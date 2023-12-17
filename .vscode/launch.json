@@ -1,0 +1,77 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/Client",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "preLaunchTask": "Debug"
+        },
+        {
+            "name": "ReleaseSafe",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/Client",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "preLaunchTask": "ReleaseSafe"
+        },
+        {
+            "name": "ReleaseFast",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/Client",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "preLaunchTask": "ReleaseFast"
+        },
+        {
+            "name": "ReleaseSmall",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/Client",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "preLaunchTask": "ReleaseSmall"
+        },
+        {
+            "name": "Debug (cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/Client",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "preLaunchTask": "Debug"
+        },
+        {
+            "name": "ReleaseSafe (cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/Client",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "preLaunchTask": "ReleaseSafe"
+        },
+        {
+            "name": "ReleaseFast (cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/Client",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "preLaunchTask": "ReleaseFast"
+        },
+        {
+            "name": "ReleaseSmall (cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/Client",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "preLaunchTask": "ReleaseSmall"
+        },
+    ]
+}
