@@ -816,61 +816,30 @@ pub fn init(allocator: std.mem.Allocator) !void {
     defer allocator.free(nodes);
     zstbrp.initPack(&ctx, nodes);
 
-    try addImage("textile_4x4", "textile_4x4.png", 4, 4, &ctx, allocator);
-    try addImage("textile_5x5", "textile_5x5.png", 5, 5, &ctx, allocator);
-    try addImage("textile_9x9", "textile_9x9.png", 9, 9, &ctx, allocator);
-    try addImage("textile_10x10", "textile_10x10.png", 10, 10, &ctx, allocator);
     try addImage("bars", "bars.png", 24, 8, &ctx, allocator);
+    try addImage("conditions", "conditions.png", 16, 16, &ctx, allocator);
     try addImage("error_texture", "error_texture.png", 8, 8, &ctx, allocator);
     try addImage("invisible", "invisible.png", 8, 8, &ctx, allocator);
+    try addImage("ground", "ground.png", 8, 8, &ctx, allocator);
     try addImage("ground_masks", "ground_masks.png", 8, 8, &ctx, allocator);
     try addImage("key_indicators", "key_indicators.png", 100, 100, &ctx, allocator);
-    try addImage("lofi_char_8x8", "lofi_char.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_char_16x16", "lofi_char.png", 16, 16, &ctx, allocator);
-    try addImage("lofi_char_2_8x8", "lofi_char_2.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_char_2_16x16", "lofi_char_2.png", 16, 16, &ctx, allocator);
-    try addImage("lofi_char_big", "lofi_char_big.png", 16, 16, &ctx, allocator);
-    try addImage("lofi_environment", "lofi_environment.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_environment_2", "lofi_environment_2.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_environment_3", "lofi_environment_3.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_interface", "lofi_interface.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_interface_2", "lofi_interface_2.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_interface_big", "lofi_interface_big.png", 16, 16, &ctx, allocator);
-    try addImage("lofi_obj", "lofi_obj.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_obj_2", "lofi_obj_2.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_obj_3", "lofi_obj_3.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_obj_4", "lofi_obj_4.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_obj_5", "lofi_obj_5.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_obj_6", "lofi_obj_6.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_obj_big", "lofi_obj_big.png", 16, 16, &ctx, allocator);
-    try addImage("lofi_parts", "lofi_parts.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_projs", "lofi_projs.png", 8, 8, &ctx, allocator);
-    try addImage("lofi_projs_big", "lofi_projs_big.png", 16, 16, &ctx, allocator);
-    try addImage("stars", "stars.png", 8, 8, &ctx, allocator);
+    try addImage("items", "items.png", 8, 8, &ctx, allocator);
+    try addImage("misc", "misc.png", 8, 8, &ctx, allocator);
+    try addImage("misc_16", "misc_16.png", 16, 16, &ctx, allocator);
+    try addImage("portals", "portals.png", 8, 8, &ctx, allocator);
+    try addImage("portals_16", "portals_16.png", 16, 16, &ctx, allocator);
+    try addImage("props", "props.png", 8, 8, &ctx, allocator);
+    try addImage("props_16", "props_16.png", 16, 16, &ctx, allocator);
+    try addImage("tiered_items", "tiered_items.png", 8, 8, &ctx, allocator);
+    try addImage("tiered_projectiles", "tiered_projectiles.png", 8, 8, &ctx, allocator);
     try addImage("wall_backface", "wall_backface.png", 8, 8, &ctx, allocator);
     try addImage("particles", "particles.png", 8, 8, &ctx, allocator);
     try addImage("editor_tile_base", "editor_tile_base.png", 8, 8, &ctx, allocator);
 
-    try addAnimEnemy("chars_8x8d_encounters", "chars_8x8d_encounters.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8d_hero_1", "chars_8x8d_hero_1.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8d_beach", "chars_8x8d_beach.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_beach", "chars_8x8r_beach.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_encounters", "chars_8x8r_encounters.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_hero_1", "chars_8x8r_hero_1.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_hero_2", "chars_8x8r_hero_2.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_high", "chars_8x8r_high.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_low_1", "chars_8x8r_low_1.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_low_2", "chars_8x8r_low_2.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_mid", "chars_8x8r_mid.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_mid_2", "chars_8x8r_mid_2.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_8x8r_pets_1", "chars_8x8r_pets_1.png", 8, 8, 48, 8, &ctx, allocator);
-    try addAnimEnemy("chars_16x8d_encounters", "chars_16x8d_encounters.png", 16, 8, 96, 8, &ctx, allocator);
-    try addAnimEnemy("chars_16x8r_encounters", "chars_16x8r_encounters.png", 16, 8, 96, 8, &ctx, allocator);
-    try addAnimEnemy("chars_16x16d_encounters", "chars_16x16d_encounters.png", 16, 16, 96, 16, &ctx, allocator);
-    try addAnimEnemy("chars_16x16d_encounters_2", "chars_16x16d_encounters_2.png", 16, 16, 96, 16, &ctx, allocator);
-    try addAnimEnemy("chars_16x16d_mountains_1", "chars_16x16d_mountains_1.png", 16, 16, 96, 16, &ctx, allocator);
-    try addAnimEnemy("chars_16x16d_mountains_2", "chars_16x16d_mountains_2.png", 16, 16, 96, 16, &ctx, allocator);
-    try addAnimEnemy("chars_16x16r_encounters", "chars_16x16r_encounters.png", 16, 16, 96, 16, &ctx, allocator);
+    try addAnimEnemy("low_realm", "low_realm.png", 8, 8, 48, 8, &ctx, allocator);
+    try addAnimEnemy("low_realm_16", "low_realm_16.png", 16, 16, 96, 16, &ctx, allocator);
+    try addAnimEnemy("mid_realm", "mid_realm.png", 8, 8, 48, 8, &ctx, allocator);
+    try addAnimEnemy("mid_realm_16", "mid_realm_16.png", 16, 16, 96, 16, &ctx, allocator);
     try addAnimPlayer("players", "players.png", 8, 8, 48, 8, &ctx, allocator);
     try addAnimPlayer("player_skins", "player_skins.png", 8, 8, 48, 8, &ctx, allocator);
 
@@ -887,7 +856,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
         .num_nodes = 100,
         .active_head = null,
         .free_head = null,
-        .extra = [2]zstbrp.PackNode{ zstbrp.PackNode{ .x = 0, .y = 0, .next = null }, zstbrp.PackNode{ .x = 0, .y = 0, .next = null } },
+        .extra = [2]zstbrp.PackNode{ .{ .x = 0, .y = 0, .next = null }, .{ .x = 0, .y = 0, .next = null } },
     };
 
     const ui_nodes = try allocator.alloc(zstbrp.PackNode, 4096);
@@ -895,15 +864,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     zstbrp.initPack(&ui_ctx, ui_nodes);
 
     const imply_size = std.math.maxInt(u32);
-    try addUiImage("lofi_interface", "sheets/lofi_interface.png", 8, 8, &ctx, allocator);
-    try addUiImage("lofi_interface_2", "sheets/lofi_interface_2.png", 8, 8, &ctx, allocator);
-    try addUiImage("lofi_obj", "sheets/lofi_obj.png", 8, 8, &ctx, allocator);
-    try addUiImage("lofi_obj_2", "sheets/lofi_obj_2.png", 8, 8, &ctx, allocator);
-    try addUiImage("lofi_obj_3", "sheets/lofi_obj_3.png", 8, 8, &ctx, allocator);
-    try addUiImage("lofi_obj_4", "sheets/lofi_obj_4.png", 8, 8, &ctx, allocator);
-    try addUiImage("lofi_obj_5", "sheets/lofi_obj_5.png", 8, 8, &ctx, allocator);
-    try addUiImage("lofi_obj_6", "sheets/lofi_obj_6.png", 8, 8, &ctx, allocator);
-    try addUiImage("key_indicators", "sheets/key_indicators.png", 100, 100, &ctx, allocator);
+    try addUiImage("ability_icons", "sheets/ability_icons.png", 40, 40, &ctx, allocator);
     try addUiImage("error_texture", "sheets/error_texture.png", imply_size, imply_size, &ctx, allocator);
     try addUiImage("basic_panel", "ui/basic_panel.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_background", "ui/chat/chatbox_background.png", imply_size, imply_size, &ui_ctx, allocator);

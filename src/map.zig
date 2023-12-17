@@ -490,47 +490,7 @@ pub const GameObject = struct {
                     if (cond_str.len == 0)
                         continue;
 
-                    switch (eff) {
-                        .stasis => {
-                            if (self.condition.stasis_immune) {
-                                element.StatusText.add(.{
-                                    .obj_id = self.obj_id,
-                                    .start_time = time,
-                                    .text_data = .{
-                                        .text = std.fmt.allocPrint(allocator.*, "Immune", .{}) catch unreachable,
-                                        .text_type = .bold,
-                                        .size = 22,
-                                        .color = 0xFF0000,
-                                    },
-                                    .initial_size = 22,
-                                }) catch |e| {
-                                    std.log.err("Allocation for immune text failed: {any}", .{e});
-                                };
-                                continue;
-                            } else self.condition.stasis = true;
-                        },
-                        .stunned => {
-                            if (self.condition.stun_immune) {
-                                element.StatusText.add(.{
-                                    .obj_id = self.obj_id,
-                                    .start_time = time,
-                                    .text_data = .{
-                                        .text = std.fmt.allocPrint(allocator.*, "Immune", .{}) catch unreachable,
-                                        .text_type = .bold,
-                                        .size = 22,
-                                        .color = 0xFF0000,
-                                    },
-                                    .initial_size = 22,
-                                }) catch |e| {
-                                    std.log.err("Allocation for immune text failed: {any}", .{e});
-                                };
-                                continue;
-                            } else self.condition.stunned = true;
-                        },
-                        else => {
-                            self.condition.set(eff, true);
-                        },
-                    }
+                    self.condition.set(eff, true);
 
                     element.StatusText.add(.{
                         .obj_id = self.obj_id,
@@ -779,7 +739,7 @@ pub const Player = struct {
 
         const float_speed: f32 = @floatFromInt(self.speed);
         var move_speed = min_move_speed + float_speed / 75.0 * (max_move_speed - min_move_speed);
-        if (self.condition.speedy or self.condition.ninja_speedy)
+        if (self.condition.speedy)
             move_speed *= 1.5;
 
         return move_speed * self.move_multiplier * self.walk_speed_multiplier;
@@ -879,20 +839,14 @@ pub const Player = struct {
     }
 
     pub fn attackFrequency(noalias self: *const Player) f32 {
-        if (self.condition.dazed)
-            return min_attack_freq;
-
-        var frequency = (min_attack_freq + ((@as(f32, @floatFromInt(self.dexterity)) / 75.0) * (max_attack_freq - min_attack_freq)));
-        if (self.condition.berserk)
-            frequency *= 1.5;
-
+        const frequency = (min_attack_freq + ((@as(f32, @floatFromInt(self.dexterity)) / 75.0) * (max_attack_freq - min_attack_freq)));
         return frequency;
     }
 
     pub fn useAbility(noalias self: *Player, screen_x: f32, screen_y: f32, use_type: game_data.UseType) void {
         const item_type = self.inventory[1];
         const item_props = game_data.item_type_to_props.getPtr(@intCast(item_type));
-        if (self.condition.paused or item_type == -1 or item_props == null or !item_props.?.usable) {
+        if (item_type == -1 or item_props == null or !item_props.?.usable) {
             assets.playSfx("error");
             return;
         }
@@ -1029,9 +983,6 @@ pub const Player = struct {
     }
 
     pub fn weaponShoot(noalias self: *Player, angle: f32, time: i64) void {
-        if (self.condition.stunned or self.condition.stasis)
-            return;
-
         const weapon_type: i32 = self.inventory[0];
         if (weapon_type == -1)
             return;
@@ -1114,47 +1065,7 @@ pub const Player = struct {
                     if (cond_str.len == 0)
                         continue;
 
-                    switch (eff) {
-                        .stasis => {
-                            if (self.condition.stasis_immune) {
-                                element.StatusText.add(.{
-                                    .obj_id = self.obj_id,
-                                    .start_time = time,
-                                    .text_data = .{
-                                        .text = std.fmt.allocPrint(allocator.*, "Immune", .{}) catch unreachable,
-                                        .text_type = .bold,
-                                        .size = 22,
-                                        .color = 0xFF0000,
-                                    },
-                                    .initial_size = 22,
-                                }) catch |e| {
-                                    std.log.err("Allocation for immune text failed: {any}", .{e});
-                                };
-                                continue;
-                            } else self.condition.stasis = true;
-                        },
-                        .stunned => {
-                            if (self.condition.stun_immune) {
-                                element.StatusText.add(.{
-                                    .obj_id = self.obj_id,
-                                    .start_time = time,
-                                    .text_data = .{
-                                        .text = std.fmt.allocPrint(allocator.*, "Immune", .{}) catch unreachable,
-                                        .text_type = .bold,
-                                        .size = 22,
-                                        .color = 0xFF0000,
-                                    },
-                                    .initial_size = 22,
-                                }) catch |e| {
-                                    std.log.err("Allocation for immune text failed: {any}", .{e});
-                                };
-                                continue;
-                            } else self.condition.stunned = true;
-                        },
-                        else => {
-                            self.condition.set(eff, true);
-                        },
-                    }
+                    self.condition.set(eff, true);
 
                     element.StatusText.add(.{
                         .obj_id = self.obj_id,
@@ -1296,9 +1207,7 @@ pub const Player = struct {
                 }
             }
 
-            if (sc.current_screen != .editor and !self.condition.invulnerable and !self.condition.invincible and
-                !self.condition.stasis and time - self.last_ground_damage_time >= 500)
-            {
+            if (sc.current_screen != .editor and !self.condition.invulnerable and time - self.last_ground_damage_time >= 500) {
                 if (validPos(floor_x, floor_y)) {
                     const square = squares[floor_y * width + floor_x];
                     if (square.tile_type != 0xFFFF and square.tile_type != 0xFF and
@@ -1352,12 +1261,6 @@ pub const Player = struct {
     }
 
     fn modifyMove(noalias self: *Player, x: f32, y: f32, noalias target_x: *f32, noalias target_y: *f32) void {
-        if (self.condition.paralyzed or self.condition.stasis) {
-            target_x.* = self.x;
-            target_y.* = self.y;
-            return;
-        }
-
         const dx = x - self.x;
         const dy = y - self.y;
 
@@ -1599,7 +1502,7 @@ pub const Projectile = struct {
                 if (@abs(y - player.y) > radius)
                     break :loopBelow;
 
-                if (!(player.condition.invincible or player.condition.dead)) {
+                if (!player.condition.dead) {
                     const dist_sqr = utils.distSqr(player.x, player.y, x, y);
                     if (dist_sqr < min_dist) {
                         min_dist = dist_sqr;
@@ -1615,7 +1518,7 @@ pub const Projectile = struct {
                 if (@abs(y - player.y) > radius)
                     break :loopAbove;
 
-                if (!(player.condition.invincible or player.condition.dead)) {
+                if (!player.condition.dead) {
                     const dist_sqr = utils.distSqr(player.x, player.y, x, y);
                     if (dist_sqr < min_dist) {
                         min_dist = dist_sqr;
@@ -1641,7 +1544,7 @@ pub const Projectile = struct {
                     break :loopBelow;
 
                 if ((object.is_enemy or object.occupy_square or object.enemy_occupy_square) and
-                    !(object.condition.invincible or object.condition.dead))
+                    !object.condition.dead)
                 {
                     const dist_sqr = utils.distSqr(object.x, object.y, x, y);
                     if (dist_sqr < min_dist) {
@@ -1659,7 +1562,7 @@ pub const Projectile = struct {
                     break :loopAbove;
 
                 if ((object.is_enemy or object.occupy_square or object.enemy_occupy_square) and
-                    !(object.condition.invincible or object.condition.dead))
+                    !object.condition.dead)
                 {
                     const dist_sqr = utils.distSqr(object.x, object.y, x, y);
                     if (dist_sqr < min_dist) {
@@ -1828,7 +1731,7 @@ pub const Projectile = struct {
         if (time - self.last_hit_check > 16) {
             if (self.damage_players) {
                 if (findTargetPlayer(self.x, self.y, 0.57, idx)) |player| {
-                    if (player.condition.invincible or player.condition.stasis or self.hit_list.contains(player.obj_id))
+                    if (self.hit_list.contains(player.obj_id))
                         return true;
 
                     if (player.condition.invulnerable) {
@@ -1891,7 +1794,7 @@ pub const Projectile = struct {
                 }
             } else {
                 if (findTargetObject(self.x, self.y, 0.57, idx)) |object| {
-                    if (object.condition.invincible or object.condition.stasis or self.hit_list.contains(object.obj_id))
+                    if (self.hit_list.contains(object.obj_id))
                         return true;
 
                     if (object.condition.invulnerable) {
@@ -1972,7 +1875,7 @@ pub fn damageWithDefense(orig_damage: f32, target_defense: f32, armor_piercing: 
         def *= 2.0;
     }
 
-    if (condition.invulnerable or condition.invincible)
+    if (condition.invulnerable)
         return 0;
 
     const min = orig_damage * 0.25;

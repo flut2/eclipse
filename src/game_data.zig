@@ -85,7 +85,7 @@ pub const TextureData = struct {
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator, animated: bool) !TextureData {
         return TextureData{
-            .sheet = try node.getValueAlloc("File", allocator, "Unknown"),
+            .sheet = try node.getValueAlloc("Sheet", allocator, "Unknown"),
             .index = try node.getValueInt("Index", u16, 0),
             .animated = animated,
         };
@@ -476,53 +476,6 @@ pub const ProjProps = struct {
             .angle_change_accel_delay = try node.getValueInt("AngleChangeAccelDelay", u16, 0),
             .angle_change_clamp = try node.getValueFloat("AngleChangeClamp", f32, 0.0),
             .zero_velocity_delay = try node.getValueInt("ZeroVelocityDelay", i16, -1),
-        };
-    }
-};
-
-pub const EffectProps = struct {
-    id: []const u8,
-    particle: []const u8,
-    cooldown: f32,
-    color: u32,
-    rate: f32,
-    speed: f32,
-    speed_variance: f32,
-    spread: f32,
-    life: f32,
-    life_variance: f32,
-    size: i32,
-    friction: f32,
-    rise: f32,
-    rise_variance: f32,
-    rise_acc: f32,
-    range_x: i32,
-    range_y: i32,
-    z_offset: f32,
-    bitmap_file: []const u8,
-    bitmap_index: u32,
-
-    pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !EffectProps {
-        return EffectProps{
-            .id = try node.currentValue(),
-            .particle = try node.getAttributeAlloc("particle", allocator, ""),
-            .cooldown = try node.getAttributeFloat("Cooldown", f32, 0.0),
-            .color = try node.getAttributeInt("color", u32, 0xFFFFFF),
-            .rate = try node.getAttributeFloat("rate", f32, 5.0),
-            .speed = try node.getAttributeFloat("speed", f32, 0.0),
-            .speed_variance = try node.getAttributeFloat("speedVariance", f32, 0.0),
-            .spread = try node.getAttributeFloat("spread", f32, 0.0),
-            .life = try node.getAttributeFloat("life", f32, 1.0),
-            .life_variance = try node.getAttributeFloat("lifeVariance", f32, 0.0),
-            .size = try node.getAttributeInt("size", i32, 3),
-            .rise = try node.getAttributeFloat("rise", f32, 0.0),
-            .rise_variance = try node.getAttributeFloat("riseVariance", f32, 0.0),
-            .rise_acc = try node.getAttributeFloat("riseAcc", f32, 0.0),
-            .range_x = try node.getAttributeInt("rangeX", i32, 0),
-            .range_y = try node.getAttributeInt("rangeY", i32, 0),
-            .z_offset = try node.getAttributeFloat("zOffset", f32, 0.0),
-            .bitmap_file = try node.getAttributeAlloc("bitmapFile", allocator, ""),
-            .bitmap_index = try node.getAttributeInt("bitmapIndex", u32, 0),
         };
     }
 };

@@ -200,30 +200,20 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 
 pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
     for (0..@bitSizeOf(utils.Condition)) |i| {
-        const sheet_name = "lofi_interface_2";
+        const sheet_name = "conditions";
         const sheet_indices: []const u16 = switch (std.meta.intToEnum(utils.ConditionEnum, i + 1) catch continue) {
-            .quiet => &[_]u16{32},
-            .weak => &[_]u16{ 34, 35, 36, 37 },
-            .slowed => &[_]u16{1},
-            .sick => &[_]u16{39},
-            .dazed => &[_]u16{44},
-            .stunned => &[_]u16{45},
-            .blind => &[_]u16{41},
-            .hallucinating => &[_]u16{42},
-            .drunk => &[_]u16{43},
-            .confused => &[_]u16{2},
-            .paralyzed => &[_]u16{ 53, 54 },
-            .speedy => &[_]u16{0},
-            .bleeding => &[_]u16{46},
-            .healing => &[_]u16{47},
-            .damaging => &[_]u16{49},
-            .berserk => &[_]u16{50},
-            .invulnerable => &[_]u16{17},
-            .armored => &[_]u16{16},
-            .armor_broken => &[_]u16{55},
-            .hexed => &[_]u16{42},
-            .ninja_speedy => &[_]u16{0},
-            else => &[0]u16{},
+            .weak => &[_]u16{5},
+            .slowed => &[_]u16{7},
+            .sick => &[_]u16{10},
+            .speedy => &[_]u16{6},
+            .bleeding => &[_]u16{2},
+            .healing => &[_]u16{1},
+            .damaging => &[_]u16{4},
+            .invulnerable => &[_]u16{11},
+            .armored => &[_]u16{3},
+            .armor_broken => &[_]u16{9},
+            .targeted => &[_]u16{8},
+            .unknown, .dead, .hidden, .invisible => &[0]u16{},
         };
 
         const indices_len = sheet_indices.len;
@@ -3060,12 +3050,9 @@ pub fn draw(
 
                         var color: u32 = 0;
                         var color_intensity: f32 = 0.0;
-                        if (player.condition.stasis) {
-                            color = 0x777777;
-                            color_intensity = 0.7;
-                        } else {
-                            // flash
-                        }
+                        _ = &color;
+                        _ = &color_intensity;
+                        // flash
 
                         if (settings.enable_lights and player.light_color > 0) {
                             const light_size = player.light_radius + player.light_pulse * @sin(float_time_ms / 1000.0 * player.light_pulse_speed);
@@ -3294,12 +3281,9 @@ pub fn draw(
 
                         var color: u32 = 0;
                         var color_intensity: f32 = 0.0;
-                        if (bo.condition.stasis) {
-                            color = 0x777777;
-                            color_intensity = 0.7;
-                        } else {
-                            // flash
-                        }
+                        _ = &color;
+                        _ = &color_intensity;
+                        // flash
 
                         if (settings.enable_lights and bo.light_color > 0) {
                             const light_size = bo.light_radius + bo.light_pulse * @sin(float_time_ms / 1000.0 * bo.light_pulse_speed);

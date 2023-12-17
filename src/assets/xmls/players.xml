@@ -1,458 +1,720 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Objects>
-  <Object type="0x0300" id="Rogue">
+  <Object type="0x0300" id="Pathfinder">
     <Class>Player</Class>
-    <Description>The rogue relies on his speed to deal damage at medium range while avoiding attacks.</Description>
+    <Description>
+      The Pathfinder is a balanced bowman who aims to cover all bases.
+    </Description>
     <AnimatedTexture>
-      <File>players</File>
+      <Sheet>players</Sheet>
       <Index>0</Index>
     </AnimatedTexture>
-    <HitSound>player/rogue_hit</HitSound>
-    <DeathSound>player/rogue_death</DeathSound>
     <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>2, 13, 6, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa14, 0xa56, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="720">150</MaxHitPoints>
-    <MaxMagicPoints max="252">100</MaxMagicPoints>
-    <Attack max="50">10</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="75">15</Speed>
-    <Dexterity max="75">15</Dexterity>
-    <HpRegen max="40">15</HpRegen>
-    <MpRegen max="50">10</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="2" max="8">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="0" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="1" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="1" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="0" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="5" type="0x0307">Archer</UnlockLevel>
-    <UnlockCost>199</UnlockCost>
+    <SlotTypes>3, 6, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa2a, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;&lt;font color="#B3B3B3"&gt;PASSIVE:&lt;/font&gt;&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
+&lt;b&gt;&lt;font color="#B3B3B3"&gt;ACTIVE:&lt;/font&gt;&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+&lt;i&gt;&lt;font size="10" color="#B3B3B3"&gt;Soul Fragments are shared between all Enigmas in the same instance.&lt;/font&gt;&lt;/i&gt;</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="60" t1="55">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
   </Object>
-  <Object type="0x0307" id="Archer">
+  <Object type="0x0307" id="Blood Mage">
     <Class>Player</Class>
-    <Description>The archer has a long-range attack and can acquire very powerful weapons.</Description>
+    <Description>
+      The Blood Mage is a ranged damage dealer who uses his health to cast spells.
+    </Description>
     <AnimatedTexture>
-      <File>players</File>
+      <Sheet>players</Sheet>
       <Index>1</Index>
     </AnimatedTexture>
-    <HitSound>player/archer_hit</HitSound>
-    <DeathSound>player/archer_death</DeathSound>
     <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>3, 15, 6, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa1a, 0xa61, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="700">130</MaxHitPoints>
-    <MaxMagicPoints max="252">100</MaxMagicPoints>
-    <Attack max="75">12</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="50">12</Speed>
-    <Dexterity max="50">12</Dexterity>
-    <HpRegen max="40">12</HpRegen>
-    <MpRegen max="50">10</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="2" max="8">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="0" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="0" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="0" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="5" type="0x0310">Priest</UnlockLevel>
-    <UnlockCost>199</UnlockCost>
+    <SlotTypes>17, 14, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa35, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
+&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+Soul Fragments are shared between all Enigmas in the same instance.</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="60" t1="55">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
   </Object>
-  <Object type="0x030e" id="Wizard">
+  <Object type="0x030e" id="Warden">
     <Class>Player</Class>
-    <Description>The wizard deals damage from a long distance and blasts enemies with powerful spells.</Description>
+    <Description>
+      The Warden is a support class who provides utility for the group.
+    </Description>
     <AnimatedTexture>
-      <File>players</File>
+      <Sheet>players</Sheet>
       <Index>2</Index>
     </AnimatedTexture>
-    <HitSound>player/wizard_hit</HitSound>
-    <DeathSound>player/wizard_death</DeathSound>
     <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>17, 11, 14, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa97, 0xa2e, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="670">100</MaxHitPoints>
-    <MaxMagicPoints max="385">100</MaxMagicPoints>
-    <Attack max="75">12</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="50">10</Speed>
-    <Dexterity max="75">15</Dexterity>
-    <HpRegen max="40">12</HpRegen>
-    <MpRegen max="60">12</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="5" max="15">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="0" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="1" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="0" max="2">MpRegen</LevelIncrease>
-    <UnlockCost>0</UnlockCost>
+    <SlotTypes>3, 6, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa2a, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
+&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+Soul Fragments are shared between all Enigmas in the same instance.</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="60" t1="55">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
   </Object>
-  <Object type="0x0310" id="Priest">
+  <Object type="0x0310" id="Warlock">
     <Class>Player</Class>
-    <Description>The priest attacks at long range and can heal himself and his allies.</Description>
+    <Description>
+      The Warlock is an ability-less damage dealer with high base stats.
+    </Description>
     <AnimatedTexture>
-      <File>players</File>
+      <Sheet>players</Sheet>
       <Index>3</Index>
     </AnimatedTexture>
-    <HitSound>player/priest_hit</HitSound>
-    <DeathSound>player/priest_death</DeathSound>
     <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>8, 4, 14, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa04, 0xa31, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="670">100</MaxHitPoints>
-    <MaxMagicPoints max="385">100</MaxMagicPoints>
-    <Attack max="50">10</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="50">12</Speed>
-    <Dexterity max="50">12</Dexterity>
-    <HpRegen max="40">10</HpRegen>
-    <MpRegen max="75">15</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="5" max="15">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="0" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="1" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="0" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="1" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="5" type="0x030e">Wizard</UnlockLevel>
-    <UnlockCost>50</UnlockCost>
+    <SlotTypes>17, 14, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa35, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
+&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+Soul Fragments are shared between all Enigmas in the same instance.</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="60" t1="55">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
   </Object>
-  <Object type="0x031d" id="Warrior">
+  <Object type="0x031d" id="Berserker">
     <Class>Player</Class>
-    <Description>The warrior wears strong armor and uses his magic helmet to inspire his allies in battle.</Description>
+    <Description>
+      The Berserker is a sword user who gives up survivability for damage.
+    </Description>
     <AnimatedTexture>
-      <File>players</File>
+      <Sheet>players</Sheet>
       <Index>4</Index>
     </AnimatedTexture>
-    <HitSound>player/warrior_hit</HitSound>
-    <DeathSound>player/warrior_death</DeathSound>
     <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>1, 16, 7, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa00, 0x0a66, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="770">200</MaxHitPoints>
-    <MaxMagicPoints max="252">100</MaxMagicPoints>
-    <Attack max="75">15</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="50">7</Speed>
-    <Dexterity max="50">10</Dexterity>
-    <HpRegen max="75">10</HpRegen>
-    <MpRegen max="50">10</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="2" max="8">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="0" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="0" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="1" max="2">HpRegen</LevelIncrease>
-    <LevelIncrease min="0" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="5" type="0x0300">Rogue</UnlockLevel>
-    <UnlockCost>199</UnlockCost>
+    <SlotTypes>1, 7, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa00, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
+&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+Soul Fragments are shared between all Enigmas in the same instance.</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="60" t1="55">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
   </Object>
-  <Object type="0x031e" id="Knight">
+  <Object type="0x031e" id="Juggernaut">
     <Class>Player</Class>
-    <Description>The knight fights at close range, wears very heavy armor, and uses his shield to stun enemies.</Description>
+    <Description>
+      The Juggernaut is a sword user who specializes in defense.
+    </Description>
     <AnimatedTexture>
-      <File>players</File>
+      <Sheet>players</Sheet>
       <Index>5</Index>
     </AnimatedTexture>
-    <HitSound>player/knight_hit</HitSound>
-    <DeathSound>player/knight_death</DeathSound>
     <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>1, 5, 7, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa00, 0x0a08, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="770">200</MaxHitPoints>
-    <MaxMagicPoints max="252">100</MaxMagicPoints>
-    <Attack max="50">15</Attack>
-    <Defense max="40">0</Defense>
-    <Speed max="50">7</Speed>
-    <Dexterity max="50">10</Dexterity>
-    <HpRegen max="75">10</HpRegen>
-    <MpRegen max="50">10</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="2" max="8">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="0" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="0" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="1" max="2">HpRegen</LevelIncrease>
-    <LevelIncrease min="0" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="20" type="0x031d">Warrior</UnlockLevel>
-    <UnlockCost>499</UnlockCost>
+    <SlotTypes>1, 7, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa00, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
+&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+Soul Fragments are shared between all Enigmas in the same instance.</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="60" t1="55">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
   </Object>
-  <Object type="0x031f" id="Paladin">
+  <Object type="0x031f" id="Chronomancer">
     <Class>Player</Class>
-    <Description>The paladin can deal damage at close range, wear armor and heal himself and his allies.</Description>
+    <Description>
+      The Chronomancer is a staff class who is able to turn back time.
+    </Description>
     <AnimatedTexture>
-      <File>players</File>
+      <Sheet>players</Sheet>
       <Index>6</Index>
     </AnimatedTexture>
-    <HitSound>player/paladin_hit</HitSound>
-    <DeathSound>player/paladin_death</DeathSound>
     <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>1, 12, 7, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa00, 0xa52, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="770">200</MaxHitPoints>
-    <MaxMagicPoints max="252">100</MaxMagicPoints>
-    <Attack max="50">12</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="50">7</Speed>
-    <Dexterity max="50">10</Dexterity>
-    <HpRegen max="40">10</HpRegen>
-    <MpRegen max="75">10</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="2" max="8">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="0" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="0" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="1" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="20" type="0x031e">Knight</UnlockLevel>
-    <UnlockLevel level="20" type="0x0310">Priest</UnlockLevel>
-    <UnlockCost>499</UnlockCost>
+    <SlotTypes>17, 14, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa35, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
+&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+Soul Fragments are shared between all Enigmas in the same instance.</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="60" t1="55">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
   </Object>
-  <Object type="0x0320" id="Assassin">
+  <Object type="0x0320" id="Monk">
     <Class>Player</Class>
-    <Description>The assassin fights from medium range and uses poison to damage his enemies over time.</Description>
+    <Description>
+      The Monk is a support class who provides protection for the group.
+    </Description>
     <AnimatedTexture>
-      <File>players</File>
-      <Index>7</Index>
-    </AnimatedTexture>
-    <HitSound>player/rogue_hit</HitSound>
-    <DeathSound>player/rogue_death</DeathSound>
-    <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>2, 18, 6, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa14, 0xaa3, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="720">150</MaxHitPoints>
-    <MaxMagicPoints max="252">100</MaxMagicPoints>
-    <Attack max="60">12</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="75">15</Speed>
-    <Dexterity max="75">15</Dexterity>
-    <HpRegen max="40">15</HpRegen>
-    <MpRegen max="60">10</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="2" max="8">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="0" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="1" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="1" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="1" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="20" type="0x0300">Rogue</UnlockLevel>
-    <UnlockLevel level="20" type="0x030e">Wizard</UnlockLevel>
-    <UnlockCost>499</UnlockCost>
-  </Object>
-  <Object type="0x0321" id="Necromancer">
-    <Class>Player</Class>
-    <Description>The necromancer drains life from his enemies to heal himself and his allies.</Description>
-    <AnimatedTexture>
-      <File>players</File>
-      <Index>8</Index>
-    </AnimatedTexture>
-    <HitSound>player/wizard_hit</HitSound>
-    <DeathSound>player/wizard_death</DeathSound>
-    <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>17, 19, 14, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa97, 0xaaa, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="670">100</MaxHitPoints>
-    <MaxMagicPoints max="385">100</MaxMagicPoints>
-    <Attack max="60">12</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="50">10</Speed>
-    <Dexterity max="60">15</Dexterity>
-    <HpRegen max="30">10</HpRegen>
-    <MpRegen max="75">12</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="5" max="15">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="0" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="1" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="1" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="20" type="0x030e">Wizard</UnlockLevel>
-    <UnlockLevel level="20" type="0x0310">Priest</UnlockLevel>
-    <UnlockCost>499</UnlockCost>
-  </Object>
-  <Object type="0x0322" id="Huntress">
-    <Class>Player</Class>
-    <Description>The huntress uses arrows and traps to defeat her enemies.</Description>
-    <AnimatedTexture>
-      <File>players</File>
+      <Sheet>players</Sheet>
       <Index>9</Index>
     </AnimatedTexture>
-    <HitSound>player/archer_hit</HitSound>
-    <DeathSound>player/archer_death</DeathSound>
     <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>3, 20, 6, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa1a, 0xab1, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="700">130</MaxHitPoints>
-    <MaxMagicPoints max="252">100</MaxMagicPoints>
-    <Attack max="75">12</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="50">12</Speed>
-    <Dexterity max="50">12</Dexterity>
-    <HpRegen max="40">12</HpRegen>
-    <MpRegen max="50">10</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="2" max="8">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="0" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="0" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="0" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="20" type="0x0300">Rogue</UnlockLevel>
-    <UnlockLevel level="20" type="0x0307">Archer</UnlockLevel>
-    <UnlockCost>499</UnlockCost>
+    <SlotTypes>17, 14, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa35, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
+&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+Soul Fragments are shared between all Enigmas in the same instance.</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="65" t1="60">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
   </Object>
-  <Object type="0x0323" id="Mystic">
+  <Object type="0x0321" id="Enigma">
     <Class>Player</Class>
-    <Description>The mystic fights with a staff and uses her crystal orb to bind enemies to a distant plane. </Description>
+    <Description>
+      The Enigma is proficient with all styles but their base stats are low.
+    </Description>
     <AnimatedTexture>
-      <File>players</File>
+      <Sheet>players</Sheet>
+      <Index>8</Index>
+    </AnimatedTexture>
+    <Player />
+    <SlotTypes>22, 20, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa35, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Projectile id="0">
+      <RandomTexture>
+        <Texture>
+          <Sheet>projectiles</Sheet>
+          <Index>125</Index>
+        </Texture>
+        <Texture>
+          <Sheet>projectiles</Sheet>
+          <Index>126</Index>
+        </Texture>
+        <Texture>
+          <Sheet>projectiles</Sheet>
+          <Index>127</Index>
+        </Texture>
+      </RandomTexture>
+      <AngleCorrection>1</AngleCorrection>
+      <LightColor>0xFA35FF</LightColor>
+      <LightIntensity>0.2</LightIntensity>
+      <LightRadius>0.5</LightRadius>
+      <Speed>70</Speed>
+      <LifetimeMS>1000</LifetimeMS>
+      <Damage>750</Damage>
+      <HeatSeekSpeed>150</HeatSeekSpeed>
+      <HeatSeekRadius>12</HeatSeekRadius>
+      <HeatSeekDelay>250</HeatSeekDelay>
+    </Projectile>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;750 (+75% STR) Physical Damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a &lt;i&gt;Phantom&lt;/i&gt;  for the next 3 seconds, becoming invisible to enemies and gaining &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;+25% SPD&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;&lt;font color="#7A6D6A"&gt;PASSIVE:&lt;/font&gt;&lt;/b&gt; Enemies killed near the Enigma leave behind a &lt;i&gt;Soul Fragment&lt;/i&gt; for 5 seconds.
+&lt;b&gt;&lt;font color="#7A6D6A"&gt;ACTIVE:&lt;/font&gt;&lt;/b&gt; Convert all &lt;i&gt;Soul Fragments&lt;/i&gt; within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+&lt;i&gt;&lt;font size="10" color="#736562"&gt;Soul Fragments are shared between all Enigmas in the same instance.&lt;/font&gt;&lt;/i&gt;</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Possession</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Possess the targeted Enemy for the next &lt;b&gt;&lt;i&gt;&lt;font color="#8086BF"&gt;5 (+7% INT) seconds&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, making you control its movements and making it unable to shoot.
+&lt;i&gt;&lt;font size="10" color="#736562"&gt;During the possession, your body remains vulnerable to other enemies' attacks.&lt;/font&gt;&lt;/i&gt;</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="60" t1="55">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
+  </Object>
+  <Object type="0x0322" id="Plaguebearer">
+    <Class>Player</Class>
+    <Description>
+      The Plaguebearer is a bow class capable of debilitating enemies.
+    </Description>
+    <AnimatedTexture>
+      <Sheet>players</Sheet>
       <Index>10</Index>
     </AnimatedTexture>
-    <HitSound>player/wizard_hit</HitSound>
-    <DeathSound>player/wizard_death</DeathSound>
     <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>17, 21, 14, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa97, 0xae4, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="670">100</MaxHitPoints>
-    <MaxMagicPoints max="385">100</MaxMagicPoints>
-    <Attack max="60">10</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="60">12</Speed>
-    <Dexterity max="50">10</Dexterity>
-    <HpRegen max="40">15</HpRegen>
-    <MpRegen max="75">15</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="5" max="15">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="0" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="0" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="1" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="20" type="0x0322">Huntress</UnlockLevel>
-    <UnlockLevel level="20" type="0x0321">Necromancer</UnlockLevel>
-    <UnlockCost>999</UnlockCost>
-  </Object>
-  <Object type="0x0324" id="Trickster">
-    <Class>Player</Class>
-    <Description>The trickster fights with a dagger while using her magical prism to distract enemies.</Description>
-    <AnimatedTexture>
-      <File>players</File>
-      <Index>11</Index>
-    </AnimatedTexture>
-    <HitSound>player/rogue_hit</HitSound>
-    <DeathSound>player/rogue_death</DeathSound>
-    <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>2, 22, 6, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa14, 0xae3, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="720">150</MaxHitPoints>
-    <MaxMagicPoints max="252">100</MaxMagicPoints>
-    <Attack max="65">10</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="75">12</Speed>
-    <Dexterity max="75">15</Dexterity>
-    <HpRegen max="40">12</HpRegen>
-    <MpRegen max="60">12</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="2" max="8">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="1" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="1" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="0" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="20" type="0x0320">Assassin</UnlockLevel>
-    <UnlockLevel level="20" type="0x031f">Paladin</UnlockLevel>
-    <UnlockCost>999</UnlockCost>
-  </Object>
-  <Object type="0x0325" id="Sorcerer">
-    <Class>Player</Class>
-    <Description>The sorcerer uses his scepter to fire blasts of chain lightning at his enemies.</Description>
-    <AnimatedTexture>
-      <File>players</File>
-      <Index>12</Index>
-    </AnimatedTexture>
-    <HitSound>player/priest_hit</HitSound>
-    <DeathSound>player/priest_death</DeathSound>
-    <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>8, 23, 14, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xa04, 0xae5, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="670">100</MaxHitPoints>
-    <MaxMagicPoints max="385">100</MaxMagicPoints>
-    <Attack max="60">10</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="60">12</Speed>
-    <Dexterity max="60">12</Dexterity>
-    <HpRegen max="75">10</HpRegen>
-    <MpRegen max="60">15</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="5" max="15">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="1" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="0" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="1" max="2">HpRegen</LevelIncrease>
-    <LevelIncrease min="1" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="20" type="0x0321">Necromancer</UnlockLevel>
-    <UnlockLevel level="20" type="0x0320">Assassin</UnlockLevel>
-    <UnlockCost>999</UnlockCost>
-  </Object>
-  <Object type="0x0326" id="Ninja">
-    <Class>Player</Class>
-    <Description>The ninja relies on speed and skill, using katanas and ninja stars to deal big damage.</Description>
-    <AnimatedTexture>
-      <File>players</File>
-      <Index>13</Index>
-    </AnimatedTexture>
-    <HitSound>player/rogue_hit</HitSound>
-    <DeathSound>player/rogue_death</DeathSound>
-    <Player />
-    <BloodProb>1.0</BloodProb>
-    <SlotTypes>24, 25, 6, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
-    <Equipment>0xc44, 0xc53, -1, -1, 0xa22, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
-    <MaxHitPoints max="720">150</MaxHitPoints>
-    <MaxMagicPoints max="252">100</MaxMagicPoints>
-    <Attack max="70">15</Attack>
-    <Defense max="25">0</Defense>
-    <Speed max="60">10</Speed>
-    <Dexterity max="70">12</Dexterity>
-    <HpRegen max="40">10</HpRegen>
-    <MpRegen max="70">12</MpRegen>
-    <LevelIncrease min="20" max="30">MaxHitPoints</LevelIncrease>
-    <LevelIncrease min="2" max="8">MaxMagicPoints</LevelIncrease>
-    <LevelIncrease min="1" max="2">Attack</LevelIncrease>
-    <LevelIncrease min="0" max="0">Defense</LevelIncrease>
-    <LevelIncrease min="0" max="2">Speed</LevelIncrease>
-    <LevelIncrease min="1" max="2">Dexterity</LevelIncrease>
-    <LevelIncrease min="0" max="1">HpRegen</LevelIncrease>
-    <LevelIncrease min="1" max="2">MpRegen</LevelIncrease>
-    <UnlockLevel level="20" type="0x0300">Rogue</UnlockLevel>
-    <UnlockLevel level="20" type="0x031d">Warrior</UnlockLevel>
-    <UnlockCost>999</UnlockCost>
+    <SlotTypes>3, 6, 9, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <Equipment>0xa2a, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1</Equipment>
+    <Ability1>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>0</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
+      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+    </Ability1>
+    <Ability2>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>1</Index>
+      </Icon>
+      <Name>Paradoxical Shift</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>15</Cooldown>
+      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+    </Ability2>
+    <Ability3>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>2</Index>
+      </Icon>
+      <Name>Swarm</Name>
+      <ManaCost>100</ManaCost>
+      <Cooldown>25</Cooldown>
+      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
+&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
+Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
+Soul Fragments are shared between all Enigmas in the same instance.</Description>
+    </Ability3>
+    <UltimateAbility>
+      <Icon>
+        <Sheet>ability_icons</Sheet>
+        <Index>3</Index>
+      </Icon>
+      <Name>Anomalous Burst</Name>
+      <ManaCost>0</ManaCost>
+      <Cooldown>150</Cooldown>
+      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+    </UltimateAbility>
+    <Health t2="740" t1="720">695</Health>
+    <Mana t2="240" t1="225">200</Mana>
+    <Strength t2="75" t1="70">65</Strength>
+    <Wit t2="75" t1="70">65</Wit>
+    <Defense t2="25" t1="20">15</Defense>
+    <Resistance t2="25" t1="20">15</Resistance>
+    <Speed t2="55" t1="50">45</Speed>
+    <Stamina t2="60" t1="55">50</Stamina>
+    <Intelligence t2="60" t1="55">50</Intelligence>
+    <Penetration t2="55" t1="50">45</Penetration>
+    <Piercing t2="35" t1="30">25</Piercing>
+    <Haste t2="35" t1="30">25</Haste>
+    <Tenacity t2="55" t1="50">45</Tenacity>
   </Object>
 </Objects>
