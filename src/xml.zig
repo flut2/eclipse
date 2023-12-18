@@ -154,35 +154,23 @@ pub const Node = struct {
     }
 
     pub fn getValueAlloc(node: Node, key: []const u8, allocator: std.mem.Allocator, default_value: []const u8) ![]const u8 {
-        const val = getValue(node, key);
-        if (val == null)
-            return try allocator.dupe(u8, default_value);
-
-        return try allocator.dupe(u8, val.?);
+        const val = getValue(node, key) orelse return try allocator.dupe(u8, default_value);
+        return try allocator.dupe(u8, val);
     }
 
     pub fn getValueAllocZ(node: Node, key: []const u8, allocator: std.mem.Allocator, default_value: []const u8) ![:0]const u8 {
-        const val = getValue(node, key);
-        if (val == null)
-            return try allocator.dupeZ(u8, default_value);
-
-        return try allocator.dupeZ(u8, val.?);
+        const val = getValue(node, key) orelse return try allocator.dupeZ(u8, default_value);
+        return try allocator.dupeZ(u8, val);
     }
 
     pub fn getValueInt(node: Node, key: []const u8, comptime T: type, default_value: T) !T {
-        const val = getValue(node, key);
-        if (val == null)
-            return default_value;
-
-        return try std.fmt.parseInt(T, val.?, 0);
+        const val = getValue(node, key) orelse return default_value;
+        return try std.fmt.parseInt(T, val, 0);
     }
 
     pub fn getValueFloat(node: Node, key: []const u8, comptime T: type, default_value: T) !T {
-        const val = getValue(node, key);
-        if (val == null)
-            return default_value;
-
-        return try std.fmt.parseFloat(T, val.?);
+        const val = getValue(node, key) orelse return default_value;
+        return try std.fmt.parseFloat(T, val);
     }
 
     pub fn currentName(node: Node) ?[:0]const u8 {
@@ -203,19 +191,13 @@ pub const Node = struct {
     }
 
     pub fn currentValueInt(node: Node, comptime T: type, default_value: T) !T {
-        const val = currentValue(node);
-        if (val == null)
-            return default_value;
-
-        return try std.fmt.parseInt(T, val, default_value);
+        const val = currentValue(node) orelse return default_value;
+        return try std.fmt.parseInt(T, val, 0);
     }
 
     pub fn currentValueFloat(node: Node, comptime T: type, default_value: T) !T {
-        const val = currentValue(node);
-        if (val == null)
-            return default_value;
-
-        return try std.fmt.parseFloat(T, val, default_value);
+        const val = currentValue(node) orelse return default_value;
+        return try std.fmt.parseFloat(T, val);
     }
 };
 

@@ -2298,7 +2298,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                 .normal => |image_data| {
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
+                        .ui_quad = image.ui_quad,
                         .scissor = image_data.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2366,19 +2366,13 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .shadow_texel_mult = 2.0 / @max(image_data.scale_x, image_data.scale_y),
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
+                        .ui_quad = false,
                         .scissor = image_data.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                     };
                     ui_idx = drawQuad(ui_idx, item.x + x_offset, item.y + y_offset, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
                 },
-            }
-
-            if (item.tier_text) |tier_text| {
-                const text_len = tier_text.text_data.text.len;
-                if (text_len > 0)
-                    ui_idx = drawText(ui_idx, item.x + tier_text.x + x_offset, item.y + tier_text.y + y_offset, &tier_text.text_data, draw_data);
             }
         },
         .bar => |bar| {
@@ -3177,7 +3171,7 @@ pub fn draw(
                             y_pos += mp_bar_h - pad_scale_bar;
                         }
 
-                        const cond_int: u64 = @bitCast(player.condition);
+                        const cond_int: @typeInfo(utils.Condition).Struct.backing_integer.? = @bitCast(player.condition);
                         if (cond_int > 0) {
                             var cond_len: f32 = 0.0;
                             for (0..@bitSizeOf(utils.Condition)) |i| {
@@ -3394,7 +3388,7 @@ pub fn draw(
                             y_pos += hp_bar_h - pad_scale_bar;
                         }
 
-                        const cond_int: u64 = @bitCast(bo.condition);
+                        const cond_int: @typeInfo(utils.Condition).Struct.backing_integer.? = @bitCast(bo.condition);
                         if (cond_int > 0) {
                             var cond_len: f32 = 0.0;
                             for (0..@bitSizeOf(utils.Condition)) |i| {

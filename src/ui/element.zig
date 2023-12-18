@@ -517,6 +517,7 @@ pub const Image = struct {
     x: f32,
     y: f32,
     image_data: ImageData,
+    ui_quad: bool = true,
     visible: bool = true,
     // hack
     is_minimap_decor: bool = false,
@@ -620,7 +621,6 @@ pub const Item = struct {
     drag_end_callback: *const fn (*Item) void,
     double_click_callback: *const fn (*Item) void,
     shift_click_callback: *const fn (*Item) void,
-    tier_text: ?Text = null, // ui text because the text is offset
     visible: bool = true,
     draggable: bool = false,
     _is_dragging: bool = false,
@@ -629,7 +629,7 @@ pub const Item = struct {
     _drag_offset_x: f32 = 0,
     _drag_offset_y: f32 = 0,
     _last_click_time: i64 = 0,
-    _item: i32 = -1,
+    _item: u16 = std.math.maxInt(u16),
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
@@ -643,9 +643,6 @@ pub const Item = struct {
         var elem = try allocator.create(Item);
         elem.* = data;
         elem._allocator = allocator;
-        if (elem.tier_text) |*text| {
-            text.text_data.recalculateAttributes(allocator);
-        }
         try sc.elements.append(.{ .item = elem });
         return elem;
     }
@@ -677,9 +674,6 @@ pub const Item = struct {
             }
         }
 
-        if (self.tier_text) |*text| {
-            text.text_data.deinit(self._allocator);
-        }
         self._allocator.destroy(self);
     }
 };
@@ -1009,10 +1003,6 @@ pub const Container = struct {
         switch (T) {
             Image => try self._elements.append(.{ .image = elem }),
             Item => {
-                if (elem.tier_text) |*text| {
-                    text.text_data.recalculateAttributes(self._allocator);
-                }
-
                 try self._elements.append(.{ .item = elem });
             },
             Bar => {
@@ -1124,9 +1114,6 @@ pub const Container = struct {
                     self._allocator.destroy(text);
                 },
                 .item => |item| {
-                    if (item.tier_text) |*text| {
-                        text.text_data.deinit(self._allocator);
-                    }
                     self._allocator.destroy(item);
                 },
                 .image => |image| {

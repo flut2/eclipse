@@ -1,5 +1,5 @@
 .{
-    .name = "Client",
+    .name = "Faer",
     .version = "0.5.0",
     .dependencies = .{
         .dawn_x86_64_windows_gnu = .{

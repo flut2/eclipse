@@ -168,7 +168,7 @@ pub const ConditionEnum = enum(u8) {
     }
 };
 
-pub const Condition = packed struct(u64) {
+pub const Condition = packed struct(u32) {
     dead: bool = false,
     weak: bool = false,
     slowed: bool = false,
@@ -183,7 +183,7 @@ pub const Condition = packed struct(u64) {
     hidden: bool = false,
     targeted: bool = false,
     invisible: bool = false,
-    _padding: u50 = 0,
+    _padding: u18 = 0,
 
     pub inline fn fromCondSlice(slice: []game_data.ConditionEffect) Condition {
         var ret = Condition{};

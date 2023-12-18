@@ -134,7 +134,6 @@ fn networkTick(allocator: *std.mem.Allocator) void {
                         .email = current_account.email,
                         .password = current_account.password,
                         .char_id = @intCast(selected_char_id),
-                        .create_char = char_create_type != 0,
                         .class_type = char_create_type,
                         .skin_type = char_create_skin_type,
                     } });
@@ -406,7 +405,7 @@ pub fn main() !void {
     screen_controller.switchScreen(.main_menu);
 
     zglfw.WindowHint.set(.client_api, @intFromEnum(zglfw.ClientApi.no_api));
-    const window = zglfw.Window.create(1280, 720, "Client", null) catch |e| {
+    const window = zglfw.Window.create(1280, 720, "Faer", null) catch |e| {
         std.log.err("Failed to create window: {any}", .{e});
         return;
     };

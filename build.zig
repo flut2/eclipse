@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) !void {
     const is_debug = optimize == .Debug;
 
     const exe = b.addExecutable(.{
-        .name = "Client",
+        .name = "Faer",
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,

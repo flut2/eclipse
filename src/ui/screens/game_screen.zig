@@ -19,7 +19,7 @@ pub const GameScreen = struct {
         is_container: bool = false,
 
         fn findInvSlotId(screen: GameScreen, x: f32, y: f32) u8 {
-            for (0..20) |i| {
+            for (0..22) |i| {
                 const data = screen.inventory_pos_data[i];
                 if (utils.isInBounds(
                     x,
@@ -40,7 +40,7 @@ pub const GameScreen = struct {
             if (!sc.current_screen.game.container_visible)
                 return 255;
 
-            for (0..8) |i| {
+            for (0..9) |i| {
                 const data = screen.container_pos_data[i];
                 if (utils.isInBounds(
                     x,
@@ -71,8 +71,8 @@ pub const GameScreen = struct {
             return Slot{ .idx = 255 };
         }
 
-        pub fn nextEquippableSlot(slot_types: [20]i8, base_slot_type: i8) Slot {
-            for (0..20) |idx| {
+        pub fn nextEquippableSlot(slot_types: [22]i8, base_slot_type: i8) Slot {
+            for (0..22) |idx| {
                 if (slot_types[idx] > 0 and game_data.ItemType.slotsMatch(slot_types[idx], base_slot_type))
                     return Slot{ .idx = @intCast(idx) };
             }
@@ -80,8 +80,8 @@ pub const GameScreen = struct {
         }
 
         pub fn nextAvailableSlot(screen: GameScreen) Slot {
-            for (0..20) |idx| {
-                if (screen.inventory_items[idx]._item == -1)
+            for (0..22) |idx| {
+                if (screen.inventory_items[idx]._item == std.math.maxInt(u16))
                     return Slot{ .idx = @intCast(idx) };
             }
             return Slot{ .idx = 255 };
@@ -122,17 +122,17 @@ pub const GameScreen = struct {
     health_bar: *element.Bar = undefined,
     mana_bar: *element.Bar = undefined,
     inventory_decor: *element.Image = undefined,
-    inventory_items: [20]*element.Item = undefined,
+    inventory_items: [22]*element.Item = undefined,
     health_potion: *element.Image = undefined,
     health_potion_text: *element.Text = undefined,
     magic_potion: *element.Image = undefined,
     magic_potion_text: *element.Text = undefined,
     container_decor: *element.Image = undefined,
     container_name: *element.Text = undefined,
-    container_items: [8]*element.Item = undefined,
+    container_items: [9]*element.Item = undefined,
     minimap_decor: *element.Image = undefined,
     tooltip_container: *element.Container = undefined,
-    tooltip_item: i32 = -1,
+    tooltip_item: u16 = std.math.maxInt(u16),
     tooltip_decor: *element.Image = undefined,
     tooltip_image: *element.Image = undefined,
     tooltip_item_name: *element.Text = undefined,
@@ -143,8 +143,8 @@ pub const GameScreen = struct {
     tooltip_spacer_two: *element.Image = undefined,
     tooltip_footer: *element.Text = undefined,
 
-    inventory_pos_data: [20]utils.Rect = undefined,
-    container_pos_data: [8]utils.Rect = undefined,
+    inventory_pos_data: [22]utils.Rect = undefined,
+    container_pos_data: [9]utils.Rect = undefined,
 
     _allocator: std.mem.Allocator = undefined,
 
@@ -176,22 +176,11 @@ pub const GameScreen = struct {
             .image_data = .{ .normal = .{ .atlas_data = inventory_data } },
         });
 
-        for (0..20) |i| {
+        for (0..22) |i| {
             screen.inventory_items[i] = try element.Item.create(allocator, .{
-                .x = screen.inventory_decor.x + screen.inventory_pos_data[i].x + (screen.inventory_pos_data[i].w - assets.ui_error_data.texWRaw() * 4.0 + assets.padding * 2) / 2,
-                .y = screen.inventory_decor.y + screen.inventory_pos_data[i].y + (screen.inventory_pos_data[i].h - assets.ui_error_data.texHRaw() * 4.0 + assets.padding * 2) / 2,
-                .image_data = .{ .normal = .{ .scale_x = 4.0, .scale_y = 4.0, .atlas_data = assets.ui_error_data } },
-                .tier_text = .{
-                    .text_data = .{
-                        .text = "",
-                        .size = 11,
-                        .text_type = .bold_italic,
-                        .max_chars = 8,
-                    },
-                    .visible = false,
-                    .x = 0,
-                    .y = 0,
-                },
+                .x = screen.inventory_decor.x + screen.inventory_pos_data[i].x + (screen.inventory_pos_data[i].w - assets.error_data.texWRaw() * 4.0 + assets.padding * 2) / 2,
+                .y = screen.inventory_decor.y + screen.inventory_pos_data[i].y + (screen.inventory_pos_data[i].h - assets.error_data.texHRaw() * 4.0 + assets.padding * 2) / 2,
+                .image_data = .{ .normal = .{ .scale_x = 4.0, .scale_y = 4.0, .atlas_data = assets.error_data } },
                 .visible = false,
                 .draggable = true,
                 .drag_end_callback = itemDragEndCallback,
@@ -209,26 +198,15 @@ pub const GameScreen = struct {
             .visible = false,
         });
 
-        for (0..8) |i| {
+        for (0..9) |i| {
             screen.container_items[i] = try element.Item.create(allocator, .{
-                .x = screen.container_decor.x + screen.container_pos_data[i].x + (screen.container_pos_data[i].w - assets.ui_error_data.texWRaw() * 4.0 + assets.padding * 2) / 2,
-                .y = screen.container_decor.y + screen.container_pos_data[i].y + (screen.container_pos_data[i].h - assets.ui_error_data.texHRaw() * 4.0 + assets.padding * 2) / 2,
+                .x = screen.container_decor.x + screen.container_pos_data[i].x + (screen.container_pos_data[i].w - assets.error_data.texWRaw() * 4.0 + assets.padding * 2) / 2,
+                .y = screen.container_decor.y + screen.container_pos_data[i].y + (screen.container_pos_data[i].h - assets.error_data.texHRaw() * 4.0 + assets.padding * 2) / 2,
                 .image_data = .{ .normal = .{
                     .scale_x = 4.0,
                     .scale_y = 4.0,
-                    .atlas_data = assets.ui_error_data,
+                    .atlas_data = assets.error_data,
                 } },
-                .tier_text = .{
-                    .text_data = .{
-                        .text = "",
-                        .size = 10,
-                        .text_type = .bold,
-                        .max_chars = 8,
-                    },
-                    .visible = false,
-                    .x = 0,
-                    .y = 0,
-                },
                 .visible = false,
                 .draggable = true,
                 .drag_end_callback = itemDragEndCallback,
@@ -480,12 +458,12 @@ pub const GameScreen = struct {
             .y = 0,
         });
 
-        const tooltipBackground_data = assets.getUiData("tooltip_background", 0);
+        const tooltip_background_data = assets.getUiData("tooltip_background", 0);
         screen.tooltip_decor = try screen.tooltip_container.createElement(element.Image, .{
             .x = 0,
             .y = 0,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltipBackground_data, camera.screen_width / 3.5, camera.screen_height / 2, 16, 16, 1, 1, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, camera.screen_width / 3.5, camera.screen_height / 2, 16, 16, 1, 1, 1.0),
             },
         });
 
@@ -500,6 +478,7 @@ pub const GameScreen = struct {
                     .glow = true,
                 },
             },
+            .ui_quad = false,
         });
 
         screen.tooltip_item_name = try screen.tooltip_container.createElement(element.Text, .{
@@ -670,46 +649,46 @@ pub const GameScreen = struct {
         self.fps_text.visible = settings.stats_enabled;
 
         if (map.localPlayerConst()) |local_player| {
-            if (self.last_level != local_player.level) {
-                var level_text_data = &self.level_text.text_data;
-                level_text_data.text = try std.fmt.bufPrint(level_text_data._backing_buffer, "{d}", .{local_player.level});
-                level_text_data.recalculateAttributes(self._allocator);
+            // if (self.last_level != local_player.level) {
+            //     var level_text_data = &self.level_text.text_data;
+            //     level_text_data.text = try std.fmt.bufPrint(level_text_data._backing_buffer, "{d}", .{local_player.level});
+            //     level_text_data.recalculateAttributes(self._allocator);
 
-                self.last_level = local_player.level;
-            }
+            //     self.last_level = local_player.level;
+            // }
 
-            const max_level = local_player.level >= 20;
-            if (max_level) {
-                if (self.last_fame != local_player.fame or self.last_fame_goal != local_player.fame_goal) {
-                    self.fame_bar.visible = true;
-                    self.xp_bar.visible = false;
+            // const max_level = local_player.level >= 20;
+            // if (max_level) {
+            //     if (self.last_fame != local_player.fame or self.last_fame_goal != local_player.fame_goal) {
+            //         self.fame_bar.visible = true;
+            //         self.xp_bar.visible = false;
 
-                    const fame_perc = @as(f32, @floatFromInt(local_player.fame)) / @as(f32, @floatFromInt(local_player.fame_goal));
-                    self.fame_bar.image_data.normal.scissor.max_x = self.fame_bar.width() * fame_perc;
+            //         const fame_perc = @as(f32, @floatFromInt(local_player.fame)) / @as(f32, @floatFromInt(local_player.fame_goal));
+            //         self.fame_bar.image_data.normal.scissor.max_x = self.fame_bar.width() * fame_perc;
 
-                    var fame_text_data = &self.fame_bar.text_data;
-                    fame_text_data.text = try std.fmt.bufPrint(fame_text_data._backing_buffer, "{d}/{d} Fame", .{ local_player.fame, local_player.fame_goal });
-                    fame_text_data.recalculateAttributes(self._allocator);
+            //         var fame_text_data = &self.fame_bar.text_data;
+            //         fame_text_data.text = try std.fmt.bufPrint(fame_text_data._backing_buffer, "{d}/{d} Fame", .{ local_player.fame, local_player.fame_goal });
+            //         fame_text_data.recalculateAttributes(self._allocator);
 
-                    self.last_fame = local_player.fame;
-                    self.last_fame_goal = local_player.fame_goal;
-                }
-            } else {
-                if (self.last_xp != local_player.exp or self.last_xp_goal != local_player.exp_goal) {
-                    self.xp_bar.visible = true;
-                    self.fame_bar.visible = false;
+            //         self.last_fame = local_player.fame;
+            //         self.last_fame_goal = local_player.fame_goal;
+            //     }
+            // } else {
+            //     if (self.last_xp != local_player.exp or self.last_xp_goal != local_player.exp_goal) {
+            //         self.xp_bar.visible = true;
+            //         self.fame_bar.visible = false;
 
-                    const exp_perc = @as(f32, @floatFromInt(local_player.exp)) / @as(f32, @floatFromInt(local_player.exp_goal));
-                    self.xp_bar.image_data.normal.scissor.max_x = self.xp_bar.width() * exp_perc;
+            //         const exp_perc = @as(f32, @floatFromInt(local_player.exp)) / @as(f32, @floatFromInt(local_player.exp_goal));
+            //         self.xp_bar.image_data.normal.scissor.max_x = self.xp_bar.width() * exp_perc;
 
-                    var xp_text_data = &self.xp_bar.text_data;
-                    xp_text_data.text = try std.fmt.bufPrint(xp_text_data._backing_buffer, "{d}/{d} XP", .{ local_player.exp, local_player.exp_goal });
-                    xp_text_data.recalculateAttributes(self._allocator);
+            //         var xp_text_data = &self.xp_bar.text_data;
+            //         xp_text_data.text = try std.fmt.bufPrint(xp_text_data._backing_buffer, "{d}/{d} XP", .{ local_player.exp, local_player.exp_goal });
+            //         xp_text_data.recalculateAttributes(self._allocator);
 
-                    self.last_xp = local_player.exp;
-                    self.last_xp_goal = local_player.exp_goal;
-                }
-            }
+            //         self.last_xp = local_player.exp;
+            //         self.last_xp_goal = local_player.exp_goal;
+            //     }
+            // }
 
             if (self.last_hp != local_player.hp or self.last_max_hp != local_player.max_hp) {
                 const hp_perc = @as(f32, @floatFromInt(local_player.hp)) / @as(f32, @floatFromInt(local_player.max_hp));
@@ -759,14 +738,14 @@ pub const GameScreen = struct {
         if (!self.inited)
             return;
 
-        if (map.localPlayerConst()) |player| {
-            updateStat(self._allocator, &self.stats_attack.text_data, player.attack, player.attack_bonus);
-            updateStat(self._allocator, &self.stats_dexterity.text_data, player.dexterity, player.dexterity_bonus);
-            updateStat(self._allocator, &self.stats_speed.text_data, player.speed, player.speed_bonus);
-            updateStat(self._allocator, &self.stats_defense.text_data, player.defense, player.defense_bonus);
-            updateStat(self._allocator, &self.stats_vitality.text_data, player.vitality, player.vitality_bonus);
-            updateStat(self._allocator, &self.stats_wisdom.text_data, player.wisdom, player.wisdom_bonus);
-        }
+        // if (map.localPlayerConst()) |player| {
+        //     updateStat(self._allocator, &self.stats_attack.text_data, player.attack, player.attack_bonus);
+        //     updateStat(self._allocator, &self.stats_dexterity.text_data, player.dexterity, player.dexterity_bonus);
+        //     updateStat(self._allocator, &self.stats_speed.text_data, player.speed, player.speed_bonus);
+        //     updateStat(self._allocator, &self.stats_defense.text_data, player.defense, player.defense_bonus);
+        //     updateStat(self._allocator, &self.stats_vitality.text_data, player.vitality, player.vitality_bonus);
+        //     updateStat(self._allocator, &self.stats_wisdom.text_data, player.wisdom, player.wisdom_bonus);
+        // }
     }
 
     pub fn updateFpsText(self: *GameScreen, fps: f64, mem: f32) !void {
@@ -806,7 +785,7 @@ pub const GameScreen = struct {
         }
     }
 
-    pub fn updateTooltip(self: *GameScreen, x: f32, y: f32, item: i32) void {
+    pub fn updateTooltip(self: *GameScreen, x: f32, y: f32, item: u16) void {
         self.tooltip_container.x = x - self.tooltip_decor.width() - 15;
         self.tooltip_container.y = y - self.tooltip_decor.height() - 15;
 
@@ -833,7 +812,7 @@ pub const GameScreen = struct {
 
             self.tooltip_rarity.text_data.recalculateAttributes(self._allocator);
 
-            if (assets.ui_atlas_data.get(props.texture_data.sheet)) |data| {
+            if (assets.atlas_data.get(props.texture_data.sheet)) |data| {
                 self.tooltip_image.image_data.normal.atlas_data = data[props.texture_data.index];
             }
 
@@ -872,7 +851,6 @@ pub const GameScreen = struct {
                         .heal => std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Restores " ++ decimal_fmt ++ " HP", .{ text, data.amount }),
                         .magic => std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Restores " ++ decimal_fmt ++ " MP", .{ text, data.amount }),
                         .create => std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Spawn the following: " ++ string_fmt, .{ text, data.id }),
-                        .pet => std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Spawn the following: " ++ string_fmt, .{ text, data.object_id }),
                         .heal_nova => std.fmt.bufPrint(
                             self.getMainBuffer(),
                             line_base_inset ++ "Restores " ++ decimal_fmt ++ " HP within " ++ decimal_fmt ++ " tiles",
@@ -882,11 +860,6 @@ pub const GameScreen = struct {
                             self.getMainBuffer(),
                             line_base_inset ++ "Restores " ++ decimal_fmt ++ " HP within " ++ decimal_fmt ++ " tiles",
                             .{ text, data.amount, data.range },
-                        ),
-                        .bullet_nova => std.fmt.bufPrint(
-                            self.getMainBuffer(),
-                            line_base_inset ++ "Spawn an explosion of " ++ decimal_fmt ++ " bullets",
-                            .{ text, 20 },
                         ),
                         .stat_boost_self => std.fmt.bufPrint(
                             self.getMainBuffer(),
@@ -899,67 +872,21 @@ pub const GameScreen = struct {
                                 " tiles for " ++ decimal_fmt ++ " seconds",
                             .{ text, data.amount, if (data.stat) |stat| stat.toString() else "Unknown", data.range, data.duration },
                         ),
-                        .effect_aura => std.fmt.bufPrint(
+                        .condition_effect_aura => std.fmt.bufPrint(
                             self.getMainBuffer(),
                             line_base_inset ++ "Grant players " ++ string_fmt ++ " within " ++ decimal_fmt ++ " tiles for " ++ decimal_fmt ++ " seconds",
                             .{ text, data.effect.toString(), data.range, data.duration },
                         ),
-                        .effect => std.fmt.bufPrint(
+                        .condition_effect_self => std.fmt.bufPrint(
                             self.getMainBuffer(),
                             line_base_inset ++ "Grant yourself " ++ string_fmt ++ " for " ++ decimal_fmt ++ " seconds",
                             .{ text, data.effect.toString(), data.duration },
                         ),
                         .teleport => std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Teleport to cursor", .{text}),
-                        .vampire_blast => std.fmt.bufPrint(
-                            self.getMainBuffer(),
-                            line_base_inset ++ "Deal " ++ decimal_fmt ++ " HP damage to enemies within " ++ decimal_fmt ++ " tiles, healing in the process",
-                            .{ text, data.total_damage, data.radius },
-                        ),
-                        .poison_grenade => std.fmt.bufPrint(
-                            self.getMainBuffer(),
-                            line_base_inset ++ "Poison enemies for " ++ decimal_fmt ++ " HP damage over " ++ decimal_fmt ++
-                                " seconds within " ++ decimal_fmt ++ " tiles",
-                            .{ text, data.total_damage, data.duration, data.radius },
-                        ),
-                        .trap => std.fmt.bufPrint(
-                            self.getMainBuffer(),
-                            line_base_inset ++ "Deal " ++ decimal_fmt ++ " HP damage to enemies within " ++ decimal_fmt ++
-                                " tiles, applying Slowed for " ++ decimal_fmt ++ " seconds in the process",
-                            .{ text, data.total_damage, data.radius, data.duration },
-                        ),
-                        .stasis_blast => std.fmt.bufPrint(
-                            self.getMainBuffer(),
-                            line_base_inset ++ "Applies Stasis to enemies within 3 tiles for " ++ decimal_fmt ++ " seconds",
-                            .{ text, data.duration },
-                        ),
-                        .decoy => std.fmt.bufPrint(
-                            self.getMainBuffer(),
-                            line_base_inset ++ "Spawn a decoy for " ++ decimal_fmt ++ " seconds",
-                            .{ text, data.duration },
-                        ),
-                        .lightning => std.fmt.bufPrint(
-                            self.getMainBuffer(),
-                            line_base_inset ++ "Deal " ++ decimal_fmt ++ " HP damage to " ++ decimal_fmt ++ " enemies",
-                            .{ text, data.total_damage, data.max_targets },
-                        ),
                         .unlock_portal => std.fmt.bufPrint(
                             self.getMainBuffer(),
                             line_base_inset ++ "Unlocks the following dungeon: " ++ string_fmt,
                             .{ text, data.dungeon_name },
-                        ),
-                        .dye => std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Applies a new color", .{text}),
-                        .backpack => std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Unlocks your Backpack slots", .{text}),
-                        .remove_negative_conditions_self => std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Cleanses all your debuffs", .{text}),
-                        .remove_negative_conditions_aura => std.fmt.bufPrint(
-                            self.getMainBuffer(),
-                            line_base_inset ++ "Cleanses all debuffs within " ++ decimal_fmt ++ " tiles",
-                            .{ text, data.range },
-                        ),
-                        .clear_condition_effect_self => std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Removes all your buffs/debuffs", .{text}),
-                        .clear_condition_effect_aura => std.fmt.bufPrint(
-                            self.getMainBuffer(),
-                            line_base_inset ++ "Removes all buffs/debuffs within " ++ decimal_fmt ++ " tiles",
-                            .{ text, data.range },
                         ),
                         else => continue,
                     } catch text;
@@ -1042,7 +969,12 @@ pub const GameScreen = struct {
 
             if (props.projectile) |proj| {
                 text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Bullets: " ++ decimal_fmt, .{ text, props.num_projectiles }) catch text;
-                text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Damage: " ++ decimal_fmt ++ "-" ++ decimal_fmt, .{ text, proj.min_damage, proj.max_damage }) catch text;
+                if (proj.physical_damage > 0)
+                    text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Physical Damage: " ++ decimal_fmt, .{ text, proj.physical_damage }) catch text;
+                if (proj.magic_damage > 0)
+                    text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Magic Damage: " ++ decimal_fmt, .{ text, proj.magic_damage }) catch text;
+                if (proj.true_damage > 0)
+                    text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "True Damage: " ++ decimal_fmt, .{ text, proj.true_damage }) catch text;
                 text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Range: " ++ float_fmt, .{ text, proj.speed * @as(f32, @floatFromInt(proj.lifetime_ms)) }) catch text;
 
                 for (proj.effects, 0..) |effect, i| {
@@ -1098,12 +1030,6 @@ pub const GameScreen = struct {
 
             if (props.usable)
                 text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Cooldown: " ++ decimal_fmt ++ " seconds", .{ text, props.cooldown }) catch text;
-
-            if (props.doses != 0)
-                text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Doses: " ++ decimal_fmt, .{ text, props.doses }) catch text;
-
-            if (props.fame_bonus != 0)
-                text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Fame Bonus: " ++ decimal_fmt ++ "%", .{ text, props.fame_bonus }) catch text;
 
             self.tooltip_main.text_data.text = text;
             self.tooltip_main.text_data.recalculateAttributes(self._allocator);
@@ -1227,18 +1153,16 @@ pub const GameScreen = struct {
 
         if (end_slot.idx == 255) {
             if (start_slot.is_container) {
-                self.setContainerItem(-1, start_slot.idx);
+                self.setContainerItem(std.math.maxInt(u16), start_slot.idx);
                 network.queuePacket(.{ .inv_drop = .{
                     .obj_id = int_id,
                     .slot_id = start_slot.idx,
-                    .obj_type = self.container_items[start_slot.idx]._item,
                 } });
             } else {
-                self.setInvItem(-1, start_slot.idx);
+                self.setInvItem(std.math.maxInt(u16), start_slot.idx);
                 network.queuePacket(.{ .inv_drop = .{
                     .obj_id = map.local_player_id,
                     .slot_id = start_slot.idx,
-                    .obj_type = self.inventory_items[start_slot.idx]._item,
                 } });
             }
         } else {
@@ -1251,7 +1175,7 @@ pub const GameScreen = struct {
                 else
                     self.inventory_items[start_slot.idx]._item;
 
-                if (end_slot.idx >= 12 and !local_player.has_backpack) {
+                if (end_slot.idx >= 12 and local_player.tier < 2) {
                     if (start_slot.is_container) {
                         self.setContainerItem(start_item, start_slot.idx);
                     } else {
@@ -1285,10 +1209,8 @@ pub const GameScreen = struct {
                     .y = local_player.y,
                     .from_obj_id = if (start_slot.is_container) int_id else map.local_player_id,
                     .from_slot_id = start_slot.idx,
-                    .from_obj_type = start_item,
                     .to_obj_id = if (end_slot.is_container) int_id else map.local_player_id,
                     .to_slot_id = end_slot.idx,
-                    .to_obj_type = end_item,
                 } });
 
                 assets.playSfx("inventory_move_item");
@@ -1310,7 +1232,6 @@ pub const GameScreen = struct {
                     network.queuePacket(.{ .use_item = .{
                         .obj_id = map.local_player_id,
                         .slot_id = start_slot.idx,
-                        .obj_type = item._item,
                         .x = local_player.x,
                         .y = local_player.y,
                         .time = main.current_time,
@@ -1400,7 +1321,6 @@ pub const GameScreen = struct {
                     network.queuePacket(.{ .use_item = .{
                         .obj_id = if (slot.is_container) current_screen.container_id else map.local_player_id,
                         .slot_id = slot.idx,
-                        .obj_type = item._item,
                         .x = local_player.x,
                         .y = local_player.y,
                         .time = main.current_time,
@@ -1418,9 +1338,9 @@ pub const GameScreen = struct {
         itemDoubleClickCallback(self.inventory_items[idx]);
     }
 
-    pub fn setContainerItem(self: *GameScreen, item: i32, idx: u8) void {
-        if (item == -1) {
-            self.container_items[idx]._item = -1;
+    pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
+        if (item == std.math.maxInt(u16)) {
+            self.container_items[idx]._item = std.math.maxInt(u16);
             self.container_items[idx].visible = false;
             return;
         }
@@ -1428,7 +1348,7 @@ pub const GameScreen = struct {
         self.container_items[idx].visible = true;
 
         if (game_data.item_type_to_props.get(@intCast(item))) |props| {
-            if (assets.ui_atlas_data.get(props.texture_data.sheet)) |data| {
+            if (assets.atlas_data.get(props.texture_data.sheet)) |data| {
                 const atlas_data = data[props.texture_data.index];
                 const base_x = self.container_decor.x + self.container_pos_data[idx].x;
                 const base_y = self.container_decor.y + self.container_pos_data[idx].y;
@@ -1439,30 +1359,6 @@ pub const GameScreen = struct {
                 self.container_items[idx].image_data.normal.atlas_data = atlas_data;
                 self.container_items[idx].x = base_x + (pos_w - self.container_items[idx].width() + assets.padding * 2) / 2;
                 self.container_items[idx].y = base_y + (pos_h - self.container_items[idx].height() + assets.padding * 2) / 2;
-
-                if (self.container_items[idx].tier_text) |*tier_text| {
-                    if (props.consumable) {
-                        tier_text.visible = false;
-                    } else {
-                        var tier_base: []const u8 = &[0]u8{};
-                        if (std.mem.eql(u8, props.tier, "UT")) {
-                            tier_base = props.tier;
-                            tier_text.text_data.color = 0x8A2BE2;
-                        } else {
-                            tier_base = std.fmt.bufPrint(tier_text.text_data._backing_buffer, "T{s}", .{props.tier}) catch @panic("Out of memory, tier alloc failed");
-                            tier_text.text_data.color = 0xFFFFFF;
-                        }
-
-                        tier_text.text_data.text = tier_base;
-                        tier_text.text_data.recalculateAttributes(self._allocator);
-
-                        // the positioning is relative to parent
-                        tier_text.x = pos_w - tier_text.text_data._width - 2;
-                        tier_text.y = pos_h - tier_text.text_data._height + 6;
-                        tier_text.visible = true;
-                    }
-                }
-
                 return;
             } else {
                 std.log.err("Could not find ui sheet {s} for item with type 0x{x}, index {d}", .{ props.texture_data.sheet, item, idx });
@@ -1471,16 +1367,16 @@ pub const GameScreen = struct {
             std.log.err("Attempted to populate inventory index {d} with item 0x{x}, but props was not found", .{ idx, item });
         }
 
-        const atlas_data = assets.ui_error_data;
-        self.container_items[idx]._item = -1;
+        const atlas_data = assets.error_data;
+        self.container_items[idx]._item = std.math.maxInt(u16);
         self.container_items[idx].image_data.normal.atlas_data = atlas_data;
         self.container_items[idx].x = self.container_decor.x + self.container_pos_data[idx].x + (self.container_pos_data[idx].w - self.container_items[idx].width() + assets.padding * 2) / 2;
         self.container_items[idx].y = self.container_decor.y + self.container_pos_data[idx].y + (self.container_pos_data[idx].h - self.container_items[idx].height() + assets.padding * 2) / 2;
     }
 
-    pub fn setInvItem(self: *GameScreen, item: i32, idx: u8) void {
-        if (item == -1) {
-            self.inventory_items[idx]._item = -1;
+    pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
+        if (item == std.math.maxInt(u16)) {
+            self.inventory_items[idx]._item = std.math.maxInt(u16);
             self.inventory_items[idx].visible = false;
             return;
         }
@@ -1488,7 +1384,7 @@ pub const GameScreen = struct {
         self.inventory_items[idx].visible = true;
 
         if (game_data.item_type_to_props.get(@intCast(item))) |props| {
-            if (assets.ui_atlas_data.get(props.texture_data.sheet)) |data| {
+            if (assets.atlas_data.get(props.texture_data.sheet)) |data| {
                 const atlas_data = data[props.texture_data.index];
                 const base_x = self.inventory_decor.x + self.inventory_pos_data[idx].x;
                 const base_y = self.inventory_decor.y + self.inventory_pos_data[idx].y;
@@ -1499,29 +1395,6 @@ pub const GameScreen = struct {
                 self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
                 self.inventory_items[idx].x = base_x + (pos_w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
                 self.inventory_items[idx].y = base_y + (pos_h - self.inventory_items[idx].height() + assets.padding * 2) / 2;
-
-                if (self.inventory_items[idx].tier_text) |*tier_text| {
-                    if (props.consumable) {
-                        tier_text.visible = false;
-                    } else {
-                        var tier_base: []const u8 = &[0]u8{};
-                        if (std.mem.eql(u8, props.tier, "UT")) {
-                            tier_base = props.tier;
-                            tier_text.text_data.color = 0x8A2BE2;
-                        } else {
-                            tier_base = std.fmt.bufPrint(tier_text.text_data._backing_buffer, "T{s}", .{props.tier}) catch @panic("Out of memory, tier alloc failed");
-                            tier_text.text_data.color = 0xFFFFFF;
-                        }
-
-                        tier_text.text_data.text = tier_base;
-                        tier_text.text_data.recalculateAttributes(self._allocator);
-
-                        // the positioning is relative to parent
-                        tier_text.x = pos_w - tier_text.text_data._width;
-                        tier_text.y = pos_h - tier_text.text_data._height + 4;
-                        tier_text.visible = true;
-                    }
-                }
                 return;
             } else {
                 std.log.err("Could not find ui sheet {s} for item with type 0x{x}, index {d}", .{ props.texture_data.sheet, item, idx });
@@ -1530,8 +1403,8 @@ pub const GameScreen = struct {
             std.log.err("Attempted to populate inventory index {d} with item 0x{x}, but props was not found", .{ idx, item });
         }
 
-        const atlas_data = assets.ui_error_data;
-        self.inventory_items[idx]._item = -1;
+        const atlas_data = assets.error_data;
+        self.inventory_items[idx]._item = std.math.maxInt(u16);
         self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
         self.inventory_items[idx].x = self.inventory_decor.x + self.inventory_pos_data[idx].x + (self.inventory_pos_data[idx].w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
         self.inventory_items[idx].y = self.inventory_decor.y + self.inventory_pos_data[idx].y + (self.inventory_pos_data[idx].h - self.inventory_items[idx].height() + assets.padding * 2) / 2;

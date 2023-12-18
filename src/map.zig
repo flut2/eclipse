@@ -14,8 +14,7 @@ const sc = @import("ui/controllers//screen_controller.zig");
 pub const move_threshold = 0.4;
 pub const min_move_speed = 0.004;
 pub const max_move_speed = 0.0096;
-pub const min_attack_freq = 0.0015;
-pub const max_attack_freq = 0.008;
+pub const attack_frequency = 0.005;
 pub const min_attack_mult = 0.5;
 pub const max_attack_mult = 2.0;
 pub const max_sink_level = 18.0;
@@ -172,26 +171,21 @@ pub const GameObject = struct {
     size: f32 = 0,
     max_hp: i32 = 0,
     hp: i32 = 0,
-    defense: i32 = 0,
+    defense: i16 = 0,
+    resistance: i16 = 0,
     condition: utils.Condition = .{},
-    level: i32 = 0,
     tex_1: i32 = 0,
     tex_2: i32 = 0,
-    alt_texture_index: i32 = 0,
-    inventory: [8]i32 = [_]i32{-1} ** 8,
+    alt_texture_index: u16 = 0,
+    inventory: [9]u16 = [_]u16{std.math.maxInt(u16)} ** 9,
     owner_acc_id: i32 = -1,
     last_merch_type: u16 = 0,
     merchant_obj_type: u16 = 0,
-    merchant_rem_count: i32 = 0,
-    merchant_rem_minute: i32 = 0,
-    merchant_discount: i32 = 0,
-    sellable_price: i32 = 0,
+    merchant_rem_count: i8 = 0,
+    sellable_price: u16 = 0,
     sellable_currency: game_data.Currency = .gold,
-    sellable_rank_req: i32 = 0,
     portal_active: bool = false,
-    object_connection: i32 = 0,
     owner_account_id: i32 = 0,
-    rank_required: i32 = 0,
     anim_data: ?assets.AnimEnemyData = null,
     atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
     top_atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
@@ -482,7 +476,7 @@ pub const GameObject = struct {
                 effect.addToMap();
             }
 
-            const cond_int: u64 = @bitCast(conditions);
+            const cond_int: @typeInfo(utils.Condition).Struct.backing_integer.? = @bitCast(conditions);
             for (0..@bitSizeOf(utils.Condition)) |i| {
                 if (cond_int & (@as(usize, 1) << @intCast(i)) != 0) {
                     const eff: utils.ConditionEnum = @enumFromInt(i + 1);
@@ -630,48 +624,50 @@ pub const Player = struct {
     alpha: f32 = 1.0,
     name: []const u8 = &[0]u8{},
     name_text_data: element.TextData = undefined,
-    name_chosen: bool = false,
     account_id: i32 = 0,
     size: f32 = 0,
     max_hp: i32 = 0,
+    max_mp: i16 = 0,
     hp: i32 = 0,
-    max_mp: i32 = 0,
-    mp: i32 = 0,
-    attack: i32 = 0,
-    defense: i32 = 0,
-    speed: i32 = 0,
-    vitality: i32 = 0,
-    wisdom: i32 = 0,
-    dexterity: i32 = 0,
-    hp_boost: i32 = 0,
-    mp_boost: i32 = 0,
-    attack_bonus: i32 = 0,
-    defense_bonus: i32 = 0,
-    speed_bonus: i32 = 0,
-    vitality_bonus: i32 = 0,
-    wisdom_bonus: i32 = 0,
-    dexterity_bonus: i32 = 0,
-    health_stack_count: i32 = 0,
-    magic_stack_count: i32 = 0,
+    mp: i16 = 0,
+    strength: i16 = 0,
+    defense: i16 = 0,
+    speed: i16 = 0,
+    stamina: i16 = 0,
+    wit: i16 = 0,
+    resistance: i16 = 0,
+    intelligence: i16 = 0,
+    penetration: i16 = 0,
+    piercing: i16 = 0,
+    haste: i16 = 0,
+    tenacity: i16 = 0,
+    hp_bonus: i16 = 0,
+    mp_bonus: i16 = 0,
+    strength_bonus: i16 = 0,
+    defense_bonus: i16 = 0,
+    speed_bonus: i16 = 0,
+    stamina_bonus: i16 = 0,
+    wit_bonus: i16 = 0,
+    resistance_bonus: i16 = 0,
+    intelligence_bonus: i16 = 0,
+    penetration_bonus: i16 = 0,
+    piercing_bonus: i16 = 0,
+    haste_bonus: i16 = 0,
+    tenacity_bonus: i16 = 0,
+    hit_multiplier: f32 = 1.0,
+    damage_multiplier: f32 = 1.0,
     condition: utils.Condition = utils.Condition{},
-    inventory: [20]i32 = [_]i32{-1} ** 20,
-    slot_types: [20]i8 = [_]i8{0} ** 20,
-    has_backpack: bool = false,
-    exp_goal: i32 = 0,
-    exp: i32 = 0,
-    level: i32 = 0,
-    stars: i32 = 0,
+    inventory: [22]u16 = [_]u16{std.math.maxInt(u16)} ** 22,
+    slot_types: [22]i8 = [_]i8{0} ** 22,
+    tier: u8 = 0,
     tex_1: i32 = 0,
     tex_2: i32 = 0,
-    skin: i32 = 0,
-    glow: i32 = 0,
-    credits: i32 = 0,
-    current_fame: i32 = 0,
-    fame: i32 = 0,
-    fame_goal: i32 = 0,
+    skin: u16 = 0,
+    gold: i32 = 0,
+    gems: i32 = 0,
+    crowns: i32 = 0,
     guild: []const u8 = &[0]u8{},
-    guild_rank: i32 = 0,
-    oxygen_bar: i32 = 0,
+    guild_rank: i8 = 0,
     attack_start: i64 = 0,
     attack_period: i64 = 0,
     attack_angle: f32 = 0,
@@ -721,12 +717,24 @@ pub const Player = struct {
         }
     }
 
-    pub fn attackMultiplier(noalias self: *const Player) f32 {
+    pub fn strengthMultiplier(noalias self: *const Player) f32 {
         if (self.condition.weak)
             return min_attack_mult;
 
-        const float_attack: f32 = @floatFromInt(self.attack);
-        var mult = min_attack_mult + float_attack / 75.0 * (max_attack_mult - min_attack_mult);
+        const float_strength: f32 = @floatFromInt(self.strength);
+        var mult = min_attack_mult + float_strength / 75.0 * (max_attack_mult - min_attack_mult);
+        if (self.condition.damaging)
+            mult *= 1.5;
+
+        return mult;
+    }
+
+    pub fn witMultiplier(noalias self: *const Player) f32 {
+        if (self.condition.weak)
+            return min_attack_mult;
+
+        const float_wit: f32 = @floatFromInt(self.wit);
+        var mult = min_attack_mult + float_wit / 75.0 * (max_attack_mult - min_attack_mult);
         if (self.condition.damaging)
             mult *= 1.5;
 
@@ -817,7 +825,7 @@ pub const Player = struct {
         var default_name: []const u8 = "";
         for (game_data.classes) |class| {
             if (class.obj_type == self.obj_type and class.slot_types.len >= 20) {
-                self.slot_types = class.slot_types[0..20].*;
+                self.slot_types = class.slot_types[0..22].*;
                 default_name = class.name;
                 self.class_name = class.name;
             }
@@ -838,11 +846,6 @@ pub const Player = struct {
         };
     }
 
-    pub fn attackFrequency(noalias self: *const Player) f32 {
-        const frequency = (min_attack_freq + ((@as(f32, @floatFromInt(self.dexterity)) / 75.0) * (max_attack_freq - min_attack_freq)));
-        return frequency;
-    }
-
     pub fn useAbility(noalias self: *Player, screen_x: f32, screen_y: f32, use_type: game_data.UseType) void {
         const item_type = self.inventory[1];
         const item_props = game_data.item_type_to_props.getPtr(@intCast(item_type));
@@ -851,22 +854,13 @@ pub const Player = struct {
             return;
         }
 
-        const angle = camera.angle + std.math.atan2(f32, screen_y - camera.screen_height / 2.0, screen_x - camera.screen_width / 2.0);
-
-        var is_shoot = false;
         var needs_walkable = false;
-
         if (use_type == game_data.UseType.start) {
             if (item_props.?.activations) |activate| {
                 for (activate) |data| {
-                    if (data.activation_type == game_data.ActivationType.teleport or
-                        data.activation_type == game_data.ActivationType.object_toss)
-                    {
+                    if (data.activation_type == game_data.ActivationType.teleport) {
                         needs_walkable = true;
-                    }
-
-                    if (data.activation_type == game_data.ActivationType.shoot) {
-                        is_shoot = true;
+                        break;
                     }
                 }
             }
@@ -899,32 +893,11 @@ pub const Player = struct {
             network.queuePacket(.{ .use_item = .{
                 .obj_id = self.obj_id,
                 .slot_id = 1,
-                .obj_type = item_type,
                 .x = position.x,
                 .y = position.y,
                 .time = main.current_time,
                 .use_type = use_type,
             } });
-
-            if (is_shoot)
-                self.doShoot(now, item_type, item_props, angle, false);
-        } else {
-            if (item_props.?.multi_phase) {
-                network.queuePacket(.{ .use_item = .{
-                    .obj_id = self.obj_id,
-                    .slot_id = 1,
-                    .obj_type = item_type,
-                    .x = position.x,
-                    .y = position.y,
-                    .time = main.current_time,
-                    .use_type = use_type,
-                } });
-
-                // todo
-                // if (item_props.?.mp_end_cost <= self.mp and !self.mp_zeroed) {
-                //     self.doShoot(now, item_type, item_props, angle, false);
-                // }
-            }
         }
 
         assets.playSfx(item_props.?.sound);
@@ -945,15 +918,9 @@ pub const Player = struct {
             const x = self.x + @cos(attack_angle) * 0.25;
             const y = self.y + @sin(attack_angle) * 0.25;
 
-            const att_mult = if (use_mult) self.attackMultiplier() else 1.0;
-            const damage_raw: f32 = @floatFromInt(random.nextIntRange(@intCast(proj_props.min_damage), @intCast(proj_props.max_damage)));
-            const damage: i32 = @intFromFloat(damage_raw * att_mult);
-
-            // todo add once move records are added
-            // var damage: i32 = @as(i32, @intFromFloat(damageRaw));
-            // if (time > map.last_records_clear_time + (std.time.us_per_ms * 600)) { // 600ms then drop dmg
-            //     damage = 0;
-            // }
+            const physical_damage = @as(f32, @floatFromInt(proj_props.physical_damage)) * (if (use_mult) self.strengthMultiplier() else 1.0);
+            const magic_damage = @as(f32, @floatFromInt(proj_props.magic_damage)) * (if (use_mult) self.witMultiplier() else 1.0);
+            const true_damage = proj_props.true_damage;
 
             var proj = Projectile{
                 .x = x,
@@ -963,7 +930,9 @@ pub const Player = struct {
                 .start_time = @divFloor(time, std.time.us_per_ms),
                 .bullet_id = bullet_id,
                 .owner_id = self.obj_id,
-                .damage = damage,
+                .physical_damage = @intFromFloat(physical_damage),
+                .magic_damage = @intFromFloat(magic_damage),
+                .true_damage = true_damage,
             };
             proj.addToMap(false);
 
@@ -991,7 +960,7 @@ pub const Player = struct {
         if (item_props == null or item_props.?.projectile == null)
             return;
 
-        const attack_delay: i64 = @intFromFloat((1.0 / attackFrequency(self)) * (1.0 / item_props.?.rate_of_fire) * std.time.us_per_ms);
+        const attack_delay: i64 = @intFromFloat(1.0 / (item_props.?.rate_of_fire * attack_frequency) * std.time.us_per_ms);
         if (time < self.attack_start + attack_delay)
             return;
 
@@ -1057,7 +1026,7 @@ pub const Player = struct {
                 effect.addToMap();
             }
 
-            const cond_int: u64 = @bitCast(conditions);
+            const cond_int: @typeInfo(utils.Condition).Struct.backing_integer.? = @bitCast(conditions);
             for (0..@bitSizeOf(utils.Condition)) |i| {
                 if (cond_int & (@as(usize, 1) << @intCast(i)) != 0) {
                     const eff: utils.ConditionEnum = @enumFromInt(i + 1);
@@ -1211,13 +1180,12 @@ pub const Player = struct {
                 if (validPos(floor_x, floor_y)) {
                     const square = squares[floor_y * width + floor_x];
                     if (square.tile_type != 0xFFFF and square.tile_type != 0xFF and
-                        square.props != null and square.props.?.min_damage > 0 and !square.protect_from_ground_damage)
+                        square.props != null and square.props.?.damage > 0 and !square.protect_from_ground_damage)
                     {
-                        const dmg = random.nextIntRange(square.props.?.min_damage, square.props.?.max_damage);
                         network.queuePacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
                         self.takeDamage(
-                            @intCast(dmg),
-                            dmg >= self.hp,
+                            @intCast(square.props.?.damage),
+                            square.props.?.damage >= self.hp,
                             true,
                             time,
                             utils.Condition{},
@@ -1414,7 +1382,9 @@ pub const Projectile = struct {
     bullet_id: u8 = 0,
     owner_id: i32 = 0,
     damage_players: bool = false,
-    damage: i32 = 0,
+    physical_damage: i32 = 0,
+    magic_damage: i32 = 0,
+    true_damage: i32 = 0,
     props: game_data.ProjProps,
     last_hit_check: i64 = 0,
     colors: []u32 = &[0]u32{},
@@ -1742,7 +1712,7 @@ pub const Projectile = struct {
                     if (local_player_id == player.obj_id) {
                         const pierced = self.props.armor_piercing;
                         const d = damageWithDefense(
-                            @floatFromInt(self.damage),
+                            @floatFromInt(self.physical_damage),
                             @floatFromInt(player.defense),
                             pierced,
                             player.condition,
@@ -1805,7 +1775,7 @@ pub const Projectile = struct {
                     if (object.is_enemy) {
                         const pierced = self.props.armor_piercing;
                         const d = damageWithDefense(
-                            @floatFromInt(self.damage),
+                            @floatFromInt(self.physical_damage),
                             @floatFromInt(object.defense),
                             pierced,
                             object.condition,
@@ -1979,7 +1949,6 @@ pub var day_light_intensity: f32 = 0.0;
 pub var night_light_intensity: f32 = 0.0;
 pub var server_time_offset: i64 = 0;
 pub var last_records_clear_time: i64 = 0;
-pub var random = utils.Random{};
 pub var minimap: zstbi.Image = undefined;
 var last_sort: i64 = -1;
 
@@ -2031,7 +2000,6 @@ pub fn dispose(allocator: std.mem.Allocator) void {
     interactive_type.store(.game_object, .Release);
     width = 0;
     height = 0;
-    seed = 0;
 
     for (entities.items) |*en| {
         disposeEntity(allocator, en);
@@ -2322,7 +2290,7 @@ pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) v
     if (!interactive_set and sc.current_screen == .game) {
         if (sc.current_screen.game.container_id != -1) {
             inline for (0..8) |idx| {
-                sc.current_screen.game.setContainerItem(-1, idx);
+                sc.current_screen.game.setContainerItem(std.math.maxInt(u16), idx);
             }
         }
 

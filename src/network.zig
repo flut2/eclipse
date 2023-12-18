@@ -31,133 +31,126 @@ pub const TradeItem = extern struct {
 
 const C2SPacketId = enum(u8) {
     unknown = 0,
-    accept_trade = 1,
-    aoe_ack = 2,
-    buy = 3,
-    cancel_trade = 4,
-    change_guild_rank = 5,
-    change_trade = 6,
-    choose_name = 8,
-    create_guild = 10,
-    edit_account_list = 11,
-    enemy_hit = 12,
-    escape = 13,
-    ground_damage = 15,
-    guild_invite = 16,
-    guild_remove = 17,
-    hello = 18,
-    inv_drop = 19,
-    inv_swap = 20,
-    join_guild = 21,
-    move = 23,
-    other_hit = 24,
-    player_hit = 25,
-    player_shoot = 26,
-    player_text = 27,
-    pong = 28,
-    request_trade = 29,
-    reskin = 30,
-    shoot_ack = 32,
-    square_hit = 33,
-    teleport = 34,
-    update_ack = 35,
-    use_item = 36,
-    use_portal = 37,
+    player_shoot = 1,
+    move = 2,
+    player_text = 3,
+    update_ack = 4,
+    inv_swap = 5,
+    use_item = 6,
+    hello = 7,
+    inv_drop = 8,
+    pong = 9,
+    teleport = 10,
+    use_portal = 11,
+    buy = 12,
+    ground_damage = 13,
+    player_hit = 14,
+    enemy_hit = 15,
+    aoe_ack = 16,
+    shoot_ack = 17,
+    other_hit = 18,
+    square_hit = 19,
+    edit_account_list = 20,
+    create_guild = 21,
+    guild_remove = 22,
+    guild_invite = 23,
+    request_trade = 24,
+    change_trade = 25,
+    accept_trade = 26,
+    cancel_trade = 27,
+    escape = 28,
+    join_guild = 29,
+    change_guild_rank = 30,
+    reskin = 31,
+    map_hello = 32,
+    use_ability = 33,
 };
 
 // All packets without variable length fields (like slices) should be packed.
 // This allows us to directly copy the struct into the buffer
 pub const C2SPacket = union(C2SPacketId) {
     unknown: packed struct {},
-    accept_trade: struct { my_offer: []bool, your_offer: []bool },
-    aoe_ack: packed struct { time: u32, x: f32, y: f32 },
-    buy: packed struct { obj_id: i32 },
-    cancel_trade: packed struct {},
-    change_guild_rank: struct { name: []const u8, rank: i32 },
-    change_trade: struct { offer: []bool },
-    choose_name: struct { name: []const u8 },
-    create_guild: struct { guild_name: []const u8 },
-    edit_account_list: packed struct { list_id: i32, add: bool, obj_id: i32 },
-    enemy_hit: packed struct { time: i64, bullet_id: u8, target_id: i32, killed: bool },
-    escape: packed struct {},
-    ground_damage: packed struct { time: i64, x: f32, y: f32 },
-    guild_invite: struct { name: []const u8 },
-    guild_remove: struct { name: []const u8 },
-    hello: struct {
-        build_ver: []const u8,
-        game_id: i32,
-        email: []const u8,
-        password: []const u8,
-        char_id: i16,
-        create_char: bool,
-        class_type: u16,
-        skin_type: u16,
-    },
-    inv_drop: packed struct { obj_id: i32, slot_id: u8, obj_type: i32 },
+    player_shoot: packed struct { time: i64, bullet_id: u8, container_type: u16, start_x: f32, start_y: f32, angle: f32 },
+    move: struct { tick_id: u8, time: i64, pos_x: f32, pos_y: f32, records: []const TimedPosition },
+    player_text: struct { text: []const u8 },
+    update_ack: packed struct {},
     inv_swap: packed struct {
         time: i64,
         x: f32,
         y: f32,
         from_obj_id: i32,
         from_slot_id: u8,
-        from_obj_type: i32,
         to_obj_id: i32,
         to_slot_id: u8,
-        to_obj_type: i32,
     },
-    join_guild: struct { name: []const u8 },
-    move: struct { tick_id: i32, time: i64, pos_x: f32, pos_y: f32, records: []const TimedPosition },
-    other_hit: packed struct { time: i64, bullet_id: u8, object_id: i32, target_id: i32 },
-    player_hit: packed struct { bullet_id: u8, object_id: i32 },
-    player_shoot: packed struct { time: i64, bullet_id: u8, container_type: u16, start_x: f32, start_y: f32, angle: f32 },
-    player_text: struct { text: []const u8 },
+    use_item: packed struct { time: i64, obj_id: i32, slot_id: u8, x: f32, y: f32, use_type: game_data.UseType },
+    hello: struct {
+        build_ver: []const u8,
+        game_id: i32,
+        email: []const u8,
+        password: []const u8,
+        char_id: i16,
+        class_type: u16,
+        skin_type: u16,
+    },
+    inv_drop: packed struct { obj_id: i32, slot_id: u8 },
     pong: packed struct { serial: i32, time: i64 },
-    request_trade: struct { name: []const u8 },
-    reskin: packed struct { skin_id: i32 },
-    shoot_ack: packed struct { time: i64 },
-    square_hit: packed struct { time: i64, bullet_id: u8, obj_id: i32 },
     teleport: packed struct { obj_id: i32 },
-    update_ack: packed struct {},
-    use_item: packed struct { time: i64, obj_id: i32, slot_id: u8, obj_type: i32, x: f32, y: f32, use_type: game_data.UseType },
     use_portal: packed struct { obj_id: i32 },
+    buy: packed struct { obj_id: i32 },
+    ground_damage: packed struct { time: i64, x: f32, y: f32 },
+    player_hit: packed struct { bullet_id: u8, object_id: i32 },
+    enemy_hit: packed struct { time: i64, bullet_id: u8, target_id: i32, killed: bool },
+    aoe_ack: packed struct { time: i64, x: f32, y: f32 },
+    shoot_ack: packed struct { time: i64 },
+    other_hit: packed struct { time: i64, bullet_id: u8, object_id: i32, target_id: i32 },
+    square_hit: packed struct { time: i64, bullet_id: u8, obj_id: i32 },
+    edit_account_list: packed struct { list_id: i32, add: bool, obj_id: i32 },
+    create_guild: struct { guild_name: []const u8 },
+    guild_remove: struct { name: []const u8 },
+    guild_invite: struct { name: []const u8 },
+    request_trade: struct { name: []const u8 },
+    change_trade: struct { offer: []bool },
+    accept_trade: struct { my_offer: []bool, your_offer: []bool },
+    cancel_trade: packed struct {},
+    escape: packed struct {},
+    join_guild: struct { name: []const u8 },
+    change_guild_rank: struct { name: []const u8, rank: i32 },
+    reskin: packed struct { skin_id: i32 },
+    map_hello: struct { name: []const u8 },
+    use_ability: struct { ability_type: u8, data: []u8 },
 };
 
 const S2CPacketId = enum(u8) {
     unknown = 0,
-    account_list = 1,
-    ally_shoot = 2,
-    aoe = 3,
-    buy_result = 4,
-    client_stat = 5,
-    create_success = 6,
-    damage = 7,
-    death = 8,
-    enemy_shoot = 9,
-    failure = 10,
-    file = 11,
-    global_notification = 12,
-    goto = 13,
-    guild_result = 14,
-    inv_result = 15,
-    invited_to_guild = 16,
-    map_info = 17,
-    name_result = 18,
-    new_tick = 19,
-    notification = 20,
-    pic = 21,
-    ping = 22,
-    play_sound = 23,
-    quest_obj_id = 24,
-    reconnect = 25,
-    server_player_shoot = 26,
-    show_effect = 27,
-    text = 28,
-    trade_accepted = 29,
-    trade_changed = 30,
-    trade_done = 31,
-    trade_requested = 32,
-    trade_start = 33,
-    update = 34,
+    create_success = 1,
+    text = 2,
+    server_player_shoot = 3,
+    damage = 4,
+    update = 5,
+    notification = 6,
+    new_tick = 7,
+    show_effect = 8,
+    goto = 9,
+    inv_result = 10,
+    ping = 11,
+    map_info = 12,
+    death = 13,
+    buy_result = 14,
+    aoe = 15,
+    account_list = 16,
+    quest_obj_id = 17,
+    guild_result = 18,
+    ally_shoot = 19,
+    enemy_shoot = 20,
+    trade_requested = 21,
+    trade_start = 22,
+    trade_changed = 23,
+    trade_done = 24,
+    trade_accepted = 25,
+    invited_to_guild = 26,
+    play_sound = 27,
+    failure = 28,
 };
 
 const EffectType = enum(u8) {
@@ -275,12 +268,10 @@ pub fn accept() void {
             .death => handleDeath(),
             .enemy_shoot => handleEnemyShoot(),
             .failure => handleFailure(),
-            .global_notification => handleGlobalNotification(),
             .goto => handleGoto(),
             .invited_to_guild => handleInvitedToGuild(),
             .inv_result => handleInvResult(),
             .map_info => handleMapInfo(),
-            .name_result => handleNameResult(),
             .new_tick => handleNewTick(),
             .notification => handleNotification(),
             .ping => handlePing(),
@@ -320,7 +311,7 @@ fn handleAccountList() void {
 }
 
 fn handleAllyShoot() void {
-    const bullet_id = reader.read(i8);
+    const bullet_id = reader.read(u8);
     const owner_id = reader.read(i32);
     const container_type = reader.read(u16);
     const angle = reader.read(f32);
@@ -346,7 +337,7 @@ fn handleAllyShoot() void {
             proj.addToMap(true);
             // }
 
-            const attack_period: i64 = @intFromFloat((1.0 / player.attackFrequency()) * (1.0 / item_props.?.rate_of_fire) * std.time.us_per_ms);
+            const attack_period: i64 = @intFromFloat(1.0 / (map.attack_frequency * item_props.?.rate_of_fire) * std.time.us_per_ms);
             player.attack_period = attack_period;
             player.attack_angle = angle - camera.angle;
             player.attack_start = main.current_time;
@@ -361,10 +352,11 @@ fn handleAoe() void {
     const x = reader.read(f32);
     const y = reader.read(f32);
     const radius = reader.read(f32);
-    const damage = reader.read(i16);
+    const damage = reader.read(u16);
     const condition_effect = reader.read(utils.Condition);
     const duration = reader.read(f32);
     const orig_type = reader.read(u8);
+    const color = reader.read(u32);
 
     var effect = particles.AoeEffect{
         .x = x,
@@ -375,7 +367,7 @@ fn handleAoe() void {
     effect.addToMap();
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick or settings.log_packets == .all_non_tick)
-        std.log.debug("Recv - Aoe: x={e}, y={e}, radius={e}, damage={d}, condition_effect={any}, duration={e}, orig_type={d}", .{ x, y, radius, damage, condition_effect, duration, orig_type });
+        std.log.debug("Recv - Aoe: x={e}, y={e}, radius={e}, damage={d}, condition_effect={any}, duration={e}, orig_type={d}, color={d}", .{ x, y, radius, damage, condition_effect, duration, orig_type, color });
 }
 
 fn handleBuyResult() void {
@@ -457,7 +449,9 @@ fn handleEnemyShoot() void {
     const start_x = reader.read(f32);
     const start_y = reader.read(f32);
     const angle = reader.read(f32);
-    const damage = reader.read(i16);
+    const physical_damage = reader.read(i16);
+    const magic_damage = reader.read(i16);
+    const true_damage = reader.read(i16);
     const num_shots = reader.read(u8);
     const angle_inc = reader.read(f32);
 
@@ -486,7 +480,9 @@ fn handleEnemyShoot() void {
         var proj = map.Projectile{
             .x = start_x,
             .y = start_y,
-            .damage = damage,
+            .physical_damage = physical_damage,
+            .magic_damage = magic_damage,
+            .true_damage = true_damage,
             .props = proj_props,
             .angle = current_angle,
             .start_time = @divFloor(main.current_time, std.time.us_per_ms),
@@ -503,7 +499,7 @@ fn handleEnemyShoot() void {
     owner.?.attack_start = main.current_time;
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick or settings.log_packets == .all_non_tick)
-        std.log.debug("Recv - EnemyShoot: bullet_id={d}, owner_id={d}, bullet_type={d}, x={e}, y={e}, angle={e}, damage={d}, num_shots={d}, angle_inc={e}", .{ bullet_id, owner_id, bullet_type, start_x, start_y, angle, damage, num_shots, angle_inc });
+        std.log.debug("Recv - EnemyShoot: bullet_id={d}, owner_id={d}, bullet_type={d}, x={e}, y={e}, angle={e}, physical_damage={d}, magic_damage={d}, true_damage={d}, num_shots={d}, angle_inc={e}", .{ bullet_id, owner_id, bullet_type, start_x, start_y, angle, physical_damage, magic_damage, true_damage, num_shots, angle_inc });
 
     sendPacket(.{ .shoot_ack = .{ .time = main.current_time } });
 }
@@ -516,14 +512,6 @@ fn handleFailure() void {
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
         std.log.debug("Recv - Failure: error_id={d}, error_description={s}", .{ error_id, error_description });
-}
-
-fn handleGlobalNotification() void {
-    const notif_type = reader.read(i32);
-    const text = reader.readArray(u8);
-
-    if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
-        std.log.debug("Recv - GlobalNotification: type={d}, text={s}", .{ notif_type, text });
 }
 
 fn handleGoto() void {
@@ -581,15 +569,10 @@ fn handleMapInfo() void {
     if (map.name.len > 0)
         _allocator.free(map.name);
     map.name = _allocator.dupe(u8, reader.readArray(u8)) catch "";
-    const display_name = reader.readArray(u8);
-    map.seed = reader.read(u32);
-    const difficulty = reader.read(i32);
-    const background = reader.read(i32);
-    const allow_player_teleport = reader.read(bool);
-    const show_displays = reader.read(bool);
 
     map.bg_light_color = reader.read(u32);
     map.bg_light_intensity = reader.read(f32);
+    const allow_player_teleport = reader.read(bool);
     const uses_day_night = reader.read(bool);
     if (uses_day_night) {
         map.day_light_intensity = reader.read(f32);
@@ -600,25 +583,16 @@ fn handleMapInfo() void {
         map.night_light_intensity = 0.0;
         map.server_time_offset = 0;
     }
-    map.random.setSeed(map.seed);
 
     main.tick_frame = true;
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
-        std.log.debug("Recv - MapInfo: width={d}, height={d}, name={s}, display_name={s}, seed={d}, difficulty={d}, background={d}, allow_player_teleport={any}, show_displays={any}, bg_light_color={d}, bg_light_intensity={e}, day_and_night={any}", .{ width, height, map.name, display_name, map.seed, difficulty, background, allow_player_teleport, show_displays, map.bg_light_color, map.bg_light_intensity, uses_day_night });
-}
-
-fn handleNameResult() void {
-    const success = reader.read(bool);
-    const error_text = reader.readArray(u8);
-
-    if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
-        std.log.debug("Recv - NameResult: success={any}, error_text={s}", .{ success, error_text });
+        std.log.debug("Recv - MapInfo: width={d}, height={d}, name={s}, bg_light_color={d}, bg_light_intensity={e}, allow_player_teleport={any}, day_and_night={any}", .{ width, height, map.name, map.bg_light_color, map.bg_light_intensity, allow_player_teleport, uses_day_night });
 }
 
 fn handleNewTick() void {
-    const tick_id = reader.read(i32);
-    const tick_time: f32 = @floatFromInt(reader.read(i32));
+    const tick_id = reader.read(u8);
+    const tick_time = 1000.0 / @as(f32, @floatFromInt(reader.read(u8)));
 
     while (!map.object_lock.tryLock()) {}
     defer map.object_lock.unlock();
@@ -690,8 +664,8 @@ fn handleNewTick() void {
                             std.log.err("Could not parse stat {d}: {any}", .{ stat_id, e });
                             continue :statusLoop;
                         };
-                        if (!parsePlrStatData(&player.*, stat, &stat_reader)) {
-                            std.log.err("Stat data parsing for stat {d} failed, player: {any}", .{ stat_id, player });
+                        if (!parsePlayerStat(&player.*, stat, &stat_reader)) {
+                            std.log.err("Stat data parsing for stat {any} failed, player: {any}", .{ stat, player });
                             continue :statusLoop;
                         }
                     }
@@ -725,8 +699,8 @@ fn handleNewTick() void {
                             std.log.err("Could not parse stat {d}: {any}", .{ stat_id, e });
                             continue :statusLoop;
                         };
-                        if (!parseObjStatData(&object.*, stat, &stat_reader)) {
-                            std.log.err("Stat data parsing for stat {d} failed, object: {any}", .{ stat_id, object });
+                        if (!parseObjectStat(&object.*, stat, &stat_reader)) {
+                            std.log.err("Stat data parsing for stat {any} failed, object: {any}", .{ stat, object });
                             continue :statusLoop;
                         }
                     }
@@ -791,7 +765,7 @@ fn handlePing() void {
 
 fn handlePlaySound() void {
     const owner_id = reader.read(i32);
-    const sound_id = reader.read(i32);
+    const sound_id = reader.read(u8);
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
         std.log.debug("Recv - PlaySound: owner_id={d}, sound_id={d}", .{ owner_id, sound_id });
@@ -832,7 +806,7 @@ fn handleServerPlayerShoot() void {
                 var proj = map.Projectile{
                     .x = start_x,
                     .y = start_y,
-                    .damage = damage,
+                    .physical_damage = damage,
                     .props = proj_props,
                     .angle = current_angle,
                     .start_time = @divFloor(main.current_time, std.time.us_per_ms),
@@ -949,7 +923,6 @@ fn handleShowEffect() void {
 fn handleText() void {
     const name = reader.readArray(u8);
     const object_id = reader.read(i32);
-    const num_stars = reader.read(i32);
     const bubble_time = reader.read(u8);
     const recipient = reader.readArray(u8);
     const text = reader.readArray(u8);
@@ -992,7 +965,7 @@ fn handleText() void {
     }
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
-        std.log.debug("Recv - Text: name={s}, object_id={d}, num_stars={d}, bubble_time={d}, recipient={s}, text={s}", .{ name, object_id, num_stars, bubble_time, recipient, text });
+        std.log.debug("Recv - Text: name={s}, object_id={d}, bubble_time={d}, recipient={s}, text={s}", .{ name, object_id, bubble_time, recipient, text });
 }
 
 fn handleTradeAccepted() void {
@@ -1075,8 +1048,8 @@ fn handleUpdate() void {
                         std.log.err("Could not parse stat {d}: {any}", .{ stat_id, e });
                         continue :objLoop;
                     };
-                    if (!parsePlrStatData(&player, stat, &stat_reader)) {
-                        std.log.err("Stat data parsing for stat {d} failed, player: {any}", .{ stat_id, player });
+                    if (!parsePlayerStat(&player, stat, &stat_reader)) {
+                        std.log.err("Stat data parsing for stat {any} failed, player: {any}", .{ stat, player });
                         continue :objLoop;
                     }
                 }
@@ -1092,8 +1065,8 @@ fn handleUpdate() void {
                         std.log.err("Could not parse stat {d}: {any}", .{ stat_id, e });
                         continue :objLoop;
                     };
-                    if (!parseObjStatData(&obj, stat, &stat_reader)) {
-                        std.log.err("Stat data parsing for stat {d} failed, object: {any}", .{ stat_id, obj });
+                    if (!parseObjectStat(&obj, stat, &stat_reader)) {
+                        std.log.err("Stat data parsing for stat {any} failed, object: {any}", .{ stat, obj });
                         continue :objLoop;
                     }
                 }
@@ -1107,7 +1080,7 @@ fn handleUpdate() void {
         std.log.debug("Recv - Update: tiles_len={d}, new_objs_len={d}, drops_len={d}", .{ tiles.len, new_objs_len, drops.len });
 }
 
-fn parsePlrStatData(plr: *map.Player, stat_type: game_data.StatType, stat_reader: *utils.PacketReader) bool {
+fn parsePlayerStat(plr: *map.Player, stat_type: game_data.StatType, stat_reader: *utils.PacketReader) bool {
     switch (stat_type) {
         .max_hp => plr.max_hp = stat_reader.read(i32),
         .hp => {
@@ -1115,62 +1088,46 @@ fn parsePlrStatData(plr: *map.Player, stat_type: game_data.StatType, stat_reader
             if (plr.hp > 0)
                 plr.dead = false;
         },
-        .size => plr.size = @as(f32, @floatFromInt(stat_reader.read(i32))) / 100.0,
-        .max_mp => plr.max_mp = stat_reader.read(i32),
-        .mp => plr.mp = stat_reader.read(i32),
-        .exp_goal => plr.exp_goal = stat_reader.read(i32),
-        .exp => {
-            const last_xp = plr.exp;
-            plr.exp = stat_reader.read(i32);
-            if (last_xp != 0 and last_xp < plr.exp and (settings.always_show_xp_gain or plr.level < 20)) {
-                element.StatusText.add(.{
-                    .obj_id = plr.obj_id,
-                    .start_time = @divFloor(main.current_time, std.time.us_per_ms),
-                    .lifetime = 2000,
-                    .text_data = .{
-                        .text = std.fmt.allocPrint(_allocator.*, "+{d} XP", .{plr.exp - last_xp}) catch return false,
-                        .text_type = .bold,
-                        .size = 22,
-                        .color = 0x0D5936,
-                    },
-                    .initial_size = 22,
-                }) catch return false;
-            }
-        },
-        .level => {
-            const last_level = plr.level;
-            plr.level = stat_reader.read(i32);
-            if (last_level != 0 and last_level < plr.level) {
-                element.StatusText.add(.{
-                    .obj_id = plr.obj_id,
-                    .start_time = @divFloor(main.current_time, std.time.us_per_ms),
-                    .lifetime = 2000,
-                    .text_data = .{
-                        .text = std.fmt.allocPrint(_allocator.*, "Level Up!", .{}) catch return false,
-                        .text_type = .bold,
-                        .size = 22,
-                        .color = 0x0D5936,
-                    },
-                    .initial_size = 22,
-                }) catch return false;
-                assets.playSfx("level_up");
-            }
-        },
-        .attack => plr.attack = stat_reader.read(i32),
-        .defense => plr.defense = stat_reader.read(i32),
-        .speed => plr.speed = stat_reader.read(i32),
-        .dexterity => plr.dexterity = stat_reader.read(i32),
-        .vitality => plr.vitality = stat_reader.read(i32),
-        .wisdom => plr.wisdom = stat_reader.read(i32),
+        .size => plr.size = @as(f32, @floatFromInt(stat_reader.read(u16))) / 100.0,
+        .max_mp => plr.max_mp = stat_reader.read(i16),
+        .mp => plr.mp = stat_reader.read(i16),
+        .strength => plr.strength = stat_reader.read(i16),
+        .defense => plr.defense = stat_reader.read(i16),
+        .speed => plr.speed = stat_reader.read(i16),
+        .stamina => plr.stamina = stat_reader.read(i16),
+        .wit => plr.wit = stat_reader.read(i16),
+        .resistance => plr.resistance = stat_reader.read(i16),
+        .intelligence => plr.intelligence = stat_reader.read(i16),
+        .penetration => plr.penetration = stat_reader.read(i16),
+        .piercing => plr.piercing = stat_reader.read(i16),
+        .haste => plr.haste = stat_reader.read(i16),
+        .tenacity => plr.tenacity = stat_reader.read(i16),
+        .hp_bonus => plr.hp_bonus = stat_reader.read(i16),
+        .mp_bonus => plr.mp_bonus = stat_reader.read(i16),
+        .strength_bonus => plr.strength_bonus = stat_reader.read(i16),
+        .defense_bonus => plr.defense_bonus = stat_reader.read(i16),
+        .speed_bonus => plr.speed_bonus = stat_reader.read(i16),
+        .stamina_bonus => plr.stamina_bonus = stat_reader.read(i16),
+        .wit_bonus => plr.wit_bonus = stat_reader.read(i16),
+        .resistance_bonus => plr.resistance_bonus = stat_reader.read(i16),
+        .intelligence_bonus => plr.intelligence_bonus = stat_reader.read(i16),
+        .penetration_bonus => plr.penetration_bonus = stat_reader.read(i16),
+        .piercing_bonus => plr.piercing_bonus = stat_reader.read(i16),
+        .haste_bonus => plr.haste_bonus = stat_reader.read(i16),
+        .tenacity_bonus => plr.tenacity_bonus = stat_reader.read(i16),
+        .hit_multiplier => plr.hit_multiplier = stat_reader.read(f32),
+        .damage_multiplier => plr.damage_multiplier = stat_reader.read(f32),
         .condition => plr.condition = stat_reader.read(utils.Condition),
-        .inv_0, .inv_1, .inv_2, .inv_3, .inv_4, .inv_5, .inv_6, .inv_7, .inv_8, .inv_9, .inv_10, .inv_11 => {
+        // zig fmt: off
+        .inv_0, .inv_1, .inv_2, .inv_3, .inv_4, .inv_5, .inv_6, .inv_7, .inv_8, .inv_9, .inv_10, .inv_11,
+        .inv_12, .inv_13, .inv_14, .inv_15, .inv_16, .inv_17, .inv_18, .inv_19, .inv_20, .inv_21 => {
+        // zig fmt: on
             const inv_idx = @intFromEnum(stat_type) - @intFromEnum(game_data.StatType.inv_0);
-            const item = stat_reader.read(i32);
+            const item = stat_reader.read(u16);
             plr.inventory[inv_idx] = item;
             if (plr.obj_id == map.local_player_id and sc.current_screen == .game)
                 sc.current_screen.game.setInvItem(item, inv_idx);
         },
-        .stars => plr.stars = stat_reader.read(i32),
         .name => {
             if (plr.name.len > 0)
                 _allocator.free(plr.name);
@@ -1184,53 +1141,15 @@ fn parsePlrStatData(plr: *map.Player, stat_type: game_data.StatType, stat_reader
         },
         .tex_1 => plr.tex_1 = stat_reader.read(i32),
         .tex_2 => plr.tex_2 = stat_reader.read(i32),
-        .credits => plr.credits = stat_reader.read(i32),
+        .gold => plr.gold = stat_reader.read(i32),
+        .gems => plr.gems = stat_reader.read(i32),
+        .crowns => plr.crowns = stat_reader.read(i32),
         .account_id => plr.account_id = stat_reader.read(i32),
-        .current_fame => plr.current_fame = stat_reader.read(i32),
-        .hp_boost => plr.hp_boost = stat_reader.read(i32),
-        .mp_boost => plr.mp_boost = stat_reader.read(i32),
-        .attack_bonus => plr.attack_bonus = stat_reader.read(i32),
-        .defense_bonus => plr.defense_bonus = stat_reader.read(i32),
-        .speed_bonus => plr.speed_bonus = stat_reader.read(i32),
-        .vitality_bonus => plr.vitality_bonus = stat_reader.read(i32),
-        .wisdom_bonus => plr.wisdom_bonus = stat_reader.read(i32),
-        .dexterity_bonus => plr.dexterity_bonus = stat_reader.read(i32),
-        .name_chosen => plr.name_chosen = stat_reader.read(bool),
-        .fame => {
-            const last_fame = plr.fame;
-            plr.fame = stat_reader.read(i32);
-            if (last_fame != 0 and last_fame < plr.fame and plr.level >= 20) {
-                element.StatusText.add(.{
-                    .obj_id = plr.obj_id,
-                    .start_time = @divFloor(main.current_time, std.time.us_per_ms),
-                    .lifetime = 2000,
-                    .text_data = .{
-                        .text = std.fmt.allocPrint(_allocator.*, "+{d} Fame", .{plr.fame - last_fame}) catch return false,
-                        .text_type = .bold,
-                        .size = 22,
-                        .color = 0xE64F2A,
-                    },
-                    .initial_size = 22,
-                }) catch return false;
-            }
-        },
-        .fame_goal => plr.fame_goal = stat_reader.read(i32),
-        .glow => plr.glow = stat_reader.read(i32),
-        .sink_level => plr.sink_level = @floatFromInt(stat_reader.read(u16)),
         .guild => plr.guild = _allocator.dupe(u8, stat_reader.readArray(u8)) catch &[0]u8{},
-        .guild_rank => plr.guild_rank = stat_reader.read(i32),
-        .oxygen_bar => plr.oxygen_bar = stat_reader.read(i32),
-        .health_stack_count => plr.health_stack_count = stat_reader.read(i32),
-        .magic_stack_count => plr.magic_stack_count = stat_reader.read(i32),
-        .backpack_0, .backpack_1, .backpack_2, .backpack_3, .backpack_4, .backpack_5, .backpack_6, .backpack_7 => {
-            const backpack_idx = @intFromEnum(stat_type) - @intFromEnum(game_data.StatType.backpack_0) + 12;
-            const item = stat_reader.read(i32);
-            plr.inventory[backpack_idx] = item;
-            if (plr.obj_id == map.local_player_id and sc.current_screen == .game)
-                sc.current_screen.game.setInvItem(item, backpack_idx);
-        },
-        .has_backpack => plr.has_backpack = stat_reader.read(bool),
-        .skin => plr.skin = stat_reader.read(i32),
+        .guild_rank => plr.guild_rank = stat_reader.read(i8),
+        .texture => plr.skin = stat_reader.read(u16),
+        .tier => plr.tier = stat_reader.read(u8),
+        .alt_texture_index => {},
         else => {
             std.log.err("Unknown player stat type: {any}", .{stat_type});
             return false;
@@ -1242,7 +1161,7 @@ fn parsePlrStatData(plr: *map.Player, stat_type: game_data.StatType, stat_reader
     return true;
 }
 
-fn parseObjStatData(obj: *map.GameObject, stat_type: game_data.StatType, stat_reader: *utils.PacketReader) bool {
+fn parseObjectStat(obj: *map.GameObject, stat_type: game_data.StatType, stat_reader: *utils.PacketReader) bool {
     switch (stat_type) {
         .max_hp => obj.max_hp = stat_reader.read(i32),
         .hp => {
@@ -1250,13 +1169,13 @@ fn parseObjStatData(obj: *map.GameObject, stat_type: game_data.StatType, stat_re
             if (obj.hp > 0)
                 obj.dead = false;
         },
-        .size => obj.size = @as(f32, @floatFromInt(stat_reader.read(i32))) / 100.0,
-        .level => obj.level = stat_reader.read(i32),
-        .defense => obj.defense = stat_reader.read(i32),
+        .size => obj.size = @as(f32, @floatFromInt(stat_reader.read(u16))) / 100.0,
+        .defense => obj.defense = stat_reader.read(i16),
+        .resistance => obj.resistance = stat_reader.read(i16),
         .condition => obj.condition = stat_reader.read(utils.Condition),
-        .inv_0, .inv_1, .inv_2, .inv_3, .inv_4, .inv_5, .inv_6, .inv_7 => {
+        .inv_0, .inv_1, .inv_2, .inv_3, .inv_4, .inv_5, .inv_6, .inv_7, .inv_8 => {
             const inv_idx = @intFromEnum(stat_type) - @intFromEnum(game_data.StatType.inv_0);
-            const item = stat_reader.read(i32);
+            const item = stat_reader.read(u16);
             obj.inventory[inv_idx] = item;
             if (obj.obj_id == map.interactive_id.load(.Acquire) and sc.current_screen == .game) {
                 sc.current_screen.game.setContainerItem(item, inv_idx);
@@ -1279,18 +1198,13 @@ fn parseObjStatData(obj: *map.GameObject, stat_type: game_data.StatType, stat_re
         },
         .tex_1 => obj.tex_1 = stat_reader.read(i32),
         .tex_2 => obj.tex_2 = stat_reader.read(i32),
-        .merchant_merch_type => obj.merchant_obj_type = stat_reader.read(u16),
-        .merchant_rem_count => obj.merchant_rem_count = stat_reader.read(i32),
-        .merchant_rem_minute => obj.merchant_rem_minute = stat_reader.read(i32),
-        .sellable_price => obj.sellable_price = stat_reader.read(i32),
-        .sellable_currency => obj.sellable_currency = @enumFromInt(stat_reader.read(u8)),
-        .sellable_rank_req => obj.sellable_rank_req = stat_reader.read(i32),
-        .merchant_discount => obj.merchant_discount = stat_reader.read(u8),
-        .portal_active => obj.portal_active = stat_reader.read(bool),
-        .object_connection => obj.object_connection = stat_reader.read(i32),
-        .owner_acc_id => obj.owner_acc_id = stat_reader.read(i32),
-        .rank_required => obj.rank_required = stat_reader.read(i32),
-        .alt_texture_index => obj.alt_texture_index = stat_reader.read(i32),
+        .merch_type => obj.merchant_obj_type = stat_reader.read(u16),
+        .merch_count => obj.merchant_rem_count = stat_reader.read(i8),
+        .sellable_price => obj.sellable_price = stat_reader.read(u16),
+        //.sellable_currency => obj.sellable_currency = @enumFromInt(stat_reader.read(u8)),
+        .portal_usable => obj.portal_active = stat_reader.read(bool),
+        .owner_account_id => obj.owner_acc_id = stat_reader.read(i32),
+        .alt_texture_index => obj.alt_texture_index = stat_reader.read(u16),
         else => {
             std.log.err("Unknown entity stat type: {any}", .{stat_type});
             return false;

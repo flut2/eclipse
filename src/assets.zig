@@ -230,7 +230,6 @@ pub var empty_bar_data: AtlasData = undefined;
 pub var hp_bar_data: AtlasData = undefined;
 pub var mp_bar_data: AtlasData = undefined;
 pub var particle_data: AtlasData = undefined;
-pub var ui_error_data: AtlasData = undefined;
 pub var error_data: AtlasData = undefined;
 pub var error_data_enemy: AnimEnemyData = undefined;
 pub var error_data_player: AnimPlayerData = undefined;
@@ -830,6 +829,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("portals_16", "portals_16.png", 16, 16, &ctx, allocator);
     try addImage("props", "props.png", 8, 8, &ctx, allocator);
     try addImage("props_16", "props_16.png", 16, 16, &ctx, allocator);
+    try addImage("projectiles", "projectiles.png", 8, 8, &ctx, allocator);
     try addImage("tiered_items", "tiered_items.png", 8, 8, &ctx, allocator);
     try addImage("tiered_projectiles", "tiered_projectiles.png", 8, 8, &ctx, allocator);
     try addImage("wall_backface", "wall_backface.png", 8, 8, &ctx, allocator);
@@ -865,7 +865,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     const imply_size = std.math.maxInt(u32);
     try addUiImage("ability_icons", "sheets/ability_icons.png", 40, 40, &ctx, allocator);
-    try addUiImage("error_texture", "sheets/error_texture.png", imply_size, imply_size, &ctx, allocator);
     try addUiImage("basic_panel", "ui/basic_panel.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_background", "ui/chat/chatbox_background.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_input", "ui/chat/chatbox_input.png", imply_size, imply_size, &ui_ctx, allocator);
@@ -981,10 +980,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
             },
         };
     } else @panic("Could not find error_texture in the atlas");
-
-    if (ui_atlas_data.get("error_texture")) |error_tex| {
-        ui_error_data = error_tex[0x0];
-    } else @panic("Could not find error_texture in the UI atlas");
 
     settings.assetsLoaded();
 }
