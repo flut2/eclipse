@@ -17,15 +17,17 @@ pub const CharCreateScreen = struct {
             ._allocator = allocator,
         };
 
-        screen.boxes = std.ArrayList(*element.CharacterBox).init(allocator);
-        try screen.boxes.ensureTotalCapacity(game_data.classes.len);
+        screen.boxes = try std.ArrayList(*element.CharacterBox).initCapacity(allocator, 9);
 
         const button_data_base = assets.getUiData("button_base", 0);
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
 
         //TODO Check which classes are locked as it kicks you to character select if class is locked
-        for (game_data.classes, 0..) |char, i| {
+        var class_iter = game_data.classes.valueIterator();
+        var i: usize = 0;
+        while (class_iter.next()) |char| {
+            defer i += 1;
             const box = element.CharacterBox.create(allocator, .{
                 .x = (camera.screen_width - button_data_base.texWRaw()) / 2,
                 .y = @floatFromInt(50 * i),
@@ -45,6 +47,7 @@ pub const CharCreateScreen = struct {
             }) catch return screen;
             screen.boxes.append(box) catch return screen;
         }
+        
         screen.inited = true;
         return screen;
     }

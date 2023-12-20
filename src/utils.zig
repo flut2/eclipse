@@ -241,51 +241,6 @@ pub const Rect = struct {
     h_pad: f32,
 };
 
-pub const Random = struct {
-    seed: u32 = 0,
-
-    pub fn init(seed: u32) Random {
-        return .{ .seed = seed };
-    }
-
-    pub fn setSeed(self: *Random, seed: u32) void {
-        self.seed = seed;
-    }
-
-    pub fn nextIntRange(self: *Random, min: u32, max: u32) u32 {
-        return if (min == max) min else min + (self.gen() % (max - min));
-    }
-
-    fn gen(self: *Random) u32 {
-        var lo = 16807 * (self.seed & 0xFFFF);
-        const hi = 16807 * (self.seed >> 16);
-
-        lo += (hi & 0x7FFF) << 16;
-        lo += hi >> 15;
-
-        if (lo > 0x7FFFFFFF)
-            lo -= 0x7FFFFFFF;
-
-        self.seed = lo;
-        return lo;
-    }
-};
-
-pub const VM_COUNTERS_EX = extern struct {
-    PeakVirtualSize: std.os.windows.SIZE_T,
-    VirtualSize: std.os.windows.SIZE_T,
-    PageFaultCount: std.os.windows.ULONG,
-    PeakWorkingSetSize: std.os.windows.SIZE_T,
-    WorkingSetSize: std.os.windows.SIZE_T,
-    QuotaPeakPagedPoolUsage: std.os.windows.SIZE_T,
-    QuotaPagedPoolUsage: std.os.windows.SIZE_T,
-    QuotaPeakNonPagedPoolUsage: std.os.windows.SIZE_T,
-    QuotaNonPagedPoolUsage: std.os.windows.SIZE_T,
-    PagefileUsage: std.os.windows.SIZE_T,
-    PeakPagefileUsage: std.os.windows.SIZE_T,
-    PrivateUsage: std.os.windows.SIZE_T,
-};
-
 pub var rng = std.rand.DefaultPrng.init(0);
 
 var last_memory_access: i64 = -1;

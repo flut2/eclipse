@@ -234,15 +234,6 @@ pub const OptionsPanel = struct {
         try addKeyMap(screen.general_tab, &settings.toggle_perf_stats, "Toggle Performance Counter", "This toggles whether to show the performance counter");
         try addKeyMap(screen.general_tab, &settings.toggle_centering, "Toggle Centering", "This toggles whether to center the camera on player or ahead of it");
 
-        try addKeyMap(screen.keys_tab, &settings.inv_0, "Use Inventory 1", "This will either consume or equip the item at the given slot. Backpack slots can be accessed by pressing this key in combination with CTRL");
-        try addKeyMap(screen.keys_tab, &settings.inv_1, "Use Inventory 2", "This will either consume or equip the item at the given slot. Backpack slots can be accessed by pressing this key in combination with CTRL");
-        try addKeyMap(screen.keys_tab, &settings.inv_2, "Use Inventory 3", "This will either consume or equip the item at the given slot. Backpack slots can be accessed by pressing this key in combination with CTRL");
-        try addKeyMap(screen.keys_tab, &settings.inv_3, "Use Inventory 4", "This will either consume or equip the item at the given slot. Backpack slots can be accessed by pressing this key in combination with CTRL");
-        try addKeyMap(screen.keys_tab, &settings.inv_4, "Use Inventory 5", "This will either consume or equip the item at the given slot. Backpack slots can be accessed by pressing this key in combination with CTRL");
-        try addKeyMap(screen.keys_tab, &settings.inv_5, "Use Inventory 6", "This will either consume or equip the item at the given slot. Backpack slots can be accessed by pressing this key in combination with CTRL");
-        try addKeyMap(screen.keys_tab, &settings.inv_6, "Use Inventory 7", "This will either consume or equip the item at the given slot. Backpack slots can be accessed by pressing this key in combination with CTRL");
-        try addKeyMap(screen.keys_tab, &settings.inv_7, "Use Inventory 8", "This will either consume or equip the item at the given slot. Backpack slots can be accessed by pressing this key in combination with CTRL");
-
         try addToggle(screen.graphics_tab, &settings.enable_vsync, "V-Sync", "Toggles vertical syncing, which can reduce screen tearing");
         try addToggle(screen.graphics_tab, &settings.enable_lights, "Lights", "Toggles lights, which can reduce frame rates");
         try addToggle(screen.graphics_tab, &settings.enable_glow, "Sprite Glow", "Toggles the glow effect on sprites, which can reduce frame rates");

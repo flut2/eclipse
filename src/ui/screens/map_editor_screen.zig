@@ -1059,9 +1059,7 @@ pub const MapEditorScreen = struct {
         // self.active_brush.update(floor_x, floor_y);
     }
 
-    pub fn onMousePress(self: *MapEditorScreen, x: f64, y: f64, mods: zglfw.Mods, button: zglfw.MouseButton) void {
-        _ = mods;
-
+    pub fn onMousePress(self: *MapEditorScreen, x: f64, y: f64, button: zglfw.MouseButton) void {
         self.action = if (button == self.place_key_settings.getMouse()) .place else if (button == self.erase_key_settings.getMouse()) .erase else .none;
 
         if (button == self.sample_key_settings.getMouse()) {
@@ -1107,13 +1105,11 @@ pub const MapEditorScreen = struct {
         }
     }
 
-    pub fn onMouseRelease(self: *MapEditorScreen, _: f64, _: f64, _: zglfw.Mods, _: zglfw.MouseButton) void {
+    pub fn onMouseRelease(self: *MapEditorScreen) void {
         self.action = .none;
     }
 
-    pub fn onKeyPress(self: *MapEditorScreen, key: zglfw.Key, mods: zglfw.Mods) void {
-        _ = mods;
-
+    pub fn onKeyPress(self: *MapEditorScreen, key: zglfw.Key) void {
         // could convert into as witch statement
 
         // switch (key) {
@@ -1268,10 +1264,7 @@ pub const MapEditorScreen = struct {
         const cam_x = camera.x.load(.Acquire);
         const cam_y = camera.y.load(.Acquire);
 
-        const x: f32 = @floatCast(input.mouse_x);
-        const y: f32 = @floatCast(input.mouse_y);
-
-        var world_point = camera.screenToWorld(x, y);
+        var world_point = camera.screenToWorld(input.mouse_x, input.mouse_y);
         world_point.x = @max(0, @min(world_point.x, @as(f32, @floatFromInt(self.map_size - 1))));
         world_point.y = @max(0, @min(world_point.y, @as(f32, @floatFromInt(self.map_size - 1))));
 

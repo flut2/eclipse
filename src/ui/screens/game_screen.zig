@@ -60,31 +60,31 @@ pub const GameScreen = struct {
         pub fn findSlotId(screen: GameScreen, x: f32, y: f32) Slot {
             const inv_slot = findInvSlotId(screen, x, y);
             if (inv_slot != 255) {
-                return Slot{ .idx = inv_slot };
+                return .{ .idx = inv_slot };
             }
 
             const container_slot = findContainerSlotId(screen, x, y);
             if (container_slot != 255) {
-                return Slot{ .idx = container_slot, .is_container = true };
+                return .{ .idx = container_slot, .is_container = true };
             }
 
-            return Slot{ .idx = 255 };
+            return .{ .idx = 255 };
         }
 
-        pub fn nextEquippableSlot(slot_types: [22]i8, base_slot_type: i8) Slot {
+        pub fn nextEquippableSlot(slot_types: [22]game_data.ItemType, base_slot_type: game_data.ItemType) Slot {
             for (0..22) |idx| {
-                if (slot_types[idx] > 0 and game_data.ItemType.slotsMatch(slot_types[idx], base_slot_type))
-                    return Slot{ .idx = @intCast(idx) };
+                if (slot_types[idx].slotsMatch(base_slot_type))
+                    return .{ .idx = @intCast(idx) };
             }
-            return Slot{ .idx = 255 };
+            return .{ .idx = 255 };
         }
 
         pub fn nextAvailableSlot(screen: GameScreen) Slot {
             for (0..22) |idx| {
                 if (screen.inventory_items[idx]._item == std.math.maxInt(u16))
-                    return Slot{ .idx = @intCast(idx) };
+                    return .{ .idx = @intCast(idx) };
             }
-            return Slot{ .idx = 255 };
+            return .{ .idx = 255 };
         }
     };
 
@@ -99,7 +99,6 @@ pub const GameScreen = struct {
     last_max_mp: i32 = -1,
     container_visible: bool = false,
     container_id: i32 = -1,
-    inited: bool = false,
     main_buffer_front: bool = false,
     footer_buffer_front: bool = false,
 
@@ -109,24 +108,24 @@ pub const GameScreen = struct {
     bars_decor: *element.Image = undefined,
     stats_button: *element.Button = undefined,
     stats_container: *element.Container = undefined,
+    ability_container: *element.Container = undefined,
     stats_decor: *element.Image = undefined,
-    stats_attack: *element.Text = undefined,
-    stats_dexterity: *element.Text = undefined,
-    stats_speed: *element.Text = undefined,
-    stats_defense: *element.Text = undefined,
-    stats_vitality: *element.Text = undefined,
-    stats_wisdom: *element.Text = undefined,
-    level_text: *element.Text = undefined,
+    strength_stat_text: *element.Text = undefined,
+    defense_stat_text: *element.Text = undefined,
+    speed_stat_text: *element.Text = undefined,
+    haste_stat_text: *element.Text = undefined,
+    wit_stat_text: *element.Text = undefined,
+    resistance_stat_text: *element.Text = undefined,
+    stamina_stat_text: *element.Text = undefined,
+    intelligence_stat_text: *element.Text = undefined,
+    penetration_stat_text: *element.Text = undefined,
+    piercing_stat_text: *element.Text = undefined,
+    tenacity_stat_text: *element.Text = undefined,
     xp_bar: *element.Bar = undefined,
-    fame_bar: *element.Bar = undefined,
     health_bar: *element.Bar = undefined,
     mana_bar: *element.Bar = undefined,
     inventory_decor: *element.Image = undefined,
     inventory_items: [22]*element.Item = undefined,
-    health_potion: *element.Image = undefined,
-    health_potion_text: *element.Text = undefined,
-    magic_potion: *element.Image = undefined,
-    magic_potion_text: *element.Text = undefined,
     container_decor: *element.Image = undefined,
     container_name: *element.Text = undefined,
     container_items: [9]*element.Item = undefined,
@@ -146,6 +145,8 @@ pub const GameScreen = struct {
     inventory_pos_data: [22]utils.Rect = undefined,
     container_pos_data: [9]utils.Rect = undefined,
 
+    abilities_inited: bool = false,
+    inited: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
     interact_class: game_data.ClassType = game_data.ClassType.game_object,
@@ -164,10 +165,10 @@ pub const GameScreen = struct {
             .y = 10,
             .image_data = .{ .normal = .{ .atlas_data = minimap_data } },
             .is_minimap_decor = true,
-            .minimap_offset_x = 7.0,
-            .minimap_offset_y = 10.0,
-            .minimap_width = 172.0,
-            .minimap_height = 172.0,
+            .minimap_offset_x = 6.0,
+            .minimap_offset_y = 6.0,
+            .minimap_width = 174.0,
+            .minimap_height = 174.0,
         });
 
         screen.inventory_decor = try element.Image.create(allocator, .{
@@ -190,7 +191,6 @@ pub const GameScreen = struct {
         }
 
         const container_data = assets.getUiData("container_view", 0);
-
         screen.container_decor = try element.Image.create(allocator, .{
             .x = screen.inventory_decor.x - container_data.texWRaw() - 10,
             .y = camera.screen_height - container_data.texHRaw() - 10,
@@ -215,152 +215,39 @@ pub const GameScreen = struct {
             });
         }
 
-        const bars_data = assets.getUiData("player_status_bars_decor", 0);
+        const xp_bar_decor_data = assets.getUiData("player_xp_decor", 0);
+        const bars_data = assets.getUiData("player_abilities_bars", 0);
         screen.bars_decor = try element.Image.create(allocator, .{
             .x = (camera.screen_width - bars_data.texWRaw()) / 2,
-            .y = camera.screen_height - bars_data.texHRaw() - 10,
+            .y = camera.screen_height - bars_data.texHRaw() - 10 - 16, // 16 for the xp bar to fit
             .image_data = .{ .normal = .{ .atlas_data = bars_data } },
         });
 
-        const stats_button_data = assets.getUiData("player_status_bar_stat_icon", 0);
+        const stats_button_data = assets.getUiData("minimap_icons", 0);
         screen.stats_button = try element.Button.create(allocator, .{
-            .x = screen.bars_decor.x + 7,
-            .y = screen.bars_decor.y + 8,
+            .x = screen.bars_decor.x + 23 + (22 - stats_button_data.texWRaw() + assets.padding * 2) / 2.0,
+            .y = screen.bars_decor.y + 10 + (24 - stats_button_data.texHRaw() + assets.padding * 2) / 2.0,
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = stats_button_data } } },
             .press_callback = statsCallback,
         });
 
-        const stats_decor_data = assets.getUiData("stats_view", 0);
-        const decor_scale = 2;
-        screen.stats_container = try element.Container.create(allocator, .{
-            .x = screen.bars_decor.x - (stats_decor_data.texWRaw() * decor_scale - bars_data.texWRaw()) / 2,
-            .y = screen.bars_decor.y - stats_decor_data.texHRaw() * decor_scale - 5,
-            .visible = false,
+        screen.ability_container = try element.Container.create(allocator, .{
+            .x = screen.bars_decor.x + 7,
+            .y = screen.bars_decor.y + 39,
         });
 
-        screen.stats_decor = try screen.stats_container.createElement(element.Image, .{ .x = 0, .y = 0, .image_data = .{
-            .normal = .{ .atlas_data = stats_decor_data, .scale_x = 2, .scale_y = 2 },
-        } });
-
-        if (assets.ui_atlas_data.get("stats_view_icons")) |data| {
-            const w_spacing = 126.0;
-            const h_spacing = 60.0;
-            var base_x: f32 = 28.0;
-            var base_y: f32 = 16.0;
-
-            _ = try screen.stats_container.createElement(element.Image, .{ .x = base_x + 2, .y = base_y - 2, .image_data = .{
-                .normal = .{ .atlas_data = data[2], .scale_x = 4, .scale_y = 4 },
-            } });
-
-            _ = try screen.stats_container.createElement(element.Image, .{ .x = base_x + w_spacing, .y = base_y, .image_data = .{
-                .normal = .{ .atlas_data = data[4], .scale_x = 4, .scale_y = 4 },
-            } });
-
-            _ = try screen.stats_container.createElement(element.Image, .{ .x = base_x - 2 + w_spacing * 2, .y = base_y, .image_data = .{
-                .normal = .{ .atlas_data = data[5], .scale_x = 4, .scale_y = 4 },
-            } });
-
-            _ = try screen.stats_container.createElement(element.Image, .{ .x = base_x - 2, .y = base_y + 2 + h_spacing, .image_data = .{
-                .normal = .{ .atlas_data = data[3], .scale_x = 4, .scale_y = 4 },
-            } });
-
-            _ = try screen.stats_container.createElement(element.Image, .{ .x = base_x - 2 + w_spacing, .y = base_y + h_spacing, .image_data = .{
-                .normal = .{ .atlas_data = data[6], .scale_x = 4, .scale_y = 4 },
-            } });
-
-            _ = try screen.stats_container.createElement(element.Image, .{ .x = base_x + w_spacing * 2, .y = base_y - 2 + h_spacing, .image_data = .{
-                .normal = .{ .atlas_data = data[7], .scale_x = 4, .scale_y = 4 },
-            } });
-
-            base_x += 48;
-            base_y += 2;
-
-            screen.stats_attack = try screen.stats_container.createElement(element.Text, .{ .x = base_x, .y = base_y, .text_data = .{
-                .text = "",
-                .size = 18,
-                .text_type = .bold,
-                .max_width = 62,
-                .max_height = 40,
-                .hori_align = .middle,
-                .vert_align = .middle,
-                .max_chars = 64,
-            } });
-
-            screen.stats_dexterity = try screen.stats_container.createElement(element.Text, .{ .x = base_x + w_spacing, .y = base_y, .text_data = .{
-                .text = "",
-                .size = 18,
-                .text_type = .bold,
-                .max_width = 62,
-                .max_height = 40,
-                .hori_align = .middle,
-                .vert_align = .middle,
-                .max_chars = 64,
-            } });
-
-            screen.stats_speed = try screen.stats_container.createElement(element.Text, .{ .x = base_x + w_spacing * 2, .y = base_y, .text_data = .{
-                .text = "",
-                .size = 18,
-                .text_type = .bold,
-                .max_width = 62,
-                .max_height = 40,
-                .hori_align = .middle,
-                .vert_align = .middle,
-                .max_chars = 64,
-            } });
-
-            screen.stats_defense = try screen.stats_container.createElement(element.Text, .{ .x = base_x, .y = base_y + h_spacing, .text_data = .{
-                .text = "",
-                .size = 18,
-                .text_type = .bold,
-                .max_width = 62,
-                .max_height = 40,
-                .hori_align = .middle,
-                .vert_align = .middle,
-                .max_chars = 64,
-            } });
-
-            screen.stats_vitality = try screen.stats_container.createElement(element.Text, .{ .x = base_x + w_spacing, .y = base_y + h_spacing, .text_data = .{
-                .text = "",
-                .size = 18,
-                .text_type = .bold,
-                .max_width = 62,
-                .max_height = 40,
-                .hori_align = .middle,
-                .vert_align = .middle,
-                .max_chars = 64,
-            } });
-
-            screen.stats_wisdom = try screen.stats_container.createElement(element.Text, .{ .x = base_x + w_spacing * 2, .y = base_y + h_spacing, .text_data = .{
-                .text = "",
-                .size = 18,
-                .text_type = .bold,
-                .max_width = 62,
-                .max_height = 40,
-                .hori_align = .middle,
-                .vert_align = .middle,
-                .max_chars = 64,
-            } });
-        } else @panic("Could not find stats_view_icons in the UI atlas");
-
-        screen.level_text = try element.Text.create(allocator, .{
-            .x = screen.bars_decor.x + 178,
-            .y = screen.bars_decor.y + 9,
-            .text_data = .{
-                .text = "",
-                .size = 12,
-                .text_type = .bold,
-                .max_chars = 8,
-                .max_width = 24,
-                .max_height = 24,
-                .vert_align = .middle,
-                .hori_align = .middle,
-            },
+        const decor_offset_x = -60;
+        const decor_offset_y = 56;
+        _ = try screen.ability_container.createElement(element.Image, .{
+            .x = decor_offset_x,
+            .y = decor_offset_y,
+            .image_data = .{ .normal = .{ .atlas_data = xp_bar_decor_data } },
         });
 
-        const xp_bar_data = assets.getUiData("player_status_bar_xp", 0);
-        screen.xp_bar = try element.Bar.create(allocator, .{
-            .x = screen.bars_decor.x + 42,
-            .y = screen.bars_decor.y + 12,
+        const xp_bar_data = assets.getUiData("player_xp_bar", 0);
+        screen.xp_bar = try screen.ability_container.createElement(element.Bar, .{
+            .x = decor_offset_x + 24,
+            .y = decor_offset_y + 9,
             .image_data = .{ .normal = .{ .atlas_data = xp_bar_data } },
             .text_data = .{
                 .text = "",
@@ -370,40 +257,53 @@ pub const GameScreen = struct {
             },
         });
 
-        const fame_bar_data = assets.getUiData("player_status_bar_fame", 0);
-        screen.fame_bar = try element.Bar.create(allocator, .{
-            .x = screen.bars_decor.x + 42,
-            .y = screen.bars_decor.y + 12,
-            .image_data = .{ .normal = .{ .atlas_data = fame_bar_data } },
-            .text_data = .{
-                .text = "",
-                .size = 12,
-                .text_type = .bold_italic,
-                .max_chars = 64,
-            },
+        const stats_decor_data = assets.getUiData("player_stats", 0);
+        screen.stats_container = try element.Container.create(allocator, .{
+            .x = screen.bars_decor.x + (bars_data.texWRaw() - stats_decor_data.texWRaw()) / 2.0,
+            .y = screen.bars_decor.y + 32,
+            .visible = false,
         });
 
-        const health_bar_data = assets.getUiData("player_status_bar_health", 0);
+        screen.stats_decor = try screen.stats_container.createElement(element.Image, .{
+            .x = 0,
+            .y = 0,
+            .image_data = .{ .normal = .{ .atlas_data = stats_decor_data } },
+        });
+
+        var idx: f32 = 0;
+        try addStatText(screen.stats_container, &screen.strength_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.resistance_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.intelligence_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.haste_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.wit_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.speed_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.penetration_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.tenacity_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.defense_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.stamina_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.piercing_stat_text, &idx);
+
+        const health_bar_data = assets.getUiData("player_health_bar", 0);
         screen.health_bar = try element.Bar.create(allocator, .{
-            .x = screen.bars_decor.x + 8,
-            .y = screen.bars_decor.y + 47,
+            .x = screen.bars_decor.x + 47,
+            .y = screen.bars_decor.y + 4,
             .image_data = .{ .normal = .{ .atlas_data = health_bar_data } },
             .text_data = .{
                 .text = "",
-                .size = 12,
+                .size = 10,
                 .text_type = .bold_italic,
                 .max_chars = 64,
             },
         });
 
-        const mana_bar_data = assets.getUiData("player_status_bar_mana", 0);
+        const mana_bar_data = assets.getUiData("player_mana_bar", 0);
         screen.mana_bar = try element.Bar.create(allocator, .{
-            .x = screen.bars_decor.x + 8,
-            .y = screen.bars_decor.y + 73,
+            .x = screen.bars_decor.x + 47,
+            .y = screen.bars_decor.y + 18,
             .image_data = .{ .normal = .{ .atlas_data = mana_bar_data } },
             .text_data = .{
                 .text = "",
-                .size = 12,
+                .size = 10,
                 .text_type = .bold_italic,
                 .max_chars = 64,
             },
@@ -566,10 +466,41 @@ pub const GameScreen = struct {
         return screen;
     }
 
-    fn addStatsLine(
-        container: *element.Container,
-    ) void {
-        _ = container;
+    fn addAbility(container: *element.Container, ability: game_data.Ability, idx: *f32) !void {
+        defer idx.* += 1;
+
+        if (assets.ui_atlas_data.get(ability.icon.sheet)) |data| {
+            const index = ability.icon.index;
+            if (data.len <= index) {
+                std.log.err("Could not initiate ability for GameScreen, index was out of bounds", .{});
+                return;
+            }
+
+            _ = try container.createElement(element.Image, .{
+                .x = idx.* * 48.0,
+                .y = 0,
+                .image_data = .{ .normal = .{ .atlas_data = data[index] } },
+            });
+        } else {
+            std.log.err("Could not initiate ability for GameScreen, sheet was missing", .{});
+        }
+    }
+
+    fn addStatText(container: *element.Container, text: **element.Text, idx: *f32) !void {
+        defer idx.* += 1;
+
+        const x = 32.0 + 74.0 * @mod(idx.*, 4.0);
+        const y = 4.0 + 28.0 * @floor(idx.* / 4.0);
+        text.* = try container.createElement(element.Text, .{ .x = x, .y = y, .text_data = .{
+            .text = "",
+            .size = 12,
+            .text_type = .bold,
+            .max_width = 45,
+            .max_height = 26,
+            .hori_align = .middle,
+            .vert_align = .middle,
+            .max_chars = 64,
+        } });
     }
 
     pub fn deinit(self: *GameScreen) void {
@@ -581,9 +512,7 @@ pub const GameScreen = struct {
         self.bars_decor.destroy();
         self.stats_button.destroy();
         self.stats_container.destroy();
-        self.level_text.destroy();
-        self.xp_bar.destroy();
-        self.fame_bar.destroy();
+        self.ability_container.destroy();
         self.health_bar.destroy();
         self.mana_bar.destroy();
         self.chat_decor.destroy();
@@ -612,32 +541,28 @@ pub const GameScreen = struct {
         self.container_decor.x = self.inventory_decor.x - self.container_decor.width() - 10;
         self.container_decor.y = h - self.container_decor.height() - 10;
         self.bars_decor.x = (w - self.bars_decor.width()) / 2;
-        self.bars_decor.y = h - self.bars_decor.height() - 10;
-        self.stats_button.x = self.bars_decor.x + 7;
-        self.stats_button.y = self.bars_decor.y + 8;
-        self.level_text.x = self.bars_decor.x + 178;
-        self.level_text.y = self.bars_decor.y + 9;
-        self.xp_bar.x = self.bars_decor.x + 42;
-        self.xp_bar.y = self.bars_decor.y + 12;
-        self.fame_bar.x = self.bars_decor.x + 42;
-        self.fame_bar.y = self.bars_decor.y + 12;
-        self.health_bar.x = self.bars_decor.x + 8;
-        self.health_bar.y = self.bars_decor.y + 47;
-        self.mana_bar.x = self.bars_decor.x + 8;
-        self.mana_bar.y = self.bars_decor.y + 73;
+        self.bars_decor.y = h - self.bars_decor.height() - 10 - 16;
+        self.stats_container.x = self.bars_decor.x + (self.bars_decor.width() - self.stats_decor.width()) / 2.0;
+        self.stats_container.y = self.bars_decor.y + 32;
+        self.ability_container.x = self.bars_decor.x + 7;
+        self.ability_container.y = self.bars_decor.y + 39;
+        self.stats_button.x = self.bars_decor.x + 23 + (22 - self.stats_button.width() + assets.padding * 2) / 2.0;
+        self.stats_button.y = self.bars_decor.y + 10 + (24 - self.stats_button.height() + assets.padding * 2) / 2.0;
+        self.health_bar.x = self.bars_decor.x + 47;
+        self.health_bar.y = self.bars_decor.y + 4;
+        self.mana_bar.x = self.bars_decor.x + 47;
+        self.mana_bar.y = self.bars_decor.y + 18;
         const chat_decor_h = self.chat_decor.height();
         self.chat_decor.y = h - chat_decor_h - self.chat_input.imageData().normal.height() - 10;
         self.chat_input.y = self.chat_decor.y + chat_decor_h;
         self.fps_text.y = self.minimap_decor.y + self.minimap_decor.height() + 10;
-        self.stats_container.x = (camera.screen_width - self.stats_decor.width()) / 2;
-        self.stats_container.y = camera.screen_height - self.bars_decor.height() - self.stats_decor.height() - 10;
 
-        for (0..20) |idx| {
+        for (0..22) |idx| {
             self.inventory_items[idx].x = self.inventory_decor.x + sc.current_screen.game.inventory_pos_data[idx].x + (sc.current_screen.game.inventory_pos_data[idx].w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
             self.inventory_items[idx].y = self.inventory_decor.y + sc.current_screen.game.inventory_pos_data[idx].y + (sc.current_screen.game.inventory_pos_data[idx].h - self.inventory_items[idx].height() + assets.padding * 2) / 2;
         }
 
-        for (0..8) |idx| {
+        for (0..9) |idx| {
             self.container_items[idx].x = self.container_decor.x + sc.current_screen.game.container_pos_data[idx].x + (sc.current_screen.game.container_pos_data[idx].w - self.container_items[idx].width() + assets.padding * 2) / 2;
             self.container_items[idx].y = self.container_decor.y + sc.current_screen.game.container_pos_data[idx].y + (sc.current_screen.game.container_pos_data[idx].h - self.container_items[idx].height() + assets.padding * 2) / 2;
         }
@@ -649,46 +574,19 @@ pub const GameScreen = struct {
         self.fps_text.visible = settings.stats_enabled;
 
         if (map.localPlayerConst()) |local_player| {
-            // if (self.last_level != local_player.level) {
-            //     var level_text_data = &self.level_text.text_data;
-            //     level_text_data.text = try std.fmt.bufPrint(level_text_data._backing_buffer, "{d}", .{local_player.level});
-            //     level_text_data.recalculateAttributes(self._allocator);
+            if (!self.abilities_inited) {
+                if (game_data.classes.get(local_player.obj_type)) |char_class| {
+                    var idx: f32 = 0;
+                    try addAbility(self.ability_container, char_class.ability_1, &idx);
+                    try addAbility(self.ability_container, char_class.ability_2, &idx);
+                    try addAbility(self.ability_container, char_class.ability_3, &idx);
+                    try addAbility(self.ability_container, char_class.ultimate_ability, &idx);
+                } else {
+                    std.log.err("Could not initiate GameScreen abilities: CharacterClass was missing for object type 0x{x}", .{local_player.obj_type});
+                }
 
-            //     self.last_level = local_player.level;
-            // }
-
-            // const max_level = local_player.level >= 20;
-            // if (max_level) {
-            //     if (self.last_fame != local_player.fame or self.last_fame_goal != local_player.fame_goal) {
-            //         self.fame_bar.visible = true;
-            //         self.xp_bar.visible = false;
-
-            //         const fame_perc = @as(f32, @floatFromInt(local_player.fame)) / @as(f32, @floatFromInt(local_player.fame_goal));
-            //         self.fame_bar.image_data.normal.scissor.max_x = self.fame_bar.width() * fame_perc;
-
-            //         var fame_text_data = &self.fame_bar.text_data;
-            //         fame_text_data.text = try std.fmt.bufPrint(fame_text_data._backing_buffer, "{d}/{d} Fame", .{ local_player.fame, local_player.fame_goal });
-            //         fame_text_data.recalculateAttributes(self._allocator);
-
-            //         self.last_fame = local_player.fame;
-            //         self.last_fame_goal = local_player.fame_goal;
-            //     }
-            // } else {
-            //     if (self.last_xp != local_player.exp or self.last_xp_goal != local_player.exp_goal) {
-            //         self.xp_bar.visible = true;
-            //         self.fame_bar.visible = false;
-
-            //         const exp_perc = @as(f32, @floatFromInt(local_player.exp)) / @as(f32, @floatFromInt(local_player.exp_goal));
-            //         self.xp_bar.image_data.normal.scissor.max_x = self.xp_bar.width() * exp_perc;
-
-            //         var xp_text_data = &self.xp_bar.text_data;
-            //         xp_text_data.text = try std.fmt.bufPrint(xp_text_data._backing_buffer, "{d}/{d} XP", .{ local_player.exp, local_player.exp_goal });
-            //         xp_text_data.recalculateAttributes(self._allocator);
-
-            //         self.last_xp = local_player.exp;
-            //         self.last_xp_goal = local_player.exp_goal;
-            //     }
-            // }
+                self.abilities_inited = true;
+            }
 
             if (self.last_hp != local_player.hp or self.last_max_hp != local_player.max_hp) {
                 const hp_perc = @as(f32, @floatFromInt(local_player.hp)) / @as(f32, @floatFromInt(local_player.max_hp));
@@ -720,13 +618,13 @@ pub const GameScreen = struct {
         text_data.text = (if (bonus_val > 0)
             std.fmt.bufPrint(
                 text_data._backing_buffer,
-                "{d}&s=10&c=00FF00\n(+{d})",
+                "{d}&s=8&c=00FF00\n(+{d})",
                 .{ base_val, bonus_val },
             )
         else if (bonus_val < 0)
             std.fmt.bufPrint(
                 text_data._backing_buffer,
-                "{d}&s=10&c=FF0000\n({d})",
+                "{d}&s=8&c=FF0000\n({d})",
                 .{ base_val, bonus_val },
             )
         else
@@ -738,19 +636,24 @@ pub const GameScreen = struct {
         if (!self.inited)
             return;
 
-        // if (map.localPlayerConst()) |player| {
-        //     updateStat(self._allocator, &self.stats_attack.text_data, player.attack, player.attack_bonus);
-        //     updateStat(self._allocator, &self.stats_dexterity.text_data, player.dexterity, player.dexterity_bonus);
-        //     updateStat(self._allocator, &self.stats_speed.text_data, player.speed, player.speed_bonus);
-        //     updateStat(self._allocator, &self.stats_defense.text_data, player.defense, player.defense_bonus);
-        //     updateStat(self._allocator, &self.stats_vitality.text_data, player.vitality, player.vitality_bonus);
-        //     updateStat(self._allocator, &self.stats_wisdom.text_data, player.wisdom, player.wisdom_bonus);
-        // }
+        if (map.localPlayerConst()) |player| {
+            updateStat(self._allocator, &self.strength_stat_text.text_data, player.strength, player.strength_bonus);
+            updateStat(self._allocator, &self.resistance_stat_text.text_data, player.resistance, player.resistance_bonus);
+            updateStat(self._allocator, &self.intelligence_stat_text.text_data, player.intelligence, player.intelligence_bonus);
+            updateStat(self._allocator, &self.haste_stat_text.text_data, player.haste, player.haste_bonus);
+            updateStat(self._allocator, &self.wit_stat_text.text_data, player.wit, player.wit_bonus);
+            updateStat(self._allocator, &self.speed_stat_text.text_data, player.speed, player.speed_bonus);
+            updateStat(self._allocator, &self.penetration_stat_text.text_data, player.penetration, player.penetration_bonus);
+            updateStat(self._allocator, &self.tenacity_stat_text.text_data, player.tenacity, player.tenacity_bonus);
+            updateStat(self._allocator, &self.defense_stat_text.text_data, player.defense, player.defense_bonus);
+            updateStat(self._allocator, &self.stamina_stat_text.text_data, player.stamina, player.stamina_bonus);
+            updateStat(self._allocator, &self.piercing_stat_text.text_data, player.piercing, player.piercing_bonus);
+        }
     }
 
     pub fn updateFpsText(self: *GameScreen, fps: f64, mem: f32) !void {
         const fmt =
-            \\FPS: {d:.3}
+            \\FPS: {d:.1}
             \\Memory: {d:.1} MB
         ;
         self.fps_text.text_data.text = try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, fmt, .{ fps, mem });
@@ -994,8 +897,6 @@ pub const GameScreen = struct {
                     text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Bullets pierce", .{text}) catch text;
                 if (proj.passes_cover)
                     text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Bullets pass through cover", .{text}) catch text;
-                if (proj.armor_piercing)
-                    text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Bullets ignore Defense", .{text}) catch text;
                 if (proj.wavy)
                     text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Bullets are wavy", .{text}) catch text;
                 if (proj.parametric)
@@ -1041,11 +942,11 @@ pub const GameScreen = struct {
             if (props.untradeable)
                 footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Can not be traded", .{footer_text}) catch footer_text;
 
-            const item_type: game_data.ItemType = @enumFromInt(props.slot_type);
-            if (item_type != game_data.ItemType.no_item and
-                item_type != game_data.ItemType.any and
-                item_type != game_data.ItemType.consumable and
-                item_type != game_data.ItemType.ring)
+            if (props.slot_type != .no_item and
+                props.slot_type != .any and
+                props.slot_type != .consumable and
+                props.slot_type != .boots and
+                props.slot_type != .artifact)
             {
                 if (map.localPlayerConst()) |player| {
                     var has_type = false;
@@ -1074,7 +975,8 @@ pub const GameScreen = struct {
                     footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Usable by: ", .{footer_text}) catch footer_text;
 
                     var first = true;
-                    for (game_data.classes) |class| {
+                    var class_iter = game_data.classes.valueIterator();
+                    if (class_iter.next()) |class| {
                         for (class.slot_types) |slot_type| {
                             if (slot_type == props.slot_type) {
                                 if (first) {
@@ -1110,40 +1012,41 @@ pub const GameScreen = struct {
     }
 
     fn parseItemRects(self: *GameScreen) void {
-        for (0..20) |i| {
-            const hori_idx: f32 = @floatFromInt(@mod(i, 4));
-            const vert_idx: f32 = @floatFromInt(@divFloor(i, 4));
+        for (0..22) |i| {
             if (i < 4) {
+                const hori_idx: f32 = @floatFromInt(@mod(i, 4));
                 self.inventory_pos_data[i] = utils.Rect{
-                    .x = 5 + hori_idx * 44,
-                    .y = 8,
+                    .x = 51 + hori_idx * 48,
+                    .y = 7,
                     .w = 40,
                     .h = 40,
-                    .w_pad = 2,
-                    .h_pad = 13,
+                    .w_pad = 4,
+                    .h_pad = 4,
                 };
             } else {
+                const hori_idx: f32 = @floatFromInt(@mod(i - 4, 6));
+                const vert_idx: f32 = @floatFromInt(@divFloor(i - 4, 6));
                 self.inventory_pos_data[i] = utils.Rect{
-                    .x = 5 + hori_idx * 44,
-                    .y = 63 + (vert_idx - 1) * 44,
+                    .x = 3 + hori_idx * 48,
+                    .y = 59 + vert_idx * 48,
                     .w = 40,
                     .h = 40,
-                    .w_pad = 2,
-                    .h_pad = 2,
+                    .w_pad = 4,
+                    .h_pad = 4,
                 };
             }
         }
 
-        for (0..8) |i| {
-            const hori_idx: f32 = @floatFromInt(@mod(i, 4));
-            const vert_idx: f32 = @floatFromInt(@divFloor(i, 4));
+        for (0..9) |i| {
+            const hori_idx: f32 = @floatFromInt(@mod(i, 3));
+            const vert_idx: f32 = @floatFromInt(@divFloor(i, 3));
             self.container_pos_data[i] = utils.Rect{
-                .x = 5 + hori_idx * 44,
-                .y = 8 + vert_idx * 44,
+                .x = 7 + hori_idx * 48,
+                .y = 33 + vert_idx * 48,
                 .w = 40,
                 .h = 40,
-                .w_pad = 2,
-                .h_pad = 2,
+                .w_pad = 4,
+                .h_pad = 4,
             };
         }
     }
@@ -1175,7 +1078,7 @@ pub const GameScreen = struct {
                 else
                     self.inventory_items[start_slot.idx]._item;
 
-                if (end_slot.idx >= 12 and local_player.tier < 2) {
+                if (end_slot.idx >= 4 + 9 and local_player.tier < 2) {
                     if (start_slot.is_container) {
                         self.setContainerItem(start_item, start_slot.idx);
                     } else {
@@ -1274,9 +1177,20 @@ pub const GameScreen = struct {
         }
     }
 
-    fn statsCallback() void {
+    pub fn statsCallback() void {
         sc.current_screen.game.stats_container.visible = !sc.current_screen.game.stats_container.visible;
-        sc.current_screen.game.updateStats();
+        if (sc.current_screen.game.stats_container.visible) {
+            const abil_button_data = assets.getUiData("minimap_icons", 1);
+            sc.current_screen.game.stats_button.image_data.base.normal.atlas_data = abil_button_data;
+
+            sc.current_screen.game.ability_container.visible = false;
+            sc.current_screen.game.updateStats();
+        } else {
+            const stats_button_data = assets.getUiData("minimap_icons", 0);
+            sc.current_screen.game.stats_button.image_data.base.normal.atlas_data = stats_button_data;
+
+            sc.current_screen.game.ability_container.visible = true;
+        }
     }
 
     fn chatCallback(input_text: []const u8) void {

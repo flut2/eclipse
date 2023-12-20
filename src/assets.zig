@@ -899,16 +899,13 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addUiImage("minimap", "ui/minimap.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("minimap_icons", "ui/minimap_icons.png", 8, 8, &ui_ctx, allocator);
     try addUiImage("player_inventory", "ui/player_inventory.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_status_bar_fame", "ui/player_status_bar_fame.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_status_bar_health", "ui/player_status_bar_health.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_status_bar_mana", "ui/player_status_bar_mana.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_status_bars_decor", "ui/player_status_bars_decor.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_status_bar_stat_icon", "ui/player_status_bar_stat_icon.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_status_bar_xp", "ui/player_status_bar_xp.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_health_bar", "ui/player_health_bar.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_mana_bar", "ui/player_mana_bar.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_abilities_bars", "ui/player_abilities_bars.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_xp_bar", "ui/player_xp_bar.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_xp_decor", "ui/player_xp_decor.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("options_background", "ui/options_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("stats_view", "ui/stats_view.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("stats_view_icons", "ui/stats_view_icons.png", 8, 8, &ctx, allocator);
-    try addUiImage("item_row", "ui/item_row.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_stats", "ui/player_stats.png", imply_size, imply_size, &ui_ctx, allocator);
 
     if (settings.print_ui_atlas)
         try zstbi.Image.writeToFile(ui_atlas, "ui_atlas.png", .png);

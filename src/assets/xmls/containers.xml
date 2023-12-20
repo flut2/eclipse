@@ -10,7 +10,7 @@
       <Index>0x0a</Index>
     </Texture>
     <Size>62</Size>
-    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
   </Object>
   <Object type="0x0505" id="Closed Stash Chest">
     <Class>ClosedStashChest</Class>
@@ -30,7 +30,7 @@
       <Index>0x16</Index>
     </Texture>
     <Size>80</Size>
-    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
   </Object>
   <Object type="0x0507" id="Purple Bag">
     <DisplayId>Loot Bag</DisplayId>
@@ -44,7 +44,7 @@
       <Index>0x17</Index>
     </Texture>
     <Size>80</Size>
-    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
   </Object>
   <Object type="0x0508" id="Blue Bag">
     <DisplayId>Loot Bag</DisplayId>
@@ -58,7 +58,7 @@
       <Index>0x18</Index>
     </Texture>
     <Size>120</Size>
-    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
   </Object>
   <Object type="0x0509" id="White Bag">
     <DisplayId>Loot Bag</DisplayId>
@@ -72,7 +72,7 @@
       <Index>0x19</Index>
     </Texture>
     <Size>120</Size>
-    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
   </Object>
   <Object type="0x050a" id="Stash Chest Skin">
     <Class>Container</Class>
@@ -85,6 +85,6 @@
     </Texture>
     <Cost>1000</Cost>
     <Size>62</Size>
-    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
+    <SlotTypes>0, 0, 0, 0, 0, 0, 0, 0, 0</SlotTypes>
   </Object>
 </Objects>

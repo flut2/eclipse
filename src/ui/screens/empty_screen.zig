@@ -5,9 +5,8 @@ pub const EmptyScreen = struct {
     inited: bool = false,
 
     pub fn init(allocator: Allocator) !*EmptyScreen {
-        var screen = try allocator.create(EmptyScreen);
-        screen.* = .{ ._allocator = allocator };
-        screen.inited = true;
+        const screen = try allocator.create(EmptyScreen);
+        screen.* = .{ ._allocator = allocator, .inited = true };
         return screen;
     }
 

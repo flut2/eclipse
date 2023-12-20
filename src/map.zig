@@ -425,15 +425,15 @@ pub const GameObject = struct {
 
     pub fn takeDamage(
         noalias self: *GameObject,
-        damage_amount: i32,
+        phys_dmg: i32,
+        magic_dmg: i32,
+        true_dmg: i32,
         kill: bool,
-        armor_pierce: bool,
         time: i64,
         conditions: utils.Condition,
         noalias proj_colors: []const u32,
         proj_angle: f32,
         proj_speed: f32,
-        ground_damage: bool,
         noalias allocator: *const std.mem.Allocator,
     ) void {
         if (self.dead)
@@ -503,9 +503,8 @@ pub const GameObject = struct {
             }
         }
 
-        if (damage_amount > 0) {
-            const pierced = self.condition.armor_broken or armor_pierce or ground_damage;
-            showDamageText(time, damage_amount, pierced, self.obj_id, allocator);
+        if (phys_dmg > 0 or magic_dmg > 0 or true_dmg > 0) {
+            showDamageText(time, phys_dmg, magic_dmg, true_dmg, self.obj_id, allocator);
         }
     }
 
@@ -658,8 +657,9 @@ pub const Player = struct {
     damage_multiplier: f32 = 1.0,
     condition: utils.Condition = utils.Condition{},
     inventory: [22]u16 = [_]u16{std.math.maxInt(u16)} ** 22,
-    slot_types: [22]i8 = [_]i8{0} ** 22,
+    slot_types: [22]game_data.ItemType = [_]game_data.ItemType{.any} ** 22,
     tier: u8 = 0,
+    tier_xp: i32 = 0,
     tex_1: i32 = 0,
     tex_2: i32 = 0,
     skin: u16 = 0,
@@ -823,12 +823,10 @@ pub const Player = struct {
         }
 
         var default_name: []const u8 = "";
-        for (game_data.classes) |class| {
-            if (class.obj_type == self.obj_type and class.slot_types.len >= 20) {
-                self.slot_types = class.slot_types[0..22].*;
-                default_name = class.name;
-                self.class_name = class.name;
-            }
+        if (game_data.classes.get(self.obj_type)) |class| {
+            self.slot_types = class.slot_types[0..22].*;
+            default_name = class.name;
+            self.class_name = class.name;
         }
 
         self.name_text_data = element.TextData{
@@ -903,7 +901,7 @@ pub const Player = struct {
         assets.playSfx(item_props.?.sound);
     }
 
-    pub fn doShoot(noalias self: *Player, time: i64, weapon_type: i32, noalias item_props: ?*game_data.ItemProps, attack_angle: f32, use_mult: bool) void {
+    pub fn doShoot(noalias self: *Player, time: i64, weapon_type: i32, noalias item_props: ?*game_data.ItemProps, attack_angle: f32) void {
         const projs_len = item_props.?.num_projectiles;
         const arc_gap = item_props.?.arc_gap;
         const total_angle = arc_gap * @as(f32, @floatFromInt(projs_len - 1));
@@ -918,8 +916,8 @@ pub const Player = struct {
             const x = self.x + @cos(attack_angle) * 0.25;
             const y = self.y + @sin(attack_angle) * 0.25;
 
-            const physical_damage = @as(f32, @floatFromInt(proj_props.physical_damage)) * (if (use_mult) self.strengthMultiplier() else 1.0);
-            const magic_damage = @as(f32, @floatFromInt(proj_props.magic_damage)) * (if (use_mult) self.witMultiplier() else 1.0);
+            const physical_damage = @as(f32, @floatFromInt(proj_props.physical_damage)) * self.strengthMultiplier();
+            const magic_damage = @as(f32, @floatFromInt(proj_props.magic_damage)) * self.witMultiplier();
             const true_damage = proj_props.true_damage;
 
             var proj = Projectile{
@@ -933,6 +931,8 @@ pub const Player = struct {
                 .physical_damage = @intFromFloat(physical_damage),
                 .magic_damage = @intFromFloat(magic_damage),
                 .true_damage = true_damage,
+                .piercing = self.piercing,
+                .penetration = self.penetration,
             };
             proj.addToMap(false);
 
@@ -967,23 +967,23 @@ pub const Player = struct {
         assets.playSfx(item_props.?.old_sound);
 
         self.attack_period = attack_delay;
-        self.attack_angle = angle - camera.angle; // - angle + angle later is to prevent std check need
+        self.attack_angle = angle - camera.angle;
         self.attack_start = time;
 
-        self.doShoot(self.attack_start, weapon_type, item_props, angle, true);
+        self.doShoot(self.attack_start, weapon_type, item_props, angle);
     }
 
     pub fn takeDamage(
         noalias self: *Player,
-        damage_amount: i32,
+        phys_dmg: i32,
+        magic_dmg: i32,
+        true_dmg: i32,
         kill: bool,
-        armor_pierce: bool,
         time: i64,
         conditions: utils.Condition,
         noalias proj_colors: []const u32,
         proj_angle: f32,
         proj_speed: f32,
-        ground_damage: bool,
         noalias allocator: *const std.mem.Allocator,
     ) void {
         if (self.dead)
@@ -1053,9 +1053,8 @@ pub const Player = struct {
             }
         }
 
-        if (damage_amount > 0) {
-            const pierced = self.condition.armor_broken or armor_pierce or ground_damage;
-            showDamageText(time, damage_amount, pierced, self.obj_id, allocator);
+        if (phys_dmg > 0 or magic_dmg > 0 or true_dmg > 0) {
+            showDamageText(time, phys_dmg, magic_dmg, true_dmg, self.obj_id, allocator);
         }
     }
 
@@ -1184,15 +1183,15 @@ pub const Player = struct {
                     {
                         network.queuePacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
                         self.takeDamage(
+                            0,
+                            0,
                             @intCast(square.props.?.damage),
                             square.props.?.damage >= self.hp,
-                            true,
                             time,
                             utils.Condition{},
                             self.colors,
                             0.0,
                             100.0 / 10000.0,
-                            true,
                             allocator,
                         );
                         self.last_ground_damage_time = time;
@@ -1385,6 +1384,8 @@ pub const Projectile = struct {
     physical_damage: i32 = 0,
     magic_damage: i32 = 0,
     true_damage: i32 = 0,
+    penetration: i32 = 0,
+    piercing: i32 = 0,
     props: game_data.ProjProps,
     last_hit_check: i64 = 0,
     colors: []u32 = &[0]u32{},
@@ -1710,25 +1711,21 @@ pub const Projectile = struct {
                     }
 
                     if (local_player_id == player.obj_id) {
-                        const pierced = self.props.armor_piercing;
-                        const d = damageWithDefense(
-                            @floatFromInt(self.physical_damage),
-                            @floatFromInt(player.defense),
-                            pierced,
-                            player.condition,
-                        );
-                        const dead = player.hp <= d;
+                        const phys_dmg = physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(player.defense - self.penetration), player.condition);
+                        const magic_dmg = magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(player.resistance - self.piercing), player.condition);
+                        const true_dmg = self.true_damage;
+                        const dead = player.hp <= (phys_dmg + magic_dmg + true_dmg);
 
                         player.takeDamage(
-                            d,
+                            phys_dmg,
+                            magic_dmg,
+                            true_dmg,
                             dead,
-                            pierced,
                             time,
                             utils.Condition.fromCondSlice(self.props.effects),
                             self.colors,
                             self.angle,
                             self.props.speed,
-                            false,
                             allocator,
                         );
                         network.queuePacket(.{ .player_hit = .{ .bullet_id = self.bullet_id, .object_id = self.owner_id } });
@@ -1773,25 +1770,21 @@ pub const Projectile = struct {
                     }
 
                     if (object.is_enemy) {
-                        const pierced = self.props.armor_piercing;
-                        const d = damageWithDefense(
-                            @floatFromInt(self.physical_damage),
-                            @floatFromInt(object.defense),
-                            pierced,
-                            object.condition,
-                        );
-                        const dead = object.hp <= d;
+                        const phys_dmg = physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(object.defense - self.penetration), object.condition);
+                        const magic_dmg = magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(object.resistance - self.piercing), object.condition);
+                        const true_dmg = self.true_damage;
+                        const dead = object.hp <= (phys_dmg + magic_dmg + true_dmg);
 
                         object.takeDamage(
-                            d,
+                            phys_dmg,
+                            magic_dmg,
+                            true_dmg,
                             dead,
-                            pierced,
                             time,
                             utils.Condition.fromCondSlice(self.props.effects),
                             self.colors,
                             self.angle,
                             self.props.speed,
-                            false,
                             allocator,
                         );
 
@@ -1837,9 +1830,12 @@ pub const Projectile = struct {
     }
 };
 
-pub fn damageWithDefense(orig_damage: f32, target_defense: f32, armor_piercing: bool, condition: utils.Condition) i32 {
-    var def = target_defense;
-    if (armor_piercing or condition.armor_broken) {
+pub fn physicalDamage(dmg: f32, defense: f32, condition: utils.Condition) i32 {
+    if (dmg == 0)
+        return 0;
+
+    var def = defense;
+    if (condition.armor_broken) {
         def = 0.0;
     } else if (condition.armored) {
         def *= 2.0;
@@ -1848,28 +1844,80 @@ pub fn damageWithDefense(orig_damage: f32, target_defense: f32, armor_piercing: 
     if (condition.invulnerable)
         return 0;
 
-    const min = orig_damage * 0.25;
-    return @intFromFloat(@max(min, orig_damage - def));
+    const min = dmg * 0.25;
+    return @intFromFloat(@max(min, dmg - def));
 }
 
-pub fn showDamageText(time: i64, damage: i32, pierced: bool, object_id: i32, noalias allocator: *const std.mem.Allocator) void {
-    var damage_color: u32 = 0xB02020;
-    if (pierced)
-        damage_color = 0x890AFF;
+pub fn magicDamage(dmg: f32, resistance: f32, condition: utils.Condition) i32 {
+    if (dmg == 0)
+        return 0;
 
-    element.StatusText.add(.{
-        .obj_id = object_id,
-        .start_time = time,
-        .text_data = .{
-            .text = std.fmt.allocPrint(allocator.*, "-{d}", .{damage}) catch unreachable,
-            .text_type = .bold,
-            .size = 22,
-            .color = damage_color,
-        },
-        .initial_size = 22,
-    }) catch |e| {
-        std.log.err("Allocation for damage text \"-{d}\" failed: {any}", .{ damage, e });
-    };
+    var def = resistance;
+    if (condition.armor_broken) {
+        def = 0.0;
+    } else if (condition.armored) {
+        def *= 2.0;
+    }
+
+    if (condition.invulnerable)
+        return 0;
+
+    const min = dmg * 0.25;
+    return @intFromFloat(@max(min, dmg - def));
+}
+
+pub fn showDamageText(time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i32, noalias allocator: *const std.mem.Allocator) void {
+    var delay: i64 = 0;
+    if (phys_dmg > 0) {
+        element.StatusText.add(.{
+            .obj_id = object_id,
+            .start_time = time + delay,
+            .text_data = .{
+                .text = std.fmt.allocPrint(allocator.*, "-{d}", .{phys_dmg}) catch unreachable,
+                .text_type = .bold,
+                .size = 22,
+                .color = 0xB02020,
+            },
+            .initial_size = 22,
+        }) catch |e| {
+            std.log.err("Allocation for physical damage text \"-{d}\" failed: {any}", .{ phys_dmg, e });
+        };
+        delay += 100;
+    }
+
+    if (magic_dmg > 0) {
+        element.StatusText.add(.{
+            .obj_id = object_id,
+            .start_time = time + delay,
+            .text_data = .{
+                .text = std.fmt.allocPrint(allocator.*, "-{d}", .{magic_dmg}) catch unreachable,
+                .text_type = .bold,
+                .size = 22,
+                .color = 0x6E15AD,
+            },
+            .initial_size = 22,
+        }) catch |e| {
+            std.log.err("Allocation for magic damage text \"-{d}\" failed: {any}", .{ magic_dmg, e });
+        };
+        delay += 100;
+    }
+
+    if (true_dmg > 0) {
+        element.StatusText.add(.{
+            .obj_id = object_id,
+            .start_time = time + delay,
+            .text_data = .{
+                .text = std.fmt.allocPrint(allocator.*, "-{d}", .{true_dmg}) catch unreachable,
+                .text_type = .bold,
+                .size = 22,
+                .color = 0xC2C2C2,
+            },
+            .initial_size = 22,
+        }) catch |e| {
+            std.log.err("Allocation for true damage text \"-{d}\" failed: {any}", .{ true_dmg, e });
+        };
+        delay += 100;
+    }
 }
 
 fn lessThan(_: void, lhs: Entity, rhs: Entity) bool {
@@ -1932,7 +1980,6 @@ const day_cycle_ms_half: f32 = @as(f32, day_cycle_ms) / 2;
 
 pub var object_lock: std.Thread.RwLock = .{};
 pub var entities: std.ArrayList(Entity) = undefined;
-pub var entity_indices_to_remove: std.ArrayList(usize) = undefined;
 pub var move_records: std.ArrayList(network.TimedPosition) = undefined;
 pub var atlas_to_color_data: std.AutoHashMap(AtlasHashHack, []u32) = undefined;
 pub var local_player_id: i32 = -1;
@@ -1954,7 +2001,6 @@ var last_sort: i64 = -1;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     entities = try std.ArrayList(Entity).initCapacity(allocator, 65536);
-    entity_indices_to_remove = try std.ArrayList(usize).initCapacity(allocator, 256);
     move_records = try std.ArrayList(network.TimedPosition).initCapacity(allocator, 10);
     atlas_to_color_data = std.AutoHashMap(AtlasHashHack, []u32).init(allocator);
 
@@ -2038,7 +2084,6 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     }
 
     entities.deinit();
-    entity_indices_to_remove.deinit();
     move_records.deinit();
     atlas_to_color_data.deinit();
     minimap.deinit();
@@ -2200,6 +2245,9 @@ pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
 }
 
 pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) void {
+    if (entities.items.len <= 0)
+        return;
+
     while (!object_lock.tryLock()) {}
     defer object_lock.unlock();
 
@@ -2214,7 +2262,13 @@ pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) v
 
     var interactive_set = false;
     @prefetch(entities.items, .{ .rw = .write });
-    for (entities.items, 0..) |*en, i| {
+    var iter = std.mem.reverseIterator(entities.items);
+    var i: usize = entities.items.len - 1;
+    while (iter.nextPtr()) |en| {
+        defer if (i != 0) {
+            i -= 1;
+        };
+
         switch (en.*) {
             .player => |*player| {
                 player.update(ms_time, ms_dt, allocator);
@@ -2222,9 +2276,7 @@ pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) v
                     camera.update(player.x, player.y, ms_dt, input.rotate);
                     addMoveRecord(time, player.x, player.y);
                     if (input.attacking) {
-                        const y: f32 = @floatCast(input.mouse_y);
-                        const x: f32 = @floatCast(input.mouse_x);
-                        const shoot_angle = std.math.atan2(f32, y - camera.screen_height / 2.0, x - camera.screen_width / 2.0) + camera.angle;
+                        const shoot_angle = std.math.atan2(f32, input.mouse_y - camera.screen_height / 2.0, input.mouse_x - camera.screen_width / 2.0) + camera.angle;
                         player.weaponShoot(shoot_angle, time);
                     }
                 }
@@ -2259,28 +2311,28 @@ pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) v
                 object.update(ms_time, ms_dt);
             },
             .projectile => |*projectile| {
-                if (!projectile.update(ms_time, ms_dt, i, allocator))
-                    entity_indices_to_remove.append(i) catch |e| {
-                        std.log.err("Out of memory: {any}", .{e});
-                    };
+                if (!projectile.update(ms_time, ms_dt, i, allocator)) {
+                    disposeEntity(allocator.*, &entities.items[i]);
+                    _ = entities.swapRemove(i);
+                }
             },
             .particle => |*pt| {
                 switch (pt.*) {
                     inline else => |*particle| {
-                        if (!particle.update(ms_time, ms_dt))
-                            entity_indices_to_remove.append(i) catch |e| {
-                                std.log.err("Out of memory: {any}", .{e});
-                            };
+                        if (!particle.update(ms_time, ms_dt)) {
+                            disposeEntity(allocator.*, &entities.items[i]);
+                            _ = entities.swapRemove(i);
+                        }
                     },
                 }
             },
             .particle_effect => |*pt_eff| {
                 switch (pt_eff.*) {
                     inline else => |*effect| {
-                        if (!effect.update(ms_time, ms_dt))
-                            entity_indices_to_remove.append(i) catch |e| {
-                                std.log.err("Out of memory: {any}", .{e});
-                            };
+                        if (!effect.update(ms_time, ms_dt)) {
+                            disposeEntity(allocator.*, &entities.items[i]);
+                            _ = entities.swapRemove(i);
+                        }
                     },
                 }
             },
@@ -2298,14 +2350,6 @@ pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) v
         sc.current_screen.game.setContainerVisible(false);
         sc.current_screen.game.panel_controller.hidePanels();
     }
-
-    var remove_iter = std.mem.reverseIterator(entity_indices_to_remove.items);
-    while (remove_iter.next()) |idx| {
-        disposeEntity(allocator.*, &entities.items[idx]);
-        _ = entities.swapRemove(idx);
-    }
-
-    entity_indices_to_remove.clearRetainingCapacity();
 
     std.sort.pdq(Entity, entities.items, {}, lessThan);
 }

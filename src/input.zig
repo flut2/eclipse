@@ -9,6 +9,7 @@ const assets = @import("assets.zig");
 const network = @import("network.zig");
 const game_data = @import("game_data.zig");
 const sc = @import("ui/controllers/screen_controller.zig");
+const GameScreen = @import("ui/screens/game_screen.zig").GameScreen;
 
 var move_up: f32 = 0.0;
 var move_down: f32 = 0.0;
@@ -20,8 +21,8 @@ var rotate_right: i8 = 0;
 pub var attacking: bool = false;
 pub var walking_speed_multiplier: f32 = 1.0;
 pub var rotate: i8 = 0;
-pub var mouse_x: f64 = 0.0;
-pub var mouse_y: f64 = 0.0;
+pub var mouse_x: f32 = 0.0;
+pub var mouse_y: f32 = 0.0;
 
 pub var selected_key_mapper: ?*element.KeyMapper = null;
 pub var selected_input_field: ?*element.Input = null;
@@ -54,7 +55,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 
 // todo isolate the ingame and editor logic
 
-fn keyPress(window: *zglfw.Window, key: zglfw.Key, mods: zglfw.Mods) void {
+fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
     if (sc.current_screen != .game and sc.current_screen != .editor)
         return;
 
@@ -108,44 +109,11 @@ fn keyPress(window: *zglfw.Window, key: zglfw.Key, mods: zglfw.Mods) void {
         charEvent(window, .slash);
         selected_input_field = sc.current_screen.game.chat_input;
         selected_input_field.?._last_input = 0;
-    } else if (key == settings.inv_0.getKey()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 4 + 8 else 4);
-        }
-    } else if (key == settings.inv_1.getKey()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 5 + 8 else 5);
-        }
-    } else if (key == settings.inv_2.getKey()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 6 + 8 else 6);
-        }
-    } else if (key == settings.inv_3.getKey()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 7 + 8 else 7);
-        }
-    } else if (key == settings.inv_4.getKey()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 8 + 8 else 8);
-        }
-    } else if (key == settings.inv_5.getKey()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 9 + 8 else 9);
-        }
-    } else if (key == settings.inv_6.getKey()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 10 + 8 else 10);
-        }
-    } else if (key == settings.inv_7.getKey()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 11 + 8 else 11);
-        }
     } else if (key == settings.toggle_perf_stats.getKey()) {
         settings.stats_enabled = !settings.stats_enabled;
     } else if (key == settings.toggle_stats.getKey()) {
         if (sc.current_screen == .game) {
-            sc.current_screen.game.stats_container.visible = !sc.current_screen.game.stats_container.visible;
-            sc.current_screen.game.updateStats();
+            GameScreen.statsCallback();
         }
     }
 }
@@ -178,7 +146,7 @@ fn keyRelease(key: zglfw.Key) void {
     }
 }
 
-fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton, mods: zglfw.Mods) void {
+fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
     if (sc.current_screen != .game and sc.current_screen != .editor)
         return;
 
@@ -238,44 +206,11 @@ fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton, mods: zglfw.Mods
             selected_input_field = sc.current_screen.game.chat_input;
             selected_input_field.?._last_input = 0;
         }
-    } else if (button == settings.inv_0.getMouse()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 4 + 8 else 4);
-        }
-    } else if (button == settings.inv_1.getMouse()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 5 + 8 else 5);
-        }
-    } else if (button == settings.inv_2.getMouse()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 6 + 8 else 6);
-        }
-    } else if (button == settings.inv_3.getMouse()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 7 + 8 else 7);
-        }
-    } else if (button == settings.inv_4.getMouse()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 8 + 8 else 8);
-        }
-    } else if (button == settings.inv_5.getMouse()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 9 + 8 else 9);
-        }
-    } else if (button == settings.inv_6.getMouse()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 10 + 8 else 10);
-        }
-    } else if (button == settings.inv_7.getMouse()) {
-        if (sc.current_screen == .game) {
-            sc.current_screen.game.useItem(if (mods.control) 11 + 8 else 11);
-        }
     } else if (button == settings.toggle_perf_stats.getMouse()) {
         settings.stats_enabled = !settings.stats_enabled;
     } else if (button == settings.toggle_stats.getMouse()) {
         if (sc.current_screen == .game) {
-            sc.current_screen.game.stats_container.visible = !sc.current_screen.game.stats_container.visible;
-            sc.current_screen.game.updateStats();
+            GameScreen.statsCallback();
         }
     }
 }
@@ -428,9 +363,9 @@ pub fn keyEvent(window: *zglfw.Window, key: zglfw.Key, _: i32, action: zglfw.Act
     }
 
     if (action == .press) {
-        keyPress(window, key, mods);
+        keyPress(window, key);
         if (sc.current_screen == .editor) {
-            sc.current_screen.editor.onKeyPress(key, mods);
+            sc.current_screen.editor.onKeyPress(key);
         }
     } else if (action == .release) {
         keyRelease(key);
@@ -464,20 +399,19 @@ pub fn mouseEvent(window: *zglfw.Window, button: zglfw.MouseButton, action: zglf
             .target_ally => assets.target_ally_cursor,
         });
     }
-
     if (action == .press) {
-        if (!sc.mousePress(@floatCast(mouse_x), @floatCast(mouse_y), mods, button)) {
-            mousePress(window, button, mods);
+        if (!sc.mousePress(mouse_x, mouse_y, mods, button)) {
+            mousePress(window, button);
 
             if (sc.current_screen == .editor) {
-                sc.current_screen.editor.onMousePress(@floatCast(mouse_x), @floatCast(mouse_y), mods, button);
+                sc.current_screen.editor.onMousePress(mouse_x, mouse_y, button);
             }
         }
     } else if (action == .release) {
         if (sc.current_screen == .editor) {
-            sc.current_screen.editor.onMouseRelease(@floatCast(mouse_x), @floatCast(mouse_y), mods, button);
+            sc.current_screen.editor.onMouseRelease();
         }
-        sc.mouseRelease(@floatCast(mouse_x), @floatCast(mouse_y));
+        sc.mouseRelease(mouse_x, mouse_y);
         mouseRelease(button);
     }
 
@@ -498,23 +432,21 @@ pub fn updateState() void {
         local_player.walk_speed_multiplier = walking_speed_multiplier;
 
         if (attacking) {
-            const y: f32 = @floatCast(mouse_y);
-            const x: f32 = @floatCast(mouse_x);
-            const shoot_angle = std.math.atan2(f32, y - camera.screen_height / 2.0, x - camera.screen_width / 2.0) + camera.angle;
+            const shoot_angle = std.math.atan2(f32, mouse_y - camera.screen_height / 2.0, mouse_x - camera.screen_width / 2.0) + camera.angle;
             local_player.weaponShoot(shoot_angle, main.current_time);
         }
     }
 }
 
-pub fn mouseMoveEvent(_: *zglfw.Window, xpos: f64, ypos: f64) callconv(.C) void {
-    mouse_x = xpos;
-    mouse_y = ypos;
+pub fn mouseMoveEvent(_: *zglfw.Window, x_pos: f64, y_pos: f64) callconv(.C) void {
+    mouse_x = @floatCast(x_pos);
+    mouse_y = @floatCast(y_pos);
 
-    sc.mouseMove(@floatCast(mouse_x), @floatCast(mouse_y));
+    sc.mouseMove(mouse_x, mouse_y);
 
     if (sc.current_screen == .editor) {
         if (main.editing_map) {
-            sc.current_screen.editor.onMouseMove(@floatCast(mouse_x), @floatCast(mouse_y));
+            sc.current_screen.editor.onMouseMove(mouse_x, mouse_y);
         }
     }
 }
@@ -540,8 +472,6 @@ fn useAbility() void {
     defer map.object_lock.unlockShared();
 
     if (map.localPlayerRef()) |local_player| {
-        const x: f32 = @floatCast(mouse_x);
-        const y: f32 = @floatCast(mouse_y);
-        local_player.useAbility(x, y, game_data.UseType.start); // todo multi phase part with usetype checks
+        local_player.useAbility(mouse_x, mouse_y, game_data.UseType.start);
     }
 }

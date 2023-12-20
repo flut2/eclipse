@@ -110,6 +110,26 @@ pub const CharacterSkin = struct {
     }
 };
 
+pub const Ability = struct {
+    icon: TextureData,
+    name: []const u8,
+    mana_cost: i16,
+    health_cost: i32,
+    cooldown: f32,
+    description: []const u8,
+
+    pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !Ability {
+        return Ability{
+            .icon = try TextureData.parse(node.findChild("Icon") orelse @panic("Could not parse Ability: Icon node is missing"), allocator, false),
+            .name = try node.getValueAlloc("Name", allocator, "Unknown"),
+            .mana_cost = try node.getValueInt("ManaCost", i16, 0),
+            .health_cost = try node.getValueInt("HealthCost", i32, 0),
+            .cooldown = try node.getValueFloat("Cooldown", f32, 0.0),
+            .description = try node.getValueAlloc("Description", allocator, "Unknown"),
+        };
+    }
+};
+
 pub const CharacterClassStat = struct {
     const tier_count = 2;
 
@@ -135,8 +155,12 @@ pub const CharacterClass = struct {
     hit_sound: []const u8,
     death_sound: []const u8,
     blood_prob: f32,
-    slot_types: []i8,
+    slot_types: []ItemType,
     equipment: []i16,
+    ability_1: Ability,
+    ability_2: Ability,
+    ability_3: Ability,
+    ultimate_ability: Ability,
     health: CharacterClassStat,
     mana: CharacterClassStat,
     strength: CharacterClassStat,
@@ -154,11 +178,11 @@ pub const CharacterClass = struct {
     skins: ?[]CharacterSkin,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !CharacterClass {
-        var slot_list = try std.ArrayList(i8).initCapacity(allocator, 20);
+        var slot_list = try std.ArrayList(ItemType).initCapacity(allocator, 20);
         defer slot_list.deinit();
         var slot_iter = std.mem.split(u8, node.getValue("SlotTypes") orelse "", ", ");
         while (slot_iter.next()) |s|
-            try slot_list.append(try std.fmt.parseInt(i8, s, 0));
+            try slot_list.append(@enumFromInt(try std.fmt.parseInt(i8, s, 0)));
 
         var equip_list = try std.ArrayList(i16).initCapacity(allocator, 20);
         defer equip_list.deinit();
@@ -173,8 +197,12 @@ pub const CharacterClass = struct {
             .hit_sound = try node.getValueAlloc("HitSound", allocator, "default_hit"),
             .death_sound = try node.getValueAlloc("DeathSound", allocator, "default_death"),
             .blood_prob = try node.getAttributeFloat("BloodProb", f32, 0.0),
-            .slot_types = try allocator.dupe(i8, slot_list.items),
+            .slot_types = try allocator.dupe(ItemType, slot_list.items),
             .equipment = try allocator.dupe(i16, equip_list.items),
+            .ability_1 = try Ability.parse(node.findChild("Ability1") orelse @panic("Could not parse CharacterClass: Ability1 node is missing"), allocator),
+            .ability_2 = try Ability.parse(node.findChild("Ability2") orelse @panic("Could not parse CharacterClass: Ability2 node is missing"), allocator),
+            .ability_3 = try Ability.parse(node.findChild("Ability3") orelse @panic("Could not parse CharacterClass: Ability3 node is missing"), allocator),
+            .ultimate_ability = try Ability.parse(node.findChild("UltimateAbility") orelse @panic("Could not parse CharacterClass: UltimateAbility node is missing"), allocator),
             .health = try CharacterClassStat.parse(node.findChild("Health") orelse @panic("Could not parse CharacterClass: Health node is missing")),
             .mana = try CharacterClassStat.parse(node.findChild("Mana") orelse @panic("Could not parse CharacterClass: Mana node is missing")),
             .strength = try CharacterClassStat.parse(node.findChild("Strength") orelse @panic("Could not parse CharacterClass: Strength node is missing")),
@@ -454,7 +482,6 @@ pub const ProjProps = struct {
     effects: []ConditionEffect,
     multi_hit: bool,
     passes_cover: bool,
-    armor_piercing: bool,
     particle_trail: bool,
     wavy: bool,
     parametric: bool,
@@ -500,7 +527,6 @@ pub const ProjProps = struct {
             .effects = try allocator.dupe(ConditionEffect, effect_list.items),
             .multi_hit = node.elementExists("MultiHit"),
             .passes_cover = node.elementExists("PassesCover"),
-            .armor_piercing = node.elementExists("ArmorPiercing"),
             .particle_trail = node.elementExists("ParticleTrail"),
             .wavy = node.elementExists("Wavy"),
             .parametric = node.elementExists("Parametric"),
@@ -776,7 +802,7 @@ pub const ItemProps = struct {
     lt_boosted: bool,
     ld_boosted: bool,
     backpack: bool,
-    slot_type: i8,
+    slot_type: ItemType,
     tier: []const u8,
     mp_cost: f32,
     bag_type: u8,
@@ -821,7 +847,7 @@ pub const ItemProps = struct {
             .consumable = node.elementExists("Consumable"),
             .untradeable = node.elementExists("Soulbound"),
             .usable = node.elementExists("Usable"),
-            .slot_type = try node.getValueInt("SlotType", i8, 0),
+            .slot_type = @enumFromInt(try node.getValueInt("SlotType", i8, 0)),
             .tier = try node.getValueAlloc("Tier", allocator, "Unknown"),
             .bag_type = try node.getValueInt("BagType", u8, 0),
             .num_projectiles = try node.getValueInt("NumProjectiles", u8, 1),
@@ -856,47 +882,38 @@ pub const UseType = enum(u8) {
 };
 
 pub const ItemType = enum(i8) {
+    const weapon_types = [_]ItemType{ .sword, .bow, .staff };
+    const armor_types = [_]ItemType{ .leather, .heavy, .robe };
+
     no_item = -1,
     any = 0,
+    boots = 9,
+    artifact = 23,
+    consumable = 10,
+
     sword = 1,
-    dagger = 2,
     bow = 3,
-    tome = 4,
-    shield = 5,
+    staff = 17,
+    any_weapon = 22,
+
     leather = 6,
     heavy = 7,
-    wand = 8,
-    ring = 9,
-    consumable = 10,
-    spell = 11,
-    seal = 12,
-    cloak = 13,
     robe = 14,
-    quiver = 15,
-    helm = 16,
-    staff = 17,
-    poison = 18,
-    skull = 19,
-    trap = 20,
-    orb = 21,
-    prism = 22,
-    scepter = 23,
-    katana = 24,
-    shuriken = 25,
+    any_armor = 20,
 
-    pub inline fn slotsMatch(slot_1: i8, slot_2: i8) bool {
-        return slot_1 == @intFromEnum(ItemType.any) or slot_2 == @intFromEnum(ItemType.any) or slot_1 == slot_2;
+    pub inline fn slotsMatch(self: ItemType, target: ItemType) bool {
+        return self == .any or target == .any or
+            std.mem.indexOfScalar(ItemType, &weapon_types, self) != null and target == .any_weapon or
+            std.mem.indexOfScalar(ItemType, &weapon_types, target) != null and self == .any_weapon or
+            std.mem.indexOfScalar(ItemType, &armor_types, self) != null and target == .any_armor or
+            std.mem.indexOfScalar(ItemType, &armor_types, target) != null and self == .any_armor or
+            self == target;
     }
 };
 
-pub const Currency = enum(u8) {
-    gold = 0,
-    fame = 1,
-    guild_fame = 2,
-    tokens = 3,
-};
+pub const Currency = enum(u8) { gold = 0, gems = 1, crowns = 2 };
 
-pub var classes: []CharacterClass = undefined;
+pub var classes: std.AutoHashMap(u16, CharacterClass) = undefined;
 pub var item_name_to_type: std.StringHashMap(u16) = undefined;
 pub var item_type_to_props: std.AutoHashMap(u16, ItemProps) = undefined;
 pub var item_type_to_name: std.AutoHashMap(u16, []const u8) = undefined;
@@ -915,6 +932,7 @@ pub var region_type_to_name: std.AutoHashMap(u16, []const u8) = undefined;
 pub var region_type_to_color: std.AutoHashMap(u16, u32) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
+    classes = std.AutoHashMap(u16, CharacterClass).init(allocator);
     item_name_to_type = std.StringHashMap(u16).init(allocator);
     item_type_to_props = std.AutoHashMap(u16, ItemProps).init(allocator);
     item_type_to_name = std.AutoHashMap(u16, []const u8).init(allocator);
@@ -977,11 +995,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
     const player_root = try player_doc.getRootElement();
     var player_root_it = player_root.iterate(&.{}, "Object");
 
-    var class_list = try std.ArrayList(CharacterClass).initCapacity(allocator, 14);
-    defer class_list.deinit();
-    while (player_root_it.next()) |node|
-        try class_list.append(try CharacterClass.parse(node, allocator));
-    classes = try allocator.dupe(CharacterClass, class_list.items);
+    while (player_root_it.next()) |node| {
+        const class = try CharacterClass.parse(node, allocator);
+        try classes.put(class.obj_type, class);
+    }
 }
 
 pub fn deinit(allocator: std.mem.Allocator) void {
@@ -1100,7 +1117,8 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         allocator.free(tex_list.*);
     }
 
-    for (classes) |class| {
+    var class_iter = classes.valueIterator();
+    while (class_iter.next()) |class| {
         allocator.free(class.texture.sheet);
         allocator.free(class.hit_sound);
         allocator.free(class.death_sound);
@@ -1108,10 +1126,21 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         allocator.free(class.desc);
         allocator.free(class.slot_types);
         allocator.free(class.equipment);
+        allocator.free(class.ability_1.icon.sheet);
+        allocator.free(class.ability_1.name);
+        allocator.free(class.ability_1.description);
+        allocator.free(class.ability_2.icon.sheet);
+        allocator.free(class.ability_2.name);
+        allocator.free(class.ability_2.description);
+        allocator.free(class.ability_3.icon.sheet);
+        allocator.free(class.ability_3.name);
+        allocator.free(class.ability_3.description);
+        allocator.free(class.ultimate_ability.icon.sheet);
+        allocator.free(class.ultimate_ability.name);
+        allocator.free(class.ultimate_ability.description);
     }
 
-    allocator.free(classes);
-
+    classes.deinit();
     item_name_to_type.deinit();
     item_type_to_props.deinit();
     item_type_to_name.deinit();

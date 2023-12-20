@@ -117,14 +117,6 @@ const keys_format =
     \\toggle_stats={s}
     \\toggle_perf_stats={s}
     \\toggle_centering={s}
-    \\inv_0={s}
-    \\inv_1={s}
-    \\inv_2={s}
-    \\inv_3={s}
-    \\inv_4={s}
-    \\inv_5={s}
-    \\inv_6={s}
-    \\inv_7={s}
     \\
 ;
 
@@ -157,14 +149,6 @@ pub const unset_key_tex_idx: u16 = 0x68;
 pub var interact_key_tex: assets.AtlasData = undefined;
 pub var key_tex_map: std.AutoHashMap(Button, u16) = undefined;
 
-pub var inv_0 = Button{ .key = .one };
-pub var inv_1 = Button{ .key = .two };
-pub var inv_2 = Button{ .key = .three };
-pub var inv_3 = Button{ .key = .four };
-pub var inv_4 = Button{ .key = .five };
-pub var inv_5 = Button{ .key = .six };
-pub var inv_6 = Button{ .key = .seven };
-pub var inv_7 = Button{ .key = .eight };
 pub var move_left = Button{ .key = .a };
 pub var move_right = Button{ .key = .d };
 pub var move_up = Button{ .key = .w };
@@ -341,14 +325,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try key_name_map.put("toggle_stats", &toggle_stats);
     try key_name_map.put("shoot", &shoot);
     try key_name_map.put("ability", &ability);
-    try key_name_map.put("inv_0", &inv_0);
-    try key_name_map.put("inv_1", &inv_1);
-    try key_name_map.put("inv_2", &inv_2);
-    try key_name_map.put("inv_3", &inv_3);
-    try key_name_map.put("inv_4", &inv_4);
-    try key_name_map.put("inv_5", &inv_5);
-    try key_name_map.put("inv_6", &inv_6);
-    try key_name_map.put("inv_7", &inv_7);
 
     try float_name_map.put("sfx_volume", &sfx_volume);
     try float_name_map.put("music_volume", &music_volume);
@@ -509,14 +485,6 @@ fn saveData(file: std.fs.File) !void {
         toggle_stats.getName(allocator),
         toggle_perf_stats.getName(allocator),
         toggle_centering.getName(allocator),
-        inv_0.getName(allocator),
-        inv_1.getName(allocator),
-        inv_2.getName(allocator),
-        inv_3.getName(allocator),
-        inv_4.getName(allocator),
-        inv_5.getName(allocator),
-        inv_6.getName(allocator),
-        inv_7.getName(allocator),
     });
     defer main._allocator.free(keys_buf);
     _ = try file.write(keys_buf);
@@ -540,14 +508,6 @@ fn saveData(file: std.fs.File) !void {
 }
 
 pub fn resetToDefault() void {
-    inv_0 = .{ .key = .one };
-    inv_1 = .{ .key = .two };
-    inv_2 = .{ .key = .three };
-    inv_3 = .{ .key = .four };
-    inv_4 = .{ .key = .five };
-    inv_5 = .{ .key = .six };
-    inv_6 = .{ .key = .seven };
-    inv_7 = .{ .key = .eight };
     move_left = .{ .key = .a };
     move_right = .{ .key = .d };
     move_up = .{ .key = .w };

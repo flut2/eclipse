@@ -397,28 +397,28 @@ fn handleDamage() void {
             .player => |*player| {
                 player.takeDamage(
                     amount,
+                    0,
+                    0,
                     kill,
-                    false,
                     @divFloor(main.current_time, std.time.us_per_ms),
                     effects,
                     player.colors,
                     0.0,
                     100.0 / 10000.0,
-                    false,
                     _allocator,
                 );
             },
             .object => |*object| {
                 object.takeDamage(
                     amount,
+                    0,
+                    0,
                     kill,
-                    false,
                     @divFloor(main.current_time, std.time.us_per_ms),
                     effects,
                     object.colors,
                     0.0,
                     100.0 / 10000.0,
-                    false,
                     _allocator,
                 );
             },
@@ -669,6 +669,9 @@ fn handleNewTick() void {
                             continue :statusLoop;
                         }
                     }
+
+                    if (player.obj_id == map.local_player_id and sc.current_screen == .game)
+                        sc.current_screen.game.updateStats();
 
                     continue :statusLoop;
                 },
@@ -1054,6 +1057,9 @@ fn handleUpdate() void {
                     }
                 }
 
+                if (obj_id == map.local_player_id and sc.current_screen == .game)
+                    sc.current_screen.game.updateStats();
+
                 player.addToMap(_allocator.*);
             },
             inline else => {
@@ -1149,14 +1155,12 @@ fn parsePlayerStat(plr: *map.Player, stat_type: game_data.StatType, stat_reader:
         .guild_rank => plr.guild_rank = stat_reader.read(i8),
         .texture => plr.skin = stat_reader.read(u16),
         .tier => plr.tier = stat_reader.read(u8),
-        .alt_texture_index => {},
+        .alt_texture_index => _ = stat_reader.read(u16),
         else => {
             std.log.err("Unknown player stat type: {any}", .{stat_type});
             return false;
         },
     }
-
-    sc.current_screen.game.updateStats();
 
     return true;
 }
