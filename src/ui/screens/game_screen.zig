@@ -574,57 +574,65 @@ pub const GameScreen = struct {
         self.fps_text.visible = settings.stats_enabled;
 
         if (map.localPlayerConst()) |local_player| {
-            if (!self.abilities_inited) {
-                if (game_data.classes.get(local_player.obj_type)) |char_class| {
+            if (game_data.classes.get(local_player.obj_type)) |char_class| {
+                if (!self.abilities_inited) {
                     var idx: f32 = 0;
                     try addAbility(self.ability_container, char_class.ability_1, &idx);
                     try addAbility(self.ability_container, char_class.ability_2, &idx);
                     try addAbility(self.ability_container, char_class.ability_3, &idx);
                     try addAbility(self.ability_container, char_class.ultimate_ability, &idx);
-                } else {
-                    std.log.err("Could not initiate GameScreen abilities: CharacterClass was missing for object type 0x{x}", .{local_player.obj_type});
+                    self.abilities_inited = true;
                 }
 
-                self.abilities_inited = true;
-            }
+                if (self.last_hp != local_player.hp or self.last_max_hp != local_player.max_hp) {
+                    const hp_perc = @as(f32, @floatFromInt(local_player.hp)) / @as(f32, @floatFromInt(local_player.max_hp));
+                    self.health_bar.image_data.normal.scissor.max_x = self.health_bar.width() * hp_perc;
 
-            if (self.last_hp != local_player.hp or self.last_max_hp != local_player.max_hp) {
-                const hp_perc = @as(f32, @floatFromInt(local_player.hp)) / @as(f32, @floatFromInt(local_player.max_hp));
-                self.health_bar.image_data.normal.scissor.max_x = self.health_bar.width() * hp_perc;
+                    var health_text_data = &self.health_bar.text_data;
+                    health_text_data.color = if (local_player.hp - local_player.hp_bonus >= char_class.health.max_values[local_player.tier - 1])
+                        0xFFE770
+                    else
+                        0xFFFFFF;
+                    health_text_data.text = try std.fmt.bufPrint(health_text_data._backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp });
+                    health_text_data.recalculateAttributes(self._allocator);
 
-                var health_text_data = &self.health_bar.text_data;
-                health_text_data.text = try std.fmt.bufPrint(health_text_data._backing_buffer, "{d}/{d} HP", .{ local_player.hp, local_player.max_hp });
-                health_text_data.recalculateAttributes(self._allocator);
+                    self.last_hp = local_player.hp;
+                    self.last_max_hp = local_player.max_hp;
+                }
 
-                self.last_hp = local_player.hp;
-                self.last_max_hp = local_player.max_hp;
-            }
+                if (self.last_mp != local_player.mp or self.last_max_mp != local_player.max_mp) {
+                    const mp_perc = @as(f32, @floatFromInt(local_player.mp)) / @as(f32, @floatFromInt(local_player.max_mp));
+                    self.mana_bar.image_data.normal.scissor.max_x = self.mana_bar.width() * mp_perc;
 
-            if (self.last_mp != local_player.mp or self.last_max_mp != local_player.max_mp) {
-                const mp_perc = @as(f32, @floatFromInt(local_player.mp)) / @as(f32, @floatFromInt(local_player.max_mp));
-                self.mana_bar.image_data.normal.scissor.max_x = self.mana_bar.width() * mp_perc;
+                    var mana_text_data = &self.mana_bar.text_data;
+                    mana_text_data.color = if (local_player.mp - local_player.mp_bonus >= char_class.mana.max_values[local_player.tier - 1])
+                        0xFFE770
+                    else
+                        0xFFFFFF;
+                    mana_text_data.text = try std.fmt.bufPrint(mana_text_data._backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp });
+                    mana_text_data.recalculateAttributes(self._allocator);
 
-                var mana_text_data = &self.mana_bar.text_data;
-                mana_text_data.text = try std.fmt.bufPrint(mana_text_data._backing_buffer, "{d}/{d} MP", .{ local_player.mp, local_player.max_mp });
-                mana_text_data.recalculateAttributes(self._allocator);
-
-                self.last_mp = local_player.mp;
-                self.last_max_mp = local_player.max_mp;
+                    self.last_mp = local_player.mp;
+                    self.last_max_mp = local_player.max_mp;
+                }
+            } else {
+                std.log.err("Could not update UI: CharacterClass was missing for object type 0x{x}", .{local_player.obj_type});
             }
         }
     }
 
-    fn updateStat(allocator: std.mem.Allocator, text_data: *element.TextData, base_val: i32, bonus_val: i32) void {
+    fn updateStat(allocator: std.mem.Allocator, text_data: *element.TextData, base_val: i32, bonus_val: i32, max_val: i32) void {
+        text_data.color = if (base_val - bonus_val >= max_val) 0xFFE770 else 0xFFFFFF;
         text_data.text = (if (bonus_val > 0)
             std.fmt.bufPrint(
                 text_data._backing_buffer,
-                "{d}&s=8&c=00FF00\n(+{d})",
+                "{d}&s=8&c=65E698\n(+{d})",
                 .{ base_val, bonus_val },
             )
         else if (bonus_val < 0)
             std.fmt.bufPrint(
                 text_data._backing_buffer,
-                "{d}&s=8&c=FF0000\n({d})",
+                "{d}&s=8&c=FF7070\n({d})",
                 .{ base_val, bonus_val },
             )
         else
@@ -637,17 +645,87 @@ pub const GameScreen = struct {
             return;
 
         if (map.localPlayerConst()) |player| {
-            updateStat(self._allocator, &self.strength_stat_text.text_data, player.strength, player.strength_bonus);
-            updateStat(self._allocator, &self.resistance_stat_text.text_data, player.resistance, player.resistance_bonus);
-            updateStat(self._allocator, &self.intelligence_stat_text.text_data, player.intelligence, player.intelligence_bonus);
-            updateStat(self._allocator, &self.haste_stat_text.text_data, player.haste, player.haste_bonus);
-            updateStat(self._allocator, &self.wit_stat_text.text_data, player.wit, player.wit_bonus);
-            updateStat(self._allocator, &self.speed_stat_text.text_data, player.speed, player.speed_bonus);
-            updateStat(self._allocator, &self.penetration_stat_text.text_data, player.penetration, player.penetration_bonus);
-            updateStat(self._allocator, &self.tenacity_stat_text.text_data, player.tenacity, player.tenacity_bonus);
-            updateStat(self._allocator, &self.defense_stat_text.text_data, player.defense, player.defense_bonus);
-            updateStat(self._allocator, &self.stamina_stat_text.text_data, player.stamina, player.stamina_bonus);
-            updateStat(self._allocator, &self.piercing_stat_text.text_data, player.piercing, player.piercing_bonus);
+            if (game_data.classes.get(player.obj_type)) |char_class| {
+                updateStat(
+                    self._allocator,
+                    &self.strength_stat_text.text_data,
+                    player.strength,
+                    player.strength_bonus,
+                    char_class.strength.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.resistance_stat_text.text_data,
+                    player.resistance,
+                    player.resistance_bonus,
+                    char_class.resistance.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.intelligence_stat_text.text_data,
+                    player.intelligence,
+                    player.intelligence_bonus,
+                    char_class.intelligence.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.haste_stat_text.text_data,
+                    player.haste,
+                    player.haste_bonus,
+                    char_class.haste.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.wit_stat_text.text_data,
+                    player.wit,
+                    player.wit_bonus,
+                    char_class.wit.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.speed_stat_text.text_data,
+                    player.speed,
+                    player.speed_bonus,
+                    char_class.speed.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.penetration_stat_text.text_data,
+                    player.penetration,
+                    player.penetration_bonus,
+                    char_class.penetration.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.tenacity_stat_text.text_data,
+                    player.tenacity,
+                    player.tenacity_bonus,
+                    char_class.tenacity.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.defense_stat_text.text_data,
+                    player.defense,
+                    player.defense_bonus,
+                    char_class.defense.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.stamina_stat_text.text_data,
+                    player.stamina,
+                    player.stamina_bonus,
+                    char_class.stamina.max_values[player.tier - 1],
+                );
+                updateStat(
+                    self._allocator,
+                    &self.piercing_stat_text.text_data,
+                    player.piercing,
+                    player.piercing_bonus,
+                    char_class.piercing.max_values[player.tier - 1],
+                );
+            } else {
+                std.log.err("Could not update UI stats: CharacterClass was missing for object type 0x{x}", .{player.obj_type});
+            }
         }
     }
 

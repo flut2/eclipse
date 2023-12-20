@@ -350,8 +350,10 @@ pub fn main() !void {
         if (current_account.password.len > 0)
             allocator.free(current_account.password);
 
-        if (network.connected)
+        if (network.connected) {
+            tick_network = false;
             network.deinit(allocator);
+        }
 
         if (character_list.len > 0) {
             for (character_list) |char| {

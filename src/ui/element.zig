@@ -800,7 +800,7 @@ pub const TextData = struct {
     // 0 implies that the backing buffer won't be used. if your element uses it, you must set this to something above 0
     max_chars: u32 = 0,
     text_type: TextType = .medium,
-    color: u32 = 0xFFFFFFFF,
+    color: u32 = 0xFFFFFF,
     alpha: f32 = 1.0,
     shadow_color: u32 = 0xFF000000,
     shadow_alpha_mult: f32 = 0.5,

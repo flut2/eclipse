@@ -196,10 +196,12 @@ pub fn init(ip: []const u8, port: u16, allocator: *std.mem.Allocator) void {
 
     _allocator = allocator;
     queue = std.ArrayList(C2SPacket).init(allocator.*);
+    reader.index = 0;
     reader.buffer = allocator.alloc(u8, 65535) catch |e| {
         std.log.err("Buffer initialization for server failed: {any}", .{e});
         return;
     };
+    writer.index = 0;
     writer.buffer = allocator.alloc(u8, 65535) catch |e| {
         std.log.err("Buffer initialization for server failed: {any}", .{e});
         return;
@@ -208,7 +210,6 @@ pub fn init(ip: []const u8, port: u16, allocator: *std.mem.Allocator) void {
 }
 
 pub fn deinit(allocator: std.mem.Allocator) void {
-    main.tick_network = false;
     queue.deinit();
     stream.close();
     allocator.free(reader.buffer);
