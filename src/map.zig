@@ -424,17 +424,17 @@ pub const GameObject = struct {
     }
 
     pub fn takeDamage(
-        noalias self: *GameObject,
+        self: *GameObject,
         phys_dmg: i32,
         magic_dmg: i32,
         true_dmg: i32,
         kill: bool,
         time: i64,
         conditions: utils.Condition,
-        noalias proj_colors: []const u32,
+        proj_colors: []const u32,
         proj_angle: f32,
         proj_speed: f32,
-        noalias allocator: *const std.mem.Allocator,
+        allocator: std.mem.Allocator,
     ) void {
         if (self.dead)
             return;
@@ -490,7 +490,7 @@ pub const GameObject = struct {
                         .obj_id = self.obj_id,
                         .start_time = time,
                         .text_data = .{
-                            .text = std.fmt.allocPrint(allocator.*, "{s}", .{cond_str}) catch unreachable,
+                            .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
                             .text_type = .bold,
                             .size = 22,
                             .color = 0xB02020,
@@ -702,7 +702,7 @@ pub const Player = struct {
     anim_index: u8 = 0,
     class_name: []const u8 = "",
 
-    pub fn onMove(noalias self: *Player) void {
+    pub fn onMove(self: *Player) void {
         if (getSquare(self.x, self.y)) |square| {
             if (square.props == null)
                 return;
@@ -717,7 +717,7 @@ pub const Player = struct {
         }
     }
 
-    pub fn strengthMultiplier(noalias self: *const Player) f32 {
+    pub fn strengthMultiplier(self: Player) f32 {
         if (self.condition.weak)
             return min_attack_mult;
 
@@ -729,7 +729,7 @@ pub const Player = struct {
         return mult;
     }
 
-    pub fn witMultiplier(noalias self: *const Player) f32 {
+    pub fn witMultiplier(self: Player) f32 {
         if (self.condition.weak)
             return min_attack_mult;
 
@@ -741,7 +741,7 @@ pub const Player = struct {
         return mult;
     }
 
-    pub fn moveSpeedMultiplier(noalias self: *const Player) f32 {
+    pub fn moveSpeedMultiplier(self: Player) f32 {
         if (self.condition.slowed)
             return min_move_speed * self.move_multiplier * self.walk_speed_multiplier;
 
@@ -753,7 +753,7 @@ pub const Player = struct {
         return move_speed * self.move_multiplier * self.walk_speed_multiplier;
     }
 
-    pub fn addToMap(noalias self: *Player, allocator: std.mem.Allocator) void {
+    pub fn addToMap(self: *Player, allocator: std.mem.Allocator) void {
         const should_lock = entities.capacity == 0;
         if (should_lock) {
             while (!object_lock.tryLock()) {}
@@ -844,7 +844,7 @@ pub const Player = struct {
         };
     }
 
-    pub fn useAbility(noalias self: *Player, screen_x: f32, screen_y: f32, use_type: game_data.UseType) void {
+    pub fn useAbility(self: *Player, screen_x: f32, screen_y: f32, use_type: game_data.UseType) void {
         const item_type = self.inventory[1];
         const item_props = game_data.item_type_to_props.getPtr(@intCast(item_type));
         if (item_type == -1 or item_props == null or !item_props.?.usable) {
@@ -901,7 +901,7 @@ pub const Player = struct {
         assets.playSfx(item_props.?.sound);
     }
 
-    pub fn doShoot(noalias self: *Player, time: i64, weapon_type: i32, noalias item_props: ?*game_data.ItemProps, attack_angle: f32) void {
+    pub fn doShoot(self: *Player, time: i64, weapon_type: i32, item_props: ?*game_data.ItemProps, attack_angle: f32) void {
         const projs_len = item_props.?.num_projectiles;
         const arc_gap = item_props.?.arc_gap;
         const total_angle = arc_gap * @as(f32, @floatFromInt(projs_len - 1));
@@ -951,7 +951,7 @@ pub const Player = struct {
         }
     }
 
-    pub fn weaponShoot(noalias self: *Player, angle: f32, time: i64) void {
+    pub fn weaponShoot(self: *Player, angle: f32, time: i64) void {
         const weapon_type: i32 = self.inventory[0];
         if (weapon_type == -1)
             return;
@@ -974,17 +974,17 @@ pub const Player = struct {
     }
 
     pub fn takeDamage(
-        noalias self: *Player,
+        self: *Player,
         phys_dmg: i32,
         magic_dmg: i32,
         true_dmg: i32,
         kill: bool,
         time: i64,
         conditions: utils.Condition,
-        noalias proj_colors: []const u32,
+        proj_colors: []const u32,
         proj_angle: f32,
         proj_speed: f32,
-        noalias allocator: *const std.mem.Allocator,
+        allocator: std.mem.Allocator,
     ) void {
         if (self.dead)
             return;
@@ -1040,7 +1040,7 @@ pub const Player = struct {
                         .obj_id = self.obj_id,
                         .start_time = time,
                         .text_data = .{
-                            .text = std.fmt.allocPrint(allocator.*, "{s}", .{cond_str}) catch unreachable,
+                            .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
                             .text_type = .bold,
                             .size = 22,
                             .color = 0xB02020,
@@ -1058,7 +1058,7 @@ pub const Player = struct {
         }
     }
 
-    pub fn update(noalias self: *Player, time: i64, dt: f32, noalias allocator: *const std.mem.Allocator) void {
+    pub fn update(noalias self: *Player, time: i64, dt: f32, allocator: std.mem.Allocator) void {
         if (main.current_time < self.attack_start + self.attack_period) {
             const time_dt: f32 = @floatFromInt(main.current_time - self.attack_start);
             const float_period: f32 = @floatFromInt(self.attack_period);
@@ -1618,7 +1618,7 @@ pub const Projectile = struct {
         }
     }
 
-    pub fn update(noalias self: *Projectile, time: i64, dt: f32, idx: usize, noalias allocator: *const std.mem.Allocator) bool {
+    pub fn update(noalias self: *Projectile, time: i64, dt: f32, idx: usize, allocator: std.mem.Allocator) bool {
         const elapsed = time - self.start_time;
         if (elapsed >= self.props.lifetime_ms)
             return false;
@@ -1866,14 +1866,14 @@ pub fn magicDamage(dmg: f32, resistance: f32, condition: utils.Condition) i32 {
     return @intFromFloat(@max(min, dmg - def));
 }
 
-pub fn showDamageText(time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i32, noalias allocator: *const std.mem.Allocator) void {
+pub fn showDamageText(time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i32, allocator: std.mem.Allocator) void {
     var delay: i64 = 0;
     if (phys_dmg > 0) {
         element.StatusText.add(.{
             .obj_id = object_id,
             .start_time = time + delay,
             .text_data = .{
-                .text = std.fmt.allocPrint(allocator.*, "-{d}", .{phys_dmg}) catch unreachable,
+                .text = std.fmt.allocPrint(allocator, "-{d}", .{phys_dmg}) catch unreachable,
                 .text_type = .bold,
                 .size = 22,
                 .color = 0xB02020,
@@ -1890,7 +1890,7 @@ pub fn showDamageText(time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32, o
             .obj_id = object_id,
             .start_time = time + delay,
             .text_data = .{
-                .text = std.fmt.allocPrint(allocator.*, "-{d}", .{magic_dmg}) catch unreachable,
+                .text = std.fmt.allocPrint(allocator, "-{d}", .{magic_dmg}) catch unreachable,
                 .text_type = .bold,
                 .size = 22,
                 .color = 0x6E15AD,
@@ -1907,7 +1907,7 @@ pub fn showDamageText(time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32, o
             .obj_id = object_id,
             .start_time = time + delay,
             .text_data = .{
-                .text = std.fmt.allocPrint(allocator.*, "-{d}", .{true_dmg}) catch unreachable,
+                .text = std.fmt.allocPrint(allocator, "-{d}", .{true_dmg}) catch unreachable,
                 .text_type = .bold,
                 .size = 22,
                 .color = 0xC2C2C2,
@@ -2007,7 +2007,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     minimap = try zstbi.Image.createEmpty(4096, 4096, 4, .{});
 }
 
-pub fn disposeEntity(allocator: std.mem.Allocator, noalias en: *Entity) void {
+pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
     switch (en.*) {
         .object => |*obj| {
             if (getSquarePtr(obj.x, obj.y)) |square| {
@@ -2244,7 +2244,7 @@ pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
     std.log.err("Could not remove object with id {d}", .{obj_id});
 }
 
-pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) void {
+pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
     if (entities.items.len <= 0)
         return;
 
@@ -2312,7 +2312,7 @@ pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) v
             },
             .projectile => |*projectile| {
                 if (!projectile.update(ms_time, ms_dt, i, allocator)) {
-                    disposeEntity(allocator.*, &entities.items[i]);
+                    disposeEntity(allocator, &entities.items[i]);
                     _ = entities.swapRemove(i);
                 }
             },
@@ -2320,7 +2320,7 @@ pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) v
                 switch (pt.*) {
                     inline else => |*particle| {
                         if (!particle.update(ms_time, ms_dt)) {
-                            disposeEntity(allocator.*, &entities.items[i]);
+                            disposeEntity(allocator, &entities.items[i]);
                             _ = entities.swapRemove(i);
                         }
                     },
@@ -2330,7 +2330,7 @@ pub fn update(time: i64, dt: i64, noalias allocator: *const std.mem.Allocator) v
                 switch (pt_eff.*) {
                     inline else => |*effect| {
                         if (!effect.update(ms_time, ms_dt)) {
-                            disposeEntity(allocator.*, &entities.items[i]);
+                            disposeEntity(allocator, &entities.items[i]);
                             _ = entities.swapRemove(i);
                         }
                     },

@@ -183,9 +183,9 @@ var stream: std.net.Stream = undefined;
 var reader = utils.PacketReader{};
 var writer = utils.PacketWriter{};
 var last_tick_time: i64 = 0;
-var _allocator: *std.mem.Allocator = undefined;
+var _allocator: std.mem.Allocator = undefined;
 
-pub fn init(ip: []const u8, port: u16, allocator: *std.mem.Allocator) void {
+pub fn init(ip: []const u8, port: u16, allocator: std.mem.Allocator) void {
     stream = std.net.tcpConnectToAddress(std.net.Address.parseIp(ip, port) catch |address_error| {
         std.log.err("Could not parse address {s}:{d}: {any}", .{ ip, port, address_error });
         return;
@@ -195,7 +195,7 @@ pub fn init(ip: []const u8, port: u16, allocator: *std.mem.Allocator) void {
     };
 
     _allocator = allocator;
-    queue = std.ArrayList(C2SPacket).init(allocator.*);
+    queue = std.ArrayList(C2SPacket).init(allocator);
     reader.index = 0;
     reader.buffer = allocator.alloc(u8, 65535) catch |e| {
         std.log.err("Buffer initialization for server failed: {any}", .{e});
@@ -566,7 +566,7 @@ fn handleMapInfo() void {
 
     const width: u32 = @intCast(@max(0, reader.read(i32)));
     const height: u32 = @intCast(@max(0, reader.read(i32)));
-    map.setWH(width, height, _allocator.*);
+    map.setWH(width, height, _allocator);
     if (map.name.len > 0)
         _allocator.free(map.name);
     map.name = _allocator.dupe(u8, reader.readArray(u8)) catch "";
@@ -1026,7 +1026,7 @@ fn handleUpdate() void {
     defer map.object_lock.unlock();
 
     for (drops) |drop| {
-        map.removeEntity(_allocator.*, drop);
+        map.removeEntity(_allocator, drop);
     }
 
     var stat_reader = utils.PacketReader{};
@@ -1061,7 +1061,7 @@ fn handleUpdate() void {
                 if (obj_id == map.local_player_id and sc.current_screen == .game)
                     sc.current_screen.game.updateStats();
 
-                player.addToMap(_allocator.*);
+                player.addToMap(_allocator);
             },
             inline else => {
                 var obj = map.GameObject{ .x = x, .y = y, .obj_id = obj_id, .obj_type = obj_type };
@@ -1078,7 +1078,7 @@ fn handleUpdate() void {
                     }
                 }
 
-                obj.addToMap(_allocator.*);
+                obj.addToMap(_allocator);
             },
         }
     }
@@ -1144,7 +1144,7 @@ fn parsePlayerStat(plr: *map.Player, stat_type: game_data.StatType, stat_reader:
 
             // this will get overwritten and leak in addToMap() otherwise
             if (plr.name_text_data._line_widths != null)
-                plr.name_text_data.recalculateAttributes(_allocator.*);
+                plr.name_text_data.recalculateAttributes(_allocator);
         },
         .tex_1 => plr.tex_1 = stat_reader.read(i32),
         .tex_2 => plr.tex_2 = stat_reader.read(i32),
@@ -1199,7 +1199,7 @@ fn parseObjectStat(obj: *map.GameObject, stat_type: game_data.StatType, stat_rea
 
             // this will get overwritten and leak in addToMap() otherwise
             if (obj.name_text_data._line_widths != null)
-                obj.name_text_data.recalculateAttributes(_allocator.*);
+                obj.name_text_data.recalculateAttributes(_allocator);
         },
         .tex_1 => obj.tex_1 = stat_reader.read(i32),
         .tex_2 => obj.tex_2 = stat_reader.read(i32),

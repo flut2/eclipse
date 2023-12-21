@@ -941,7 +941,7 @@ pub const TextData = struct {
         self._height = y_pointer;
     }
 
-    pub fn deinit(noalias self: *TextData, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *TextData, allocator: std.mem.Allocator) void {
         while (!self._lock.tryLock()) {}
         defer self._lock.unlock();
 

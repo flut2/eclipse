@@ -1029,7 +1029,7 @@ pub const GameScreen = struct {
                 if (map.localPlayerConst()) |player| {
                     var has_type = false;
                     for (player.slot_types) |slot_type| {
-                        if (slot_type == props.slot_type)
+                        if (slot_type.slotsMatch(props.slot_type))
                             has_type = true;
                     }
 
@@ -1055,8 +1055,8 @@ pub const GameScreen = struct {
                     var first = true;
                     var class_iter = game_data.classes.valueIterator();
                     if (class_iter.next()) |class| {
-                        for (class.slot_types) |slot_type| {
-                            if (slot_type == props.slot_type) {
+                        slotsMatch: for (class.slot_types) |slot_type| {
+                            if (slot_type != .any and slot_type.slotsMatch(props.slot_type)) {
                                 if (first) {
                                     footer_text = std.fmt.bufPrint(self.getFooterBuffer(), "{s}" ++ string_fmt, .{ footer_text, class.name }) catch footer_text;
                                 } else {
@@ -1064,6 +1064,7 @@ pub const GameScreen = struct {
                                 }
 
                                 first = false;
+                                break :slotsMatch;
                             }
                         }
                     }

@@ -512,7 +512,7 @@ const DrawData = struct {
     bind_group: zgpu.wgpu.BindGroup,
 };
 
-fn drawWall(idx: u16, x: f32, y: f32, alpha: f32, atlas_data: assets.AtlasData, top_atlas_data: assets.AtlasData, noalias draw_data: *const DrawData) u16 {
+fn drawWall(idx: u16, x: f32, y: f32, alpha: f32, atlas_data: assets.AtlasData, top_atlas_data: assets.AtlasData, noalias draw_data: *const DrawData,) u16 {
     var idx_new: u16 = idx;
     var atlas_data_new = atlas_data;
 
@@ -2286,7 +2286,7 @@ fn drawLight(idx: u16, w: f32, h: f32, x: f32, y: f32, color: u32, intensity: f3
     return idx + 4;
 }
 
-fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const DrawData, cam_x: f32, cam_y: f32, x_offset: f32, y_offset: f32, time: i64) u16 {
+fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const DrawData, cam_x: f32, cam_y: f32, x_offset: f32, y_offset: f32, time: i64,) u16 {
     var ui_idx = idx;
     switch (elem) {
         .image => |image| {
@@ -2759,9 +2759,9 @@ inline fn endDraw(noalias draw_data: *const DrawData, verts: u64, indices: u32, 
 
 pub fn draw(
     time: i64,
-    noalias gctx: *zgpu.GraphicsContext,
-    noalias back_buffer: zgpu.wgpu.TextureView,
-    noalias encoder: zgpu.wgpu.CommandEncoder,
+    gctx: *zgpu.GraphicsContext,
+    back_buffer: zgpu.wgpu.TextureView,
+    encoder: zgpu.wgpu.CommandEncoder,
 ) void {
     var light_idx: u16 = 0;
 

@@ -116,7 +116,7 @@ fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
     screen_controller.resize(float_w, float_h);
 }
 
-fn networkTick(allocator: *std.mem.Allocator) void {
+fn networkTick(allocator: std.mem.Allocator) void {
     while (tick_network) {
         // ticking can get turned off while in sleep
         if (!tick_network)
@@ -443,7 +443,7 @@ pub fn main() !void {
     render.init(gctx, allocator);
     defer render.deinit(allocator);
 
-    network_thread = try std.Thread.spawn(.{}, networkTick, .{&allocator});
+    network_thread = try std.Thread.spawn(.{}, networkTick, .{allocator});
     defer {
         tick_network = false;
         network_thread.join();
@@ -464,7 +464,7 @@ pub fn main() !void {
 
         if (tick_frame or editing_map) {
             const dt = time - last_update;
-            map.update(time, dt, &allocator);
+            map.update(time, dt, allocator);
             try screen_controller.update(time, dt, allocator);
         }
 
