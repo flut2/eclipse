@@ -589,7 +589,7 @@ pub const GameScreen = struct {
                     self.health_bar.image_data.normal.scissor.max_x = self.health_bar.width() * hp_perc;
 
                     var health_text_data = &self.health_bar.text_data;
-                    health_text_data.color = if (local_player.hp - local_player.hp_bonus >= char_class.health.max_values[local_player.tier - 1])
+                    health_text_data.color = if (local_player.max_hp - local_player.hp_bonus >= char_class.health.max_values[local_player.tier - 1])
                         0xFFE770
                     else
                         0xFFFFFF;
@@ -605,7 +605,7 @@ pub const GameScreen = struct {
                     self.mana_bar.image_data.normal.scissor.max_x = self.mana_bar.width() * mp_perc;
 
                     var mana_text_data = &self.mana_bar.text_data;
-                    mana_text_data.color = if (local_player.mp - local_player.mp_bonus >= char_class.mana.max_values[local_player.tier - 1])
+                    mana_text_data.color = if (local_player.max_mp - local_player.mp_bonus >= char_class.mana.max_values[local_player.tier - 1])
                         0xFFE770
                     else
                         0xFFFFFF;
