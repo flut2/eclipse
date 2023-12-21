@@ -4,7 +4,7 @@ pub const PackRect = extern struct {
     h: u32,
     x: u32,
     y: u32,
-    was_packed: u8,
+    was_packed: u32,
 };
 
 pub const PackNode = extern struct {
@@ -13,16 +13,21 @@ pub const PackNode = extern struct {
     next: ?*PackNode,
 };
 
+pub const PackHeuristic = enum(i32) {
+    default = 0,
+    sort_height = 1,  
+};
+
 pub const PackContext = extern struct {
     width: u32,
     height: u32,
-    pack_align: u8,
-    init_mode: u8,
-    heuristic: u8,
     num_nodes: u32,
-    active_head: ?*PackNode,
-    free_head: ?*PackNode,
-    extra: [2]PackNode,
+    pack_align: u32 = 0,
+    init_mode: u32 = 0,
+    heuristic: PackHeuristic = .sort_height,
+    active_head: ?*PackNode = null,
+    free_head: ?*PackNode = null,
+    extra: [2]PackNode = undefined,
 };
 
 pub fn initPack(ctx: *PackContext, nodes: []PackNode) void {

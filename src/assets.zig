@@ -490,6 +490,9 @@ fn addAnimEnemy(
         for (0..2) |i| {
             for (0..len) |j| {
                 const rect = current_rects[i * len + j];
+                if (rect.w == 0 or rect.h == 0)
+                    continue;
+
                 const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
                 const frame_idx = j % 5;
                 const set_idx = @divFloor(j, 5);
@@ -576,6 +579,9 @@ fn addAnimPlayer(
         left_sub = 0;
         for (0..len) |j| {
             const rect = current_rects[j];
+            if (rect.w == 0 or rect.h == 0)
+                continue;
+                
             const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
             const frame_idx = j % 5;
             const set_idx = @divFloor(j, 5);
@@ -802,13 +808,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     var ctx = zstbrp.PackContext{
         .width = atlas_width,
         .height = atlas_height,
-        .pack_align = 0,
-        .init_mode = 0,
-        .heuristic = 0,
         .num_nodes = 100,
-        .active_head = null,
-        .free_head = null,
-        .extra = [2]zstbrp.PackNode{ .{ .x = 0, .y = 0, .next = null }, .{ .x = 0, .y = 0, .next = null } },
     };
 
     const nodes = try allocator.alloc(zstbrp.PackNode, 4096);
@@ -850,13 +850,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     var ui_ctx = zstbrp.PackContext{
         .width = atlas_width,
         .height = atlas_height,
-        .pack_align = 0,
-        .init_mode = 0,
-        .heuristic = 0,
         .num_nodes = 100,
-        .active_head = null,
-        .free_head = null,
-        .extra = [2]zstbrp.PackNode{ .{ .x = 0, .y = 0, .next = null }, .{ .x = 0, .y = 0, .next = null } },
     };
 
     const ui_nodes = try allocator.alloc(zstbrp.PackNode, 4096);
