@@ -5,6 +5,7 @@ const camera = @import("../../../camera.zig");
 const main = @import("../../../main.zig");
 const game_data = @import("../../../game_data.zig");
 const screen_controller = @import("../../controllers/screen_controller.zig");
+const rpc = @import("rpc");
 
 pub const CharCreateScreen = struct {
     inited: bool = false,
@@ -13,9 +14,19 @@ pub const CharCreateScreen = struct {
 
     pub fn init(allocator: std.mem.Allocator) !*CharCreateScreen {
         var screen = try allocator.create(CharCreateScreen);
-        screen.* = CharCreateScreen{
-            ._allocator = allocator,
+        screen.* = .{ ._allocator = allocator };
+
+        const presence = rpc.Packet.Presence{
+            .assets = .{
+                .large_image = rpc.Packet.ArrayString(256).create("logo"),
+                .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
+            },
+            .state = rpc.Packet.ArrayString(128).create("Character Create"),
+            .timestamps = .{
+                .start = main.rpc_start,
+            },
         };
+        try main.rpc_client.setPresence(presence);
 
         screen.boxes = try std.ArrayList(*element.CharacterBox).initCapacity(allocator, 9);
 
@@ -47,7 +58,7 @@ pub const CharCreateScreen = struct {
             }) catch return screen;
             screen.boxes.append(box) catch return screen;
         }
-        
+
         screen.inited = true;
         return screen;
     }

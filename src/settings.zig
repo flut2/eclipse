@@ -105,7 +105,10 @@ const keys_format =
     \\rotate_left={s}
     \\rotate_right={s}
     \\shoot={s}
-    \\ability={s}
+    \\ability_1={s}
+    \\ability_2={s}
+    \\ability_3={s}
+    \\ultimate_ability={s}
     \\interact={s}
     \\options={s}
     \\escape={s}
@@ -125,7 +128,6 @@ const misc_format =
     \\enable_glow={s} 
     \\enable_lights={s}
     \\enable_vsync={s}
-    \\always_show_xp_gain={s}
     \\stats_enabled={s}
     \\save_email={s}
     \\fps_cap={d:.2}
@@ -140,7 +142,7 @@ const misc_format =
 pub const build_version = "0.5";
 pub const app_engine_url = "http://127.0.0.1:8080/";
 pub const log_packets = LogType.off;
-pub const print_atlas = true;
+pub const print_atlas = false;
 pub const print_ui_atlas = false;
 pub const rotate_speed = 0.002;
 pub const enable_tracy = false;
@@ -168,7 +170,10 @@ pub var chat_cmd = Button{ .key = .slash };
 pub var respond = Button{ .key = .F2 };
 pub var toggle_centering = Button{ .key = .x };
 pub var shoot = Button{ .mouse = .left };
-pub var ability = Button{ .mouse = .right };
+pub var ability_1 = Button{ .key = .one };
+pub var ability_2 = Button{ .key = .two };
+pub var ability_3 = Button{ .key = .three };
+pub var ultimate_ability = Button{ .key = .four };
 pub var toggle_stats = Button{ .key = .b };
 pub var sfx_volume: f32 = 0.33;
 pub var music_volume: f32 = 0.1;
@@ -176,7 +181,6 @@ pub var fps_cap: f32 = 360.0; // 0 to disable
 pub var enable_glow = true;
 pub var enable_lights = true;
 pub var enable_vsync = true;
-pub var always_show_xp_gain = true;
 pub var stats_enabled = true;
 pub var save_email = true;
 pub var cursor_type = CursorType.aztec;
@@ -324,7 +328,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try key_name_map.put("toggle_centering", &toggle_centering);
     try key_name_map.put("toggle_stats", &toggle_stats);
     try key_name_map.put("shoot", &shoot);
-    try key_name_map.put("ability", &ability);
+    try key_name_map.put("ability_1", &ability_1);
+    try key_name_map.put("ability_2", &ability_2);
+    try key_name_map.put("ability_3", &ability_3);
+    try key_name_map.put("ultimate_ability", &ultimate_ability);
 
     try float_name_map.put("sfx_volume", &sfx_volume);
     try float_name_map.put("music_volume", &music_volume);
@@ -333,7 +340,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try bool_name_map.put("enable_glow", &enable_glow);
     try bool_name_map.put("enable_lights", &enable_lights);
     try bool_name_map.put("enable_vsync", &enable_vsync);
-    try bool_name_map.put("always_show_xp_gain", &always_show_xp_gain);
     try bool_name_map.put("save_email", &save_email);
 
     try string_name_map.put("email", &email);
@@ -473,7 +479,10 @@ fn saveData(file: std.fs.File) !void {
         rotate_left.getName(allocator),
         rotate_right.getName(allocator),
         shoot.getName(allocator),
-        ability.getName(allocator),
+        ability_1.getName(allocator),
+        ability_2.getName(allocator),
+        ability_3.getName(allocator),
+        ultimate_ability.getName(allocator),
         interact.getName(allocator),
         options.getName(allocator),
         escape.getName(allocator),
@@ -493,7 +502,6 @@ fn saveData(file: std.fs.File) !void {
         boolToString(enable_glow),
         boolToString(enable_lights),
         boolToString(enable_vsync),
-        boolToString(always_show_xp_gain),
         boolToString(stats_enabled),
         boolToString(save_email),
         fps_cap,
@@ -527,13 +535,15 @@ pub fn resetToDefault() void {
     respond = .{ .key = .F2 };
     toggle_centering = .{ .key = .x };
     shoot = .{ .mouse = .left };
-    ability = .{ .mouse = .right };
+    ability_1 = .{ .key = .one };
+    ability_2 = .{ .key = .two };
+    ability_3 = .{ .key = .three };
+    ultimate_ability = .{ .key = .four };
     sfx_volume = 0.33;
     music_volume = 0.1;
     enable_glow = false;
     enable_lights = false;
     enable_vsync = false;
-    always_show_xp_gain = false;
     fps_cap = 360.0;
     cursor_type = CursorType.aztec;
     aa_type = .msaa4x;

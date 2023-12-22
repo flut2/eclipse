@@ -6,6 +6,7 @@ const utils = @import("../../utils.zig");
 const main = @import("../../main.zig");
 const map = @import("../../map.zig");
 const assets = @import("../../assets.zig");
+const tooltip = @import("../tooltips/tooltip.zig");
 const zglfw = @import("zglfw");
 
 const AccountLoginScreen = @import("../screens/account/account_login_screen.zig").AccountLoginScreen;
@@ -39,15 +40,15 @@ pub const Screen = union(ScreenType) {
 pub var ui_lock: std.Thread.Mutex = .{};
 pub var temp_elem_lock: std.Thread.Mutex = .{};
 pub var elements: std.ArrayList(element.UiElement) = undefined;
+pub var tooltip_elements: std.ArrayList(element.UiElement) = undefined;
 pub var temp_elements: std.ArrayList(element.Temporary) = undefined;
 pub var current_screen: Screen = undefined;
 
 pub var menu_background: *element.MenuBackground = undefined;
 
-var hide_tooltip: bool = true;
-
 pub fn init(allocator: std.mem.Allocator) !void {
     elements = try std.ArrayList(element.UiElement).initCapacity(allocator, 32);
+    tooltip_elements = try std.ArrayList(element.UiElement).initCapacity(allocator, 32);
     temp_elements = try std.ArrayList(element.Temporary).initCapacity(allocator, 32);
 
     menu_background = try element.MenuBackground.create(allocator, .{
@@ -58,11 +59,15 @@ pub fn init(allocator: std.mem.Allocator) !void {
     });
 
     current_screen = .{ .empty = try EmptyScreen.init(allocator) };
+
+    try tooltip.init(allocator);
 }
 
 pub fn deinit(allocator: std.mem.Allocator) void {
     while (!ui_lock.tryLock()) {}
     defer ui_lock.unlock();
+
+    tooltip.deinit();
 
     menu_background.destroy();
 
@@ -90,6 +95,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     }
 
     elements.deinit();
+    tooltip_elements.deinit();
     temp_elements.deinit();
 }
 
@@ -184,8 +190,16 @@ pub fn removeAttachedUi(obj_id: i32, allocator: std.mem.Allocator) void {
     }
 }
 
-fn elemMove(elem: element.UiElement, x: f32, y: f32) void {
+fn elemMove(elem: element.UiElement, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
     switch (elem) {
+        .scrollable_container => |scrollable_container| {
+            if (!scrollable_container.visible)
+                return;
+
+            const container = scrollable_container._container;
+            elemMove(.{ .container = container }, x - container.x, y - container.y, container.x, container.y);
+            elemMove(.{ .slider = scrollable_container._scroll_bar }, x, y, 0, 0);
+        },
         .container => |container| {
             if (!container.visible)
                 return;
@@ -197,9 +211,9 @@ fn elemMove(elem: element.UiElement, x: f32, y: f32) void {
                         if (container.x > 0)
                             container.x = 0;
 
-                        const bottom_x = container.x + container.width;
+                        const bottom_x = container.x + container.width();
                         if (bottom_x < camera.screen_width)
-                            container.x = container.width;
+                            container.x = container.width();
                     }
                 }
                 if (!container._clamp_y) {
@@ -208,7 +222,7 @@ fn elemMove(elem: element.UiElement, x: f32, y: f32) void {
                         if (container.y > 0)
                             container.y = 0;
 
-                        const bottom_y = container.y + container.height;
+                        const bottom_y = container.y + container.height();
                         if (bottom_y < camera.screen_height)
                             container.y = bottom_y;
                     }
@@ -216,7 +230,7 @@ fn elemMove(elem: element.UiElement, x: f32, y: f32) void {
             }
 
             for (container._elements.items) |container_elem| {
-                elemMove(container_elem, x - container.x, y - container.y);
+                elemMove(container_elem, x - container.x, y - container.y, container.x, container.y);
             }
         },
         .item => |item| {
@@ -224,9 +238,8 @@ fn elemMove(elem: element.UiElement, x: f32, y: f32) void {
                 return;
 
             if (utils.isInBounds(x, y, item.x, item.y, item.width(), item.height())) {
-                current_screen.game.updateTooltip(x, y, item._item);
-                current_screen.game.tooltip_container.visible = true;
-                hide_tooltip = false;
+                tooltip.switchTooltip(.item);
+                tooltip.current_tooltip.item.update(x + x_offset, y + y_offset, item._item);
             }
 
             if (!item._is_dragging)
@@ -250,6 +263,11 @@ fn elemMove(elem: element.UiElement, x: f32, y: f32) void {
                 return;
 
             if (utils.isInBounds(x, y, toggle.x, toggle.y, toggle.width(), toggle.height())) {
+                if (toggle.tooltip_text) |text_data| {
+                    tooltip.switchTooltip(.text);
+                    tooltip.current_tooltip.text.update(x + x_offset, y + y_offset, text_data);
+                }
+
                 toggle.state = .hovered;
             } else {
                 toggle.state = .none;
@@ -280,6 +298,11 @@ fn elemMove(elem: element.UiElement, x: f32, y: f32) void {
                 return;
 
             if (utils.isInBounds(x, y, key_mapper.x, key_mapper.y, key_mapper.width(), key_mapper.height())) {
+                if (key_mapper.tooltip_text) |text_data| {
+                    tooltip.switchTooltip(.text);
+                    tooltip.current_tooltip.text.update(x + x_offset, y + y_offset, text_data);
+                }
+
                 key_mapper.state = .hovered;
             } else {
                 key_mapper.state = .none;
@@ -299,6 +322,13 @@ fn elemMove(elem: element.UiElement, x: f32, y: f32) void {
                 .normal => |normal| normal.height(),
             };
 
+            if (utils.isInBounds(x, y, slider.x, slider.y, slider.width(), slider.height())) {
+                if (slider.tooltip_text) |text_data| {
+                    tooltip.switchTooltip(.text);
+                    tooltip.current_tooltip.text.update(x + x_offset, y + y_offset, text_data);
+                }
+            }
+
             if (slider.state == .pressed) {
                 sliderPressed(slider, x, y, knob_h, knob_w);
             } else if (utils.isInBounds(x, y, slider.x + slider._knob_x, slider.y + slider._knob_y, knob_w, knob_h)) {
@@ -312,17 +342,28 @@ fn elemMove(elem: element.UiElement, x: f32, y: f32) void {
 }
 
 pub fn mouseMove(x: f32, y: f32) void {
-    hide_tooltip = true;
+    tooltip.switchTooltip(.none);
+
     for (elements.items) |elem| {
-        elemMove(elem, x, y);
+        elemMove(elem, x, y, 0, 0);
     }
 
-    if (current_screen == .game and hide_tooltip)
-        current_screen.game.tooltip_container.visible = false;
+    for (tooltip_elements.items) |elem| {
+        elemMove(elem, x, y, 0, 0);
+    }
 }
 
 fn elemPress(elem: element.UiElement, x: f32, y: f32, mods: zglfw.Mods) bool {
     switch (elem) {
+        .scrollable_container => |scrollable_container| {
+            if (!scrollable_container.visible)
+                return false;
+
+            const container = scrollable_container._container;
+            if (elemPress(.{ .container = container }, x - container.x, y - container.y, mods) or
+                elemPress(.{ .slider = scrollable_container._scroll_bar }, x, y, mods))
+                return true;
+        },
         .container => |container| {
             if (!container.visible)
                 return false;
@@ -333,7 +374,7 @@ fn elemPress(elem: element.UiElement, x: f32, y: f32, mods: zglfw.Mods) bool {
                     return true;
             }
 
-            if (container.draggable and utils.isInBounds(x, y, container.x, container.y, container.width, container.height)) {
+            if (container.draggable and utils.isInBounds(x, y, container.x, container.y, container.width(), container.height())) {
                 container._is_dragging = true;
                 container._drag_start_x = container.x;
                 container._drag_start_y = container.y;
@@ -362,6 +403,7 @@ fn elemPress(elem: element.UiElement, x: f32, y: f32, mods: zglfw.Mods) bool {
                 item._drag_offset_x = item.x - x;
                 item._drag_offset_y = item.y - y;
                 item._last_click_time = main.current_time;
+                item.drag_start_callback(item);
                 return true;
             }
         },
@@ -472,11 +514,25 @@ pub fn mousePress(x: f32, y: f32, mods: zglfw.Mods, button: zglfw.MouseButton) b
             return true;
     }
 
+    var tooltip_elem_iter = std.mem.reverseIterator(tooltip_elements.items);
+    while (tooltip_elem_iter.next()) |elem| {
+        if (elemPress(elem, x, y, mods))
+            return true;
+    }
+
     return false;
 }
 
 fn elemRelease(elem: element.UiElement, x: f32, y: f32) void {
     switch (elem) {
+        .scrollable_container => |scrollable_container| {
+            if (!scrollable_container.visible)
+                return;
+
+            const container = scrollable_container._container;
+            elemRelease(.{ .container = container }, x - container.x, y - container.y);
+            elemRelease(.{ .slider = scrollable_container._scroll_bar }, x, y);
+        },
         .container => |container| {
             if (!container.visible)
                 return;
@@ -566,6 +622,77 @@ pub fn mouseRelease(x: f32, y: f32) void {
     for (elements.items) |elem| {
         elemRelease(elem, x, y);
     }
+
+    for (tooltip_elements.items) |elem| {
+        elemRelease(elem, x, y);
+    }
+}
+
+pub fn elemScroll(elem: element.UiElement, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
+    switch (elem) {
+        .scrollable_container => |scrollable_container| {
+            if (!scrollable_container.visible)
+                return false;
+
+            const container = scrollable_container._container;
+            if (utils.isInBounds(x, y, container.x, container.y, scrollable_container.width(), scrollable_container.height())) {
+                const scroll_bar = scrollable_container._scroll_bar;
+                scrollable_container._scroll_bar.setValue(
+                    @min(
+                        scroll_bar.max_value,
+                        @max(
+                            scroll_bar.min_value,
+                            scroll_bar._current_value + (scroll_bar.max_value - scroll_bar.min_value) * -y_offset / 64.0,
+                        ),
+                    ),
+                );
+                return true;
+            }
+        },
+        .container => |container| {
+            if (!container.visible)
+                return false;
+
+            var iter = std.mem.reverseIterator(container._elements.items);
+            while (iter.next()) |container_elem| {
+                if (elemScroll(container_elem, x - container.x, y - container.y, x_offset, y_offset))
+                    return true;
+            }
+        },
+        .slider => |slider| {
+            if (utils.isInBounds(x, y, slider.x, slider.y, slider.width(), slider.height())) {
+                slider.setValue(
+                    @min(
+                        slider.max_value,
+                        @max(
+                            slider.min_value,
+                            slider._current_value + (slider.max_value - slider.min_value) * -y_offset / 64.0,
+                        ),
+                    ),
+                );
+                return true;
+            }
+        },
+        else => {},
+    }
+
+    return false;
+}
+
+pub fn mouseScroll(x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
+    var elem_iter = std.mem.reverseIterator(elements.items);
+    while (elem_iter.next()) |elem| {
+        if (elemScroll(elem, x, y, x_offset, y_offset))
+            return true;
+    }
+
+    var tooltip_elem_iter = std.mem.reverseIterator(tooltip_elements.items);
+    while (tooltip_elem_iter.next()) |elem| {
+        if (elemScroll(elem, x, y, x_offset, y_offset))
+            return true;
+    }
+
+    return false;
 }
 
 pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) !void {
@@ -665,34 +792,19 @@ fn sliderPressed(slider: *element.Slider, x: f32, y: f32, knob_h: f32, knob_w: f
     const prev_value = slider._current_value;
 
     if (slider.vertical) {
-        const ceil_y = @ceil(slider.y);
-        if (y + knob_h / 2 <= slider.h + ceil_y and y - knob_h / 2 >= ceil_y and slider._knob_y != y - knob_h / 2) {
-            slider._knob_y = y - knob_h / 2;
-            slider._current_value = ((slider.max_value - slider.min_value) * ((slider._knob_y - ceil_y) / (slider.h - knob_h))) + slider.min_value;
-        } else if (y + knob_h / 2 >= slider.h + ceil_y and slider._knob_y != y - knob_h / 2) {
-            slider._knob_y = slider.y + slider.h - knob_h;
-            slider._current_value = slider.max_value;
-        } else if (y - knob_h / 2 <= ceil_y and slider._knob_y != y - knob_h / 2) {
-            slider._knob_y = slider.y;
-            slider._current_value = slider.min_value;
-        }
+        slider._knob_y = @min(slider.h - knob_h, @max(0, y - knob_h - slider.y));
+        slider._current_value = slider._knob_y / (slider.h - knob_h) * (slider.max_value - slider.min_value) + slider.min_value;
     } else {
-        const ceil_x = @ceil(slider.x);
-        if (x + knob_w / 2 <= slider.w + ceil_x and x - knob_w / 2 >= ceil_x and slider._knob_x != x - knob_w / 2) {
-            slider._knob_x = x - knob_w / 2;
-            slider._current_value = ((slider.max_value - slider.min_value) * ((slider._knob_x - ceil_x) / (slider.w - knob_w))) + slider.min_value;
-        } else if (x + knob_w / 2 >= slider.w + ceil_x and slider._knob_x != x - knob_w / 2) {
-            slider._knob_x = slider.x + slider.w - knob_w;
-            slider._current_value = slider.max_value;
-        } else if (x - knob_w / 2 <= ceil_x and slider._knob_x != x - knob_w / 2) {
-            slider._knob_x = slider.x;
-            slider._current_value = slider.min_value;
-        }
+        slider._knob_x = @min(slider.w - knob_w, @max(0, x - knob_w - slider.x));
+        slider._current_value = slider._knob_x / (slider.w - knob_w) * (slider.max_value - slider.min_value) + slider.min_value;
     }
 
     if (slider._current_value != prev_value) {
-        slider.value_text_data.text = std.fmt.bufPrint(slider.value_text_data._backing_buffer, "{d:.2}", .{slider._current_value}) catch "-1.00";
-        slider.value_text_data.recalculateAttributes(slider._allocator);
+        if (slider.value_text_data) |*text_data| {
+            text_data.text = std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{slider._current_value}) catch "-1.00";
+            text_data.recalculateAttributes(slider._allocator);
+        }
+
         if (slider.continous_event_fire)
             slider.state_change(slider);
     }

@@ -581,7 +581,7 @@ fn addAnimPlayer(
             const rect = current_rects[j];
             if (rect.w == 0 or rect.h == 0)
                 continue;
-                
+
             const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
             const frame_idx = j % 5;
             const set_idx = @divFloor(j, 5);
@@ -778,7 +778,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     anim_enemies = std.StringHashMap([]AnimEnemyData).init(allocator);
     anim_players = std.StringHashMap([]AnimPlayerData).init(allocator);
 
-    menu_background = try zstbi.Image.loadFromFile(asset_dir ++ "ui/menu_background.jpg", 4);
+    menu_background = try zstbi.Image.loadFromFile(asset_dir ++ "ui/menu_background.png", 4);
 
     bold_atlas = try zstbi.Image.loadFromFile(asset_dir ++ "fonts/ubuntu_bold.png", 4);
     bold_italic_atlas = try zstbi.Image.loadFromFile(asset_dir ++ "fonts/ubuntu_bold_italic.png", 4);
@@ -859,11 +859,18 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     const imply_size = std.math.maxInt(u32);
     try addUiImage("ability_icons", "sheets/ability_icons.png", 40, 40, &ctx, allocator);
+    try addUiImage("rare_slot", "ui/rare_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("epic_slot", "ui/epic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("legendary_slot", "ui/legendary_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("mythic_slot", "ui/mythic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("basic_panel", "ui/basic_panel.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_background", "ui/chat/chatbox_background.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_input", "ui/chat/chatbox_input.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_cursor", "ui/chat/chatbox_cursor.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_scroll_wheel", "ui/chat/chatbox_scroll_wheel.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_scroll_background", "ui/chat/chatbox_scroll_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_scroll_wheel_base", "ui/chat/chatbox_scroll_wheel_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_scroll_wheel_hover", "ui/chat/chatbox_scroll_wheel_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_scroll_wheel_press", "ui/chat/chatbox_scroll_wheel_press.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("speech_balloons", "ui/chat/speech_balloons.png", 65, 45, &ui_ctx, allocator);
     try addUiImage("button_base", "ui/screens/button_base.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("button_hover", "ui/screens/button_hover.png", imply_size, imply_size, &ui_ctx, allocator);

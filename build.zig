@@ -9,6 +9,7 @@ const zstbrp = @import("libs/zstbrp/build.zig");
 const ztracy = @import("libs/ztracy/build.zig");
 const zaudio = @import("libs/zaudio/build.zig");
 const ini = @import("libs/ini/build.zig");
+const zdiscord = @import("libs/zig-discord/build.zig");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -22,6 +23,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     exe.strip = !is_debug;
+    exe.addModule("rpc", zdiscord.getModule(b));
     exe.addModule("nfd", nfd.getModule(b));
 
     const nfd_lib = nfd.makeLib(b, target, optimize);

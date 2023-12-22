@@ -151,6 +151,7 @@ pub const CharacterClassStat = struct {
 pub const CharacterClass = struct {
     obj_type: u16,
     name: []const u8,
+    rpc_name: []const u8,
     desc: []const u8,
     hit_sound: []const u8,
     death_sound: []const u8,
@@ -190,9 +191,17 @@ pub const CharacterClass = struct {
         while (equip_iter.next()) |s|
             try equip_list.append(try std.fmt.parseInt(i16, s, 0));
 
+        const name = try node.getAttributeAlloc("id", allocator, "Unknown");
+        const rpc_name = try allocator.dupe(u8, name);
+        std.mem.replaceScalar(u8, rpc_name, ' ', '_');
+        for (rpc_name) |*char| {
+            char.* = std.ascii.toLower(char.*);
+        }
+
         return CharacterClass{
             .obj_type = try node.getAttributeInt("type", u16, 0),
-            .name = try node.getAttributeAlloc("id", allocator, "Unknown"),
+            .name = name,
+            .rpc_name = rpc_name,
             .desc = try node.getValueAlloc("Description", allocator, "Unknown"),
             .hit_sound = try node.getValueAlloc("HitSound", allocator, "default_hit"),
             .death_sound = try node.getValueAlloc("DeathSound", allocator, "default_death"),
@@ -322,7 +331,7 @@ pub const GroundProps = struct {
             .sink = node.elementExists("Sink"),
             .sinking = node.elementExists("Sinking"),
             .random_offset = node.elementExists("RandomOffset"),
-            .light_color = try node.getValueInt("LightColor", u32, 0),
+            .light_color = try node.getValueInt("LightColor", u32, std.math.maxInt(u32)),
             .light_intensity = try node.getValueFloat("LightIntensity", f32, 0.1),
             .light_radius = try node.getValueFloat("LightRadius", f32, 1.0),
             .light_pulse = try node.getValueFloat("LightPulse", f32, 0.0),
@@ -423,7 +432,7 @@ pub const ObjProps = struct {
             .size_step = try node.getValueFloat("SizeStep", f32, 0.0) / 100.0,
             .angle_correction = try node.getValueFloat("AngleCorrection", f32, 0.0) * (std.math.pi / 4.0),
             .rotation = try node.getValueFloat("Rotation", f32, 0.0),
-            .light_color = try node.getValueInt("LightColor", u32, 0),
+            .light_color = try node.getValueInt("LightColor", u32, std.math.maxInt(u32)),
             .light_intensity = try node.getValueFloat("LightIntensity", f32, 0.1),
             .light_radius = try node.getValueFloat("LightRadius", f32, 1.0),
             .light_pulse = try node.getValueFloat("LightPulse", f32, 0.0),
@@ -511,7 +520,7 @@ pub const ProjProps = struct {
             .texture_data = try parseTexture(node, allocator),
             .angle_correction = try node.getValueFloat("AngleCorrection", f32, 0.0) * (std.math.pi / 4.0),
             .rotation = try node.getValueFloat("Rotation", f32, 0.0),
-            .light_color = try node.getValueInt("LightColor", u32, 0),
+            .light_color = try node.getValueInt("LightColor", u32, std.math.maxInt(u32)),
             .light_intensity = try node.getValueFloat("LightIntensity", f32, 0.1),
             .light_radius = try node.getValueFloat("LightRadius", f32, 1.0),
             .light_pulse = try node.getValueFloat("LightPulse", f32, 0.0),
@@ -737,6 +746,7 @@ pub const ActivationData = struct {
     activation_type: ActivationType,
     object_id: []const u8,
     dungeon_name: []const u8,
+    obj_type: u16,
     duration: f32,
     max_distance: u8,
     max_targets: u8,
@@ -753,6 +763,7 @@ pub const ActivationData = struct {
         return ActivationData{
             .activation_type = ActivationType.fromString(node.currentValue() orelse "IncrementStat"),
             .object_id = try node.getAttributeAlloc("objectId", allocator, ""),
+            .obj_type = try node.getAttributeInt("objType", u16, std.math.maxInt(u16)),
             .id = try node.getAttributeAlloc("id", allocator, ""),
             .dungeon_name = try node.getAttributeAlloc("dungeonName", allocator, "Unknown"),
             .effect = utils.ConditionEnum.fromString(node.getAttribute("effect") orelse ""),
@@ -804,6 +815,7 @@ pub const ItemProps = struct {
     backpack: bool,
     slot_type: ItemType,
     tier: []const u8,
+    tier_req: u8,
     mp_cost: f32,
     bag_type: u8,
     num_projectiles: u8,
@@ -824,19 +836,19 @@ pub const ItemProps = struct {
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ItemProps {
         var incr_it = node.iterate(&.{}, "IncrementStat");
-        var incr_list = try std.ArrayList(StatIncrementData).initCapacity(allocator, 4);
+        var incr_list = std.ArrayList(StatIncrementData).init(allocator);
         defer incr_list.deinit();
         while (incr_it.next()) |incr_node|
             try incr_list.append(try StatIncrementData.parse(incr_node));
 
         var activate_it = node.iterate(&.{}, "Activate");
-        var activate_list = try std.ArrayList(ActivationData).initCapacity(allocator, 4);
+        var activate_list = std.ArrayList(ActivationData).init(allocator);
         defer activate_list.deinit();
         while (activate_it.next()) |activate_node|
             try activate_list.append(try ActivationData.parse(activate_node, allocator));
 
         var extra_tooltip_it = node.iterate(&.{}, "ExtraTooltipData");
-        var extra_tooltip_list = try std.ArrayList(EffectInfo).initCapacity(allocator, 4);
+        var extra_tooltip_list = std.ArrayList(EffectInfo).init(allocator);
         defer extra_tooltip_list.deinit();
         while (extra_tooltip_it.next()) |extra_tooltip_node|
             try extra_tooltip_list.append(try EffectInfo.parse(extra_tooltip_node, allocator));
@@ -849,6 +861,7 @@ pub const ItemProps = struct {
             .usable = node.elementExists("Usable"),
             .slot_type = @enumFromInt(try node.getValueInt("SlotType", i8, 0)),
             .tier = try node.getValueAlloc("Tier", allocator, "Unknown"),
+            .tier_req = try node.getValueInt("TierReq", u8, 0),
             .bag_type = try node.getValueInt("BagType", u8, 0),
             .num_projectiles = try node.getValueInt("NumProjectiles", u8, 1),
             .arc_gap = std.math.degreesToRadians(f32, try node.getValueFloat("ArcGap", f32, 0)),
@@ -859,7 +872,7 @@ pub const ItemProps = struct {
             .texture_data = try TextureData.parse(node.findChild("Texture").?, allocator, false),
             .projectile = if (node.elementExists("Projectile")) try ProjProps.parse(node.findChild("Projectile").?, allocator) else null,
             .stat_increments = try allocator.dupe(StatIncrementData, incr_list.items),
-            .activations = if (node.elementExists("Activate")) try allocator.dupe(ActivationData, activate_list.items) else null,
+            .activations = try allocator.dupe(ActivationData, activate_list.items),
             .sound = try node.getValueAlloc("Sound", allocator, "Unknown"),
             .old_sound = try node.getValueAlloc("OldSound", allocator, "Unknown"),
             .is_potion = node.elementExists("Potion"),
@@ -869,7 +882,7 @@ pub const ItemProps = struct {
             .lt_boosted = node.elementExists("LTBoosted"),
             .ld_boosted = node.elementExists("LDBoosted"),
             .backpack = node.elementExists("Backpack"),
-            .extra_tooltip_data = if (node.elementExists("ExtraTooltipData")) try allocator.dupe(EffectInfo, extra_tooltip_list.items) else null,
+            .extra_tooltip_data = try allocator.dupe(EffectInfo, extra_tooltip_list.items),
             .description = try node.getValueAlloc("Description", allocator, ""),
         };
     }
@@ -901,13 +914,27 @@ pub const ItemType = enum(i8) {
     robe = 14,
     any_armor = 20,
 
+    pub fn toString(self: ItemType) []const u8 {
+        return switch (self) {
+            .boots => "Boots",
+            .artifact => "Artifact",
+            .consumable => "Consumable",
+            .sword => "Sword",
+            .bow => "Bow",
+            .staff => "Staff",
+            .leather => "Leather",
+            .heavy => "Heavy",
+            .robe => "Robe",
+            .no_item, .any, .any_weapon, .any_armor => "Unknown",
+        };
+    }
+
     pub inline fn slotsMatch(self: ItemType, target: ItemType) bool {
-        return self == .any or target == .any or
+        return self == target or self == .any or target == .any or
             std.mem.indexOfScalar(ItemType, &weapon_types, self) != null and target == .any_weapon or
             std.mem.indexOfScalar(ItemType, &weapon_types, target) != null and self == .any_weapon or
             std.mem.indexOfScalar(ItemType, &armor_types, self) != null and target == .any_armor or
-            std.mem.indexOfScalar(ItemType, &armor_types, target) != null and self == .any_armor or
-            self == target;
+            std.mem.indexOfScalar(ItemType, &armor_types, target) != null and self == .any_armor;
     }
 };
 
@@ -1123,6 +1150,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         allocator.free(class.hit_sound);
         allocator.free(class.death_sound);
         allocator.free(class.name);
+        allocator.free(class.rpc_name);
         allocator.free(class.desc);
         allocator.free(class.slot_types);
         allocator.free(class.equipment);

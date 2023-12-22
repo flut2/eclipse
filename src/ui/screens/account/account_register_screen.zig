@@ -5,6 +5,7 @@ const camera = @import("../../../camera.zig");
 const requests = @import("../../../requests.zig");
 const xml = @import("../../../xml.zig");
 const main = @import("../../../main.zig");
+const rpc = @import("rpc");
 
 const screen_controller = @import("../../controllers/screen_controller.zig");
 
@@ -26,6 +27,18 @@ pub const AccountRegisterScreen = struct {
     pub fn init(allocator: std.mem.Allocator) !*AccountRegisterScreen {
         var screen = try allocator.create(AccountRegisterScreen);
         screen.* = .{ ._allocator = allocator };
+
+        const presence = rpc.Packet.Presence{
+            .assets = .{
+                .large_image = rpc.Packet.ArrayString(256).create("logo"),
+                .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
+            },
+            .state = rpc.Packet.ArrayString(128).create("Register Screen"),
+            .timestamps = .{
+                .start = main.rpc_start,
+            },
+        };
+        try main.rpc_client.setPresence(presence);
 
         const input_w = 300;
         const input_h = 50;

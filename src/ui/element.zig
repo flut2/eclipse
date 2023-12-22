@@ -5,6 +5,7 @@ const main = @import("../main.zig");
 const zglfw = @import("zglfw");
 const settings = @import("../settings.zig");
 const sc = @import("controllers/screen_controller.zig");
+const tooltip = @import("tooltips/tooltip.zig");
 
 pub const RGBF32 = extern struct {
     r: f32,
@@ -70,8 +71,9 @@ pub const Input = struct {
     allocator: std.mem.Allocator,
     enter_callback: ?*const fn ([]const u8) void = null,
     state: InteractableState = .none,
-    visible: bool = true,
     is_chat: bool = false,
+    scissor: ScissorRect = .{},
+    visible: bool = true,
     // -1 means not selected
     _last_input: i64 = -1,
     _x_offset: f32 = 0.0,
@@ -179,6 +181,7 @@ pub const Button = struct {
     image_data: InteractableImageData,
     state: InteractableState = .none,
     text_data: ?TextData = null,
+    scissor: ScissorRect = .{},
     visible: bool = true,
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
@@ -262,7 +265,9 @@ pub const KeyMapper = struct {
     key: zglfw.Key = zglfw.Key.unknown,
     mouse: zglfw.MouseButton = zglfw.MouseButton.unknown,
     title_text_data: ?TextData = null,
+    tooltip_text: ?TextData = null,
     state: InteractableState = .none,
+    scissor: ScissorRect = .{},
     visible: bool = true,
     listening: bool = false,
     _disposed: bool = false,
@@ -278,11 +283,18 @@ pub const KeyMapper = struct {
         var elem = try allocator.create(KeyMapper);
         elem.* = data;
         elem._allocator = allocator;
-        if (elem.title_text_data) |*text_data| {
-            text_data.recalculateAttributes(allocator);
-        }
+        try elem.init();
         try sc.elements.append(.{ .key_mapper = elem });
         return elem;
+    }
+
+    pub fn init(self: *KeyMapper) !void {
+        if (self.title_text_data) |*text_data| {
+            text_data.recalculateAttributes(self._allocator);
+        }
+        if (self.tooltip_text) |*text_data| {
+            text_data.recalculateAttributes(self._allocator);
+        }
     }
 
     pub fn imageData(self: KeyMapper) ImageData {
@@ -304,6 +316,15 @@ pub const KeyMapper = struct {
         };
     }
 
+    pub fn deinit(self: *KeyMapper) void {
+        if (self.title_text_data) |*text_data| {
+            text_data.deinit(self._allocator);
+        }
+        if (self.tooltip_text) |*text_data| {
+            text_data.deinit(self._allocator);
+        }
+    }
+
     pub fn destroy(self: *KeyMapper) void {
         if (self._disposed)
             return;
@@ -317,10 +338,7 @@ pub const KeyMapper = struct {
             }
         }
 
-        if (self.title_text_data) |title_text| {
-            title_text.deinit(self._allocator);
-        }
-
+        self.deinit();
         self._allocator.destroy(self);
     }
 };
@@ -334,6 +352,7 @@ pub const CharacterBox = struct {
     image_data: InteractableImageData,
     state: InteractableState = .none,
     text_data: ?TextData = null,
+    scissor: ScissorRect = .{},
     visible: bool = true,
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
@@ -427,7 +446,6 @@ pub const NineSliceImageData = struct {
     color: u32 = std.math.maxInt(u32),
     color_intensity: f32 = 0,
     atlas_data: [9]AtlasData,
-    scissor: ScissorRect = .{},
 
     pub fn fromAtlasData(data: AtlasData, w: f32, h: f32, slice_x: f32, slice_y: f32, slice_w: f32, slice_h: f32, alpha: f32) NineSliceImageData {
         const base_u = data.texURaw() + assets.padding;
@@ -496,7 +514,6 @@ pub const NormalImageData = struct {
     color: u32 = std.math.maxInt(u32),
     color_intensity: f32 = 0,
     atlas_data: assets.AtlasData,
-    scissor: ScissorRect = .{},
     glow: bool = false,
 
     pub fn width(self: NormalImageData) f32 {
@@ -517,6 +534,7 @@ pub const Image = struct {
     x: f32,
     y: f32,
     image_data: ImageData,
+    scissor: ScissorRect = .{},
     ui_quad: bool = true,
     visible: bool = true,
     // hack
@@ -597,6 +615,14 @@ pub const MenuBackground = struct {
         return elem;
     }
 
+    pub fn width(_: MenuBackground) f32 {
+        return @floatFromInt(assets.menu_background.width);
+    }
+
+    pub fn height(_: MenuBackground) f32 {
+        return @floatFromInt(assets.menu_background.height);
+    }
+
     pub fn destroy(self: *MenuBackground) void {
         if (self._disposed)
             return;
@@ -617,12 +643,18 @@ pub const MenuBackground = struct {
 pub const Item = struct {
     x: f32,
     y: f32,
+    background_x: f32,
+    background_y: f32,
     image_data: ImageData,
+    drag_start_callback: *const fn (*Item) void,
     drag_end_callback: *const fn (*Item) void,
     double_click_callback: *const fn (*Item) void,
     shift_click_callback: *const fn (*Item) void,
+    scissor: ScissorRect = .{},
     visible: bool = true,
     draggable: bool = false,
+    // don't set this to anything, it's used for item tier backgrounds
+    _background_image_data: ?ImageData = null,
     _is_dragging: bool = false,
     _drag_start_x: f32 = 0,
     _drag_start_y: f32 = 0,
@@ -682,6 +714,7 @@ pub const Bar = struct {
     x: f32,
     y: f32,
     image_data: ImageData,
+    scissor: ScissorRect = .{},
     visible: bool = true,
     text_data: TextData,
     _disposed: bool = false,
@@ -738,6 +771,7 @@ pub const Text = struct {
     x: f32,
     y: f32,
     text_data: TextData,
+    scissor: ScissorRect = .{},
     visible: bool = true,
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
@@ -752,9 +786,25 @@ pub const Text = struct {
         var elem = try allocator.create(Text);
         elem.* = data;
         elem._allocator = allocator;
-        elem.text_data.recalculateAttributes(allocator);
+        elem.init();
         try sc.elements.append(.{ .text = elem });
         return elem;
+    }
+
+    pub fn init(self: *Text) void {
+        self.text_data.recalculateAttributes(self._allocator);
+    }
+
+    pub fn deinit(self: *Text) void {
+        self.text_data.deinit(self._allocator);
+    }
+
+    pub fn width(self: Text) f32 {
+        return self.text_data._width;
+    }
+
+    pub fn height(self: Text) f32 {
+        return self.text_data._height;
     }
 
     pub fn destroy(self: *Text) void {
@@ -770,7 +820,7 @@ pub const Text = struct {
             }
         }
 
-        self.text_data.deinit(self._allocator);
+        self.deinit();
         self._allocator.destroy(self);
     }
 };
@@ -955,13 +1005,170 @@ pub const TextData = struct {
     }
 };
 
+pub const ScrollableContainer = struct {
+    const Params = struct {
+        x: f32,
+        y: f32,
+        scissor_w: f32,
+        scissor_h: f32,
+        scroll_x: f32,
+        scroll_y: f32,
+        scroll_w: f32,
+        scroll_h: f32,
+        scroll_decor_image_data: ImageData,
+        scroll_knob_image_data: InteractableImageData,
+        visible: bool = true,
+    };
+
+    visible: bool = true,
+    base_y: f32 = 0.0,
+    scissor_h: f32 = 0.0,
+    _container: *Container = undefined,
+    _scroll_bar: *Slider = undefined,
+    _disposed: bool = false,
+    _allocator: std.mem.Allocator,
+
+    pub fn create(allocator: std.mem.Allocator, params: Params) !*ScrollableContainer {
+        const should_lock = sc.elements.capacity == 0;
+        if (should_lock) {
+            while (!sc.ui_lock.tryLock()) {}
+        }
+        defer if (should_lock) sc.ui_lock.unlock();
+
+        var elem = try allocator.create(ScrollableContainer);
+        elem.visible = params.visible;
+        elem.* = .{
+            .base_y = params.y,
+            .scissor_h = params.scissor_h,
+            .visible = params.visible,
+            ._allocator = allocator,
+            ._container = try allocator.create(Container),
+            ._scroll_bar = try allocator.create(Slider),
+        };
+
+        elem._container.* = .{ .x = params.x, .y = params.y, .scissor = .{
+            .min_x = 0,
+            .min_y = 0,
+            .max_x = params.scissor_w,
+            .max_y = params.scissor_h,
+        } };
+        elem._container._allocator = allocator;
+        try elem._container.init();
+
+        elem._scroll_bar.* = .{
+            .x = params.scroll_x,
+            .y = params.scroll_y,
+            .w = params.scroll_w,
+            .h = params.scroll_h,
+            .decor_image_data = params.scroll_decor_image_data,
+            .knob_image_data = params.scroll_knob_image_data,
+            .min_value = 0.0,
+            .max_value = 1.0,
+            .continous_event_fire = true,
+            .state_change = onScrollChanged,
+            .vertical = true,
+            .visible = false,
+            ._parent_container = elem,
+            ._current_value = 1.0,
+        };
+        elem._scroll_bar._allocator = allocator;
+        try elem._scroll_bar.init();
+
+        try sc.elements.append(.{ .scrollable_container = elem });
+        return elem;
+    }
+
+    pub fn init(_: *ScrollableContainer) !void {}
+
+    pub fn deinit(self: *ScrollableContainer) void {
+        self._container.deinit();
+        self._allocator.destroy(self._container);
+
+        self._scroll_bar.deinit();
+        self._allocator.destroy(self._scroll_bar);
+    }
+
+    pub fn width(self: ScrollableContainer) f32 {
+        return @max(self._container.width(), (self._scroll_bar.x - self._container.x) + self._scroll_bar.width());
+    }
+
+    pub fn height(self: ScrollableContainer) f32 {
+        return @max(self._container.height(), (self._scroll_bar.y - self._container.y) + self._scroll_bar.height());
+    }
+
+    pub fn createElement(self: *ScrollableContainer, comptime T: type, data: T) !*T {
+        const elem = self._container.createElement(T, data);
+        self.update();
+        return elem;
+    }
+
+    pub fn update(self: *ScrollableContainer) void {
+        if (self.scissor_h >= self._container.height()) {
+            self._scroll_bar.visible = false;
+            return;
+        }
+
+        const h_dt_base = (self.scissor_h - self._container.height());
+        const h_dt = self._scroll_bar._current_value * h_dt_base;
+        const new_h = self._scroll_bar.h / (2.0 + -h_dt_base / self.scissor_h);
+        scaleImageData(&self._scroll_bar.knob_image_data.base, new_h);
+        if (self._scroll_bar.knob_image_data.hover) |*image_data| scaleImageData(image_data, new_h);
+        if (self._scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
+        self._scroll_bar.setValue(self._scroll_bar._current_value);
+        self._scroll_bar.visible = true;
+
+        self._container.y = self.base_y + h_dt;
+        self._container.scissor.min_y = -h_dt;
+        self._container.scissor.max_y = -h_dt + self.scissor_h;
+        self._container.updateScissors();
+    }
+
+    fn scaleImageData(image_data: *ImageData, new_h: f32) void {
+        switch (image_data.*) {
+            .nine_slice => |*nine_slice| nine_slice.h = new_h,
+            .normal => |*normal_image_data| normal_image_data.scale_y = normal_image_data.atlas_data.texHRaw() / new_h,
+        }
+    }
+
+    fn onScrollChanged(scroll_bar: *Slider) void {
+        var parent = scroll_bar._parent_container.?;
+        if (parent.scissor_h >= parent._container.height()) {
+            parent._scroll_bar.visible = false;
+            return;
+        }
+
+        const h_dt_base = (parent.scissor_h - parent._container.height());
+        const h_dt = scroll_bar._current_value * h_dt_base;
+        const new_h = parent._scroll_bar.h / (2.0 + -h_dt_base / parent.scissor_h);
+        scaleImageData(&parent._scroll_bar.knob_image_data.base, new_h);
+        if (parent._scroll_bar.knob_image_data.hover) |*image_data| scaleImageData(image_data, new_h);
+        if (parent._scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
+        parent._scroll_bar.visible = true;
+
+        parent._container.y = parent.base_y + h_dt;
+        parent._container.scissor.min_y = -h_dt;
+        parent._container.scissor.max_y = -h_dt + parent.scissor_h;
+        parent._container.updateScissors();
+    }
+
+    pub fn destroy(self: *ScrollableContainer) void {
+        if (self._disposed)
+            return;
+
+        self._disposed = true;
+
+        self.deinit();
+        self._allocator.destroy(self);
+    }
+};
+
 pub const Container = struct {
     x: f32,
     y: f32,
-    width: f32 = 0,
-    height: f32 = 0,
+    scissor: ScissorRect = .{},
     visible: bool = true,
     draggable: bool = false,
+    tooltip_container: bool = false,
 
     _elements: std.ArrayList(UiElement) = undefined,
     _disposed: bool = false,
@@ -977,7 +1184,7 @@ pub const Container = struct {
     _clamp_to_screen: bool = false,
 
     pub fn create(allocator: std.mem.Allocator, data: Container) !*Container {
-        const should_lock = sc.elements.capacity == 0;
+        const should_lock = if (data.tooltip_container) sc.elements.capacity == 0 else sc.tooltip_elements.capacity == 0;
         if (should_lock) {
             while (!sc.ui_lock.tryLock()) {}
         }
@@ -986,20 +1193,43 @@ pub const Container = struct {
         var elem = try allocator.create(Container);
         elem.* = data;
         elem._allocator = allocator;
-        elem._elements = try std.ArrayList(UiElement).initCapacity(allocator, 8);
-        try sc.elements.append(.{ .container = elem });
+        try elem.init();
+        if (data.tooltip_container) {
+            try sc.tooltip_elements.append(.{ .container = elem });
+        } else {
+            try sc.elements.append(.{ .container = elem });
+        }
         return elem;
     }
 
-    pub fn createElement(self: *Container, comptime T: type, data: T) !*T {
-        const should_lock = sc.elements.capacity == 0;
-        if (should_lock) {
-            while (!sc.ui_lock.tryLock()) {}
-        }
-        defer if (should_lock) sc.ui_lock.unlock();
+    pub fn init(self: *Container) !void {
+        self._elements = try std.ArrayList(UiElement).initCapacity(self._allocator, 8);
+    }
 
+    pub fn createElement(self: *Container, comptime T: type, data: T) !*T {
         var elem = try self._allocator.create(T);
         elem.* = data;
+        elem._allocator = self._allocator;
+
+        elem.scissor = .{
+            .min_x = if (self.scissor.min_x == ScissorRect.dont_scissor)
+                ScissorRect.dont_scissor
+            else
+                self.scissor.min_x - elem.x,
+            .min_y = if (self.scissor.min_y == ScissorRect.dont_scissor)
+                ScissorRect.dont_scissor
+            else
+                self.scissor.min_y - elem.y,
+            .max_x = if (self.scissor.max_x == ScissorRect.dont_scissor)
+                ScissorRect.dont_scissor
+            else
+                self.scissor.max_x - elem.x,
+            .max_y = if (self.scissor.max_y == ScissorRect.dont_scissor)
+                ScissorRect.dont_scissor
+            else
+                self.scissor.max_y - elem.y,
+        };
+
         switch (T) {
             Image => try self._elements.append(.{ .image = elem }),
             Item => {
@@ -1035,7 +1265,7 @@ pub const Container = struct {
                 try self._elements.append(.{ .button = elem });
             },
             Text => {
-                elem.text_data.recalculateAttributes(self._allocator);
+                elem.init();
                 try self._elements.append(.{ .text = elem });
             },
             CharacterBox => {
@@ -1045,30 +1275,103 @@ pub const Container = struct {
                 try self._elements.append(.{ .char_box = elem });
             },
             Container => {
-                elem._allocator = self._allocator;
-                elem._elements = try std.ArrayList(UiElement).initCapacity(self._allocator, 8);
+                try elem.init();
                 try self._elements.append(.{ .container = elem });
             },
             MenuBackground => try self._elements.append(.{ .menu_bg = elem }),
             Toggle => {
-                if (elem.text_data) |*text_data| {
-                    text_data.recalculateAttributes(self._allocator);
-                }
+                try elem.init();
                 try self._elements.append(.{ .toggle = elem });
             },
             KeyMapper => {
-                if (elem.title_text_data) |*text_data| {
-                    text_data.recalculateAttributes(self._allocator);
-                }
+                try elem.init();
                 try self._elements.append(.{ .key_mapper = elem });
             },
             Slider => {
-                elem.init(self._allocator);
+                try elem.init();
                 try self._elements.append(.{ .slider = elem });
             },
             else => @compileError("Element type not supported"),
         }
         return elem;
+    }
+
+    pub fn width(self: Container) f32 {
+        if (self._elements.items.len <= 0)
+            return 0.0;
+
+        var min_x: f32 = std.math.floatMax(f32);
+        var max_x: f32 = std.math.floatMin(f32);
+        for (self._elements.items) |elem| {
+            switch (elem) {
+                .scrollable_container => {},
+                inline else => |inner_elem| {
+                    if (min_x > inner_elem.x) {
+                        min_x = inner_elem.x;
+                    }
+
+                    const elem_max_x = inner_elem.x + inner_elem.width();
+                    if (max_x < elem_max_x) {
+                        max_x = elem_max_x;
+                    }
+                },
+            }
+        }
+
+        return max_x - min_x;
+    }
+
+    pub fn height(self: Container) f32 {
+        if (self._elements.items.len <= 0)
+            return 0.0;
+
+        var min_y: f32 = std.math.floatMax(f32);
+        var max_y: f32 = std.math.floatMin(f32);
+        for (self._elements.items) |elem| {
+            switch (elem) {
+                .scrollable_container => {},
+                inline else => |inner_elem| {
+                    if (min_y > inner_elem.y) {
+                        min_y = inner_elem.y;
+                    }
+
+                    const elem_max_y = inner_elem.y + inner_elem.height();
+                    if (max_y < elem_max_y) {
+                        max_y = elem_max_y;
+                    }
+                },
+            }
+        }
+
+        return max_y - min_y;
+    }
+
+    pub fn updateScissors(self: *Container) void {
+        for (self._elements.items) |elem| {
+            switch (elem) {
+                .scrollable_container => {},
+                inline else => |inner_elem| {
+                    inner_elem.scissor = .{
+                        .min_x = if (self.scissor.min_x == ScissorRect.dont_scissor)
+                            ScissorRect.dont_scissor
+                        else
+                            self.scissor.min_x - inner_elem.x,
+                        .min_y = if (self.scissor.min_y == ScissorRect.dont_scissor)
+                            ScissorRect.dont_scissor
+                        else
+                            self.scissor.min_y - inner_elem.y,
+                        .max_x = if (self.scissor.max_x == ScissorRect.dont_scissor)
+                            ScissorRect.dont_scissor
+                        else
+                            self.scissor.max_x - inner_elem.x,
+                        .max_y = if (self.scissor.max_y == ScissorRect.dont_scissor)
+                            ScissorRect.dont_scissor
+                        else
+                            self.scissor.max_y - inner_elem.y,
+                    };
+                },
+            }
+        }
     }
 
     pub fn destroy(self: *Container) void {
@@ -1084,10 +1387,20 @@ pub const Container = struct {
             }
         }
 
+        self.deinit();
+        self._allocator.destroy(self);
+    }
+
+    pub fn deinit(self: *Container) void {
         for (self._elements.items) |*elem| {
             switch (elem.*) {
+                .scrollable_container => |scrollable_container| {
+                    scrollable_container.destroy();
+                    self._allocator.destroy(scrollable_container);
+                },
                 .container => |container| {
-                    container.destroy();
+                    container.deinit();
+                    self._allocator.destroy(container);
                 },
                 .bar => |bar| {
                     bar.text_data.deinit(self._allocator);
@@ -1110,7 +1423,7 @@ pub const Container = struct {
                     self._allocator.destroy(box);
                 },
                 .text => |text| {
-                    text.text_data.deinit(self._allocator);
+                    text.deinit();
                     self._allocator.destroy(text);
                 },
                 .item => |item| {
@@ -1123,29 +1436,20 @@ pub const Container = struct {
                     self._allocator.destroy(menu_bg);
                 },
                 .toggle => |toggle| {
-                    if (toggle.text_data) |*text_data| {
-                        text_data.deinit(self._allocator);
-                    }
+                    toggle.deinit();
                     self._allocator.destroy(toggle);
                 },
                 .key_mapper => |key_mapper| {
-                    if (key_mapper.title_text_data) |*title_text| {
-                        title_text.deinit(self._allocator);
-                    }
+                    key_mapper.deinit();
                     self._allocator.destroy(key_mapper);
                 },
                 .slider => |slider| {
-                    slider.value_text_data.deinit(self._allocator);
-                    if (slider.title_text_data) |*text_data| {
-                        text_data.deinit(self._allocator);
-                    }
+                    slider.deinit();
                     self._allocator.destroy(slider);
                 },
             }
         }
         self._elements.deinit();
-
-        self._allocator.destroy(self);
     }
 };
 
@@ -1155,8 +1459,10 @@ pub const Toggle = struct {
     toggled: *bool,
     off_image_data: InteractableImageData,
     on_image_data: InteractableImageData,
+    scissor: ScissorRect = .{},
     state: InteractableState = .none,
     text_data: ?TextData = null,
+    tooltip_text: ?TextData = null,
     state_change: ?*const fn (*Toggle) void = null,
     visible: bool = true,
     _disposed: bool = false,
@@ -1172,11 +1478,18 @@ pub const Toggle = struct {
         var elem = try allocator.create(Toggle);
         elem.* = data;
         elem._allocator = allocator;
-        if (elem.text_data) |*text_data| {
-            text_data.recalculateAttributes(allocator);
-        }
+        try elem.init();
         try sc.elements.append(.{ .toggle = elem });
         return elem;
+    }
+
+    pub fn init(self: *Toggle) !void {
+        if (self.text_data) |*text_data| {
+            text_data.recalculateAttributes(self._allocator);
+        }
+        if (self.tooltip_text) |*text_data| {
+            text_data.recalculateAttributes(self._allocator);
+        }
     }
 
     pub fn imageData(self: Toggle) ImageData {
@@ -1200,6 +1513,15 @@ pub const Toggle = struct {
         }
     }
 
+    pub fn deinit(self: *Toggle) void {
+        if (self.text_data) |*text_data| {
+            text_data.deinit(self._allocator);
+        }
+        if (self.tooltip_text) |*text_data| {
+            text_data.deinit(self._allocator);
+        }
+    }
+
     pub fn destroy(self: *Toggle) void {
         if (self._disposed)
             return;
@@ -1213,10 +1535,7 @@ pub const Toggle = struct {
             }
         }
 
-        if (self.text_data) |*text_data| {
-            text_data.deinit(self._allocator);
-        }
-
+        self.deinit();
         self._allocator.destroy(self);
     }
 };
@@ -1228,18 +1547,20 @@ pub const Slider = struct {
     h: f32,
     min_value: f32,
     max_value: f32,
-    // the alignments and max w/h on this will be overwritten, don't bother setting it
-    value_text_data: TextData,
     decor_image_data: ImageData,
     knob_image_data: InteractableImageData,
     state_change: *const fn (*Slider) void,
+    scissor: ScissorRect = .{},
     vertical: bool = false,
     continous_event_fire: bool = true,
     state: InteractableState = .none,
-    // the alignments and max w/h on this will be overwritten, don't bother setting it
+    // the alignments and max w/h on these will be overwritten, don't bother setting it
+    value_text_data: ?TextData = null,
     title_text_data: ?TextData = null,
+    tooltip_text: ?TextData = null,
     title_offset: f32 = 30.0,
     stored_value: ?*f32 = null, // options hack. remove when callbacks will be able to take in arbitrary params...
+    _parent_container: ?*ScrollableContainer = null, // another hack...
     visible: bool = true,
     _knob_x: f32 = 0,
     _knob_y: f32 = 0,
@@ -1257,12 +1578,40 @@ pub const Slider = struct {
         var elem = try allocator.create(Slider);
         elem.* = data;
         elem._allocator = allocator;
-
+        try elem.init();
         try sc.elements.append(.{ .slider = elem });
         return elem;
     }
 
-    pub fn init(self: *Slider, allocator: std.mem.Allocator) void {
+    pub fn width(self: Slider) f32 {
+        const decor_w = switch (self.decor_image_data) {
+            .nine_slice => |nine_slice| nine_slice.w,
+            .normal => |image_data| image_data.width(),
+        };
+
+        const knob_w = switch (self.knob_image_data.current(self.state)) {
+            .nine_slice => |nine_slice| nine_slice.w,
+            .normal => |normal| normal.width(),
+        };
+
+        return @max(decor_w, knob_w);
+    }
+
+    pub fn height(self: Slider) f32 {
+        const decor_h = switch (self.decor_image_data) {
+            .nine_slice => |nine_slice| nine_slice.h,
+            .normal => |image_data| image_data.height(),
+        };
+
+        const knob_h = switch (self.knob_image_data.current(self.state)) {
+            .nine_slice => |nine_slice| nine_slice.h,
+            .normal => |normal| normal.height(),
+        };
+
+        return @max(decor_h, knob_h);
+    }
+
+    pub fn init(self: *Slider) !void {
         if (self.stored_value) |value_ptr| {
             value_ptr.* = @min(self.max_value, @max(self.min_value, value_ptr.*));
             self._current_value = value_ptr.*;
@@ -1295,12 +1644,14 @@ pub const Slider = struct {
             }
             self._knob_x = offset;
 
-            self.value_text_data.hori_align = .left;
-            self.value_text_data.vert_align = .middle;
-            self.value_text_data.max_height = knob_h;
+            if (self.value_text_data) |*text_data| {
+                text_data.hori_align = .left;
+                text_data.vert_align = .middle;
+                text_data.max_height = knob_h;
+            }
 
             if (self._current_value != 0.0)
-                self._knob_y = self.y + self.h * ((self._current_value - self.min_value) / (self.max_value - self.min_value)) - knob_h / 2.0;
+                self._knob_y = (self._current_value - self.min_value) / (self.max_value - self.min_value) * self.h - knob_h / 2.0;
         } else {
             const offset = (self.h - knob_h) / 2.0;
             if (offset < 0) {
@@ -1308,28 +1659,64 @@ pub const Slider = struct {
             }
             self._knob_y = offset;
 
-            self.value_text_data.hori_align = .middle;
-            self.value_text_data.vert_align = .top;
-            self.value_text_data.max_width = knob_w;
+            if (self.value_text_data) |*text_data| {
+                text_data.hori_align = .middle;
+                text_data.vert_align = .top;
+                text_data.max_width = knob_w;
+            }
 
             if (self._current_value != 0.0)
-                self._knob_x = self.x + self.w * ((self._current_value - self.min_value) / (self.max_value - self.min_value)) - knob_w / 2.0;
+                self._knob_x = (self._current_value - self.min_value) / (self.max_value - self.min_value) * self.w - knob_w / 2.0;
         }
 
-        // have to do it for the backing buffer init
-        self.value_text_data.recalculateAttributes(allocator);
-        self.value_text_data.text = std.fmt.bufPrint(self.value_text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00";
-        self.value_text_data.recalculateAttributes(allocator);
+        if (self.value_text_data) |*text_data| {
+            // have to do it for the backing buffer init
+            text_data.recalculateAttributes(self._allocator);
+            text_data.text = std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00";
+            text_data.recalculateAttributes(self._allocator);
+        }
 
         if (self.title_text_data) |*text_data| {
             text_data.vert_align = .middle;
             text_data.hori_align = .middle;
             text_data.max_width = self.w;
             text_data.max_height = self.title_offset;
+            text_data.recalculateAttributes(self._allocator);
         }
 
-        if (self.title_text_data) |*text_data| {
-            text_data.recalculateAttributes(allocator);
+        if (self.tooltip_text) |*text_data| {
+            text_data.recalculateAttributes(self._allocator);
+        }
+    }
+
+    pub fn setValue(self: *Slider, value: f32) void {
+        const prev_value = self._current_value;
+
+        const knob_w = switch (self.knob_image_data.current(self.state)) {
+            .nine_slice => |nine_slice| nine_slice.w,
+            .normal => |normal| normal.width(),
+        };
+
+        const knob_h = switch (self.knob_image_data.current(self.state)) {
+            .nine_slice => |nine_slice| nine_slice.h,
+            .normal => |normal| normal.height(),
+        };
+
+        self._current_value = value;
+        if (self.vertical) {
+            self._knob_y = (value - self.min_value) / (self.max_value - self.min_value) * (self.h - knob_h);
+        } else {
+            self._knob_x = (value - self.min_value) / (self.max_value - self.min_value) * (self.w - knob_w);
+        }
+
+        if (self._current_value != prev_value) {
+            if (self.value_text_data) |*text_data| {
+                text_data.text = std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00";
+                text_data.recalculateAttributes(self._allocator);
+            }
+
+            if (self.continous_event_fire)
+                self.state_change(self);
         }
     }
 
@@ -1346,12 +1733,20 @@ pub const Slider = struct {
             }
         }
 
-        self.value_text_data.deinit(self._allocator);
+        self.deinit();
+        self._allocator.destroy(self);
+    }
+
+    pub fn deinit(self: *Slider) void {
+        if (self.value_text_data) |*text_data| {
+            text_data.deinit(self._allocator);
+        }
         if (self.title_text_data) |*text_data| {
             text_data.deinit(self._allocator);
         }
-
-        self._allocator.destroy(self);
+        if (self.tooltip_text) |*text_data| {
+            text_data.deinit(self._allocator);
+        }
     }
 };
 
@@ -1364,6 +1759,7 @@ pub const UiElement = union(enum) {
     text: *Text,
     char_box: *CharacterBox,
     container: *Container,
+    scrollable_container: *ScrollableContainer,
     menu_bg: *MenuBackground,
     toggle: *Toggle,
     key_mapper: *KeyMapper,

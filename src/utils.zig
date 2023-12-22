@@ -105,6 +105,16 @@ pub const PacketReader = struct {
         self.index += byte_size;
         return std.mem.bytesAsSlice(T, buf);
     }
+
+    // don't use this, it's only for the stat reader. 
+    // you can't rely on the array preserving its integrity since the buffer gets overwrriten each accept
+    pub fn readArrayMut(self: *PacketReader, comptime T: type) []align(1) T {
+        const byte_size = (@bitSizeOf(T) + 7) / 8 * self.read(u16);
+        var buf = self.buffer[self.index .. self.index + byte_size];
+        _ = &buf;
+        self.index += byte_size;
+        return std.mem.bytesAsSlice(T, buf);
+    }
 };
 
 pub const ConditionEnum = enum(u8) {
@@ -274,6 +284,26 @@ pub fn currentMemoryUse(allocator: std.mem.Allocator) !f32 {
     last_memory_access = main.current_time;
     last_memory_value = memory_value;
     return memory_value;
+}
+
+pub fn toRoman(int: u12) []const u8 {
+    if (int > 3999)
+        return "Invalid";
+
+    const value = [_]u12{ 1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1 };
+    const roman = [_][]const u8{ "M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I" };
+
+    var ret: [32]u8 = undefined;
+    var buf = std.io.fixedBufferStream(&ret);
+    var num = int;
+    for (0..value.len) |i| {
+        while (num >= value[i]) {
+            num -= value[i];
+            std.fmt.format(buf.writer(), "{s}{s}", .{ ret[0..buf.pos], roman[i] }) catch continue;
+        }
+    }
+
+    return ret[0..buf.pos];
 }
 
 pub fn plusMinus(range: f32) f32 {

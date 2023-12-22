@@ -19,6 +19,7 @@ const render = @import("render.zig");
 const ztracy = @import("ztracy");
 const zaudio = @import("zaudio");
 const screen_controller = @import("ui/controllers/screen_controller.zig");
+const rpc = @import("rpc");
 
 pub const ServerData = struct {
     name: []const u8 = "",
@@ -102,6 +103,9 @@ pub var minimap_update_min_x: u32 = 4096;
 pub var minimap_update_max_x: u32 = 0;
 pub var minimap_update_min_y: u32 = 4096;
 pub var minimap_update_max_y: u32 = 0;
+pub var rpc_client: *rpc = undefined;
+pub var rpc_start: u64 = 0;
+pub var version_text: []const u8 = undefined;
 pub var _allocator: std.mem.Allocator = undefined;
 
 fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
@@ -371,6 +375,10 @@ pub fn main() !void {
         }
     }
 
+    version_text = "v" ++ settings.build_version;
+    rpc_client = try rpc.init(allocator, &ready);
+    defer rpc_client.deinit();
+
     zglfw.init() catch |e| {
         std.log.err("Failed to initialize GLFW library: {any}", .{e});
         return;
@@ -443,6 +451,12 @@ pub fn main() !void {
     render.init(gctx, allocator);
     defer render.deinit(allocator);
 
+    var rpc_thread = try std.Thread.spawn(.{}, runRpc, .{rpc_client});
+    defer {
+        rpc_client.stop();
+        rpc_thread.join();
+    }
+
     network_thread = try std.Thread.spawn(.{}, networkTick, .{allocator});
     defer {
         tick_network = false;
@@ -472,4 +486,24 @@ pub fn main() !void {
 
         std.time.sleep(6.5 * std.time.ns_per_ms);
     }
+}
+
+fn ready(cli: *rpc) !void {
+    rpc_start = @intCast(std.time.timestamp());
+    const presence = rpc.Packet.Presence{
+        .assets = .{
+            .large_image = rpc.Packet.ArrayString(256).create("logo"),
+            .large_text = rpc.Packet.ArrayString(128).create(version_text),
+        },
+        .timestamps = .{
+            .start = rpc_start,
+        },
+    };
+    try cli.setPresence(presence);
+}
+
+fn runRpc(cli: *rpc) void {
+    cli.run(.{ .client_id = "976795120663945227" }) catch |e| {
+        std.log.err("Setting up RPC failed: {any}", .{e});
+    };
 }

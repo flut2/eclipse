@@ -567,6 +567,7 @@ fn handleMapInfo() void {
     const width: u32 = @intCast(@max(0, reader.read(i32)));
     const height: u32 = @intCast(@max(0, reader.read(i32)));
     map.setWH(width, height, _allocator);
+    map.rpc_set = false;
     if (map.name.len > 0)
         _allocator.free(map.name);
     map.name = _allocator.dupe(u8, reader.readArray(u8)) catch "";
@@ -633,7 +634,7 @@ fn handleNewTick() void {
         const y = reader.read(f32);
 
         stat_reader.index = 0;
-        stat_reader.buffer = @constCast(reader.readArray(u8)); // horrible hack
+        stat_reader.buffer = reader.readArrayMut(u8);
 
         if (map.findEntityRef(obj_id)) |en| {
             switch (en.*) {
@@ -931,6 +932,11 @@ fn handleText() void {
     const recipient = reader.readArray(u8);
     const text = reader.readArray(u8);
 
+    if (sc.current_screen == .game)
+        sc.current_screen.game.addChatLine(name, text) catch |e| {
+            std.log.err("Adding message with name {s} and text {s} failed: {any}", .{name, text, e});
+        };
+
     while (!map.object_lock.tryLockShared()) {}
     defer map.object_lock.unlockShared();
 
@@ -1038,7 +1044,7 @@ fn handleUpdate() void {
         const y = reader.read(f32);
 
         stat_reader.index = 0;
-        stat_reader.buffer = @constCast(reader.readArray(u8)); // horrible hack
+        stat_reader.buffer = reader.readArrayMut(u8);
 
         const class = game_data.obj_type_to_class.get(obj_type) orelse game_data.ClassType.game_object;
 

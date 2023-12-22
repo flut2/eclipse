@@ -3,6 +3,7 @@ const element = @import("../../element.zig");
 const assets = @import("../../../assets.zig");
 const camera = @import("../../../camera.zig");
 const main = @import("../../../main.zig");
+const rpc = @import("rpc");
 
 const screen_controller = @import("../../controllers/screen_controller.zig");
 
@@ -14,9 +15,19 @@ pub const CharSelectScreen = struct {
     new_char_button: *element.Button = undefined,
     pub fn init(allocator: std.mem.Allocator) !*CharSelectScreen {
         var screen = try allocator.create(CharSelectScreen);
-        screen.* = .{
-            ._allocator = allocator,
+        screen.* = .{ ._allocator = allocator };
+
+        const presence = rpc.Packet.Presence{
+            .assets = .{
+                .large_image = rpc.Packet.ArrayString(256).create("logo"),
+                .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
+            },
+            .state = rpc.Packet.ArrayString(128).create("Character Select"),
+            .timestamps = .{
+                .start = main.rpc_start,
+            },
         };
+        try main.rpc_client.setPresence(presence);
 
         screen.boxes = std.ArrayList(*element.CharacterBox).init(allocator);
         try screen.boxes.ensureTotalCapacity(8);

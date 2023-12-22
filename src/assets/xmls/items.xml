@@ -107,8 +107,8 @@
         <SlotType>6</SlotType>
         <Tier>Tier I-</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="7">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="3">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="7"/>
+        <IncrementStat stat="Speed" amount="3"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa0c" id="Apprentice Hide">
@@ -119,8 +119,8 @@
         <SlotType>6</SlotType>
         <Tier>Tier I</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="9">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="4">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="9"/>
+        <IncrementStat stat="Speed" amount="4"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa0d" id="Adept Hide">
@@ -131,8 +131,8 @@
         <SlotType>6</SlotType>
         <Tier>Tier I+</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="11">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="5">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="11"/>
+        <IncrementStat stat="Speed" amount="5"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa0e" id="Expert Hide">
@@ -143,8 +143,8 @@
         <SlotType>6</SlotType>
         <Tier>Tier II-</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="13">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="6">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="Speed" amount="6"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa15" id="Novice Vest">
@@ -155,8 +155,8 @@
         <SlotType>7</SlotType>
         <Tier>Tier I-</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="9">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="5">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="9"/>
+        <IncrementStat stat="Stamina" amount="5"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa16" id="Apprentice Vest">
@@ -167,8 +167,8 @@
         <SlotType>7</SlotType>
         <Tier>Tier I</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="12">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="7">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="12"/>
+        <IncrementStat stat="Stamina" amount="7"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa17" id="Adept Vest">
@@ -179,8 +179,8 @@
         <SlotType>7</SlotType>
         <Tier>Tier I+</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="15">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="9">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="15"/>
+        <IncrementStat stat="Stamina" amount="9"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa18" id="Expert Vest">
@@ -191,8 +191,8 @@
         <SlotType>7</SlotType>
         <Tier>Tier II-</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="18">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="11">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="18"/>
+        <IncrementStat stat="Stamina" amount="11"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa2a" id="Beginner Bow">
@@ -442,8 +442,8 @@
         <SlotType>14</SlotType>
         <Tier>Tier I-</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="5">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="50">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="5"/>
+        <IncrementStat stat="MaxMP" amount="50"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa41" id="Apprentice Robe">
@@ -454,8 +454,8 @@
         <SlotType>14</SlotType>
         <Tier>Tier I</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="6">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="70">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="6"/>
+        <IncrementStat stat="MaxMP" amount="70"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa42" id="Adept Robe">
@@ -466,8 +466,8 @@
         <SlotType>14</SlotType>
         <Tier>Tier I+</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="8">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="100">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="8"/>
+        <IncrementStat stat="MaxMP" amount="100"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xa43" id="Expert Robe">
@@ -478,8 +478,8 @@
         <SlotType>14</SlotType>
         <Tier>Tier II-</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="10">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="130">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="10"/>
+        <IncrementStat stat="MaxMP" amount="130"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xaa1" id="Health Vial">
@@ -650,10 +650,10 @@
         <SlotType>14</SlotType>
         <Tier>Rare</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="13">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxHP" amount="50">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="-2">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="-2">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxHP" amount="50"/>
+        <IncrementStat stat="Strength" amount="-2"/>
+        <IncrementStat stat="Speed" amount="-2"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xab8" id="Hydra Hide">
@@ -664,9 +664,9 @@
         <SlotType>6</SlotType>
         <Tier>Rare</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="10">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Penetration" amount="12">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="3">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="10"/>
+        <IncrementStat stat="Penetration" amount="12"/>
+        <IncrementStat stat="Strength" amount="3"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xab9" id="Chainmail Cuirass">
@@ -677,9 +677,9 @@
         <SlotType>7</SlotType>
         <Tier>Rare</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Defense" amount="11">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="4">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="3">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="11"/>
+        <IncrementStat stat="Strength" amount="4"/>
+        <IncrementStat stat="Speed" amount="3"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xaba" id="Rapier of Rage">
@@ -711,8 +711,8 @@
         <SlotType>7</SlotType>
         <Tier>Epic</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="13">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxHP" amount="90">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxHP" amount="90"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xac0" id="Champion's Chopper">
@@ -809,8 +809,8 @@
         <SlotType>6</SlotType>
         <Tier>Epic</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="11">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="11">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="11"/>
+        <IncrementStat stat="Strength" amount="11"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xaca" id="Scrounger's Spear">
@@ -865,9 +865,9 @@
         <SlotType>14</SlotType>
         <Tier>Rare</Tier>
         <TierReq>1</TierReq>
-        <ActivateOnEquip stat="Strength" amount="9">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Defense" amount="3">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="3">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Strength" amount="9"/>
+        <IncrementStat stat="Defense" amount="3"/>
+        <IncrementStat stat="Speed" amount="3"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xad9" id="Reptile Repeater">
@@ -899,10 +899,10 @@
         <SlotType>14</SlotType>
         <Tier>Legendary</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Penetration" amount="22">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="10">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Defense" amount="6">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="6">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Penetration" amount="22"/>
+        <IncrementStat stat="Strength" amount="10"/>
+        <IncrementStat stat="Defense" amount="6"/>
+        <IncrementStat stat="Speed" amount="6"/>
         <Thorns>250</Thorns>
         <BagType>3</BagType>
     </Item>
@@ -914,10 +914,10 @@
         <SlotType>7</SlotType>
         <Tier>Legendary</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="MaxHP" amount="100">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="10">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="5">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="5">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="MaxHP" amount="100"/>
+        <IncrementStat stat="Stamina" amount="10"/>
+        <IncrementStat stat="Strength" amount="5"/>
+        <IncrementStat stat="Speed" amount="5"/>
         <Thorns>500</Thorns>
         <BagType>3</BagType>
     </Item>
@@ -1145,8 +1145,8 @@
         <SlotType>6</SlotType>
         <Tier>Tier II</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="14">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="7">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="14"/>
+        <IncrementStat stat="Speed" amount="7"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xaf2" id="Illustrious Hide">
@@ -1157,8 +1157,8 @@
         <SlotType>6</SlotType>
         <Tier>Tier II+</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="15">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="8">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="15"/>
+        <IncrementStat stat="Speed" amount="8"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xaf3" id="Sublime Hide">
@@ -1169,8 +1169,8 @@
         <SlotType>6</SlotType>
         <Tier>Tier III-</Tier>
         <TierReq>3</TierReq>
-        <ActivateOnEquip stat="Defense" amount="16">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="9">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="16"/>
+        <IncrementStat stat="Speed" amount="9"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xaf4" id="Master Hide">
@@ -1181,8 +1181,8 @@
         <SlotType>6</SlotType>
         <Tier>Tier III</Tier>
         <TierReq>3</TierReq>
-        <ActivateOnEquip stat="Defense" amount="17">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="9">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="17"/>
+        <IncrementStat stat="Speed" amount="9"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xaf5" id="Prime Hide">
@@ -1193,8 +1193,8 @@
         <SlotType>6</SlotType>
         <Tier>Tier III+</Tier>
         <TierReq>3</TierReq>
-        <ActivateOnEquip stat="Defense" amount="18">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="9">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="18"/>
+        <IncrementStat stat="Speed" amount="9"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xaf6" id="Grand Vest">
@@ -1205,8 +1205,8 @@
         <SlotType>7</SlotType>
         <Tier>Tier II</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="20">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="12">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="20"/>
+        <IncrementStat stat="Stamina" amount="12"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xaf7" id="Illustrious Vest">
@@ -1217,8 +1217,8 @@
         <SlotType>7</SlotType>
         <Tier>Tier II+</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="22">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="13">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="22"/>
+        <IncrementStat stat="Stamina" amount="13"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xaf8" id="Sublime Vest">
@@ -1229,8 +1229,8 @@
         <SlotType>7</SlotType>
         <Tier>Tier III-</Tier>
         <TierReq>3</TierReq>
-        <ActivateOnEquip stat="Defense" amount="24">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="14">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="24"/>
+        <IncrementStat stat="Stamina" amount="14"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xaf9" id="Master Vest">
@@ -1241,8 +1241,8 @@
         <SlotType>7</SlotType>
         <Tier>Tier III</Tier>
         <TierReq>3</TierReq>
-        <ActivateOnEquip stat="Defense" amount="25">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="14">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="25"/>
+        <IncrementStat stat="Stamina" amount="14"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xafa" id="Prime Vest">
@@ -1253,8 +1253,8 @@
         <SlotType>7</SlotType>
         <Tier>Tier III+</Tier>
         <TierReq>3</TierReq>
-        <ActivateOnEquip stat="Defense" amount="26">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="14">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="26"/>
+        <IncrementStat stat="Stamina" amount="14"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xafb" id="Grand Bow">
@@ -1514,8 +1514,8 @@
         <SlotType>14</SlotType>
         <Tier>Tier II</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="11">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="145">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="11"/>
+        <IncrementStat stat="MaxMP" amount="145"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xb06" id="Illustrious Robe">
@@ -1526,8 +1526,8 @@
         <SlotType>14</SlotType>
         <Tier>Tier II+</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="12">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="160">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="12"/>
+        <IncrementStat stat="MaxMP" amount="160"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xb07" id="Sublime Robe">
@@ -1538,8 +1538,8 @@
         <SlotType>14</SlotType>
         <Tier>Tier III-</Tier>
         <TierReq>3</TierReq>
-        <ActivateOnEquip stat="Defense" amount="13">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="175">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxMP" amount="175"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xb08" id="Master Robe">
@@ -1550,8 +1550,8 @@
         <SlotType>14</SlotType>
         <Tier>Tier III</Tier>
         <TierReq>3</TierReq>
-        <ActivateOnEquip stat="Defense" amount="13">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="185">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxMP" amount="185"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xb09" id="Prime Robe">
@@ -1562,8 +1562,8 @@
         <SlotType>14</SlotType>
         <Tier>Tier III+</Tier>
         <TierReq>3</TierReq>
-        <ActivateOnEquip stat="Defense" amount="13">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="200">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxMP" amount="200"/>
         <BagType>1</BagType>
     </Item>
     <Item type="0xb32" id="Greater Health Vial">
@@ -1668,9 +1668,9 @@
         <SlotType>6</SlotType>
         <Tier>Legendary</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Stamina" amount="15">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="13">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="5">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Stamina" amount="15"/>
+        <IncrementStat stat="Strength" amount="13"/>
+        <IncrementStat stat="Speed" amount="5"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb3b" id="Neon Nullifier">
@@ -1681,8 +1681,8 @@
         <SlotType>6</SlotType>
         <Tier>Epic</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Stamina" amount="18">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Defense" amount="15">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Stamina" amount="18"/>
+        <IncrementStat stat="Defense" amount="15"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb3c" id="Fiery Coat">
@@ -1693,9 +1693,9 @@
         <SlotType>6</SlotType>
         <Tier>Epic</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="6">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="10">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="10">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="6"/>
+        <IncrementStat stat="Speed" amount="10"/>
+        <IncrementStat stat="Strength" amount="10"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb46" id="Terran Waraxe">
@@ -1717,7 +1717,7 @@
             <LifetimeMS>620</LifetimeMS>
             <Damage>750</Damage>
         </Projectile>
-        <ActivateOnEquip stat="Defense" amount="8">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="8"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb47" id="Thousand Slash">
@@ -1741,7 +1741,7 @@
         </Projectile>
         <NumProjectiles>2</NumProjectiles>
         <ArcGap>4</ArcGap>
-        <ActivateOnEquip stat="Speed" amount="4">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Speed" amount="4"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb48" id="Phasesaber">
@@ -1795,9 +1795,9 @@
         <SlotType>7</SlotType>
         <Tier>Epic</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Stamina" amount="12">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Defense" amount="12">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="12">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Stamina" amount="12"/>
+        <IncrementStat stat="Defense" amount="12"/>
+        <IncrementStat stat="Strength" amount="12"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb65" id="Stoneplate Ward">
@@ -1808,9 +1808,9 @@
         <SlotType>7</SlotType>
         <Tier>Legendary</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="30">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="12">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="-10">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="30"/>
+        <IncrementStat stat="Stamina" amount="12"/>
+        <IncrementStat stat="Speed" amount="-10"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb66" id="Neon Amplifier">
@@ -1821,9 +1821,9 @@
         <SlotType>7</SlotType>
         <Tier>Epic</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Defense" amount="9">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="13">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Speed" amount="13">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Defense" amount="9"/>
+        <IncrementStat stat="Strength" amount="13"/>
+        <IncrementStat stat="Speed" amount="13"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb67" id="Infernal Spear">
@@ -1935,7 +1935,7 @@
             <LifetimeMS>350</LifetimeMS>
             <Damage>550</Damage>
         </Projectile>
-        <ActivateOnEquip stat="Stamina" amount="11">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Stamina" amount="11"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb50" id="Tornado Wand">
@@ -1958,7 +1958,7 @@
             <Damage>400</Damage>
             <MultiHit/>
         </Projectile>
-        <ActivateOnEquip stat="Speed" amount="3">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Speed" amount="3"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb51" id="Carbon Plasmifier">
@@ -1980,7 +1980,7 @@
             <LifetimeMS>420</LifetimeMS>
             <Damage>1300</Damage>
         </Projectile>
-        <ActivateOnEquip stat="Stamina" amount="15">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Stamina" amount="15"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb52" id="Galactic Garbs">
@@ -1991,9 +1991,9 @@
         <SlotType>14</SlotType>
         <Tier>Epic</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Tenacity" amount="22">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Defense" amount="10">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="6">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Tenacity" amount="22"/>
+        <IncrementStat stat="Defense" amount="10"/>
+        <IncrementStat stat="Strength" amount="6"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb53" id="Coat of Clarity">
@@ -2004,9 +2004,9 @@
         <SlotType>14</SlotType>
         <Tier>Epic</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="Stamina" amount="15">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Stamina" amount="15">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="150">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="Stamina" amount="15"/>
+        <IncrementStat stat="Stamina" amount="15"/>
+        <IncrementStat stat="MaxMP" amount="150"/>
         <BagType>3</BagType>
     </Item>
     <Item type="0xb54" id="Nanotech Cloth">
@@ -2017,10 +2017,10 @@
         <SlotType>14</SlotType>
         <Tier>Legendary</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="MaxHP" amount="100">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="MaxMP" amount="100">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Defense" amount="10">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Strength" amount="6">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="MaxHP" amount="100"/>
+        <IncrementStat stat="MaxMP" amount="100"/>
+        <IncrementStat stat="Defense" amount="10"/>
+        <IncrementStat stat="Strength" amount="6"/>
         <ManaShield>15</ManaShield>
         <BagType>3</BagType>
     </Item>
@@ -2057,9 +2057,9 @@
         <SlotType>14</SlotType>
         <Tier>Epic</Tier>
         <TierReq>2</TierReq>
-        <ActivateOnEquip stat="MaxMP" amount="250">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Defense" amount="13">IncrementStat</ActivateOnEquip>
-        <ActivateOnEquip stat="Tenacity" amount="9">IncrementStat</ActivateOnEquip>
+        <IncrementStat stat="MaxMP" amount="250"/>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="Tenacity" amount="9"/>
         <ManaShield>15</ManaShield>
         <BagType>3</BagType>
     </Item>

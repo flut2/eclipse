@@ -225,21 +225,23 @@ pub const OptionsPanel = struct {
         try addKeyMap(screen.general_tab, &settings.move_left, "Move Left", "");
         try addKeyMap(screen.general_tab, &settings.rotate_left, "Rotate Left", "");
         try addKeyMap(screen.general_tab, &settings.rotate_right, "Rotate Right", "");
-        try addKeyMap(screen.general_tab, &settings.escape, "Return to Nexus", "");
+        try addKeyMap(screen.general_tab, &settings.escape, "Return to Hub", "");
         try addKeyMap(screen.general_tab, &settings.interact, "Interact", "");
         try addKeyMap(screen.general_tab, &settings.shoot, "Shoot", "");
-        try addKeyMap(screen.general_tab, &settings.ability, "Use Ability", "");
+        try addKeyMap(screen.general_tab, &settings.ability_1, "Use Ability 1", "");
+        try addKeyMap(screen.general_tab, &settings.ability_2, "Use Ability 2", "");
+        try addKeyMap(screen.general_tab, &settings.ability_3, "Use Ability 3", "");
+        try addKeyMap(screen.general_tab, &settings.ultimate_ability, "Use Ultimate Ability", "");
         try addKeyMap(screen.general_tab, &settings.reset_camera, "Reset Camera", "This resets the camera's angle to the default of 0");
         try addKeyMap(screen.general_tab, &settings.toggle_stats, "Toggle Stats", "This toggles whether to show the stats view");
         try addKeyMap(screen.general_tab, &settings.toggle_perf_stats, "Toggle Performance Counter", "This toggles whether to show the performance counter");
-        try addKeyMap(screen.general_tab, &settings.toggle_centering, "Toggle Centering", "This toggles whether to center the camera on player or ahead of it");
+        try addKeyMap(screen.general_tab, &settings.toggle_centering, "Toggle Centering", "This toggles whether to center the camera on the player or ahead of it");
 
         try addToggle(screen.graphics_tab, &settings.enable_vsync, "V-Sync", "Toggles vertical syncing, which can reduce screen tearing");
         try addToggle(screen.graphics_tab, &settings.enable_lights, "Lights", "Toggles lights, which can reduce frame rates");
         try addToggle(screen.graphics_tab, &settings.enable_glow, "Sprite Glow", "Toggles the glow effect on sprites, which can reduce frame rates");
         try addSlider(screen.graphics_tab, &settings.fps_cap, 60.0, 999.99, "FPS Cap", "Changes the FPS cap");
 
-        try addToggle(screen.misc_tab, &settings.always_show_xp_gain, "Show EXP Gain", "Toggles whether to always show the EXP gained or just below 20");
         try addSlider(screen.misc_tab, &settings.sfx_volume, 0.0, 1.0, "SFX Volume", "Changes the volume of sound effects");
         try addSlider(screen.misc_tab, &settings.music_volume, 0.0, 1.0, "Music Volume", "Changes the volume of music");
 
@@ -266,8 +268,6 @@ pub const OptionsPanel = struct {
     }
 
     fn addKeyMap(target_tab: *element.Container, button: *settings.Button, title: []const u8, desc: []const u8) !void {
-        _ = desc;
-
         const button_data_base = assets.getUiData("button_base", 0);
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
@@ -288,6 +288,11 @@ pub const OptionsPanel = struct {
                 .size = 18,
                 .text_type = .bold,
             },
+            .tooltip_text = if (desc.len > 0) .{
+                .text = desc,
+                .size = 16,
+                .text_type = .bold_italic,
+            } else null,
             .key = button.getKey(),
             .mouse = button.getMouse(),
             .settings_button = button,
@@ -296,8 +301,6 @@ pub const OptionsPanel = struct {
     }
 
     fn addToggle(target_tab: *element.Container, value: *bool, title: []const u8, desc: []const u8) !void {
-        _ = desc;
-
         const toggle_data_base_off = assets.getUiData("toggle_slider_base_off", 0);
         const toggle_data_hover_off = assets.getUiData("toggle_slider_hover_off", 0);
         const toggle_data_press_off = assets.getUiData("toggle_slider_press_off", 0);
@@ -323,13 +326,16 @@ pub const OptionsPanel = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .tooltip_text = if (desc.len > 0) .{
+                .text = desc,
+                .size = 16,
+                .text_type = .bold_italic,
+            } else null,
             .toggled = value,
         });
     }
 
     fn addSlider(target_tab: *element.Container, value: *f32, min_value: f32, max_value: f32, title: []const u8, desc: []const u8) !void {
-        _ = desc;
-
         const background_data = assets.getUiData("slider_background", 0);
         const knob_data_base = assets.getUiData("slider_knob_base", 0);
         const knob_data_hover = assets.getUiData("slider_knob_hover", 0);
@@ -363,6 +369,11 @@ pub const OptionsPanel = struct {
                 .text_type = .bold,
                 .max_chars = 64,
             },
+            .tooltip_text = if (desc.len > 0) .{
+                .text = desc,
+                .size = 16,
+                .text_type = .bold_italic,
+            } else null,
             .stored_value = value,
             .state_change = sliderCallback,
         });
@@ -371,6 +382,7 @@ pub const OptionsPanel = struct {
     fn positionElements(container: *element.Container) void {
         for (container._elements.items, 0..) |elem, i| {
             switch (elem) {
+                .scrollable_container, .container => {},
                 inline else => |inner| {
                     inner.x = @floatFromInt(@divFloor(i, 6) * 300);
                     inner.y = @floatFromInt(@mod(i, 6) * 80);

@@ -50,7 +50,7 @@
             <Index>0x04</Index>
         </Texture>
         <BlendPriority>98</BlendPriority>
-        <LightColor>0x4C8AED</LightColor>
+        <LightColor>0x000000</LightColor>
         <LightIntensity>0.1</LightIntensity>
         <NoWalk/>
     </Ground>

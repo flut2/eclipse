@@ -100,8 +100,6 @@ fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
                 else => {},
             }
         }
-    } else if (key == settings.ability.getKey()) {
-        useAbility();
     } else if (key == settings.chat.getKey()) {
         selected_input_field = sc.current_screen.game.chat_input;
         selected_input_field.?._last_input = 0;
@@ -190,10 +188,6 @@ fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
                 .portal => network.queuePacket(.{ .use_portal = .{ .obj_id = int_id } }),
                 else => {},
             }
-        }
-    } else if (button == settings.ability.getMouse()) {
-        if (sc.current_screen == .game) {
-            useAbility();
         }
     } else if (button == settings.chat.getMouse()) {
         if (sc.current_screen == .game) {
@@ -451,17 +445,19 @@ pub fn mouseMoveEvent(_: *zglfw.Window, x_pos: f64, y_pos: f64) callconv(.C) voi
     }
 }
 
-pub fn scrollEvent(_: *zglfw.Window, _: f64, yoffset: f64) callconv(.C) void {
-    const size = @max(map.width, map.height);
-    const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
-    const scroll_speed = @as(f32, @floatFromInt(size)) / 1280;
+pub fn scrollEvent(_: *zglfw.Window, x_offset: f64, y_offset: f64) callconv(.C) void {
+    if (!sc.mouseScroll(mouse_x, mouse_y, @floatCast(x_offset), @floatCast(y_offset))) {
+        const size = @max(map.width, map.height);
+        const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
+        const scroll_speed = @as(f32, @floatFromInt(size)) / 1280;
 
-    camera.minimap_zoom += @floatCast(yoffset * scroll_speed);
-    camera.minimap_zoom = @max(1, @min(max_zoom, camera.minimap_zoom));
+        camera.minimap_zoom += @floatCast(y_offset * scroll_speed);
+        camera.minimap_zoom = @max(1, @min(max_zoom, camera.minimap_zoom));
+    }
 }
 
 fn tryEscape() void {
-    if (sc.current_screen != .game or std.mem.eql(u8, map.name, "Nexus"))
+    if (sc.current_screen != .game or std.mem.eql(u8, map.name, "Hub"))
         return;
 
     network.queuePacket(.{ .escape = .{} });

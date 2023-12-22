@@ -10,6 +10,7 @@ const map = @import("../../map.zig");
 const element = @import("../element.zig");
 const game_data = @import("../../game_data.zig");
 const settings = @import("../../settings.zig");
+const rpc = @import("rpc");
 
 const sc = @import("../controllers/screen_controller.zig");
 const NineSlice = element.NineSliceImageData;
@@ -374,6 +375,18 @@ pub const MapEditorScreen = struct {
         var screen = try allocator.create(MapEditorScreen);
         screen.* = .{ ._allocator = allocator };
 
+        const presence = rpc.Packet.Presence{
+            .assets = .{
+                .large_image = rpc.Packet.ArrayString(256).create("logo"),
+                .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
+            },
+            .state = rpc.Packet.ArrayString(128).create("Map Editor"),
+            .timestamps = .{
+                .start = main.rpc_start,
+            },
+        };
+        try main.rpc_client.setPresence(presence);
+
         screen.command_queue = .{};
         screen.command_queue.init(allocator);
 
@@ -428,8 +441,6 @@ pub const MapEditorScreen = struct {
         screen.buttons_container = try element.Container.create(allocator, .{
             .x = 0,
             .y = camera.screen_height - button_container_height,
-            .width = button_container_width,
-            .height = button_container_height,
         });
 
         _ = try screen.buttons_container.createElement(element.Image, .{
@@ -515,8 +526,6 @@ pub const MapEditorScreen = struct {
         screen.new_container = try element.Container.create(allocator, .{
             .x = (camera.screen_width - new_container_width) / 2,
             .y = (camera.screen_height - new_container_height) / 2,
-            .width = new_container_width,
-            .height = new_container_height,
             .visible = false,
         });
 
@@ -630,7 +639,7 @@ pub const MapEditorScreen = struct {
         });
 
         const login_button = try screen.new_container.createElement(element.Button, .{
-            .x = (screen.new_container.width - (button_width * 2)) / 2 - (button_padding / 2),
+            .x = (screen.new_container.width() - (button_width * 2)) / 2 - (button_padding / 2),
             .y = (new_container_height - button_height - (button_padding * 2)),
             .image_data = .{
                 .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
@@ -1030,10 +1039,10 @@ pub const MapEditorScreen = struct {
     }
 
     pub fn resize(self: *MapEditorScreen, width: f32, height: f32) void {
-        self.new_container.x = (width - self.new_container.height) / 2;
-        self.new_container.y = (height - self.new_container.height) / 2;
+        self.new_container.x = (width - self.new_container.height()) / 2;
+        self.new_container.y = (height - self.new_container.height()) / 2;
         self.buttons_container.x = 0;
-        self.buttons_container.y = height - self.buttons_container.height;
+        self.buttons_container.y = height - self.buttons_container.height();
     }
 
     // flickering is happening

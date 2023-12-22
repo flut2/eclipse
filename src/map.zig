@@ -10,6 +10,7 @@ const element = @import("ui/element.zig");
 const zstbi = @import("zstbi");
 const particles = @import("particles.zig");
 const sc = @import("ui/controllers//screen_controller.zig");
+const rpc = @import("rpc");
 
 pub const move_threshold = 0.4;
 pub const min_move_speed = 0.004;
@@ -18,7 +19,6 @@ pub const attack_frequency = 0.005;
 pub const min_attack_mult = 0.5;
 pub const max_attack_mult = 2.0;
 pub const max_sink_level = 18.0;
-pub const nexus_id_name = "Nexus";
 
 pub const Square = struct {
     tile_type: u16 = 0xFFFF,
@@ -203,7 +203,7 @@ pub const GameObject = struct {
     draw_on_ground: bool = false,
     is_wall: bool = false,
     is_enemy: bool = false,
-    light_color: u32 = 0,
+    light_color: u32 = std.math.maxInt(u32),
     light_intensity: f32 = 0.1,
     light_radius: f32 = 1.0,
     light_pulse: f32 = 0.0,
@@ -680,7 +680,7 @@ pub const Player = struct {
     target_y_dir: f32 = 0.0,
     facing: f32 = std.math.nan(f32),
     walk_speed_multiplier: f32 = 1.0,
-    light_color: u32 = 0,
+    light_color: u32 = std.math.maxInt(u32),
     light_intensity: f32 = 0.1,
     light_radius: f32 = 1.0,
     light_pulse: f32 = 0.0,
@@ -838,6 +838,37 @@ pub const Player = struct {
             .max_width = 200,
         };
         self.name_text_data.recalculateAttributes(allocator);
+
+        setRpc: {
+            if (!rpc_set) {
+                if (game_data.classes.get(self.obj_type)) |char_class| {
+                    const presence = rpc.Packet.Presence{
+                        .assets = .{
+                            .large_image = rpc.Packet.ArrayString(256).create("logo"),
+                            .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
+                            .small_image = rpc.Packet.ArrayString(256).create(char_class.rpc_name),
+                            .small_text = rpc.Packet.ArrayString(128).createFromFormat("Tier {s} {s}", .{utils.toRoman(self.tier), char_class.name}) catch {
+                                std.log.err("Setting Discord RPC failed, small_text buffer was out of space", .{});
+                                break :setRpc;
+                            },
+                        },
+                        .state = rpc.Packet.ArrayString(128).createFromFormat("In {s}", .{name}) catch {
+                            std.log.err("Setting Discord RPC failed, state buffer was out of space", .{});
+                            break :setRpc;
+                        },
+                        .timestamps = .{
+                            .start = main.rpc_start,
+                        },
+                    };
+                    main.rpc_client.setPresence(presence) catch |e| {
+                        std.log.err("Setting Discord RPC failed: {any}", .{e});
+                    };
+                    rpc_set = true;
+                } else {
+                    std.log.err("Setting Discord RPC failed, CharacterClass was missing", .{});
+                }
+            }
+        }
 
         entities.append(.{ .player = self.* }) catch |e| {
             std.log.err("Could not add player to map (obj_id={d}, obj_type={d}, x={d}, y={d}): {any}", .{ self.obj_id, self.obj_type, self.x, self.y, e });
@@ -1997,6 +2028,7 @@ pub var night_light_intensity: f32 = 0.0;
 pub var server_time_offset: i64 = 0;
 pub var last_records_clear_time: i64 = 0;
 pub var minimap: zstbi.Image = undefined;
+pub var rpc_set = false;
 var last_sort: i64 = -1;
 
 pub fn init(allocator: std.mem.Allocator) !void {

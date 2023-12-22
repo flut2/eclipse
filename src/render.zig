@@ -512,7 +512,15 @@ const DrawData = struct {
     bind_group: zgpu.wgpu.BindGroup,
 };
 
-fn drawWall(idx: u16, x: f32, y: f32, alpha: f32, atlas_data: assets.AtlasData, top_atlas_data: assets.AtlasData, noalias draw_data: *const DrawData,) u16 {
+fn drawWall(
+    idx: u16,
+    x: f32,
+    y: f32,
+    alpha: f32,
+    atlas_data: assets.AtlasData,
+    top_atlas_data: assets.AtlasData,
+    noalias draw_data: *const DrawData,
+) u16 {
     var idx_new: u16 = idx;
     var atlas_data_new = atlas_data;
 
@@ -1761,12 +1769,12 @@ fn drawText(
     idx: u16,
     x: f32,
     y: f32,
-    noalias text_data: *const element.TextData,
+    noalias text_data: *element.TextData,
     noalias draw_data: *const DrawData,
+    noalias scissor_override: *const element.ScissorRect,
 ) u16 {
-    // this is extremely bad, but the alternative is even worse
-    while (!@constCast(text_data)._lock.tryLock()) {}
-    defer @constCast(text_data)._lock.unlock();
+    while (!text_data._lock.tryLock()) {}
+    defer text_data._lock.unlock();
 
     // text data not initiated
     if (text_data._line_widths == null)
@@ -1912,22 +1920,23 @@ fn drawText(
         const text_type: f32 = @floatFromInt(@intFromEnum(current_type));
 
         const dont_scissor = element.ScissorRect.dont_scissor;
-        const scaled_min_x = if (text_data.scissor.min_x != dont_scissor)
-            (text_data.scissor.min_x + start_x) * camera.clip_scale_x
+        const scissor = if (scissor_override.isDefault()) text_data.scissor else scissor_override.*;
+        const scaled_min_x = if (scissor.min_x != dont_scissor)
+            (scissor.min_x + start_x) * camera.clip_scale_x
         else
             -1.0;
-        const scaled_max_x = if (text_data.scissor.max_x != dont_scissor)
-            (text_data.scissor.max_x + start_x) * camera.clip_scale_x
+        const scaled_max_x = if (scissor.max_x != dont_scissor)
+            (scissor.max_x + start_x) * camera.clip_scale_x
         else
             1.0;
 
         // have to flip these, y is inverted... should be fixed later
-        const scaled_min_y = if (text_data.scissor.max_y != dont_scissor)
-            -(text_data.scissor.max_y + start_y - line_height) * camera.clip_scale_y
+        const scaled_min_y = if (scissor.max_y != dont_scissor)
+            -(scissor.max_y + start_y - line_height) * camera.clip_scale_y
         else
             -1.0;
-        const scaled_max_y = if (text_data.scissor.min_y != dont_scissor)
-            -(text_data.scissor.min_y + start_y - line_height) * camera.clip_scale_y
+        const scaled_max_y = if (scissor.min_y != dont_scissor)
+            -(scissor.min_y + start_y - line_height) * camera.clip_scale_y
         else
             1.0;
 
@@ -2199,7 +2208,6 @@ fn drawNineSlice(
     const opts: *const QuadOptions = &.{
         .alpha_mult = image_data.alpha,
         .ui_quad = true,
-        .scissor = image_data.scissor,
         .base_color = image_data.color,
         .base_color_intensity = image_data.color_intensity,
     };
@@ -2286,7 +2294,16 @@ fn drawLight(idx: u16, w: f32, h: f32, x: f32, y: f32, color: u32, intensity: f3
     return idx + 4;
 }
 
-fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const DrawData, cam_x: f32, cam_y: f32, x_offset: f32, y_offset: f32, time: i64,) u16 {
+fn drawElement(
+    idx: u16,
+    elem: element.UiElement,
+    noalias draw_data: *const DrawData,
+    cam_x: f32,
+    cam_y: f32,
+    x_offset: f32,
+    y_offset: f32,
+    time: i64,
+) u16 {
     var ui_idx = idx;
     switch (elem) {
         .image => |image| {
@@ -2299,7 +2316,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = image.ui_quad,
-                        .scissor = image_data.scissor,
+                        .scissor = image.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2358,6 +2375,25 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
             if (!item.visible)
                 return ui_idx;
 
+            if (item._background_image_data) |background_image_data| {
+                switch (background_image_data) {
+                    .nine_slice => |nine_slice| {
+                        ui_idx = drawNineSlice(ui_idx, item.background_x + x_offset, item.background_y + y_offset, &nine_slice, draw_data);
+                    },
+                    .normal => |image_data| {
+                        const opts: *const QuadOptions = &.{
+                            .shadow_texel_mult = 2.0 / @max(image_data.scale_x, image_data.scale_y),
+                            .alpha_mult = image_data.alpha,
+                            .ui_quad = true,
+                            .scissor = item.scissor,
+                            .base_color = image_data.color,
+                            .base_color_intensity = image_data.color_intensity,
+                        };
+                        ui_idx = drawQuad(ui_idx, item.background_x + x_offset, item.background_y + y_offset, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
+                    },
+                }
+            }
+
             switch (item.image_data) {
                 .nine_slice => |nine_slice| {
                     ui_idx = drawNineSlice(ui_idx, item.x + x_offset, item.y + y_offset, &nine_slice, draw_data);
@@ -2367,7 +2403,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                         .shadow_texel_mult = 2.0 / @max(image_data.scale_x, image_data.scale_y),
                         .alpha_mult = image_data.alpha,
                         .ui_quad = false,
-                        .scissor = image_data.scissor,
+                        .scissor = item.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                     };
@@ -2396,7 +2432,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = true,
-                        .scissor = image_data.scissor,
+                        .scissor = bar.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2411,6 +2447,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                 bar.y + (h - bar.text_data._height) / 2 + y_offset,
                 &bar.text_data,
                 draw_data,
+                &bar.scissor,
             );
         },
         .button => |button| {
@@ -2432,7 +2469,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = true,
-                        .scissor = image_data.scissor,
+                        .scissor = button.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2441,13 +2478,14 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                 },
             }
 
-            if (button.text_data) |text_data| {
+            if (button.text_data) |*text_data| {
                 ui_idx = drawText(
                     ui_idx,
                     button.x + (w - text_data._width) / 2 + x_offset,
                     button.y + (h - text_data._height) / 2 + y_offset,
-                    &text_data,
+                    text_data,
                     draw_data,
+                    &button.scissor,
                 );
             }
         },
@@ -2470,7 +2508,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = true,
-                        .scissor = image_data.scissor,
+                        .scissor = char_box.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2488,13 +2526,14 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                 },
             }
 
-            if (char_box.text_data) |text_data| {
+            if (char_box.text_data) |*text_data| {
                 ui_idx = drawText(
                     ui_idx,
                     char_box.x + (w - text_data._width) / 2 + x_offset,
                     char_box.y + (h - text_data._height) / 2 + y_offset,
-                    &text_data,
+                    text_data,
                     draw_data,
+                    &char_box.scissor,
                 );
             }
         },
@@ -2502,7 +2541,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
             if (!text.visible)
                 return ui_idx;
 
-            ui_idx = drawText(ui_idx, text.x + x_offset, text.y + y_offset, &text.text_data, draw_data);
+            ui_idx = drawText(ui_idx, text.x + x_offset, text.y + y_offset, &text.text_data, draw_data, &text.scissor);
         },
         .input_field => |input_field| {
             if (!input_field.visible)
@@ -2523,7 +2562,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = true,
-                        .scissor = image_data.scissor,
+                        .scissor = input_field.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2534,7 +2573,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
 
             const text_x = input_field.x + input_field.text_inlay_x + x_offset + input_field._x_offset;
             const text_y = input_field.y + input_field.text_inlay_y + y_offset;
-            ui_idx = drawText(ui_idx, text_x, text_y, &input_field.text_data, draw_data);
+            ui_idx = drawText(ui_idx, text_x, text_y, &input_field.text_data, draw_data, &input_field.scissor);
 
             const flash_delay = 500 * std.time.us_per_ms;
             if (input_field._last_input != -1 and (time - input_field._last_input < flash_delay or @mod(@divFloor(time, flash_delay), 2) == 0)) {
@@ -2545,7 +2584,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                         const opts: *const QuadOptions = &.{
                             .alpha_mult = image_data.alpha,
                             .ui_quad = true,
-                            .scissor = image_data.scissor,
+                            .scissor = input_field.scissor,
                             .base_color = image_data.color,
                             .base_color_intensity = image_data.color_intensity,
                             .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2574,7 +2613,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = true,
-                        .scissor = image_data.scissor,
+                        .scissor = toggle.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2583,14 +2622,15 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                 },
             }
 
-            if (toggle.text_data) |text_data| {
+            if (toggle.text_data) |*text_data| {
                 const pad = 5;
                 ui_idx = drawText(
                     ui_idx,
                     toggle.x + w + pad + x_offset,
                     toggle.y + (h - text_data._height) / 2 + y_offset,
-                    &text_data,
+                    text_data,
                     draw_data,
+                    &toggle.scissor,
                 );
             }
         },
@@ -2613,7 +2653,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = true,
-                        .scissor = image_data.scissor,
+                        .scissor = key_mapper.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2633,14 +2673,15 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                 &.{ .force_glow_off = true },
             );
 
-            if (key_mapper.title_text_data) |text_data| {
+            if (key_mapper.title_text_data) |*text_data| {
                 const pad = 5;
                 ui_idx = drawText(
                     ui_idx,
                     key_mapper.x + w + pad + x_offset,
                     key_mapper.y + (h - text_data._height) / 2 + y_offset,
-                    &text_data,
+                    text_data,
                     draw_data,
+                    &key_mapper.scissor,
                 );
             }
         },
@@ -2660,7 +2701,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = true,
-                        .scissor = image_data.scissor,
+                        .scissor = slider.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2676,16 +2717,6 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                         opts,
                     );
                 },
-            }
-
-            if (slider.title_text_data) |text_data| {
-                ui_idx = drawText(
-                    ui_idx,
-                    slider.x + x_offset,
-                    slider.y + y_offset - slider.title_offset,
-                    &text_data,
-                    draw_data,
-                );
             }
 
             const knob_image_data = slider.knob_image_data.current(slider.state);
@@ -2710,7 +2741,7 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = true,
-                        .scissor = image_data.scissor,
+                        .scissor = slider.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -2731,13 +2762,27 @@ fn drawElement(idx: u16, elem: element.UiElement, noalias draw_data: *const Draw
                 },
             }
 
-            ui_idx = drawText(
-                ui_idx,
-                knob_x + if (slider.vertical) knob_w else 0,
-                knob_y + if (slider.vertical) 0 else knob_h,
-                &slider.value_text_data,
-                draw_data,
-            );
+            if (slider.title_text_data) |*text_data| {
+                ui_idx = drawText(
+                    ui_idx,
+                    slider.x + x_offset,
+                    slider.y + y_offset - slider.title_offset,
+                    text_data,
+                    draw_data,
+                    &slider.scissor,
+                );
+            }
+
+            if (slider.value_text_data) |*text_data| {
+                ui_idx = drawText(
+                    ui_idx,
+                    knob_x + if (slider.vertical) knob_w else 0,
+                    knob_y + if (slider.vertical) 0 else knob_h,
+                    text_data,
+                    draw_data,
+                    &slider.scissor,
+                );
+            }
         },
         else => {},
     }
@@ -2865,7 +2910,7 @@ pub fn draw(
                     if (square.props != null) {
                         if (settings.enable_lights) {
                             const light_color = square.props.?.light_color;
-                            if (light_color > 0) {
+                            if (light_color != std.math.maxInt(u32)) {
                                 const size = camera.px_per_tile * (square.props.?.light_radius + square.props.?.light_pulse *
                                     @sin(float_time_ms / 1000.0 * square.props.?.light_pulse_speed));
                                 light_idx = drawLight(
@@ -2965,8 +3010,8 @@ pub fn draw(
             defer map.object_lock.unlockShared();
 
             var idx: u16 = 0;
-            for (map.entities.items) |en| {
-                switch (en) {
+            for (map.entities.items) |*en| {
+                switch (en.*) {
                     .particle_effect => {},
                     .particle => |pt| {
                         switch (pt) {
@@ -2998,7 +3043,7 @@ pub fn draw(
                             },
                         }
                     },
-                    .player => |player| {
+                    .player => |*player| {
                         // hack just dont render players
                         if (sc.current_screen == .editor or player.dead or !camera.visibleInCamera(player.x, player.y)) {
                             continue;
@@ -3048,7 +3093,7 @@ pub fn draw(
                         _ = &color_intensity;
                         // flash
 
-                        if (settings.enable_lights and player.light_color > 0) {
+                        if (settings.enable_lights and player.light_color != std.math.maxInt(u32)) {
                             const light_size = player.light_radius + player.light_pulse * @sin(float_time_ms / 1000.0 * player.light_pulse_speed);
 
                             light_idx = drawLight(
@@ -3068,6 +3113,7 @@ pub fn draw(
                             screen_pos.y - player.name_text_data._height,
                             &player.name_text_data,
                             draw_data,
+                            &.{},
                         );
 
                         idx = drawQuad(
@@ -3207,7 +3253,7 @@ pub fn draw(
                             y_pos += 20;
                         }
                     },
-                    .object => |bo| {
+                    .object => |*bo| {
                         if (bo.dead or !camera.visibleInCamera(bo.x, bo.y)) {
                             continue;
                         }
@@ -3279,7 +3325,7 @@ pub fn draw(
                         _ = &color_intensity;
                         // flash
 
-                        if (settings.enable_lights and bo.light_color > 0) {
+                        if (settings.enable_lights and bo.light_color != std.math.maxInt(u32)) {
                             const light_size = bo.light_radius + bo.light_pulse * @sin(float_time_ms / 1000.0 * bo.light_pulse_speed);
 
                             light_idx = drawLight(
@@ -3301,6 +3347,7 @@ pub fn draw(
                                 screen_pos.y - bo.name_text_data._height,
                                 &bo.name_text_data,
                                 draw_data,
+                                &.{},
                             );
 
                             if (is_portal and map.interactive_id.load(.Acquire) == bo.obj_id) {
@@ -3325,6 +3372,7 @@ pub fn draw(
                                     screen_pos.y + h + 5,
                                     &enter_text_data,
                                     draw_data,
+                                    &.{},
                                 );
                             }
                         }
@@ -3438,7 +3486,7 @@ pub fn draw(
                         const angle = -(proj.visual_angle + proj.props.angle_correction +
                             (if (rotation == 0) 0 else @as(f32, @floatFromInt(time)) / rotation / std.time.us_per_ms) - camera.angle);
 
-                        if (settings.enable_lights and proj.props.light_color > 0) {
+                        if (settings.enable_lights and proj.props.light_color != std.math.maxInt(u32)) {
                             const light_size = proj.props.light_radius + proj.props.light_pulse * @sin(float_time_ms / 1000.0 * proj.props.light_pulse_speed);
 
                             light_idx = drawLight(
@@ -3534,15 +3582,15 @@ pub fn draw(
         var ui_idx: u16 = 0;
 
         while (!sc.temp_elem_lock.tryLock()) {}
-        for (sc.temp_elements.items) |elem| {
-            switch (elem) {
-                .status => |text| {
+        for (sc.temp_elements.items) |*elem| {
+            switch (elem.*) {
+                .status => |*text| {
                     if (!text.visible)
                         continue;
 
-                    ui_idx = drawText(ui_idx, text._screen_x, text._screen_y, &text.text_data, draw_data);
+                    ui_idx = drawText(ui_idx, text._screen_x, text._screen_y, &text.text_data, draw_data, &.{});
                 },
-                .balloon => |balloon| {
+                .balloon => |*balloon| {
                     if (!balloon.visible)
                         continue;
 
@@ -3553,7 +3601,6 @@ pub fn draw(
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
                         .ui_quad = true,
-                        .scissor = image_data.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 1.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
@@ -3567,6 +3614,7 @@ pub fn draw(
                         balloon._screen_y + (h - balloon.text_data._height) / 2 - decor_offset,
                         &balloon.text_data,
                         draw_data,
+                        &.{},
                     );
                 },
             }
@@ -3576,6 +3624,78 @@ pub fn draw(
         while (!sc.ui_lock.tryLock()) {}
         for (sc.elements.items) |elem| {
             switch (elem) {
+                .scrollable_container => |scrollable_container| {
+                    if (!scrollable_container.visible)
+                        continue;
+
+                    for (scrollable_container._container._elements.items) |cont_elem| {
+                        ui_idx = drawElement(
+                            ui_idx,
+                            cont_elem,
+                            draw_data,
+                            cam_x,
+                            cam_y,
+                            scrollable_container._container.x,
+                            scrollable_container._container.y,
+                            time,
+                        );
+                    }
+
+                    ui_idx = drawElement(
+                        ui_idx,
+                        .{ .slider = scrollable_container._scroll_bar },
+                        draw_data,
+                        cam_x,
+                        cam_y,
+                        0,
+                        0,
+                        time,
+                    );
+                },
+                .container => |container| {
+                    if (!container.visible)
+                        continue;
+
+                    for (container._elements.items) |cont_elem| {
+                        ui_idx = drawElement(ui_idx, cont_elem, draw_data, cam_x, cam_y, container.x, container.y, time);
+                    }
+                },
+                else => {
+                    ui_idx = drawElement(ui_idx, elem, draw_data, cam_x, cam_y, 0, 0, time);
+                },
+            }
+        }
+
+        for (sc.tooltip_elements.items) |elem| {
+            switch (elem) {
+                .scrollable_container => |scrollable_container| {
+                    if (!scrollable_container.visible)
+                        continue;
+
+                    for (scrollable_container._container._elements.items) |cont_elem| {
+                        ui_idx = drawElement(
+                            ui_idx,
+                            cont_elem,
+                            draw_data,
+                            cam_x,
+                            cam_y,
+                            scrollable_container._container.x,
+                            scrollable_container._container.y,
+                            time,
+                        );
+                    }
+
+                    ui_idx = drawElement(
+                        ui_idx,
+                        .{ .slider = scrollable_container._scroll_bar },
+                        draw_data,
+                        cam_x,
+                        cam_y,
+                        0,
+                        0,
+                        time,
+                    );
+                },
                 .container => |container| {
                     if (!container.visible)
                         continue;

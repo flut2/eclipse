@@ -8,6 +8,7 @@ const main = @import("../../../main.zig");
 const settings = @import("../../../settings.zig");
 const screen_controller = @import("../../controllers/screen_controller.zig");
 const input = @import("../../../input.zig");
+const rpc = @import("rpc");
 
 pub const AccountLoginScreen = struct {
     email_text: *element.Text = undefined,
@@ -26,6 +27,18 @@ pub const AccountLoginScreen = struct {
     pub fn init(allocator: std.mem.Allocator) !*AccountLoginScreen {
         var screen = try allocator.create(AccountLoginScreen);
         screen.* = .{ ._allocator = allocator };
+
+        const presence = rpc.Packet.Presence{
+            .assets = .{
+                .large_image = rpc.Packet.ArrayString(256).create("logo"),
+                .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
+            },
+            .state = rpc.Packet.ArrayString(128).create("Login Screen"),
+            .timestamps = .{
+                .start = main.rpc_start,
+            },
+        };
+        try main.rpc_client.setPresence(presence);
 
         const input_w = 300;
         const input_h = 50;
@@ -321,7 +334,7 @@ fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) 
     if (settings.save_email) {
         if (settings.email.len > 0)
             allocator.free(settings.email);
-            
+
         settings.email = try allocator.dupe(u8, email);
     }
 
