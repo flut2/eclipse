@@ -847,7 +847,7 @@ pub const Player = struct {
                             .large_image = rpc.Packet.ArrayString(256).create("logo"),
                             .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
                             .small_image = rpc.Packet.ArrayString(256).create(char_class.rpc_name),
-                            .small_text = rpc.Packet.ArrayString(128).createFromFormat("Tier {s} {s}", .{utils.toRoman(self.tier), char_class.name}) catch {
+                            .small_text = rpc.Packet.ArrayString(128).createFromFormat("Tier {s} {s}", .{ utils.toRoman(self.tier), char_class.name }) catch {
                                 std.log.err("Setting Discord RPC failed, small_text buffer was out of space", .{});
                                 break :setRpc;
                             },
@@ -959,9 +959,9 @@ pub const Player = struct {
                 .start_time = @divFloor(time, std.time.us_per_ms),
                 .bullet_id = bullet_id,
                 .owner_id = self.obj_id,
-                .physical_damage = @intFromFloat(physical_damage),
-                .magic_damage = @intFromFloat(magic_damage),
-                .true_damage = true_damage,
+                .physical_damage = @intFromFloat(physical_damage * self.damage_multiplier),
+                .magic_damage = @intFromFloat(magic_damage * self.damage_multiplier),
+                .true_damage = true_damage * self.damage_multiplier,
                 .piercing = self.piercing,
                 .penetration = self.penetration,
             };
@@ -1748,9 +1748,9 @@ pub const Projectile = struct {
                         const dead = player.hp <= (phys_dmg + magic_dmg + true_dmg);
 
                         player.takeDamage(
-                            phys_dmg,
-                            magic_dmg,
-                            true_dmg,
+                            phys_dmg * player.hit_multiplier,
+                            magic_dmg * player.hit_multiplier,
+                            true_dmg * player.hit_multiplier,
                             dead,
                             time,
                             utils.Condition.fromCondSlice(self.props.effects),

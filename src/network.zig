@@ -395,6 +395,8 @@ fn handleDamage() void {
     const effects = reader.read(utils.Condition);
     const amount = reader.read(u16);
     const kill = reader.read(bool);
+    const bullet_id = reader.read(u8);
+    const object_id = reader.read(i32);
 
     if (map.findEntityRef(target_id)) |en| {
         switch (en.*) {
@@ -431,7 +433,7 @@ fn handleDamage() void {
     }
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick or settings.log_packets == .all_non_tick)
-        std.log.debug("Recv - Damage: target_id={d}, effects={any}, damage_amount={d}, kill={any}", .{ target_id, effects, amount, kill });
+        std.log.debug("Recv - Damage: target_id={d}, effects={any}, damage_amount={d}, kill={any}, bullet_id={d}, object_id={d}", .{ target_id, effects, amount, kill, bullet_id, object_id });
 }
 
 fn handleDeath() void {
