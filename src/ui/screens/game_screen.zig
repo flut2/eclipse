@@ -80,9 +80,9 @@ pub const GameScreen = struct {
             return .{ .idx = 255 };
         }
 
-        pub fn nextAvailableSlot(screen: GameScreen) Slot {
+        pub fn nextAvailableSlot(screen: GameScreen, slot_types: [22]game_data.ItemType, base_slot_type: game_data.ItemType) Slot {
             for (0..22) |idx| {
-                if (screen.inventory_items[idx]._item == std.math.maxInt(u16))
+                if (screen.inventory_items[idx]._item == std.math.maxInt(u16) and slot_types[idx].slotsMatch(base_slot_type))
                     return .{ .idx = @intCast(idx) };
             }
             return .{ .idx = 255 };
@@ -398,7 +398,7 @@ pub const GameScreen = struct {
                     },
                 });
             } else {
-                const line_str = try std.fmt.allocPrint(self._allocator, "&c={x}{s}", .{text_color, text});
+                const line_str = try std.fmt.allocPrint(self._allocator, "&c={x}{s}", .{ text_color, text });
                 break :blk try self.chat_container.createElement(element.Text, .{
                     .x = 0,
                     .y = 0,
@@ -846,21 +846,21 @@ pub const GameScreen = struct {
             }
         }
 
-        if (start_slot.is_container) {
-            const end_slot = Slot.nextAvailableSlot(sc.current_screen.game.*);
-            if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
-                item.x = item._drag_start_x;
-                item.y = item._drag_start_y;
-                return;
-            }
+        while (!map.object_lock.tryLockShared()) {}
+        defer map.object_lock.unlockShared();
 
-            sc.current_screen.game.swapSlots(start_slot, end_slot);
-        } else {
+        if (map.localPlayerConst()) |local_player| {
             if (game_data.item_type_to_props.get(@intCast(item._item))) |props| {
-                while (!map.object_lock.tryLockShared()) {}
-                defer map.object_lock.unlockShared();
+                if (start_slot.is_container) {
+                    const end_slot = Slot.nextAvailableSlot(sc.current_screen.game.*, local_player.slot_types, props.slot_type);
+                    if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
+                        item.x = item._drag_start_x;
+                        item.y = item._drag_start_y;
+                        return;
+                    }
 
-                if (map.localPlayerConst()) |local_player| {
+                    sc.current_screen.game.swapSlots(start_slot, end_slot);
+                } else {
                     const end_slot = Slot.nextEquippableSlot(local_player.slot_types, props.slot_type);
                     if (end_slot.idx == 255 or // we don't want to drop
                         start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container)
