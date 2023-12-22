@@ -382,10 +382,10 @@ pub const GameScreen = struct {
         return screen;
     }
 
-    pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8) !void {
+    pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_color: u32, text_color: u32) !void {
         var chat_line = blk: {
             if (name.len > 0) {
-                const line_str = try std.fmt.allocPrint(self._allocator, "[{s}]: {s}", .{ name, text });
+                const line_str = try std.fmt.allocPrint(self._allocator, "&c={x}[{s}]: &c={x}{s}", .{ name_color, name, text_color, text });
                 break :blk try self.chat_container.createElement(element.Text, .{
                     .x = 0,
                     .y = 0,
@@ -398,7 +398,7 @@ pub const GameScreen = struct {
                     },
                 });
             } else {
-                const line_str = try std.fmt.allocPrint(self._allocator, "{s}", .{text});
+                const line_str = try std.fmt.allocPrint(self._allocator, "&c={x}{s}", .{text_color, text});
                 break :blk try self.chat_container.createElement(element.Text, .{
                     .x = 0,
                     .y = 0,

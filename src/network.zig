@@ -94,7 +94,7 @@ pub const C2SPacket = union(C2SPacketId) {
         skin_type: u16,
     },
     inv_drop: packed struct { obj_id: i32, slot_id: u8 },
-    pong: packed struct { serial: i32, time: i64 },
+    pong: packed struct { serial: i64, time: i64 },
     teleport: packed struct { obj_id: i32 },
     use_portal: packed struct { obj_id: i32 },
     buy: packed struct { obj_id: i32 },
@@ -295,7 +295,10 @@ pub fn accept() void {
             },
         }
 
-        reader.index = next_packet_idx;
+        if (reader.index != next_packet_idx) {
+            std.log.err("S2C packet {any} has {d} bytes left over", .{ packet_id, next_packet_idx - reader.index });
+            reader.index = next_packet_idx;
+        }
         message_len = 65535;
     }
 
@@ -760,7 +763,7 @@ fn handleNotification() void {
 }
 
 fn handlePing() void {
-    const serial = reader.read(i32);
+    const serial = reader.read(i64);
 
     sendPacket(.{ .pong = .{ .serial = serial, .time = main.current_time } });
 
@@ -931,10 +934,16 @@ fn handleText() void {
     const bubble_time = reader.read(u8);
     const recipient = reader.readArray(u8);
     const text = reader.readArray(u8);
+    var name_color: u32 = 0xFF0000;
+    var text_color: u32 = 0xFFFFFF;
+    if (name.len > 0)
+        name_color = reader.read(u32);
+    if (text.len > 0)
+        text_color = reader.read(u32);
 
     if (sc.current_screen == .game)
-        sc.current_screen.game.addChatLine(name, text) catch |e| {
-            std.log.err("Adding message with name {s} and text {s} failed: {any}", .{name, text, e});
+        sc.current_screen.game.addChatLine(name, text, name_color, text_color) catch |e| {
+            std.log.err("Adding message with name {s} and text {s} failed: {any}", .{ name, text, e });
         };
 
     while (!map.object_lock.tryLockShared()) {}
@@ -943,16 +952,22 @@ fn handleText() void {
     if (map.findEntityConst(object_id)) |en| {
         var atlas_data = assets.error_data;
         if (assets.ui_atlas_data.get("speech_balloons")) |balloon_data| {
-            // todo: guild, party and admin balloons
-
-            if (!std.mem.eql(u8, recipient, "")) {
-                atlas_data = balloon_data[1]; // tell balloon
-            } else {
-                if (en == .object) {
-                    atlas_data = balloon_data[3]; // enemy balloon
-                } else {
-                    atlas_data = balloon_data[0]; // normal balloon
-                }
+            switch (name_color) {
+                0xD4AF37 => atlas_data = balloon_data[5], // admin balloon
+                // todo
+                0x000000 => atlas_data = balloon_data[2], // guild balloon
+                0x000001 => atlas_data = balloon_data[4], // party balloon
+                else => {
+                    if (!std.mem.eql(u8, recipient, "")) {
+                        atlas_data = balloon_data[1]; // tell balloon
+                    } else {
+                        if (en == .object) {
+                            atlas_data = balloon_data[3]; // enemy balloon
+                        } else {
+                            atlas_data = balloon_data[0]; // normal balloon
+                        }
+                    }
+                },
             }
         } else @panic("Could not find speech_balloons in the UI atlas");
 
@@ -968,6 +983,7 @@ fn handleText() void {
                 .max_width = 160,
                 .outline_width = 1.5,
                 .disable_subpixel = true,
+                .color = text_color,
             },
             .target_id = object_id,
             .start_time = @divFloor(main.current_time, std.time.us_per_ms),
