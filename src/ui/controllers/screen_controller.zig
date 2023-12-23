@@ -100,6 +100,9 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 }
 
 pub fn switchScreen(screen_type: ScreenType) void {
+    while (!ui_lock.tryLock()) {}
+    defer ui_lock.unlock();
+    
     menu_background.visible = screen_type != .game and screen_type != .editor;
     input.selected_key_mapper = null;
 
@@ -150,6 +153,9 @@ pub fn switchScreen(screen_type: ScreenType) void {
 }
 
 pub fn resize(w: f32, h: f32) void {
+    while (!ui_lock.tryLock()) {}
+    defer ui_lock.unlock();
+
     menu_background.w = camera.screen_width;
     menu_background.h = camera.screen_height;
 
@@ -696,8 +702,8 @@ pub fn mouseScroll(x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
 }
 
 pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) !void {
-    while (!map.object_lock.tryLockShared()) {}
-    defer map.object_lock.unlockShared();
+    while (!ui_lock.tryLock()) {}
+    defer ui_lock.unlock();
 
     const ms_time = @divFloor(time, std.time.us_per_ms);
     const ms_dt = @as(f32, @floatFromInt(dt)) / std.time.us_per_ms;

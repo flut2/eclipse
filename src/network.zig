@@ -10,6 +10,14 @@ const assets = @import("assets.zig");
 const particles = @import("particles.zig");
 const sc = @import("ui/controllers/screen_controller.zig");
 
+pub const FailureType = enum(i8) {
+    message_no_disconnect = -1,
+    message_with_disconnect = 0,
+    client_update_needed = 1,
+    force_close_game = 2,
+    invalid_teleport_target = 3,
+};
+
 pub const TimedPosition = packed struct {
     time: i64,
     x: f32,
@@ -511,10 +519,11 @@ fn handleEnemyShoot() void {
 }
 
 fn handleFailure() void {
-    const error_id = reader.read(i32);
+    const error_id = reader.read(FailureType);
     const error_description = reader.readArray(u8);
 
-    main.disconnect();
+    if (error_id == .message_with_disconnect or error_id == .force_close_game)
+        main.disconnect();
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
         std.log.debug("Recv - Failure: error_id={d}, error_description={s}", .{ error_id, error_description });

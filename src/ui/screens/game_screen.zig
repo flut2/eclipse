@@ -545,6 +545,9 @@ pub const GameScreen = struct {
     pub fn update(self: *GameScreen, _: i64, _: f32) !void {
         self.fps_text.visible = settings.stats_enabled;
 
+        while (!map.object_lock.tryLockShared()) {}
+        defer map.object_lock.unlockShared();
+        
         if (map.localPlayerConst()) |local_player| {
             if (game_data.classes.get(local_player.obj_type)) |char_class| {
                 if (!self.abilities_inited) {

@@ -949,7 +949,7 @@ pub const Player = struct {
 
             const physical_damage = @as(f32, @floatFromInt(proj_props.physical_damage)) * self.strengthMultiplier();
             const magic_damage = @as(f32, @floatFromInt(proj_props.magic_damage)) * self.witMultiplier();
-            const true_damage = proj_props.true_damage;
+            const true_damage = @as(f32, @floatFromInt(proj_props.true_damage));
 
             var proj = Projectile{
                 .x = x,
@@ -961,7 +961,7 @@ pub const Player = struct {
                 .owner_id = self.obj_id,
                 .physical_damage = @intFromFloat(physical_damage * self.damage_multiplier),
                 .magic_damage = @intFromFloat(magic_damage * self.damage_multiplier),
-                .true_damage = true_damage * self.damage_multiplier,
+                .true_damage = @intFromFloat(true_damage * self.damage_multiplier),
                 .piercing = self.piercing,
                 .penetration = self.penetration,
             };
@@ -1744,13 +1744,13 @@ pub const Projectile = struct {
                     if (local_player_id == player.obj_id) {
                         const phys_dmg = physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(player.defense - self.penetration), player.condition);
                         const magic_dmg = magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(player.resistance - self.piercing), player.condition);
-                        const true_dmg = self.true_damage;
-                        const dead = player.hp <= (phys_dmg + magic_dmg + true_dmg);
+                        const true_dmg: f32 = @floatFromInt(self.true_damage);
+                        const dead = @as(f32, @floatFromInt(player.hp)) <= (phys_dmg + magic_dmg + true_dmg);
 
                         player.takeDamage(
-                            phys_dmg * player.hit_multiplier,
-                            magic_dmg * player.hit_multiplier,
-                            true_dmg * player.hit_multiplier,
+                            @intFromFloat(phys_dmg * player.hit_multiplier),
+                            @intFromFloat(magic_dmg * player.hit_multiplier),
+                            @intFromFloat(true_dmg * player.hit_multiplier),
                             dead,
                             time,
                             utils.Condition.fromCondSlice(self.props.effects),
@@ -1803,13 +1803,13 @@ pub const Projectile = struct {
                     if (object.is_enemy) {
                         const phys_dmg = physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(object.defense - self.penetration), object.condition);
                         const magic_dmg = magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(object.resistance - self.piercing), object.condition);
-                        const true_dmg = self.true_damage;
-                        const dead = object.hp <= (phys_dmg + magic_dmg + true_dmg);
+                        const true_dmg: f32 = @floatFromInt(self.true_damage);
+                        const dead = @as(f32, @floatFromInt(object.hp)) <= (phys_dmg + magic_dmg + true_dmg);
 
                         object.takeDamage(
-                            phys_dmg,
-                            magic_dmg,
-                            true_dmg,
+                            @intFromFloat(phys_dmg),
+                            @intFromFloat(magic_dmg),
+                            @intFromFloat(true_dmg),
                             dead,
                             time,
                             utils.Condition.fromCondSlice(self.props.effects),
@@ -1861,7 +1861,7 @@ pub const Projectile = struct {
     }
 };
 
-pub fn physicalDamage(dmg: f32, defense: f32, condition: utils.Condition) i32 {
+pub fn physicalDamage(dmg: f32, defense: f32, condition: utils.Condition) f32 {
     if (dmg == 0)
         return 0;
 
@@ -1876,10 +1876,10 @@ pub fn physicalDamage(dmg: f32, defense: f32, condition: utils.Condition) i32 {
         return 0;
 
     const min = dmg * 0.25;
-    return @intFromFloat(@max(min, dmg - def));
+    return @max(min, dmg - def);
 }
 
-pub fn magicDamage(dmg: f32, resistance: f32, condition: utils.Condition) i32 {
+pub fn magicDamage(dmg: f32, resistance: f32, condition: utils.Condition) f32 {
     if (dmg == 0)
         return 0;
 
@@ -1894,7 +1894,7 @@ pub fn magicDamage(dmg: f32, resistance: f32, condition: utils.Condition) i32 {
         return 0;
 
     const min = dmg * 0.25;
-    return @intFromFloat(@max(min, dmg - def));
+    return @max(min, dmg - def);
 }
 
 pub fn showDamageText(time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i32, allocator: std.mem.Allocator) void {
@@ -2073,6 +2073,9 @@ pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
 }
 
 pub fn dispose(allocator: std.mem.Allocator) void {
+    while (!object_lock.tryLock()) {}
+    defer object_lock.unlock();
+
     local_player_id = -1;
     interactive_id.store(-1, .Release);
     interactive_type.store(.game_object, .Release);
@@ -2088,6 +2091,9 @@ pub fn dispose(allocator: std.mem.Allocator) void {
 }
 
 pub fn deinit(allocator: std.mem.Allocator) void {
+    while (!object_lock.tryLock()) {}
+    defer object_lock.unlock();
+
     if (squares.len > 0) {
         allocator.free(squares);
     }
@@ -2277,11 +2283,11 @@ pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
 }
 
 pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
-    if (entities.items.len <= 0)
-        return;
-
     while (!object_lock.tryLock()) {}
     defer object_lock.unlock();
+    
+    if (entities.items.len <= 0)
+        return;
 
     interactive_id.store(-1, .Release);
     interactive_type.store(.game_object, .Release);
@@ -2485,14 +2491,14 @@ pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
     if (id < 1 or id > 10)
         return;
 
-    if (move_records.capacity == 0) {
+    if (move_records.items.len == 0) {
         move_records.append(.{ .time = time, .x = x, .y = y }) catch |e| {
             std.log.err("Adding move record failed: {any}", .{e});
         };
         return;
     }
 
-    const record_idx = move_records.capacity - 1;
+    const record_idx = move_records.items.len - 1;
     const curr_record = move_records.items[record_idx];
     const curr_id = getId(curr_record.time);
     if (id != curr_id) {

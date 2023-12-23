@@ -379,6 +379,8 @@ pub fn main() !void {
     rpc_client = try rpc.init(allocator, &ready);
     defer rpc_client.deinit();
 
+    std.os.maybeIgnoreSigpipe();
+
     zglfw.init() catch |e| {
         std.log.err("Failed to initialize GLFW library: {any}", .{e});
         return;
@@ -483,8 +485,6 @@ pub fn main() !void {
         }
 
         last_update = time;
-
-        std.time.sleep(6.5 * std.time.ns_per_ms);
     }
 }
 
