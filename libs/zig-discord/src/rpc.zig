@@ -148,15 +148,12 @@ pub fn run(self: *Self, options: Options) !void {
         //TODO: disconnect properly here if no error condition
         //Set state to disconnected after scope ends
         self.state = .disconnected;
-
-        std.log.debug("RPC disconnecting", .{});
     }
 
     self.writer = std.io.bufferedWriter(sock.writer());
     self.reader = std.io.bufferedReader(sock.reader());
     var reader = self.reader.reader();
 
-    std.log.debug("Sending RPC handshake", .{});
     try self.thread_pool.spawn(sendPacket, .{
         self,
         Packet.Handshake{
@@ -174,7 +171,6 @@ pub fn run(self: *Self, options: Options) !void {
     var buf2: [10000]u8 = undefined;
     var parsing_fba = std.heap.FixedBufferAllocator.init(&buf2);
 
-    std.log.debug("Starting RPC read loop", .{});
     while (self.run_loop.load(.SeqCst)) {
         defer std.time.sleep(std.time.ns_per_s * 0.25);
 
@@ -197,8 +193,6 @@ pub fn run(self: *Self, options: Options) !void {
         const data = try fba.allocator().alloc(u8, len);
         std.debug.assert(try reader.readAll(data) == len);
 
-        std.log.debug("Got data {s} from RPC api", .{data});
-
         switch (op) {
             .frame => {
                 const first_pass = try std.json.parseFromSliceLeaky(Packet.PacketData, parsing_fba.allocator(), data, parse_options);
@@ -210,10 +204,8 @@ pub fn run(self: *Self, options: Options) !void {
                     .DISPATCH => if (self.state == .connecting) {
                         std.debug.assert(server_event.? == .READY);
 
-                        const parsed = try std.json.parseFromSliceLeaky(Packet.ServerPacket(Packet.ReadyEventData), parsing_fba.allocator(), data, parse_options);
+                        _ = try std.json.parseFromSliceLeaky(Packet.ServerPacket(Packet.ReadyEventData), parsing_fba.allocator(), data, parse_options);
                         defer parsing_fba.reset();
-
-                        std.log.info("Connected to Discord RPC as user {s}", .{parsed.data.user.username});
 
                         self.state = .connected;
 
@@ -293,5 +285,4 @@ fn sendPacket(
 
     packet_to_send.serialize(self.writer.writer()) catch unreachable;
     self.writer.flush() catch unreachable;
-    std.log.debug("Wrote discord rpc packet of type {s}", .{@typeName(@TypeOf(packet))});
 }

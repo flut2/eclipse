@@ -887,7 +887,8 @@ pub const TextData = struct {
         }
 
         const size_scale = self.size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
-        var line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
+        const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
+        var line_height = start_line_height;
 
         var x_max: f32 = 0.0;
         var x_pointer: f32 = 0.0;
@@ -896,7 +897,8 @@ pub const TextData = struct {
         var current_type = self.text_type;
         var index_offset: u16 = 0;
         for (0..self.text.len) |i| {
-            if (i + index_offset >= self.text.len) {
+            const offset_i = i + index_offset;
+            if (offset_i >= self.text.len) {
                 self._width = @max(x_max, x_pointer);
                 self._line_widths.?.append(x_pointer) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {any}", .{e});
@@ -906,54 +908,70 @@ pub const TextData = struct {
                 return;
             }
 
-            const char = self.text[i + index_offset];
+            const char = self.text[offset_i];
             specialChar: {
                 if (!self.handle_special_chars)
                     break :specialChar;
 
                 if (char == '&') {
-                    const start_idx = i + index_offset + 3;
-                    if (self.text.len <= start_idx or self.text[start_idx - 1] != '=')
-                        break :specialChar;
+                    const name_start = self.text[offset_i + 1 ..];
+                    if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
+                        const value_start_idx = offset_i + 1 + eql_idx + 1;
+                        if (self.text.len <= value_start_idx or self.text[value_start_idx] != '"')
+                            break :specialChar;
 
-                    switch (self.text[start_idx - 2]) {
-                        'c' => {
-                            if (self.text.len < start_idx + 6)
+                        const value_start = self.text[value_start_idx + 1 ..];
+                        if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
+                            const name = name_start[0..eql_idx];
+                            const value = value_start[0..value_end_idx];
+                            if (std.mem.eql(u8, name, "size")) {
+                                const size = std.fmt.parseFloat(f32, value) catch break :specialChar;
+                                current_size = size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
+                                line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
+                                y_pointer += line_height - start_line_height;
+                            } else if (std.mem.eql(u8, name, "type")) {
+                                if (std.mem.eql(u8, value, "med")) {
+                                    current_type = .medium;
+                                } else if (std.mem.eql(u8, value, "med_it")) {
+                                    current_type = .medium_italic;
+                                } else if (std.mem.eql(u8, value, "bold")) {
+                                    current_type = .bold;
+                                } else if (std.mem.eql(u8, value, "bold_it")) {
+                                    current_type = .bold_italic;
+                                }
+                            } else if (std.mem.eql(u8, name, "img")) {
+                                var values = std.mem.splitScalar(u8, value, ',');
+                                const sheet = values.next();
+                                if (sheet == null or std.mem.eql(u8, sheet.?, value)) {
+                                    std.log.err("Invalid sheet given to control code: {?s}", .{sheet});
+                                    break :specialChar;
+                                }
+
+                                const index_str = values.next() orelse {
+                                    std.log.err("Index was not found for control code with sheet {s}", .{sheet.?});
+                                    break :specialChar;
+                                };
+                                const index = std.fmt.parseInt(u32, index_str, 0) catch {
+                                    std.log.err("Invalid index given to control code with sheet {s}: {s}", .{ sheet.?, index_str });
+                                    break :specialChar;
+                                };
+                                const data = assets.atlas_data.get(sheet.?) orelse {
+                                    std.log.err("Sheet {s} given to control code was not found in atlas", .{sheet.?});
+                                    break :specialChar;
+                                };
+                                if (index >= data.len) {
+                                    std.log.err("The index {d} given for sheet {s} in control code was out of bounds", .{ index, sheet.? });
+                                    break :specialChar;
+                                }
+
+                                x_pointer += current_size * assets.CharacterData.size;
+                            } else if (!std.mem.eql(u8, name, "col"))
                                 break :specialChar;
 
-                            index_offset += 8;
+                            index_offset += 1 + @as(u16, @intCast(eql_idx)) + 1 + @as(u16, @intCast(value_end_idx)) + 1;
                             continue;
-                        },
-                        's' => {
-                            var size_len: u8 = 0;
-                            while (start_idx + size_len < self.text.len and std.ascii.isDigit(self.text[start_idx + size_len])) {
-                                size_len += 1;
-                            }
-
-                            if (size_len == 0)
-                                break :specialChar;
-
-                            const size = std.fmt.parseFloat(f32, self.text[start_idx .. start_idx + size_len]) catch 16.0;
-                            current_size = size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
-                            line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
-                            index_offset += 2 + size_len;
-                            continue;
-                        },
-                        't' => {
-                            switch (self.text[start_idx]) {
-                                'm' => current_type = .medium,
-                                'i' => current_type = .medium_italic,
-                                'b' => current_type = .bold,
-                                // this has no reason to be 'c', just a hack...
-                                'c' => current_type = .bold_italic,
-                                else => {},
-                            }
-
-                            index_offset += 3;
-                            continue;
-                        },
-                        else => {},
-                    }
+                        } else break :specialChar;
+                    } else break :specialChar;
                 }
             }
 

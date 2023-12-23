@@ -58,14 +58,15 @@ pub fn package(
                 enable_fibers,
                 // MinGW doesn't have all the newfangled windows features,
                 // so we need to pretend to have an older windows version.
-                // "-D_WIN32_WINNT=0x601",
-                "-std=c++17",
+                "-D_WIN32_WINNT=0x601",
                 "-fno-sanitize=undefined",
             },
         });
 
+        const abi = (std.zig.system.NativeTargetInfo.detect(target) catch unreachable).target.abi;
         ztracy_c_cpp.linkLibC();
-        ztracy_c_cpp.linkLibCpp();
+        if (abi != .msvc)
+            ztracy_c_cpp.linkLibCpp();
 
         switch (target.getOs().tag) {
             .windows => {

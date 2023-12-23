@@ -118,7 +118,7 @@
         <BlendPriority>99</BlendPriority>
         <LightColor>0xcc4539</LightColor>
         <LightIntensity>0.25</LightIntensity>
-        <Damage>30</Damage>
+        <TrueDamage>30</TrueDamage>
         <Speed>0.58</Speed>
         <Sink/>
     </Ground>
@@ -390,7 +390,7 @@
         </Texture>
         <Animate dx=".15" dy=".15">Wave</Animate>
         <BlendPriority>99</BlendPriority>
-        <Damage>15</Damage>
+        <MagicDamage>15</MagicDamage>
         <Speed>0.3</Speed>
         <Sink/>
         <BlendPriority>-1</BlendPriority>
@@ -787,7 +787,7 @@
     <Ground type="0x7a" id="Chasm Lava">
         <Texture><Sheet>ground</Sheet><Index>0x78</Index></Texture>
         <Animate dx=".13" dy=".13">Wave</Animate>
-        <Damage>30</Damage>
+        <TrueDamage>30</TrueDamage>
         <Speed>0.58</Speed>
         <Sink/>
         <BlendPriority>99</BlendPriority>
@@ -1021,7 +1021,7 @@
         </Texture>
         <Animate dx=".15" dy=".15">Wave</Animate>
         <BlendPriority>99</BlendPriority>
-        <Damage>15</Damage>
+        <MagicDamage>15</MagicDamage>
         <Speed>0.3</Speed>
         <Sink/>
         <BlendPriority>-1</BlendPriority>
@@ -1033,7 +1033,7 @@
         </Texture>
         <Animate dx=".15" dy=".15">Wave</Animate>
         <BlendPriority>99</BlendPriority>
-        <Damage>15</Damage>
+        <MagicDamage>15</MagicDamage>
         <Speed>0.3</Speed>
         <Sink/>
         <BlendPriority>-1</BlendPriority>
@@ -1045,7 +1045,7 @@
         </Texture>
         <Animate dx=".15" dy=".15">Wave</Animate>
         <BlendPriority>99</BlendPriority>
-        <Damage>15</Damage>
+        <MagicDamage>15</MagicDamage>
         <Speed>0.3</Speed>
         <Sink/>
         <BlendPriority>-1</BlendPriority>

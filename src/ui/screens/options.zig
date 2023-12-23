@@ -4,8 +4,8 @@ const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const main = @import("../../main.zig");
 const settings = @import("../../settings.zig");
+const input = @import("../../input.zig");
 
-const PanelController = @import("../controllers/panel_controller.zig").PanelController;
 const NineSlice = element.NineSliceImageData;
 const sc = @import("../controllers/screen_controller.zig");
 
@@ -16,7 +16,7 @@ pub const TabType = enum {
     misc,
 };
 
-pub const OptionsPanel = struct {
+pub const Options = struct {
     visible: bool = false,
     inited: bool = false,
     selected_tab_type: TabType = .general,
@@ -29,8 +29,8 @@ pub const OptionsPanel = struct {
     misc_tab: *element.Container = undefined,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn init(allocator: std.mem.Allocator) !*OptionsPanel {
-        var screen = try allocator.create(OptionsPanel);
+    pub fn init(allocator: std.mem.Allocator) !*Options {
+        var screen = try allocator.create(Options);
         screen.* = .{ ._allocator = allocator };
 
         const button_width = 150;
@@ -256,7 +256,7 @@ pub const OptionsPanel = struct {
         return screen;
     }
 
-    pub fn deinit(self: *OptionsPanel) void {
+    pub fn deinit(self: *Options) void {
         self.main.destroy();
         self.buttons.destroy();
         self.tabs.destroy();
@@ -419,7 +419,8 @@ pub const OptionsPanel = struct {
     }
 
     fn closeCallback() void {
-        sc.current_screen.game.panel_controller.setOptionsVisible(false);
+        sc.current_screen.game.options.setVisible(false);
+        input.disable_input = false;
 
         trySave();
     }
@@ -457,7 +458,7 @@ pub const OptionsPanel = struct {
     }
 
     pub fn switchTab(tab: TabType) void {
-        var self = sc.current_screen.game.panel_controller.options;
+        var self = sc.current_screen.game.options;
 
         self.selected_tab_type = tab;
         self.general_tab.visible = tab == .general;
@@ -473,7 +474,7 @@ pub const OptionsPanel = struct {
         }
     }
 
-    pub fn setVisible(self: *OptionsPanel, val: bool) void {
+    pub fn setVisible(self: *Options, val: bool) void {
         self.visible = val;
         self.main.visible = val;
         self.buttons.visible = val;
@@ -489,5 +490,5 @@ pub const OptionsPanel = struct {
         }
     }
 
-    pub fn resize(_: *OptionsPanel, _: f32, _: f32) void {}
+    pub fn resize(_: *Options, _: f32, _: f32) void {}
 };

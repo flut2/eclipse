@@ -106,7 +106,7 @@ pub const PacketReader = struct {
         return std.mem.bytesAsSlice(T, buf);
     }
 
-    // don't use this, it's only for the stat reader. 
+    // don't use this, it's only for the stat reader.
     // you can't rely on the array preserving its integrity since the buffer gets overwrriten each accept
     pub fn readArrayMut(self: *PacketReader, comptime T: type) []align(1) T {
         const byte_size = (@bitSizeOf(T) + 7) / 8 * self.read(u16);

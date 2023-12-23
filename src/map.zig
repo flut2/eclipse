@@ -1209,23 +1209,24 @@ pub const Player = struct {
             if (sc.current_screen != .editor and !self.condition.invulnerable and time - self.last_ground_damage_time >= 500) {
                 if (validPos(floor_x, floor_y)) {
                     const square = squares[floor_y * width + floor_x];
-                    if (square.tile_type != 0xFFFF and square.tile_type != 0xFF and
-                        square.props != null and square.props.?.damage > 0 and !square.protect_from_ground_damage)
-                    {
-                        network.queuePacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
-                        self.takeDamage(
-                            0,
-                            0,
-                            @intCast(square.props.?.damage),
-                            square.props.?.damage >= self.hp,
-                            time,
-                            utils.Condition{},
-                            self.colors,
-                            0.0,
-                            100.0 / 10000.0,
-                            allocator,
-                        );
-                        self.last_ground_damage_time = time;
+                    if (square.props) |props| {
+                        const total_damage = props.physical_damage + props.magic_damage + props.true_damage;
+                        if (total_damage > 0 and !square.protect_from_ground_damage) {
+                            network.queuePacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
+                            self.takeDamage(
+                                @intCast(props.physical_damage),
+                                @intCast(props.magic_damage),
+                                @intCast(props.true_damage),
+                                total_damage >= self.hp,
+                                time,
+                                .{},
+                                self.colors,
+                                0.0,
+                                100.0 / 10000.0,
+                                allocator,
+                            );
+                            self.last_ground_damage_time = time;
+                        }
                     }
                 }
             }
@@ -2285,7 +2286,7 @@ pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
 pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
     while (!object_lock.tryLock()) {}
     defer object_lock.unlock();
-    
+
     if (entities.items.len <= 0)
         return;
 
@@ -2303,9 +2304,7 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
     var iter = std.mem.reverseIterator(entities.items);
     var i: usize = entities.items.len - 1;
     while (iter.nextPtr()) |en| {
-        defer if (i != 0) {
-            i -= 1;
-        };
+        defer i -%= 1;
 
         switch (en.*) {
             .player => |*player| {
@@ -2336,10 +2335,6 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
 
                             sc.current_screen.game.container_id = object.obj_id;
                             sc.current_screen.game.setContainerVisible(true);
-                        }
-
-                        if (object.class.hasPanel()) {
-                            sc.current_screen.game.showPanel(object.class);
                         }
 
                         interactive_set = true;
@@ -2386,10 +2381,12 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
 
         sc.current_screen.game.container_id = -1;
         sc.current_screen.game.setContainerVisible(false);
-        sc.current_screen.game.panel_controller.hidePanels();
     }
 
-    std.sort.pdq(Entity, entities.items, {}, lessThan);
+    if (time - last_sort > 100 * std.time.us_per_ms) {
+        std.sort.pdq(Entity, entities.items, {}, lessThan);
+        last_sort = time;
+    }
 }
 
 // x/y < 0 has to be handled before this, since it's a u32

@@ -286,7 +286,9 @@ pub const GroundProps = struct {
     obj_type: i32,
     obj_id: []const u8,
     no_walk: bool,
-    damage: u16,
+    physical_damage: u16,
+    magic_damage: u16,
+    true_damage: u16,
     blend_prio: i32,
     composite_prio: i32,
     speed: f32,
@@ -320,7 +322,9 @@ pub const GroundProps = struct {
             .obj_type = try node.getAttributeInt("type", i32, 0),
             .obj_id = try node.getAttributeAlloc("id", allocator, "Unknown"),
             .no_walk = node.elementExists("NoWalk"),
-            .damage = try node.getValueInt("Damage", u16, 0),
+            .physical_damage = try node.getValueInt("PhysicalDamage", u16, 0),
+            .magic_damage = try node.getValueInt("MagicDamage", u16, 0),
+            .true_damage = try node.getValueInt("TrueDamage", u16, 0),
             .blend_prio = try node.getValueInt("BlendPriority", i32, 0),
             .composite_prio = try node.getValueInt("CompositePriority", i32, 0),
             .speed = try node.getValueFloat("Speed", f32, 1.0),
@@ -675,6 +679,25 @@ pub const StatType = enum(u8) {
             .haste => "Haste",
             .tenacity => "Tenacity",
             else => "Unknown Stat",
+        };
+    }
+
+    pub fn toControlCode(self: StatType) []const u8 {
+        return switch (self) {
+            .max_hp => "&img=\"misc_16,0x28\"",
+            .max_mp => "&img=\"misc_16,0x27\"",
+            .strength => "&img=\"misc_16,0x20\"",
+            .defense => "&img=\"misc_16,0x21\"",
+            .speed => "&img=\"misc_16,0x22\"",
+            .stamina => "&img=\"misc_16,0x24\"",
+            .wit => "&img=\"misc_16,0x23\"",
+            .resistance => "&img=\"misc_16,0x39\"",
+            .intelligence => "&img=\"misc_16,0x3b\"",
+            .penetration => "&img=\"misc_16,0x26\"",
+            .piercing => "&img=\"misc_16,0x3c\"",
+            .haste => "&img=\"misc_16,0x3a\"",
+            .tenacity => "&img=\"misc_16,0x25\"",
+            else => "",
         };
     }
 };

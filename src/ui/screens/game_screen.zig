@@ -11,7 +11,7 @@ const input = @import("../../input.zig");
 const settings = @import("../../settings.zig");
 
 const sc = @import("../controllers/screen_controller.zig");
-const PanelController = @import("../controllers/panel_controller.zig").PanelController;
+const Options = @import("options.zig").Options;
 const NineSlice = element.NineSliceImageData;
 
 pub const GameScreen = struct {
@@ -98,8 +98,11 @@ pub const GameScreen = struct {
     last_max_hp: i32 = -1,
     last_mp: i32 = -1,
     last_max_mp: i32 = -1,
+    interact_class: game_data.ClassType = game_data.ClassType.game_object,
     container_visible: bool = false,
     container_id: i32 = -1,
+
+    options: *Options = undefined,
 
     fps_text: *element.Text = undefined,
     chat_input: *element.Input = undefined,
@@ -138,9 +141,6 @@ pub const GameScreen = struct {
     abilities_inited: bool = false,
     inited: bool = false,
     _allocator: std.mem.Allocator = undefined,
-
-    interact_class: game_data.ClassType = game_data.ClassType.game_object,
-    panel_controller: *PanelController = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*GameScreen {
         var screen = try allocator.create(GameScreen);
@@ -235,7 +235,7 @@ pub const GameScreen = struct {
         });
 
         const decor_offset_x = -60;
-        const decor_offset_y = 56;
+        const decor_offset_y = 53;
         _ = try screen.ability_container.createElement(element.Image, .{
             .x = decor_offset_x,
             .y = decor_offset_y,
@@ -371,12 +371,7 @@ pub const GameScreen = struct {
             .text_data = fps_text_data,
         });
 
-        screen.panel_controller = try PanelController.init(allocator, .{
-            .x = camera.screen_width,
-            .y = camera.screen_height,
-            .width = inventory_data.texWRaw() + 10,
-            .height = inventory_data.texHRaw() + 10,
-        });
+        screen.options = try Options.init(allocator);
 
         screen.inited = true;
         return screen;
@@ -385,7 +380,7 @@ pub const GameScreen = struct {
     pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_color: u32, text_color: u32) !void {
         var chat_line = blk: {
             if (name.len > 0) {
-                const line_str = try std.fmt.allocPrint(self._allocator, "&c={x}[{s}]: &c={x}{s}", .{ name_color, name, text_color, text });
+                const line_str = try std.fmt.allocPrint(self._allocator, "&col=\"{x}\"[{s}]: &col=\"{x}\"{s}", .{ name_color, name, text_color, text });
                 break :blk try self.chat_container.createElement(element.Text, .{
                     .x = 0,
                     .y = 0,
@@ -398,7 +393,7 @@ pub const GameScreen = struct {
                     },
                 });
             } else {
-                const line_str = try std.fmt.allocPrint(self._allocator, "&c={x}{s}", .{ text_color, text });
+                const line_str = try std.fmt.allocPrint(self._allocator, "&col=\"{x}\"{s}", .{ text_color, text });
                 break :blk try self.chat_container.createElement(element.Text, .{
                     .x = 0,
                     .y = 0,
@@ -490,7 +485,7 @@ pub const GameScreen = struct {
         }
 
         self.chat_lines.deinit();
-        self.panel_controller.deinit();
+        self.options.deinit();
 
         self._allocator.destroy(self);
     }
@@ -539,7 +534,7 @@ pub const GameScreen = struct {
             self.container_items[idx].background_y = self.container_decor.y + sc.current_screen.game.container_pos_data[idx].y;
         }
 
-        self.panel_controller.resize(w, h);
+        self.options.resize(w, h);
     }
 
     pub fn update(self: *GameScreen, _: i64, _: f32) !void {
@@ -547,7 +542,7 @@ pub const GameScreen = struct {
 
         while (!map.object_lock.tryLockShared()) {}
         defer map.object_lock.unlockShared();
-        
+
         if (map.localPlayerConst()) |local_player| {
             if (game_data.classes.get(local_player.obj_type)) |char_class| {
                 if (!self.abilities_inited) {
@@ -601,13 +596,13 @@ pub const GameScreen = struct {
         text_data.text = (if (bonus_val > 0)
             std.fmt.bufPrint(
                 text_data._backing_buffer,
-                "{d}&s=8&c=65E698\n(+{d})",
+                "{d}&size=\"8\"&col=\"65E698\"\n(+{d})",
                 .{ base_val, bonus_val },
             )
         else if (bonus_val < 0)
             std.fmt.bufPrint(
                 text_data._backing_buffer,
-                "{d}&s=8&c=FF7070\n({d})",
+                "{d}&size=\"8\"&col=\"FF7070\"\n({d})",
                 .{ base_val, bonus_val },
             )
         else
@@ -1070,17 +1065,5 @@ pub const GameScreen = struct {
 
         self.container_visible = visible;
         self.container_decor.visible = visible;
-    }
-
-    pub fn showPanel(self: *GameScreen, class_type: game_data.ClassType) void {
-        self.interact_class = class_type;
-        const text_size = 16.0;
-        switch (self.interact_class) {
-            .guild_register => self.panel_controller.showBasicPanel("Guild Register", text_size),
-            .guild_merchant => self.panel_controller.showBasicPanel("Guild Merchant", text_size),
-            .guild_chronicle => self.panel_controller.showBasicPanel("Guild Chronicle", text_size),
-            .guild_board => self.panel_controller.showBasicPanel("Guild Board", text_size),
-            else => {},
-        }
     }
 };

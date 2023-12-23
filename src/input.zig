@@ -84,7 +84,8 @@ fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
         }
     } else if (key == settings.options.getKey()) {
         if (sc.current_screen == .game) {
-            sc.current_screen.game.panel_controller.setOptionsVisible(true);
+            sc.current_screen.game.options.setVisible(true);
+            disable_input = true;
         }
 
         if (sc.current_screen == .editor) {
@@ -173,7 +174,8 @@ fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
         }
     } else if (button == settings.options.getMouse()) {
         if (sc.current_screen == .game) {
-            sc.current_screen.game.panel_controller.setOptionsVisible(true);
+            sc.current_screen.game.options.setVisible(true);
+            disable_input = true;
         }
 
         if (sc.current_screen == .editor) {

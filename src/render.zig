@@ -1787,7 +1787,8 @@ fn drawText(
     const outline_rgb = element.RGBF32.fromInt(text_data.outline_color);
 
     const size_scale = text_data.size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
-    var line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
+    const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
+    var line_height = start_line_height;
 
     const max_width_off = text_data.max_width == std.math.floatMax(f32);
     const max_height_off = text_data.max_height == std.math.floatMax(f32);
@@ -1819,59 +1820,88 @@ fn drawText(
     var current_type = text_data.text_type;
     var index_offset: u16 = 0;
     for (0..text_data.text.len) |i| {
-        if (i + index_offset >= text_data.text.len)
+        const offset_i = i + index_offset;
+        if (offset_i >= text_data.text.len)
             return idx_new;
 
-        const char = text_data.text[i + index_offset];
+        const char = text_data.text[offset_i];
         specialChar: {
             if (!text_data.handle_special_chars)
                 break :specialChar;
 
             if (char == '&') {
-                const start_idx = i + index_offset + 3;
-                if (text_data.text.len <= start_idx or text_data.text[start_idx - 1] != '=')
-                    break :specialChar;
+                const name_start = text_data.text[offset_i + 1 ..];
+                if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
+                    const value_start_idx = offset_i + 1 + eql_idx + 1;
+                    if (text_data.text.len <= value_start_idx or text_data.text[value_start_idx] != '"')
+                        break :specialChar;
 
-                switch (text_data.text[start_idx - 2]) {
-                    'c' => {
-                        if (text_data.text.len < start_idx + 6)
-                            break :specialChar;
+                    const value_start = text_data.text[value_start_idx + 1 ..];
+                    if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
+                        const name = name_start[0..eql_idx];
+                        const value = value_start[0..value_end_idx];
+                        if (std.mem.eql(u8, name, "col")) {
+                            const int_color = std.fmt.parseInt(u32, value, 16) catch break :specialChar;
+                            current_color = element.RGBF32.fromInt(int_color);
+                        } else if (std.mem.eql(u8, name, "size")) {
+                            const size = std.fmt.parseFloat(f32, value) catch break :specialChar;
+                            current_size = size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
+                            line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
+                            y_pointer += line_height - start_line_height;
+                        } else if (std.mem.eql(u8, name, "type")) {
+                            if (std.mem.eql(u8, value, "med")) {
+                                current_type = .medium;
+                            } else if (std.mem.eql(u8, value, "med_it")) {
+                                current_type = .medium_italic;
+                            } else if (std.mem.eql(u8, value, "bold")) {
+                                current_type = .bold;
+                            } else if (std.mem.eql(u8, value, "bold_it")) {
+                                current_type = .bold_italic;
+                            }
+                        } else if (std.mem.eql(u8, name, "img")) {
+                            var values = std.mem.splitScalar(u8, value, ',');
+                            const sheet = values.next();
+                            if (sheet == null or std.mem.eql(u8, sheet.?, value)) {
+                                std.log.err("Invalid sheet given to control code: {?s}", .{sheet});
+                                break :specialChar;
+                            }
 
-                        const int_color = std.fmt.parseInt(u32, text_data.text[start_idx .. start_idx + 6], 16) catch 0;
-                        current_color = element.RGBF32.fromInt(int_color);
-                        index_offset += 8;
+                            const index_str = values.next() orelse {
+                                std.log.err("Index was not found for control code with sheet {s}", .{sheet.?});
+                                break :specialChar;
+                            };
+                            const index = std.fmt.parseInt(u32, index_str, 0) catch {
+                                std.log.err("Invalid index given to control code with sheet {s}: {s}", .{ sheet.?, index_str });
+                                break :specialChar;
+                            };
+                            const data = assets.atlas_data.get(sheet.?) orelse {
+                                std.log.err("Sheet {s} given to control code was not found in atlas", .{sheet.?});
+                                break :specialChar;
+                            };
+                            if (index >= data.len) {
+                                std.log.err("The index {d} given for sheet {s} in control code was out of bounds", .{ index, sheet.? });
+                                break :specialChar;
+                            }
+
+                            const quad_size = current_size * assets.CharacterData.size;
+                            idx_new = drawQuad(
+                                idx_new,
+                                x_pointer + camera.screen_width / 2.0,
+                                y_pointer - line_height + camera.screen_height / 2.0,
+                                quad_size,
+                                quad_size,
+                                data[index],
+                                draw_data,
+                                &.{ .shadow_texel_mult = 0.5, .force_glow_off = true, .alpha_mult = text_data.alpha },
+                            );
+
+                            x_pointer += quad_size;
+                        } else break :specialChar;
+
+                        index_offset += 1 + @as(u16, @intCast(eql_idx)) + 1 + @as(u16, @intCast(value_end_idx)) + 1;
                         continue;
-                    },
-                    's' => {
-                        var size_len: u8 = 0;
-                        while (start_idx + size_len < text_data.text.len and std.ascii.isDigit(text_data.text[start_idx + size_len])) {
-                            size_len += 1;
-                        }
-
-                        if (size_len == 0)
-                            break :specialChar;
-
-                        const size = std.fmt.parseFloat(f32, text_data.text[start_idx .. start_idx + size_len]) catch 16.0;
-                        current_size = size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
-                        line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
-                        index_offset += 2 + size_len;
-                        continue;
-                    },
-                    't' => {
-                        switch (text_data.text[start_idx]) {
-                            'm' => current_type = .medium,
-                            'i' => current_type = .medium_italic,
-                            'b' => current_type = .bold,
-                            // this has no reason to be 'c', just a hack...
-                            'c' => current_type = .bold_italic,
-                            else => {},
-                        }
-
-                        index_offset += 3;
-                        continue;
-                    },
-                    else => {},
-                }
+                    } else break :specialChar;
+                } else break :specialChar;
             }
         }
         const mod_char = if (text_data.password) '*' else char;
@@ -2447,7 +2477,7 @@ fn drawElement(
                 bar.y + (h - bar.text_data._height) / 2 + y_offset,
                 &bar.text_data,
                 draw_data,
-                &bar.scissor,
+                &.{},
             );
         },
         .button => |button| {

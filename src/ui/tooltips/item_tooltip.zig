@@ -200,9 +200,9 @@ pub const ItemTooltip = struct {
             const line_base = "{s}\n";
             const line_base_inset = line_base ++ "- ";
 
-            const string_fmt = "&c=FFFF8F{s}&c=9B9B9B";
-            const decimal_fmt = "&c=FFFF8F{d}&c=9B9B9B";
-            const float_fmt = "&c=FFFF8F{d:.1}&c=9B9B9B";
+            const string_fmt = "&col=\"FFFF8F\"{s}&col=\"9B9B9B\"";
+            const decimal_fmt = "&col=\"FFFF8F\"{d}&col=\"9B9B9B\"";
+            const float_fmt = "&col=\"FFFF8F\"{d:.1}&col=\"9B9B9B\"";
 
             var written_on_use = false;
             var text: []u8 = "";
@@ -313,19 +313,19 @@ pub const ItemTooltip = struct {
             if (props.stat_increments) |stat_increments| {
                 for (stat_increments, 0..) |stat_increment, i| {
                     if (i == 0)
-                        text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "On Equip:", .{text}) catch text;
+                        text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "On Equip: ", .{text}) catch text;
 
                     if (stat_increment.amount > 0) {
                         text = std.fmt.bufPrint(
                             self.getMainBuffer(),
-                            line_base ++ "+" ++ decimal_fmt ++ " {s}",
-                            .{ text, stat_increment.amount, stat_increment.stat.toString() },
+                            "{s}+" ++ decimal_fmt ++ " {s}{s}",
+                            .{ text, stat_increment.amount, stat_increment.stat.toControlCode(), if (i == stat_increments.len - 1) "" else ", " },
                         ) catch text;
                     } else {
                         text = std.fmt.bufPrint(
                             self.getMainBuffer(),
-                            line_base ++ decimal_fmt ++ " {s}",
-                            .{ text, stat_increment.amount, stat_increment.stat.toString() },
+                            "{s}" ++ decimal_fmt ++ " {s}{s}",
+                            .{ text, stat_increment.amount, stat_increment.stat.toControlCode(), if (i == stat_increments.len - 1) "" else ", " },
                         ) catch text;
                     }
                 }
@@ -366,7 +366,7 @@ pub const ItemTooltip = struct {
                     if (!has_type) {
                         footer_text = std.fmt.bufPrint(
                             self.getFooterBuffer(),
-                            line_base ++ "&c=D00000Not usable by: " ++ string_fmt,
+                            line_base ++ "&col=\"D00000\"Not usable by: " ++ string_fmt,
                             .{ footer_text, player.class_name },
                         ) catch footer_text;
 

@@ -146,7 +146,7 @@ pub const print_atlas = false;
 pub const print_ui_atlas = false;
 pub const rotate_speed = 0.002;
 pub const enable_tracy = false;
-pub const unset_key_tex_idx: u16 = 0x68;
+pub const unset_key_tex_idx = 0x68;
 
 pub var interact_key_tex: assets.AtlasData = undefined;
 pub var key_tex_map: std.AutoHashMap(Button, u16) = undefined;

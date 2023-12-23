@@ -22,6 +22,12 @@ pub const ThrowParticle = struct {
     _last_update: i64 = 0,
 
     pub fn addToMap(self: *ThrowParticle) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+        
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
@@ -80,6 +86,12 @@ pub const SparkerParticle = struct {
     _last_update: i64 = 0,
 
     pub fn addToMap(self: *SparkerParticle) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
@@ -136,6 +148,12 @@ pub const SparkParticle = struct {
     dy: f32,
 
     pub fn addToMap(self: *SparkParticle) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
@@ -170,6 +188,12 @@ pub const TeleportParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(self: *TeleportParticle) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
@@ -205,6 +229,12 @@ pub const ExplosionParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(self: *ExplosionParticle) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
@@ -242,6 +272,12 @@ pub const HitParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(self: *HitParticle) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
@@ -279,6 +315,12 @@ pub const HealParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(self: *HealParticle) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
@@ -349,6 +391,12 @@ pub const ThrowEffect = struct {
     duration: i64,
 
     pub fn addToMap(self: *ThrowEffect) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = ParticleEffect.getNextObjId();
         map.entities.append(.{ .particle_effect = .{ .throw = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
@@ -382,6 +430,12 @@ pub const AoeEffect = struct {
     color: u32,
 
     pub fn addToMap(self: *AoeEffect) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = ParticleEffect.getNextObjId();
         map.entities.append(.{ .particle_effect = .{ .aoe = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
@@ -420,6 +474,12 @@ pub const TeleportEffect = struct {
     y: f32,
 
     pub fn addToMap(self: *TeleportEffect) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = ParticleEffect.getNextObjId();
         map.entities.append(.{ .particle_effect = .{ .teleport = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
@@ -456,6 +516,12 @@ pub const LineEffect = struct {
     color: u32,
 
     pub fn addToMap(self: *LineEffect) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = ParticleEffect.getNextObjId();
         map.entities.append(.{ .particle_effect = .{ .line = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
@@ -494,6 +560,12 @@ pub const ExplosionEffect = struct {
     amount: u32,
 
     pub fn addToMap(self: *ExplosionEffect) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = ParticleEffect.getNextObjId();
         map.entities.append(.{ .particle_effect = .{ .explosion = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
@@ -536,6 +608,12 @@ pub const HitEffect = struct {
     amount: u32,
 
     pub fn addToMap(self: *HitEffect) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = ParticleEffect.getNextObjId();
         map.entities.append(.{ .particle_effect = .{ .hit = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
@@ -576,6 +654,12 @@ pub const HealEffect = struct {
     color: u32,
 
     pub fn addToMap(self: *HealEffect) void {
+        const should_lock = map.entities.capacity == 0;
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+
         self.obj_id = ParticleEffect.getNextObjId();
         map.entities.append(.{ .particle_effect = .{ .heal = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});

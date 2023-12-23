@@ -102,7 +102,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 pub fn switchScreen(screen_type: ScreenType) void {
     while (!ui_lock.tryLock()) {}
     defer ui_lock.unlock();
-    
+
     menu_background.visible = screen_type != .game and screen_type != .editor;
     input.selected_key_mapper = null;
 
@@ -175,9 +175,7 @@ pub fn removeAttachedUi(obj_id: i32, allocator: std.mem.Allocator) void {
     var iter = std.mem.reverseIterator(temp_elements.items);
     var i: usize = temp_elements.items.len - 1;
     while (iter.nextPtr()) |elem| {
-        defer if (i != 0) {
-            i -= 1;
-        };
+        defer i -%= 1;
 
         switch (elem.*) {
             .status => |*status| {
@@ -722,9 +720,7 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) !void {
     var iter = std.mem.reverseIterator(temp_elements.items);
     var i: usize = temp_elements.items.len - 1;
     while (iter.nextPtr()) |elem| {
-        defer if (i != 0) {
-            i -= 1;
-        };
+        defer i -%= 1;
 
         switch (elem.*) {
             .status => |*status_text| {
