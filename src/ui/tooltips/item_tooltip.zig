@@ -36,7 +36,7 @@ pub const ItemTooltip = struct {
             .x = 0,
             .y = 0,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 16, 16, 1, 1, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 14, 14, 2, 2, 1.0),
             },
         });
 
@@ -78,15 +78,15 @@ pub const ItemTooltip = struct {
         const tooltip_line_spacer_data = assets.getUiData("tooltip_line_spacer", 0);
         self.line_break_one = try self.root.createElement(element.Image, .{
             .x = 20,
-            .y = self.image.y + self.image.height() + 10,
+            .y = self.image.y + self.image.height(),
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 4, 13, 0, 1, 4, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 14, 13, 0, 1, 14, 1.0),
             },
         });
 
         self.main_text = try self.root.createElement(element.Text, .{
             .x = 10,
-            .y = self.line_break_one.y + self.line_break_one.height() + 10,
+            .y = self.line_break_one.y + self.line_break_one.height() + 20,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -99,15 +99,15 @@ pub const ItemTooltip = struct {
 
         self.line_break_two = try self.root.createElement(element.Image, .{
             .x = 20,
-            .y = self.main_text.y + self.main_text.text_data._height + 10,
+            .y = self.main_text.y + self.main_text.text_data._height,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 4, 13, 0, 1, 4, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 14, 13, 0, 1, 14, 1.0),
             },
         });
 
         self.footer = try self.root.createElement(element.Text, .{
             .x = 10,
-            .y = self.line_break_two.y + self.line_break_two.height() + 10,
+            .y = self.line_break_two.y + self.line_break_two.height() + 20,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -195,7 +195,7 @@ pub const ItemTooltip = struct {
             self.item_name.text_data.recalculateAttributes(self._allocator);
 
             self.line_break_one.y = self.image.y + self.image.height() + 10;
-            self.main_text.y = self.line_break_one.y - 10;
+            self.main_text.y = self.line_break_one.y - 5;
 
             const line_base = "{s}\n";
             const line_base_inset = line_base ++ "- ";
@@ -340,8 +340,8 @@ pub const ItemTooltip = struct {
             self.main_text.text_data.text = text;
             self.main_text.text_data.recalculateAttributes(self._allocator);
 
-            self.line_break_two.y = self.main_text.y + self.main_text.text_data._height + 10;
-            self.footer.y = self.line_break_two.y - 10;
+            self.line_break_two.y = self.main_text.y + self.main_text.text_data._height + 5;
+            self.footer.y = self.line_break_two.y - 5;
 
             var footer_text: []u8 = "";
             if (props.untradeable)

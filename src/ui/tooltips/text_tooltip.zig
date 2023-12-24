@@ -27,7 +27,7 @@ pub const TextTooltip = struct {
             .x = 0,
             .y = 0,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 0, 0, 16, 16, 1, 1, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 0, 0, 14, 14, 2, 2, 1.0),
             },
         });
 

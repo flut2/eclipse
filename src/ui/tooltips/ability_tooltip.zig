@@ -32,7 +32,7 @@ pub const AbilityTooltip = struct {
             .x = 0,
             .y = 0,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 16, 16, 1, 1, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 14, 14, 2, 2, 1.0),
             },
         });
 
@@ -73,13 +73,13 @@ pub const AbilityTooltip = struct {
             .x = 20,
             .y = self.image.y + self.image.height() + 10,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 4, 13, 0, 1, 4, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 14, 13, 0, 1, 14, 1.0),
             },
         });
 
         self.description = try self.root.createElement(element.Text, .{
             .x = 10,
-            .y = self.line_break.y + self.line_break.height() + 10,
+            .y = self.line_break.y + self.line_break.height() + 20,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -140,7 +140,7 @@ pub const AbilityTooltip = struct {
             self.description.text_data.recalculateAttributes(self._allocator);
 
             self.line_break.y = self.image.y + self.image.height() + 10;
-            self.description.y = self.line_break.y + 10;
+            self.description.y = self.line_break.y + 20;
 
             const new_h = self.description.y + self.description.text_data._height + 10;
             switch (self.decor.image_data) {
