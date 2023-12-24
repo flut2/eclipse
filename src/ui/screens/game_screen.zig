@@ -436,6 +436,7 @@ pub const GameScreen = struct {
                 .x = idx.* * 48.0,
                 .y = 0,
                 .image_data = .{ .normal = .{ .atlas_data = data[index] } },
+                .ability_props = ability,
             });
         } else {
             std.log.err("Could not initiate ability for GameScreen, sheet was missing", .{});
@@ -510,7 +511,7 @@ pub const GameScreen = struct {
         self.mana_bar.x = self.bars_decor.x + 47;
         self.mana_bar.y = self.bars_decor.y + 18;
         const chat_decor_h = self.chat_decor.height();
-        self.chat_decor.y = h - chat_decor_h - self.chat_input.imageData().normal.height() - 10;
+        self.chat_decor.y = h - chat_decor_h - self.chat_input.image_data.current(self.chat_input.state).normal.height() - 10;
         self.chat_container._container.x = self.chat_decor.x + 9;
         const old_y = self.chat_container.base_y;
         self.chat_container.base_y = self.chat_decor.y + 9;

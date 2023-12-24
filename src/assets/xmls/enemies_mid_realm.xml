@@ -17,7 +17,7 @@
             <Damage>85</Damage>
             <Speed>70</Speed>
             <Size>150</Size>
-            <LifetimeMS>1700</LifetimeMS>
+            <Lifetime>1700</Lifetime>
             <Amplitude>1</Amplitude>
             <Frequency>0.33</Frequency>
             <MultiHit/>
@@ -31,7 +31,7 @@
             <Damage>105</Damage>
             <Speed>100</Speed>
             <Size>150</Size>
-            <LifetimeMS>1600</LifetimeMS>
+            <Lifetime>1600</Lifetime>
             <Amplitude>2</Amplitude>
             <Frequency>0.33</Frequency>
             <MultiHit/>
@@ -45,7 +45,7 @@
             <Damage>105</Damage>
             <Speed>100</Speed>
             <Size>150</Size>
-            <LifetimeMS>1600</LifetimeMS>
+            <Lifetime>1600</Lifetime>
             <Amplitude>1</Amplitude>
             <Frequency>0.45</Frequency>
         </Projectile>
@@ -58,7 +58,7 @@
             <Damage>105</Damage>
             <Speed>120</Speed>
             <Size>150</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>1</Amplitude>
             <Frequency>0.45</Frequency>
             <MultiHit/>
@@ -84,7 +84,7 @@
             <Damage>155</Damage>
             <Speed>70</Speed>
             <Size>160</Size>
-            <LifetimeMS>1700</LifetimeMS>
+            <Lifetime>1700</Lifetime>
             <Amplitude>0.6</Amplitude>
             <Frequency>0.6</Frequency>
             <MultiHit/>
@@ -98,7 +98,7 @@
             <Damage>125</Damage>
             <Speed>100</Speed>
             <Size>140</Size>
-            <LifetimeMS>1600</LifetimeMS>
+            <Lifetime>1600</Lifetime>
             <Amplitude>0.3</Amplitude>
             <Frequency>0.6</Frequency>
             <MultiHit/>
@@ -124,7 +124,7 @@
             <Damage>175</Damage>
             <Speed>70</Speed>
             <Size>150</Size>
-            <LifetimeMS>2800</LifetimeMS>
+            <Lifetime>2800</Lifetime>
             <Amplitude>0.3</Amplitude>
             <Frequency>0.6</Frequency>
             <MultiHit/>
@@ -137,7 +137,7 @@
             <Damage>95</Damage>
             <Speed>110</Speed>
             <Size>150</Size>
-            <LifetimeMS>1700</LifetimeMS>
+            <Lifetime>1700</Lifetime>
             <Amplitude>0.7</Amplitude>
             <Frequency>0.6</Frequency>
             <MultiHit/>
@@ -162,7 +162,7 @@
             <Damage>55</Damage>
             <Speed>100</Speed>
             <Size>120</Size>
-            <LifetimeMS>500</LifetimeMS>
+            <Lifetime>500</Lifetime>
             <Amplitude>1</Amplitude>
             <Frequency>1.4</Frequency>
             <MultiHit/>
@@ -176,7 +176,7 @@
             <Damage>75</Damage>
             <Speed>110</Speed>
             <Size>120</Size>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <Amplitude>0.7</Amplitude>
             <Frequency>1.4</Frequency>
             <MultiHit/>
@@ -201,7 +201,7 @@
             <Damage>75</Damage>
             <Speed>100</Speed>
             <Size>120</Size>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <Magnitude>1.1</Magnitude>
             <Parametric/>
             <MultiHit/>
@@ -215,7 +215,7 @@
             <Damage>55</Damage>
             <Speed>110</Speed>
             <Size>120</Size>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <Amplitude>0.7</Amplitude>
             <Frequency>1.4</Frequency>
             <MultiHit/>
@@ -251,7 +251,7 @@
             <Damage>55</Damage>
             <Speed>110</Speed>
             <Size>120</Size>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <Amplitude>0.33</Amplitude>
             <Frequency>1.7</Frequency>
             <MultiHit/>
@@ -276,7 +276,7 @@
             <Damage>125</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <Amplitude>0.6</Amplitude>
             <Frequency>1.1</Frequency>
             <MultiHit/>
@@ -312,7 +312,7 @@
             <Damage>75</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>1.8</Frequency>
             <MultiHit/>
@@ -337,7 +337,7 @@
             <Damage>75</Damage>
             <Speed>130</Speed>
             <Size>110</Size>
-            <LifetimeMS>800</LifetimeMS>
+            <Lifetime>800</Lifetime>
             <ConditionEffect duration="2">Slowed</ConditionEffect>
             <MultiHit/>
         </Projectile>
@@ -361,7 +361,7 @@
             <Damage>75</Damage>
             <Speed>60</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Magnitude>1.1</Magnitude>
             <Parametric/>
             <MultiHit/>
@@ -375,7 +375,7 @@
             <Damage>125</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>1.8</Frequency>
             <MultiHit/>
@@ -400,7 +400,7 @@
             <Damage>145</Damage>
             <Speed>80</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="1">
@@ -412,7 +412,7 @@
             <Damage>115</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>600</LifetimeMS>
+            <Lifetime>600</Lifetime>
             <Amplitude>0.5</Amplitude>
             <Frequency>0.6</Frequency>
             <MultiHit/>
@@ -437,7 +437,7 @@
             <Damage>100</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.6</Amplitude>
             <Frequency>1.1</Frequency>
             <MultiHit/>
@@ -451,7 +451,7 @@
             <Damage>125</Damage>
             <Speed>80</Speed>
             <Size>110</Size>
-            <LifetimeMS>600</LifetimeMS>
+            <Lifetime>600</Lifetime>
             <Amplitude>0.3</Amplitude>
             <Frequency>1.7</Frequency>
             <MultiHit/>
@@ -476,7 +476,7 @@
             <Damage>100</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.6</Amplitude>
             <Frequency>0.3</Frequency>
             <MultiHit/>
@@ -490,7 +490,7 @@
             <Damage>125</Damage>
             <Speed>80</Speed>
             <Size>110</Size>
-            <LifetimeMS>600</LifetimeMS>
+            <Lifetime>600</Lifetime>
             <Amplitude>0.3</Amplitude>
             <Frequency>1.7</Frequency>
             <MultiHit/>
@@ -515,7 +515,7 @@
             <Damage>100</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.4</Amplitude>
             <Frequency>1.2</Frequency>
             <MultiHit/>
@@ -549,7 +549,7 @@
             <Damage>100</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.7</Frequency>
             <MultiHit/>
@@ -574,7 +574,7 @@
             <Damage>100</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.7</Frequency>
             <MultiHit/>
@@ -599,7 +599,7 @@
             <Damage>100</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.7</Frequency>
             <MultiHit/>
@@ -624,7 +624,7 @@
             <Damage>100</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.7</Frequency>
             <MultiHit/>
@@ -649,7 +649,7 @@
             <Damage>75</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.9</Frequency>
             <MultiHit/>
@@ -674,7 +674,7 @@
             <Damage>75</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.9</Frequency>
             <MultiHit/>
@@ -699,7 +699,7 @@
             <Damage>75</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.9</Frequency>
             <MultiHit/>
@@ -724,7 +724,7 @@
             <Damage>75</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.9</Frequency>
             <MultiHit/>
@@ -749,7 +749,7 @@
             <Damage>125</Damage>
             <Speed>95</Speed>
             <Size>120</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="1">
@@ -761,7 +761,7 @@
             <Damage>175</Damage>
             <Speed>140</Speed>
             <Size>150</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <MultiHit/>
         </Projectile>
         <Size>170</Size>
@@ -784,7 +784,7 @@
             <Damage>125</Damage>
             <Speed>95</Speed>
             <Size>120</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="1">
@@ -796,7 +796,7 @@
             <Damage>175</Damage>
             <Speed>140</Speed>
             <Size>150</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <MultiHit/>
         </Projectile>
         <Size>170</Size>
@@ -818,7 +818,7 @@
             <Damage>125</Damage>
             <Speed>95</Speed>
             <Size>120</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="1">
@@ -830,7 +830,7 @@
             <Damage>175</Damage>
             <Speed>140</Speed>
             <Size>150</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <MultiHit/>
         </Projectile>
         <Size>170</Size>
@@ -853,7 +853,7 @@
             <Damage>125</Damage>
             <Speed>95</Speed>
             <Size>120</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="1">
@@ -865,7 +865,7 @@
             <Damage>175</Damage>
             <Speed>140</Speed>
             <Size>150</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <MultiHit/>
         </Projectile>
         <Size>170</Size>
@@ -888,7 +888,7 @@
             <Damage>95</Damage>
             <Speed>95</Speed>
             <Size>120</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <Amplitude>0.8</Amplitude>
             <Frequency>0.8</Frequency>
             <MultiHit/>
@@ -902,7 +902,7 @@
             <Damage>75</Damage>
             <Speed>70</Speed>
             <Size>150</Size>
-            <LifetimeMS>2600</LifetimeMS>
+            <Lifetime>2600</Lifetime>
             <Amplitude>0.6</Amplitude>
             <Frequency>1</Frequency>
             <Boomerang/>
@@ -929,7 +929,7 @@
             <Damage>125</Damage>
             <Speed>115</Speed>
             <Size>120</Size>
-            <LifetimeMS>2600</LifetimeMS>
+            <Lifetime>2600</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.9</Frequency>
             <MultiHit/>
@@ -943,7 +943,7 @@
             <Damage>75</Damage>
             <Speed>70</Speed>
             <Size>150</Size>
-            <LifetimeMS>2600</LifetimeMS>
+            <Lifetime>2600</Lifetime>
             <Amplitude>0.7</Amplitude>
             <Frequency>0.7</Frequency>
             <MultiHit/>
@@ -957,7 +957,7 @@
             <Damage>145</Damage>
             <Speed>115</Speed>
             <Size>120</Size>
-            <LifetimeMS>2600</LifetimeMS>
+            <Lifetime>2600</Lifetime>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.9</Frequency>
             <MultiHit/>
@@ -971,7 +971,7 @@
             <Damage>105</Damage>
             <Speed>70</Speed>
             <Size>150</Size>
-            <LifetimeMS>2600</LifetimeMS>
+            <Lifetime>2600</Lifetime>
             <Amplitude>0.7</Amplitude>
             <Frequency>0.7</Frequency>
             <MultiHit/>
@@ -997,7 +997,7 @@
             <Damage>145</Damage>
             <Speed>85</Speed>
             <Size>120</Size>
-            <LifetimeMS>2800</LifetimeMS>
+            <Lifetime>2800</Lifetime>
             <ConditionEffect duration="3">Weak</ConditionEffect>
             <Boomerang/>
             <MultiHit/>
@@ -1011,7 +1011,7 @@
             <Damage>75</Damage>
             <Speed>130</Speed>
             <Size>150</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <Amplitude>0.7</Amplitude>
             <Frequency>0.7</Frequency>
             <MultiHit/>
@@ -1037,7 +1037,7 @@
             <Damage>115</Damage>
             <Speed>85</Speed>
             <Size>120</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <Magnitude>3</Magnitude>
             <Parametric/>
             <MultiHit/>
@@ -1051,7 +1051,7 @@
             <Damage>95</Damage>
             <Speed>130</Speed>
             <Size>150</Size>
-            <LifetimeMS>1300</LifetimeMS>
+            <Lifetime>1300</Lifetime>
             <Amplitude>0.7</Amplitude>
             <Frequency>0.7</Frequency>
             <MultiHit/>

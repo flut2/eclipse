@@ -126,7 +126,7 @@ pub const C2SPacket = union(C2SPacketId) {
     change_guild_rank: struct { name: []const u8, rank: i32 },
     reskin: packed struct { skin_id: i32 },
     map_hello: struct { name: []const u8 },
-    use_ability: struct { ability_type: u8, data: []u8 },
+    use_ability: struct { time: i64, ability_type: u8, data: []u8 },
 };
 
 const S2CPacketId = enum(u8) {
@@ -342,14 +342,13 @@ fn handleAllyShoot() void {
                 .y = player.y,
                 .props = proj_props,
                 .angle = angle,
-                .start_time = @divFloor(main.current_time, std.time.us_per_ms),
                 .bullet_id = @intCast(bullet_id),
                 .owner_id = player.obj_id,
             };
             proj.addToMap(true);
             // }
 
-            const attack_period: i64 = @intFromFloat(1.0 / (map.attack_frequency * item_props.?.rate_of_fire) * std.time.us_per_ms);
+            const attack_period: i64 = @intFromFloat(1.0 / (map.attack_frequency * item_props.?.rate_of_fire));
             player.attack_period = attack_period;
             player.attack_angle = angle - camera.angle;
             player.attack_start = main.current_time;
@@ -376,7 +375,7 @@ fn handleAoe() void {
         .color = 0xFF0000,
         .radius = radius,
     };
-    effect.addToMap();
+    effect.addToMap(true);
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick or settings.log_packets == .all_non_tick)
         std.log.debug("Recv - Aoe: x={e}, y={e}, radius={e}, damage={d}, condition_effect={any}, duration={e}, orig_type={d}, color={d}", .{ x, y, radius, damage, condition_effect, duration, orig_type, color });
@@ -406,6 +405,9 @@ fn handleDamage() void {
     const bullet_id = reader.read(u8);
     const object_id = reader.read(i32);
 
+    while (!map.object_lock.tryLock()) {}
+    defer map.object_lock.unlock();
+
     if (map.findEntityRef(target_id)) |en| {
         switch (en.*) {
             .player => |*player| {
@@ -414,12 +416,12 @@ fn handleDamage() void {
                     0,
                     0,
                     kill,
-                    @divFloor(main.current_time, std.time.us_per_ms),
                     effects,
                     player.colors,
                     0.0,
                     100.0 / 10000.0,
                     _allocator,
+                    false,
                 );
             },
             .object => |*object| {
@@ -428,12 +430,12 @@ fn handleDamage() void {
                     0,
                     0,
                     kill,
-                    @divFloor(main.current_time, std.time.us_per_ms),
                     effects,
                     object.colors,
                     0.0,
                     100.0 / 10000.0,
                     _allocator,
+                    false,
                 );
             },
             else => {},
@@ -499,7 +501,6 @@ fn handleEnemyShoot() void {
             .true_damage = true_damage,
             .props = proj_props,
             .angle = current_angle,
-            .start_time = @divFloor(main.current_time, std.time.us_per_ms),
             .bullet_id = bullet_id +% @as(u8, @intCast(i)),
             .owner_id = owner_id,
             .damage_players = true,
@@ -608,7 +609,7 @@ fn handleMapInfo() void {
 
 fn handleNewTick() void {
     const tick_id = reader.read(u8);
-    const tick_time = 1000.0 / @as(f32, @floatFromInt(reader.read(u8)));
+    const tick_time = @as(f32, std.time.us_per_s) / @as(f32, @floatFromInt(reader.read(u8)));
 
     while (!map.object_lock.tryLock()) {}
     defer map.object_lock.unlock();
@@ -730,7 +731,7 @@ fn handleNewTick() void {
             }
         }
 
-        std.log.err("Could not find object in NewTick (obj_id={d}, x={d}, y={d})", .{ obj_id, x, y });
+        std.log.err("Could not find object in NewTick (obj_id={d}, x={d:.2}, y={d:.2})", .{ obj_id, x, y });
     }
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_tick)
@@ -753,7 +754,6 @@ fn handleNotification() void {
         if (en == .player) {
             element.StatusText.add(.{
                 .obj_id = en.player.obj_id,
-                .start_time = @divFloor(main.current_time, std.time.us_per_ms),
                 .lifetime = 2000,
                 .text_data = text_data,
                 .initial_size = 22,
@@ -761,7 +761,6 @@ fn handleNotification() void {
         } else if (en == .object) {
             element.StatusText.add(.{
                 .obj_id = en.object.obj_id,
-                .start_time = @divFloor(main.current_time, std.time.us_per_ms),
                 .lifetime = 2000,
                 .text_data = text_data,
                 .initial_size = 22,
@@ -828,7 +827,6 @@ fn handleServerPlayerShoot() void {
                     .physical_damage = damage,
                     .props = proj_props,
                     .angle = current_angle,
-                    .start_time = @divFloor(main.current_time, std.time.us_per_ms),
                     .bullet_id = bullet_id +% @as(u8, @intCast(i)), // this is wrong but whatever
                     .owner_id = owner_id,
                 };
@@ -884,14 +882,14 @@ fn handleShowEffect() void {
                 .color = color,
                 .duration = 1500,
             };
-            effect.addToMap();
+            effect.addToMap(true);
         },
         .teleport => {
             var effect = particles.TeleportEffect{
                 .x = x1,
                 .y = y1,
             };
-            effect.addToMap();
+            effect.addToMap(true);
         },
         .trail => {
             var start_x = x2;
@@ -918,7 +916,7 @@ fn handleShowEffect() void {
                 .end_y = y1,
                 .color = color,
             };
-            effect.addToMap();
+            effect.addToMap(true);
         },
         .potion => {
             // the effect itself handles checks for invalid entity
@@ -926,7 +924,7 @@ fn handleShowEffect() void {
                 .target_id = target_object_id,
                 .color = color,
             };
-            effect.addToMap();
+            effect.addToMap(true);
         },
         .earthquake => {
             camera.quake = true;
@@ -997,7 +995,6 @@ fn handleText() void {
                 .color = text_color,
             },
             .target_id = object_id,
-            .start_time = @divFloor(main.current_time, std.time.us_per_ms),
         }) catch unreachable;
     }
 
@@ -1055,11 +1052,13 @@ fn handleUpdate() void {
     main.need_minimap_update = tiles.len > 0;
 
     const drops = reader.readArray(i32);
-    while (!map.object_lock.tryLock()) {}
-    defer map.object_lock.unlock();
+    {
+        while (!map.object_lock.tryLock()) {}
+        defer map.object_lock.unlock();
 
-    for (drops) |drop| {
-        map.removeEntity(_allocator, drop);
+        for (drops) |drop| {
+            map.removeEntity(_allocator, drop);
+        }
     }
 
     var stat_reader = utils.PacketReader{};
@@ -1094,7 +1093,7 @@ fn handleUpdate() void {
                 if (obj_id == map.local_player_id and sc.current_screen == .game)
                     sc.current_screen.game.updateStats();
 
-                player.addToMap(_allocator);
+                player.addToMap(_allocator, true);
             },
             inline else => {
                 var obj = map.GameObject{ .x = x, .y = y, .obj_id = obj_id, .obj_type = obj_type };
@@ -1111,7 +1110,7 @@ fn handleUpdate() void {
                     }
                 }
 
-                obj.addToMap(_allocator);
+                obj.addToMap(_allocator, true);
             },
         }
     }

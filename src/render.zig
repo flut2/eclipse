@@ -1836,15 +1836,32 @@ fn drawText(
                     if (text_data.text.len <= value_start_idx or text_data.text[value_start_idx] != '"')
                         break :specialChar;
 
+                    const reset = "reset";
+                    if (text_data.text.len > offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
+                        current_type = text_data.text_type;
+                        current_color = rgb;
+                        current_size = size_scale;
+                        line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
+                        y_pointer += line_height - start_line_height;
+                        index_offset += @intCast(reset.len);
+                        continue;
+                    }
+
                     const value_start = text_data.text[value_start_idx + 1 ..];
                     if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
                         const name = name_start[0..eql_idx];
                         const value = value_start[0..value_end_idx];
                         if (std.mem.eql(u8, name, "col")) {
-                            const int_color = std.fmt.parseInt(u32, value, 16) catch break :specialChar;
+                            const int_color = std.fmt.parseInt(u32, value, 16) catch {
+                                std.log.err("Invalid color given to control code: {s}", .{value});
+                                break :specialChar;
+                            };
                             current_color = element.RGBF32.fromInt(int_color);
                         } else if (std.mem.eql(u8, name, "size")) {
-                            const size = std.fmt.parseFloat(f32, value) catch break :specialChar;
+                            const size = std.fmt.parseFloat(f32, value) catch {
+                                std.log.err("Invalid size given to control code: {s}", .{value});
+                                break :specialChar;
+                            };
                             current_size = size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
                             line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
                             y_pointer += line_height - start_line_height;
@@ -1887,7 +1904,7 @@ fn drawText(
                             idx_new = drawQuad(
                                 idx_new,
                                 x_pointer + camera.screen_width / 2.0,
-                                y_pointer - line_height + camera.screen_height / 2.0,
+                                y_pointer - quad_size + camera.screen_height / 2.0,
                                 quad_size,
                                 quad_size,
                                 data[index],
@@ -1898,7 +1915,7 @@ fn drawText(
                             x_pointer += quad_size;
                         } else break :specialChar;
 
-                        index_offset += 1 + @as(u16, @intCast(eql_idx)) + 1 + @as(u16, @intCast(value_end_idx)) + 1;
+                        index_offset += @intCast(1 + eql_idx + 1 + value_end_idx + 1);
                         continue;
                     } else break :specialChar;
                 } else break :specialChar;
@@ -2487,7 +2504,7 @@ fn drawElement(
             var w: f32 = 0;
             var h: f32 = 0;
 
-            switch (button.imageData()) {
+            switch (button.image_data.current(button.state)) {
                 .nine_slice => |nine_slice| {
                     w = nine_slice.w;
                     h = nine_slice.h;
@@ -2526,7 +2543,7 @@ fn drawElement(
             var w: f32 = 0;
             var h: f32 = 0;
 
-            switch (char_box.imageData()) {
+            switch (char_box.image_data.current(char_box.state)) {
                 .nine_slice => |nine_slice| {
                     w = nine_slice.w;
                     h = nine_slice.h;
@@ -2580,7 +2597,7 @@ fn drawElement(
             var w: f32 = 0;
             var h: f32 = 0;
 
-            switch (input_field.imageData()) {
+            switch (input_field.image_data.current(input_field.state)) {
                 .nine_slice => |nine_slice| {
                     w = nine_slice.w;
                     h = nine_slice.h;
@@ -2631,7 +2648,10 @@ fn drawElement(
             var w: f32 = 0;
             var h: f32 = 0;
 
-            switch (toggle.imageData()) {
+            switch (if (toggle.toggled.*)
+                toggle.on_image_data.current(toggle.state)
+            else
+                toggle.off_image_data.current(toggle.state)) {
                 .nine_slice => |nine_slice| {
                     w = nine_slice.w;
                     h = nine_slice.h;
@@ -2671,7 +2691,7 @@ fn drawElement(
             var w: f32 = 0;
             var h: f32 = 0;
 
-            switch (key_mapper.imageData()) {
+            switch (key_mapper.image_data.current(key_mapper.state)) {
                 .nine_slice => |nine_slice| {
                     w = nine_slice.w;
                     h = nine_slice.h;

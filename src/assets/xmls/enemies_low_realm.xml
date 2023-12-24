@@ -17,7 +17,7 @@
             <Damage>70</Damage>
             <Speed>150</Speed>
             <Size>130</Size>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
         </Projectile>
         <Size>120</Size>
         <Enemy/>
@@ -39,7 +39,7 @@
             <Damage>55</Damage>
             <Speed>75</Speed>
             <Size>150</Size>
-            <LifetimeMS>800</LifetimeMS>
+            <Lifetime>800</Lifetime>
         </Projectile>
         <Size>130</Size>
         <Enemy/>
@@ -61,7 +61,7 @@
             <Damage>80</Damage>
             <Speed>150</Speed>
             <Size>130</Size>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
         </Projectile>
         <Size>120</Size>
         <Enemy/>
@@ -83,7 +83,7 @@
             <Damage>65</Damage>
             <Speed>125</Speed>
             <Size>130</Size>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
         </Projectile>
         <Size>120</Size>
         <Enemy/>
@@ -105,7 +105,7 @@
             <Damage>110</Damage>
             <Speed>150</Speed>
             <Size>130</Size>
-            <LifetimeMS>600</LifetimeMS>
+            <Lifetime>600</Lifetime>
         </Projectile>
         <Projectile id="1">
             <Texture>
@@ -116,7 +116,7 @@
             <Damage>75</Damage>
             <Speed>125</Speed>
             <Size>130</Size>
-            <LifetimeMS>600</LifetimeMS>
+            <Lifetime>600</Lifetime>
         </Projectile>
         <Projectile id="2">
             <Texture>
@@ -127,7 +127,7 @@
             <Damage>160</Damage>
             <Speed>160</Speed>
             <Size>130</Size>
-            <LifetimeMS>500</LifetimeMS>
+            <Lifetime>500</Lifetime>
             <ConditionEffect duration="3">Slowed</ConditionEffect>
         </Projectile>
         <Size>150</Size>
@@ -151,7 +151,7 @@
             <Damage>130</Damage>
             <Speed>75</Speed>
             <Size>130</Size>
-            <LifetimeMS>1800</LifetimeMS>
+            <Lifetime>1800</Lifetime>
             <ConditionEffect duration="3">Slowed</ConditionEffect>
         </Projectile>
         <Projectile id="1">
@@ -163,7 +163,7 @@
             <Damage>55</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>1800</LifetimeMS>
+            <Lifetime>1800</Lifetime>
         </Projectile>
         <Projectile id="2">
             <Texture>
@@ -174,7 +174,7 @@
             <Damage>70</Damage>
             <Speed>55</Speed>
             <Size>120</Size>
-            <LifetimeMS>2700</LifetimeMS>
+            <Lifetime>2700</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="3">
@@ -187,7 +187,7 @@
             <Damage>75</Damage>
             <Speed>145</Speed>
             <Size>110</Size>
-            <LifetimeMS>1800</LifetimeMS>
+            <Lifetime>1800</Lifetime>
             <Boomerang/>
             <MultiHit/>
             <Amplitude>2</Amplitude>
@@ -214,7 +214,7 @@
             <Damage>75</Damage>
             <Speed>75</Speed>
             <Size>100</Size>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
             <Amplitude>1.2</Amplitude>
         </Projectile>
         <Size>110</Size>
@@ -237,7 +237,7 @@
             <Damage>120</Damage>
             <Speed>75</Speed>
             <Size>110</Size>
-            <LifetimeMS>600</LifetimeMS>
+            <Lifetime>600</Lifetime>
             <Amplitude>0.69</Amplitude>
         </Projectile>
         <Size>110</Size>
@@ -260,7 +260,7 @@
             <Damage>90</Damage>
             <Speed>75</Speed>
             <Size>130</Size>
-            <LifetimeMS>1600</LifetimeMS>
+            <Lifetime>1600</Lifetime>
             <Boomerang/>
             <Amplitude>0.22</Amplitude>
         </Projectile>
@@ -284,7 +284,7 @@
             <Damage>125</Damage>
             <Speed>75</Speed>
             <Size>130</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
             <MultiHit/>
             <Amplitude>0.22</Amplitude>
         </Projectile>
@@ -309,7 +309,7 @@
             <Damage>70</Damage>
             <Speed>55</Speed>
             <Size>130</Size>
-            <LifetimeMS>3200</LifetimeMS>
+            <Lifetime>3200</Lifetime>
             <Amplitude>1.2</Amplitude>
         </Projectile>
         <Projectile id="1">
@@ -321,7 +321,7 @@
             <Damage>110</Damage>
             <Speed>75</Speed>
             <Size>130</Size>
-            <LifetimeMS>5600</LifetimeMS>
+            <Lifetime>5600</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="2">
@@ -333,7 +333,7 @@
             <Damage>81</Damage>
             <Speed>27</Speed>
             <Size>99</Size>
-            <LifetimeMS>9000</LifetimeMS>
+            <Lifetime>9000</Lifetime>
             <Boomerang/>
             <MultiHit/>
             <ConditionEffect duration="1">Slowed</ConditionEffect>
@@ -347,7 +347,7 @@
             <Damage>120</Damage>
             <Speed>75</Speed>
             <Size>110</Size>
-            <LifetimeMS>600</LifetimeMS>
+            <Lifetime>600</Lifetime>
             <Amplitude>0.69</Amplitude>
         </Projectile>
         <Projectile id="4">
@@ -360,7 +360,7 @@
             <Damage>75</Damage>
             <Speed>145</Speed>
             <Size>110</Size>
-            <LifetimeMS>1800</LifetimeMS>
+            <Lifetime>1800</Lifetime>
             <Boomerang/>
             <MultiHit/>
             <Amplitude>2</Amplitude>
@@ -375,7 +375,7 @@
             <Damage>75</Damage>
             <Speed>75</Speed>
             <Size>100</Size>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
             <Amplitude>1.2</Amplitude>
         </Projectile>
         <Size>170</Size>
@@ -399,7 +399,7 @@
             <Damage>110</Damage>
             <Speed>75</Speed>
             <Size>130</Size>
-            <LifetimeMS>5600</LifetimeMS>
+            <Lifetime>5600</Lifetime>
             <MultiHit/>
             <Boomerang/>
         </Projectile>
@@ -424,7 +424,7 @@
             <Damage>70</Damage>
             <Speed>75</Speed>
             <Size>130</Size>
-            <LifetimeMS>1000</LifetimeMS>
+            <Lifetime>1000</Lifetime>
         </Projectile>
         <Size>140</Size>
         <Enemy/>
@@ -446,7 +446,7 @@
             <Damage>68</Damage>
             <Speed>42</Speed>
             <Size>66</Size>
-            <LifetimeMS>5000</LifetimeMS>
+            <Lifetime>5000</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="1">
@@ -458,7 +458,7 @@
             <Damage>110</Damage>
             <Speed>75</Speed>
             <Size>130</Size>
-            <LifetimeMS>5600</LifetimeMS>
+            <Lifetime>5600</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="2">
@@ -470,7 +470,7 @@
             <Damage>81</Damage>
             <Speed>27</Speed>
             <Size>99</Size>
-            <LifetimeMS>9000</LifetimeMS>
+            <Lifetime>9000</Lifetime>
             <Boomerang/>
             <MultiHit/>
             <ConditionEffect duration="1">Slowed</ConditionEffect>
@@ -484,7 +484,7 @@
             <Damage>120</Damage>
             <Speed>75</Speed>
             <Size>110</Size>
-            <LifetimeMS>600</LifetimeMS>
+            <Lifetime>600</Lifetime>
             <Amplitude>0.69</Amplitude>
         </Projectile>
         <Projectile id="4">
@@ -497,7 +497,7 @@
             <Damage>75</Damage>
             <Speed>145</Speed>
             <Size>110</Size>
-            <LifetimeMS>1800</LifetimeMS>
+            <Lifetime>1800</Lifetime>
             <Boomerang/>
             <MultiHit/>
             <Amplitude>2</Amplitude>
@@ -512,7 +512,7 @@
             <Damage>75</Damage>
             <Speed>75</Speed>
             <Size>100</Size>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
             <Amplitude>1.2</Amplitude>
         </Projectile>
         <Size>180</Size>
@@ -537,7 +537,7 @@
             <Damage>75</Damage>
             <Speed>95</Speed>
             <Size>130</Size>
-            <LifetimeMS>500</LifetimeMS>
+            <Lifetime>500</Lifetime>
             <MultiHit/>
         </Projectile>
         <Size>140</Size>
@@ -560,7 +560,7 @@
             <Damage>75</Damage>
             <Speed>55</Speed>
             <Size>130</Size>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MultiHit/>
         </Projectile>
         <Size>120</Size>
@@ -584,7 +584,7 @@
             <Damage>95</Damage>
             <Speed>75</Speed>
             <Size>130</Size>
-            <LifetimeMS>1500</LifetimeMS>
+            <Lifetime>1500</Lifetime>
             <MultiHit/>
             <Amplitude>0.7</Amplitude>
         </Projectile>
@@ -619,7 +619,7 @@
             <Damage>130</Damage>
             <Speed>55</Speed>
             <Size>130</Size>
-            <LifetimeMS>3200</LifetimeMS>
+            <Lifetime>3200</Lifetime>
         </Projectile>
         <Projectile id="1">
             <Texture>
@@ -630,7 +630,7 @@
             <Damage>110</Damage>
             <Speed>85</Speed>
             <Size>130</Size>
-            <LifetimeMS>2200</LifetimeMS>
+            <Lifetime>2200</Lifetime>
             <ConditionEffect duration="3">Sick</ConditionEffect>
         </Projectile>
         <Size>170</Size>
@@ -654,7 +654,7 @@
             <Damage>153</Damage>
             <Speed>115</Speed>
             <Size>130</Size>
-            <LifetimeMS>2800</LifetimeMS>
+            <Lifetime>2800</Lifetime>
             <Amplitude>1.2</Amplitude>
             <ConditionEffect duration="3">Bleeding</ConditionEffect>
             <MultiHit/>
@@ -680,7 +680,7 @@
             <Damage>110</Damage>
             <Speed>125</Speed>
             <Size>130</Size>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
             <MultiHit/>
         </Projectile>
         <Size>120</Size>
@@ -703,7 +703,7 @@
             <Damage>75</Damage>
             <Speed>110</Speed>
             <Size>120</Size>
-            <LifetimeMS>3300</LifetimeMS>
+            <Lifetime>3300</Lifetime>
             <Amplitude>0.33</Amplitude>
             <Frequency>0.3</Frequency>
         </Projectile>
@@ -728,7 +728,7 @@
             <Damage>85</Damage>
             <Speed>95</Speed>
             <Size>110</Size>
-            <LifetimeMS>1100</LifetimeMS>
+            <Lifetime>1100</Lifetime>
             <Amplitude>0.33</Amplitude>
         </Projectile>
         <Size>130</Size>
@@ -752,7 +752,7 @@
             <Damage>90</Damage>
             <Speed>85</Speed>
             <Size>130</Size>
-            <LifetimeMS>1800</LifetimeMS>
+            <Lifetime>1800</Lifetime>
             <ConditionEffect duration="3">Slowed</ConditionEffect>
         </Projectile>
         <Projectile id="1">
@@ -764,7 +764,7 @@
             <Damage>75</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>1800</LifetimeMS>
+            <Lifetime>1800</Lifetime>
         </Projectile>
         <Size>170</Size>
         <PermaMiniMap/>
@@ -787,7 +787,7 @@
             <Damage>110</Damage>
             <Speed>80</Speed>
             <Size>130</Size>
-            <LifetimeMS>1100</LifetimeMS>
+            <Lifetime>1100</Lifetime>
         </Projectile>
         <Projectile id="1">
             <Texture>
@@ -799,7 +799,7 @@
             <Damage>85</Damage>
             <Speed>130</Speed>
             <Size>110</Size>
-            <LifetimeMS>1100</LifetimeMS>
+            <Lifetime>1100</Lifetime>
             <ConditionEffect duration="3">Weak</ConditionEffect>
         </Projectile>
         <Size>170</Size>
@@ -822,7 +822,7 @@
             <Damage>75</Damage>
             <Speed>100</Speed>
             <Size>110</Size>
-            <LifetimeMS>800</LifetimeMS>
+            <Lifetime>800</Lifetime>
             <Amplitude>0.4</Amplitude>
         </Projectile>
         <Projectile id="1">
@@ -833,7 +833,7 @@
             <Damage>85</Damage>
             <Speed>85</Speed>
             <Size>110</Size>
-            <LifetimeMS>800</LifetimeMS>
+            <Lifetime>800</Lifetime>
         </Projectile>
         <Size>170</Size>
         <PermaMiniMap/>
@@ -856,7 +856,7 @@
             <Damage>145</Damage>
             <Speed>70</Speed>
             <Size>130</Size>
-            <LifetimeMS>2200</LifetimeMS>
+            <Lifetime>2200</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="1">
@@ -868,7 +868,7 @@
             <Damage>175</Damage>
             <Speed>100</Speed>
             <Size>110</Size>
-            <LifetimeMS>1600</LifetimeMS>
+            <Lifetime>1600</Lifetime>
             <Amplitude>0.4</Amplitude>
             <MultiHit/>
         </Projectile>
@@ -893,7 +893,7 @@
             <Damage>95</Damage>
             <Speed>70</Speed>
             <Size>130</Size>
-            <LifetimeMS>2200</LifetimeMS>
+            <Lifetime>2200</Lifetime>
             <MultiHit/>
         </Projectile>
         <Projectile id="1">
@@ -905,7 +905,7 @@
             <Damage>75</Damage>
             <Speed>100</Speed>
             <Size>110</Size>
-            <LifetimeMS>1600</LifetimeMS>
+            <Lifetime>1600</Lifetime>
             <Amplitude>0.4</Amplitude>
             <Frequency>1</Frequency>
             <MultiHit/>
@@ -932,7 +932,7 @@
             <MagicDamage>65</MagicDamage>
             <Speed>75</Speed>
             <Size>125</Size>
-            <LifetimeMS>1200</LifetimeMS>
+            <Lifetime>1200</Lifetime>
         </Projectile>
         <Projectile id="1">
             <Texture>
@@ -943,7 +943,7 @@
             <Damage>50</Damage>
             <Speed>75</Speed>
             <Size>125</Size>
-            <LifetimeMS>1000</LifetimeMS>
+            <Lifetime>1000</Lifetime>
         </Projectile>
         <Size>90</Size>
         <Enemy/>
@@ -966,7 +966,7 @@
             <MagicDamage>65</MagicDamage>
             <Speed>75</Speed>
             <Size>125</Size>
-            <LifetimeMS>1200</LifetimeMS>
+            <Lifetime>1200</Lifetime>
         </Projectile>
         <Projectile id="1">
             <Texture>
@@ -977,7 +977,7 @@
             <MagicDamage>80</MagicDamage>
             <Speed>75</Speed>
             <Size>125</Size>
-            <LifetimeMS>1000</LifetimeMS>
+            <Lifetime>1000</Lifetime>
         </Projectile>
         <Size>90</Size>
         <Enemy/>
@@ -1000,7 +1000,7 @@
             <MagicDamage>65</MagicDamage>
             <Speed>75</Speed>
             <Size>125</Size>
-            <LifetimeMS>1200</LifetimeMS>
+            <Lifetime>1200</Lifetime>
         </Projectile>
         <Projectile id="1">
             <Texture>
@@ -1011,7 +1011,7 @@
             <MagicDamage>80</MagicDamage>
             <Speed>75</Speed>
             <Size>125</Size>
-            <LifetimeMS>1000</LifetimeMS>
+            <Lifetime>1000</Lifetime>
         </Projectile>
         <Size>90</Size>
         <Enemy/>
@@ -1034,7 +1034,7 @@
             <Damage>70</Damage>
             <Speed>75</Speed>
             <Size>125</Size>
-            <LifetimeMS>900</LifetimeMS>
+            <Lifetime>900</Lifetime>
         </Projectile>
         <Projectile id="1">
             <Texture>
@@ -1045,7 +1045,7 @@
             <Damage>80</Damage>
             <Speed>75</Speed>
             <Size>125</Size>
-            <LifetimeMS>1000</LifetimeMS>
+            <Lifetime>1000</Lifetime>
         </Projectile>
         <Size>90</Size>
         <Enemy/>
@@ -1068,7 +1068,7 @@
             <Damage>50</Damage>
             <Speed>100</Speed>
             <Size>100</Size>
-            <LifetimeMS>950</LifetimeMS>
+            <Lifetime>950</Lifetime>
         </Projectile>
         <Size>90</Size>
         <Enemy/>
@@ -1092,7 +1092,7 @@
             <Damage>90</Damage>
             <Speed>85</Speed>
             <Size>130</Size>
-            <LifetimeMS>1800</LifetimeMS>
+            <Lifetime>1800</Lifetime>
             <ConditionEffect duration="3">Slowed</ConditionEffect>
         </Projectile>
         <Projectile id="1">
@@ -1104,7 +1104,7 @@
             <Damage>75</Damage>
             <Speed>110</Speed>
             <Size>110</Size>
-            <LifetimeMS>1800</LifetimeMS>
+            <Lifetime>1800</Lifetime>
         </Projectile>
         <Size>170</Size>
         <Enemy/>

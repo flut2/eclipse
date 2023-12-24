@@ -13,9 +13,9 @@ const sc = @import("ui/controllers//screen_controller.zig");
 const rpc = @import("rpc");
 
 pub const move_threshold = 0.4;
-pub const min_move_speed = 0.004;
-pub const max_move_speed = 0.0096;
-pub const attack_frequency = 0.005;
+pub const min_move_speed = 4.0 / @as(f32, std.time.us_per_s);
+pub const max_move_speed = 9.6 / @as(f32, std.time.us_per_s);
+pub const attack_frequency = 5.0 / @as(f32, std.time.us_per_s);
 pub const min_attack_mult = 0.5;
 pub const max_attack_mult = 2.0;
 pub const max_sink_level = 18.0;
@@ -221,13 +221,7 @@ pub const GameObject = struct {
     anim_sector: u8 = 0,
     anim_index: u8 = 0,
 
-    pub fn addToMap(self: *GameObject, allocator: std.mem.Allocator) void {
-        const should_lock = entities.capacity == 0;
-        if (should_lock) {
-            while (!object_lock.tryLock()) {}
-        }
-        defer if (should_lock) object_lock.unlock();
-
+    pub fn addToMap(self: *GameObject, allocator: std.mem.Allocator, should_lock: bool) void {
         const floor_y: u32 = @intFromFloat(@floor(self.y));
         const floor_x: u32 = @intFromFloat(@floor(self.x));
 
@@ -418,6 +412,10 @@ pub const GameObject = struct {
         };
         self.name_text_data.recalculateAttributes(main._allocator);
 
+        if (should_lock) {
+            while (!object_lock.tryLock()) {}
+        }
+        defer if (should_lock) object_lock.unlock();
         entities.append(.{ .object = self.* }) catch |e| {
             std.log.err("Could not add object to map (obj_id={d}, obj_type={d}, x={d}, y={d}): {any}", .{ self.obj_id, self.obj_type, self.x, self.y, e });
         };
@@ -429,12 +427,12 @@ pub const GameObject = struct {
         magic_dmg: i32,
         true_dmg: i32,
         kill: bool,
-        time: i64,
         conditions: utils.Condition,
         proj_colors: []const u32,
         proj_angle: f32,
         proj_speed: f32,
         allocator: std.mem.Allocator,
+        should_lock: bool,
     ) void {
         if (self.dead)
             return;
@@ -450,7 +448,7 @@ pub const GameObject = struct {
                 .size = self.size,
                 .amount = 30,
             };
-            effect.addToMap();
+            effect.addToMap(should_lock);
         } else {
             assets.playSfx(self.hit_sound);
 
@@ -462,7 +460,7 @@ pub const GameObject = struct {
                     .size = self.size,
                     .amount = 30,
                 };
-                effect.addToMap();
+                effect.addToMap(should_lock);
             } else {
                 var effect = particles.HitEffect{
                     .x = self.x,
@@ -473,7 +471,7 @@ pub const GameObject = struct {
                     .size = 1.0,
                     .amount = 3,
                 };
-                effect.addToMap();
+                effect.addToMap(should_lock);
             }
 
             const cond_int: @typeInfo(utils.Condition).Struct.backing_integer.? = @bitCast(conditions);
@@ -488,7 +486,6 @@ pub const GameObject = struct {
 
                     element.StatusText.add(.{
                         .obj_id = self.obj_id,
-                        .start_time = time,
                         .text_data = .{
                             .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
                             .text_type = .bold,
@@ -504,21 +501,21 @@ pub const GameObject = struct {
         }
 
         if (phys_dmg > 0 or magic_dmg > 0 or true_dmg > 0) {
-            showDamageText(time, phys_dmg, magic_dmg, true_dmg, self.obj_id, allocator);
+            showDamageText(phys_dmg, magic_dmg, true_dmg, self.obj_id, allocator);
         }
     }
 
-    pub fn update(noalias self: *GameObject, _: i64, dt: f32) void {
+    pub fn update(noalias self: *GameObject, time: i64, dt: f32) void {
         // todo: clean this up, reuse
-        const attack_period = 300 * std.time.us_per_ms;
-        if (main.current_time < self.attack_start + attack_period) {
-            const time_dt: f32 = @floatFromInt(main.current_time - self.attack_start);
+        const attack_period: i64 = 0.3 * std.time.us_per_s;
+        if (time < self.attack_start + attack_period) {
+            const time_dt: f32 = @floatFromInt(time - self.attack_start);
             self.float_period = @mod(time_dt, attack_period) / attack_period;
             self.facing = self.attack_angle;
             self.action = assets.attack_action;
         } else if (!std.math.isNan(self.move_angle)) {
-            const move_period = (400 - @mod(self.inv_dist, 400)) * std.time.us_per_ms;
-            const float_time: f32 = @floatFromInt(main.current_time);
+            const move_period: i64 = 0.4 * std.time.us_per_s;
+            const float_time: f32 = @floatFromInt(time);
             self.float_period = @mod(float_time, move_period) / move_period;
             self.facing = self.move_angle;
             self.action = assets.walk_action;
@@ -701,6 +698,8 @@ pub const Player = struct {
     anim_sector: u8 = 0,
     anim_index: u8 = 0,
     class_name: []const u8 = "",
+    ability_use_times: [4]i64 = [_]i64{-1} ** 4,
+    ability_data: std.ArrayList(u8) = undefined,
 
     pub fn onMove(self: *Player) void {
         if (getSquare(self.x, self.y)) |square| {
@@ -753,12 +752,8 @@ pub const Player = struct {
         return move_speed * self.move_multiplier * self.walk_speed_multiplier;
     }
 
-    pub fn addToMap(self: *Player, allocator: std.mem.Allocator) void {
-        const should_lock = entities.capacity == 0;
-        if (should_lock) {
-            while (!object_lock.tryLock()) {}
-        }
-        defer if (should_lock) object_lock.unlock();
+    pub fn addToMap(self: *Player, allocator: std.mem.Allocator, should_lock: bool) void {
+        self.ability_data = std.ArrayList(u8).init(allocator);
 
         if (game_data.obj_type_to_tex_data.get(self.obj_type)) |tex_list| {
             const tex = tex_list[@as(usize, @intCast(self.obj_id)) % tex_list.len];
@@ -870,66 +865,109 @@ pub const Player = struct {
             }
         }
 
+        if (should_lock) {
+            while (!object_lock.tryLock()) {}
+        }
+        defer if (should_lock) object_lock.unlock();
         entities.append(.{ .player = self.* }) catch |e| {
             std.log.err("Could not add player to map (obj_id={d}, obj_type={d}, x={d}, y={d}): {any}", .{ self.obj_id, self.obj_type, self.x, self.y, e });
         };
     }
 
-    pub fn useAbility(self: *Player, screen_x: f32, screen_y: f32, use_type: game_data.UseType) void {
-        const item_type = self.inventory[1];
-        const item_props = game_data.item_type_to_props.getPtr(@intCast(item_type));
-        if (item_type == -1 or item_props == null or !item_props.?.usable) {
-            assets.playSfx("error");
-            return;
-        }
+    pub fn useAbility(self: *Player, idx: u8) void {
+        if (game_data.classes.get(self.obj_type)) |class| {
+            const abil_props = switch (idx) {
+                0 => class.ability_1,
+                1 => class.ability_2,
+                2 => class.ability_3,
+                3 => class.ultimate_ability,
+                else => {
+                    std.log.err("Invalid idx {d} for useAbility()", .{idx});
+                    return;
+                },
+            };
 
-        var needs_walkable = false;
-        if (use_type == game_data.UseType.start) {
-            if (item_props.?.activations) |activate| {
-                for (activate) |data| {
-                    if (data.activation_type == game_data.ActivationType.teleport) {
-                        needs_walkable = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        const position = camera.screenToWorld(screen_x, screen_y);
-        if (needs_walkable and !isValidPosition(position.x, position.y)) {
-            assets.playSfx("error");
-            return;
-        }
-
-        const now = main.current_time;
-        if (use_type == game_data.UseType.start) {
-            if (now < self.next_ability_attack_time) {
+            const int_cd_ms: i64 = @intFromFloat(abil_props.cooldown * 1000);
+            if (int_cd_ms > main.current_time - self.ability_use_times[idx] or
+                abil_props.mana_cost > self.mp or
+                abil_props.health_cost > self.hp - 1)
+            {
                 assets.playSfx("error");
                 return;
             }
 
-            const mana_cost: i32 = @intFromFloat(item_props.?.mp_cost);
-            if (mana_cost > self.mp) {
-                assets.playSfx("no_mana");
-                return;
+            self.ability_use_times[idx] = main.current_time;
+            self.ability_data.clearRetainingCapacity();
+
+            if (std.mem.eql(u8, abil_props.name, "Anomalous Burst")) {
+                const attack_angle = std.math.atan2(f32, input.mouse_y, input.mouse_x);
+                const num_projs: u16 = @intCast(6 + @divFloor(self.speed, 30));
+                const arc_gap = std.math.degreesToRadians(f32, 24);
+                const float_str: f32 = @floatFromInt(self.strength);
+
+                const attack_angle_left = attack_angle - std.math.phi;
+                const left_proj_count = @divFloor(num_projs, 2);
+                var left_angle = attack_angle_left - arc_gap * @as(f32, @floatFromInt(left_proj_count - 1));
+                for (0..left_proj_count) |_| {
+                    const bullet_id = @mod(self.next_bullet_id + 1, 128);
+                    self.next_bullet_id = bullet_id;
+                    const x = self.x + @cos(attack_angle) * 0.25;
+                    const y = self.y + @sin(attack_angle) * 0.25;
+
+                    var proj = Projectile{
+                        .x = x,
+                        .y = y,
+                        .props = class.projs[0],
+                        .angle = left_angle,
+                        .bullet_id = bullet_id,
+                        .owner_id = self.obj_id,
+                        .physical_damage = @intFromFloat((750 + float_str * 0.75) * self.damage_multiplier),
+                        .piercing = self.piercing,
+                        .penetration = self.penetration,
+                    };
+                    proj.addToMap(true);
+
+                    left_angle += arc_gap;
+                }
+
+                const attack_angle_right = attack_angle + std.math.phi;
+                const right_proj_count = num_projs - left_proj_count;
+                var right_angle = attack_angle_right - arc_gap * @as(f32, @floatFromInt(right_proj_count - 1));
+                for (0..left_proj_count) |_| {
+                    const bullet_id = @mod(self.next_bullet_id + 1, 128);
+                    self.next_bullet_id = bullet_id;
+                    const x = self.x + @cos(attack_angle) * 0.25;
+                    const y = self.y + @sin(attack_angle) * 0.25;
+
+                    var proj = Projectile{
+                        .x = x,
+                        .y = y,
+                        .props = class.projs[0],
+                        .angle = right_angle,
+                        .bullet_id = bullet_id,
+                        .owner_id = self.obj_id,
+                        .physical_damage = @intFromFloat((750 + float_str * 0.75) * self.damage_multiplier),
+                        .piercing = self.piercing,
+                        .penetration = self.penetration,
+                    };
+                    proj.addToMap(true);
+
+                    right_angle += arc_gap;
+                }
+
+                self.ability_data.writer().writeAll(&std.mem.toBytes(attack_angle)) catch |e| {
+                    std.log.err("Writing to ability data buffer failed: {any}", .{e});
+                    return;
+                };
+            } else if (std.mem.eql(u8, abil_props.name, "Possession")) {
+                self.ability_data.writer().writeAll(&std.mem.toBytes(@as(f32, -1))) catch |e| {
+                    std.log.err("Writing to ability data buffer failed: {any}", .{e});
+                    return;
+                };
             }
 
-            const cooldown = @as(i64, @intFromFloat(item_props.?.cooldown * 1000.0)) * std.time.us_per_ms;
-            self.next_ability_attack_time = now + cooldown;
-
-            self.mp_zeroed = false;
-
-            network.queuePacket(.{ .use_item = .{
-                .obj_id = self.obj_id,
-                .slot_id = 1,
-                .x = position.x,
-                .y = position.y,
-                .time = main.current_time,
-                .use_type = use_type,
-            } });
+            network.queuePacket(.{ .use_ability = .{ .time = main.current_time, .ability_type = idx, .data = self.ability_data.items } });
         }
-
-        assets.playSfx(item_props.?.sound);
     }
 
     pub fn doShoot(self: *Player, time: i64, weapon_type: i32, item_props: ?*game_data.ItemProps, attack_angle: f32) void {
@@ -956,7 +994,6 @@ pub const Player = struct {
                 .y = y,
                 .props = proj_props,
                 .angle = angle,
-                .start_time = @divFloor(time, std.time.us_per_ms),
                 .bullet_id = bullet_id,
                 .owner_id = self.obj_id,
                 .physical_damage = @intFromFloat(physical_damage * self.damage_multiplier),
@@ -991,7 +1028,7 @@ pub const Player = struct {
         if (item_props == null or item_props.?.projectile == null)
             return;
 
-        const attack_delay: i64 = @intFromFloat(1.0 / (item_props.?.rate_of_fire * attack_frequency) * std.time.us_per_ms);
+        const attack_delay: i64 = @intFromFloat(1.0 / (item_props.?.rate_of_fire * attack_frequency));
         if (time < self.attack_start + attack_delay)
             return;
 
@@ -1010,12 +1047,12 @@ pub const Player = struct {
         magic_dmg: i32,
         true_dmg: i32,
         kill: bool,
-        time: i64,
         conditions: utils.Condition,
         proj_colors: []const u32,
         proj_angle: f32,
         proj_speed: f32,
         allocator: std.mem.Allocator,
+        should_lock: bool,
     ) void {
         if (self.dead)
             return;
@@ -1031,7 +1068,7 @@ pub const Player = struct {
                 .size = self.size,
                 .amount = 30,
             };
-            effect.addToMap();
+            effect.addToMap(should_lock);
         } else {
             assets.playSfx(self.hit_sound);
 
@@ -1043,7 +1080,7 @@ pub const Player = struct {
                     .size = self.size,
                     .amount = 30,
                 };
-                effect.addToMap();
+                effect.addToMap(should_lock);
             } else {
                 var effect = particles.HitEffect{
                     .x = self.x,
@@ -1054,7 +1091,7 @@ pub const Player = struct {
                     .size = 1.0,
                     .amount = 3,
                 };
-                effect.addToMap();
+                effect.addToMap(should_lock);
             }
 
             const cond_int: @typeInfo(utils.Condition).Struct.backing_integer.? = @bitCast(conditions);
@@ -1069,7 +1106,6 @@ pub const Player = struct {
 
                     element.StatusText.add(.{
                         .obj_id = self.obj_id,
-                        .start_time = time,
                         .text_data = .{
                             .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
                             .text_type = .bold,
@@ -1085,20 +1121,20 @@ pub const Player = struct {
         }
 
         if (phys_dmg > 0 or magic_dmg > 0 or true_dmg > 0) {
-            showDamageText(time, phys_dmg, magic_dmg, true_dmg, self.obj_id, allocator);
+            showDamageText(phys_dmg, magic_dmg, true_dmg, self.obj_id, allocator);
         }
     }
 
     pub fn update(noalias self: *Player, time: i64, dt: f32, allocator: std.mem.Allocator) void {
-        if (main.current_time < self.attack_start + self.attack_period) {
-            const time_dt: f32 = @floatFromInt(main.current_time - self.attack_start);
+        if (time < self.attack_start + self.attack_period) {
+            const time_dt: f32 = @floatFromInt(time - self.attack_start);
             const float_period: f32 = @floatFromInt(self.attack_period);
             self.float_period = @mod(time_dt, float_period) / float_period;
             self.facing = self.attack_angle + camera.angle;
             self.action = assets.attack_action;
-        } else if (self.x_dir != 0.0 or self.y_dir != 0.0) { // now works with sliding and pushing
-            const walk_period = 3.5 * std.time.us_per_ms / self.moveSpeedMultiplier();
-            const float_time: f32 = @floatFromInt(main.current_time);
+        } else if (self.x_dir != 0.0 or self.y_dir != 0.0) {
+            const walk_period = 3.5 / self.moveSpeedMultiplier();
+            const float_time: f32 = @floatFromInt(time);
             self.float_period = @mod(float_time, walk_period) / walk_period;
             self.facing = std.math.atan2(f32, self.y_dir, self.x_dir);
             self.action = assets.walk_action;
@@ -1206,7 +1242,7 @@ pub const Player = struct {
                 }
             }
 
-            if (sc.current_screen != .editor and !self.condition.invulnerable and time - self.last_ground_damage_time >= 500) {
+            if (sc.current_screen != .editor and !self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
                 if (validPos(floor_x, floor_y)) {
                     const square = squares[floor_y * width + floor_x];
                     if (square.props) |props| {
@@ -1218,12 +1254,12 @@ pub const Player = struct {
                                 @intCast(props.magic_damage),
                                 @intCast(props.true_damage),
                                 total_damage >= self.hp,
-                                time,
                                 .{},
                                 self.colors,
                                 0.0,
                                 100.0 / 10000.0,
                                 allocator,
+                                false,
                             );
                             self.last_ground_damage_time = time;
                         }
@@ -1423,14 +1459,9 @@ pub const Projectile = struct {
     colors: []u32 = &[0]u32{},
     hit_list: std.AutoHashMap(i32, void) = undefined,
 
-    pub fn addToMap(self: *Projectile, needs_lock: bool) void {
-        const should_lock = needs_lock and entities.capacity == 0;
-        if (should_lock) {
-            while (!object_lock.tryLock()) {}
-        }
-        defer if (should_lock) object_lock.unlock();
-
+    pub fn addToMap(self: *Projectile, should_lock: bool) void {
         self.hit_list = std.AutoHashMap(i32, void).init(main._allocator);
+        self.start_time = main.current_time;
 
         const tex_list = self.props.texture_data;
         const tex = tex_list[@as(usize, @intCast(self.obj_id)) % tex_list.len];
@@ -1485,6 +1516,10 @@ pub const Projectile = struct {
         if (Projectile.next_obj_id == std.math.maxInt(i32))
             Projectile.next_obj_id = 0x7F000000;
 
+        if (should_lock) {
+            while (!object_lock.tryLock()) {}
+        }
+        defer if (should_lock) object_lock.unlock();
         entities.append(.{ .projectile = self.* }) catch |e| {
             std.log.err("Could not add projectile to map (obj_id={d}, x={d}, y={d}): {any}", .{ self.obj_id, self.x, self.y, e });
         };
@@ -1582,12 +1617,12 @@ pub const Projectile = struct {
     fn updatePosition(self: *Projectile, elapsed: i64, dt: f32) void {
         var angle_change: f32 = 0.0;
         if (self.props.angle_change != 0 and elapsed < self.props.angle_change_end and elapsed >= self.props.angle_change_delay) {
-            angle_change += dt / 1000.0 * self.props.angle_change;
+            angle_change += dt / std.time.us_per_s * self.props.angle_change;
         }
 
         if (self.props.angle_change_accel != 0 and elapsed >= self.props.angle_change_accel_delay) {
             const time_in_accel: f32 = @floatFromInt(elapsed - self.props.angle_change_accel_delay);
-            angle_change += dt / 1000.0 * self.props.angle_change_accel * time_in_accel / 1000.0;
+            angle_change += dt / std.time.us_per_s * self.props.angle_change_accel * time_in_accel / std.time.us_per_s;
         }
 
         if (angle_change != 0.0) {
@@ -1602,17 +1637,17 @@ pub const Projectile = struct {
         }
 
         var dist: f32 = 0.0;
-        const uses_zero_vel = self.props.zero_velocity_delay != -1;
+        const uses_zero_vel = self.props.zero_velocity_delay > 0;
         if (!uses_zero_vel or self.props.zero_velocity_delay > elapsed) {
             if (self.props.accel == 0.0 or elapsed < self.props.accel_delay) {
                 dist = dt * self.props.speed;
             } else {
                 const time_in_accel: f32 = @floatFromInt(elapsed - self.props.accel_delay);
-                const accel_dist = dt * ((self.props.speed * 10000.0 + self.props.accel * time_in_accel / 1000.0) / 10000.0);
+                const accel_dist = dt * ((self.props.speed * 10 * std.time.us_per_s + self.props.accel * time_in_accel / std.time.us_per_s) / (10 * std.time.us_per_s));
                 if (self.props.speed_clamp != -1) {
                     dist = accel_dist;
                 } else {
-                    const clamp_dist = dt * self.props.speed_clamp / 10000.0;
+                    const clamp_dist = dt * self.props.speed_clamp / (10 * std.time.us_per_s);
                     dist = if (self.props.accel > 0) @min(accel_dist, clamp_dist) else @max(accel_dist, clamp_dist);
                 }
             }
@@ -1627,24 +1662,23 @@ pub const Projectile = struct {
         }
 
         if (self.props.parametric) {
-            const t = @as(f32, @floatFromInt(@divTrunc(elapsed, self.props.lifetime_ms))) * std.math.tau;
+            const t = @as(f32, @floatFromInt(@divTrunc(elapsed, self.props.lifetime))) * std.math.tau;
             const x = @sin(t) * if (self.bullet_id % 2 == 0) @as(f32, 1.0) else @as(f32, -1.0);
             const y = @sin(2 * t) * if (self.bullet_id % 4 < 2) @as(f32, 1.0) else @as(f32, -1.0);
             self.x += (x * @cos(self.angle) - y * @sin(self.angle)) * self.props.magnitude;
             self.y += (x * @sin(self.angle) + y * @cos(self.angle)) * self.props.magnitude;
         } else {
-            if (self.props.boomerang and elapsed > self.props.lifetime_ms / 2)
+            if (self.props.boomerang and elapsed > @divFloor(self.props.lifetime, 2))
                 dist = -dist;
 
             self.x += dist * @cos(self.angle);
             self.y += dist * @sin(self.angle);
             if (self.props.amplitude != 0) {
                 const phase: f32 = if (self.bullet_id % 2 == 0) 0.0 else std.math.pi;
-                const time_ratio: f32 = @as(f32, @floatFromInt(elapsed)) / @as(f32, @floatFromInt(self.props.lifetime_ms));
+                const time_ratio: f32 = @as(f32, @floatFromInt(elapsed)) / @as(f32, @floatFromInt(self.props.lifetime));
                 const deflection_target = self.props.amplitude * @sin(phase + time_ratio * self.props.frequency * std.math.tau);
-                const pi_div_2 = std.math.pi / 2.0;
-                self.x += (deflection_target - self.last_deflect) * @cos(self.angle + pi_div_2);
-                self.y += (deflection_target - self.last_deflect) * @sin(self.angle + pi_div_2);
+                self.x += (deflection_target - self.last_deflect) * @cos(self.angle + std.math.phi);
+                self.y += (deflection_target - self.last_deflect) * @sin(self.angle + std.math.phi);
                 self.last_deflect = deflection_target;
             }
         }
@@ -1652,7 +1686,7 @@ pub const Projectile = struct {
 
     pub fn update(noalias self: *Projectile, time: i64, dt: f32, idx: usize, allocator: std.mem.Allocator) bool {
         const elapsed = time - self.start_time;
-        if (elapsed >= self.props.lifetime_ms)
+        if (elapsed >= self.props.lifetime)
             return false;
 
         const last_x = self.x;
@@ -1701,7 +1735,7 @@ pub const Projectile = struct {
                             .size = 1.0,
                             .amount = 3,
                         };
-                        effect.addToMap();
+                        effect.addToMap(false);
                     }
                 }
                 return false;
@@ -1725,13 +1759,13 @@ pub const Projectile = struct {
                         .size = 1.0,
                         .amount = 3,
                     };
-                    effect.addToMap();
+                    effect.addToMap(false);
                 }
                 return false;
             }
         }
 
-        if (time - self.last_hit_check > 16) {
+        if (time - self.last_hit_check > 16 * std.time.us_per_ms) {
             if (self.damage_players) {
                 if (findTargetPlayer(self.x, self.y, 0.57, idx)) |player| {
                     if (self.hit_list.contains(player.obj_id))
@@ -1753,12 +1787,12 @@ pub const Projectile = struct {
                             @intFromFloat(magic_dmg * player.hit_multiplier),
                             @intFromFloat(true_dmg * player.hit_multiplier),
                             dead,
-                            time,
                             utils.Condition.fromCondSlice(self.props.effects),
                             self.colors,
                             self.angle,
                             self.props.speed,
                             allocator,
+                            false,
                         );
                         network.queuePacket(.{ .player_hit = .{ .bullet_id = self.bullet_id, .object_id = self.owner_id } });
                     } else if (!self.props.multi_hit) {
@@ -1771,7 +1805,7 @@ pub const Projectile = struct {
                             .size = 1.0,
                             .amount = 3,
                         };
-                        effect.addToMap();
+                        effect.addToMap(false);
 
                         network.queuePacket(.{ .other_hit = .{
                             .time = time,
@@ -1812,12 +1846,12 @@ pub const Projectile = struct {
                             @intFromFloat(magic_dmg),
                             @intFromFloat(true_dmg),
                             dead,
-                            time,
                             utils.Condition.fromCondSlice(self.props.effects),
                             self.colors,
                             self.angle,
                             self.props.speed,
                             allocator,
+                            false,
                         );
 
                         network.queuePacket(.{ .enemy_hit = .{
@@ -1836,7 +1870,7 @@ pub const Projectile = struct {
                             .size = 1.0,
                             .amount = 3,
                         };
-                        effect.addToMap();
+                        effect.addToMap(false);
 
                         network.queuePacket(.{ .other_hit = .{
                             .time = time,
@@ -1898,12 +1932,12 @@ pub fn magicDamage(dmg: f32, resistance: f32, condition: utils.Condition) f32 {
     return @max(min, dmg - def);
 }
 
-pub fn showDamageText(time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i32, allocator: std.mem.Allocator) void {
+pub fn showDamageText(phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i32, allocator: std.mem.Allocator) void {
     var delay: i64 = 0;
     if (phys_dmg > 0) {
         element.StatusText.add(.{
             .obj_id = object_id,
-            .start_time = time + delay,
+            .delay = delay,
             .text_data = .{
                 .text = std.fmt.allocPrint(allocator, "-{d}", .{phys_dmg}) catch unreachable,
                 .text_type = .bold,
@@ -1920,7 +1954,7 @@ pub fn showDamageText(time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32, o
     if (magic_dmg > 0) {
         element.StatusText.add(.{
             .obj_id = object_id,
-            .start_time = time + delay,
+            .delay = delay,
             .text_data = .{
                 .text = std.fmt.allocPrint(allocator, "-{d}", .{magic_dmg}) catch unreachable,
                 .text_type = .bold,
@@ -1937,7 +1971,7 @@ pub fn showDamageText(time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32, o
     if (true_dmg > 0) {
         element.StatusText.add(.{
             .obj_id = object_id,
-            .start_time = time + delay,
+            .delay = delay,
             .text_data = .{
                 .text = std.fmt.allocPrint(allocator, "-{d}", .{true_dmg}) catch unreachable,
                 .text_type = .bold,
@@ -2063,6 +2097,7 @@ pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
         },
         .player => |*player| {
             sc.removeAttachedUi(player.obj_id, allocator);
+            player.ability_data.deinit();
             if (player.name.len > 0)
                 allocator.free(player.name);
             if (player.guild.len > 0)
@@ -2107,6 +2142,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
                 obj.name_text_data.deinit(allocator);
             },
             .player => |*player| {
+                player.ability_data.deinit();
                 if (player.name.len > 0)
                     allocator.free(player.name);
                 if (player.guild.len > 0)
@@ -2293,8 +2329,7 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
     interactive_id.store(-1, .Release);
     interactive_type.store(.game_object, .Release);
 
-    const ms_time = @divFloor(time, std.time.us_per_ms);
-    const ms_dt = @as(f32, @floatFromInt(dt)) / std.time.us_per_ms;
+    const float_dt: f32 = @floatFromInt(dt);
 
     const cam_x = camera.x.load(.Acquire);
     const cam_y = camera.y.load(.Acquire);
@@ -2308,9 +2343,9 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
 
         switch (en.*) {
             .player => |*player| {
-                player.update(ms_time, ms_dt, allocator);
+                player.update(time, float_dt, allocator);
                 if (player.obj_id == local_player_id) {
-                    camera.update(player.x, player.y, ms_dt, input.rotate);
+                    camera.update(player.x, player.y, float_dt, input.rotate);
                     addMoveRecord(time, player.x, player.y);
                     if (input.attacking) {
                         const shoot_angle = std.math.atan2(f32, input.mouse_y - camera.screen_height / 2.0, input.mouse_x - camera.screen_width / 2.0) + camera.angle;
@@ -2341,10 +2376,10 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
                     }
                 }
 
-                object.update(ms_time, ms_dt);
+                object.update(time, float_dt);
             },
             .projectile => |*projectile| {
-                if (!projectile.update(ms_time, ms_dt, i, allocator)) {
+                if (!projectile.update(time, float_dt, i, allocator)) {
                     disposeEntity(allocator, &entities.items[i]);
                     _ = entities.swapRemove(i);
                 }
@@ -2352,7 +2387,7 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
             .particle => |*pt| {
                 switch (pt.*) {
                     inline else => |*particle| {
-                        if (!particle.update(ms_time, ms_dt)) {
+                        if (!particle.update(time, float_dt)) {
                             disposeEntity(allocator, &entities.items[i]);
                             _ = entities.swapRemove(i);
                         }
@@ -2362,7 +2397,7 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) void {
             .particle_effect => |*pt_eff| {
                 switch (pt_eff.*) {
                     inline else => |*effect| {
-                        if (!effect.update(ms_time, ms_dt)) {
+                        if (!effect.update(time, float_dt)) {
                             disposeEntity(allocator, &entities.items[i]);
                             _ = entities.swapRemove(i);
                         }

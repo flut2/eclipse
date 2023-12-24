@@ -144,7 +144,7 @@ pub const app_engine_url = "http://127.0.0.1:8080/";
 pub const log_packets = LogType.off;
 pub const print_atlas = false;
 pub const print_ui_atlas = false;
-pub const rotate_speed = 0.002;
+pub const rotate_speed = 2.0 / @as(f32, std.time.us_per_s);
 pub const enable_tracy = false;
 pub const unset_key_tex_idx = 0x68;
 

@@ -302,7 +302,7 @@ pub const EditorBrush = struct {
                     .size = 100,
                     .alpha = 0.6,
                 };
-                obj.addToMap(self._screen._allocator);
+                obj.addToMap(self._screen._allocator, true);
 
                 self._visual_objects.append(obj.obj_id) catch return;
 
@@ -953,7 +953,7 @@ pub const MapEditorScreen = struct {
             .speed = 300, // mabye make it so we can adjust speed locally like shift slows down
         };
 
-        player.addToMap(screen._allocator);
+        player.addToMap(screen._allocator, true);
 
         main.editing_map = true;
 
@@ -1248,7 +1248,7 @@ pub const MapEditorScreen = struct {
                 .alpha = 1.0,
             };
 
-            obj.addToMap(self._allocator);
+            obj.addToMap(self._allocator, true);
         }
     }
 
@@ -1257,10 +1257,7 @@ pub const MapEditorScreen = struct {
         self.map_tile_data[index].region_type = value;
     }
 
-    pub fn update(self: *MapEditorScreen, time: i64, dt: f32) !void {
-        _ = dt;
-        _ = time;
-
+    pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
         // map.server_time_offset += @intFromFloat(dt * std.time.us_per_ms * 16);
 
         // map.day_light_intensity = 0.4;

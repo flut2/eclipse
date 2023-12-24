@@ -82,6 +82,14 @@ fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
         if (sc.current_screen == .game) {
             attacking = true;
         }
+    } else if (key == settings.ability_1.getKey()) {
+        if (map.localPlayerRef()) |player| player.useAbility(0);
+    } else if (key == settings.ability_2.getKey()) {
+        if (map.localPlayerRef()) |player| player.useAbility(1);
+    } else if (key == settings.ability_3.getKey()) {
+        if (map.localPlayerRef()) |player| player.useAbility(2);
+    } else if (key == settings.ultimate_ability.getKey()) {
+        if (map.localPlayerRef()) |player| player.useAbility(3);
     } else if (key == settings.options.getKey()) {
         if (sc.current_screen == .game) {
             sc.current_screen.game.options.setVisible(true);
@@ -172,6 +180,14 @@ fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
         if (sc.current_screen == .game) {
             attacking = true;
         }
+    } else if (button == settings.ability_1.getMouse()) {
+        if (map.localPlayerRef()) |player| player.useAbility(0);
+    } else if (button == settings.ability_2.getMouse()) {
+        if (map.localPlayerRef()) |player| player.useAbility(1);
+    } else if (button == settings.ability_3.getMouse()) {
+        if (map.localPlayerRef()) |player| player.useAbility(2);
+    } else if (button == settings.ultimate_ability.getMouse()) {
+        if (map.localPlayerRef()) |player| player.useAbility(3);
     } else if (button == settings.options.getMouse()) {
         if (sc.current_screen == .game) {
             sc.current_screen.game.options.setVisible(true);

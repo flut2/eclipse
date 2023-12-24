@@ -39,8 +39,8 @@ pub fn update(target_x: f32, target_y: f32, dt: f32, rotate: i8) void {
     var ty: f32 = target_y;
     if (quake) {
         const max_quake = 0.5;
-        const quake_buildup_ms = 10000;
-        quake_amount += dt * max_quake / quake_buildup_ms;
+        const quake_buildup = 10.0 * @as(f32, std.time.us_per_s);
+        quake_amount += dt * max_quake / quake_buildup;
         if (quake_amount > max_quake)
             quake_amount = max_quake;
         tx += utils.plusMinus(quake_amount);

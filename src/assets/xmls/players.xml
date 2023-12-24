@@ -89,7 +89,7 @@ Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maxim
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="FFE880"6 (+1 per 30 SPD) heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="ECA07F"750 (+75% STR) Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -99,7 +99,7 @@ Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maxim
       <Name>Paradoxical Shift</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>15</Cooldown>
-      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="FFE880"+25% SPD.</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -109,20 +109,21 @@ Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maxim
       <Name>Swarm</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
-      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
-&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
-Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
-Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="D1A2F2"50 (+120% WIT) damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="80BFA4"350 (+25% HP) Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
+      <Name>Possession</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
-      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="8086BF"5 (+7% INT) seconds&amp;reset, making you control its movements and making it unable to shoot.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -158,7 +159,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="FFE880"6 (+1 per 30 SPD) heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="ECA07F"750 (+75% STR) Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -168,7 +169,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Paradoxical Shift</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>15</Cooldown>
-      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="FFE880"+25% SPD.</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -178,20 +179,21 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Swarm</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
-      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
-&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
-Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
-Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="D1A2F2"50 (+120% WIT) damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="80BFA4"350 (+25% HP) Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
+      <Name>Possession</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
-      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="8086BF"5 (+7% INT) seconds&amp;reset, making you control its movements and making it unable to shoot.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -227,7 +229,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="FFE880"6 (+1 per 30 SPD) heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="ECA07F"750 (+75% STR) Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -237,7 +239,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Paradoxical Shift</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>15</Cooldown>
-      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="FFE880"+25% SPD.</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -247,20 +249,21 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Swarm</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
-      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
-&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
-Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
-Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="D1A2F2"50 (+120% WIT) damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="80BFA4"350 (+25% HP) Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
+      <Name>Possession</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
-      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="8086BF"5 (+7% INT) seconds&amp;reset, making you control its movements and making it unable to shoot.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -296,7 +299,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="FFE880"6 (+1 per 30 SPD) heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="ECA07F"750 (+75% STR) Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -306,7 +309,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Paradoxical Shift</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>15</Cooldown>
-      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="FFE880"+25% SPD.</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -316,20 +319,21 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Swarm</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
-      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
-&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
-Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
-Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="D1A2F2"50 (+120% WIT) damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="80BFA4"350 (+25% HP) Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
+      <Name>Possession</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
-      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="8086BF"5 (+7% INT) seconds&amp;reset, making you control its movements and making it unable to shoot.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -365,7 +369,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="FFE880"6 (+1 per 30 SPD) heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="ECA07F"750 (+75% STR) Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -375,7 +379,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Paradoxical Shift</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>15</Cooldown>
-      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="FFE880"+25% SPD.</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -385,20 +389,21 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Swarm</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
-      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
-&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
-Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
-Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="D1A2F2"50 (+120% WIT) damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="80BFA4"350 (+25% HP) Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
+      <Name>Possession</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
-      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="8086BF"5 (+7% INT) seconds&amp;reset, making you control its movements and making it unable to shoot.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -434,7 +439,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="FFE880"6 (+1 per 30 SPD) heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="ECA07F"750 (+75% STR) Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -444,7 +449,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Paradoxical Shift</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>15</Cooldown>
-      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="FFE880"+25% SPD.</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -454,20 +459,21 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Swarm</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
-      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
-&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
-Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
-Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="D1A2F2"50 (+120% WIT) damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="80BFA4"350 (+25% HP) Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
+      <Name>Possession</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
-      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="8086BF"5 (+7% INT) seconds&amp;reset, making you control its movements and making it unable to shoot.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -503,7 +509,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="FFE880"6 (+1 per 30 SPD) heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="ECA07F"750 (+75% STR) Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -513,7 +519,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Paradoxical Shift</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>15</Cooldown>
-      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="FFE880"+25% SPD.</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -523,20 +529,21 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Swarm</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
-      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
-&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
-Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
-Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="D1A2F2"50 (+120% WIT) damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="80BFA4"350 (+25% HP) Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
+      <Name>Possession</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
-      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="8086BF"5 (+7% INT) seconds&amp;reset, making you control its movements and making it unable to shoot.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -584,7 +591,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <LightIntensity>0.2</LightIntensity>
       <LightRadius>0.5</LightRadius>
       <Speed>70</Speed>
-      <LifetimeMS>1000</LifetimeMS>
+      <Lifetime>1000</Lifetime>
       <Damage>750</Damage>
       <HeatSeekSpeed>150</HeatSeekSpeed>
       <HeatSeekRadius>12</HeatSeekRadius>
@@ -598,7 +605,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;750 (+75% STR) Physical Damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="FFE880"6 (+1 per 30 SPD) heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="ECA07F"750 (+75% STR) Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -608,7 +615,7 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Paradoxical Shift</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>15</Cooldown>
-      <Description>Become a &lt;i&gt;Phantom&lt;/i&gt;  for the next 3 seconds, becoming invisible to enemies and gaining &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;+25% SPD&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;.</Description>
+      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="FFE880"+25% SPD.</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -618,10 +625,10 @@ Soul Fragments are shared between all Enigmas in the same instance.</Description
       <Name>Swarm</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
-      <Description>&lt;b&gt;&lt;font color="#7A6D6A"&gt;PASSIVE:&lt;/font&gt;&lt;/b&gt; Enemies killed near the Enigma leave behind a &lt;i&gt;Soul Fragment&lt;/i&gt; for 5 seconds.
-&lt;b&gt;&lt;font color="#7A6D6A"&gt;ACTIVE:&lt;/font&gt;&lt;/b&gt; Convert all &lt;i&gt;Soul Fragments&lt;/i&gt; within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
-Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
-&lt;i&gt;&lt;font size="10" color="#736562"&gt;Soul Fragments are shared between all Enigmas in the same instance.&lt;/font&gt;&lt;/i&gt;</Description>
+      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="D1A2F2"50 (+120% WIT) damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="80BFA4"350 (+25% HP) Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
@@ -631,8 +638,8 @@ Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maxim
       <Name>Possession</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
-      <Description>Possess the targeted Enemy for the next &lt;b&gt;&lt;i&gt;&lt;font color="#8086BF"&gt;5 (+7% INT) seconds&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, making you control its movements and making it unable to shoot.
-&lt;i&gt;&lt;font size="10" color="#736562"&gt;During the possession, your body remains vulnerable to other enemies' attacks.&lt;/font&gt;&lt;/i&gt;</Description>
+      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="8086BF"5 (+7% INT) seconds&amp;reset, making you control its movements and making it unable to shoot.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -668,7 +675,7 @@ Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maxim
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &lt;b&gt;&lt;i&gt;&lt;font color="#FFE880"&gt;6 (+1 per 30 SPD) heat seeking void blasts&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, dealing &lt;b&gt;&lt;i&gt;&lt;font color="#ECA07F"&gt;75 (+75% STR) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="FFE880"6 (+1 per 30 SPD) heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="ECA07F"750 (+75% STR) Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -678,7 +685,7 @@ Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maxim
       <Name>Paradoxical Shift</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>15</Cooldown>
-      <Description>Become a Phantom for the next 3 seconds, becoming invisible to enemies and gaining +25% Speed.</Description>
+      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="FFE880"+25% SPD.</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -688,20 +695,21 @@ Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maxim
       <Name>Swarm</Name>
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
-      <Description>&lt;b&gt;PASSIVE:&lt;/b&gt; Enemies killed near the Enigma leave behind a Soul Fragment for 5 seconds.
-&lt;b&gt;ACTIVE:&lt;/b&gt; Convert all Soul Fragments within a 2 tile radius of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &lt;b&gt;&lt;i&gt;&lt;font color="#D1A2F2"&gt;50 (+120% WIT) damage.&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;
-Voidlings have &lt;b&gt;&lt;i&gt;&lt;font color="#80BFA4"&gt;350 (+25% HP) Maximum Health&lt;/font&gt;&lt;/b&gt;&lt;/i&gt;, and lose 75 health every second.
-Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="D1A2F2"50 (+120% WIT) damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="80BFA4"350 (+25% HP) Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
+      <Name>Possession</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
-      <Description>Gain control of the targeted Enemy for the next 10 seconds, making it unable to act on its own. During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="8086BF"5 (+7% INT) seconds&amp;reset, making you control its movements and making it unable to shoot.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>

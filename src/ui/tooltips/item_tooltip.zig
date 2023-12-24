@@ -283,7 +283,7 @@ pub const ItemTooltip = struct {
                     text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Magic Damage: " ++ decimal_fmt, .{ text, proj.magic_damage }) catch text;
                 if (proj.true_damage > 0)
                     text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "True Damage: " ++ decimal_fmt, .{ text, proj.true_damage }) catch text;
-                text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Range: " ++ float_fmt, .{ text, proj.speed * @as(f32, @floatFromInt(proj.lifetime_ms)) }) catch text;
+                text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Range: " ++ float_fmt, .{ text, proj.speed * @as(f32, @floatFromInt(proj.lifetime)) }) catch text;
 
                 for (proj.effects, 0..) |effect, i| {
                     if (i == 0)

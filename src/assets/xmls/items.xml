@@ -14,7 +14,7 @@
                 <Index>0x00</Index>
             </Texture>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>330</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -34,7 +34,7 @@
                 <Index>0x01</Index>
             </Texture>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>360</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -54,7 +54,7 @@
                 <Index>0x02</Index>
             </Texture>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>400</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -74,7 +74,7 @@
                 <Index>0x03</Index>
             </Texture>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>450</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -94,7 +94,7 @@
                 <Index>0x04</Index>
             </Texture>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>500</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -210,7 +210,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>150</Damage>
         </Projectile>
@@ -231,7 +231,7 @@
                 <Index>0x11</Index>
             </Texture>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>180</Damage>
         </Projectile>
@@ -252,7 +252,7 @@
                 <Index>0x12</Index>
             </Texture>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>220</Damage>
         </Projectile>
@@ -273,7 +273,7 @@
                 <Index>0x13</Index>
             </Texture>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>260</Damage>
         </Projectile>
@@ -294,7 +294,7 @@
                 <Index>0x14</Index>
             </Texture>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>300</Damage>
         </Projectile>
@@ -314,7 +314,7 @@
                 <Index>0x20</Index>
             </Texture>
             <Speed>150</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>70</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -341,7 +341,7 @@
                 <Index>0x21</Index>
             </Texture>
             <Speed>150</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>85</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -368,7 +368,7 @@
                 <Index>0x22</Index>
             </Texture>
             <Speed>150</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>95</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -395,7 +395,7 @@
                 <Index>0x23</Index>
             </Texture>
             <Speed>150</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>105</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -422,7 +422,7 @@
                 <Index>0x24</Index>
             </Texture>
             <Speed>150</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>115</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -612,7 +612,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>110</Speed>
-            <LifetimeMS>800</LifetimeMS>
+            <Lifetime>800</Lifetime>
             <Damage>140</Damage>
         </Projectile>
         <BagType>3</BagType>
@@ -634,7 +634,7 @@
             <Rotation>200</Rotation>
             <AngleCorrection>1</AngleCorrection>
             <Speed>170</Speed>
-            <LifetimeMS>570</LifetimeMS>
+            <Lifetime>570</Lifetime>
             <Damage>105</Damage>
             <Amplitude>0.6</Amplitude>
         </Projectile>
@@ -698,7 +698,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>200</Speed>
-            <LifetimeMS>270</LifetimeMS>
+            <Lifetime>270</Lifetime>
             <Damage>310</Damage>
         </Projectile>
         <BagType>3</BagType>
@@ -731,7 +731,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>110</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>370</Damage>
         </Projectile>
         <BagType>3</BagType>
@@ -752,7 +752,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
-            <LifetimeMS>750</LifetimeMS>
+            <Lifetime>750</Lifetime>
             <Damage>250</Damage>
         </Projectile>
         <BagType>3</BagType>
@@ -773,7 +773,7 @@
             </Texture>
             <Rotation>200</Rotation>
             <Speed>220</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <MultiHit />
             <Damage>660</Damage>
         </Projectile>
@@ -794,7 +794,7 @@
                 <Index>29</Index>
             </Texture>
             <Speed>200</Speed>
-            <LifetimeMS>360</LifetimeMS>
+            <Lifetime>360</Lifetime>
             <Damage>145</Damage>
         </Projectile>
         <NumProjectiles>3</NumProjectiles>
@@ -829,7 +829,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>180</Speed>
-            <LifetimeMS>240</LifetimeMS>
+            <Lifetime>240</Lifetime>
             <Damage>720</Damage>
         </Projectile>
         <BagType>3</BagType>
@@ -850,7 +850,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
-            <LifetimeMS>1020</LifetimeMS>
+            <Lifetime>1020</Lifetime>
             <Damage>420</Damage>
             <Amplitude>0.1</Amplitude>
             <Boomerang/>
@@ -886,7 +886,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>180</Speed>
-            <LifetimeMS>360</LifetimeMS>
+            <Lifetime>360</Lifetime>
             <Damage>450</Damage>
         </Projectile>
         <BagType>3</BagType>
@@ -937,7 +937,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>140</Speed>
-            <LifetimeMS>260</LifetimeMS>
+            <Lifetime>260</Lifetime>
             <Damage>400</Damage>
             <ArmorPiercing/>
         </Projectile>
@@ -1048,7 +1048,7 @@
                 <Index>0x05</Index>
             </Texture>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>530</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -1069,7 +1069,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>560</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -1090,7 +1090,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>590</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -1111,7 +1111,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>610</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -1132,7 +1132,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>130</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>630</Damage>
         </Projectile>
         <BagType>1</BagType>
@@ -1273,7 +1273,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>330</Damage>
         </Projectile>
@@ -1295,7 +1295,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>360</Damage>
         </Projectile>
@@ -1317,7 +1317,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>390</Damage>
         </Projectile>
@@ -1339,7 +1339,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>410</Damage>
         </Projectile>
@@ -1361,7 +1361,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>180</Speed>
-            <LifetimeMS>440</LifetimeMS>
+            <Lifetime>440</Lifetime>
             <MultiHit />
             <Damage>430</Damage>
         </Projectile>
@@ -1383,7 +1383,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>130</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -1410,7 +1410,7 @@
                 <Index>0x26</Index>
             </Texture>
             <Speed>150</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>150</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -1438,7 +1438,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>170</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -1466,7 +1466,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>190</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>170</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -1494,7 +1494,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <MagicDamage>220</MagicDamage>
             <Amplitude>0.33</Amplitude>
             <Frequency>4</Frequency>
@@ -1714,7 +1714,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>80</Speed>
-            <LifetimeMS>620</LifetimeMS>
+            <Lifetime>620</Lifetime>
             <Damage>750</Damage>
         </Projectile>
         <IncrementStat stat="Defense" amount="8"/>
@@ -1736,7 +1736,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>120</Speed>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
             <Damage>330</Damage>
         </Projectile>
         <NumProjectiles>2</NumProjectiles>
@@ -1760,7 +1760,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>100</Speed>
-            <LifetimeMS>300</LifetimeMS>
+            <Lifetime>300</Lifetime>
             <Damage>720</Damage>
         </Projectile>
         <BagType>3</BagType>
@@ -1781,7 +1781,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>90</Speed>
-            <LifetimeMS>400</LifetimeMS>
+            <Lifetime>400</Lifetime>
             <Damage>450</Damage>
             <ArmorPiercing/>
         </Projectile>
@@ -1842,7 +1842,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>160</Speed>
-            <LifetimeMS>600</LifetimeMS>
+            <Lifetime>600</Lifetime>
             <Damage>500</Damage>
         </Projectile>
         <BagType>3</BagType>
@@ -1863,7 +1863,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>160</Speed>
-            <LifetimeMS>450</LifetimeMS>
+            <Lifetime>450</Lifetime>
             <Damage>250</Damage>
         </Projectile>
         <NumProjectiles>3</NumProjectiles>
@@ -1886,7 +1886,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>80</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <Damage>1050</Damage>
         </Projectile>
         <BagType>3</BagType>
@@ -1907,7 +1907,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>120</Speed>
-            <LifetimeMS>700</LifetimeMS>
+            <Lifetime>700</Lifetime>
             <Damage>280</Damage>
             <Amplitude>0.3</Amplitude>
             <Frequency>1.2</Frequency>
@@ -1932,7 +1932,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>190</Speed>
-            <LifetimeMS>350</LifetimeMS>
+            <Lifetime>350</Lifetime>
             <Damage>550</Damage>
         </Projectile>
         <IncrementStat stat="Stamina" amount="11"/>
@@ -1954,7 +1954,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>130</Speed>
-            <LifetimeMS>550</LifetimeMS>
+            <Lifetime>550</Lifetime>
             <Damage>400</Damage>
             <MultiHit/>
         </Projectile>
@@ -1977,7 +1977,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
-            <LifetimeMS>420</LifetimeMS>
+            <Lifetime>420</Lifetime>
             <Damage>1300</Damage>
         </Projectile>
         <IncrementStat stat="Stamina" amount="15"/>
@@ -2040,7 +2040,7 @@
             </Texture>
             <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
-            <LifetimeMS>420</LifetimeMS>
+            <Lifetime>420</Lifetime>
             <Damage>1200</Damage>
             <Amplitude>0.9</Amplitude>
             <Frequency>0.9</Frequency>

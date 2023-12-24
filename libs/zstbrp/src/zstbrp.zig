@@ -15,7 +15,7 @@ pub const PackNode = extern struct {
 
 pub const PackHeuristic = enum(i32) {
     default = 0,
-    sort_height = 1,  
+    sort_height = 1,
 };
 
 pub const PackContext = extern struct {

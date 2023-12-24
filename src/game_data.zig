@@ -176,6 +176,7 @@ pub const CharacterClass = struct {
     haste: CharacterClassStat,
     tenacity: CharacterClassStat,
     texture: TextureData,
+    projs: []ProjProps,
     skins: ?[]CharacterSkin,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !CharacterClass {
@@ -197,6 +198,12 @@ pub const CharacterClass = struct {
         for (rpc_name) |*char| {
             char.* = std.ascii.toLower(char.*);
         }
+
+        var proj_list = std.ArrayList(ProjProps).init(allocator);
+        defer proj_list.deinit();
+        var proj_iter = node.iterate(&.{}, "Projectile");
+        while (proj_iter.next()) |proj_node|
+            try proj_list.append(try ProjProps.parse(proj_node, allocator));
 
         return CharacterClass{
             .obj_type = try node.getAttributeInt("type", u16, 0),
@@ -227,6 +234,7 @@ pub const CharacterClass = struct {
             .tenacity = try CharacterClassStat.parse(node.findChild("Tenacity") orelse @panic("Could not parse CharacterClass: Tenacity node is missing")),
             .texture = try TextureData.parse(node.findChild("AnimatedTexture") orelse @panic("Could not parse CharacterClass: Texture is missing"), allocator, false),
             .skins = null,
+            .projs = try allocator.dupe(ProjProps, proj_list.items),
         };
     }
 };
@@ -254,8 +262,8 @@ pub const AnimProps = struct {
         var frame_list = try std.ArrayList(AnimFrame).initCapacity(allocator, 5);
         defer frame_list.deinit();
         var frame_iter = node.iterate(&.{}, "Frame");
-        while (frame_iter.next()) |animNode|
-            try frame_list.append(try AnimFrame.parse(animNode, allocator));
+        while (frame_iter.next()) |anim_node|
+            try frame_list.append(try AnimFrame.parse(anim_node, allocator));
 
         return AnimProps{
             .prob = try node.getAttributeFloat("prob", f32, 0.0),
@@ -486,7 +494,7 @@ pub const ProjProps = struct {
     light_pulse_speed: f32,
     bullet_type: i32,
     object_id: []const u8,
-    lifetime_ms: u16,
+    lifetime: i64,
     speed: f32,
     size: f32,
     physical_damage: i32,
@@ -503,15 +511,15 @@ pub const ProjProps = struct {
     frequency: f32,
     magnitude: f32,
     accel: f32,
-    accel_delay: u16,
+    accel_delay: i64,
     speed_clamp: u16,
     angle_change: f32,
-    angle_change_delay: u16,
+    angle_change_delay: i64,
     angle_change_end: u16,
     angle_change_accel: f32,
-    angle_change_accel_delay: u16,
+    angle_change_accel_delay: i64,
     angle_change_clamp: f32,
-    zero_velocity_delay: i16,
+    zero_velocity_delay: i64,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ProjProps {
         var effect_it = node.iterate(&.{}, "ConditionEffect");
@@ -531,8 +539,8 @@ pub const ProjProps = struct {
             .light_pulse_speed = try node.getValueFloat("LightPulseSpeed", f32, 1.0),
             .bullet_type = try node.getAttributeInt("type", i32, 0),
             .object_id = try node.getValueAlloc("ObjectId", allocator, ""),
-            .lifetime_ms = try node.getValueInt("LifetimeMS", u16, 0),
-            .speed = try node.getValueFloat("Speed", f32, 0) / 10000.0,
+            .lifetime = try node.getValueInt("Lifetime", i64, 0) * std.time.us_per_ms,
+            .speed = try node.getValueFloat("Speed", f32, 0) / 10000.0 / std.time.us_per_ms,
             .size = try node.getValueFloat("Size", f32, 100) / 100.0,
             .physical_damage = try node.getValueInt("Damage", i32, 0),
             .magic_damage = try node.getValueInt("MagicDamage", i32, 0),
@@ -548,15 +556,15 @@ pub const ProjProps = struct {
             .frequency = try node.getValueFloat("Frequency", f32, 1.0),
             .magnitude = try node.getValueFloat("Magnitude", f32, 3.0),
             .accel = try node.getValueFloat("Acceleration", f32, 0.0),
-            .accel_delay = try node.getValueInt("AccelerationDelay", u16, 0),
+            .accel_delay = try node.getValueInt("AccelerationDelay", i64, 0) * std.time.us_per_ms,
             .speed_clamp = try node.getValueInt("SpeedClamp", u16, 0),
             .angle_change = std.math.degreesToRadians(f32, try node.getValueFloat("AngleChange", f32, 0.0)),
-            .angle_change_delay = try node.getValueInt("AngleChangeDelay", u16, 0),
+            .angle_change_delay = try node.getValueInt("AngleChangeDelay", i64, 0) * std.time.us_per_ms,
             .angle_change_end = try node.getValueInt("AngleChangeEnd", u16, 0),
             .angle_change_accel = std.math.degreesToRadians(f32, try node.getValueFloat("AngleChangeAccel", f32, 0.0)),
-            .angle_change_accel_delay = try node.getValueInt("AngleChangeAccelDelay", u16, 0),
+            .angle_change_accel_delay = try node.getValueInt("AngleChangeAccelDelay", i64, 0) * std.time.us_per_ms,
             .angle_change_clamp = try node.getValueFloat("AngleChangeClamp", f32, 0.0),
-            .zero_velocity_delay = try node.getValueInt("ZeroVelocityDelay", i16, -1),
+            .zero_velocity_delay = try node.getValueInt("ZeroVelocityDelay", i64, -1) * std.time.us_per_ms,
         };
     }
 };
@@ -1174,6 +1182,15 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         allocator.free(class.death_sound);
         allocator.free(class.name);
         allocator.free(class.rpc_name);
+        for (class.projs) |proj_props| {
+            for (proj_props.texture_data) |tex| {
+                allocator.free(tex.sheet);
+            }
+            allocator.free(proj_props.texture_data);
+            allocator.free(proj_props.object_id);
+            allocator.free(proj_props.effects);
+        }
+        allocator.free(class.projs);
         allocator.free(class.desc);
         allocator.free(class.slot_types);
         allocator.free(class.equipment);

@@ -329,6 +329,9 @@ fn addImage(
         var dominant_colors = try allocator.alloc(RGBA, len);
         @memset(dominant_colors, RGBA{});
 
+        var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
+        defer color_counts.deinit();
+
         for (0..len) |i| {
             const rect = current_rects[i];
             if (rect.w == 0 or rect.h == 0)
@@ -339,8 +342,7 @@ fn addImage(
             const cur_src_x = (i * cut_width) % img.width;
             const cur_src_y = @divFloor(i * cut_width, img.width) * cut_height;
 
-            var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
-            defer color_counts.deinit();
+            color_counts.clearRetainingCapacity();
 
             for (0..img_size) |j| {
                 const row_count = @divFloor(j, cut_width);
@@ -643,7 +645,7 @@ fn parseFontData(allocator: std.mem.Allocator, comptime atlas_w: f32, comptime a
 }
 
 pub fn playSfx(name: []const u8) void {
-    if (settings.sfx_volume <= 0.0 or std.mem.eql(u8, name, "Unknown"))
+    if (settings.sfx_volume <= 0.0)
         return;
 
     if (sfx_map.get(name)) |audio| {
@@ -863,6 +865,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addUiImage("epic_slot", "ui/epic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("legendary_slot", "ui/legendary_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("mythic_slot", "ui/mythic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("out_of_mana_slot", "ui/out_of_mana_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("out_of_health_slot", "ui/out_of_health_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("basic_panel", "ui/basic_panel.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_background", "ui/chat/chatbox_background.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_input", "ui/chat/chatbox_input.png", imply_size, imply_size, &ui_ctx, allocator);
