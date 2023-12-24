@@ -1268,6 +1268,8 @@ pub const ScrollableContainer = struct {
     }
 
     pub fn init(self: *ScrollableContainer) void {
+        self.base_y = self.y;
+        
         self._container = self._allocator.create(Container) catch @panic("ScrollableContainer child container alloc failed");
         self._container.* = .{ .x = self.x, .y = self.y, .scissor = .{
             .min_x = 0,
