@@ -1481,7 +1481,6 @@ pub const Container = struct {
         var max_x: f32 = std.math.floatMin(f32);
         for (self._elements.items) |elem| {
             switch (elem) {
-                .scrollable_container => {},
                 inline else => |inner_elem| {
                     if (min_x > inner_elem.x) {
                         min_x = inner_elem.x;
@@ -1506,7 +1505,6 @@ pub const Container = struct {
         var max_y: f32 = std.math.floatMin(f32);
         for (self._elements.items) |elem| {
             switch (elem) {
-                .scrollable_container => {},
                 inline else => |inner_elem| {
                     if (min_y > inner_elem.y) {
                         min_y = inner_elem.y;
