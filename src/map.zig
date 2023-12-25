@@ -245,6 +245,19 @@ pub const GameObject = struct {
             self.occupy_square = props.occupy_square;
             self.enemy_occupy_square = props.enemy_occupy_square;
 
+            for (props.show_effects) |eff| {
+                if (eff.effect == .ring) {
+                    var effect = particles.RingEffect{
+                        .start_x = self.x,
+                        .start_y = self.y,
+                        .color = eff.color,
+                        .cooldown = eff.cooldown,
+                        .radius = eff.radius,
+                    };
+                    effect.addToMap(true);
+                }
+            }
+
             if (validPos(floor_x, floor_y)) {
                 const idx = floor_y * width + floor_x;
                 squares[idx].obj_id = self.obj_id;

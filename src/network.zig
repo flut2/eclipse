@@ -161,26 +161,6 @@ const S2CPacketId = enum(u8) {
     failure = 28,
 };
 
-const EffectType = enum(u8) {
-    unknown = 0,
-    potion = 1,
-    teleport = 2,
-    stream = 3,
-    throw = 4,
-    area_blast = 5,
-    dead = 6,
-    trail = 7,
-    diffuse = 8,
-    flow = 9,
-    trap = 10,
-    lightning = 11,
-    concentrate = 12,
-    blast_wave = 13,
-    earthquake = 14,
-    flashing = 15,
-    beach_ball = 16,
-};
-
 pub var connected = false;
 pub var queue: std.ArrayList(C2SPacket) = undefined;
 
@@ -847,7 +827,7 @@ fn handleServerPlayerShoot() void {
 }
 
 fn handleShowEffect() void {
-    const effect_type: EffectType = @enumFromInt(reader.read(u8));
+    const effect_type: game_data.ShowEffect = @enumFromInt(reader.read(u8));
     const target_object_id = reader.read(i32);
     const x1 = reader.read(f32);
     const y1 = reader.read(f32);

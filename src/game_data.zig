@@ -355,6 +355,67 @@ pub const GroundProps = struct {
     }
 };
 
+pub const ShowEffect = enum(u8) {
+    unknown = 0,
+    potion = 1,
+    teleport = 2,
+    stream = 3,
+    throw = 4,
+    area_blast = 5,
+    dead = 6,
+    trail = 7,
+    diffuse = 8,
+    flow = 9,
+    trap = 10,
+    lightning = 11,
+    concentrate = 12,
+    blast_wave = 13,
+    earthquake = 14,
+    flashing = 15,
+    beach_ball = 16,
+    ring = 17,
+
+    const map = std.ComptimeStringMap(ShowEffect, .{
+        .{ "Potion", .potion },
+        .{ "Teleport", .teleport },
+        .{ "Stream", .stream },
+        .{ "Throw", .throw },
+        .{ "AreaBlast", .area_blast },
+        .{ "Dead", .dead },
+        .{ "Trail", .trail },
+        .{ "Diffuse", .diffuse },
+        .{ "Flow", .flow },
+        .{ "Trap", .trap },
+        .{ "Lightning", .lightning },
+        .{ "Concentrate", .concentrate },
+        .{ "BlastWave", .blast_wave },
+        .{ "Earthquake", .earthquake },
+        .{ "Flashing", .flashing },
+        .{ "BeachBall", .beach_ball },
+        .{ "Ring", .ring },
+    });
+
+    pub fn fromString(str: []const u8) ShowEffect {
+        return map.get(str) orelse .unknown;
+    }
+};
+
+pub const ShowEffProps = struct {
+    effect: ShowEffect,
+    radius: f32,
+    cooldown: i64,
+    color: u32,
+
+    pub fn parse(node: xml.Node) !ShowEffProps {
+        return ShowEffProps{
+            .effect = ShowEffect.fromString(node.currentValue() orelse ""),
+            .radius = try node.getAttributeFloat("radius", f32, 5.0),
+            .cooldown = try node.getAttributeInt("cooldown", i64, 1000) * std.time.us_per_ms,
+            .color = try node.getAttributeInt("color", u32, 0xFFFFFF),
+        };
+    }
+};
+
 pub const ObjProps = struct {
     obj_type: u16,
     obj_id: []const u8,
@@ -395,6 +456,7 @@ pub const ObjProps = struct {
     light_pulse: f32,
     light_pulse_speed: f32,
     alpha_mult: f32,
+    show_effects: []ShowEffProps,
     projectiles: []ProjProps,
     hit_sound: []const u8,
     death_sound: []const u8,
@@ -410,10 +472,16 @@ pub const ObjProps = struct {
         }
 
         var proj_it = node.iterate(&.{}, "Projectile");
-        var proj_list = try std.ArrayList(ProjProps).initCapacity(allocator, 5);
+        var proj_list = std.ArrayList(ProjProps).init(allocator);
         defer proj_list.deinit();
         while (proj_it.next()) |proj_node|
             try proj_list.append(try ProjProps.parse(proj_node, allocator));
+
+        var eff_it = node.iterate(&.{}, "ShowEffect");
+        var eff_list = std.ArrayList(ShowEffProps).init(allocator);
+        defer eff_list.deinit();
+        while (eff_it.next()) |eff_node|
+            try eff_list.append(try ShowEffProps.parse(eff_node));
 
         const float_node = node.findChild("Float");
         return ObjProps{
@@ -454,6 +522,7 @@ pub const ObjProps = struct {
             .float_time = try std.fmt.parseInt(u16, if (float_node != null) float_node.?.getAttribute("time") orelse "0" else "0", 0),
             .float_height = try std.fmt.parseFloat(f32, if (float_node != null) float_node.?.getAttribute("height") orelse "0.0" else "0.0"),
             .float_sine = float_node != null and float_node.?.getAttribute("sine") != null,
+            .show_effects = try allocator.dupe(ShowEffProps, eff_list.items),
             .projectiles = try allocator.dupe(ProjProps, proj_list.items),
             .hit_sound = try node.getValueAlloc("HitSound", allocator, "Unknown"),
             .death_sound = try node.getValueAlloc("DeathSound", allocator, "Unknown"),
@@ -1066,26 +1135,28 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     }
 
     var obj_props_iter = obj_type_to_props.valueIterator();
-    while (obj_props_iter.next()) |prop| {
-        allocator.free(prop.obj_id);
-        allocator.free(prop.display_id);
-        allocator.free(prop.death_sound);
-        allocator.free(prop.hit_sound);
+    while (obj_props_iter.next()) |props| {
+        allocator.free(props.obj_id);
+        allocator.free(props.display_id);
+        allocator.free(props.death_sound);
+        allocator.free(props.hit_sound);
 
-        if (prop.portrait) |tex_data| {
+        if (props.portrait) |tex_data| {
             allocator.free(tex_data.sheet);
         }
 
-        for (prop.projectiles) |proj_prop| {
-            for (proj_prop.texture_data) |tex| {
+        allocator.free(props.show_effects);
+
+        for (props.projectiles) |proj_props| {
+            for (proj_props.texture_data) |tex| {
                 allocator.free(tex.sheet);
             }
-            allocator.free(proj_prop.texture_data);
-            allocator.free(proj_prop.object_id);
-            allocator.free(proj_prop.effects);
+            allocator.free(proj_props.texture_data);
+            allocator.free(proj_props.object_id);
+            allocator.free(proj_props.effects);
         }
 
-        allocator.free(prop.projectiles);
+        allocator.free(props.projectiles);
     }
 
     var item_props_iter = item_type_to_props.valueIterator();

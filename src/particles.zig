@@ -23,7 +23,6 @@ pub const ThrowParticle = struct {
 
     pub fn addToMap(self: *ThrowParticle, should_lock: bool) void {
         self.obj_id = Particle.getNextObjId();
-        self.time_left *= std.time.us_per_ms;
         Particle.setTexture(&self.atlas_data, 0);
 
         if (should_lock) {
@@ -45,7 +44,7 @@ pub const ThrowParticle = struct {
         self.y += self.dy * dt / std.time.us_per_ms;
 
         if (time - self._last_update >= 16 * std.time.us_per_ms) {
-            const duration: f32 = 400.0;
+            const duration: f32 = 0.4 * std.time.us_per_s;
             var particle = SparkParticle{
                 .size = @floor(self.z + 1),
                 .initial_size = @floor(self.z + 1),
@@ -86,7 +85,6 @@ pub const SparkerParticle = struct {
 
     pub fn addToMap(self: *SparkerParticle, should_lock: bool) void {
         self.obj_id = Particle.getNextObjId();
-        self.time_left *= std.time.us_per_ms;
         Particle.setTexture(&self.atlas_data, 0);
 
         if (should_lock) {
@@ -103,11 +101,11 @@ pub const SparkerParticle = struct {
         if (self.time_left <= 0)
             return false;
 
-        self.x += self.dx * dt / std.time.us_per_ms;
-        self.y += self.dy * dt / std.time.us_per_ms;
+        self.x += self.dx * dt;
+        self.y += self.dy * dt;
 
         if (time - self._last_update >= 16 * std.time.us_per_ms) {
-            const duration: f32 = 600.0;
+            const duration: f32 = 0.6 * std.time.us_per_s;
             var particle = SparkParticle{
                 .size = 0.5,
                 .initial_size = 0.5,
@@ -147,7 +145,6 @@ pub const SparkParticle = struct {
 
     pub fn addToMap(self: *SparkParticle, should_lock: bool) void {
         self.obj_id = Particle.getNextObjId();
-        self.time_left *= std.time.us_per_ms;
         Particle.setTexture(&self.atlas_data, 0);
 
         if (should_lock) {
@@ -186,7 +183,6 @@ pub const TeleportParticle = struct {
 
     pub fn addToMap(self: *TeleportParticle, should_lock: bool) void {
         self.obj_id = Particle.getNextObjId();
-        self.time_left *= std.time.us_per_ms;
         Particle.setTexture(&self.atlas_data, 0);
 
         if (should_lock) {
@@ -227,7 +223,6 @@ pub const ExplosionParticle = struct {
 
     pub fn addToMap(self: *ExplosionParticle, should_lock: bool) void {
         self.obj_id = Particle.getNextObjId();
-        self.time_left *= std.time.us_per_ms;
         Particle.setTexture(&self.atlas_data, 0);
 
         if (should_lock) {
@@ -270,7 +265,6 @@ pub const HitParticle = struct {
 
     pub fn addToMap(self: *HitParticle, should_lock: bool) void {
         self.obj_id = Particle.getNextObjId();
-        self.time_left *= std.time.us_per_ms;
         Particle.setTexture(&self.atlas_data, 0);
 
         if (should_lock) {
@@ -313,7 +307,6 @@ pub const HealParticle = struct {
 
     pub fn addToMap(self: *HealParticle, should_lock: bool) void {
         self.obj_id = Particle.getNextObjId();
-        self.time_left *= std.time.us_per_ms;
         Particle.setTexture(&self.atlas_data, 0);
 
         if (should_lock) {
@@ -400,7 +393,7 @@ pub const ThrowEffect = struct {
     }
 
     pub fn update(self: *ThrowEffect, _: i64, _: f32) bool {
-        const duration: f32 = @floatFromInt(if (self.duration == 0) 1500 else self.duration);
+        const duration: f32 = @floatFromInt((if (self.duration == 0) 1500 else self.duration) * std.time.us_per_ms);
         var particle = ThrowParticle{
             .size = 2.0,
             .initial_size = 2.0,
@@ -444,7 +437,7 @@ pub const AoeEffect = struct {
             const angle = (float_i * 2.0 * std.math.pi) / part_num;
             const end_x = self.x + self.radius * @cos(angle);
             const end_y = self.y + self.radius * @sin(angle);
-            const duration = 200.0;
+            const duration = 0.2 * std.time.us_per_s;
             var particle = SparkerParticle{
                 .size = 0.4,
                 .initial_size = 0.4,
@@ -489,7 +482,7 @@ pub const TeleportEffect = struct {
             var particle = TeleportParticle{
                 .size = 0.8,
                 .color = 0x0000FF,
-                .time_left = 500 + 1000 * rand,
+                .time_left = (0.5 + 1.0 * rand) * std.time.us_per_s,
                 .z_dir = 0.1,
                 .x = self.x + radius * @cos(angle),
                 .y = self.y + radius * @sin(angle),
@@ -522,7 +515,7 @@ pub const LineEffect = struct {
     }
 
     pub fn update(self: *LineEffect, _: i64, _: f32) bool {
-        const duration = 700.0;
+        const duration = 0.7 * std.time.us_per_s;
         for (0..30) |i| {
             const f = @as(f32, @floatFromInt(i)) / 30;
             var particle = SparkParticle{
@@ -569,7 +562,7 @@ pub const ExplosionEffect = struct {
             return false;
 
         for (0..self.amount) |_| {
-            const duration = 200.0 + utils.rng.random().float(f32) * 100.0;
+            const duration = (0.2 + utils.rng.random().float(f32) * 0.1) * std.time.us_per_s;
             var particle = ExplosionParticle{
                 .size = self.size,
                 .color = self.colors[utils.rng.next() % self.colors.len],
@@ -619,7 +612,7 @@ pub const HitEffect = struct {
         const sin = self.speed / 600.0 * -@sin(self.angle);
 
         for (0..self.amount) |_| {
-            const duration = 200.0 + utils.rng.random().float(f32) * 100.0;
+            const duration = (0.2 + utils.rng.random().float(f32) * 0.1) * std.time.us_per_s;
             var particle = HitParticle{
                 .size = self.size,
                 .color = self.colors[utils.rng.next() % self.colors.len],
@@ -668,7 +661,7 @@ pub const HealEffect = struct {
                         var particle = HealParticle{
                             .size = 0.5 + utils.rng.random().float(f32),
                             .color = self.color,
-                            .time_left = 1000.0,
+                            .time_left = 1.0 * std.time.us_per_s,
                             .angle = angle,
                             .dist = radius,
                             .target_id = entity.obj_id,
@@ -690,6 +683,63 @@ pub const HealEffect = struct {
     }
 };
 
+pub const RingEffect = struct {
+    obj_id: i32 = 0,
+    start_x: f32,
+    start_y: f32,
+    radius: f32,
+    color: u32,
+    cooldown: i64,
+    last_activate: i64 = -1,
+
+    pub fn addToMap(self: *RingEffect, should_lock: bool) void {
+        self.obj_id = ParticleEffect.getNextObjId();
+
+        if (should_lock) {
+            while (!map.object_lock.tryLock()) {}
+        }
+        defer if (should_lock) map.object_lock.unlock();
+        map.entities.append(.{ .particle_effect = .{ .ring = self.* } }) catch |e| {
+            std.log.err("Out of memory: {any}", .{e});
+        };
+    }
+
+    pub fn update(self: *RingEffect, time: i64, _: f32) bool {
+        if (self.cooldown > 0 and time < self.last_activate + self.cooldown)
+            return true;
+
+        const duration = 0.2 * std.time.us_per_s;
+        for (0..12) |i| {
+            const float_i: f32 = @floatFromInt(i);
+            const angle = (float_i * 2.0 * std.math.pi) / 12.0;
+            const cos_angle = @cos(angle);
+            const sin_angle = @sin(angle);
+
+            const start_x = self.start_x + self.radius * cos_angle;
+            const start_y = self.start_y + self.radius * sin_angle;
+            const end_x = self.start_x + self.radius * 0.9 * cos_angle;
+            const end_y = self.start_y + self.radius * 0.9 * sin_angle;
+
+            var particle = SparkerParticle{
+                .size = 1.0,
+                .initial_size = 1.0,
+                .color = self.color,
+                .lifetime = duration,
+                .time_left = duration,
+                .dx = (end_x - start_x) / duration,
+                .dy = (end_y - start_y) / duration,
+                .x = start_x,
+                .y = start_y,
+                .z = 0.5,
+            };
+            particle.addToMap(false);
+        }
+
+        self.last_activate = time;
+        return self.cooldown > 0;
+    }
+};
+
 pub const ParticleEffect = union(enum) {
     const obj_id_max = 0x7E000000;
     const obj_id_base = 0x7D000000;
@@ -702,6 +752,7 @@ pub const ParticleEffect = union(enum) {
     explosion: ExplosionEffect,
     hit: HitEffect,
     heal: HealEffect,
+    ring: RingEffect,
 
     pub inline fn getNextObjId() i32 {
         const obj_id = next_obj_id + 1;
