@@ -170,13 +170,17 @@ pub fn mouseMove(x: f32, y: f32) void {
 
     for (elements.items) |elem| {
         switch (elem) {
-            inline else => |inner_elem| inner_elem.mouseMove(x, y, 0, 0),
+            inline else => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove")) inner_elem.mouseMove(x, y, 0, 0);
+            },
         }
     }
 
     for (tooltip_elements.items) |elem| {
         switch (elem) {
-            inline else => |inner_elem| inner_elem.mouseMove(x, y, 0, 0),
+            inline else => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove")) inner_elem.mouseMove(x, y, 0, 0);
+            },
         }
     }
 }
@@ -198,14 +202,20 @@ pub fn mousePress(x: f32, y: f32, mods: zglfw.Mods, button: zglfw.MouseButton) b
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| {
         switch (elem) {
-            inline else => |inner_elem| if (inner_elem.mousePress(x, y, 0, 0, mods)) return true,
+            inline else => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))
+                    return true;
+            },
         }
     }
 
     var tooltip_elem_iter = std.mem.reverseIterator(tooltip_elements.items);
     while (tooltip_elem_iter.next()) |elem| {
         switch (elem) {
-            inline else => |inner_elem| if (inner_elem.mousePress(x, y, 0, 0, mods)) return true,
+            inline else => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))
+                    return true;
+            },
         }
     }
 
@@ -215,13 +225,17 @@ pub fn mousePress(x: f32, y: f32, mods: zglfw.Mods, button: zglfw.MouseButton) b
 pub fn mouseRelease(x: f32, y: f32) void {
     for (elements.items) |elem| {
         switch (elem) {
-            inline else => |inner_elem| inner_elem.mouseRelease(x, y, 0, 0),
+            inline else => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease")) inner_elem.mouseRelease(x, y, 0, 0);
+            },
         }
     }
 
     for (tooltip_elements.items) |elem| {
         switch (elem) {
-            inline else => |inner_elem| inner_elem.mouseRelease(x, y, 0, 0),
+            inline else => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease")) inner_elem.mouseRelease(x, y, 0, 0);
+            },
         }
     }
 }
@@ -230,14 +244,20 @@ pub fn mouseScroll(x: f32, y: f32, x_scroll: f32, y_scroll: f32) bool {
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| {
         switch (elem) {
-            inline else => |inner_elem| if (inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll)) return true,
+            inline else => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseScroll") and inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll))
+                    return true;
+            },
         }
     }
 
     var tooltip_elem_iter = std.mem.reverseIterator(tooltip_elements.items);
     while (tooltip_elem_iter.next()) |elem| {
         switch (elem) {
-            inline else => |inner_elem| if (inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll)) return true,
+            inline else => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseScroll") and inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll))
+                    return true;
+            },
         }
     }
 

@@ -60,7 +60,7 @@ pub const ItemTooltip = struct {
             .text_data = .{
                 .text = "",
                 .size = 16,
-                .text_type = .bold,
+                .text_type = .bold_italic,
             },
         });
 
@@ -72,6 +72,7 @@ pub const ItemTooltip = struct {
                 .size = 14,
                 .color = 0xB3B3B3,
                 .max_chars = 64,
+                .text_type = .medium_italic,
             },
         });
 

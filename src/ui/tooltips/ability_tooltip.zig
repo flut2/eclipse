@@ -53,7 +53,7 @@ pub const AbilityTooltip = struct {
             .text_data = .{
                 .text = "",
                 .size = 16,
-                .text_type = .bold,
+                .text_type = .bold_italic,
             },
         });
 

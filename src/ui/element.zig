@@ -14,7 +14,7 @@ inline fn createAny(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data)
     var elem = try allocator.create(@TypeOf(data));
     elem.* = data;
     elem._allocator = allocator;
-    elem.init();
+    if (std.meta.hasFn(@TypeOf(data), "init")) elem.init();
 
     comptime var field_name: []const u8 = "";
     comptime {
@@ -65,7 +65,7 @@ inline fn destroyAny(self: anytype) void {
         }
     }
 
-    self.deinit();
+    if (std.meta.hasFn(@typeInfo(@TypeOf(self)).Pointer.child, "deinit")) self.deinit();
     self._allocator.destroy(self);
 }
 
@@ -512,10 +512,6 @@ pub const Input = struct {
         }
     }
 
-    pub fn mouseScroll(_: *Input, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
-    }
-
     pub fn init(self: *Input) void {
         if (self.text_data.scissor.isDefault()) {
             self.text_data.scissor = .{
@@ -609,7 +605,7 @@ pub const Button = struct {
         if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
             self.state = .pressed;
             self.press_callback();
-            assets.playSfx("self_click");
+            assets.playSfx("button_click");
             return true;
         }
 
@@ -634,10 +630,6 @@ pub const Button = struct {
         } else {
             self.state = .none;
         }
-    }
-
-    pub fn mouseScroll(_: *Button, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
     }
 
     pub fn init(self: *Button) void {
@@ -750,10 +742,6 @@ pub const KeyMapper = struct {
         }
     }
 
-    pub fn mouseScroll(_: *KeyMapper, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
-    }
-
     pub fn init(self: *KeyMapper) void {
         if (self.title_text_data) |*text_data| {
             text_data.recalculateAttributes(self._allocator);
@@ -844,10 +832,6 @@ pub const CharacterBox = struct {
         }
     }
 
-    pub fn mouseScroll(_: *CharacterBox, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
-    }
-
     pub fn init(self: *CharacterBox) void {
         if (self.text_data) |*text_data| {
             text_data.recalculateAttributes(self._allocator);
@@ -914,13 +898,6 @@ pub const Image = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn init(_: *Image) void {}
-    pub fn deinit(_: *Image) void {}
-
-    pub fn mousePress(_: *Image, _: f32, _: f32, _: f32, _: f32, _: zglfw.Mods) bool {
-        return false;
-    }
-    pub fn mouseRelease(_: *Image, _: f32, _: f32, _: f32, _: f32) void {}
     pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
         if (!self.visible)
             return;
@@ -929,9 +906,6 @@ pub const Image = struct {
             tooltip.switchTooltip(.ability);
             tooltip.current_tooltip.ability.update(x + x_offset, y + y_offset, self.ability_props.?);
         }
-    }
-    pub fn mouseScroll(_: *Image, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
     }
 
     pub fn width(self: Image) f32 {
@@ -966,18 +940,6 @@ pub const MenuBackground = struct {
     visible: bool = true,
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
-
-    pub fn mousePress(_: *MenuBackground, _: f32, _: f32, _: f32, _: f32, _: zglfw.Mods) bool {
-        return false;
-    }
-    pub fn mouseRelease(_: *MenuBackground, _: f32, _: f32, _: f32, _: f32) void {}
-    pub fn mouseMove(_: *MenuBackground, _: f32, _: f32, _: f32, _: f32) void {}
-    pub fn mouseScroll(_: *MenuBackground, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
-    }
-
-    pub fn init(_: *MenuBackground) void {}
-    pub fn deinit(_: *MenuBackground) void {}
 
     pub fn width(_: MenuBackground) f32 {
         return @floatFromInt(assets.menu_background.width);
@@ -1073,13 +1035,6 @@ pub const Item = struct {
         self.y = y + self._drag_offset_y;
     }
 
-    pub fn mouseScroll(_: *Item, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
-    }
-
-    pub fn init(_: *Item) void {}
-    pub fn deinit(_: *Item) void {}
-
     pub fn width(self: Item) f32 {
         switch (self.image_data) {
             .nine_slice => |nine_slice| return nine_slice.w,
@@ -1112,15 +1067,6 @@ pub const Bar = struct {
     text_data: TextData,
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
-
-    pub fn mousePress(_: *Bar, _: f32, _: f32, _: f32, _: f32, _: zglfw.Mods) bool {
-        return false;
-    }
-    pub fn mouseRelease(_: *Bar, _: f32, _: f32, _: f32, _: f32) void {}
-    pub fn mouseMove(_: *Bar, _: f32, _: f32, _: f32, _: f32) void {}
-    pub fn mouseScroll(_: *Bar, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
-    }
 
     pub fn init(self: *Bar) void {
         self.text_data.recalculateAttributes(self._allocator);
@@ -1161,15 +1107,6 @@ pub const Text = struct {
     visible: bool = true,
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
-
-    pub fn mousePress(_: *Text, _: f32, _: f32, _: f32, _: f32, _: zglfw.Mods) bool {
-        return false;
-    }
-    pub fn mouseRelease(_: *Text, _: f32, _: f32, _: f32, _: f32) void {}
-    pub fn mouseMove(_: *Text, _: f32, _: f32, _: f32, _: f32) void {}
-    pub fn mouseScroll(_: *Text, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
-    }
 
     pub fn init(self: *Text) void {
         self.text_data.recalculateAttributes(self._allocator);
@@ -1269,7 +1206,7 @@ pub const ScrollableContainer = struct {
 
     pub fn init(self: *ScrollableContainer) void {
         self.base_y = self.y;
-        
+
         self._container = self._allocator.create(Container) catch @panic("ScrollableContainer child container alloc failed");
         self._container.* = .{ .x = self.x, .y = self.y, .scissor = .{
             .min_x = 0,
@@ -1409,8 +1346,11 @@ pub const Container = struct {
         var iter = std.mem.reverseIterator(self._elements.items);
         while (iter.next()) |elem| {
             switch (elem) {
-                inline else => |inner_elem| if (inner_elem.mousePress(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, mods))
-                    return true,
+                inline else => |inner_elem| {
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and
+                        inner_elem.mousePress(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, mods))
+                        return true;
+                },
             }
         }
 
@@ -1435,7 +1375,10 @@ pub const Container = struct {
         var iter = std.mem.reverseIterator(self._elements.items);
         while (iter.next()) |elem| {
             switch (elem) {
-                inline else => |inner_elem| inner_elem.mouseRelease(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset),
+                inline else => |inner_elem| {
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease"))
+                        inner_elem.mouseRelease(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset);
+                },
             }
         }
     }
@@ -1472,7 +1415,10 @@ pub const Container = struct {
         var iter = std.mem.reverseIterator(self._elements.items);
         while (iter.next()) |elem| {
             switch (elem) {
-                inline else => |inner_elem| inner_elem.mouseMove(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset),
+                inline else => |inner_elem| {
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove"))
+                        inner_elem.mouseMove(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset);
+                },
             }
         }
     }
@@ -1484,8 +1430,11 @@ pub const Container = struct {
         var iter = std.mem.reverseIterator(self._elements.items);
         while (iter.next()) |elem| {
             switch (elem) {
-                inline else => |inner_elem| if (inner_elem.mouseScroll(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, x_scroll, y_scroll))
-                    return true,
+                inline else => |inner_elem| {
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseScroll") and
+                        inner_elem.mouseScroll(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, x_scroll, y_scroll))
+                        return true;
+                },
             }
         }
 
@@ -1500,7 +1449,7 @@ pub const Container = struct {
         for (self._elements.items) |*elem| {
             switch (elem.*) {
                 inline else => |inner_elem| {
-                    inner_elem.deinit();
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "deinit")) inner_elem.deinit();
                     self._allocator.destroy(inner_elem);
                 },
             }
@@ -1585,7 +1534,7 @@ pub const Container = struct {
         var elem = try self._allocator.create(T);
         elem.* = data;
         elem._allocator = self._allocator;
-        elem.init();
+        if (std.meta.hasFn(T, "init")) elem.init();
         elem.scissor = .{
             .min_x = if (self.scissor.min_x == ScissorRect.dont_scissor)
                 ScissorRect.dont_scissor
@@ -1706,10 +1655,6 @@ pub const Toggle = struct {
         } else {
             self.state = .none;
         }
-    }
-
-    pub fn mouseScroll(_: *Toggle, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) bool {
-        return false;
     }
 
     pub fn init(self: *Toggle) void {
