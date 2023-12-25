@@ -40,18 +40,17 @@ pub const Screen = union(ScreenType) {
 pub var ui_lock: std.Thread.Mutex = .{};
 pub var temp_elem_lock: std.Thread.Mutex = .{};
 pub var elements: std.ArrayList(element.UiElement) = undefined;
-pub var tooltip_elements: std.ArrayList(element.UiElement) = undefined;
 pub var temp_elements: std.ArrayList(element.Temporary) = undefined;
 pub var current_screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
 
+var last_sort: i64 = -1;
 var _allocator: std.mem.Allocator = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     _allocator = allocator;
 
     elements = try std.ArrayList(element.UiElement).initCapacity(allocator, 32);
-    tooltip_elements = try std.ArrayList(element.UiElement).initCapacity(allocator, 32);
     temp_elements = try std.ArrayList(element.Temporary).initCapacity(allocator, 32);
 
     menu_background = try element.MenuBackground.create(allocator, .{
@@ -98,7 +97,6 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     }
 
     elements.deinit();
-    tooltip_elements.deinit();
     temp_elements.deinit();
 }
 
@@ -175,14 +173,6 @@ pub fn mouseMove(x: f32, y: f32) void {
             },
         }
     }
-
-    for (tooltip_elements.items) |elem| {
-        switch (elem) {
-            inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove")) inner_elem.mouseMove(x, y, 0, 0);
-            },
-        }
-    }
 }
 
 pub fn mousePress(x: f32, y: f32, mods: zglfw.Mods, button: zglfw.MouseButton) bool {
@@ -209,29 +199,11 @@ pub fn mousePress(x: f32, y: f32, mods: zglfw.Mods, button: zglfw.MouseButton) b
         }
     }
 
-    var tooltip_elem_iter = std.mem.reverseIterator(tooltip_elements.items);
-    while (tooltip_elem_iter.next()) |elem| {
-        switch (elem) {
-            inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))
-                    return true;
-            },
-        }
-    }
-
     return false;
 }
 
 pub fn mouseRelease(x: f32, y: f32) void {
     for (elements.items) |elem| {
-        switch (elem) {
-            inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease")) inner_elem.mouseRelease(x, y, 0, 0);
-            },
-        }
-    }
-
-    for (tooltip_elements.items) |elem| {
         switch (elem) {
             inline else => |inner_elem| {
                 if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease")) inner_elem.mouseRelease(x, y, 0, 0);
@@ -251,22 +223,25 @@ pub fn mouseScroll(x: f32, y: f32, x_scroll: f32, y_scroll: f32) bool {
         }
     }
 
-    var tooltip_elem_iter = std.mem.reverseIterator(tooltip_elements.items);
-    while (tooltip_elem_iter.next()) |elem| {
-        switch (elem) {
-            inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseScroll") and inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll))
-                    return true;
-            },
-        }
-    }
-
     return false;
+}
+
+fn lessThan(_: void, lhs: element.UiElement, rhs: element.UiElement) bool {
+    return switch (lhs) {
+        inline else => |elem| @intFromEnum(elem.layer),
+    } < switch (rhs) {
+        inline else => |elem| @intFromEnum(elem.layer),
+    };
 }
 
 pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) !void {
     while (!ui_lock.tryLock()) {}
     defer ui_lock.unlock();
+
+    if (time - last_sort > 16 * std.time.us_per_ms) {
+        std.sort.block(element.UiElement, elements.items, {}, lessThan);
+        last_sort = time;
+    }
 
     switch (current_screen) {
         inline else => |screen| if (screen.inited) try screen.update(time, @floatFromInt(dt)),

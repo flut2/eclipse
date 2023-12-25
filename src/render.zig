@@ -3715,50 +3715,6 @@ pub fn draw(
                 },
             }
         }
-
-        for (sc.tooltip_elements.items) |elem| {
-            switch (elem) {
-                .scrollable_container => |scrollable_container| {
-                    if (!scrollable_container.visible)
-                        continue;
-
-                    for (scrollable_container._container._elements.items) |cont_elem| {
-                        ui_idx = drawElement(
-                            ui_idx,
-                            cont_elem,
-                            draw_data,
-                            cam_x,
-                            cam_y,
-                            scrollable_container._container.x,
-                            scrollable_container._container.y,
-                            time,
-                        );
-                    }
-
-                    ui_idx = drawElement(
-                        ui_idx,
-                        .{ .slider = scrollable_container._scroll_bar },
-                        draw_data,
-                        cam_x,
-                        cam_y,
-                        0,
-                        0,
-                        time,
-                    );
-                },
-                .container => |container| {
-                    if (!container.visible)
-                        continue;
-
-                    for (container._elements.items) |cont_elem| {
-                        ui_idx = drawElement(ui_idx, cont_elem, draw_data, cam_x, cam_y, container.x, container.y, time);
-                    }
-                },
-                else => {
-                    ui_idx = drawElement(ui_idx, elem, draw_data, cam_x, cam_y, 0, 0, time);
-                },
-            }
-        }
         sc.ui_lock.unlock();
 
         if (ui_idx != 0) {

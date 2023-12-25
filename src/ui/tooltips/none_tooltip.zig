@@ -7,7 +7,7 @@ pub const NoneTooltip = struct {
     pub fn init(self: *NoneTooltip, allocator: std.mem.Allocator) !void {
         self.root = try element.Container.create(allocator, .{
             .visible = false,
-            .tooltip_container = true,
+            .layer = .tooltip,
             .x = 0,
             .y = 0,
         });

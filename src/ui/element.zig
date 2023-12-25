@@ -69,6 +69,12 @@ inline fn destroyAny(self: anytype) void {
     self._allocator.destroy(self);
 }
 
+pub const Layer = enum(u8) {
+    default = 0,
+    dialog = 1,
+    tooltip = 2,
+};
+
 pub const RGBF32 = extern struct {
     r: f32,
     g: f32,
@@ -87,7 +93,7 @@ pub const RGBF32 = extern struct {
     }
 };
 
-pub const TextType = enum(u32) {
+pub const TextType = enum(u8) {
     medium = 0,
     medium_italic = 1,
     bold = 2,
@@ -468,6 +474,7 @@ pub const Input = struct {
     allocator: std.mem.Allocator,
     enter_callback: ?*const fn ([]const u8) void = null,
     state: InteractableState = .none,
+    layer: Layer = .default,
     is_chat: bool = false,
     scissor: ScissorRect = .{},
     visible: bool = true,
@@ -592,6 +599,7 @@ pub const Button = struct {
     press_callback: *const fn () void,
     image_data: InteractableImageData,
     state: InteractableState = .none,
+    layer: Layer = .default,
     text_data: ?TextData = null,
     scissor: ScissorRect = .{},
     visible: bool = true,
@@ -692,6 +700,7 @@ pub const KeyMapper = struct {
     title_text_data: ?TextData = null,
     tooltip_text: ?TextData = null,
     state: InteractableState = .none,
+    layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
     listening: bool = false,
@@ -792,6 +801,7 @@ pub const CharacterBox = struct {
     press_callback: *const fn (*CharacterBox) void,
     image_data: InteractableImageData,
     state: InteractableState = .none,
+    layer: Layer = .default,
     text_data: ?TextData = null,
     scissor: ScissorRect = .{},
     visible: bool = true,
@@ -885,6 +895,7 @@ pub const Image = struct {
     x: f32,
     y: f32,
     image_data: ImageData,
+    layer: Layer = .default,
     scissor: ScissorRect = .{},
     ui_quad: bool = true,
     visible: bool = true,
@@ -936,6 +947,7 @@ pub const MenuBackground = struct {
     y: f32,
     w: f32,
     h: f32,
+    layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
     _disposed: bool = false,
@@ -968,6 +980,7 @@ pub const Item = struct {
     drag_end_callback: *const fn (*Item) void,
     double_click_callback: *const fn (*Item) void,
     shift_click_callback: *const fn (*Item) void,
+    layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
     draggable: bool = false,
@@ -1062,6 +1075,7 @@ pub const Bar = struct {
     x: f32,
     y: f32,
     image_data: ImageData,
+    layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
     text_data: TextData,
@@ -1103,6 +1117,7 @@ pub const Text = struct {
     x: f32,
     y: f32,
     text_data: TextData,
+    layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
     _disposed: bool = false,
@@ -1144,6 +1159,7 @@ pub const ScrollableContainer = struct {
     scroll_h: f32,
     scroll_decor_image_data: ImageData,
     scroll_knob_image_data: InteractableImageData,
+    layer: Layer = .default,
 
     visible: bool = true,
     base_y: f32 = 0.0,
@@ -1324,7 +1340,7 @@ pub const Container = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     draggable: bool = false,
-    tooltip_container: bool = false,
+    layer: Layer = .default,
 
     _elements: std.ArrayList(UiElement) = undefined,
     _disposed: bool = false,
@@ -1508,22 +1524,7 @@ pub const Container = struct {
     }
 
     pub fn create(allocator: std.mem.Allocator, data: Container) !*Container {
-        const should_lock = if (data.tooltip_container) sc.elements.capacity == 0 else sc.tooltip_elements.capacity == 0;
-        if (should_lock) {
-            while (!sc.ui_lock.tryLock()) {}
-        }
-        defer if (should_lock) sc.ui_lock.unlock();
-
-        var elem = try allocator.create(Container);
-        elem.* = data;
-        elem._allocator = allocator;
-        elem.init();
-        if (data.tooltip_container) {
-            try sc.tooltip_elements.append(.{ .container = elem });
-        } else {
-            try sc.elements.append(.{ .container = elem });
-        }
-        return elem;
+        return try createAny(allocator, data);
     }
 
     pub fn destroy(self: *Container) void {
@@ -1608,6 +1609,7 @@ pub const Toggle = struct {
     on_image_data: InteractableImageData,
     scissor: ScissorRect = .{},
     state: InteractableState = .none,
+    layer: Layer = .default,
     text_data: ?TextData = null,
     tooltip_text: ?TextData = null,
     state_change: ?*const fn (*Toggle) void = null,
@@ -1718,6 +1720,7 @@ pub const Slider = struct {
     vertical: bool = false,
     continous_event_fire: bool = true,
     state: InteractableState = .none,
+    layer: Layer = .default,
     // the alignments and max w/h on these will be overwritten, don't bother setting it
     value_text_data: ?TextData = null,
     title_text_data: ?TextData = null,

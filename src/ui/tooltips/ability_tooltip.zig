@@ -22,7 +22,7 @@ pub const AbilityTooltip = struct {
 
         self.root = try element.Container.create(allocator, .{
             .visible = false,
-            .tooltip_container = true,
+            .layer = .tooltip,
             .x = 0,
             .y = 0,
         });
