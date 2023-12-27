@@ -8,7 +8,7 @@ const element = @import("ui/element.zig");
 const camera = @import("camera.zig");
 const assets = @import("assets.zig");
 const particles = @import("particles.zig");
-const sc = @import("ui/controllers/screen_controller.zig");
+const systems = @import("ui/systems.zig");
 
 pub const FailureType = enum(i8) {
     message_no_disconnect = -1,
@@ -215,7 +215,7 @@ pub fn onError(e: SocketError) void {
 }
 
 pub fn accept() void {
-    while (!queue_lock.tryLock()) {}
+    queue_lock.lock();
     for (queue.items) |packet| {
         sendPacket(packet);
     }
@@ -308,6 +308,9 @@ fn handleAllyShoot() void {
     const container_type = reader.read(u16);
     const angle = reader.read(f32);
 
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
+
     if (map.findEntityRef(owner_id)) |en| {
         if (en.* == .player) {
             const player = &en.player;
@@ -325,7 +328,7 @@ fn handleAllyShoot() void {
                 .bullet_id = @intCast(bullet_id),
                 .owner_id = player.obj_id,
             };
-            proj.addToMap(true);
+            proj.addToMap();
             // }
 
             const attack_period: i64 = @intFromFloat(1.0 / (map.attack_frequency * item_props.?.rate_of_fire));
@@ -355,7 +358,7 @@ fn handleAoe() void {
         .color = 0xFF0000,
         .radius = radius,
     };
-    effect.addToMap(true);
+    effect.addToMap();
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick or settings.log_packets == .all_non_tick)
         std.log.debug("Recv - Aoe: x={e}, y={e}, radius={e}, damage={d}, condition_effect={any}, duration={e}, orig_type={d}, color={d}", .{ x, y, radius, damage, condition_effect, duration, orig_type, color });
@@ -385,7 +388,7 @@ fn handleDamage() void {
     const bullet_id = reader.read(u8);
     const object_id = reader.read(i32);
 
-    while (!map.object_lock.tryLock()) {}
+    map.object_lock.lock();
     defer map.object_lock.unlock();
 
     if (map.findEntityRef(target_id)) |en| {
@@ -401,7 +404,6 @@ fn handleDamage() void {
                     0.0,
                     100.0 / 10000.0,
                     _allocator,
-                    false,
                 );
             },
             .object => |*object| {
@@ -415,7 +417,6 @@ fn handleDamage() void {
                     0.0,
                     100.0 / 10000.0,
                     _allocator,
-                    false,
                 );
             },
             else => {},
@@ -455,6 +456,9 @@ fn handleEnemyShoot() void {
     if (num_shots == 0)
         return;
 
+    map.object_lock.lockShared();
+    defer map.object_lock.unlockShared();
+
     var owner: ?map.GameObject = null;
     if (map.findEntityConst(owner_id)) |en| {
         if (en == .object) {
@@ -472,6 +476,7 @@ fn handleEnemyShoot() void {
     const total_angle = angle_inc * @as(f32, @floatFromInt(num_shots - 1));
     var current_angle = angle - total_angle / 2.0;
     const proj_props = owner_props.?.projectiles[bullet_type];
+
     for (0..num_shots) |i| {
         var proj = map.Projectile{
             .x = start_x,
@@ -485,7 +490,7 @@ fn handleEnemyShoot() void {
             .owner_id = owner_id,
             .damage_players = true,
         };
-        proj.addToMap(true);
+        proj.addToMap();
 
         current_angle += angle_inc;
     }
@@ -507,7 +512,7 @@ fn handleFailure() void {
         main.disconnect();
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
-        std.log.debug("Recv - Failure: error_id={d}, error_description={s}", .{ error_id, error_description });
+        std.log.debug("Recv - Failure: error_id={any}, error_description={s}", .{ error_id, error_description });
 }
 
 fn handleGoto() void {
@@ -515,7 +520,7 @@ fn handleGoto() void {
     const x = reader.read(f32);
     const y = reader.read(f32);
 
-    while (!map.object_lock.tryLock()) {}
+    map.object_lock.lock();
     defer map.object_lock.unlock();
 
     if (map.findEntityRef(object_id)) |en| {
@@ -561,7 +566,7 @@ fn handleMapInfo() void {
 
     const width: u32 = @intCast(@max(0, reader.read(i32)));
     const height: u32 = @intCast(@max(0, reader.read(i32)));
-    map.setWH(width, height, _allocator);
+    map.setWH(width, height);
     map.rpc_set = false;
     if (map.name.len > 0)
         _allocator.free(map.name);
@@ -591,7 +596,7 @@ fn handleNewTick() void {
     const tick_id = reader.read(u8);
     const tick_time = @as(f32, std.time.us_per_s) / @as(f32, @floatFromInt(reader.read(u8)));
 
-    while (!map.object_lock.tryLock()) {}
+    map.object_lock.lock();
     defer map.object_lock.unlock();
 
     defer {
@@ -623,7 +628,7 @@ fn handleNewTick() void {
 
     var stat_reader = utils.PacketReader{};
     const statuses_len = reader.read(u16);
-    statusLoop: for (0..statuses_len) |_| {
+    for (0..statuses_len) |_| {
         const obj_id = reader.read(i32);
         const x = reader.read(f32);
         const y = reader.read(f32);
@@ -659,18 +664,18 @@ fn handleNewTick() void {
                         const stat_id = stat_reader.read(u8);
                         const stat = std.meta.intToEnum(game_data.StatType, stat_id) catch |e| {
                             std.log.err("Could not parse stat {d}: {any}", .{ stat_id, e });
-                            continue :statusLoop;
+                            continue;
                         };
                         if (!parsePlayerStat(&player.*, stat, &stat_reader)) {
                             std.log.err("Stat data parsing for stat {any} failed, player: {any}", .{ stat, player });
-                            continue :statusLoop;
+                            continue;
                         }
                     }
 
-                    if (player.obj_id == map.local_player_id and sc.current_screen == .game)
-                        sc.current_screen.game.updateStats();
+                    if (player.obj_id == map.local_player_id and systems.screen == .game)
+                        systems.screen.game.updateStats();
 
-                    continue :statusLoop;
+                    continue;
                 },
                 .object => |*object| {
                     {
@@ -697,15 +702,15 @@ fn handleNewTick() void {
                         const stat_id = stat_reader.read(u8);
                         const stat = std.meta.intToEnum(game_data.StatType, stat_id) catch |e| {
                             std.log.err("Could not parse stat {d}: {any}", .{ stat_id, e });
-                            continue :statusLoop;
+                            continue;
                         };
                         if (!parseObjectStat(&object.*, stat, &stat_reader)) {
                             std.log.err("Stat data parsing for stat {any} failed, object: {any}", .{ stat, object });
-                            continue :statusLoop;
+                            continue;
                         }
                     }
 
-                    continue :statusLoop;
+                    continue;
                 },
                 else => {},
             }
@@ -790,6 +795,9 @@ fn handleServerPlayerShoot() void {
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
         std.log.debug("Recv - ServerPlayerShoot: bullet_id={d}, owner_id={d}, container_type={d}, x={e}, y={e}, angle={e}, damage={d}", .{ bullet_id, owner_id, container_type, start_x, start_y, angle, damage });
 
+    map.object_lock.lockShared();
+    defer map.object_lock.unlockShared();
+
     const needs_ack = owner_id == map.local_player_id;
     if (map.findEntityConst(owner_id)) |en| {
         if (en == .player) {
@@ -810,7 +818,7 @@ fn handleServerPlayerShoot() void {
                     .bullet_id = bullet_id +% @as(u8, @intCast(i)), // this is wrong but whatever
                     .owner_id = owner_id,
                 };
-                proj.addToMap(true);
+                proj.addToMap();
 
                 current_angle += angle_inc;
             }
@@ -840,6 +848,9 @@ fn handleShowEffect() void {
             var start_x = x2;
             var start_y = y2;
 
+            map.object_lock.lockShared();
+            defer map.object_lock.unlockShared();
+
             if (map.findEntityConst(target_object_id)) |en| {
                 switch (en) {
                     .object => |object| {
@@ -862,18 +873,21 @@ fn handleShowEffect() void {
                 .color = color,
                 .duration = 1500,
             };
-            effect.addToMap(true);
+            effect.addToMap();
         },
         .teleport => {
             var effect = particles.TeleportEffect{
                 .x = x1,
                 .y = y1,
             };
-            effect.addToMap(true);
+            effect.addToMap();
         },
         .trail => {
             var start_x = x2;
             var start_y = y2;
+
+            map.object_lock.lockShared();
+            defer map.object_lock.unlockShared();
 
             if (map.findEntityConst(target_object_id)) |en| {
                 switch (en) {
@@ -896,7 +910,7 @@ fn handleShowEffect() void {
                 .end_y = y1,
                 .color = color,
             };
-            effect.addToMap(true);
+            effect.addToMap();
         },
         .potion => {
             // the effect itself handles checks for invalid entity
@@ -904,7 +918,7 @@ fn handleShowEffect() void {
                 .target_id = target_object_id,
                 .color = color,
             };
-            effect.addToMap(true);
+            effect.addToMap();
         },
         .earthquake => {
             camera.quake = true;
@@ -930,12 +944,12 @@ fn handleText() void {
     if (text.len > 0)
         text_color = reader.read(u32);
 
-    if (sc.current_screen == .game)
-        sc.current_screen.game.addChatLine(name, text, name_color, text_color) catch |e| {
+    if (systems.screen == .game)
+        systems.screen.game.addChatLine(name, text, name_color, text_color) catch |e| {
             std.log.err("Adding message with name {s} and text {s} failed: {any}", .{ name, text, e });
         };
 
-    while (!map.object_lock.tryLockShared()) {}
+    map.object_lock.lockShared();
     defer map.object_lock.unlockShared();
 
     if (map.findEntityConst(object_id)) |en| {
@@ -958,7 +972,7 @@ fn handleText() void {
                     }
                 },
             }
-        } else @panic("Could not find speech_balloons in the UI atlas");
+        } else std.debug.panic("Could not find speech_balloons in the UI atlas", .{});
 
         element.SpeechBalloon.add(.{
             .image_data = .{ .normal = .{
@@ -1033,9 +1047,8 @@ fn handleUpdate() void {
 
     const drops = reader.readArray(i32);
     {
-        while (!map.object_lock.tryLock()) {}
+        map.object_lock.lock();
         defer map.object_lock.unlock();
-
         for (drops) |drop| {
             map.removeEntity(_allocator, drop);
         }
@@ -1043,7 +1056,7 @@ fn handleUpdate() void {
 
     var stat_reader = utils.PacketReader{};
     const new_objs_len = reader.read(u16);
-    objLoop: for (0..new_objs_len) |_| {
+    for (0..new_objs_len) |_| {
         const obj_type = reader.read(u16);
         const obj_id = reader.read(i32);
         const x = reader.read(f32);
@@ -1062,18 +1075,18 @@ fn handleUpdate() void {
                     const stat_id = stat_reader.read(u8);
                     const stat = std.meta.intToEnum(game_data.StatType, stat_id) catch |e| {
                         std.log.err("Could not parse stat {d}: {any}", .{ stat_id, e });
-                        continue :objLoop;
+                        continue;
                     };
                     if (!parsePlayerStat(&player, stat, &stat_reader)) {
                         std.log.err("Stat data parsing for stat {any} failed, player: {any}", .{ stat, player });
-                        continue :objLoop;
+                        continue;
                     }
                 }
 
-                if (obj_id == map.local_player_id and sc.current_screen == .game)
-                    sc.current_screen.game.updateStats();
+                if (obj_id == map.local_player_id and systems.screen == .game)
+                    systems.screen.game.updateStats();
 
-                player.addToMap(_allocator, true);
+                player.addToMap(_allocator);
             },
             inline else => {
                 var obj = map.GameObject{ .x = x, .y = y, .obj_id = obj_id, .obj_type = obj_type };
@@ -1082,15 +1095,15 @@ fn handleUpdate() void {
                     const stat_id = stat_reader.read(u8);
                     const stat = std.meta.intToEnum(game_data.StatType, stat_id) catch |e| {
                         std.log.err("Could not parse stat {d}: {any}", .{ stat_id, e });
-                        continue :objLoop;
+                        continue;
                     };
                     if (!parseObjectStat(&obj, stat, &stat_reader)) {
                         std.log.err("Stat data parsing for stat {any} failed, object: {any}", .{ stat, obj });
-                        continue :objLoop;
+                        continue;
                     }
                 }
 
-                obj.addToMap(_allocator, true);
+                obj.addToMap(_allocator);
             },
         }
     }
@@ -1144,19 +1157,29 @@ fn parsePlayerStat(plr: *map.Player, stat_type: game_data.StatType, stat_reader:
             const inv_idx = @intFromEnum(stat_type) - @intFromEnum(game_data.StatType.inv_0);
             const item = stat_reader.read(u16);
             plr.inventory[inv_idx] = item;
-            if (plr.obj_id == map.local_player_id and sc.current_screen == .game)
-                sc.current_screen.game.setInvItem(item, inv_idx);
+            if (plr.obj_id == map.local_player_id and systems.screen == .game)
+                systems.screen.game.setInvItem(item, inv_idx);
         },
         .name => {
-            if (plr.name.len > 0)
-                _allocator.free(plr.name);
+            if (plr.name) |player_name| {
+                _allocator.free(player_name);
+            }
 
             plr.name = _allocator.dupe(u8, stat_reader.readArray(u8)) catch &[0]u8{};
-            plr.name_text_data.text = plr.name;
 
-            // this will get overwritten and leak in addToMap() otherwise
-            if (plr.name_text_data._line_widths != null)
-                plr.name_text_data.recalculateAttributes(_allocator);
+            if (plr.name_text_data) |*data| {
+                data.text = plr.name.?;
+                data.recalculateAttributes(_allocator);
+            } else {
+                plr.name_text_data = element.TextData{
+                    .text = plr.name.?,
+                    .text_type = .bold,
+                    .size = 16,
+                    .color = 0xFCDF00,
+                    .max_width = 200,
+                };
+                plr.name_text_data.?.recalculateAttributes(_allocator);
+            }
         },
         .tex_1 => plr.tex_1 = stat_reader.read(i32),
         .tex_2 => plr.tex_2 = stat_reader.read(i32),
@@ -1164,7 +1187,13 @@ fn parsePlayerStat(plr: *map.Player, stat_type: game_data.StatType, stat_reader:
         .gems => plr.gems = stat_reader.read(i32),
         .crowns => plr.crowns = stat_reader.read(i32),
         .account_id => plr.account_id = stat_reader.read(i32),
-        .guild => plr.guild = _allocator.dupe(u8, stat_reader.readArray(u8)) catch &[0]u8{},
+        .guild => {
+            if (plr.guild) |guild_name| {
+                _allocator.free(guild_name);
+            }
+
+            plr.guild = _allocator.dupe(u8, stat_reader.readArray(u8)) catch &[0]u8{};
+        },
         .guild_rank => plr.guild_rank = stat_reader.read(i8),
         .texture => plr.skin = stat_reader.read(u16),
         .tier => plr.tier = stat_reader.read(u8),
@@ -1194,8 +1223,8 @@ fn parseObjectStat(obj: *map.GameObject, stat_type: game_data.StatType, stat_rea
             const inv_idx = @intFromEnum(stat_type) - @intFromEnum(game_data.StatType.inv_0);
             const item = stat_reader.read(u16);
             obj.inventory[inv_idx] = item;
-            if (obj.obj_id == map.interactive_id.load(.Acquire) and sc.current_screen == .game) {
-                sc.current_screen.game.setContainerItem(item, inv_idx);
+            if (obj.obj_id == map.interactive_id.load(.Acquire) and systems.screen == .game) {
+                systems.screen.game.setContainerItem(item, inv_idx);
             }
         },
         .name => {
@@ -1203,15 +1232,23 @@ fn parseObjectStat(obj: *map.GameObject, stat_type: game_data.StatType, stat_rea
             if (new_name.len <= 0)
                 return true;
 
-            if (obj.name.len > 0)
-                _allocator.free(obj.name);
+            if (obj.name) |obj_name| {
+                _allocator.free(obj_name);
+            }
 
             obj.name = _allocator.dupe(u8, new_name) catch &[0]u8{};
-            obj.name_text_data.text = obj.name;
 
-            // this will get overwritten and leak in addToMap() otherwise
-            if (obj.name_text_data._line_widths != null)
-                obj.name_text_data.recalculateAttributes(_allocator);
+            if (obj.name_text_data) |*data| {
+                data.text = obj.name.?;
+                data.recalculateAttributes(_allocator);
+            } else {
+                obj.name_text_data = element.TextData{
+                    .text = obj.name.?,
+                    .text_type = .bold,
+                    .size = 16,
+                };
+                obj.name_text_data.?.recalculateAttributes(_allocator);
+            }
         },
         .tex_1 => obj.tex_1 = stat_reader.read(i32),
         .tex_2 => obj.tex_2 = stat_reader.read(i32),
@@ -1232,7 +1269,7 @@ fn parseObjectStat(obj: *map.GameObject, stat_type: game_data.StatType, stat_rea
 }
 
 pub fn queuePacket(packet: C2SPacket) void {
-    while (!queue_lock.tryLock()) {}
+    queue_lock.lock();
     defer queue_lock.unlock();
 
     if (packet == .use_portal or packet == .escape) {

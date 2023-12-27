@@ -24,7 +24,7 @@ pub const ItemTooltip = struct {
     pub fn init(self: *ItemTooltip, allocator: std.mem.Allocator) !void {
         self._allocator = allocator;
 
-        self.root = try element.Container.create(allocator, .{
+        self.root = try element.create(allocator, element.Container{
             .visible = false,
             .layer = .tooltip,
             .x = 0,
@@ -32,7 +32,7 @@ pub const ItemTooltip = struct {
         });
 
         const tooltip_background_data = assets.getUiData("tooltip_background", 0);
-        self.decor = try self.root.createElement(element.Image, .{
+        self.decor = try self.root.createChild(element.Image{
             .x = 0,
             .y = 0,
             .image_data = .{
@@ -40,7 +40,7 @@ pub const ItemTooltip = struct {
             },
         });
 
-        self.image = try self.root.createElement(element.Image, .{
+        self.image = try self.root.createChild(element.Image{
             .x = 10,
             .y = 10,
             .image_data = .{
@@ -54,7 +54,7 @@ pub const ItemTooltip = struct {
             .ui_quad = false,
         });
 
-        self.item_name = try self.root.createElement(element.Text, .{
+        self.item_name = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
             .y = 10,
             .text_data = .{
@@ -64,7 +64,7 @@ pub const ItemTooltip = struct {
             },
         });
 
-        self.rarity = try self.root.createElement(element.Text, .{
+        self.rarity = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
             .y = self.item_name.text_data._height + 10,
             .text_data = .{
@@ -77,7 +77,7 @@ pub const ItemTooltip = struct {
         });
 
         const tooltip_line_spacer_data = assets.getUiData("tooltip_line_spacer", 0);
-        self.line_break_one = try self.root.createElement(element.Image, .{
+        self.line_break_one = try self.root.createChild(element.Image{
             .x = 20,
             .y = self.image.y + self.image.height(),
             .image_data = .{
@@ -85,7 +85,7 @@ pub const ItemTooltip = struct {
             },
         });
 
-        self.main_text = try self.root.createElement(element.Text, .{
+        self.main_text = try self.root.createChild(element.Text{
             .x = 10,
             .y = self.line_break_one.y + self.line_break_one.height() + 20,
             .text_data = .{
@@ -98,7 +98,7 @@ pub const ItemTooltip = struct {
             },
         });
 
-        self.line_break_two = try self.root.createElement(element.Image, .{
+        self.line_break_two = try self.root.createChild(element.Image{
             .x = 20,
             .y = self.main_text.y + self.main_text.text_data._height,
             .image_data = .{
@@ -106,7 +106,7 @@ pub const ItemTooltip = struct {
             },
         });
 
-        self.footer = try self.root.createElement(element.Text, .{
+        self.footer = try self.root.createChild(element.Text{
             .x = 10,
             .y = self.line_break_two.y + self.line_break_two.height() + 20,
             .text_data = .{
@@ -121,7 +121,7 @@ pub const ItemTooltip = struct {
     }
 
     pub fn deinit(self: *ItemTooltip) void {
-        self.root.destroy();
+        element.destroy(self.root);
     }
 
     fn getMainBuffer(self: *ItemTooltip) []u8 {

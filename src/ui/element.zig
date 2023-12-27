@@ -5,12 +5,12 @@ const main = @import("../main.zig");
 const zglfw = @import("zglfw");
 const game_data = @import("../game_data.zig");
 const settings = @import("../settings.zig");
-const sc = @import("controllers/screen_controller.zig");
+const systems = @import("systems.zig");
 const tooltip = @import("tooltips/tooltip.zig");
 const input = @import("../input.zig");
 const utils = @import("../utils.zig");
 
-inline fn createAny(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data) {
+pub fn create(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data) {
     var elem = try allocator.create(@TypeOf(data));
     elem.* = data;
     elem._allocator = allocator;
@@ -29,16 +29,11 @@ inline fn createAny(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data)
     if (field_name.len == 0)
         @compileError("Could not find field name");
 
-    const should_lock = sc.elements.capacity == 0;
-    if (should_lock) {
-        while (!sc.ui_lock.tryLock()) {}
-    }
-    defer if (should_lock) sc.ui_lock.unlock();
-    try sc.elements.append(@unionInit(UiElement, field_name, elem));
+    try systems.elements_to_add.append(@unionInit(UiElement, field_name, elem));
     return elem;
 }
 
-inline fn destroyAny(self: anytype) void {
+pub fn destroy(self: anytype) void {
     if (self._disposed)
         return;
 
@@ -58,9 +53,9 @@ inline fn destroyAny(self: anytype) void {
         @compileError("Could not find field name");
 
     const tag = std.meta.stringToEnum(std.meta.Tag(UiElement), field_name);
-    for (sc.elements.items, 0..) |element, i| {
+    for (systems.elements.items, 0..) |element, i| {
         if (std.meta.activeTag(element) == tag and @field(element, field_name) == self) {
-            _ = sc.elements.swapRemove(i);
+            _ = systems.elements.swapRemove(i);
             break;
         }
     }
@@ -142,11 +137,11 @@ pub const TextData = struct {
     _line_widths: ?std.ArrayList(f32) = null,
 
     pub fn recalculateAttributes(self: *TextData, allocator: std.mem.Allocator) void {
-        while (!self._lock.tryLock()) {}
+        self._lock.lock();
         defer self._lock.unlock();
 
         if (self._backing_buffer.len == 0 and self.max_chars > 0)
-            self._backing_buffer = allocator.alloc(u8, self.max_chars) catch @panic("Failed to allocate the backing buffer");
+            self._backing_buffer = allocator.alloc(u8, self.max_chars) catch std.debug.panic("Failed to allocate the backing buffer", .{});
 
         if (self._line_widths) |*line_widths| {
             line_widths.clearRetainingCapacity();
@@ -291,7 +286,7 @@ pub const TextData = struct {
     }
 
     pub fn deinit(self: *TextData, allocator: std.mem.Allocator) void {
-        while (!self._lock.tryLock()) {}
+        self._lock.lock();
         defer self._lock.unlock();
 
         if (self._backing_buffer.len > 0)
@@ -558,14 +553,6 @@ pub const Input = struct {
         });
     }
 
-    pub fn create(allocator: std.mem.Allocator, data: Input) !*Input {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *Input) void {
-        destroyAny(self);
-    }
-
     pub fn clear(self: *Input) void {
         self.text_data.text = "";
         self.text_data.recalculateAttributes(self._allocator);
@@ -679,14 +666,6 @@ pub const Button = struct {
             };
         }
     }
-
-    pub fn create(allocator: std.mem.Allocator, data: Button) !*Button {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *Button) void {
-        destroyAny(self);
-    }
 };
 
 pub const KeyMapper = struct {
@@ -783,14 +762,6 @@ pub const KeyMapper = struct {
             .normal => |image_data| return image_data.height(),
         };
     }
-
-    pub fn create(allocator: std.mem.Allocator, data: KeyMapper) !*KeyMapper {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *KeyMapper) void {
-        destroyAny(self);
-    }
 };
 
 pub const CharacterBox = struct {
@@ -881,14 +852,6 @@ pub const CharacterBox = struct {
             };
         }
     }
-
-    pub fn create(allocator: std.mem.Allocator, data: CharacterBox) !*CharacterBox {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *CharacterBox) void {
-        destroyAny(self);
-    }
 };
 
 pub const Image = struct {
@@ -932,14 +895,6 @@ pub const Image = struct {
             .normal => |image_data| return image_data.height(),
         }
     }
-
-    pub fn create(allocator: std.mem.Allocator, data: Image) !*Image {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *Image) void {
-        destroyAny(self);
-    }
 };
 
 pub const MenuBackground = struct {
@@ -959,14 +914,6 @@ pub const MenuBackground = struct {
 
     pub fn height(_: MenuBackground) f32 {
         return @floatFromInt(assets.menu_background.height);
-    }
-
-    pub fn create(allocator: std.mem.Allocator, data: MenuBackground) !*MenuBackground {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *MenuBackground) void {
-        destroyAny(self);
     }
 };
 
@@ -1061,14 +1008,6 @@ pub const Item = struct {
             .normal => |image_data| return image_data.height(),
         }
     }
-
-    pub fn create(allocator: std.mem.Allocator, data: Item) !*Item {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *Item) void {
-        destroyAny(self);
-    }
 };
 
 pub const Bar = struct {
@@ -1103,14 +1042,6 @@ pub const Bar = struct {
             .normal => |image_data| return image_data.height(),
         }
     }
-
-    pub fn create(allocator: std.mem.Allocator, data: Bar) !*Bar {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *Bar) void {
-        destroyAny(self);
-    }
 };
 
 pub const Text = struct {
@@ -1137,14 +1068,6 @@ pub const Text = struct {
 
     pub fn height(self: Text) f32 {
         return self.text_data._height;
-    }
-
-    pub fn create(allocator: std.mem.Allocator, data: Text) !*Text {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *Text) void {
-        destroyAny(self);
     }
 };
 
@@ -1223,7 +1146,7 @@ pub const ScrollableContainer = struct {
     pub fn init(self: *ScrollableContainer) void {
         self.base_y = self.y;
 
-        self._container = self._allocator.create(Container) catch @panic("ScrollableContainer child container alloc failed");
+        self._container = self._allocator.create(Container) catch std.debug.panic("ScrollableContainer child container alloc failed", .{});
         self._container.* = .{ .x = self.x, .y = self.y, .scissor = .{
             .min_x = 0,
             .min_y = 0,
@@ -1233,7 +1156,7 @@ pub const ScrollableContainer = struct {
         self._container._allocator = self._allocator;
         self._container.init();
 
-        self._scroll_bar = self._allocator.create(Slider) catch @panic("ScrollableContainer scroll bar alloc failed");
+        self._scroll_bar = self._allocator.create(Slider) catch std.debug.panic("ScrollableContainer scroll bar alloc failed", .{});
         self._scroll_bar.* = .{
             .x = self.scroll_x,
             .y = self.scroll_y,
@@ -1270,16 +1193,8 @@ pub const ScrollableContainer = struct {
         return @max(self._container.height(), (self._scroll_bar.y - self._container.y) + self._scroll_bar.height());
     }
 
-    pub fn create(allocator: std.mem.Allocator, data: ScrollableContainer) !*ScrollableContainer {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *ScrollableContainer) void {
-        destroyAny(self);
-    }
-
-    pub fn createElement(self: *ScrollableContainer, comptime T: type, data: T) !*T {
-        const elem = self._container.createElement(T, data);
+    pub fn createChild(self: *ScrollableContainer, data: anytype) !*@TypeOf(data) {
+        const elem = self._container.createChild(data);
         self.update();
         return elem;
     }
@@ -1458,7 +1373,7 @@ pub const Container = struct {
     }
 
     pub fn init(self: *Container) void {
-        self._elements = std.ArrayList(UiElement).initCapacity(self._allocator, 8) catch @panic("Container element buffer alloc failed");
+        self._elements = std.ArrayList(UiElement).initCapacity(self._allocator, 8) catch std.debug.panic("Container element buffer alloc failed", .{});
     }
 
     pub fn deinit(self: *Container) void {
@@ -1521,15 +1436,8 @@ pub const Container = struct {
         return max_y - min_y;
     }
 
-    pub fn create(allocator: std.mem.Allocator, data: Container) !*Container {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *Container) void {
-        destroyAny(self);
-    }
-
-    pub fn createElement(self: *Container, comptime T: type, data: T) !*T {
+    pub fn createChild(self: *Container, data: anytype) !*@TypeOf(data) {
+        const T = @TypeOf(data);
         var elem = try self._allocator.create(T);
         elem.* = data;
         elem._allocator = self._allocator;
@@ -1693,14 +1601,6 @@ pub const Toggle = struct {
             .nine_slice => |nine_slice| return nine_slice.h,
             .normal => |image_data| return image_data.height(),
         }
-    }
-
-    pub fn create(allocator: std.mem.Allocator, data: Toggle) !*Toggle {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *Toggle) void {
-        destroyAny(self);
     }
 };
 
@@ -1943,14 +1843,6 @@ pub const Slider = struct {
         return @max(decor_h, knob_h);
     }
 
-    pub fn create(allocator: std.mem.Allocator, data: Slider) !*Slider {
-        return try createAny(allocator, data);
-    }
-
-    pub fn destroy(self: *Slider) void {
-        destroyAny(self);
-    }
-
     fn pressed(self: *Slider, x: f32, y: f32, knob_h: f32, knob_w: f32) void {
         const prev_value = self._current_value;
 
@@ -2013,7 +1905,7 @@ pub const SpeechBalloon = struct {
     target_id: i32,
     start_time: i64 = 0,
     visible: bool = true,
-    // the texts' internal x/y, don't touch outside of screen_controller.update()
+    // the texts' internal x/y, don't touch outside of systems.update()
     _screen_x: f32 = 0.0,
     _screen_y: f32 = 0.0,
     _disposed: bool = false,
@@ -2036,10 +1928,7 @@ pub const SpeechBalloon = struct {
         var balloon = Temporary{ .balloon = data };
         balloon.balloon.start_time = main.current_time;
         balloon.balloon.text_data.recalculateAttributes(main._allocator);
-
-        while (!sc.temp_elem_lock.tryLock()) {}
-        defer sc.temp_elem_lock.unlock();
-        try sc.temp_elements.append(balloon);
+        try systems.temp_elements_to_add.append(balloon);
     }
 
     pub fn destroy(self: *SpeechBalloon, allocator: std.mem.Allocator) void {
@@ -2048,7 +1937,7 @@ pub const SpeechBalloon = struct {
 
         self._disposed = true;
 
-        while (!self.text_data._lock.tryLock()) {}
+        self.text_data._lock.lock();
         allocator.free(self.text_data.text);
         self.text_data._lock.unlock();
 
@@ -2064,7 +1953,7 @@ pub const StatusText = struct {
     delay: i64 = 0,
     obj_id: i32 = -1,
     visible: bool = true,
-    // the texts' internal x/y, don't touch outside of screen_controller.update()
+    // the texts' internal x/y, don't touch outside of systems.update()
     _screen_x: f32 = 0.0,
     _screen_y: f32 = 0.0,
     _disposed: bool = false,
@@ -2081,10 +1970,7 @@ pub const StatusText = struct {
         var status = Temporary{ .status = data };
         status.status.start_time = main.current_time + data.delay;
         status.status.text_data.recalculateAttributes(main._allocator);
-
-        while (!sc.temp_elem_lock.tryLock()) {}
-        defer sc.temp_elem_lock.unlock();
-        try sc.temp_elements.append(status);
+        try systems.temp_elements_to_add.append(status);
     }
 
     pub fn destroy(self: *StatusText, allocator: std.mem.Allocator) void {
@@ -2093,7 +1979,7 @@ pub const StatusText = struct {
 
         self._disposed = true;
 
-        while (!self.text_data._lock.tryLock()) {}
+        self.text_data._lock.lock();
         allocator.free(self.text_data.text);
         self.text_data._lock.unlock();
 

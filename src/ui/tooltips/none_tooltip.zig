@@ -5,7 +5,7 @@ pub const NoneTooltip = struct {
     root: *element.Container = undefined,
 
     pub fn init(self: *NoneTooltip, allocator: std.mem.Allocator) !void {
-        self.root = try element.Container.create(allocator, .{
+        self.root = try element.create(allocator, element.Container{
             .visible = false,
             .layer = .tooltip,
             .x = 0,
@@ -14,6 +14,6 @@ pub const NoneTooltip = struct {
     }
 
     pub fn deinit(self: *NoneTooltip) void {
-        self.root.destroy();
+        element.destroy(self.root);
     }
 };

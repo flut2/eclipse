@@ -10,7 +10,7 @@ const map = @import("../../map.zig");
 const input = @import("../../input.zig");
 const settings = @import("../../settings.zig");
 
-const sc = @import("../controllers/screen_controller.zig");
+const systems = @import("../systems.zig");
 const Options = @import("options.zig").Options;
 const NineSlice = element.NineSliceImageData;
 
@@ -38,7 +38,7 @@ pub const GameScreen = struct {
         }
 
         fn findContainerSlotId(screen: GameScreen, x: f32, y: f32) u8 {
-            if (!sc.current_screen.game.container_visible)
+            if (!systems.screen.game.container_visible)
                 return 255;
 
             for (0..9) |i| {
@@ -152,7 +152,7 @@ pub const GameScreen = struct {
         screen.parseItemRects();
 
         const minimap_data = assets.getUiData("minimap", 0);
-        screen.minimap_decor = try element.Image.create(allocator, .{
+        screen.minimap_decor = try element.create(allocator, element.Image{
             .x = camera.screen_width - minimap_data.texWRaw() - 10,
             .y = 10,
             .image_data = .{ .normal = .{ .atlas_data = minimap_data } },
@@ -163,14 +163,14 @@ pub const GameScreen = struct {
             .minimap_height = 174.0,
         });
 
-        screen.inventory_decor = try element.Image.create(allocator, .{
+        screen.inventory_decor = try element.create(allocator, element.Image{
             .x = camera.screen_width - inventory_data.texWRaw() - 10,
             .y = camera.screen_height - inventory_data.texHRaw() - 10,
             .image_data = .{ .normal = .{ .atlas_data = inventory_data } },
         });
 
         for (0..22) |i| {
-            screen.inventory_items[i] = try element.Item.create(allocator, .{
+            screen.inventory_items[i] = try element.create(allocator, element.Item{
                 .x = screen.inventory_decor.x + screen.inventory_pos_data[i].x + (screen.inventory_pos_data[i].w - assets.error_data.texWRaw() * 4.0 + assets.padding * 2) / 2,
                 .y = screen.inventory_decor.y + screen.inventory_pos_data[i].y + (screen.inventory_pos_data[i].h - assets.error_data.texHRaw() * 4.0 + assets.padding * 2) / 2,
                 .background_x = screen.inventory_decor.x + screen.inventory_pos_data[i].x,
@@ -186,7 +186,7 @@ pub const GameScreen = struct {
         }
 
         const container_data = assets.getUiData("container_view", 0);
-        screen.container_decor = try element.Image.create(allocator, .{
+        screen.container_decor = try element.create(allocator, element.Image{
             .x = screen.inventory_decor.x - container_data.texWRaw() - 10,
             .y = camera.screen_height - container_data.texHRaw() - 10,
             .image_data = .{ .normal = .{ .atlas_data = container_data } },
@@ -194,7 +194,7 @@ pub const GameScreen = struct {
         });
 
         for (0..9) |i| {
-            screen.container_items[i] = try element.Item.create(allocator, .{
+            screen.container_items[i] = try element.create(allocator, element.Item{
                 .x = screen.container_decor.x + screen.container_pos_data[i].x + (screen.container_pos_data[i].w - assets.error_data.texWRaw() * 4.0 + assets.padding * 2) / 2,
                 .y = screen.container_decor.y + screen.container_pos_data[i].y + (screen.container_pos_data[i].h - assets.error_data.texHRaw() * 4.0 + assets.padding * 2) / 2,
                 .background_x = screen.container_decor.x + screen.container_pos_data[i].x,
@@ -215,35 +215,35 @@ pub const GameScreen = struct {
 
         const xp_bar_decor_data = assets.getUiData("player_xp_decor", 0);
         const bars_data = assets.getUiData("player_abilities_bars", 0);
-        screen.bars_decor = try element.Image.create(allocator, .{
+        screen.bars_decor = try element.create(allocator, element.Image{
             .x = (camera.screen_width - bars_data.texWRaw()) / 2,
             .y = camera.screen_height - bars_data.texHRaw() - 10 - 25, // -25 for the xp bar to fit
             .image_data = .{ .normal = .{ .atlas_data = bars_data } },
         });
 
         const stats_button_data = assets.getUiData("minimap_icons", 0);
-        screen.stats_button = try element.Button.create(allocator, .{
+        screen.stats_button = try element.create(allocator, element.Button{
             .x = screen.bars_decor.x + 23 + (22 - stats_button_data.texWRaw() + assets.padding * 2) / 2.0,
             .y = screen.bars_decor.y + 10 + (24 - stats_button_data.texHRaw() + assets.padding * 2) / 2.0,
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = stats_button_data } } },
             .press_callback = statsCallback,
         });
 
-        screen.ability_container = try element.Container.create(allocator, .{
+        screen.ability_container = try element.create(allocator, element.Container{
             .x = screen.bars_decor.x + 7,
             .y = screen.bars_decor.y + 39,
         });
 
         const decor_offset_x = -60;
         const decor_offset_y = 53;
-        _ = try screen.ability_container.createElement(element.Image, .{
+        _ = try screen.ability_container.createChild(element.Image{
             .x = decor_offset_x,
             .y = decor_offset_y,
             .image_data = .{ .normal = .{ .atlas_data = xp_bar_decor_data } },
         });
 
         const xp_bar_data = assets.getUiData("player_xp_bar", 0);
-        screen.xp_bar = try screen.ability_container.createElement(element.Bar, .{
+        screen.xp_bar = try screen.ability_container.createChild(element.Bar{
             .x = decor_offset_x + 24,
             .y = decor_offset_y + 9,
             .image_data = .{ .normal = .{ .atlas_data = xp_bar_data } },
@@ -256,13 +256,13 @@ pub const GameScreen = struct {
         });
 
         const stats_decor_data = assets.getUiData("player_stats", 0);
-        screen.stats_container = try element.Container.create(allocator, .{
+        screen.stats_container = try element.create(allocator, element.Container{
             .x = screen.bars_decor.x + (bars_data.texWRaw() - stats_decor_data.texWRaw()) / 2.0,
             .y = screen.bars_decor.y + 32,
             .visible = false,
         });
 
-        screen.stats_decor = try screen.stats_container.createElement(element.Image, .{
+        screen.stats_decor = try screen.stats_container.createChild(element.Image{
             .x = 0,
             .y = 0,
             .image_data = .{ .normal = .{ .atlas_data = stats_decor_data } },
@@ -282,7 +282,7 @@ pub const GameScreen = struct {
         try addStatText(screen.stats_container, &screen.piercing_stat_text, &idx);
 
         const health_bar_data = assets.getUiData("player_health_bar", 0);
-        screen.health_bar = try element.Bar.create(allocator, .{
+        screen.health_bar = try element.create(allocator, element.Bar{
             .x = screen.bars_decor.x + 47,
             .y = screen.bars_decor.y + 4,
             .image_data = .{ .normal = .{ .atlas_data = health_bar_data } },
@@ -295,7 +295,7 @@ pub const GameScreen = struct {
         });
 
         const mana_bar_data = assets.getUiData("player_mana_bar", 0);
-        screen.mana_bar = try element.Bar.create(allocator, .{
+        screen.mana_bar = try element.create(allocator, element.Bar{
             .x = screen.bars_decor.x + 47,
             .y = screen.bars_decor.y + 18,
             .image_data = .{ .normal = .{ .atlas_data = mana_bar_data } },
@@ -309,14 +309,14 @@ pub const GameScreen = struct {
 
         const chat_data = assets.getUiData("chatbox_background", 0);
         const input_data = assets.getUiData("chatbox_input", 0);
-        screen.chat_decor = try element.Image.create(allocator, .{
+        screen.chat_decor = try element.create(allocator, element.Image{
             .x = 10,
             .y = camera.screen_height - chat_data.texHRaw() - input_data.texHRaw() - 10,
             .image_data = .{ .normal = .{ .atlas_data = chat_data } },
         });
 
         const cursor_data = assets.getUiData("chatbox_cursor", 0);
-        screen.chat_input = try element.Input.create(allocator, .{
+        screen.chat_input = try element.create(allocator, element.Input{
             .x = screen.chat_decor.x,
             .y = screen.chat_decor.y + screen.chat_decor.height(),
             .text_inlay_x = 9,
@@ -339,7 +339,7 @@ pub const GameScreen = struct {
         const chat_scroll_knob_base = assets.getUiData("chatbox_scroll_wheel_base", 0);
         const chat_scroll_knob_hover = assets.getUiData("chatbox_scroll_wheel_hover", 0);
         const chat_scroll_knob_press = assets.getUiData("chatbox_scroll_wheel_press", 0);
-        screen.chat_container = try element.ScrollableContainer.create(allocator, .{
+        screen.chat_container = try element.create(allocator, element.ScrollableContainer{
             .x = screen.chat_decor.x + 9,
             .y = screen.chat_decor.y + 9,
             .scissor_w = 380,
@@ -365,7 +365,7 @@ pub const GameScreen = struct {
             .max_chars = 256,
         };
         fps_text_data.recalculateAttributes(allocator);
-        screen.fps_text = try element.Text.create(allocator, .{
+        screen.fps_text = try element.create(allocator, element.Text{
             .x = screen.minimap_decor.x,
             .y = screen.minimap_decor.y + screen.minimap_decor.height() + 10,
             .text_data = fps_text_data,
@@ -381,27 +381,27 @@ pub const GameScreen = struct {
         var chat_line = blk: {
             if (name.len > 0) {
                 const line_str = try std.fmt.allocPrint(self._allocator, "&col=\"{x}\"[{s}]: &col=\"{x}\"{s}", .{ name_color, name, text_color, text });
-                break :blk try self.chat_container.createElement(element.Text, .{
+                break :blk try self.chat_container.createChild(element.Text{
                     .x = 0,
                     .y = 0,
                     .text_data = .{
                         .text = line_str,
                         .size = 12,
                         .text_type = .bold,
-                        .max_width = 380,
+                        .max_width = 370,
                         ._backing_buffer = line_str, // putting it here to dispose automatically. kind of a hack
                     },
                 });
             } else {
                 const line_str = try std.fmt.allocPrint(self._allocator, "&col=\"{x}\"{s}", .{ text_color, text });
-                break :blk try self.chat_container.createElement(element.Text, .{
+                break :blk try self.chat_container.createChild(element.Text{
                     .x = 0,
                     .y = 0,
                     .text_data = .{
                         .text = line_str,
                         .size = 12,
                         .text_type = .bold,
-                        .max_width = 380,
+                        .max_width = 370,
                         ._backing_buffer = line_str, // putting it here to dispose automatically. kind of a hack
                     },
                 });
@@ -432,7 +432,7 @@ pub const GameScreen = struct {
                 return;
             }
 
-            _ = try container.createElement(element.Image, .{
+            _ = try container.createChild(element.Image{
                 .x = idx.* * 48.0,
                 .y = 0,
                 .image_data = .{ .normal = .{ .atlas_data = data[index] } },
@@ -448,7 +448,7 @@ pub const GameScreen = struct {
 
         const x = 33.0 + 74.0 * @mod(idx.*, 4.0);
         const y = 5.0 + 28.0 * @floor(idx.* / 4.0);
-        text.* = try container.createElement(element.Text, .{ .x = x, .y = y, .text_data = .{
+        text.* = try container.createChild(element.Text{ .x = x, .y = y, .text_data = .{
             .text = "",
             .size = 12,
             .text_type = .bold,
@@ -463,26 +463,26 @@ pub const GameScreen = struct {
     pub fn deinit(self: *GameScreen) void {
         self.inited = false;
 
-        self.minimap_decor.destroy();
-        self.inventory_decor.destroy();
-        self.container_decor.destroy();
-        self.bars_decor.destroy();
-        self.stats_button.destroy();
-        self.stats_container.destroy();
-        self.ability_container.destroy();
-        self.chat_container.destroy();
-        self.health_bar.destroy();
-        self.mana_bar.destroy();
-        self.chat_decor.destroy();
-        self.chat_input.destroy();
-        self.fps_text.destroy();
+        element.destroy(self.minimap_decor);
+        element.destroy(self.inventory_decor);
+        element.destroy(self.container_decor);
+        element.destroy(self.bars_decor);
+        element.destroy(self.stats_button);
+        element.destroy(self.stats_container);
+        element.destroy(self.ability_container);
+        element.destroy(self.chat_container);
+        element.destroy(self.health_bar);
+        element.destroy(self.mana_bar);
+        element.destroy(self.chat_decor);
+        element.destroy(self.chat_input);
+        element.destroy(self.fps_text);
 
         for (self.inventory_items) |item| {
-            item.destroy();
+            element.destroy(item);
         }
 
         for (self.container_items) |item| {
-            item.destroy();
+            element.destroy(item);
         }
 
         self.chat_lines.deinit();
@@ -522,17 +522,17 @@ pub const GameScreen = struct {
         self.fps_text.y = self.minimap_decor.y + self.minimap_decor.height() + 10;
 
         for (0..22) |idx| {
-            self.inventory_items[idx].x = self.inventory_decor.x + sc.current_screen.game.inventory_pos_data[idx].x + (sc.current_screen.game.inventory_pos_data[idx].w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
-            self.inventory_items[idx].y = self.inventory_decor.y + sc.current_screen.game.inventory_pos_data[idx].y + (sc.current_screen.game.inventory_pos_data[idx].h - self.inventory_items[idx].height() + assets.padding * 2) / 2;
-            self.inventory_items[idx].background_x = self.inventory_decor.x + sc.current_screen.game.inventory_pos_data[idx].x;
-            self.inventory_items[idx].background_y = self.inventory_decor.y + sc.current_screen.game.inventory_pos_data[idx].y;
+            self.inventory_items[idx].x = self.inventory_decor.x + systems.screen.game.inventory_pos_data[idx].x + (systems.screen.game.inventory_pos_data[idx].w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
+            self.inventory_items[idx].y = self.inventory_decor.y + systems.screen.game.inventory_pos_data[idx].y + (systems.screen.game.inventory_pos_data[idx].h - self.inventory_items[idx].height() + assets.padding * 2) / 2;
+            self.inventory_items[idx].background_x = self.inventory_decor.x + systems.screen.game.inventory_pos_data[idx].x;
+            self.inventory_items[idx].background_y = self.inventory_decor.y + systems.screen.game.inventory_pos_data[idx].y;
         }
 
         for (0..9) |idx| {
-            self.container_items[idx].x = self.container_decor.x + sc.current_screen.game.container_pos_data[idx].x + (sc.current_screen.game.container_pos_data[idx].w - self.container_items[idx].width() + assets.padding * 2) / 2;
-            self.container_items[idx].y = self.container_decor.y + sc.current_screen.game.container_pos_data[idx].y + (sc.current_screen.game.container_pos_data[idx].h - self.container_items[idx].height() + assets.padding * 2) / 2;
-            self.container_items[idx].background_x = self.container_decor.x + sc.current_screen.game.container_pos_data[idx].x;
-            self.container_items[idx].background_y = self.container_decor.y + sc.current_screen.game.container_pos_data[idx].y;
+            self.container_items[idx].x = self.container_decor.x + systems.screen.game.container_pos_data[idx].x + (systems.screen.game.container_pos_data[idx].w - self.container_items[idx].width() + assets.padding * 2) / 2;
+            self.container_items[idx].y = self.container_decor.y + systems.screen.game.container_pos_data[idx].y + (systems.screen.game.container_pos_data[idx].h - self.container_items[idx].height() + assets.padding * 2) / 2;
+            self.container_items[idx].background_x = self.container_decor.x + systems.screen.game.container_pos_data[idx].x;
+            self.container_items[idx].background_y = self.container_decor.y + systems.screen.game.container_pos_data[idx].y;
         }
 
         self.options.resize(w, h);
@@ -541,7 +541,7 @@ pub const GameScreen = struct {
     pub fn update(self: *GameScreen, _: i64, _: f32) !void {
         self.fps_text.visible = settings.stats_enabled;
 
-        while (!map.object_lock.tryLockShared()) {}
+        map.object_lock.lockShared();
         defer map.object_lock.unlockShared();
 
         if (map.localPlayerConst()) |local_player| {
@@ -767,7 +767,7 @@ pub const GameScreen = struct {
                 } });
             }
         } else {
-            while (!map.object_lock.tryLockShared()) {}
+            map.object_lock.lockShared();
             defer map.object_lock.unlockShared();
 
             if (map.localPlayerConst()) |local_player| {
@@ -823,10 +823,10 @@ pub const GameScreen = struct {
         if (item._item < 0)
             return;
 
-        const start_slot = Slot.findSlotId(sc.current_screen.game.*, item.x + 4, item.y + 4);
+        const start_slot = Slot.findSlotId(systems.screen.game.*, item.x + 4, item.y + 4);
         if (game_data.item_type_to_props.get(@intCast(item._item))) |props| {
             if (props.consumable and !start_slot.is_container) {
-                while (!map.object_lock.tryLockShared()) {}
+                map.object_lock.lockShared();
                 defer map.object_lock.unlockShared();
 
                 if (map.localPlayerConst()) |local_player| {
@@ -845,20 +845,20 @@ pub const GameScreen = struct {
             }
         }
 
-        while (!map.object_lock.tryLockShared()) {}
+        map.object_lock.lockShared();
         defer map.object_lock.unlockShared();
 
         if (map.localPlayerConst()) |local_player| {
             if (game_data.item_type_to_props.get(@intCast(item._item))) |props| {
                 if (start_slot.is_container) {
-                    const end_slot = Slot.nextAvailableSlot(sc.current_screen.game.*, local_player.slot_types, props.slot_type);
+                    const end_slot = Slot.nextAvailableSlot(systems.screen.game.*, local_player.slot_types, props.slot_type);
                     if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
                         item.x = item._drag_start_x;
                         item.y = item._drag_start_y;
                         return;
                     }
 
-                    sc.current_screen.game.swapSlots(start_slot, end_slot);
+                    systems.screen.game.swapSlots(start_slot, end_slot);
                 } else {
                     const end_slot = Slot.nextEquippableSlot(local_player.slot_types, props.slot_type);
                     if (end_slot.idx == 255 or // we don't want to drop
@@ -869,25 +869,25 @@ pub const GameScreen = struct {
                         return;
                     }
 
-                    sc.current_screen.game.swapSlots(start_slot, end_slot);
+                    systems.screen.game.swapSlots(start_slot, end_slot);
                 }
             }
         }
     }
 
     pub fn statsCallback() void {
-        sc.current_screen.game.stats_container.visible = !sc.current_screen.game.stats_container.visible;
-        if (sc.current_screen.game.stats_container.visible) {
+        systems.screen.game.stats_container.visible = !systems.screen.game.stats_container.visible;
+        if (systems.screen.game.stats_container.visible) {
             const abil_button_data = assets.getUiData("minimap_icons", 1);
-            sc.current_screen.game.stats_button.image_data.base.normal.atlas_data = abil_button_data;
+            systems.screen.game.stats_button.image_data.base.normal.atlas_data = abil_button_data;
 
-            sc.current_screen.game.ability_container.visible = false;
-            sc.current_screen.game.updateStats();
+            systems.screen.game.ability_container.visible = false;
+            systems.screen.game.updateStats();
         } else {
             const stats_button_data = assets.getUiData("minimap_icons", 0);
-            sc.current_screen.game.stats_button.image_data.base.normal.atlas_data = stats_button_data;
+            systems.screen.game.stats_button.image_data.base.normal.atlas_data = stats_button_data;
 
-            sc.current_screen.game.ability_container.visible = true;
+            systems.screen.game.ability_container.visible = true;
         }
     }
 
@@ -895,7 +895,7 @@ pub const GameScreen = struct {
         if (input_text.len > 0) {
             network.queuePacket(.{ .player_text = .{ .text = input_text } });
 
-            const current_screen = sc.current_screen.game;
+            const current_screen = systems.screen.game;
             const text_copy = current_screen._allocator.dupe(u8, input_text) catch unreachable;
             input.input_history.append(text_copy) catch unreachable;
             input.input_history_idx = @intCast(input.input_history.items.len);
@@ -909,7 +909,7 @@ pub const GameScreen = struct {
     }
 
     fn itemDragEndCallback(item: *element.Item) void {
-        var current_screen = sc.current_screen.game;
+        var current_screen = systems.screen.game;
         const start_slot = Slot.findSlotId(current_screen.*, item._drag_start_x + 4, item._drag_start_y + 4);
         const end_slot = Slot.findSlotId(current_screen.*, item.x - item._drag_offset_x, item.y - item._drag_offset_y);
         if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
@@ -932,12 +932,12 @@ pub const GameScreen = struct {
         if (item._item < 0)
             return;
 
-        const current_screen = sc.current_screen.game.*;
+        const current_screen = systems.screen.game.*;
         const slot = Slot.findSlotId(current_screen, item.x + 4, item.y + 4);
 
         if (game_data.item_type_to_props.get(@intCast(item._item))) |props| {
             if (props.consumable) {
-                while (!map.object_lock.tryLockShared()) {}
+                map.object_lock.lockShared();
                 defer map.object_lock.unlockShared();
 
                 if (map.localPlayerConst()) |local_player| {

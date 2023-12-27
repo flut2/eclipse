@@ -15,7 +15,7 @@ pub const TextTooltip = struct {
     pub fn init(self: *TextTooltip, allocator: std.mem.Allocator) !void {
         self._allocator = allocator;
 
-        self.root = try element.Container.create(allocator, .{
+        self.root = try element.create(allocator, element.Container{
             .visible = false,
             .layer = .tooltip,
             .x = 0,
@@ -23,7 +23,7 @@ pub const TextTooltip = struct {
         });
 
         const tooltip_background_data = assets.getUiData("tooltip_background", 0);
-        self.decor = try self.root.createElement(element.Image, .{
+        self.decor = try self.root.createChild(element.Image{
             .x = 0,
             .y = 0,
             .image_data = .{
@@ -31,7 +31,7 @@ pub const TextTooltip = struct {
             },
         });
 
-        self.text = try self.root.createElement(element.Text, .{
+        self.text = try self.root.createChild(element.Text{
             .x = 16,
             .y = 16,
             .text_data = undefined, // must be set in update
@@ -39,7 +39,7 @@ pub const TextTooltip = struct {
     }
 
     pub fn deinit(self: *TextTooltip) void {
-        self.root.destroy();
+        element.destroy(self.root);
     }
 
     pub fn update(self: *TextTooltip, x: f32, y: f32, text_data: element.TextData) void {

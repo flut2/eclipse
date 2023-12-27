@@ -181,6 +181,8 @@ const RGBA = packed struct(u32) {
     a: u8 = 0,
 };
 
+const AtlasHashHack = [4]u32;
+
 pub var sfx_path_buffer: [256]u8 = undefined;
 pub var audio_state: *AudioState = undefined;
 pub var main_music: *zaudio.Sound = undefined;
@@ -218,6 +220,7 @@ pub var target_ally_cursor: *zglfw.Cursor = undefined;
 pub var sfx_copy_map: std.AutoHashMap(*zaudio.Sound, std.ArrayList(*zaudio.Sound)) = undefined;
 pub var sfx_map: std.StringHashMap(*zaudio.Sound) = undefined;
 pub var dominant_color_data: std.StringHashMap([]RGBA) = undefined;
+pub var atlas_to_color_data: std.AutoHashMap(AtlasHashHack, []u32) = undefined;
 pub var atlas_data: std.StringHashMap([]AtlasData) = undefined;
 pub var ui_atlas_data: std.StringHashMap([]AtlasData) = undefined;
 pub var anim_enemies: std.StringHashMap([]AnimEnemyData) = undefined;
@@ -310,7 +313,6 @@ fn addImage(
     const len = @divFloor(img.width * img.height, img_size);
     var current_rects = try allocator.alloc(zstbrp.PackRect, len);
     defer allocator.free(current_rects);
-    var data = try allocator.alloc(AtlasData, len);
 
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
@@ -326,6 +328,8 @@ fn addImage(
     }
 
     if (zstbrp.packRects(ctx, current_rects)) {
+        var data = try allocator.alloc(AtlasData, len);
+
         var dominant_colors = try allocator.alloc(RGBA, len);
         @memset(dominant_colors, RGBA{});
 
@@ -366,18 +370,24 @@ fn addImage(
                 }
             }
 
+            var colors = std.ArrayList(u32).init(allocator);
+            defer colors.deinit();
+
             var max: u32 = 0;
             var count_iter = color_counts.iterator();
-            while (count_iter.next()) |count| {
-                if (count.value_ptr.* > max) {
-                    dominant_colors[i] = count.key_ptr.*;
-                    max = count.value_ptr.*;
+            while (count_iter.next()) |entry| {
+                try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
+                    @as(u32, @intCast(entry.key_ptr.g)) << 8 |
+                    @as(u32, @intCast(entry.key_ptr.b)));
+
+                if (entry.value_ptr.* > max) {
+                    dominant_colors[i] = entry.key_ptr.*;
+                    max = entry.value_ptr.*;
                 }
             }
-        }
 
-        for (current_rects, 0..) |rect, i| {
             data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
+            try atlas_to_color_data.put(@bitCast(data[i]), try allocator.dupe(u32, colors.items));
         }
 
         try atlas_data.put(sheet_name, data);
@@ -439,9 +449,7 @@ fn addUiImage(
                 const src_idx = ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
                 @memcpy(ui_atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
             }
-        }
 
-        for (current_rects, 0..) |rect, i| {
             data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
         }
 
@@ -470,8 +478,6 @@ fn addAnimEnemy(
     var current_rects = try allocator.alloc(zstbrp.PackRect, len * 2);
     defer allocator.free(current_rects);
 
-    const enemy_data = try allocator.alloc(AnimEnemyData, @divFloor(len, 5));
-
     for (0..2) |i| {
         for (0..len) |j| {
             const cur_src_x = (j % 5) * cut_width;
@@ -489,11 +495,21 @@ fn addAnimEnemy(
     }
 
     if (zstbrp.packRects(ctx, current_rects)) {
+        const enemy_data = try allocator.alloc(AnimEnemyData, @divFloor(len, 5));
+
+        var dominant_colors = try allocator.alloc(RGBA, len);
+        @memset(dominant_colors, RGBA{});
+
+        var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
+        defer color_counts.deinit();
+
         for (0..2) |i| {
             for (0..len) |j| {
                 const rect = current_rects[i * len + j];
                 if (rect.w == 0 or rect.h == 0)
                     continue;
+
+                color_counts.clearRetainingCapacity();
 
                 const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
                 const frame_idx = j % 5;
@@ -517,18 +533,50 @@ fn addAnimEnemy(
                     const row_idx = k % scaled_w;
                     const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
 
-                    if (i == left_dir) {
-                        const src_idx = ((cur_src_y + row_count) * img.width + cur_src_x + scaled_w - row_idx - 1) * 4;
-                        @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
-                    } else {
-                        const src_idx = ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
-                        @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
+                    const src_idx = if (i == left_dir)
+                        ((cur_src_y + row_count) * img.width + cur_src_x + scaled_w - row_idx - 1) * 4
+                    else
+                        ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
+
+                    @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
+
+                    if (img.data[src_idx + 3] > 0) {
+                        const rgba = RGBA{
+                            .r = img.data[src_idx],
+                            .g = img.data[src_idx + 1],
+                            .b = img.data[src_idx + 2],
+                            .a = 255,
+                        };
+                        if (color_counts.get(rgba)) |count| {
+                            try color_counts.put(rgba, count + 1);
+                        } else {
+                            try color_counts.put(rgba, 1);
+                        }
                     }
                 }
+
+                var colors = std.ArrayList(u32).init(allocator);
+                defer colors.deinit();
+
+                var max: u32 = 0;
+                var count_iter = color_counts.iterator();
+                while (count_iter.next()) |entry| {
+                    try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
+                        @as(u32, @intCast(entry.key_ptr.g)) << 8 |
+                        @as(u32, @intCast(entry.key_ptr.b)));
+
+                    if (entry.value_ptr.* > max) {
+                        dominant_colors[set_idx] = entry.key_ptr.*;
+                        max = entry.value_ptr.*;
+                    }
+                }
+
+                try atlas_to_color_data.put(@bitCast(data), try allocator.dupe(u32, colors.items));
             }
         }
 
         try anim_enemies.put(sheet_name, enemy_data);
+        try dominant_color_data.put(sheet_name, dominant_colors);
     } else {
         std.log.err("Could not pack " ++ image_name ++ " into the atlas", .{});
     }
@@ -554,8 +602,6 @@ fn addAnimPlayer(
     var current_rects = try allocator.alloc(zstbrp.PackRect, len);
     defer allocator.free(current_rects);
 
-    const player_data = try allocator.alloc(AnimPlayerData, @divFloor(len, 5 * 4));
-
     var left_sub: u32 = 0;
     for (0..len) |j| {
         const frame_idx = j % 5;
@@ -579,10 +625,21 @@ fn addAnimPlayer(
 
     if (zstbrp.packRects(ctx, current_rects)) {
         left_sub = 0;
+
+        const player_data = try allocator.alloc(AnimPlayerData, @divFloor(len, 5 * 4));
+
+        var dominant_colors = try allocator.alloc(RGBA, len);
+        @memset(dominant_colors, RGBA{});
+
+        var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
+        defer color_counts.deinit();
+
         for (0..len) |j| {
             const rect = current_rects[j];
             if (rect.w == 0 or rect.h == 0)
                 continue;
+
+            color_counts.clearRetainingCapacity();
 
             const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
             const frame_idx = j % 5;
@@ -610,17 +667,49 @@ fn addAnimPlayer(
                 const row_idx = k % scaled_w;
                 const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
 
-                if (set_idx % 4 == left_dir) {
-                    const src_idx = ((cur_src_y + row_count) * img.width + cur_src_x + scaled_w - row_idx - 1) * 4;
-                    @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
-                } else {
-                    const src_idx = ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
-                    @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
+                const src_idx = if (set_idx % 4 == left_dir)
+                    ((cur_src_y + row_count) * img.width + cur_src_x + scaled_w - row_idx - 1) * 4
+                else
+                    ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
+
+                @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
+
+                if (img.data[src_idx + 3] > 0) {
+                    const rgba = RGBA{
+                        .r = img.data[src_idx],
+                        .g = img.data[src_idx + 1],
+                        .b = img.data[src_idx + 2],
+                        .a = 255,
+                    };
+                    if (color_counts.get(rgba)) |count| {
+                        try color_counts.put(rgba, count + 1);
+                    } else {
+                        try color_counts.put(rgba, 1);
+                    }
                 }
             }
+
+            var colors = std.ArrayList(u32).init(allocator);
+            defer colors.deinit();
+
+            var max: u32 = 0;
+            var count_iter = color_counts.iterator();
+            while (count_iter.next()) |entry| {
+                try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
+                    @as(u32, @intCast(entry.key_ptr.g)) << 8 |
+                    @as(u32, @intCast(entry.key_ptr.b)));
+
+                if (entry.value_ptr.* > max) {
+                    dominant_colors[set_idx] = entry.key_ptr.*;
+                    max = entry.value_ptr.*;
+                }
+            }
+
+            try atlas_to_color_data.put(@bitCast(data), try allocator.dupe(u32, colors.items));
         }
 
         try anim_players.put(sheet_name, player_data);
+        try dominant_color_data.put(sheet_name, dominant_colors);
     } else {
         std.log.err("Could not pack " ++ image_name ++ " into the atlas", .{});
     }
@@ -722,14 +811,10 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     target_ally_cursor_pressed.destroy();
     target_ally_cursor.destroy();
 
-    menu_background.deinit();
-    atlas.deinit();
-    ui_atlas.deinit();
-    light_tex.deinit();
-    bold_atlas.deinit();
-    bold_italic_atlas.deinit();
-    medium_atlas.deinit();
-    medium_italic_atlas.deinit();
+    var colors_iter = atlas_to_color_data.valueIterator();
+    while (colors_iter.next()) |colors| {
+        allocator.free(colors.*);
+    }
 
     var dominant_colors_iter = dominant_color_data.valueIterator();
     while (dominant_colors_iter.next()) |color_data| {
@@ -765,6 +850,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     }
 
     dominant_color_data.deinit();
+    atlas_to_color_data.deinit();
     atlas_data.deinit();
     ui_atlas_data.deinit();
     anim_enemies.deinit();
@@ -775,6 +861,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     sfx_copy_map = std.AutoHashMap(*zaudio.Sound, std.ArrayList(*zaudio.Sound)).init(allocator);
     sfx_map = std.StringHashMap(*zaudio.Sound).init(allocator);
     dominant_color_data = std.StringHashMap([]RGBA).init(allocator);
+    atlas_to_color_data = std.AutoHashMap(AtlasHashHack, []u32).init(allocator);
     atlas_data = std.StringHashMap([]AtlasData).init(allocator);
     ui_atlas_data = std.StringHashMap([]AtlasData).init(allocator);
     anim_enemies = std.StringHashMap([]AnimEnemyData).init(allocator);
@@ -931,27 +1018,27 @@ pub fn init(allocator: std.mem.Allocator) !void {
         bottom_mask_rect.removePadding();
 
         right_bottom_mask_uv = [4]f32{ right_mask_rect.tex_u, right_mask_rect.tex_v, bottom_mask_rect.tex_u, bottom_mask_rect.tex_v };
-    } else @panic("Could not find ground_masks in the atlas");
+    } else std.debug.panic("Could not find ground_masks in the atlas", .{});
 
     if (atlas_data.get("wall_backface")) |backfaces| {
         wall_backface_data = backfaces[0x0];
         wall_backface_data.removePadding();
-    } else @panic("Could not find wall_backface in the atlas");
+    } else std.debug.panic("Could not find wall_backface in the atlas", .{});
 
     if (atlas_data.get("particles")) |particles| {
         particle_data = particles[0x0];
-    } else @panic("Could not find particle in the atlas");
+    } else std.debug.panic("Could not find particle in the atlas", .{});
 
     if (atlas_data.get("editor_tile_base")) |editor_tile_tex| {
         editor_tile = editor_tile_tex[0x0];
         editor_tile.removePadding();
-    } else @panic("Could not find editor_tile_base in the atlas");
+    } else std.debug.panic("Could not find editor_tile_base in the atlas", .{});
 
     if (atlas_data.get("bars")) |bars| {
         hp_bar_data = bars[0x0];
         mp_bar_data = bars[0x1];
         empty_bar_data = bars[0x4];
-    } else @panic("Could not find bars in the atlas");
+    } else std.debug.panic("Could not find bars in the atlas", .{});
 
     if (atlas_data.get("error_texture")) |error_tex| {
         error_data = error_tex[0x0];
@@ -981,11 +1068,11 @@ pub fn init(allocator: std.mem.Allocator) !void {
                 [_]AtlasData{ error_data, error_data },
             },
         };
-    } else @panic("Could not find error_texture in the atlas");
+    } else std.debug.panic("Could not find error_texture in the atlas", .{});
 
     settings.assetsLoaded();
 }
 
 pub inline fn getUiData(comptime name: []const u8, idx: usize) AtlasData {
-    return (ui_atlas_data.get(name) orelse @panic("Could not find " ++ name ++ " in the UI atlas"))[idx];
+    return (ui_atlas_data.get(name) orelse std.debug.panic("Could not find " ++ name ++ " in the UI atlas", .{}))[idx];
 }

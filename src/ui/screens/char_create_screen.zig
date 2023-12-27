@@ -1,10 +1,10 @@
 const std = @import("std");
-const element = @import("../../element.zig");
-const assets = @import("../../../assets.zig");
-const camera = @import("../../../camera.zig");
-const main = @import("../../../main.zig");
-const game_data = @import("../../../game_data.zig");
-const screen_controller = @import("../../controllers/screen_controller.zig");
+const element = @import("../element.zig");
+const assets = @import("../../assets.zig");
+const camera = @import("../../camera.zig");
+const main = @import("../../main.zig");
+const game_data = @import("../../game_data.zig");
+const systems = @import("../systems.zig");
 const rpc = @import("rpc");
 
 pub const CharCreateScreen = struct {
@@ -39,7 +39,7 @@ pub const CharCreateScreen = struct {
         var i: usize = 0;
         while (class_iter.next()) |char| {
             defer i += 1;
-            const box = element.CharacterBox.create(allocator, .{
+            const box = element.create(allocator, element.CharacterBox{
                 .x = (camera.screen_width - button_data_base.texWRaw()) / 2,
                 .y = @floatFromInt(50 * i),
                 .id = 0,
@@ -65,7 +65,7 @@ pub const CharCreateScreen = struct {
 
     pub fn deinit(self: *CharCreateScreen) void {
         for (self.boxes.items) |box| {
-            box.destroy();
+            element.destroy(box);
         }
         self.boxes.clearAndFree();
 
@@ -87,6 +87,6 @@ pub const CharCreateScreen = struct {
         } else {
             std.log.err("No servers found", .{});
         }
-        screen_controller.switchScreen(.game);
+        systems.switchScreen(.game);
     }
 };

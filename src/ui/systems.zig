@@ -1,21 +1,21 @@
 const std = @import("std");
-const element = @import("../element.zig");
-const input = @import("../../input.zig");
-const camera = @import("../../camera.zig");
-const utils = @import("../../utils.zig");
-const main = @import("../../main.zig");
-const map = @import("../../map.zig");
-const assets = @import("../../assets.zig");
-const tooltip = @import("../tooltips/tooltip.zig");
+const element = @import("element.zig");
+const input = @import("../input.zig");
+const camera = @import("../camera.zig");
+const utils = @import("../utils.zig");
+const main = @import("../main.zig");
+const map = @import("../map.zig");
+const assets = @import("../assets.zig");
+const tooltip = @import("tooltips/tooltip.zig");
 const zglfw = @import("zglfw");
 
-const AccountLoginScreen = @import("../screens/account/account_login_screen.zig").AccountLoginScreen;
-const AccountRegisterScreen = @import("../screens/account/account_register_screen.zig").AccountRegisterScreen;
-const CharCreateScreen = @import("../screens/character/char_create_screen.zig").CharCreateScreen;
-const CharSelectScreen = @import("../screens/character/char_select_screen.zig").CharSelectScreen;
-const MapEditorScreen = @import("../screens/map_editor_screen.zig").MapEditorScreen;
-const GameScreen = @import("../screens/game_screen.zig").GameScreen;
-const EmptyScreen = @import("../screens/empty_screen.zig").EmptyScreen;
+const AccountLoginScreen = @import("screens/account_login_screen.zig").AccountLoginScreen;
+const AccountRegisterScreen = @import("screens/account_register_screen.zig").AccountRegisterScreen;
+const CharCreateScreen = @import("screens/char_create_screen.zig").CharCreateScreen;
+const CharSelectScreen = @import("screens/char_select_screen.zig").CharSelectScreen;
+const MapEditorScreen = @import("screens/map_editor_screen.zig").MapEditorScreen;
+const GameScreen = @import("screens/game_screen.zig").GameScreen;
+const EmptyScreen = @import("screens/empty_screen.zig").EmptyScreen;
 
 pub const ScreenType = enum {
     empty,
@@ -40,44 +40,46 @@ pub const Screen = union(ScreenType) {
 pub var ui_lock: std.Thread.Mutex = .{};
 pub var temp_elem_lock: std.Thread.Mutex = .{};
 pub var elements: std.ArrayList(element.UiElement) = undefined;
+pub var elements_to_add: std.ArrayList(element.UiElement) = undefined;
 pub var temp_elements: std.ArrayList(element.Temporary) = undefined;
-pub var current_screen: Screen = undefined;
+pub var temp_elements_to_add: std.ArrayList(element.Temporary) = undefined;
+pub var screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
 
-var last_sort: i64 = -1;
 var _allocator: std.mem.Allocator = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     _allocator = allocator;
 
     elements = try std.ArrayList(element.UiElement).initCapacity(allocator, 32);
+    elements_to_add = try std.ArrayList(element.UiElement).initCapacity(allocator, 16);
     temp_elements = try std.ArrayList(element.Temporary).initCapacity(allocator, 32);
+    temp_elements_to_add = try std.ArrayList(element.Temporary).initCapacity(allocator, 16);
 
-    menu_background = try element.MenuBackground.create(allocator, .{
+    menu_background = try element.create(allocator, element.MenuBackground{
         .x = 0,
         .y = 0,
         .w = camera.screen_width,
         .h = camera.screen_height,
     });
 
-    current_screen = .{ .empty = try EmptyScreen.init(allocator) };
+    screen = .{ .empty = EmptyScreen.init(allocator) catch std.debug.panic("Initializing EmptyScreen failed", .{}) };
 
     try tooltip.init(allocator);
 }
 
 pub fn deinit(allocator: std.mem.Allocator) void {
-    while (!ui_lock.tryLock()) {}
+    ui_lock.lock();
     defer ui_lock.unlock();
 
     tooltip.deinit(allocator);
+    element.destroy(menu_background);
 
-    menu_background.destroy();
-
-    switch (current_screen) {
-        inline else => |screen| screen.deinit(),
+    switch (screen) {
+        inline else => |inner_screen| inner_screen.deinit(),
     }
 
-    while (!temp_elem_lock.tryLock()) {}
+    temp_elem_lock.lock();
     defer temp_elem_lock.unlock();
 
     // Do not dispose normal UI elements here, it's the screen's job to handle that
@@ -96,22 +98,24 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         }
     }
 
+    elements_to_add.deinit();
+    temp_elements_to_add.deinit();
     elements.deinit();
     temp_elements.deinit();
 }
 
 pub fn switchScreen(comptime screen_type: ScreenType) void {
-    while (!ui_lock.tryLock()) {}
+    ui_lock.lock();
     defer ui_lock.unlock();
 
     menu_background.visible = screen_type != .game and screen_type != .editor;
     input.selected_key_mapper = null;
 
-    switch (current_screen) {
-        inline else => |screen| if (screen.inited) screen.deinit(),
+    switch (screen) {
+        inline else => |inner_screen| if (inner_screen.inited) inner_screen.deinit(),
     }
 
-    current_screen = @unionInit(
+    screen = @unionInit(
         Screen,
         @tagName(screen_type),
         @typeInfo(std.meta.TagPayloadByName(Screen, @tagName(screen_type))).Pointer.child.init(_allocator) catch |e| {
@@ -122,23 +126,23 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
 }
 
 pub fn resize(w: f32, h: f32) void {
-    while (!ui_lock.tryLock()) {}
+    ui_lock.lock();
     defer ui_lock.unlock();
 
     menu_background.w = camera.screen_width;
     menu_background.h = camera.screen_height;
 
-    switch (current_screen) {
-        inline else => |screen| screen.resize(w, h),
+    switch (screen) {
+        inline else => |inner_screen| inner_screen.resize(w, h),
     }
 }
 
 pub fn removeAttachedUi(obj_id: i32, allocator: std.mem.Allocator) void {
+    temp_elem_lock.lock();
+    defer temp_elem_lock.unlock();
+
     if (temp_elements.items.len <= 0)
         return;
-
-    while (!temp_elem_lock.tryLock()) {}
-    defer temp_elem_lock.unlock();
 
     // We iterate in reverse in order to preserve integrity, because we remove elements in place
     var iter = std.mem.reverseIterator(temp_elements.items);
@@ -234,24 +238,35 @@ fn lessThan(_: void, lhs: element.UiElement, rhs: element.UiElement) bool {
     };
 }
 
-pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) !void {
-    while (!ui_lock.tryLock()) {}
+inline fn updateElements(time: i64, dt: i64) !void {
+    ui_lock.lock();
     defer ui_lock.unlock();
 
-    if (time - last_sort > 16 * std.time.us_per_ms) {
-        std.sort.block(element.UiElement, elements.items, {}, lessThan);
-        last_sort = time;
-    }
+    elements.appendSlice(elements_to_add.items) catch |e| {
+        std.log.err("Adding new elements failed: {any}, returning", .{e});
+        return;
+    };
+    elements_to_add.clearRetainingCapacity();
 
-    switch (current_screen) {
-        inline else => |screen| if (screen.inited) try screen.update(time, @floatFromInt(dt)),
+    std.sort.block(element.UiElement, elements.items, {}, lessThan);
+
+    switch (screen) {
+        inline else => |inner_screen| if (inner_screen.inited) try inner_screen.update(time, @floatFromInt(dt)),
     }
+}
+
+inline fn updateTempElements(time: i64, allocator: std.mem.Allocator) !void {
+    temp_elem_lock.lock();
+    defer temp_elem_lock.unlock();
+
+    temp_elements.appendSlice(temp_elements_to_add.items) catch |e| {
+        std.log.err("Adding new temporary elements failed: {any}, returning", .{e});
+        return;
+    };
+    temp_elements_to_add.clearRetainingCapacity();
 
     if (temp_elements.items.len <= 0)
         return;
-
-    while (!temp_elem_lock.tryLock()) {}
-    defer temp_elem_lock.unlock();
 
     // We iterate in reverse in order to preserve integrity, because we remove elements in place
     var iter = std.mem.reverseIterator(temp_elements.items);
@@ -325,4 +340,9 @@ pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) !void {
             },
         }
     }
+}
+
+pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) !void {
+    try updateElements(time, dt);
+    try updateTempElements(time, allocator);
 }

@@ -1,13 +1,15 @@
 const std = @import("std");
-const element = @import("../../element.zig");
-const assets = @import("../../../assets.zig");
-const camera = @import("../../../camera.zig");
-const requests = @import("../../../requests.zig");
-const xml = @import("../../../xml.zig");
-const main = @import("../../../main.zig");
+const element = @import("../element.zig");
+const assets = @import("../../assets.zig");
+const camera = @import("../../camera.zig");
+const requests = @import("../../requests.zig");
+const xml = @import("../../xml.zig");
+const main = @import("../../main.zig");
 const rpc = @import("rpc");
 
-const screen_controller = @import("../../controllers/screen_controller.zig");
+const systems = @import("../systems.zig");
+
+const NineSlice = element.NineSliceImageData;
 
 pub const AccountRegisterScreen = struct {
     username_text: *element.Text = undefined,
@@ -47,12 +49,10 @@ pub const AccountRegisterScreen = struct {
         const input_data_hover = assets.getUiData("text_input_hover", 0);
         const input_data_press = assets.getUiData("text_input_press", 0);
 
-        const NineSlice = element.NineSliceImageData;
-
         const x_offset: f32 = (camera.screen_width - input_w) / 2;
         var y_offset: f32 = camera.screen_height / 7.2;
 
-        screen.username_text = try element.Text.create(allocator, .{
+        screen.username_text = try element.create(allocator, element.Text{
             .x = x_offset,
             .y = y_offset,
             .text_data = .{
@@ -69,7 +69,7 @@ pub const AccountRegisterScreen = struct {
         y_offset += 50;
 
         const cursor_data = assets.getUiData("chatbox_cursor", 0);
-        screen.username_input = try element.Input.create(allocator, .{
+        screen.username_input = try element.create(allocator, element.Input{
             .x = x_offset,
             .y = y_offset,
             .text_inlay_x = 9,
@@ -92,7 +92,7 @@ pub const AccountRegisterScreen = struct {
 
         y_offset += 50;
 
-        screen.email_text = try element.Text.create(allocator, .{
+        screen.email_text = try element.create(allocator, element.Text{
             .x = x_offset,
             .y = y_offset,
             .text_data = .{
@@ -108,7 +108,7 @@ pub const AccountRegisterScreen = struct {
 
         y_offset += 50;
 
-        screen.email_input = try element.Input.create(allocator, .{
+        screen.email_input = try element.create(allocator, element.Input{
             .x = x_offset,
             .y = y_offset,
             .text_inlay_x = 9,
@@ -131,7 +131,7 @@ pub const AccountRegisterScreen = struct {
 
         y_offset += 50;
 
-        screen.password_text = try element.Text.create(allocator, .{
+        screen.password_text = try element.create(allocator, element.Text{
             .x = x_offset,
             .y = y_offset,
             .text_data = .{
@@ -147,7 +147,7 @@ pub const AccountRegisterScreen = struct {
 
         y_offset += 50;
 
-        screen.password_input = try element.Input.create(allocator, .{
+        screen.password_input = try element.create(allocator, element.Input{
             .x = x_offset,
             .y = y_offset,
             .text_inlay_x = 9,
@@ -171,7 +171,7 @@ pub const AccountRegisterScreen = struct {
 
         y_offset += 50;
 
-        screen.password_repeat_text = try element.Text.create(allocator, .{
+        screen.password_repeat_text = try element.create(allocator, element.Text{
             .x = x_offset,
             .y = y_offset,
             .text_data = .{
@@ -187,7 +187,7 @@ pub const AccountRegisterScreen = struct {
 
         y_offset += 50;
 
-        screen.password_repeat_input = try element.Input.create(allocator, .{
+        screen.password_repeat_input = try element.create(allocator, element.Input{
             .x = x_offset,
             .y = y_offset,
             .text_inlay_x = 9,
@@ -217,7 +217,7 @@ pub const AccountRegisterScreen = struct {
         const button_width = 100;
         const button_height = 35;
 
-        screen.confirm_button = try element.Button.create(allocator, .{
+        screen.confirm_button = try element.create(allocator, element.Button{
             .x = x_offset + (input_w - (button_width * 2)) / 2 - 12.5,
             .y = y_offset,
             .image_data = .{
@@ -233,7 +233,7 @@ pub const AccountRegisterScreen = struct {
             .press_callback = registerCallback,
         });
 
-        screen.back_button = try element.Button.create(allocator, .{
+        screen.back_button = try element.create(allocator, element.Button{
             .x = screen.confirm_button.x + button_width + 25,
             .y = y_offset,
             .image_data = .{
@@ -254,16 +254,16 @@ pub const AccountRegisterScreen = struct {
     }
 
     pub fn deinit(self: *AccountRegisterScreen) void {
-        self.username_text.destroy();
-        self.username_input.destroy();
-        self.email_text.destroy();
-        self.email_input.destroy();
-        self.password_text.destroy();
-        self.password_input.destroy();
-        self.password_repeat_input.destroy();
-        self.password_repeat_text.destroy();
-        self.confirm_button.destroy();
-        self.back_button.destroy();
+        element.destroy(self.username_text);
+        element.destroy(self.username_input);
+        element.destroy(self.email_text);
+        element.destroy(self.email_input);
+        element.destroy(self.password_text);
+        element.destroy(self.password_input);
+        element.destroy(self.password_repeat_input);
+        element.destroy(self.password_repeat_text);
+        element.destroy(self.confirm_button);
+        element.destroy(self.back_button);
 
         self._allocator.destroy(self);
     }
@@ -357,16 +357,16 @@ pub const AccountRegisterScreen = struct {
         }
 
         if (main.character_list.len > 0) {
-            screen_controller.switchScreen(.char_select);
+            systems.switchScreen(.char_select);
         } else {
-            screen_controller.switchScreen(.char_create);
+            systems.switchScreen(.char_create);
         }
 
         return true;
     }
 
     fn registerCallback() void {
-        const current_screen = screen_controller.current_screen.register;
+        const current_screen = systems.screen.register;
         _ = register(
             current_screen.email_input.text_data.text,
             current_screen.password_input.text_data.text,
@@ -387,6 +387,6 @@ pub const AccountRegisterScreen = struct {
     }
 
     fn backCallback() void {
-        screen_controller.switchScreen(.main_menu);
+        systems.switchScreen(.main_menu);
     }
 };

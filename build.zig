@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    exe.strip = !is_debug;
+    exe.strip = optimize != .Debug and optimize != .ReleaseSafe;
     exe.addModule("rpc", zdiscord.getModule(b));
     exe.addModule("nfd", nfd.getModule(b));
 

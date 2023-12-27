@@ -256,8 +256,8 @@ pub var rng = std.rand.DefaultPrng.init(0);
 var last_memory_access: i64 = -1;
 var last_memory_value: f32 = -1.0;
 
-pub fn currentMemoryUse(allocator: std.mem.Allocator) !f32 {
-    if (main.current_time - last_memory_access < 5000 * std.time.us_per_ms)
+pub fn currentMemoryUse() !f32 {
+    if (main.current_time - last_memory_access < 5 * std.time.us_per_s)
         return last_memory_value;
 
     var memory_value: f32 = -1.0;
@@ -270,10 +270,10 @@ pub fn currentMemoryUse(allocator: std.mem.Allocator) !f32 {
             const file = try std.fs.cwd().openFile("/proc/self/statm", .{});
             defer file.close();
 
-            const data = try file.readToEndAlloc(allocator, std.math.maxInt(u8));
-            defer allocator.free(data);
+            var buf: [1024]u8 = undefined;
+            const size = try file.readAll(&buf);
 
-            var split_iter = std.mem.split(u8, data, " ");
+            var split_iter = std.mem.split(u8, buf[0..size], " ");
             _ = split_iter.next(); // total size
             const rss: f32 = @floatFromInt(try std.fmt.parseInt(u32, split_iter.next().?, 0));
             memory_value = rss / 1024.0;

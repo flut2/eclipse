@@ -27,7 +27,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
         var tooltip = try allocator.create(Tooltip);
         tooltip.* = @unionInit(Tooltip, field.name, .{});
         try @field(tooltip, field.name).init(allocator);
-        try tooltip_map.put(std.meta.stringToEnum(TooltipType, field.name) orelse @panic("Tooltip union and its tag enum don't match"), tooltip);
+        try tooltip_map.put(std.meta.stringToEnum(TooltipType, field.name) orelse 
+            std.debug.panic("No enum type with name {s} found on TooltipType", .{field.name}), tooltip);
     }
 
     current_tooltip = tooltip_map.get(.none).?;
@@ -60,7 +61,7 @@ pub fn switchTooltip(tooltip_type: TooltipType) void {
 
     current_tooltip = tooltip_map.get(tooltip_type) orelse blk: {
         std.log.err("Tooltip for {any} was not found, using .none", .{tooltip_type});
-        break :blk tooltip_map.get(.none) orelse @panic(".none was not a valid tooltip");
+        break :blk tooltip_map.get(.none) orelse std.debug.panic(".none was not a valid tooltip", .{});
     };
 
     switch (current_tooltip.*) {

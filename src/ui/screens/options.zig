@@ -7,7 +7,7 @@ const settings = @import("../../settings.zig");
 const input = @import("../../input.zig");
 
 const NineSlice = element.NineSliceImageData;
-const sc = @import("../controllers/screen_controller.zig");
+const systems = @import("../systems.zig");
 
 pub const TabType = enum {
     general,
@@ -42,54 +42,54 @@ pub const Options = struct {
         const buttons_x = width / 2;
         const buttons_y = height - button_height - 50;
 
-        screen.main = try element.Container.create(allocator, .{
+        screen.main = try element.create(allocator, element.Container{
             .x = 0,
             .y = 0,
             .visible = screen.visible,
         });
 
-        screen.buttons = try element.Container.create(allocator, .{
+        screen.buttons = try element.create(allocator, element.Container{
             .x = 0,
             .y = buttons_y,
             .visible = screen.visible,
         });
 
-        screen.tabs = try element.Container.create(allocator, .{
+        screen.tabs = try element.create(allocator, element.Container{
             .x = 0,
             .y = 25,
             .visible = screen.visible,
         });
 
-        screen.general_tab = try element.Container.create(allocator, .{
+        screen.general_tab = try element.create(allocator, element.Container{
             .x = 100,
             .y = 150,
             .visible = screen.visible and screen.selected_tab_type == .general,
         });
 
-        screen.keys_tab = try element.Container.create(allocator, .{
+        screen.keys_tab = try element.create(allocator, element.Container{
             .x = 100,
             .y = 150,
             .visible = screen.visible and screen.selected_tab_type == .hotkeys,
         });
 
-        screen.graphics_tab = try element.Container.create(allocator, .{
+        screen.graphics_tab = try element.create(allocator, element.Container{
             .x = 100,
             .y = 150,
             .visible = screen.visible and screen.selected_tab_type == .graphics,
         });
 
-        screen.misc_tab = try element.Container.create(allocator, .{
+        screen.misc_tab = try element.create(allocator, element.Container{
             .x = 100,
             .y = 150,
             .visible = screen.visible and screen.selected_tab_type == .misc,
         });
 
         const options_background = assets.getUiData("options_background", 0);
-        _ = try screen.main.createElement(element.Image, .{ .x = 0, .y = 0, .image_data = .{
+        _ = try screen.main.createChild(element.Image{ .x = 0, .y = 0, .image_data = .{
             .nine_slice = NineSlice.fromAtlasData(options_background, width, height, 0, 0, 8, 8, 1.0),
         } });
 
-        _ = try screen.main.createElement(element.Text, .{ .x = buttons_x - 76, .y = 25, .text_data = .{
+        _ = try screen.main.createChild(element.Text{ .x = buttons_x - 76, .y = 25, .text_data = .{
             .text = "Options",
             .size = 32,
             .text_type = .bold,
@@ -98,7 +98,7 @@ pub const Options = struct {
         const button_data_base = assets.getUiData("button_base", 0);
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
-        _ = try screen.buttons.createElement(element.Button, .{
+        _ = try screen.buttons.createChild(element.Button{
             .x = buttons_x - button_half_width,
             .y = button_half_height - 20,
             .image_data = .{
@@ -114,7 +114,7 @@ pub const Options = struct {
             .press_callback = closeCallback,
         });
 
-        _ = try screen.buttons.createElement(element.Button, .{
+        _ = try screen.buttons.createChild(element.Button{
             .x = width - button_width - 50,
             .y = button_half_height - 20,
             .image_data = .{
@@ -130,7 +130,7 @@ pub const Options = struct {
             .press_callback = disconnectCallback,
         });
 
-        _ = try screen.buttons.createElement(element.Button, .{
+        _ = try screen.buttons.createChild(element.Button{
             .x = 50,
             .y = button_half_height - 20,
             .image_data = .{
@@ -149,7 +149,7 @@ pub const Options = struct {
         var tab_x_offset: f32 = 50;
         const tab_y = 50;
 
-        _ = try screen.tabs.createElement(element.Button, .{
+        _ = try screen.tabs.createChild(element.Button{
             .x = tab_x_offset,
             .y = tab_y,
             .image_data = .{
@@ -167,7 +167,7 @@ pub const Options = struct {
 
         tab_x_offset += button_width + 10;
 
-        _ = try screen.tabs.createElement(element.Button, .{
+        _ = try screen.tabs.createChild(element.Button{
             .x = tab_x_offset,
             .y = tab_y,
             .image_data = .{
@@ -185,7 +185,7 @@ pub const Options = struct {
 
         tab_x_offset += button_width + 10;
 
-        _ = try screen.tabs.createElement(element.Button, .{
+        _ = try screen.tabs.createChild(element.Button{
             .x = tab_x_offset,
             .y = tab_y,
             .image_data = .{
@@ -203,7 +203,7 @@ pub const Options = struct {
 
         tab_x_offset += button_width + 10;
 
-        _ = try screen.tabs.createElement(element.Button, .{
+        _ = try screen.tabs.createChild(element.Button{
             .x = tab_x_offset,
             .y = tab_y,
             .image_data = .{
@@ -257,13 +257,14 @@ pub const Options = struct {
     }
 
     pub fn deinit(self: *Options) void {
-        self.main.destroy();
-        self.buttons.destroy();
-        self.tabs.destroy();
-        self.general_tab.destroy();
-        self.keys_tab.destroy();
-        self.graphics_tab.destroy();
-        self.misc_tab.destroy();
+        element.destroy(self.main);
+        element.destroy(self.buttons);
+        element.destroy(self.tabs);
+        element.destroy(self.general_tab);
+        element.destroy(self.keys_tab);
+        element.destroy(self.graphics_tab);
+        element.destroy(self.misc_tab);
+
         self._allocator.destroy(self);
     }
 
@@ -275,7 +276,7 @@ pub const Options = struct {
         const w = 50;
         const h = 50;
 
-        _ = try target_tab.createElement(element.KeyMapper, .{
+        _ = try target_tab.createChild(element.KeyMapper{
             .x = 0,
             .y = 0,
             .image_data = .{
@@ -308,7 +309,7 @@ pub const Options = struct {
         const toggle_data_hover_on = assets.getUiData("toggle_slider_hover_on", 0);
         const toggle_data_press_on = assets.getUiData("toggle_slider_press_on", 0);
 
-        _ = try target_tab.createElement(element.Toggle, .{
+        _ = try target_tab.createChild(element.Toggle{
             .x = 0,
             .y = 0,
             .off_image_data = .{
@@ -345,7 +346,7 @@ pub const Options = struct {
         const h = 30;
         const knob_size = 40;
 
-        _ = try target_tab.createElement(element.Slider, .{
+        _ = try target_tab.createChild(element.Slider{
             .x = 0,
             .y = 0,
             .w = w,
@@ -419,7 +420,7 @@ pub const Options = struct {
     }
 
     fn closeCallback() void {
-        sc.current_screen.game.options.setVisible(false);
+        systems.screen.game.options.setVisible(false);
         input.disable_input = false;
 
         trySave();
@@ -458,7 +459,7 @@ pub const Options = struct {
     }
 
     pub fn switchTab(tab: TabType) void {
-        var self = sc.current_screen.game.options;
+        var self = systems.screen.game.options;
 
         self.selected_tab_type = tab;
         self.general_tab.visible = tab == .general;

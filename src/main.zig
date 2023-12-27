@@ -18,7 +18,7 @@ const element = @import("ui/element.zig");
 const render = @import("render.zig");
 const ztracy = @import("ztracy");
 const zaudio = @import("zaudio");
-const screen_controller = @import("ui/controllers/screen_controller.zig");
+const systems = @import("ui/systems.zig");
 const rpc = @import("rpc");
 
 pub const ServerData = struct {
@@ -99,14 +99,16 @@ pub var sent_hello = false;
 pub var editing_map = false;
 pub var need_minimap_update = false;
 pub var need_force_update = false;
-pub var minimap_update_min_x: u32 = 4096;
-pub var minimap_update_max_x: u32 = 0;
-pub var minimap_update_min_y: u32 = 4096;
-pub var minimap_update_max_y: u32 = 0;
+pub var minimap_update_min_x: u32 = std.math.maxInt(u32);
+pub var minimap_update_max_x: u32 = std.math.minInt(u32);
+pub var minimap_update_min_y: u32 = std.math.maxInt(u32);
+pub var minimap_update_max_y: u32 = std.math.minInt(u32);
 pub var rpc_client: *rpc = undefined;
 pub var rpc_start: u64 = 0;
 pub var version_text: []const u8 = undefined;
 pub var _allocator: std.mem.Allocator = undefined;
+
+var last_ui_update: i64 = -1;
 
 fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
     const float_w: f32 = @floatFromInt(w);
@@ -117,7 +119,7 @@ fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
     camera.clip_scale_x = 2.0 / float_w;
     camera.clip_scale_y = 2.0 / float_h;
 
-    screen_controller.resize(float_w, float_h);
+    systems.resize(float_w, float_h);
 }
 
 fn networkTick(allocator: std.mem.Allocator) void {
@@ -185,9 +187,9 @@ fn renderTick(allocator: std.mem.Allocator) !void {
         if (gctx.present() == .swap_chain_resized)
             render.createColorTexture(gctx, gctx.swapchain_descriptor.width, gctx.swapchain_descriptor.height);
 
-        try if (settings.stats_enabled) switch (screen_controller.current_screen) {
-            .game => |game_screen| if (game_screen.inited) game_screen.updateFpsText(gctx.stats.fps, try utils.currentMemoryUse(allocator)),
-            .editor => |editor_screen| editor_screen.updateFpsText(gctx.stats.fps, try utils.currentMemoryUse(allocator)),
+        try if (settings.stats_enabled) switch (systems.screen) {
+            .game => |game_screen| if (game_screen.inited) game_screen.updateFpsText(gctx.stats.fps, try utils.currentMemoryUse()),
+            .editor => |editor_screen| editor_screen.updateFpsText(gctx.stats.fps, try utils.currentMemoryUse()),
             else => {},
         };
 
@@ -199,10 +201,10 @@ fn renderTick(allocator: std.mem.Allocator) !void {
             if (need_minimap_update) {
                 // we need to make copies of these, other threads can change them mid execution
                 // this is a hack though. should be handled double buffered or else chunks of minimap can be lost
-                const min_x = minimap_update_min_x;
-                const max_x = minimap_update_max_x + 1;
-                const min_y = minimap_update_min_y;
-                const max_y = minimap_update_max_y + 1;
+                const min_x = @min(map.minimap.width, minimap_update_min_x);
+                const max_x = @max(map.minimap.width, minimap_update_max_x + 1);
+                const min_y = @min(map.minimap.height, minimap_update_min_y);
+                const max_y = @max(map.minimap.height, minimap_update_max_y + 1);
 
                 const w = max_x - min_x;
                 const h = max_y - min_y;
@@ -213,10 +215,10 @@ fn renderTick(allocator: std.mem.Allocator) !void {
                 const copy = allocator.alloc(u8, w * h * comp_len) catch |e| {
                     std.log.err("Minimap alloc failed: {any}", .{e});
                     need_minimap_update = false;
-                    minimap_update_min_x = 4096;
-                    minimap_update_max_x = 0;
-                    minimap_update_min_y = 4096;
-                    minimap_update_max_y = 0;
+                    minimap_update_min_x = std.math.maxInt(u32);
+                    minimap_update_max_x = std.math.minInt(u32);
+                    minimap_update_min_y = std.math.maxInt(u32);
+                    minimap_update_max_y = std.math.minInt(u32);
                     break :minimapUpdate;
                 };
                 defer allocator.free(copy);
@@ -252,10 +254,10 @@ fn renderTick(allocator: std.mem.Allocator) !void {
                 );
 
                 need_minimap_update = false;
-                minimap_update_min_x = 4096;
-                minimap_update_max_x = 0;
-                minimap_update_min_y = 4096;
-                minimap_update_max_y = 0;
+                minimap_update_min_x = std.math.maxInt(u32);
+                minimap_update_max_x = std.math.minInt(u32);
+                minimap_update_min_y = std.math.maxInt(u32);
+                minimap_update_max_y = std.math.minInt(u32);
             } else if (need_force_update) {
                 gctx.queue.writeTexture(
                     .{
@@ -280,7 +282,6 @@ fn renderTick(allocator: std.mem.Allocator) !void {
 
 pub fn clear() void {
     map.dispose(_allocator);
-    need_force_update = true;
 }
 
 pub fn disconnect() void {
@@ -294,7 +295,7 @@ pub fn disconnect() void {
     clear();
     input.reset();
 
-    screen_controller.switchScreen(.char_select);
+    systems.switchScreen(.char_select);
 }
 
 // This is effectively just raw_c_allocator wrapped in the Tracy stuff
@@ -411,10 +412,10 @@ pub fn main() !void {
     input.init(allocator);
     defer input.deinit(allocator);
 
-    try screen_controller.init(allocator);
-    defer screen_controller.deinit(allocator);
+    try systems.init(allocator);
+    defer systems.deinit(allocator);
 
-    screen_controller.switchScreen(.main_menu);
+    systems.switchScreen(.main_menu);
 
     zglfw.WindowHint.set(.client_api, @intFromEnum(zglfw.ClientApi.no_api));
     const window = zglfw.Window.create(1280, 720, "Faer", null) catch |e| {
@@ -451,7 +452,7 @@ pub fn main() !void {
     _ = window.setFramebufferSizeCallback(onResize);
 
     render.init(gctx, allocator);
-    defer render.deinit(allocator);
+    defer render.deinit(gctx, allocator);
 
     var rpc_thread = try std.Thread.spawn(.{}, runRpc, .{rpc_client});
     defer {
@@ -478,10 +479,15 @@ pub fn main() !void {
 
         zglfw.pollEvents();
 
+        const dt = time - last_update;
+
         if (tick_frame or editing_map) {
-            const dt = time - last_update;
             map.update(time, dt, allocator);
-            try screen_controller.update(time, dt, allocator);
+        }
+
+        if (time - last_ui_update > 16 * std.time.us_per_ms) {
+            try systems.update(time, dt, allocator);
+            last_ui_update = time;
         }
 
         last_update = time;

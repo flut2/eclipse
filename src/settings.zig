@@ -352,7 +352,7 @@ pub fn assetsLoaded() void {
 }
 
 pub fn getKeyTexture(button: Button) assets.AtlasData {
-    const tex_list = assets.atlas_data.get("key_indicators") orelse @panic("Key texture parsing failed, the key_indicators sheet is missing");
+    const tex_list = assets.atlas_data.get("key_indicators") orelse std.debug.panic("Key texture parsing failed, the key_indicators sheet is missing", .{});
     return tex_list[key_tex_map.get(button) orelse unset_key_tex_idx];
 }
 

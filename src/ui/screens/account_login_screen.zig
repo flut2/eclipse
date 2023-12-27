@@ -1,14 +1,15 @@
 const std = @import("std");
-const element = @import("../../element.zig");
-const assets = @import("../../../assets.zig");
-const camera = @import("../../../camera.zig");
-const requests = @import("../../../requests.zig");
-const xml = @import("../../../xml.zig");
-const main = @import("../../../main.zig");
-const settings = @import("../../../settings.zig");
-const screen_controller = @import("../../controllers/screen_controller.zig");
-const input = @import("../../../input.zig");
+const element = @import("../element.zig");
+const assets = @import("../../assets.zig");
+const camera = @import("../../camera.zig");
+const requests = @import("../../requests.zig");
+const xml = @import("../../xml.zig");
+const main = @import("../../main.zig");
+const settings = @import("../../settings.zig");
+const systems = @import("../systems.zig");
+const input = @import("../../input.zig");
 const rpc = @import("rpc");
+const NineSlice = element.NineSliceImageData;
 
 pub const AccountLoginScreen = struct {
     email_text: *element.Text = undefined,
@@ -46,10 +47,8 @@ pub const AccountLoginScreen = struct {
         const input_data_hover = assets.getUiData("text_input_hover", 0);
         const input_data_press = assets.getUiData("text_input_press", 0);
 
-        const NineSlice = element.NineSliceImageData;
-
         const cursor_data = assets.getUiData("chatbox_cursor", 0);
-        screen.email_input = try element.Input.create(allocator, .{
+        screen.email_input = try element.create(allocator, element.Input{
             .x = (camera.screen_width - input_w) / 2,
             .y = camera.screen_height / 3.6,
             .text_inlay_x = 9,
@@ -77,7 +76,7 @@ pub const AccountLoginScreen = struct {
         screen.email_input.text_data.text = screen.email_input.text_data._backing_buffer[0..email_len];
         screen.email_input.inputUpdate();
 
-        screen.email_text = try element.Text.create(allocator, .{
+        screen.email_text = try element.create(allocator, element.Text{
             .x = screen.email_input.x,
             .y = screen.email_input.y - 50,
             .text_data = .{
@@ -91,7 +90,7 @@ pub const AccountLoginScreen = struct {
             },
         });
 
-        screen.password_input = try element.Input.create(allocator, .{
+        screen.password_input = try element.create(allocator, element.Input{
             .x = screen.email_input.x,
             .y = screen.email_input.y + 150,
             .text_inlay_x = 9,
@@ -113,7 +112,7 @@ pub const AccountLoginScreen = struct {
             .allocator = allocator,
         });
 
-        screen.password_text = try element.Text.create(allocator, .{
+        screen.password_text = try element.create(allocator, element.Text{
             .x = screen.password_input.x,
             .y = screen.password_input.y - 50,
             .text_data = .{
@@ -136,7 +135,7 @@ pub const AccountLoginScreen = struct {
 
         const text_w = 150;
 
-        screen.save_email_toggle = try element.Toggle.create(allocator, .{
+        screen.save_email_toggle = try element.create(allocator, element.Toggle{
             .x = screen.password_input.x + (input_w - text_w - check_box_base_on.texWRaw()) / 2,
             .y = (screen.password_input.y + 98) - ((100 - check_box_base_on.texHRaw()) / 2),
             .off_image_data = .{
@@ -152,7 +151,7 @@ pub const AccountLoginScreen = struct {
             .toggled = &settings.save_email,
         });
 
-        screen.save_email_text = try element.Text.create(allocator, .{
+        screen.save_email_text = try element.create(allocator, element.Text{
             .x = screen.save_email_toggle.x + check_box_base_on.texWRaw(),
             .y = screen.save_email_toggle.y - 24,
             .text_data = .{
@@ -170,7 +169,7 @@ pub const AccountLoginScreen = struct {
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
 
-        screen.login_button = try element.Button.create(allocator, .{
+        screen.login_button = try element.create(allocator, element.Button{
             .x = screen.password_input.x + (input_w - 200) / 2 - 12.5,
             .y = screen.password_input.y + 150,
             .image_data = .{
@@ -186,7 +185,7 @@ pub const AccountLoginScreen = struct {
             .press_callback = loginCallback,
         });
 
-        screen.confirm_button = try element.Button.create(allocator, .{
+        screen.confirm_button = try element.create(allocator, element.Button{
             .x = screen.login_button.x + (input_w - 100) / 2 + 25,
             .y = screen.login_button.y,
             .image_data = .{
@@ -202,7 +201,7 @@ pub const AccountLoginScreen = struct {
             .press_callback = registerCallback,
         });
 
-        screen.editor_button = try element.Button.create(allocator, .{
+        screen.editor_button = try element.create(allocator, element.Button{
             .x = screen.password_input.x + (input_w - 200) / 2,
             .y = screen.confirm_button.y + 50,
             .image_data = .{
@@ -222,19 +221,19 @@ pub const AccountLoginScreen = struct {
     }
 
     pub fn enableEditorCallback() void {
-        screen_controller.switchScreen(.editor);
+        systems.switchScreen(.editor);
     }
 
     pub fn deinit(self: *AccountLoginScreen) void {
-        self.email_text.destroy();
-        self.email_input.destroy();
-        self.password_text.destroy();
-        self.password_input.destroy();
-        self.login_button.destroy();
-        self.confirm_button.destroy();
-        self.save_email_text.destroy();
-        self.save_email_toggle.destroy();
-        self.editor_button.destroy();
+        element.destroy(self.email_text);
+        element.destroy(self.email_input);
+        element.destroy(self.password_text);
+        element.destroy(self.password_input);
+        element.destroy(self.login_button);
+        element.destroy(self.confirm_button);
+        element.destroy(self.save_email_text);
+        element.destroy(self.save_email_toggle);
+        element.destroy(self.editor_button);
 
         self._allocator.destroy(self);
     }
@@ -263,7 +262,7 @@ pub const AccountLoginScreen = struct {
     pub fn update(_: *AccountLoginScreen, _: i64, _: f32) !void {}
 
     fn loginCallback() void {
-        const current_screen = screen_controller.current_screen.main_menu;
+        const current_screen = systems.screen.main_menu;
         _ = login(
             current_screen._allocator,
             current_screen.email_input.text_data.text,
@@ -274,7 +273,7 @@ pub const AccountLoginScreen = struct {
     }
 
     fn registerCallback() void {
-        screen_controller.switchScreen(.register);
+        systems.switchScreen(.register);
     }
 };
 
@@ -339,9 +338,9 @@ fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) 
     }
 
     if (main.character_list.len > 0) {
-        screen_controller.switchScreen(.char_select);
+        systems.switchScreen(.char_select);
     } else {
-        screen_controller.switchScreen(.char_create);
+        systems.switchScreen(.char_create);
     }
 
     return true;

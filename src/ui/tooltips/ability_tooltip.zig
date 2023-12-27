@@ -20,7 +20,7 @@ pub const AbilityTooltip = struct {
     pub fn init(self: *AbilityTooltip, allocator: std.mem.Allocator) !void {
         self._allocator = allocator;
 
-        self.root = try element.Container.create(allocator, .{
+        self.root = try element.create(allocator, element.Container{
             .visible = false,
             .layer = .tooltip,
             .x = 0,
@@ -28,7 +28,7 @@ pub const AbilityTooltip = struct {
         });
 
         const tooltip_background_data = assets.getUiData("tooltip_background", 0);
-        self.decor = try self.root.createElement(element.Image, .{
+        self.decor = try self.root.createChild(element.Image{
             .x = 0,
             .y = 0,
             .image_data = .{
@@ -36,7 +36,7 @@ pub const AbilityTooltip = struct {
             },
         });
 
-        self.image = try self.root.createElement(element.Image, .{
+        self.image = try self.root.createChild(element.Image{
             .x = 10,
             .y = 10,
             .image_data = .{
@@ -47,7 +47,7 @@ pub const AbilityTooltip = struct {
             },
         });
 
-        self.title = try self.root.createElement(element.Text, .{
+        self.title = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
             .y = 10,
             .text_data = .{
@@ -57,7 +57,7 @@ pub const AbilityTooltip = struct {
             },
         });
 
-        self.cost_text = try self.root.createElement(element.Text, .{
+        self.cost_text = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
             .y = self.title.text_data._height + 10,
             .text_data = .{
@@ -69,7 +69,7 @@ pub const AbilityTooltip = struct {
         });
 
         const tooltip_line_spacer_data = assets.getUiData("tooltip_line_spacer", 0);
-        self.line_break = try self.root.createElement(element.Image, .{
+        self.line_break = try self.root.createChild(element.Image{
             .x = 20,
             .y = self.image.y + self.image.height() + 10,
             .image_data = .{
@@ -77,7 +77,7 @@ pub const AbilityTooltip = struct {
             },
         });
 
-        self.description = try self.root.createElement(element.Text, .{
+        self.description = try self.root.createChild(element.Text{
             .x = 10,
             .y = self.line_break.y + self.line_break.height() + 20,
             .text_data = .{
@@ -90,7 +90,7 @@ pub const AbilityTooltip = struct {
     }
 
     pub fn deinit(self: *AbilityTooltip) void {
-        self.root.destroy();
+        element.destroy(self.root);
     }
 
     pub fn update(self: *AbilityTooltip, x: f32, y: f32, props: game_data.Ability) void {

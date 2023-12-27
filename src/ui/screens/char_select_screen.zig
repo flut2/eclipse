@@ -1,11 +1,11 @@
 const std = @import("std");
-const element = @import("../../element.zig");
-const assets = @import("../../../assets.zig");
-const camera = @import("../../../camera.zig");
-const main = @import("../../../main.zig");
+const element = @import("../element.zig");
+const assets = @import("../../assets.zig");
+const camera = @import("../../camera.zig");
+const main = @import("../../main.zig");
 const rpc = @import("rpc");
 
-const screen_controller = @import("../../controllers/screen_controller.zig");
+const systems = @import("../systems.zig");
 
 pub const CharSelectScreen = struct {
     boxes: std.ArrayList(*element.CharacterBox) = undefined,
@@ -42,7 +42,7 @@ pub const CharSelectScreen = struct {
         for (main.character_list, 0..) |char, i| {
             counter += 1;
 
-            const box = element.CharacterBox.create(allocator, .{
+            const box = element.create(allocator, element.CharacterBox{
                 .x = (camera.screen_width - button_data_base.texWRaw()) / 2,
                 .y = @floatFromInt(50 * i),
                 .id = char.id,
@@ -62,7 +62,7 @@ pub const CharSelectScreen = struct {
             screen.boxes.append(box) catch return screen;
         }
 
-        screen.new_char_button = try element.Button.create(allocator, .{
+        screen.new_char_button = try element.create(allocator, element.Button{
             .x = (camera.screen_width - button_data_base.texWRaw()) / 2,
             .y = @floatFromInt(50 * (counter + 1)),
             .visible = false,
@@ -88,10 +88,11 @@ pub const CharSelectScreen = struct {
 
     pub fn deinit(self: *CharSelectScreen) void {
         for (self.boxes.items) |box| {
-            box.destroy();
+            element.destroy(box);
         }
         self.boxes.clearAndFree();
-        self.new_char_button.destroy();
+        
+        element.destroy(self.new_char_button);
 
         self._allocator.destroy(self);
     }
@@ -105,7 +106,7 @@ pub const CharSelectScreen = struct {
         if (main.server_list) |server_list| {
             if (server_list.len > 0) {
                 main.selected_server = server_list[0];
-                screen_controller.switchScreen(.game);
+                systems.switchScreen(.game);
                 return;
             }
         }
@@ -114,6 +115,6 @@ pub const CharSelectScreen = struct {
     }
 
     fn newCharCallback() void {
-        screen_controller.switchScreen(.char_create);
+        systems.switchScreen(.char_create);
     }
 };

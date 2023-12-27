@@ -8,7 +8,7 @@ const utils = @import("utils.zig");
 const zstbi = @import("zstbi");
 const element = @import("ui/element.zig");
 const main = @import("main.zig");
-const sc = @import("ui/controllers/screen_controller.zig");
+const systems = @import("ui/systems.zig");
 
 const VertexField = extern struct {
     x: f32,
@@ -189,7 +189,7 @@ pub fn createColorTexture(gctx: *zgpu.GraphicsContext, w: u32, h: u32) void {
     color_tex_set = true;
 }
 
-pub fn deinit(allocator: std.mem.Allocator) void {
+pub fn deinit(_: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
     for (condition_rects) |rects| {
         if (rects.len > 0)
             allocator.free(rects);
@@ -224,7 +224,7 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
 
         var rects = allocator.alloc(assets.AtlasData, indices_len) catch continue;
         for (0..indices_len) |j| {
-            rects[j] = (assets.atlas_data.get(sheet_name) orelse @panic("Could not find sheet for cond parsing"))[sheet_indices[j]];
+            rects[j] = (assets.atlas_data.get(sheet_name) orelse std.debug.panic("Could not find sheet {s} for cond parsing", .{sheet_name}))[sheet_indices[j]];
         }
 
         condition_rects[i] = rects;
@@ -288,6 +288,7 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
     };
 
     createColorTexture(gctx, gctx.swapchain_descriptor.width, gctx.swapchain_descriptor.height);
+    createTexture(gctx, &minimap_texture, &minimap_texture_view, map.minimap);
 
     createTexture(gctx, &medium_text_texture, &medium_text_texture_view, assets.medium_atlas);
     createTexture(gctx, &medium_italic_text_texture, &medium_italic_text_texture_view, assets.medium_italic_atlas);
@@ -296,8 +297,16 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
     createTexture(gctx, &texture, &texture_view, assets.atlas);
     createTexture(gctx, &ui_texture, &ui_texture_view, assets.ui_atlas);
     createTexture(gctx, &light_texture, &light_texture_view, assets.light_tex);
-    createTexture(gctx, &minimap_texture, &minimap_texture_view, map.minimap);
     createTexture(gctx, &menu_bg_texture, &menu_bg_texture_view, assets.menu_background);
+
+    assets.medium_atlas.deinit();
+    assets.medium_italic_atlas.deinit();
+    assets.bold_atlas.deinit();
+    assets.bold_italic_atlas.deinit();
+    assets.atlas.deinit();
+    assets.ui_atlas.deinit();
+    assets.light_tex.deinit();
+    assets.menu_background.deinit();
 
     sampler = gctx.createSampler(.{});
     linear_sampler = gctx.createSampler(.{ .min_filter = .linear, .mag_filter = .linear });
@@ -566,11 +575,11 @@ fn drawWall(
                 atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                 atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             } else {
-                const top_sq = map.squares[(floor_y - 1) * map.width + floor_x];
+                const top_sq = map.squares.get((floor_y - 1) * map.width + floor_x) orelse break :topSide;
                 if (top_sq.has_wall)
                     break :topSide;
 
-                if (top_sq.tile_type == 0xFFFF or top_sq.tile_type == 0xFF) {
+                if (top_sq.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                     atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
                 }
@@ -601,11 +610,11 @@ fn drawWall(
                 atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                 atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             } else {
-                const bottom_sq = map.squares[(floor_y + 1) * map.width + floor_x];
+                const bottom_sq = map.squares.get((floor_y + 1) * map.width + floor_x) orelse break :bottomSide;
                 if (bottom_sq.has_wall)
                     break :bottomSide;
 
-                if (bottom_sq.tile_type == 0xFFFF or bottom_sq.tile_type == 0xFF) {
+                if (bottom_sq.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                     atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
                 } else {
@@ -637,11 +646,11 @@ fn drawWall(
                 atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                 atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             } else {
-                const left_sq = map.squares[floor_y * map.width + floor_x - 1];
+                const left_sq = map.squares.get(floor_y * map.width + floor_x - 1) orelse break :leftSide;
                 if (left_sq.has_wall)
                     break :leftSide;
 
-                if (left_sq.tile_type == 0xFFFF or left_sq.tile_type == 0xFF) {
+                if (left_sq.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                     atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
                 } else {
@@ -673,11 +682,11 @@ fn drawWall(
                 atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                 atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             } else {
-                const right_sq = map.squares[floor_y * map.width + floor_x + 1];
+                const right_sq = map.squares.get(floor_y * map.width + floor_x + 1) orelse break :rightSide;
                 if (right_sq.has_wall)
                     break :rightSide;
 
-                if (right_sq.tile_type == 0xFFFF or right_sq.tile_type == 0xFF) {
+                if (right_sq.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                     atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
                 } else {
@@ -1773,7 +1782,7 @@ fn drawText(
     noalias draw_data: *const DrawData,
     noalias scissor_override: *const element.ScissorRect,
 ) u16 {
-    while (!text_data._lock.tryLock()) {}
+    text_data._lock.lock();
     defer text_data._lock.unlock();
 
     // text data not initiated
@@ -2908,7 +2917,7 @@ pub fn draw(
     first_draw = true;
 
     gamePass: {
-        if ((!main.tick_frame and sc.current_screen == .game or !main.editing_map and sc.current_screen == .editor) or !map.validPos(@intFromFloat(cam_x), @intFromFloat(cam_y)))
+        if ((!main.tick_frame and systems.screen == .game or !main.editing_map and systems.screen == .editor) or !map.validPos(@intFromFloat(cam_x), @intFromFloat(cam_y)))
             break :gamePass;
 
         const float_time_ms = @as(f32, @floatFromInt(time)) / std.time.us_per_ms;
@@ -2946,9 +2955,9 @@ pub fn draw(
                     if (dx * dx + dy * dy > camera.max_dist_sq)
                         continue;
 
-                    const map_square_idx = x + y * map.width;
-                    const square = map.squares[map_square_idx];
-                    if (square.tile_type == 0xFFFF or square.tile_type == 0xFF)
+                    const map_square_idx: u32 = @intCast(x + y * map.width);
+                    const square = map.squares.get(map_square_idx) orelse continue;
+                    if (square.tile_type == 0xFF)
                         continue;
 
                     const screen_pos = camera.rotateAroundCameraClip(square.x, square.y);
@@ -3056,7 +3065,7 @@ pub fn draw(
                 .bind_group = bind_group,
             };
 
-            while (!map.object_lock.tryLockShared()) {}
+            map.object_lock.lockShared();
             defer map.object_lock.unlockShared();
 
             var idx: u16 = 0;
@@ -3095,7 +3104,7 @@ pub fn draw(
                     },
                     .player => |*player| {
                         // hack just dont render players
-                        if (sc.current_screen == .editor or player.dead or !camera.visibleInCamera(player.x, player.y)) {
+                        if (systems.screen == .editor or player.dead or !camera.visibleInCamera(player.x, player.y)) {
                             continue;
                         }
 
@@ -3157,14 +3166,16 @@ pub fn draw(
                             );
                         }
 
-                        idx = drawText(
-                            idx,
-                            screen_pos.x - x_offset - player.name_text_data._width / 2,
-                            screen_pos.y - player.name_text_data._height,
-                            &player.name_text_data,
-                            draw_data,
-                            &.{},
-                        );
+                        if (player.name_text_data) |*data| {
+                            idx = drawText(
+                                idx,
+                                screen_pos.x - x_offset - data._width / 2,
+                                screen_pos.y - data._height,
+                                data,
+                                draw_data,
+                                &.{},
+                            );
+                        }
 
                         idx = drawQuad(
                             idx,
@@ -3313,16 +3324,58 @@ pub fn draw(
 
                         if (bo.draw_on_ground) {
                             const tile_size = @as(f32, camera.px_per_tile) * camera.scale;
+                            const h = tile_size / 2.0;
+
                             idx = drawQuad(
                                 idx,
                                 screen_pos.x - tile_size / 2.0,
-                                screen_pos.y - tile_size / 2.0,
+                                screen_pos.y - h,
                                 tile_size,
                                 tile_size,
                                 bo.atlas_data,
                                 draw_data,
                                 &.{ .rotation = camera.angle, .alpha_mult = bo.alpha },
                             );
+
+                            const is_portal = bo.class == .portal;
+                            if (bo.show_name or is_portal) {
+                                if (bo.name_text_data) |*data| {
+                                    idx = drawText(
+                                        idx,
+                                        screen_pos.x - data._width / 2,
+                                        screen_pos.y - h - data._height,
+                                        data,
+                                        draw_data,
+                                        &.{},
+                                    );
+                                }
+
+                                if (is_portal and map.interactive_id.load(.Acquire) == bo.obj_id) {
+                                    const button_w = 100 / 4;
+                                    const button_h = 100 / 4;
+                                    const total_w = enter_text_data._width + button_w;
+
+                                    idx = drawQuad(
+                                        idx,
+                                        screen_pos.x - total_w / 2,
+                                        screen_pos.y + h + 5,
+                                        button_w,
+                                        button_h,
+                                        settings.interact_key_tex,
+                                        draw_data,
+                                        &.{ .force_glow_off = true },
+                                    );
+
+                                    idx = drawText(
+                                        idx,
+                                        screen_pos.x - total_w / 2 + button_w,
+                                        screen_pos.y + h + 5,
+                                        &enter_text_data,
+                                        draw_data,
+                                        &.{},
+                                    );
+                                }
+                            }
                             continue;
                         }
 
@@ -3391,14 +3444,16 @@ pub fn draw(
 
                         const is_portal = bo.class == .portal;
                         if (bo.show_name or is_portal) {
-                            idx = drawText(
-                                idx,
-                                screen_pos.x - x_offset - bo.name_text_data._width / 2,
-                                screen_pos.y - bo.name_text_data._height,
-                                &bo.name_text_data,
-                                draw_data,
-                                &.{},
-                            );
+                            if (bo.name_text_data) |*data| {
+                                idx = drawText(
+                                    idx,
+                                    screen_pos.x - x_offset - data._width / 2,
+                                    screen_pos.y - data._height,
+                                    data,
+                                    draw_data,
+                                    &.{},
+                                );
+                            }
 
                             if (is_portal and map.interactive_id.load(.Acquire) == bo.obj_id) {
                                 const button_w = 100 / 4;
@@ -3631,8 +3686,8 @@ pub fn draw(
 
         var ui_idx: u16 = 0;
 
-        while (!sc.temp_elem_lock.tryLock()) {}
-        for (sc.temp_elements.items) |*elem| {
+        systems.temp_elem_lock.lock();
+        for (systems.temp_elements.items) |*elem| {
             switch (elem.*) {
                 .status => |*text| {
                     if (!text.visible)
@@ -3669,10 +3724,10 @@ pub fn draw(
                 },
             }
         }
-        sc.temp_elem_lock.unlock();
+        systems.temp_elem_lock.unlock();
 
-        while (!sc.ui_lock.tryLock()) {}
-        for (sc.elements.items) |elem| {
+        systems.ui_lock.lock();
+        for (systems.elements.items) |elem| {
             switch (elem) {
                 .scrollable_container => |scrollable_container| {
                     if (!scrollable_container.visible)
@@ -3715,7 +3770,7 @@ pub fn draw(
                 },
             }
         }
-        sc.ui_lock.unlock();
+        systems.ui_lock.unlock();
 
         if (ui_idx != 0) {
             encoder.writeBuffer(

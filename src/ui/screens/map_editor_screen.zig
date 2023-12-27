@@ -12,7 +12,7 @@ const game_data = @import("../../game_data.zig");
 const settings = @import("../../settings.zig");
 const rpc = @import("rpc");
 
-const sc = @import("../controllers/screen_controller.zig");
+const systems = @import("../systems.zig");
 const NineSlice = element.NineSliceImageData;
 
 const button_container_width = 420;
@@ -302,7 +302,7 @@ pub const EditorBrush = struct {
                     .size = 100,
                     .alpha = 0.6,
                 };
-                obj.addToMap(self._screen._allocator, true);
+                obj.addToMap(self._screen._allocator);
 
                 self._visual_objects.append(obj.obj_id) catch return;
 
@@ -410,7 +410,7 @@ pub const MapEditorScreen = struct {
         const button_height: f32 = 35.0;
         const button_padding: f32 = 10.0;
 
-        screen.text_statistics = try element.Text.create(allocator, .{
+        screen.text_statistics = try element.create(allocator, element.Text{
             .x = 16,
             .y = 16,
             .text_data = .{
@@ -430,7 +430,7 @@ pub const MapEditorScreen = struct {
             .color = 0x00FFFF00,
         };
         fps_text_data.recalculateAttributes(allocator);
-        screen.fps_text = try element.Text.create(allocator, .{
+        screen.fps_text = try element.create(allocator, element.Text{
             .x = camera.screen_width - fps_text_data._width - 10,
             .y = 16,
             .text_data = fps_text_data,
@@ -438,12 +438,12 @@ pub const MapEditorScreen = struct {
 
         // buttons container (bottom left)
 
-        screen.buttons_container = try element.Container.create(allocator, .{
+        screen.buttons_container = try element.create(allocator, element.Container{
             .x = 0,
             .y = camera.screen_height - button_container_height,
         });
 
-        _ = try screen.buttons_container.createElement(element.Image, .{
+        _ = try screen.buttons_container.createChild(element.Image{
             .x = 0,
             .y = 0,
             .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data_base, button_container_width, button_container_height, 8, 8, 32, 32, 1.0) },
@@ -451,7 +451,7 @@ pub const MapEditorScreen = struct {
 
         var button_offset: f32 = button_padding;
 
-        const new_button = try screen.buttons_container.createElement(element.Button, .{
+        const new_button = try screen.buttons_container.createChild(element.Button{
             .x = button_padding,
             .y = button_offset,
             .image_data = .{
@@ -469,7 +469,7 @@ pub const MapEditorScreen = struct {
 
         button_offset += button_height + button_padding;
 
-        _ = try screen.buttons_container.createElement(element.Button, .{
+        _ = try screen.buttons_container.createChild(element.Button{
             .x = button_padding,
             .y = button_offset,
             .image_data = .{
@@ -487,7 +487,7 @@ pub const MapEditorScreen = struct {
 
         button_offset += button_height + button_padding;
 
-        _ = try screen.buttons_container.createElement(element.Button, .{
+        _ = try screen.buttons_container.createChild(element.Button{
             .x = button_padding,
             .y = button_offset,
             .image_data = .{
@@ -505,7 +505,7 @@ pub const MapEditorScreen = struct {
 
         button_offset += button_height + button_padding;
 
-        _ = try screen.buttons_container.createElement(element.Button, .{
+        _ = try screen.buttons_container.createChild(element.Button{
             .x = button_padding,
             .y = button_offset,
             .image_data = .{
@@ -523,19 +523,19 @@ pub const MapEditorScreen = struct {
 
         // new container (center)
 
-        screen.new_container = try element.Container.create(allocator, .{
+        screen.new_container = try element.create(allocator, element.Container{
             .x = (camera.screen_width - new_container_width) / 2,
             .y = (camera.screen_height - new_container_height) / 2,
             .visible = false,
         });
 
-        _ = try screen.new_container.createElement(element.Image, .{
+        _ = try screen.new_container.createChild(element.Image{
             .x = 0,
             .y = 0,
             .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data_base, new_container_width, new_container_height, 8, 8, 32, 32, 1.0) },
         });
 
-        var text_size_64: element.Text = .{
+        var text_size_64 = element.Text{
             .x = new_container_width / 2,
             .y = 32,
             .text_data = .{
@@ -551,7 +551,7 @@ pub const MapEditorScreen = struct {
         text_size_64.x -= text_size_64.text_data._width / 2;
         text_size_64.y -= text_size_64.text_data._height / 2;
 
-        var text_size_128: element.Text = .{
+        var text_size_128 = element.Text{
             .x = new_container_width / 2,
             .y = 32,
             .text_data = .{
@@ -567,7 +567,7 @@ pub const MapEditorScreen = struct {
         text_size_128.x -= text_size_128.text_data._width / 2;
         text_size_128.y -= text_size_128.text_data._height / 2;
 
-        var text_size_256: element.Text = .{
+        var text_size_256 = element.Text{
             .x = new_container_width / 2,
             .y = 32,
             .text_data = .{
@@ -585,11 +585,11 @@ pub const MapEditorScreen = struct {
 
         const check_padding = 5.0;
 
-        screen.size_text_visual_64 = try screen.new_container.createElement(element.Text, text_size_64);
-        screen.size_text_visual_128 = try screen.new_container.createElement(element.Text, text_size_128);
-        screen.size_text_visual_256 = try screen.new_container.createElement(element.Text, text_size_256);
+        screen.size_text_visual_64 = try screen.new_container.createChild(text_size_64);
+        screen.size_text_visual_128 = try screen.new_container.createChild(text_size_128);
+        screen.size_text_visual_256 = try screen.new_container.createChild(text_size_256);
 
-        const size_64 = try screen.new_container.createElement(element.Toggle, .{
+        const size_64 = try screen.new_container.createChild(element.Toggle{
             .x = (new_container_width / 2) - ((check_padding + check_box_base_on.texHRaw()) / 2) * 3,
             .y = (new_container_height - check_box_base_on.texHRaw()) / 2 - check_padding,
             .off_image_data = .{
@@ -605,7 +605,7 @@ pub const MapEditorScreen = struct {
             .toggled = &screen.map_size_64,
             .state_change = mapState64Changed,
         });
-        const size_128 = try screen.new_container.createElement(element.Toggle, .{
+        const size_128 = try screen.new_container.createChild(element.Toggle{
             .x = size_64.x + size_64.width() + 5,
             .y = size_64.y,
             .off_image_data = .{
@@ -621,7 +621,7 @@ pub const MapEditorScreen = struct {
             .toggled = &screen.map_size_128,
             .state_change = mapState128Changed,
         });
-        _ = try screen.new_container.createElement(element.Toggle, .{
+        _ = try screen.new_container.createChild(element.Toggle{
             .x = size_128.x + size_128.width() + 5,
             .y = size_128.y,
             .off_image_data = .{
@@ -638,7 +638,7 @@ pub const MapEditorScreen = struct {
             .state_change = mapState256Changed,
         });
 
-        const login_button = try screen.new_container.createElement(element.Button, .{
+        const login_button = try screen.new_container.createChild(element.Button{
             .x = (screen.new_container.width() - (button_width * 2)) / 2 - (button_padding / 2),
             .y = (new_container_height - button_height - (button_padding * 2)),
             .image_data = .{
@@ -653,7 +653,7 @@ pub const MapEditorScreen = struct {
             },
             .press_callback = newCreateCallback,
         });
-        _ = try screen.new_container.createElement(element.Button, .{
+        _ = try screen.new_container.createChild(element.Button{
             .x = login_button.x + login_button.width() + (button_padding / 2),
             .y = login_button.y,
             .image_data = .{
@@ -669,7 +669,7 @@ pub const MapEditorScreen = struct {
             .press_callback = newCloseCallback,
         });
 
-        const place_key = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const place_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = new_button.x + new_button.width() + button_padding,
             .y = new_button.y,
             .image_data = .{
@@ -687,7 +687,7 @@ pub const MapEditorScreen = struct {
             .settings_button = &screen.place_key_settings,
             .set_key_callback = noAction,
         });
-        const sample_key = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const sample_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = place_key.x,
             .y = place_key.y + new_button.height() + button_padding,
             .image_data = .{
@@ -705,7 +705,7 @@ pub const MapEditorScreen = struct {
             .settings_button = &screen.sample_key_settings,
             .set_key_callback = noAction,
         });
-        const erase_key = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const erase_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = sample_key.x,
             .y = sample_key.y + sample_key.height() + button_padding,
             .image_data = .{
@@ -723,7 +723,7 @@ pub const MapEditorScreen = struct {
             .settings_button = &screen.erase_key_settings,
             .set_key_callback = noAction,
         });
-        const random_key = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const random_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = erase_key.x,
             .y = erase_key.y + erase_key.height() + button_padding,
             .image_data = .{
@@ -741,7 +741,7 @@ pub const MapEditorScreen = struct {
             .settings_button = &screen.random_key_setting,
             .set_key_callback = noAction,
         });
-        const undo_key = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const undo_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = place_key.x + random_key.width() + button_padding, // random has longest text so we use that one as offset
             .y = place_key.y,
             .image_data = .{
@@ -759,7 +759,7 @@ pub const MapEditorScreen = struct {
             .settings_button = &screen.undo_key_setting,
             .set_key_callback = noAction,
         });
-        const redo_key = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const redo_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = undo_key.x,
             .y = undo_key.y + undo_key.height() + button_padding,
             .image_data = .{
@@ -777,7 +777,7 @@ pub const MapEditorScreen = struct {
             .settings_button = &screen.redo_key_setting,
             .set_key_callback = noAction,
         });
-        const ground_layer = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const ground_layer = try screen.buttons_container.createChild(element.KeyMapper{
             .x = redo_key.x,
             .y = redo_key.y + redo_key.height() + button_padding,
             .image_data = .{
@@ -795,7 +795,7 @@ pub const MapEditorScreen = struct {
             .settings_button = &screen.ground_key_setting,
             .set_key_callback = noAction,
         });
-        const object_layer = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const object_layer = try screen.buttons_container.createChild(element.KeyMapper{
             .x = ground_layer.x,
             .y = ground_layer.y + ground_layer.height() + button_padding,
             .image_data = .{
@@ -814,7 +814,7 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = object_layer;
-        const region_layer = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const region_layer = try screen.buttons_container.createChild(element.KeyMapper{
             .x = ground_layer.x + ground_layer.width() + button_padding,
             .y = undo_key.y,
             .image_data = .{
@@ -832,7 +832,7 @@ pub const MapEditorScreen = struct {
             .settings_button = &screen.region_key_setting,
             .set_key_callback = noAction,
         });
-        const cycle_next = try screen.buttons_container.createElement(element.KeyMapper, .{
+        const cycle_next = try screen.buttons_container.createChild(element.KeyMapper{
             .x = region_layer.x,
             .y = region_layer.y + region_layer.height() + button_padding,
             .image_data = .{
@@ -850,7 +850,7 @@ pub const MapEditorScreen = struct {
             .settings_button = &screen.cycle_up_setting,
             .set_key_callback = noAction,
         });
-        _ = try screen.buttons_container.createElement(element.KeyMapper, .{
+        _ = try screen.buttons_container.createChild(element.KeyMapper{
             .x = cycle_next.x,
             .y = cycle_next.y + cycle_next.height() + button_padding,
             .image_data = .{
@@ -876,7 +876,7 @@ pub const MapEditorScreen = struct {
     fn noAction(_: *element.KeyMapper) void {}
 
     fn mapState64Changed(_: *element.Toggle) void {
-        const screen = sc.current_screen.editor;
+        const screen = systems.screen.editor;
         screen.size_text_visual_64.visible = true;
         screen.size_text_visual_128.visible = false;
         screen.size_text_visual_256.visible = false;
@@ -887,7 +887,7 @@ pub const MapEditorScreen = struct {
     }
 
     fn mapState128Changed(_: *element.Toggle) void {
-        const screen = sc.current_screen.editor;
+        const screen = systems.screen.editor;
         screen.size_text_visual_64.visible = false;
         screen.size_text_visual_128.visible = true;
         screen.size_text_visual_256.visible = false;
@@ -898,7 +898,7 @@ pub const MapEditorScreen = struct {
     }
 
     fn mapState256Changed(_: *element.Toggle) void {
-        const screen = sc.current_screen.editor;
+        const screen = systems.screen.editor;
         screen.size_text_visual_64.visible = false;
         screen.size_text_visual_128.visible = false;
         screen.size_text_visual_256.visible = true;
@@ -909,7 +909,7 @@ pub const MapEditorScreen = struct {
     }
 
     fn newCallback() void {
-        const screen = sc.current_screen.editor;
+        const screen = systems.screen.editor;
         screen.new_container.visible = true;
         screen.buttons_container.visible = false;
 
@@ -917,12 +917,12 @@ pub const MapEditorScreen = struct {
     }
 
     fn newCreateCallback() void {
-        const screen = sc.current_screen.editor;
+        const screen = systems.screen.editor;
 
         screen.buttons_container.visible = true;
         screen.new_container.visible = false;
 
-        map.setWH(screen.map_size, screen.map_size, screen._allocator);
+        map.setWH(screen.map_size, screen.map_size);
 
         if (screen.map_tile_data.len == 0) {
             screen.map_tile_data = screen._allocator.alloc(MapEditorTile, screen.map_size * screen.map_size) catch return;
@@ -953,22 +953,22 @@ pub const MapEditorScreen = struct {
             .speed = 300, // mabye make it so we can adjust speed locally like shift slows down
         };
 
-        player.addToMap(screen._allocator, true);
+        player.addToMap(screen._allocator);
 
         main.editing_map = true;
 
-        sc.menu_background.visible = false; // hack
+        systems.menu_background.visible = false; // hack
     }
 
     fn newCloseCallback() void {
-        const screen = sc.current_screen.editor;
+        const screen = systems.screen.editor;
         screen.reset();
     }
 
     fn openCallback() void {
         // if (main.editing_map) {} // maybe a popup to ask to save?
 
-        const file_path = nfd.openFileDialog("pmap", null) catch return;
+        const file_path = nfd.openFileDialog("fm", null) catch return;
         if (file_path) |path| {
             defer nfd.freePath(path);
             std.debug.print("openFileDialog result: {s}\n", .{path});
@@ -981,7 +981,7 @@ pub const MapEditorScreen = struct {
     fn saveCallback() void {
         if (!main.editing_map) return;
 
-        const file_path = nfd.saveFileDialog("pmap", null) catch return;
+        const file_path = nfd.saveFileDialog("fm", null) catch return;
         if (file_path) |path| {
             defer nfd.freePath(path);
             std.debug.print("saveFileDialog result: {s}\n", .{path});
@@ -991,7 +991,7 @@ pub const MapEditorScreen = struct {
     }
 
     pub fn exitCallback() void {
-        sc.switchScreen(.main_menu);
+        systems.switchScreen(.main_menu);
     }
 
     fn reset(screen: *MapEditorScreen) void {
@@ -1012,19 +1012,19 @@ pub const MapEditorScreen = struct {
         screen.map_size_128 = true;
         screen.map_size_256 = false;
 
-        sc.menu_background.visible = true; // hack
+        systems.menu_background.visible = true; // hack
     }
 
     pub fn deinit(self: *MapEditorScreen) void {
         self.inited = false;
-        sc.menu_background.visible = true; // hack
+        systems.menu_background.visible = true; // hack
 
         self.reset();
 
-        self.fps_text.destroy();
-        self.text_statistics.destroy();
-        self.new_container.destroy();
-        self.buttons_container.destroy();
+        element.destroy(self.fps_text);
+        element.destroy(self.text_statistics);
+        element.destroy(self.new_container);
+        element.destroy(self.buttons_container);
 
         if (self.map_tile_data.len > 0) {
             self._allocator.free(self.map_tile_data);
@@ -1248,7 +1248,7 @@ pub const MapEditorScreen = struct {
                 .alpha = 1.0,
             };
 
-            obj.addToMap(self._allocator, true);
+            obj.addToMap(self._allocator);
         }
     }
 

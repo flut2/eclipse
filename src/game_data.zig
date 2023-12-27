@@ -102,7 +102,8 @@ pub const CharacterSkin = struct {
             .objType = try node.getAttributeInt("type", u16, 0),
             .name = try node.getAttributeAlloc("id", allocator, "Unknown"),
             .texture = try TextureData.parse(
-                node.findChild("AnimatedTexture") orelse @panic("Could not parse CharacterClass"),
+                node.findChild("AnimatedTexture") orelse
+                std.debug.panic("Could not parse CharacterClass"),
                 allocator,
                 false,
             ),
@@ -120,7 +121,8 @@ pub const Ability = struct {
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !Ability {
         return Ability{
-            .icon = try TextureData.parse(node.findChild("Icon") orelse @panic("Could not parse Ability: Icon node is missing"), allocator, false),
+            .icon = try TextureData.parse(node.findChild("Icon") orelse
+                std.debug.panic("Could not parse Ability: Icon node is missing", .{}), allocator, false),
             .name = try node.getValueAlloc("Name", allocator, "Unknown"),
             .mana_cost = try node.getValueInt("ManaCost", i16, 0),
             .health_cost = try node.getValueInt("HealthCost", i32, 0),
@@ -215,24 +217,42 @@ pub const CharacterClass = struct {
             .blood_prob = try node.getAttributeFloat("BloodProb", f32, 0.0),
             .slot_types = try allocator.dupe(ItemType, slot_list.items),
             .equipment = try allocator.dupe(i16, equip_list.items),
-            .ability_1 = try Ability.parse(node.findChild("Ability1") orelse @panic("Could not parse CharacterClass: Ability1 node is missing"), allocator),
-            .ability_2 = try Ability.parse(node.findChild("Ability2") orelse @panic("Could not parse CharacterClass: Ability2 node is missing"), allocator),
-            .ability_3 = try Ability.parse(node.findChild("Ability3") orelse @panic("Could not parse CharacterClass: Ability3 node is missing"), allocator),
-            .ultimate_ability = try Ability.parse(node.findChild("UltimateAbility") orelse @panic("Could not parse CharacterClass: UltimateAbility node is missing"), allocator),
-            .health = try CharacterClassStat.parse(node.findChild("Health") orelse @panic("Could not parse CharacterClass: Health node is missing")),
-            .mana = try CharacterClassStat.parse(node.findChild("Mana") orelse @panic("Could not parse CharacterClass: Mana node is missing")),
-            .strength = try CharacterClassStat.parse(node.findChild("Strength") orelse @panic("Could not parse CharacterClass: Strength node is missing")),
-            .wit = try CharacterClassStat.parse(node.findChild("Wit") orelse @panic("Could not parse CharacterClass: Wit node is missing")),
-            .defense = try CharacterClassStat.parse(node.findChild("Defense") orelse @panic("Could not parse CharacterClass: Defense node is missing")),
-            .resistance = try CharacterClassStat.parse(node.findChild("Resistance") orelse @panic("Could not parse CharacterClass: Resistance node is missing")),
-            .speed = try CharacterClassStat.parse(node.findChild("Speed") orelse @panic("Could not parse CharacterClass: Speed node is missing")),
-            .stamina = try CharacterClassStat.parse(node.findChild("Stamina") orelse @panic("Could not parse CharacterClass: Stamina node is missing")),
-            .intelligence = try CharacterClassStat.parse(node.findChild("Intelligence") orelse @panic("Could not parse CharacterClass: Intelligence node is missing")),
-            .penetration = try CharacterClassStat.parse(node.findChild("Penetration") orelse @panic("Could not parse CharacterClass: Penetration node is missing")),
-            .piercing = try CharacterClassStat.parse(node.findChild("Piercing") orelse @panic("Could not parse CharacterClass: Piercing node is missing")),
-            .haste = try CharacterClassStat.parse(node.findChild("Haste") orelse @panic("Could not parse CharacterClass: Haste node is missing")),
-            .tenacity = try CharacterClassStat.parse(node.findChild("Tenacity") orelse @panic("Could not parse CharacterClass: Tenacity node is missing")),
-            .texture = try TextureData.parse(node.findChild("AnimatedTexture") orelse @panic("Could not parse CharacterClass: Texture is missing"), allocator, false),
+            .ability_1 = try Ability.parse(node.findChild("Ability1") orelse
+                std.debug.panic("Could not parse CharacterClass: Ability1 node is missing", .{}), allocator),
+            .ability_2 = try Ability.parse(node.findChild("Ability2") orelse
+                std.debug.panic("Could not parse CharacterClass: Ability2 node is missing", .{}), allocator),
+            .ability_3 = try Ability.parse(node.findChild("Ability3") orelse
+                std.debug.panic("Could not parse CharacterClass: Ability3 node is missing", .{}), allocator),
+            .ultimate_ability = try Ability.parse(node.findChild("UltimateAbility") orelse
+                std.debug.panic("Could not parse CharacterClass: UltimateAbility node is missing", .{}), allocator),
+            .health = try CharacterClassStat.parse(node.findChild("Health") orelse
+                std.debug.panic("Could not parse CharacterClass: Health node is missing", .{})),
+            .mana = try CharacterClassStat.parse(node.findChild("Mana") orelse
+                std.debug.panic("Could not parse CharacterClass: Mana node is missing", .{})),
+            .strength = try CharacterClassStat.parse(node.findChild("Strength") orelse
+                std.debug.panic("Could not parse CharacterClass: Strength node is missing", .{})),
+            .wit = try CharacterClassStat.parse(node.findChild("Wit") orelse
+                std.debug.panic("Could not parse CharacterClass: Wit node is missing", .{})),
+            .defense = try CharacterClassStat.parse(node.findChild("Defense") orelse
+                std.debug.panic("Could not parse CharacterClass: Defense node is missing", .{})),
+            .resistance = try CharacterClassStat.parse(node.findChild("Resistance") orelse
+                std.debug.panic("Could not parse CharacterClass: Resistance node is missing", .{})),
+            .speed = try CharacterClassStat.parse(node.findChild("Speed") orelse
+                std.debug.panic("Could not parse CharacterClass: Speed node is missing", .{})),
+            .stamina = try CharacterClassStat.parse(node.findChild("Stamina") orelse
+                std.debug.panic("Could not parse CharacterClass: Stamina node is missing", .{})),
+            .intelligence = try CharacterClassStat.parse(node.findChild("Intelligence") orelse
+                std.debug.panic("Could not parse CharacterClass: Intelligence node is missing", .{})),
+            .penetration = try CharacterClassStat.parse(node.findChild("Penetration") orelse
+                std.debug.panic("Could not parse CharacterClass: Penetration node is missing", .{})),
+            .piercing = try CharacterClassStat.parse(node.findChild("Piercing") orelse
+                std.debug.panic("Could not parse CharacterClass: Piercing node is missing", .{})),
+            .haste = try CharacterClassStat.parse(node.findChild("Haste") orelse
+                std.debug.panic("Could not parse CharacterClass: Haste node is missing", .{})),
+            .tenacity = try CharacterClassStat.parse(node.findChild("Tenacity") orelse
+                std.debug.panic("Could not parse CharacterClass: Tenacity node is missing", .{})),
+            .texture = try TextureData.parse(node.findChild("AnimatedTexture") orelse
+                std.debug.panic("Could not parse CharacterClass: Texture is missing", .{}), allocator, false),
             .skins = null,
             .projs = try allocator.dupe(ProjProps, proj_list.items),
         };
