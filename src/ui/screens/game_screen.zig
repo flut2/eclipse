@@ -12,6 +12,7 @@ const settings = @import("../../settings.zig");
 
 const systems = @import("../systems.zig");
 const Options = @import("options.zig").Options;
+const Interactable = element.InteractableImageData;
 const NineSlice = element.NineSliceImageData;
 
 pub const GameScreen = struct {
@@ -349,11 +350,7 @@ pub const GameScreen = struct {
             .scroll_w = 12,
             .scroll_h = 241,
             .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_background_data, 12, 240, 5, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_knob_base, 8, 16, 3, 3, 2, 2, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_knob_hover, 8, 16, 3, 3, 2, 2, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_knob_press, 8, 16, 3, 3, 2, 2, 1.0) },
-            },
+            .scroll_knob_image_data = Interactable.fromNineSlices(chat_scroll_knob_base, chat_scroll_knob_hover, chat_scroll_knob_press, 8, 16, 3, 3, 2, 2, 1.0),
         });
 
         var fps_text_data = element.TextData{

@@ -7,6 +7,7 @@ const settings = @import("../../settings.zig");
 const input = @import("../../input.zig");
 
 const NineSlice = element.NineSliceImageData;
+const Interactable = element.InteractableImageData;
 const systems = @import("../systems.zig");
 
 pub const TabType = enum {
@@ -101,11 +102,7 @@ pub const Options = struct {
         _ = try screen.buttons.createChild(element.Button{
             .x = buttons_x - button_half_width,
             .y = button_half_height - 20,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Continue",
                 .size = 16,
@@ -117,11 +114,7 @@ pub const Options = struct {
         _ = try screen.buttons.createChild(element.Button{
             .x = width - button_width - 50,
             .y = button_half_height - 20,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Disconnect",
                 .size = 16,
@@ -133,11 +126,7 @@ pub const Options = struct {
         _ = try screen.buttons.createChild(element.Button{
             .x = 50,
             .y = button_half_height - 20,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Defaults",
                 .size = 16,
@@ -152,11 +141,7 @@ pub const Options = struct {
         _ = try screen.tabs.createChild(element.Button{
             .x = tab_x_offset,
             .y = tab_y,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "General",
                 .size = 16,
@@ -170,11 +155,7 @@ pub const Options = struct {
         _ = try screen.tabs.createChild(element.Button{
             .x = tab_x_offset,
             .y = tab_y,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Hotkeys",
                 .size = 16,
@@ -188,11 +169,7 @@ pub const Options = struct {
         _ = try screen.tabs.createChild(element.Button{
             .x = tab_x_offset,
             .y = tab_y,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Graphics",
                 .size = 16,
@@ -206,11 +183,7 @@ pub const Options = struct {
         _ = try screen.tabs.createChild(element.Button{
             .x = tab_x_offset,
             .y = tab_y,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Misc",
                 .size = 16,
@@ -279,11 +252,7 @@ pub const Options = struct {
         _ = try target_tab.createChild(element.KeyMapper{
             .x = 0,
             .y = 0,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, w, h, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, w, h, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, w, h, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, w, h, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = title,
                 .size = 18,
@@ -312,16 +281,8 @@ pub const Options = struct {
         _ = try target_tab.createChild(element.Toggle{
             .x = 0,
             .y = 0,
-            .off_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = toggle_data_base_off } },
-                .hover = .{ .normal = .{ .atlas_data = toggle_data_hover_off } },
-                .press = .{ .normal = .{ .atlas_data = toggle_data_press_off } },
-            },
-            .on_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = toggle_data_base_on } },
-                .hover = .{ .normal = .{ .atlas_data = toggle_data_hover_on } },
-                .press = .{ .normal = .{ .atlas_data = toggle_data_press_on } },
-            },
+            .off_image_data = Interactable.fromImageData(toggle_data_base_off, toggle_data_hover_off, toggle_data_press_off),
+            .on_image_data = Interactable.fromImageData(toggle_data_base_on, toggle_data_hover_on, toggle_data_press_on),
             .text_data = .{
                 .text = title,
                 .size = 16,
@@ -354,11 +315,7 @@ pub const Options = struct {
             .min_value = min_value,
             .max_value = max_value,
             .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, w, h, 1, 1, 2, 2, 1.0) },
-            .knob_image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(knob_data_base, knob_size, knob_size, 5, 5, 2, 2, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(knob_data_hover, knob_size, knob_size, 5, 5, 2, 2, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(knob_data_press, knob_size, knob_size, 5, 5, 2, 2, 1.0) },
-            },
+            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 5, 5, 2, 2, 1.0),
             .title_text_data = .{
                 .text = title,
                 .size = 16,

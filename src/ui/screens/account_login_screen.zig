@@ -9,7 +9,9 @@ const settings = @import("../../settings.zig");
 const systems = @import("../systems.zig");
 const input = @import("../../input.zig");
 const rpc = @import("rpc");
-const NineSlice = element.NineSliceImageData;
+const dialog = @import("../dialogs/dialog.zig");
+
+const Interactable = element.InteractableImageData;
 
 pub const AccountLoginScreen = struct {
     email_text: *element.Text = undefined,
@@ -53,11 +55,7 @@ pub const AccountLoginScreen = struct {
             .y = camera.screen_height / 3.6,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(input_data_base, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(input_data_hover, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -95,11 +93,7 @@ pub const AccountLoginScreen = struct {
             .y = screen.email_input.y + 150,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(input_data_base, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(input_data_hover, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -138,16 +132,8 @@ pub const AccountLoginScreen = struct {
         screen.save_email_toggle = try element.create(allocator, element.Toggle{
             .x = screen.password_input.x + (input_w - text_w - check_box_base_on.texWRaw()) / 2,
             .y = (screen.password_input.y + 98) - ((100 - check_box_base_on.texHRaw()) / 2),
-            .off_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = check_box_base_off } },
-                .hover = .{ .normal = .{ .atlas_data = check_box_hover_off } },
-                .press = .{ .normal = .{ .atlas_data = check_box_press_off } },
-            },
-            .on_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = check_box_base_on } },
-                .hover = .{ .normal = .{ .atlas_data = check_box_hover_on } },
-                .press = .{ .normal = .{ .atlas_data = check_box_press_on } },
-            },
+            .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
+            .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
             .toggled = &settings.save_email,
         });
 
@@ -172,11 +158,7 @@ pub const AccountLoginScreen = struct {
         screen.login_button = try element.create(allocator, element.Button{
             .x = screen.password_input.x + (input_w - 200) / 2 - 12.5,
             .y = screen.password_input.y + 150,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, 100, 35, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, 100, 35, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, 100, 35, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Login",
                 .size = 16,
@@ -188,11 +170,7 @@ pub const AccountLoginScreen = struct {
         screen.confirm_button = try element.create(allocator, element.Button{
             .x = screen.login_button.x + (input_w - 100) / 2 + 25,
             .y = screen.login_button.y,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, 100, 35, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, 100, 35, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, 100, 35, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Register",
                 .size = 16,
@@ -204,11 +182,7 @@ pub const AccountLoginScreen = struct {
         screen.editor_button = try element.create(allocator, element.Button{
             .x = screen.password_input.x + (input_w - 200) / 2,
             .y = screen.confirm_button.y + 50,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, 200, 35, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, 200, 35, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, 200, 35, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Editor",
                 .size = 16,
@@ -280,7 +254,10 @@ pub const AccountLoginScreen = struct {
 fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) !bool {
     const response = try requests.sendAccountVerify(email, password);
     if (std.mem.eql(u8, response, "<Error />")) {
-        std.log.err("Login failed: {s}", .{response});
+        dialog.showDialog(.text, .{
+            .title = "Login Failed",
+            .body = "Invalid credentials",
+        });
         return false;
     }
 
@@ -289,7 +266,11 @@ fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) 
     const verify_root = try verify_doc.getRootElement();
 
     if (std.mem.eql(u8, verify_root.currentName().?, "Error")) {
-        std.log.err("Login failed: {s}", .{verify_root.currentValue().?});
+        dialog.showDialog(.text, .{
+            .title = "Login Failed",
+            .body = try allocator.dupe(u8, verify_root.currentValue().?),
+            .dispose_body = true,
+        });
         return false;
     }
 

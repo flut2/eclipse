@@ -7,6 +7,8 @@ const game_data = @import("../../game_data.zig");
 const systems = @import("../systems.zig");
 const rpc = @import("rpc");
 
+const Interactable = element.InteractableImageData;
+
 pub const CharCreateScreen = struct {
     inited: bool = false,
     boxes: std.ArrayList(*element.CharacterBox) = undefined, //TODO change 'CharacterBox' to 'NewCharacterBox' when implemented
@@ -44,11 +46,7 @@ pub const CharCreateScreen = struct {
                 .y = @floatFromInt(50 * i),
                 .id = 0,
                 .obj_type = char.obj_type,
-                .image_data = .{
-                    .base = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(button_data_base, 100, 40, 6, 6, 7, 7, 1.0) },
-                    .hover = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(button_data_hover, 100, 40, 6, 6, 7, 7, 1.0) },
-                    .press = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(button_data_press, 100, 40, 6, 6, 7, 7, 1.0) },
-                },
+                .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 40, 6, 6, 7, 7, 1.0),
                 .text_data = element.TextData{
                     .text = char.name[0..],
                     .size = 16,

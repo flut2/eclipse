@@ -1,22 +1,22 @@
 const std = @import("std");
 const element = @import("../element.zig");
-const tooltip = @import("tooltip.zig");
+const dialog = @import("dialog.zig");
 
-pub const NoneTooltip = struct {
+pub const NoneDialog = struct {
     root: *element.Container = undefined,
 
-    pub fn init(self: *NoneTooltip, allocator: std.mem.Allocator) !void {
+    pub fn init(self: *NoneDialog, allocator: std.mem.Allocator) !void {
         self.root = try element.create(allocator, element.Container{
             .visible = false,
-            .layer = .tooltip,
+            .layer = .dialog,
             .x = 0,
             .y = 0,
         });
     }
 
-    pub fn deinit(self: *NoneTooltip) void {
+    pub fn deinit(self: *NoneDialog) void {
         element.destroy(self.root);
     }
 
-    pub fn update(_: *NoneTooltip, _: tooltip.ParamsFor(NoneTooltip)) void {}
+    pub fn update(_: *NoneDialog, _: dialog.ParamsFor(NoneDialog)) void {}
 };

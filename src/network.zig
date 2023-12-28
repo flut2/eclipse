@@ -9,6 +9,7 @@ const camera = @import("camera.zig");
 const assets = @import("assets.zig");
 const particles = @import("particles.zig");
 const systems = @import("ui/systems.zig");
+const dialog = @import("ui/dialogs//dialog.zig");
 
 pub const FailureType = enum(i8) {
     message_no_disconnect = -1,
@@ -508,8 +509,14 @@ fn handleFailure() void {
     const error_id = reader.read(FailureType);
     const error_description = reader.readArray(u8);
 
-    if (error_id == .message_with_disconnect or error_id == .force_close_game)
+    if (error_id == .message_with_disconnect or error_id == .force_close_game) {
         main.disconnect();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = _allocator.dupe(u8, error_description) catch &[0]u8{},
+            .dispose_body = true,
+        });
+    }
 
     if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
         std.log.debug("Recv - Failure: error_id={any}, error_description={s}", .{ error_id, error_description });

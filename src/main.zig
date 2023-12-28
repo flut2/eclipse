@@ -20,6 +20,7 @@ const ztracy = @import("ztracy");
 const zaudio = @import("zaudio");
 const systems = @import("ui/systems.zig");
 const rpc = @import("rpc");
+const dialog = @import("ui/dialogs/dialog.zig");
 
 pub const ServerData = struct {
     name: []const u8 = "",
@@ -48,7 +49,7 @@ pub const AccountData = struct {
     guild_rank: u8 = 0,
 };
 
-// todo nilly stats (def etc)
+// todo faer stats
 pub const CharacterData = struct {
     id: u32 = 0,
     obj_type: u16 = 0,
@@ -296,6 +297,8 @@ pub fn disconnect() void {
     input.reset();
 
     systems.switchScreen(.char_select);
+
+    dialog.showDialog(.none, {});
 }
 
 // This is effectively just raw_c_allocator wrapped in the Tracy stuff

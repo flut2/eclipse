@@ -4,6 +4,9 @@ const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const game_data = @import("../../game_data.zig");
 const map = @import("../../map.zig");
+const tooltip = @import("tooltip.zig");
+
+const NineSlice = element.NineSliceImageData;
 
 pub const TextTooltip = struct {
     root: *element.Container = undefined,
@@ -27,7 +30,7 @@ pub const TextTooltip = struct {
             .x = 0,
             .y = 0,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 0, 0, 14, 14, 2, 2, 1.0),
+                .nine_slice = NineSlice.fromAtlasData(tooltip_background_data, 0, 0, 14, 14, 2, 2, 1.0),
             },
         });
 
@@ -42,8 +45,8 @@ pub const TextTooltip = struct {
         element.destroy(self.root);
     }
 
-    pub fn update(self: *TextTooltip, x: f32, y: f32, text_data: element.TextData) void {
-        self.text.text_data = text_data;
+    pub fn update(self: *TextTooltip, params: tooltip.ParamsFor(TextTooltip)) void {
+        self.text.text_data = params.text_data;
         switch (self.decor.image_data) {
             .nine_slice => |*nine_slice| {
                 nine_slice.w = self.text.width() + 16 * 2;
@@ -55,9 +58,9 @@ pub const TextTooltip = struct {
             },
         }
 
-        const left_x = x - self.decor.width() - 15;
-        const up_y = y - self.decor.height() - 15;
-        self.root.x = if (left_x < 0) x + 15 else left_x;
-        self.root.y = if (up_y < 0) y + 15 else up_y;
+        const left_x = params.x - self.decor.width() - 15;
+        const up_y = params.y - self.decor.height() - 15;
+        self.root.x = if (left_x < 0) params.x + 15 else left_x;
+        self.root.y = if (up_y < 0) params.y + 15 else up_y;
     }
 };

@@ -7,6 +7,7 @@ const main = @import("../main.zig");
 const map = @import("../map.zig");
 const assets = @import("../assets.zig");
 const tooltip = @import("tooltips/tooltip.zig");
+const dialog = @import("dialogs/dialog.zig");
 const zglfw = @import("zglfw");
 
 const AccountLoginScreen = @import("screens/account_login_screen.zig").AccountLoginScreen;
@@ -66,6 +67,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     screen = .{ .empty = EmptyScreen.init(allocator) catch std.debug.panic("Initializing EmptyScreen failed", .{}) };
 
     try tooltip.init(allocator);
+    try dialog.init(allocator);
 }
 
 pub fn deinit(allocator: std.mem.Allocator) void {
@@ -73,6 +75,8 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     defer ui_lock.unlock();
 
     tooltip.deinit(allocator);
+    dialog.deinit(allocator);
+
     element.destroy(menu_background);
 
     switch (screen) {
@@ -135,6 +139,8 @@ pub fn resize(w: f32, h: f32) void {
     switch (screen) {
         inline else => |inner_screen| inner_screen.resize(w, h),
     }
+
+    dialog.resize(w, h);
 }
 
 pub fn removeAttachedUi(obj_id: i32, allocator: std.mem.Allocator) void {
@@ -168,7 +174,7 @@ pub fn removeAttachedUi(obj_id: i32, allocator: std.mem.Allocator) void {
 }
 
 pub fn mouseMove(x: f32, y: f32) void {
-    tooltip.switchTooltip(.none);
+    tooltip.switchTooltip(.none, {});
 
     for (elements.items) |elem| {
         switch (elem) {

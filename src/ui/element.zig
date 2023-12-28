@@ -64,6 +64,10 @@ pub fn destroy(self: anytype) void {
     self._allocator.destroy(self);
 }
 
+inline fn intersects(self: anytype, x: f32, y: f32) bool {
+    return utils.isInBounds(x, y, self.x, self.y, self.width(), self.height());
+}
+
 pub const Layer = enum(u8) {
     default = 0,
     dialog = 1,
@@ -420,6 +424,50 @@ pub const InteractableImageData = struct {
             .hovered => return self.hover orelse self.base,
         }
     }
+
+    pub fn fromImageData(base: assets.AtlasData, hover: ?assets.AtlasData, press: ?assets.AtlasData) InteractableImageData {
+        var ret = InteractableImageData{
+            .base = .{ .normal = .{ .atlas_data = base } },
+        };
+
+        if (hover) |hover_data| {
+            ret.hover = .{ .normal = .{ .atlas_data = hover_data } };
+        }
+
+        if (press) |press_data| {
+            ret.press = .{ .normal = .{ .atlas_data = press_data } };
+        }
+
+        return ret;
+    }
+
+    pub fn fromNineSlices(
+        base: assets.AtlasData,
+        hover: ?assets.AtlasData,
+        press: ?assets.AtlasData,
+        w: f32,
+        h: f32,
+        slice_x: f32,
+        slice_y: f32,
+        slice_w: f32,
+        slice_h: f32,
+        alpha: f32,
+    ) InteractableImageData {
+        const NineSlice = NineSliceImageData;
+        var ret = InteractableImageData{
+            .base = .{ .nine_slice = NineSlice.fromAtlasData(base, w, h, slice_x, slice_y, slice_w, slice_h, alpha) },
+        };
+
+        if (hover) |hover_data| {
+            ret.hover = .{ .nine_slice = NineSlice.fromAtlasData(hover_data, w, h, slice_x, slice_y, slice_w, slice_h, alpha) };
+        }
+
+        if (press) |press_data| {
+            ret.press = .{ .nine_slice = NineSlice.fromAtlasData(press_data, w, h, slice_x, slice_y, slice_w, slice_h, alpha) };
+        }
+
+        return ret;
+    }
 };
 
 // Scissor positions are relative to the element it's attached to
@@ -484,7 +532,7 @@ pub const Input = struct {
         if (!self.visible)
             return false;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             input.selected_input_field = self;
             self._last_input = 0;
             self.state = .pressed;
@@ -498,7 +546,7 @@ pub const Input = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .none;
         }
     }
@@ -507,7 +555,7 @@ pub const Input = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -597,7 +645,7 @@ pub const Button = struct {
         if (!self.visible)
             return false;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .pressed;
             self.press_callback();
             assets.playSfx("button_click");
@@ -611,7 +659,7 @@ pub const Button = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .none;
         }
     }
@@ -620,7 +668,7 @@ pub const Button = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -690,7 +738,7 @@ pub const KeyMapper = struct {
         if (!self.visible)
             return false;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .pressed;
 
             if (input.selected_key_mapper == null) {
@@ -709,7 +757,7 @@ pub const KeyMapper = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .none;
         }
     }
@@ -718,10 +766,13 @@ pub const KeyMapper = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             if (self.tooltip_text) |text_data| {
-                tooltip.switchTooltip(.text);
-                tooltip.current_tooltip.text.update(x + x_offset, y + y_offset, text_data);
+                tooltip.switchTooltip(.text, .{
+                    .x = x + x_offset,
+                    .y = y + y_offset,
+                    .text_data = text_data,
+                });
             }
 
             self.state = .hovered;
@@ -783,7 +834,7 @@ pub const CharacterBox = struct {
         if (!self.visible)
             return false;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .pressed;
             self.press_callback(self);
             assets.playSfx("button_click");
@@ -797,7 +848,7 @@ pub const CharacterBox = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .none;
         }
     }
@@ -806,7 +857,7 @@ pub const CharacterBox = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -876,9 +927,12 @@ pub const Image = struct {
         if (!self.visible)
             return;
 
-        if (self.ability_props != null and utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
-            tooltip.switchTooltip(.ability);
-            tooltip.current_tooltip.ability.update(x + x_offset, y + y_offset, self.ability_props.?);
+        if (self.ability_props != null and intersects(self, x, y)) {
+            tooltip.switchTooltip(.ability, .{
+                .x = x + x_offset,
+                .y = y + y_offset,
+                .props = self.ability_props.?,
+            });
         }
     }
 
@@ -947,7 +1001,7 @@ pub const Item = struct {
         if (!self.visible or !self.draggable)
             return false;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             if (mods.shift) {
                 self.shift_click_callback(self);
                 return true;
@@ -983,9 +1037,12 @@ pub const Item = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
-            tooltip.switchTooltip(.item);
-            tooltip.current_tooltip.item.update(x + x_offset, y + y_offset, self._item);
+        if (intersects(self, x, y)) {
+            tooltip.switchTooltip(.item, .{
+                .x = x + x_offset,
+                .y = y + y_offset,
+                .item = self._item,
+            });
         }
 
         if (!self._is_dragging)
@@ -1126,7 +1183,7 @@ pub const ScrollableContainer = struct {
             return false;
 
         const container = self._container;
-        if (utils.isInBounds(x, y, container.x, container.y, self.width(), self.height())) {
+        if (intersects(container, x, y)) {
             const scroll_bar = self._scroll_bar;
             self._scroll_bar.setValue(
                 @min(
@@ -1285,7 +1342,7 @@ pub const Container = struct {
             }
         }
 
-        if (self.draggable and utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (self.draggable and intersects(self, x, y)) {
             self._is_dragging = true;
             self._drag_start_x = self.x;
             self._drag_start_y = self.y;
@@ -1527,7 +1584,7 @@ pub const Toggle = struct {
         if (!self.visible)
             return false;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .pressed;
             self.toggled.* = !self.toggled.*;
             if (self.state_change) |callback| {
@@ -1544,7 +1601,7 @@ pub const Toggle = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.state = .none;
         }
     }
@@ -1553,10 +1610,13 @@ pub const Toggle = struct {
         if (!self.visible)
             return;
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             if (self.tooltip_text) |text_data| {
-                tooltip.switchTooltip(.text);
-                tooltip.current_tooltip.text.update(x + x_offset, y + y_offset, text_data);
+                tooltip.switchTooltip(.text, .{
+                    .x = x + x_offset,
+                    .y = y + y_offset,
+                    .text_data = text_data,
+                });
             }
 
             self.state = .hovered;
@@ -1692,10 +1752,13 @@ pub const Slider = struct {
             .normal => |normal| normal.height(),
         };
 
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             if (self.tooltip_text) |text_data| {
-                tooltip.switchTooltip(.text);
-                tooltip.current_tooltip.text.update(x + x_offset, y + y_offset, text_data);
+                tooltip.switchTooltip(.text, .{
+                    .x = x + x_offset,
+                    .y = y + y_offset,
+                    .text_data = text_data,
+                });
             }
         }
 
@@ -1709,7 +1772,7 @@ pub const Slider = struct {
     }
 
     pub fn mouseScroll(self: *Slider, x: f32, y: f32, _: f32, _: f32, _: f32, y_scroll: f32) bool {
-        if (utils.isInBounds(x, y, self.x, self.y, self.width(), self.height())) {
+        if (intersects(self, x, y)) {
             self.setValue(
                 @min(
                     self.max_value,

@@ -4,6 +4,7 @@ const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const game_data = @import("../../game_data.zig");
 const map = @import("../../map.zig");
+const tooltip = @import("tooltip.zig");
 
 pub const ItemTooltip = struct {
     root: *element.Container = undefined,
@@ -152,18 +153,18 @@ pub const ItemTooltip = struct {
         }
     }
 
-    pub fn update(self: *ItemTooltip, x: f32, y: f32, item: u16) void {
-        const left_x = x - self.decor.width() - 15;
-        const up_y = y - self.decor.height() - 15;
-        self.root.x = if (left_x < 0) x + 15 else left_x;
-        self.root.y = if (up_y < 0) y + 15 else up_y;
+    pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
+        const left_x = params.x - self.decor.width() - 15;
+        const up_y = params.y - self.decor.height() - 15;
+        self.root.x = if (left_x < 0) params.x + 15 else left_x;
+        self.root.y = if (up_y < 0) params.y + 15 else up_y;
 
-        if (self.item == item)
+        if (self.item == params.item)
             return;
 
-        self.item = item;
+        self.item = params.item;
 
-        if (game_data.item_type_to_props.get(@intCast(item))) |props| {
+        if (game_data.item_type_to_props.get(@intCast(params.item))) |props| {
             self.decor.image_data.nine_slice.color_intensity = 0;
             self.line_break_one.image_data.nine_slice.color_intensity = 0;
             self.line_break_two.image_data.nine_slice.color_intensity = 0;
@@ -416,8 +417,8 @@ pub const ItemTooltip = struct {
                 self.decor.image_data.nine_slice.h = self.footer.y + self.footer.text_data._height + 10;
             }
 
-            self.root.x = x - self.decor.width() - 15;
-            self.root.y = y - self.decor.height() - 15;
+            self.root.x = params.x - self.decor.width() - 15;
+            self.root.y = params.y - self.decor.height() - 15;
         }
     }
 };

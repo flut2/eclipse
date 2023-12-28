@@ -30,11 +30,6 @@ pub const Direction = enum {
     up,
 };
 
-// todo turn into enum in future
-pub const stand_action: u8 = 0;
-pub const walk_action: u8 = 1;
-pub const attack_action: u8 = 2;
-
 pub const CharacterData = struct {
     pub const size = 64.0;
     pub const padding = 8.0;
@@ -963,6 +958,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addUiImage("out_of_mana_slot", "ui/out_of_mana_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("out_of_health_slot", "ui/out_of_health_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("basic_panel", "ui/basic_panel.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dialog_base_background", "ui/screens/dialog_base_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dialog_title_background", "ui/screens/dialog_title_background.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_background", "ui/chat/chatbox_background.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_input", "ui/chat/chatbox_input.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("chatbox_cursor", "ui/chat/chatbox_cursor.png", imply_size, imply_size, &ui_ctx, allocator);

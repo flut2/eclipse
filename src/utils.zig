@@ -310,7 +310,7 @@ pub fn plusMinus(range: f32) f32 {
     return rng.random().float(f32) * range * 2 - range;
 }
 
-pub fn isInBounds(x: f32, y: f32, bound_x: f32, bound_y: f32, bound_w: f32, bound_h: f32) bool {
+pub inline fn isInBounds(x: f32, y: f32, bound_x: f32, bound_y: f32, bound_w: f32, bound_h: f32) bool {
     return x >= bound_x and x <= bound_x + bound_w and y >= bound_y and y <= bound_y + bound_h;
 }
 

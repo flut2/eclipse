@@ -77,7 +77,7 @@ pub fn sendAccountVerify(email: []const u8, password: []const u8) ![]const u8 {
     return buffer[0..len];
 }
 
-pub fn sendAccountRegister(email: []const u8, password: []const u8, username: []const u8) ![]const u8 { // todo: add name to registering
+pub fn sendAccountRegister(email: []const u8, password: []const u8, username: []const u8) ![]const u8 {
     var req = client.open(std.http.Method.POST, std.Uri.parse(settings.app_engine_url ++ "account/register") catch unreachable, headers, .{ .max_redirects = 0 }) catch |e| {
         std.log.err("Could not send account/register (params: email={s}, password={s}): {any}", .{ email, password, e });
         return "<Error />";

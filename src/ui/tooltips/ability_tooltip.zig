@@ -4,6 +4,7 @@ const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const game_data = @import("../../game_data.zig");
 const map = @import("../../map.zig");
+const tooltip = @import("tooltip.zig");
 
 pub const AbilityTooltip = struct {
     root: *element.Container = undefined,
@@ -93,22 +94,22 @@ pub const AbilityTooltip = struct {
         element.destroy(self.root);
     }
 
-    pub fn update(self: *AbilityTooltip, x: f32, y: f32, props: game_data.Ability) void {
-        const left_x = x - self.decor.width() - 15;
-        const up_y = y - self.decor.height() - 15;
-        self.root.x = if (left_x < 0) x + 15 else left_x;
-        self.root.y = if (up_y < 0) y + 15 else up_y;
+    pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) void {
+        const left_x = params.x - self.decor.width() - 15;
+        const up_y = params.y - self.decor.height() - 15;
+        self.root.x = if (left_x < 0) params.x + 15 else left_x;
+        self.root.y = if (up_y < 0) params.y + 15 else up_y;
 
-        if (!std.mem.eql(u8, self.last_abil_name, props.name)) {
-            if (assets.ui_atlas_data.get(props.icon.sheet)) |data| {
-                self.image.image_data.normal.atlas_data = data[props.icon.index];
+        if (!std.mem.eql(u8, self.last_abil_name, params.props.name)) {
+            if (assets.ui_atlas_data.get(params.props.icon.sheet)) |data| {
+                self.image.image_data.normal.atlas_data = data[params.props.icon.index];
             }
 
-            self.title.text_data.text = props.name;
+            self.title.text_data.text = params.props.name;
             self.title.text_data.recalculateAttributes(self._allocator);
 
-            const has_mana_cost = props.mana_cost > 0;
-            const has_health_cost = props.health_cost > 0;
+            const has_mana_cost = params.props.mana_cost > 0;
+            const has_health_cost = params.props.health_cost > 0;
             if (!has_mana_cost and !has_health_cost) {
                 self.cost_text.text_data.text = "No Cost";
             } else {
@@ -119,24 +120,24 @@ pub const AbilityTooltip = struct {
                     self.cost_text.text_data.text = std.fmt.bufPrint(
                         self.cost_text.text_data._backing_buffer,
                         "{d} " ++ mana_icon ++ " {d} " ++ health_icon,
-                        .{ props.mana_cost, props.health_cost },
+                        .{ params.props.mana_cost, params.props.health_cost },
                     ) catch self.cost_text.text_data.text;
                 } else if (has_health_cost) {
                     self.cost_text.text_data.text = std.fmt.bufPrint(
                         self.cost_text.text_data._backing_buffer,
                         "{d} " ++ health_icon,
-                        .{props.health_cost},
+                        .{params.props.health_cost},
                     ) catch self.cost_text.text_data.text;
                 } else {
                     self.cost_text.text_data.text = std.fmt.bufPrint(
                         self.cost_text.text_data._backing_buffer,
                         "{d} " ++ mana_icon,
-                        .{props.mana_cost},
+                        .{params.props.mana_cost},
                     ) catch self.cost_text.text_data.text;
                 }
             }
 
-            self.description.text_data.text = props.description;
+            self.description.text_data.text = params.props.description;
             self.description.text_data.recalculateAttributes(self._allocator);
 
             self.line_break.y = self.image.y + self.image.height() + 10;
@@ -148,7 +149,7 @@ pub const AbilityTooltip = struct {
                 .normal => |*image_data| image_data.scale_y = new_h / image_data.height(),
             }
 
-            self.last_abil_name = props.name;
+            self.last_abil_name = params.props.name;
         }
     }
 };

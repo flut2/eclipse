@@ -4,8 +4,9 @@ const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const main = @import("../../main.zig");
 const rpc = @import("rpc");
-
 const systems = @import("../systems.zig");
+
+const Interactable = element.InteractableImageData;
 
 pub const CharSelectScreen = struct {
     boxes: std.ArrayList(*element.CharacterBox) = undefined,
@@ -47,11 +48,7 @@ pub const CharSelectScreen = struct {
                 .y = @floatFromInt(50 * i),
                 .id = char.id,
                 .obj_type = char.obj_type,
-                .image_data = .{
-                    .base = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                    .hover = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                    .press = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                },
+                .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
                 .text_data = element.TextData{
                     .text = char.name[0..],
                     .size = 16,
@@ -66,11 +63,7 @@ pub const CharSelectScreen = struct {
             .x = (camera.screen_width - button_data_base.texWRaw()) / 2,
             .y = @floatFromInt(50 * (counter + 1)),
             .visible = false,
-            .image_data = .{
-                .base = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "New Character",
                 .size = 16,
@@ -91,7 +84,7 @@ pub const CharSelectScreen = struct {
             element.destroy(box);
         }
         self.boxes.clearAndFree();
-        
+
         element.destroy(self.new_char_button);
 
         self._allocator.destroy(self);

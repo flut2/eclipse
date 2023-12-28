@@ -13,6 +13,8 @@ const settings = @import("../../settings.zig");
 const rpc = @import("rpc");
 
 const systems = @import("../systems.zig");
+
+const Interactable = element.InteractableImageData;
 const NineSlice = element.NineSliceImageData;
 
 const button_container_width = 420;
@@ -406,9 +408,9 @@ pub const MapEditorScreen = struct {
         const check_box_hover_off = assets.getUiData("unchecked_box_hover", 0);
         const check_box_press_off = assets.getUiData("unchecked_box_press", 0);
 
-        const button_width: f32 = 100;
-        const button_height: f32 = 35.0;
-        const button_padding: f32 = 10.0;
+        const button_width = 100.0;
+        const button_height = 35.0;
+        const button_padding = 10.0;
 
         screen.text_statistics = try element.create(allocator, element.Text{
             .x = 16,
@@ -454,11 +456,7 @@ pub const MapEditorScreen = struct {
         const new_button = try screen.buttons_container.createChild(element.Button{
             .x = button_padding,
             .y = button_offset,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "New",
                 .size = 16,
@@ -472,11 +470,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.buttons_container.createChild(element.Button{
             .x = button_padding,
             .y = button_offset,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Open",
                 .size = 16,
@@ -490,11 +484,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.buttons_container.createChild(element.Button{
             .x = button_padding,
             .y = button_offset,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Save",
                 .size = 16,
@@ -508,11 +498,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.buttons_container.createChild(element.Button{
             .x = button_padding,
             .y = button_offset,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Exit",
                 .size = 16,
@@ -592,48 +578,24 @@ pub const MapEditorScreen = struct {
         const size_64 = try screen.new_container.createChild(element.Toggle{
             .x = (new_container_width / 2) - ((check_padding + check_box_base_on.texHRaw()) / 2) * 3,
             .y = (new_container_height - check_box_base_on.texHRaw()) / 2 - check_padding,
-            .off_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = check_box_base_off } },
-                .hover = .{ .normal = .{ .atlas_data = check_box_hover_off } },
-                .press = .{ .normal = .{ .atlas_data = check_box_press_off } },
-            },
-            .on_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = check_box_base_on } },
-                .hover = .{ .normal = .{ .atlas_data = check_box_hover_on } },
-                .press = .{ .normal = .{ .atlas_data = check_box_press_on } },
-            },
+            .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
+            .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
             .toggled = &screen.map_size_64,
             .state_change = mapState64Changed,
         });
         const size_128 = try screen.new_container.createChild(element.Toggle{
             .x = size_64.x + size_64.width() + 5,
             .y = size_64.y,
-            .off_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = check_box_base_off } },
-                .hover = .{ .normal = .{ .atlas_data = check_box_hover_off } },
-                .press = .{ .normal = .{ .atlas_data = check_box_press_off } },
-            },
-            .on_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = check_box_base_on } },
-                .hover = .{ .normal = .{ .atlas_data = check_box_hover_on } },
-                .press = .{ .normal = .{ .atlas_data = check_box_press_on } },
-            },
+            .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
+            .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
             .toggled = &screen.map_size_128,
             .state_change = mapState128Changed,
         });
         _ = try screen.new_container.createChild(element.Toggle{
             .x = size_128.x + size_128.width() + 5,
             .y = size_128.y,
-            .off_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = check_box_base_off } },
-                .hover = .{ .normal = .{ .atlas_data = check_box_hover_off } },
-                .press = .{ .normal = .{ .atlas_data = check_box_press_off } },
-            },
-            .on_image_data = .{
-                .base = .{ .normal = .{ .atlas_data = check_box_base_on } },
-                .hover = .{ .normal = .{ .atlas_data = check_box_hover_on } },
-                .press = .{ .normal = .{ .atlas_data = check_box_press_on } },
-            },
+            .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
+            .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
             .toggled = &screen.map_size_256,
             .state_change = mapState256Changed,
         });
@@ -641,11 +603,7 @@ pub const MapEditorScreen = struct {
         const login_button = try screen.new_container.createChild(element.Button{
             .x = (screen.new_container.width() - (button_width * 2)) / 2 - (button_padding / 2),
             .y = (new_container_height - button_height - (button_padding * 2)),
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Create",
                 .size = 16,
@@ -656,11 +614,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.new_container.createChild(element.Button{
             .x = login_button.x + login_button.width() + (button_padding / 2),
             .y = login_button.y,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Cancel",
                 .size = 16,
@@ -672,11 +626,7 @@ pub const MapEditorScreen = struct {
         const place_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = new_button.x + new_button.width() + button_padding,
             .y = new_button.y,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Place",
                 .size = 12,
@@ -690,11 +640,7 @@ pub const MapEditorScreen = struct {
         const sample_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = place_key.x,
             .y = place_key.y + new_button.height() + button_padding,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Sample",
                 .size = 12,
@@ -708,11 +654,7 @@ pub const MapEditorScreen = struct {
         const erase_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = sample_key.x,
             .y = sample_key.y + sample_key.height() + button_padding,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Erase",
                 .size = 12,
@@ -726,11 +668,7 @@ pub const MapEditorScreen = struct {
         const random_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = erase_key.x,
             .y = erase_key.y + erase_key.height() + button_padding,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Random",
                 .size = 12,
@@ -744,11 +682,7 @@ pub const MapEditorScreen = struct {
         const undo_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = place_key.x + random_key.width() + button_padding, // random has longest text so we use that one as offset
             .y = place_key.y,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Undo",
                 .size = 12,
@@ -762,11 +696,7 @@ pub const MapEditorScreen = struct {
         const redo_key = try screen.buttons_container.createChild(element.KeyMapper{
             .x = undo_key.x,
             .y = undo_key.y + undo_key.height() + button_padding,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Redo",
                 .size = 12,
@@ -780,11 +710,7 @@ pub const MapEditorScreen = struct {
         const ground_layer = try screen.buttons_container.createChild(element.KeyMapper{
             .x = redo_key.x,
             .y = redo_key.y + redo_key.height() + button_padding,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Ground",
                 .size = 12,
@@ -798,11 +724,7 @@ pub const MapEditorScreen = struct {
         const object_layer = try screen.buttons_container.createChild(element.KeyMapper{
             .x = ground_layer.x,
             .y = ground_layer.y + ground_layer.height() + button_padding,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Object",
                 .size = 12,
@@ -817,11 +739,7 @@ pub const MapEditorScreen = struct {
         const region_layer = try screen.buttons_container.createChild(element.KeyMapper{
             .x = ground_layer.x + ground_layer.width() + button_padding,
             .y = undo_key.y,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Region",
                 .size = 12,
@@ -835,11 +753,7 @@ pub const MapEditorScreen = struct {
         const cycle_next = try screen.buttons_container.createChild(element.KeyMapper{
             .x = region_layer.x,
             .y = region_layer.y + region_layer.height() + button_padding,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Next",
                 .size = 12,
@@ -853,11 +767,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.buttons_container.createChild(element.KeyMapper{
             .x = cycle_next.x,
             .y = cycle_next.y + cycle_next.height() + button_padding,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_height, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .title_text_data = .{
                 .text = "Prev",
                 .size = 12,
@@ -1258,14 +1168,8 @@ pub const MapEditorScreen = struct {
     }
 
     pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
-        // map.server_time_offset += @intFromFloat(dt * std.time.us_per_ms * 16);
-
-        // map.day_light_intensity = 0.4;
-        // map.night_light_intensity = 0.8;
-        // map.bg_light_color = 0;
-        // map.bg_light_intensity = 0.15;
-
-        // todo unwackify it
+        if (self.map_tile_data.len <= 0)
+            return;
 
         const cam_x = camera.x.load(.Acquire);
         const cam_y = camera.y.load(.Acquire);

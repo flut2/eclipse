@@ -6,10 +6,11 @@ const requests = @import("../../requests.zig");
 const xml = @import("../../xml.zig");
 const main = @import("../../main.zig");
 const rpc = @import("rpc");
+const dialog = @import("../dialogs/dialog.zig");
 
 const systems = @import("../systems.zig");
 
-const NineSlice = element.NineSliceImageData;
+const Interactable = element.InteractableImageData;
 
 pub const AccountRegisterScreen = struct {
     username_text: *element.Text = undefined,
@@ -49,7 +50,7 @@ pub const AccountRegisterScreen = struct {
         const input_data_hover = assets.getUiData("text_input_hover", 0);
         const input_data_press = assets.getUiData("text_input_press", 0);
 
-        const x_offset: f32 = (camera.screen_width - input_w) / 2;
+        const x_offset = (camera.screen_width - input_w) / 2;
         var y_offset: f32 = camera.screen_height / 7.2;
 
         screen.username_text = try element.create(allocator, element.Text{
@@ -74,11 +75,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(input_data_base, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(input_data_hover, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -113,11 +110,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(input_data_base, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(input_data_hover, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -152,11 +145,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(input_data_base, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(input_data_hover, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -192,11 +181,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(input_data_base, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(input_data_hover, input_w, input_h, 8, 8, 32, 32, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -220,11 +205,7 @@ pub const AccountRegisterScreen = struct {
         screen.confirm_button = try element.create(allocator, element.Button{
             .x = x_offset + (input_w - (button_width * 2)) / 2 - 12.5,
             .y = y_offset,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Confirm",
                 .size = 16,
@@ -236,11 +217,7 @@ pub const AccountRegisterScreen = struct {
         screen.back_button = try element.create(allocator, element.Button{
             .x = screen.confirm_button.x + button_width + 25,
             .y = y_offset,
-            .image_data = .{
-                .base = .{ .nine_slice = NineSlice.fromAtlasData(button_data_base, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .hover = .{ .nine_slice = NineSlice.fromAtlasData(button_data_hover, button_width, button_height, 6, 6, 7, 7, 1.0) },
-                .press = .{ .nine_slice = NineSlice.fromAtlasData(button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0) },
-            },
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 6, 6, 7, 7, 1.0),
             .text_data = .{
                 .text = "Back",
                 .size = 16,
@@ -296,7 +273,10 @@ pub const AccountRegisterScreen = struct {
     fn register(email: []const u8, password: []const u8, username: []const u8) !bool {
         const response = try requests.sendAccountRegister(email, password, username);
         if (std.mem.eql(u8, response, "<Error />")) {
-            std.log.err("Register failed: {s}", .{response});
+            dialog.showDialog(.text, .{
+                .title = "Register Failed",
+                .body = "Add something here after server rewrite...",
+            });
             return false;
         }
 
@@ -306,7 +286,10 @@ pub const AccountRegisterScreen = struct {
     fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) !bool {
         const response = try requests.sendAccountVerify(email, password);
         if (std.mem.eql(u8, response, "<Error />")) {
-            std.log.err("Login failed: {s}", .{response});
+            dialog.showDialog(.text, .{
+                .title = "Login Failed",
+                .body = "Invalid credentials",
+            });
             return false;
         }
 
@@ -315,7 +298,11 @@ pub const AccountRegisterScreen = struct {
         const verify_root = try verify_doc.getRootElement();
 
         if (std.mem.eql(u8, verify_root.currentName().?, "Error")) {
-            std.log.err("Login failed: {s}", .{verify_root.currentValue().?});
+            dialog.showDialog(.text, .{
+                .title = "Login Failed",
+                .body = try allocator.dupe(u8, verify_root.currentValue().?),
+                .dispose_body = true,
+            });
             return false;
         }
 
