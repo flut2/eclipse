@@ -55,7 +55,7 @@ pub const AccountLoginScreen = struct {
             .y = camera.screen_height / 3.6,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -93,7 +93,7 @@ pub const AccountLoginScreen = struct {
             .y = screen.email_input.y + 150,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -131,7 +131,7 @@ pub const AccountLoginScreen = struct {
 
         screen.save_email_toggle = try element.create(allocator, element.Toggle{
             .x = screen.password_input.x + (input_w - text_w - check_box_base_on.texWRaw()) / 2,
-            .y = (screen.password_input.y + 98) - ((100 - check_box_base_on.texHRaw()) / 2),
+            .y = screen.password_input.y + 100 - (100 - check_box_base_on.texHRaw()) / 2,
             .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
             .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
             .toggled = &settings.save_email,
@@ -139,7 +139,7 @@ pub const AccountLoginScreen = struct {
 
         screen.save_email_text = try element.create(allocator, element.Text{
             .x = screen.save_email_toggle.x + check_box_base_on.texWRaw(),
-            .y = screen.save_email_toggle.y - 24,
+            .y = screen.save_email_toggle.y,
             .text_data = .{
                 .text = "Save e-mail",
                 .size = 20,
@@ -147,7 +147,7 @@ pub const AccountLoginScreen = struct {
                 .hori_align = .middle,
                 .vert_align = .middle,
                 .max_width = text_w,
-                .max_height = 100,
+                .max_height = screen.save_email_toggle.height(),
             },
         });
 

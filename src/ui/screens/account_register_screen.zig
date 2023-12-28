@@ -75,7 +75,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -110,7 +110,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -145,7 +145,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -181,7 +181,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 8, 8, 32, 32, 1.0),
+            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
