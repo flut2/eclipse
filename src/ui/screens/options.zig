@@ -315,7 +315,7 @@ pub const Options = struct {
             .min_value = min_value,
             .max_value = max_value,
             .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, w, h, 1, 1, 2, 2, 1.0) },
-            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 5, 5, 2, 2, 1.0),
+            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 4, 4, 4, 4, 1.0),
             .title_text_data = .{
                 .text = title,
                 .size = 16,
