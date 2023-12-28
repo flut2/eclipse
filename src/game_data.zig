@@ -1175,6 +1175,14 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         }
 
         allocator.free(props.projectiles);
+
+        if (props.anim_props) |anim_props| {
+            for (anim_props.frames) |frame| {
+                allocator.free(frame.tex.sheet);
+            }
+
+            allocator.free(anim_props.frames);
+        }
     }
 
     var item_props_iter = item_type_to_props.valueIterator();

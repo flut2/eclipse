@@ -98,13 +98,13 @@ pub const TextDialog = struct {
     }
 
     pub fn deinit(self: *TextDialog) void {
-        element.destroy(self.root);
-
         if (self.dispose_body)
             self._allocator.free(self.base_text.text_data.text);
 
         if (self.dispose_title)
             self._allocator.free(self.title_text.text_data.text);
+
+        element.destroy(self.root);
     }
 
     pub fn update(self: *TextDialog, params: dialog.ParamsFor(TextDialog)) void {
