@@ -394,6 +394,7 @@
                 <Sheet>tiered_projectiles</Sheet>
                 <Index>0x23</Index>
             </Texture>
+            <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
             <Lifetime>700</Lifetime>
             <MagicDamage>105</MagicDamage>
@@ -421,6 +422,7 @@
                 <Sheet>tiered_projectiles</Sheet>
                 <Index>0x24</Index>
             </Texture>
+            <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
             <Lifetime>700</Lifetime>
             <MagicDamage>115</MagicDamage>
@@ -1409,6 +1411,7 @@
                 <Sheet>tiered_projectiles</Sheet>
                 <Index>0x26</Index>
             </Texture>
+            <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
             <Lifetime>700</Lifetime>
             <MagicDamage>150</MagicDamage>
