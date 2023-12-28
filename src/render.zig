@@ -2867,6 +2867,9 @@ pub fn draw(
     back_buffer: zgpu.wgpu.TextureView,
     encoder: zgpu.wgpu.CommandEncoder,
 ) void {
+    map.object_lock.lockShared();
+    defer map.object_lock.unlockShared();
+
     var light_idx: u16 = 0;
 
     const cam_x = camera.x.load(.Acquire);
@@ -3065,9 +3068,6 @@ pub fn draw(
                 .bind_group = bind_group,
             };
 
-            map.object_lock.lockShared();
-            defer map.object_lock.unlockShared();
-
             var idx: u16 = 0;
             for (map.entities.items) |*en| {
                 switch (en.*) {
@@ -3110,21 +3110,8 @@ pub fn draw(
 
                         const size = camera.size_mult * camera.scale * player.size;
 
-                        const sec = player.anim_sector;
-                        const anim_idx = player.anim_index;
-
-                        var atlas_data = switch (player.action) {
-                            assets.walk_action => player.anim_data.walk_anims[sec][1 + anim_idx],
-                            assets.attack_action => player.anim_data.attack_anims[sec][anim_idx],
-                            assets.stand_action => player.anim_data.walk_anims[sec][0],
-                            else => unreachable,
-                        };
-
-                        var x_offset: f32 = 0.0;
-                        if (player.action == assets.attack_action and anim_idx == 1) {
-                            const w = atlas_data.texWRaw() * size;
-                            x_offset = if (sec == assets.left_dir) -assets.padding * size else w / 4.0;
-                        }
+                        var atlas_data = player.atlas_data;
+                        const x_offset = player.render_x_offset;
 
                         var sink: f32 = 1.0;
                         if (map.getSquare(player.x, player.y)) |square| {
@@ -3384,24 +3371,8 @@ pub fn draw(
                             continue;
                         }
 
-                        const sec = bo.anim_sector;
-                        const anim_idx = bo.anim_index;
-
                         var atlas_data = bo.atlas_data;
-                        var x_offset: f32 = 0.0;
-                        if (bo.anim_data) |anim_data| {
-                            atlas_data = switch (bo.action) {
-                                assets.walk_action => anim_data.walk_anims[sec][1 + anim_idx],
-                                assets.attack_action => anim_data.attack_anims[sec][anim_idx],
-                                assets.stand_action => anim_data.walk_anims[sec][0],
-                                else => unreachable,
-                            };
-
-                            if (bo.action == assets.attack_action and anim_idx == 1) {
-                                const w = atlas_data.texWRaw() * size;
-                                x_offset = if (sec == assets.left_dir) -assets.padding * size else w / 4.0;
-                            }
-                        }
+                        const x_offset = bo.render_x_offset;
 
                         var sink: f32 = 1.0;
                         if (map.getSquare(bo.x, bo.y)) |square| {

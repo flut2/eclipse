@@ -196,10 +196,8 @@ pub const GameObject = struct {
     target_x_dir: f32 = 0.0,
     target_y_dir: f32 = 0.0,
     inv_dist: f32 = 0.0,
-    facing: f32 = std.math.nan(f32),
     attack_start: i64 = 0,
     attack_angle: f32 = 0.0,
-    dir: u8 = assets.left_dir,
     draw_on_ground: bool = false,
     is_wall: bool = false,
     is_enemy: bool = false,
@@ -212,14 +210,19 @@ pub const GameObject = struct {
     show_name: bool = false,
     hit_sound: []const u8 = &[0]u8{},
     death_sound: []const u8 = &[0]u8{},
-    action: u8 = 0,
-    float_period: f32 = 0.0,
     full_occupy: bool = false,
     occupy_square: bool = false,
     enemy_occupy_square: bool = false,
     colors: []u32 = &[0]u32{},
-    anim_sector: u8 = 0,
-    anim_index: u8 = 0,
+    render_x_offset: f32 = 0.0,
+    anim_props: ?game_data.AnimProps = null,
+    anim_idx: u8 = 0,
+    facing: f32 = std.math.nan(f32),
+    next_anim: i64 = -1,
+    float: bool = false,
+    float_height: f32 = 0.0,
+    float_time: f32 = 0,
+    float_time_offset: i64 = 0,
     _disposed: bool = false,
 
     pub inline fn addToMap(self: *GameObject, allocator: std.mem.Allocator) void {
@@ -245,6 +248,13 @@ pub const GameObject = struct {
             self.full_occupy = props.full_occupy;
             self.occupy_square = props.occupy_square;
             self.enemy_occupy_square = props.enemy_occupy_square;
+            self.anim_props = props.anim_props;
+            self.float = props.float;
+            self.float_height = props.float_height;
+            self.float_time = @floatFromInt(props.float_time);
+            if (self.float) {
+                self.float_time_offset = @intFromFloat(utils.rng.random().float(f32) * self.float_time);
+            }
 
             for (props.show_effects) |eff| {
                 if (eff.effect == .ring) {
@@ -275,7 +285,7 @@ pub const GameObject = struct {
         texParse: {
             if (game_data.obj_type_to_tex_data.get(self.obj_type)) |tex_list| {
                 if (tex_list.len == 0) {
-                    std.log.err("Object with type {d} has an empty texture list, parsing failed", .{self.obj_type});
+                    std.log.err("Object with type 0x{x} has an empty texture list, parsing failed", .{self.obj_type});
                     break :texParse;
                 }
 
@@ -285,7 +295,7 @@ pub const GameObject = struct {
                     if (assets.anim_enemies.get(tex.sheet)) |anim_data| {
                         self.anim_data = anim_data[tex.index];
                     } else {
-                        std.log.err("Could not find anim sheet {s} for object with type {d}. Using error texture", .{ tex.sheet, self.obj_type });
+                        std.log.err("Could not find anim sheet {s} for object with type 0x{x}. Using error texture", .{ tex.sheet, self.obj_type });
                         self.anim_data = assets.error_data_enemy;
                     }
 
@@ -327,14 +337,14 @@ pub const GameObject = struct {
                     }
                 }
             } else {
-                std.log.err("Could not find texture data for obj {d}", .{self.obj_type});
+                std.log.err("Could not find texture data for obj 0x{x}", .{self.obj_type});
             }
         }
 
         topTexParse: {
             if (game_data.obj_type_to_top_tex_data.get(self.obj_type)) |top_tex_list| {
                 if (top_tex_list.len == 0) {
-                    std.log.err("Object with type {d} has an empty top texture list, parsing failed", .{self.obj_type});
+                    std.log.err("Object with type 0x{x} has an empty top texture list, parsing failed", .{self.obj_type});
                     break :topTexParse;
                 }
 
@@ -344,7 +354,7 @@ pub const GameObject = struct {
                     top_data.removePadding();
                     self.top_atlas_data = top_data;
                 } else {
-                    std.log.err("Could not find top sheet {s} for object with type {d}. Using error texture", .{ tex.sheet, self.obj_type });
+                    std.log.err("Could not find top sheet {s} for object with type 0x{x}. Using error texture", .{ tex.sheet, self.obj_type });
                     self.top_atlas_data = assets.error_data;
                 }
             }
@@ -491,53 +501,84 @@ pub const GameObject = struct {
     }
 
     pub fn update(self: *GameObject, time: i64, dt: f32) void {
-        // todo: clean this up, reuse
-        const attack_period: i64 = 0.3 * std.time.us_per_s;
-        if (time < self.attack_start + attack_period) {
-            const time_dt: f32 = @floatFromInt(time - self.attack_start);
-            self.float_period = @mod(time_dt, attack_period) / attack_period;
-            self.facing = self.attack_angle;
-            self.action = assets.attack_action;
-        } else if (!std.math.isNan(self.move_angle)) {
-            const move_period: i64 = 0.4 * std.time.us_per_s;
-            const float_time: f32 = @floatFromInt(time);
-            self.float_period = @mod(float_time, move_period) / move_period;
-            self.facing = self.move_angle;
-            self.action = assets.walk_action;
-        } else {
-            self.float_period = 0;
-            self.action = assets.stand_action;
-        }
-
         const screen_pos = camera.rotateAroundCamera(self.x, self.y);
         const size = camera.size_mult * camera.scale * self.size;
 
-        const angle = if (std.math.isNan(self.facing))
-            0.0
-        else
-            utils.halfBound(self.facing) / (std.math.pi / 4.0);
-
-        const sec = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
-            0, 1, 6, 7 => assets.left_dir,
-            2, 3, 4, 5 => assets.right_dir,
-            else => unreachable,
-        };
-        const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, self.float_period)) * 2.0);
-
-        self.anim_sector = sec;
-        self.anim_index = anim_idx;
-
-        var atlas_data = self.atlas_data;
         if (self.anim_data) |anim_data| {
-            atlas_data = switch (self.action) {
-                assets.walk_action => anim_data.walk_anims[sec][1 + anim_idx],
-                assets.attack_action => anim_data.attack_anims[sec][anim_idx],
-                assets.stand_action => anim_data.walk_anims[sec][0],
+            const attack_period: i64 = 0.3 * std.time.us_per_s;
+            const move_period: i64 = 0.4 * std.time.us_per_s;
+
+            var float_period: f32 = 0.0;
+            var action: assets.Action = .stand;
+            if (time < self.attack_start + attack_period) {
+                const time_dt: f32 = @floatFromInt(time - self.attack_start);
+                float_period = @mod(time_dt, attack_period) / attack_period;
+                self.facing = self.attack_angle;
+                action = .attack;
+            } else if (!std.math.isNan(self.move_angle)) {
+                const float_time: f32 = @floatFromInt(time);
+                float_period = @mod(float_time, move_period) / move_period;
+                self.facing = self.move_angle;
+                action = .walk;
+            } else {
+                float_period = 0;
+                action = .stand;
+            }
+
+            const angle = if (std.math.isNan(self.facing))
+                0.0
+            else
+                utils.halfBound(self.facing) / (std.math.pi / 4.0);
+            const dir: assets.Direction = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
+                0...1, 6...7 => .left,
+                2...5 => .right,
                 else => unreachable,
             };
+            const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);
+
+            self.atlas_data = switch (action) {
+                .walk => anim_data.walk_anims[@intFromEnum(dir)][1 + anim_idx],
+                .attack => anim_data.attack_anims[@intFromEnum(dir)][anim_idx],
+                .stand => anim_data.walk_anims[@intFromEnum(dir)][0],
+            };
+
+            if (action == .attack and anim_idx == 1) {
+                const w = self.atlas_data.texWRaw() * size;
+                self.render_x_offset = if (dir == .left) -assets.padding * size else w / 4.0;
+            }
+        } else if (self.anim_props) |props| {
+            updateAnim: {
+                if (time >= self.next_anim) {
+                    const frame_len = props.frames.len;
+                    if (frame_len < 2) {
+                        std.log.err("The amount of frames ({d}) was not enough for obj type 0x{x}", .{ frame_len, self.obj_type });
+                        break :updateAnim;
+                    }
+
+                    const frame_data = props.frames[self.anim_idx];
+                    const tex_data = frame_data.tex;
+                    if (assets.atlas_data.get(tex_data.sheet)) |tex| {
+                        if (tex_data.index >= tex.len) {
+                            std.log.err("Incorrect index ({d}) given to anim with sheet {s}, obj type: 0x{x}", .{ tex_data.index, tex_data.sheet, self.obj_type });
+                            break :updateAnim;
+                        }
+                        self.atlas_data = tex[tex_data.index];
+                        self.anim_idx = @intCast((self.anim_idx + 1) % frame_len);
+                        self.next_anim = time + frame_data.time;
+                    } else {
+                        std.log.err("Could not find sheet {s} for anim on obj type 0x{x}", .{ tex_data.sheet, self.obj_type });
+                        break :updateAnim;
+                    }
+                }
+            }
         }
 
-        const h = atlas_data.texHRaw() * size;
+        if (self.float) {
+            const total_time: f32 = @floatFromInt(time + self.float_time_offset);
+            self.z = self.float_height / 2.0 * (@sin(total_time / self.float_time) + 1.0);
+        }
+
+        const h = self.atlas_data.texHRaw() * size;
         self.screen_y = screen_pos.y + self.z * -camera.px_per_tile - (h - size * assets.padding) - 10;
         self.screen_x = screen_pos.x;
 
@@ -563,32 +604,6 @@ pub const GameObject = struct {
 
             self.x = next_x;
             self.y = next_y;
-        }
-
-        merchantBlock: {
-            if (self.last_merch_type == self.merchant_obj_type)
-                break :merchantBlock;
-
-            // this may not be good idea for merchants every frame lols
-            // todo move it into a fn call that will only be set on merchant_obj_type set
-            // this is temporary
-
-            if (game_data.obj_type_to_tex_data.get(self.merchant_obj_type)) |tex_list| {
-                if (tex_list.len == 0) {
-                    std.log.err("Merchant with type {d} has an empty texture list, parsing failed", .{self.merchant_obj_type});
-                    break :merchantBlock;
-                }
-
-                const tex = tex_list[@as(usize, @intCast(self.obj_id)) % tex_list.len];
-                if (assets.atlas_data.get(tex.sheet)) |data| {
-                    self.atlas_data = data[tex.index];
-                } else {
-                    std.log.err("Could not find sheet {s} for merchant with type 0x{x}. Using error texture", .{ tex.sheet, self.merchant_obj_type });
-                    self.atlas_data = assets.error_data;
-                }
-            }
-
-            self.last_merch_type = self.merchant_obj_type;
         }
     }
 };
@@ -661,7 +676,6 @@ pub const Player = struct {
     target_y: f32 = 0.0,
     target_x_dir: f32 = 0.0,
     target_y_dir: f32 = 0.0,
-    facing: f32 = std.math.nan(f32),
     walk_speed_multiplier: f32 = 1.0,
     light_color: u32 = std.math.maxInt(u32),
     light_intensity: f32 = 0.1,
@@ -670,19 +684,18 @@ pub const Player = struct {
     light_pulse_speed: f32 = 1.0,
     last_ground_damage_time: i64 = -1,
     anim_data: assets.AnimPlayerData = undefined,
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    render_x_offset: f32 = 0.0,
     move_multiplier: f32 = 1.0,
     sink_level: f32 = 0,
     hit_sound: []const u8 = &[0]u8{},
     death_sound: []const u8 = &[0]u8{},
-    action: u8 = 0,
-    float_period: f32 = 0.0,
     colors: []u32 = &[0]u32{},
     next_ability_attack_time: i64 = -1,
     mp_zeroed: bool = false,
     x_dir: f32 = 0.0,
     y_dir: f32 = 0.0,
-    anim_sector: u8 = 0,
-    anim_index: u8 = 0,
+    facing: f32 = std.math.nan(f32),
     class_name: []const u8 = "",
     ability_use_times: [4]i64 = [_]i64{-1} ** 4,
     ability_data: std.ArrayList(u8) = undefined,
@@ -862,7 +875,7 @@ pub const Player = struct {
                 const arc_gap = std.math.degreesToRadians(f32, 24);
                 const float_str: f32 = @floatFromInt(self.strength);
 
-                const attack_angle_left = attack_angle - std.math.phi;
+                const attack_angle_left = attack_angle - std.math.pi / 2.0;
                 const left_proj_count = @divFloor(num_projs, 2);
                 var left_angle = attack_angle_left - arc_gap * @as(f32, @floatFromInt(left_proj_count - 1));
                 for (0..left_proj_count) |_| {
@@ -887,7 +900,7 @@ pub const Player = struct {
                     left_angle += arc_gap;
                 }
 
-                const attack_angle_right = attack_angle + std.math.phi;
+                const attack_angle_right = attack_angle + std.math.pi / 2.0;
                 const right_proj_count = num_projs - left_proj_count;
                 var right_angle = attack_angle_right - arc_gap * @as(f32, @floatFromInt(right_proj_count - 1));
                 for (0..left_proj_count) |_| {
@@ -1082,21 +1095,24 @@ pub const Player = struct {
     }
 
     pub fn update(self: *Player, time: i64, dt: f32, allocator: std.mem.Allocator) void {
+        var float_period: f32 = 0.0;
+        var action: assets.Action = .stand;
+
         if (time < self.attack_start + self.attack_period) {
             const time_dt: f32 = @floatFromInt(time - self.attack_start);
-            const float_period: f32 = @floatFromInt(self.attack_period);
-            self.float_period = @mod(time_dt, float_period) / float_period;
+            float_period = @floatFromInt(self.attack_period);
+            float_period = @mod(time_dt, float_period) / float_period;
             self.facing = self.attack_angle + camera.angle;
-            self.action = assets.attack_action;
+            action = .attack;
         } else if (self.x_dir != 0.0 or self.y_dir != 0.0) {
-            const walk_period = 3.5 / self.moveSpeedMultiplier();
             const float_time: f32 = @floatFromInt(time);
-            self.float_period = @mod(float_time, walk_period) / walk_period;
+            float_period = 3.5 / self.moveSpeedMultiplier();
+            float_period = @mod(float_time, float_period) / float_period;
             self.facing = std.math.atan2(f32, self.y_dir, self.x_dir);
-            self.action = assets.walk_action;
+            action = .walk;
         } else {
-            self.float_period = 0.0;
-            self.action = assets.stand_action;
+            float_period = 0.0;
+            action = .stand;
         }
 
         const size = camera.size_mult * camera.scale * self.size;
@@ -1107,27 +1123,29 @@ pub const Player = struct {
         else
             utils.halfBound(self.facing - camera.angle) / pi_div_4;
 
-        const sec = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
-            0, 7 => assets.left_dir,
-            1, 2 => assets.up_dir,
-            3, 4 => assets.right_dir,
-            5, 6 => assets.down_dir,
+        const dir: assets.Direction = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
+            0, 7 => .left,
+            1, 2 => .up,
+            3, 4 => .right,
+            5, 6 => .down,
             else => unreachable,
         };
 
-        const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, self.float_period)) * 2.0);
-        var atlas_data = switch (self.action) {
-            assets.walk_action => self.anim_data.walk_anims[sec][1 + anim_idx],
-            assets.attack_action => self.anim_data.attack_anims[sec][anim_idx],
-            assets.stand_action => self.anim_data.walk_anims[sec][0],
-            else => unreachable,
+        const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);
+        self.atlas_data = switch (action) {
+            .walk => self.anim_data.walk_anims[@intFromEnum(dir)][1 + anim_idx],
+            .attack => self.anim_data.attack_anims[@intFromEnum(dir)][anim_idx],
+            .stand => self.anim_data.walk_anims[@intFromEnum(dir)][0],
         };
-
-        self.anim_sector = sec;
-        self.anim_index = anim_idx;
 
         const screen_pos = camera.rotateAroundCamera(self.x, self.y);
-        const h = atlas_data.texHRaw() * size;
+        const h = self.atlas_data.texHRaw() * size;
+        const w = self.atlas_data.texWRaw() * size;
+
+        self.render_x_offset = if (action == .attack and anim_idx == 1)
+            if (dir == .left) -assets.padding * size else w / 4.0
+        else
+            0.0;
 
         self.screen_x = screen_pos.x;
         self.screen_y = screen_pos.y + self.z * -camera.px_per_tile - (h - size * assets.padding) - 30; // account for name
@@ -1601,8 +1619,8 @@ pub const Projectile = struct {
                 const phase: f32 = if (self.bullet_id % 2 == 0) 0.0 else std.math.pi;
                 const time_ratio: f32 = @as(f32, @floatFromInt(elapsed)) / @as(f32, @floatFromInt(self.props.lifetime));
                 const deflection_target = self.props.amplitude * @sin(phase + time_ratio * self.props.frequency * std.math.tau);
-                self.x += (deflection_target - self.last_deflect) * @cos(self.angle + std.math.phi);
-                self.y += (deflection_target - self.last_deflect) * @sin(self.angle + std.math.phi);
+                self.x += (deflection_target - self.last_deflect) * @cos(self.angle + std.math.pi / 2.0);
+                self.y += (deflection_target - self.last_deflect) * @sin(self.angle + std.math.pi / 2.0);
                 self.last_deflect = deflection_target;
             }
         }
@@ -2414,7 +2432,7 @@ pub fn setSquare(x: u32, y: u32, tile_type: u16) void {
 
         if (game_data.ground_type_to_tex_data.get(tile_type)) |tex_list| {
             if (tex_list.len == 0) {
-                std.log.err("Square with type {d} has an empty texture list, parsing failed", .{tile_type});
+                std.log.err("Square with type 0x{x} has an empty texture list, parsing failed", .{tile_type});
                 break :texParse;
             }
 

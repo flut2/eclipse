@@ -99,7 +99,7 @@ pub const CharacterSkin = struct {
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) CharacterSkin {
         return CharacterSkin{
-            .objType = try node.getAttributeInt("type", u16, 0),
+            .obj_type = try node.getAttributeInt("type", u16, 0),
             .name = try node.getAttributeAlloc("id", allocator, "Unknown"),
             .texture = try TextureData.parse(
                 node.findChild("AnimatedTexture") orelse
@@ -260,12 +260,12 @@ pub const CharacterClass = struct {
 };
 
 pub const AnimFrame = struct {
-    time: f32,
+    time: i64,
     tex: TextureData,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !AnimFrame {
         return AnimFrame{
-            .time = try node.getAttributeFloat("time", f32, 0.0) * 1000,
+            .time = @intFromFloat(try node.getAttributeFloat("time", f32, 0.0) * std.time.us_per_s),
             .tex = try TextureData.parse(node.findChild("Texture").?, allocator, false),
         };
     }
@@ -273,9 +273,8 @@ pub const AnimFrame = struct {
 
 pub const AnimProps = struct {
     prob: f32,
-    period: u16,
-    period_jitter: u16,
-    sync: bool,
+    period: i64,
+    period_jitter: i64,
     frames: []AnimFrame,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !AnimProps {
@@ -287,10 +286,9 @@ pub const AnimProps = struct {
 
         return AnimProps{
             .prob = try node.getAttributeFloat("prob", f32, 0.0),
-            .period = try node.getAttributeInt("period", u16, 0),
-            .period_jitter = try node.getAttributeInt("periodJitter", u16, 0),
-            .sync = node.attributeExists("sync"),
-            .frames = frame_list.items,
+            .period = @intFromFloat(try node.getAttributeFloat("period", f32, 0.0) * std.time.us_per_s),
+            .period_jitter = @intFromFloat(try node.getAttributeFloat("periodJitter", f32, 0.0) * std.time.us_per_s),
+            .frames = try allocator.dupe(AnimFrame, frame_list.items),
         };
     }
 };
@@ -467,9 +465,8 @@ pub const ObjProps = struct {
     angle_correction: f32,
     rotation: f32,
     float: bool,
-    float_time: u16,
+    float_time: i64,
     float_height: f32,
-    float_sine: bool,
     light_color: u32,
     light_intensity: f32,
     light_radius: f32,
@@ -480,6 +477,7 @@ pub const ObjProps = struct {
     projectiles: []ProjProps,
     hit_sound: []const u8,
     death_sound: []const u8,
+    anim_props: ?AnimProps,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ObjProps {
         const obj_id = try node.getAttributeAlloc("id", allocator, "");
@@ -539,15 +537,15 @@ pub const ObjProps = struct {
             .light_pulse_speed = try node.getValueFloat("LightPulseSpeed", f32, 1.0),
             .alpha_mult = try node.getValueFloat("AlphaMult", f32, 1.0),
             .float = float_node != null,
-            .float_time = try std.fmt.parseInt(u16, if (float_node != null) float_node.?.getAttribute("time") orelse "0" else "0", 0),
+            .float_time = try std.fmt.parseInt(i64, if (float_node != null) float_node.?.getAttribute("time") orelse "0" else "0", 0) * std.time.us_per_ms,
             .float_height = try std.fmt.parseFloat(f32, if (float_node != null) float_node.?.getAttribute("height") orelse "0.0" else "0.0"),
-            .float_sine = float_node != null and float_node.?.getAttribute("sine") != null,
             .show_effects = try allocator.dupe(ShowEffProps, eff_list.items),
             .projectiles = try allocator.dupe(ProjProps, proj_list.items),
             .hit_sound = try node.getValueAlloc("HitSound", allocator, "Unknown"),
             .death_sound = try node.getValueAlloc("DeathSound", allocator, "Unknown"),
             .protect_from_ground_damage = node.elementExists("ProtectFromGroundDamage"),
             .protect_from_sink = node.elementExists("ProtectFromSink"),
+            .anim_props = if (node.elementExists("Animation")) try AnimProps.parse(node.findChild("Animation").?, allocator) else null,
         };
     }
 

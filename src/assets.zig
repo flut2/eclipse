@@ -17,15 +17,23 @@ pub const atlas_height: u32 = 4096;
 pub const base_texel_w: f32 = 1.0 / 4096.0;
 pub const base_texel_h: f32 = 1.0 / 4096.0;
 
+pub const Action = enum {
+    stand,
+    walk,
+    attack,
+};
+
+pub const Direction = enum {
+    right,
+    left,
+    down,
+    up,
+};
+
 // todo turn into enum in future
 pub const stand_action: u8 = 0;
 pub const walk_action: u8 = 1;
 pub const attack_action: u8 = 2;
-
-pub const right_dir: u8 = 0;
-pub const left_dir: u8 = 1;
-pub const down_dir: u8 = 2;
-pub const up_dir: u8 = 3;
 
 pub const CharacterData = struct {
     pub const size = 64.0;
@@ -533,7 +541,7 @@ fn addAnimEnemy(
                     const row_idx = k % scaled_w;
                     const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
 
-                    const src_idx = if (i == left_dir)
+                    const src_idx = if (i == @intFromEnum(Direction.left))
                         ((cur_src_y + row_count) * img.width + cur_src_x + scaled_w - row_idx - 1) * 4
                     else
                         ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
@@ -667,7 +675,7 @@ fn addAnimPlayer(
                 const row_idx = k % scaled_w;
                 const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
 
-                const src_idx = if (set_idx % 4 == left_dir)
+                const src_idx = if (set_idx % 4 == @intFromEnum(Direction.left))
                     ((cur_src_y + row_count) * img.width + cur_src_x + scaled_w - row_idx - 1) * 4
                 else
                     ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
