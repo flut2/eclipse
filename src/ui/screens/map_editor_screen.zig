@@ -448,7 +448,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.buttons_container.createChild(element.Image{
             .x = 0,
             .y = 0,
-            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data_base, button_container_width, button_container_height, 8, 8, 32, 32, 1.0) },
+            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data_base, button_container_width, button_container_height, 12, 12, 2, 2, 1.0) },
         });
 
         var button_offset: f32 = button_padding;
