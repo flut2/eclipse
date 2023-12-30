@@ -1,5 +1,5 @@
 const std = @import("std");
-const map = @import("map.zig");
+const map = @import("map/map.zig");
 const assets = @import("assets.zig");
 const camera = @import("camera.zig");
 const settings = @import("settings.zig");
@@ -9,6 +9,8 @@ const zstbi = @import("zstbi");
 const element = @import("ui/element.zig");
 const main = @import("main.zig");
 const systems = @import("ui/systems.zig");
+
+const Square = @import("map/square.zig").Square;
 
 const VertexField = extern struct {
     x: f32,
@@ -576,8 +578,8 @@ fn drawWall(
                 atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             } else {
                 const top_sq = map.squares.get((floor_y - 1) * map.width + floor_x) orelse break :topSide;
-                if (top_sq.has_wall)
-                    break :topSide;
+                const en = map.findEntityConst(top_sq.static_obj_id);
+                if (en != null and en.? == .object and en.?.object.class == .wall) break :topSide;
 
                 if (top_sq.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
@@ -611,8 +613,8 @@ fn drawWall(
                 atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             } else {
                 const bottom_sq = map.squares.get((floor_y + 1) * map.width + floor_x) orelse break :bottomSide;
-                if (bottom_sq.has_wall)
-                    break :bottomSide;
+                const en = map.findEntityConst(bottom_sq.static_obj_id);
+                if (en != null and en.? == .object and en.?.object.class == .wall) break :bottomSide;
 
                 if (bottom_sq.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
@@ -647,8 +649,8 @@ fn drawWall(
                 atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             } else {
                 const left_sq = map.squares.get(floor_y * map.width + floor_x - 1) orelse break :leftSide;
-                if (left_sq.has_wall)
-                    break :leftSide;
+                const en = map.findEntityConst(left_sq.static_obj_id);
+                if (en != null and en.? == .object and en.?.object.class == .wall) break :leftSide;
 
                 if (left_sq.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
@@ -683,8 +685,8 @@ fn drawWall(
                 atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             } else {
                 const right_sq = map.squares.get(floor_y * map.width + floor_x + 1) orelse break :rightSide;
-                if (right_sq.has_wall)
-                    break :rightSide;
+                const en = map.findEntityConst(right_sq.static_obj_id);
+                if (en != null and en.? == .object and en.?.object.class == .wall) break :rightSide;
 
                 if (right_sq.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
@@ -1656,14 +1658,7 @@ fn drawSquare(
     atlas_data: assets.AtlasData,
     u_offset: f32,
     v_offset: f32,
-    left_blend_u: f32,
-    left_blend_v: f32,
-    top_blend_u: f32,
-    top_blend_v: f32,
-    right_blend_u: f32,
-    right_blend_v: f32,
-    bottom_blend_u: f32,
-    bottom_blend_v: f32,
+    blends: [4]Square.Blend,
 ) void {
     ground_vert_data[idx] = GroundVertexData{
         .pos_uv = .{
@@ -1673,16 +1668,16 @@ fn drawSquare(
             .w = atlas_data.tex_h,
         },
         .left_top_blend_uv = .{
-            .x = left_blend_u,
-            .y = left_blend_v,
-            .z = top_blend_u,
-            .w = top_blend_v,
+            .x = blends[Square.left_blend_idx].u,
+            .y = blends[Square.left_blend_idx].v,
+            .z = blends[Square.top_blend_idx].u,
+            .w = blends[Square.top_blend_idx].v,
         },
         .right_bottom_blend_uv = .{
-            .x = right_blend_u,
-            .y = right_blend_v,
-            .z = bottom_blend_u,
-            .w = bottom_blend_v,
+            .x = blends[Square.right_blend_idx].u,
+            .y = blends[Square.right_blend_idx].v,
+            .z = blends[Square.bottom_blend_idx].u,
+            .w = blends[Square.bottom_blend_idx].v,
         },
         .base_and_offset_uv = .{
             .x = atlas_data.tex_u,
@@ -1700,16 +1695,16 @@ fn drawSquare(
             .w = atlas_data.tex_h,
         },
         .left_top_blend_uv = .{
-            .x = left_blend_u,
-            .y = left_blend_v,
-            .z = top_blend_u,
-            .w = top_blend_v,
+            .x = blends[Square.left_blend_idx].u,
+            .y = blends[Square.left_blend_idx].v,
+            .z = blends[Square.top_blend_idx].u,
+            .w = blends[Square.top_blend_idx].v,
         },
         .right_bottom_blend_uv = .{
-            .x = right_blend_u,
-            .y = right_blend_v,
-            .z = bottom_blend_u,
-            .w = bottom_blend_v,
+            .x = blends[Square.right_blend_idx].u,
+            .y = blends[Square.right_blend_idx].v,
+            .z = blends[Square.bottom_blend_idx].u,
+            .w = blends[Square.bottom_blend_idx].v,
         },
         .base_and_offset_uv = .{
             .x = atlas_data.tex_u,
@@ -1727,16 +1722,16 @@ fn drawSquare(
             .w = 0,
         },
         .left_top_blend_uv = .{
-            .x = left_blend_u,
-            .y = left_blend_v,
-            .z = top_blend_u,
-            .w = top_blend_v,
+            .x = blends[Square.left_blend_idx].u,
+            .y = blends[Square.left_blend_idx].v,
+            .z = blends[Square.top_blend_idx].u,
+            .w = blends[Square.top_blend_idx].v,
         },
         .right_bottom_blend_uv = .{
-            .x = right_blend_u,
-            .y = right_blend_v,
-            .z = bottom_blend_u,
-            .w = bottom_blend_v,
+            .x = blends[Square.right_blend_idx].u,
+            .y = blends[Square.right_blend_idx].v,
+            .z = blends[Square.bottom_blend_idx].u,
+            .w = blends[Square.bottom_blend_idx].v,
         },
         .base_and_offset_uv = .{
             .x = atlas_data.tex_u,
@@ -1754,16 +1749,16 @@ fn drawSquare(
             .w = 0,
         },
         .left_top_blend_uv = .{
-            .x = left_blend_u,
-            .y = left_blend_v,
-            .z = top_blend_u,
-            .w = top_blend_v,
+            .x = blends[Square.left_blend_idx].u,
+            .y = blends[Square.left_blend_idx].v,
+            .z = blends[Square.top_blend_idx].u,
+            .w = blends[Square.top_blend_idx].v,
         },
         .right_bottom_blend_uv = .{
-            .x = right_blend_u,
-            .y = right_blend_v,
-            .z = bottom_blend_u,
-            .w = bottom_blend_v,
+            .x = blends[Square.right_blend_idx].u,
+            .y = blends[Square.right_blend_idx].v,
+            .z = blends[Square.bottom_blend_idx].u,
+            .w = blends[Square.bottom_blend_idx].v,
         },
         .base_and_offset_uv = .{
             .x = atlas_data.tex_u,
@@ -2969,35 +2964,33 @@ pub fn draw(
 
                     var u_offset = square.u_offset;
                     var v_offset = square.v_offset;
-                    if (square.props != null) {
-                        if (settings.enable_lights) {
-                            const light_color = square.props.?.light_color;
-                            if (light_color != std.math.maxInt(u32)) {
-                                const size = camera.px_per_tile * (square.props.?.light_radius + square.props.?.light_pulse *
-                                    @sin(float_time_ms / 1000.0 * square.props.?.light_pulse_speed));
-                                light_idx = drawLight(
-                                    light_idx,
-                                    size,
-                                    size,
-                                    screen_pos.x + camera.screen_width / 2.0,
-                                    screen_pos.y + camera.screen_height / 2.0,
-                                    light_color,
-                                    square.props.?.light_intensity,
-                                );
-                            }
+                    if (settings.enable_lights) {
+                        const light_color = square.props.light_color;
+                        if (light_color != std.math.maxInt(u32)) {
+                            const size = camera.px_per_tile * (square.props.light_radius + square.props.light_pulse *
+                                @sin(float_time_ms / 1000.0 * square.props.light_pulse_speed));
+                            light_idx = drawLight(
+                                light_idx,
+                                size,
+                                size,
+                                screen_pos.x + camera.screen_width / 2.0,
+                                screen_pos.y + camera.screen_height / 2.0,
+                                light_color,
+                                square.props.light_intensity,
+                            );
                         }
+                    }
 
-                        switch (square.props.?.anim_type) {
-                            .wave => {
-                                u_offset += @sin(square.props.?.anim_dx * float_time_ms / 1000.0) * assets.base_texel_w;
-                                v_offset += @sin(square.props.?.anim_dy * float_time_ms / 1000.0) * assets.base_texel_h;
-                            },
-                            .flow => {
-                                u_offset += (square.props.?.anim_dx * float_time_ms / 1000.0) * assets.base_texel_w;
-                                v_offset += (square.props.?.anim_dy * float_time_ms / 1000.0) * assets.base_texel_h;
-                            },
-                            else => {},
-                        }
+                    switch (square.props.anim_type) {
+                        .wave => {
+                            u_offset += @sin(square.props.anim_dx * float_time_ms / 1000.0) * assets.base_texel_w;
+                            v_offset += @sin(square.props.anim_dy * float_time_ms / 1000.0) * assets.base_texel_h;
+                        },
+                        .flow => {
+                            u_offset += (square.props.anim_dx * float_time_ms / 1000.0) * assets.base_texel_w;
+                            v_offset += (square.props.anim_dy * float_time_ms / 1000.0) * assets.base_texel_h;
+                        },
+                        else => {},
                     }
 
                     const radius = @sqrt(@as(f32, camera.px_per_tile * camera.px_per_tile / 2)) + 1;
@@ -3020,14 +3013,7 @@ pub fn draw(
                         square.atlas_data,
                         u_offset,
                         v_offset,
-                        square.left_blend_u,
-                        square.left_blend_v,
-                        square.top_blend_u,
-                        square.top_blend_v,
-                        square.right_blend_u,
-                        square.right_blend_v,
-                        square.bottom_blend_u,
-                        square.bottom_blend_v,
+                        square.blends,
                     );
                     square_idx += 4;
                 }
@@ -3115,9 +3101,11 @@ pub fn draw(
 
                         var sink: f32 = 1.0;
                         if (map.getSquare(player.x, player.y)) |square| {
-                            if (square.tile_type != 0xFFFF) {
-                                sink += if (square.props != null and square.props.?.sink and !square.protect_from_sink) 0.75 else 0;
-                            }
+                            const protect = blk: {
+                                const entity = map.findEntityConst(square.static_obj_id) orelse break :blk false;
+                                break :blk entity == .object and entity.object.props.protect_from_sink;
+                            };
+                            sink += if (square.props.sink and !protect) 0.75 else 0;
                         }
 
                         atlas_data.tex_h /= sink;
@@ -3139,8 +3127,9 @@ pub fn draw(
                         _ = &color_intensity;
                         // flash
 
-                        if (settings.enable_lights and player.light_color != std.math.maxInt(u32)) {
-                            const light_size = player.light_radius + player.light_pulse * @sin(float_time_ms / 1000.0 * player.light_pulse_speed);
+                        if (settings.enable_lights and player.props.light_color != std.math.maxInt(u32)) {
+                            const light_size = player.props.light_radius + player.props.light_pulse *
+                                @sin(float_time_ms / 1000.0 * player.props.light_pulse_speed);
 
                             light_idx = drawLight(
                                 light_idx,
@@ -3148,8 +3137,8 @@ pub fn draw(
                                 h * light_size,
                                 screen_pos.x,
                                 screen_pos.y,
-                                player.light_color,
-                                player.light_intensity,
+                                player.props.light_color,
+                                player.props.light_intensity,
                             );
                         }
 
@@ -3309,7 +3298,7 @@ pub fn draw(
                         var screen_pos = camera.rotateAroundCamera(bo.x, bo.y);
                         const size = camera.size_mult * camera.scale * bo.size;
 
-                        if (bo.draw_on_ground) {
+                        if (bo.props.draw_on_ground) {
                             const tile_size = @as(f32, camera.px_per_tile) * camera.scale;
                             const h = tile_size / 2.0;
 
@@ -3325,7 +3314,7 @@ pub fn draw(
                             );
 
                             const is_portal = bo.class == .portal;
-                            if (bo.show_name or is_portal) {
+                            if (bo.props.show_name or is_portal) {
                                 if (bo.name_text_data) |*data| {
                                     idx = drawText(
                                         idx,
@@ -3366,7 +3355,7 @@ pub fn draw(
                             continue;
                         }
 
-                        if (bo.is_wall) {
+                        if (bo.class == .wall) {
                             idx = drawWall(idx, bo.x, bo.y, bo.alpha, bo.atlas_data, bo.top_atlas_data, draw_data);
                             continue;
                         }
@@ -3376,9 +3365,11 @@ pub fn draw(
 
                         var sink: f32 = 1.0;
                         if (map.getSquare(bo.x, bo.y)) |square| {
-                            if (square.tile_type != 0xFFFF) {
-                                sink += if (square.props != null and square.props.?.sink and !square.protect_from_sink) 0.75 else 0;
-                            }
+                            const protect = blk: {
+                                const entity = map.findEntityConst(square.static_obj_id) orelse break :blk false;
+                                break :blk entity == .object and entity.object.props.protect_from_sink;
+                            };
+                            sink += if (square.props.sink and !protect) 0.75 else 0;
                         }
 
                         atlas_data.tex_h /= sink;
@@ -3399,8 +3390,8 @@ pub fn draw(
                         _ = &color_intensity;
                         // flash
 
-                        if (settings.enable_lights and bo.light_color != std.math.maxInt(u32)) {
-                            const light_size = bo.light_radius + bo.light_pulse * @sin(float_time_ms / 1000.0 * bo.light_pulse_speed);
+                        if (settings.enable_lights and bo.props.light_color != std.math.maxInt(u32)) {
+                            const light_size = bo.props.light_radius + bo.props.light_pulse * @sin(float_time_ms / 1000.0 * bo.props.light_pulse_speed);
 
                             light_idx = drawLight(
                                 light_idx,
@@ -3408,13 +3399,13 @@ pub fn draw(
                                 h * light_size,
                                 screen_pos.x,
                                 screen_pos.y + h / 2.0,
-                                bo.light_color,
-                                bo.light_intensity,
+                                bo.props.light_color,
+                                bo.props.light_intensity,
                             );
                         }
 
                         const is_portal = bo.class == .portal;
-                        if (bo.show_name or is_portal) {
+                        if (bo.props.show_name or is_portal) {
                             if (bo.name_text_data) |*data| {
                                 idx = drawText(
                                     idx,
@@ -3469,7 +3460,7 @@ pub fn draw(
                             },
                         );
 
-                        if (!bo.is_enemy)
+                        if (!bo.props.is_enemy)
                             continue;
 
                         var y_pos: f32 = 5.0 + if (sink != 1.0) @as(f32, 15.0) else @as(f32, 0.0);

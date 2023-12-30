@@ -2,14 +2,19 @@ const std = @import("std");
 const utils = @import("utils.zig");
 const settings = @import("settings.zig");
 const main = @import("main.zig");
-const map = @import("map.zig");
+const map = @import("map/map.zig");
 const game_data = @import("game_data.zig");
 const element = @import("ui/element.zig");
 const camera = @import("camera.zig");
 const assets = @import("assets.zig");
-const particles = @import("particles.zig");
+const particles = @import("map/particles.zig");
 const systems = @import("ui/systems.zig");
 const dialog = @import("ui/dialogs//dialog.zig");
+
+const Square = @import("map/square.zig").Square;
+const Player = @import("map/player.zig").Player;
+const GameObject = @import("map/game_object.zig").GameObject;
+const Projectile = @import("map/projectile.zig").Projectile;
 
 pub const FailureType = enum(i8) {
     message_no_disconnect = -1,
@@ -317,11 +322,7 @@ fn handleAllyShoot() void {
             const player = &en.player;
             const item_props = game_data.item_type_to_props.getPtr(@intCast(container_type));
             const proj_props = item_props.?.projectile.?;
-            // in case of Shoot AE this will cause problems as we send 1 per shot
-            // (in future might be ideal to redo the shoot AE in PlayerShoot as we can credit the shot for AE to use for validation)
-            // const projs_len = item_props.?.num_projectiles;
-            // for (0..projs_len) |_| {
-            var proj = map.Projectile{
+            var proj = Projectile{
                 .x = player.x,
                 .y = player.y,
                 .props = proj_props,
@@ -330,9 +331,8 @@ fn handleAllyShoot() void {
                 .owner_id = player.obj_id,
             };
             proj.addToMap();
-            // }
 
-            const attack_period: i64 = @intFromFloat(1.0 / (map.attack_frequency * item_props.?.rate_of_fire));
+            const attack_period: i64 = @intFromFloat(1.0 / (Player.attack_frequency * item_props.?.rate_of_fire));
             player.attack_period = attack_period;
             player.attack_angle = angle - camera.angle;
             player.attack_start = main.current_time;
@@ -460,7 +460,7 @@ fn handleEnemyShoot() void {
     map.object_lock.lockShared();
     defer map.object_lock.unlockShared();
 
-    var owner: ?map.GameObject = null;
+    var owner: ?GameObject = null;
     if (map.findEntityConst(owner_id)) |en| {
         if (en == .object) {
             owner = en.object;
@@ -479,7 +479,7 @@ fn handleEnemyShoot() void {
     const proj_props = owner_props.?.projectiles[bullet_type];
 
     for (0..num_shots) |i| {
-        var proj = map.Projectile{
+        var proj = Projectile{
             .x = start_x,
             .y = start_y,
             .physical_damage = physical_damage,
@@ -507,13 +507,13 @@ fn handleEnemyShoot() void {
 
 fn handleFailure() void {
     const error_id = reader.read(FailureType);
-    const error_description = reader.readArray(u8);
+    const error_description = _allocator.dupe(u8, reader.readArray(u8)) catch &[0]u8{};
 
     if (error_id == .message_with_disconnect or error_id == .force_close_game) {
         main.disconnect();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
-            .body = _allocator.dupe(u8, error_description) catch &[0]u8{},
+            .body = error_description,
             .dispose_body = true,
         });
     }
@@ -655,8 +655,8 @@ fn handleNewTick() void {
                             player.move_step = @sqrt(dist_sqr) / tick_time;
                             player.target_x = x;
                             player.target_y = y;
-                            player.target_x_dir = if (player.x > x) -1 else 1;
-                            player.target_y_dir = if (player.y > y) -1 else 1;
+                            player.move_x_dir = player.x < x;
+                            player.move_y_dir = player.y < y;
                             player.x_dir = x_dt / tick_time;
                             player.y_dir = y_dt / tick_time;
                         } else {
@@ -694,9 +694,8 @@ fn handleNewTick() void {
                             object.move_step = @sqrt(dist_sqr) / tick_time;
                             object.target_x = x;
                             object.target_y = y;
-                            object.target_x_dir = if (object.x > x) -1 else 1;
-                            object.target_y_dir = if (object.y > y) -1 else 1;
-                            object.inv_dist = 0.5 / dist_sqr;
+                            object.move_x_dir = object.x < x;
+                            object.move_y_dir = object.y < y;
                         } else {
                             object.x = x;
                             object.y = y;
@@ -816,7 +815,7 @@ fn handleServerPlayerShoot() void {
             const total_angle = angle_inc * @as(f32, @floatFromInt(num_shots - 1));
             var current_angle = angle - total_angle / 2.0;
             for (0..num_shots) |i| {
-                var proj = map.Projectile{
+                var proj = Projectile{
                     .x = start_x,
                     .y = start_y,
                     .physical_damage = damage,
@@ -1047,7 +1046,13 @@ fn handleUpdate() void {
 
     const tiles = reader.readArray(TileData);
     for (tiles) |tile| {
-        map.setSquare(tile.x, tile.y, tile.tile_type);
+        var square = Square{
+            .tile_type = tile.tile_type,
+            .x = @as(f32, @floatFromInt(tile.x)) + 0.5,
+            .y = @as(f32, @floatFromInt(tile.y)) + 0.5,
+        };
+
+        square.addToMap();
     }
 
     main.need_minimap_update = tiles.len > 0;
@@ -1076,7 +1081,7 @@ fn handleUpdate() void {
 
         switch (class) {
             .player => {
-                var player = map.Player{ .x = x, .y = y, .obj_id = obj_id, .obj_type = obj_type };
+                var player = Player{ .x = x, .y = y, .obj_id = obj_id, .obj_type = obj_type };
 
                 while (stat_reader.index < stat_reader.buffer.len) {
                     const stat_id = stat_reader.read(u8);
@@ -1096,7 +1101,7 @@ fn handleUpdate() void {
                 player.addToMap(_allocator);
             },
             inline else => {
-                var obj = map.GameObject{ .x = x, .y = y, .obj_id = obj_id, .obj_type = obj_type };
+                var obj = GameObject{ .x = x, .y = y, .obj_id = obj_id, .obj_type = obj_type };
 
                 while (stat_reader.index < stat_reader.buffer.len) {
                     const stat_id = stat_reader.read(u8);
@@ -1119,7 +1124,7 @@ fn handleUpdate() void {
         std.log.debug("Recv - Update: tiles_len={d}, new_objs_len={d}, drops_len={d}", .{ tiles.len, new_objs_len, drops.len });
 }
 
-fn parsePlayerStat(plr: *map.Player, stat_type: game_data.StatType, stat_reader: *utils.PacketReader) bool {
+fn parsePlayerStat(plr: *Player, stat_type: game_data.StatType, stat_reader: *utils.PacketReader) bool {
     switch (stat_type) {
         .max_hp => plr.max_hp = stat_reader.read(i32),
         .hp => {
@@ -1214,7 +1219,7 @@ fn parsePlayerStat(plr: *map.Player, stat_type: game_data.StatType, stat_reader:
     return true;
 }
 
-fn parseObjectStat(obj: *map.GameObject, stat_type: game_data.StatType, stat_reader: *utils.PacketReader) bool {
+fn parseObjectStat(obj: *GameObject, stat_type: game_data.StatType, stat_reader: *utils.PacketReader) bool {
     switch (stat_type) {
         .max_hp => obj.max_hp = stat_reader.read(i32),
         .hp => {
@@ -1257,8 +1262,8 @@ fn parseObjectStat(obj: *map.GameObject, stat_type: game_data.StatType, stat_rea
                 obj.name_text_data.?.recalculateAttributes(_allocator);
             }
         },
-        .tex_1 => obj.tex_1 = stat_reader.read(i32),
-        .tex_2 => obj.tex_2 = stat_reader.read(i32),
+        .tex_1 => _ = stat_reader.read(i32),
+        .tex_2 => _ = stat_reader.read(i32),
         .merch_type => obj.merchant_obj_type = stat_reader.read(u16),
         .merch_count => obj.merchant_rem_count = stat_reader.read(i8),
         .sellable_price => obj.sellable_price = stat_reader.read(u16),

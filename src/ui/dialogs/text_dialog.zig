@@ -107,7 +107,7 @@ pub const TextDialog = struct {
         element.destroy(self.root);
     }
 
-    pub fn update(self: *TextDialog, params: dialog.ParamsFor(TextDialog)) void {
+    pub fn setValues(self: *TextDialog, params: dialog.ParamsFor(TextDialog)) void {
         if (self.dispose_body)
             self._allocator.free(self.base_text.text_data.text);
 

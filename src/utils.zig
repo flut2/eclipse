@@ -286,24 +286,24 @@ pub fn currentMemoryUse() !f32 {
     return memory_value;
 }
 
-pub fn toRoman(int: u12) []const u8 {
+pub inline fn toRoman(int: u12) []const u8 {
     if (int > 3999)
         return "Invalid";
 
     const value = [_]u12{ 1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1 };
     const roman = [_][]const u8{ "M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I" };
 
-    var ret: [32]u8 = undefined;
-    var buf = std.io.fixedBufferStream(&ret);
+    var buf: [32]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&buf);
     var num = int;
     for (0..value.len) |i| {
         while (num >= value[i]) {
             num -= value[i];
-            std.fmt.format(buf.writer(), "{s}{s}", .{ ret[0..buf.pos], roman[i] }) catch continue;
+            stream.writer().writeAll(roman[i]) catch continue;
         }
     }
 
-    return ret[0..buf.pos];
+    return buf[0..stream.pos];
 }
 
 pub fn plusMinus(range: f32) f32 {

@@ -103,7 +103,7 @@ pub const CharacterSkin = struct {
             .name = try node.getAttributeAlloc("id", allocator, "Unknown"),
             .texture = try TextureData.parse(
                 node.findChild("AnimatedTexture") orelse
-                std.debug.panic("Could not parse CharacterClass"),
+                    std.debug.panic("Could not parse CharacterClass"),
                 allocator,
                 false,
             ),
@@ -465,7 +465,7 @@ pub const ObjProps = struct {
     angle_correction: f32,
     rotation: f32,
     float: bool,
-    float_time: i64,
+    float_time: f32,
     float_height: f32,
     light_color: u32,
     light_intensity: f32,
@@ -537,7 +537,7 @@ pub const ObjProps = struct {
             .light_pulse_speed = try node.getValueFloat("LightPulseSpeed", f32, 1.0),
             .alpha_mult = try node.getValueFloat("AlphaMult", f32, 1.0),
             .float = float_node != null,
-            .float_time = try std.fmt.parseInt(i64, if (float_node != null) float_node.?.getAttribute("time") orelse "0" else "0", 0) * std.time.us_per_ms,
+            .float_time = try std.fmt.parseFloat(f32, if (float_node != null) float_node.?.getAttribute("time") orelse "0.0" else "0.0") * std.time.us_per_ms,
             .float_height = try std.fmt.parseFloat(f32, if (float_node != null) float_node.?.getAttribute("height") orelse "0.0" else "0.0"),
             .show_effects = try allocator.dupe(ShowEffProps, eff_list.items),
             .projectiles = try allocator.dupe(ProjProps, proj_list.items),

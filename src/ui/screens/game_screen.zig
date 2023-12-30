@@ -6,7 +6,7 @@ const network = @import("../../network.zig");
 const main = @import("../../main.zig");
 const utils = @import("../../utils.zig");
 const game_data = @import("../../game_data.zig");
-const map = @import("../../map.zig");
+const map = @import("../../map/map.zig");
 const input = @import("../../input.zig");
 const settings = @import("../../settings.zig");
 
@@ -73,16 +73,16 @@ pub const GameScreen = struct {
             return .{ .idx = 255 };
         }
 
-        pub fn nextEquippableSlot(slot_types: [22]game_data.ItemType, base_slot_type: game_data.ItemType) Slot {
-            for (0..22) |idx| {
+        pub fn nextEquippableSlot(slot_types: []game_data.ItemType, base_slot_type: game_data.ItemType) Slot {
+            for (0..slot_types.len) |idx| {
                 if (slot_types[idx].slotsMatch(base_slot_type))
                     return .{ .idx = @intCast(idx) };
             }
             return .{ .idx = 255 };
         }
 
-        pub fn nextAvailableSlot(screen: GameScreen, slot_types: [22]game_data.ItemType, base_slot_type: game_data.ItemType) Slot {
-            for (0..22) |idx| {
+        pub fn nextAvailableSlot(screen: GameScreen, slot_types: []game_data.ItemType, base_slot_type: game_data.ItemType) Slot {
+            for (0..slot_types.len) |idx| {
                 if (screen.inventory_items[idx]._item == std.math.maxInt(u16) and slot_types[idx].slotsMatch(base_slot_type))
                     return .{ .idx = @intCast(idx) };
             }
@@ -99,6 +99,9 @@ pub const GameScreen = struct {
     last_max_hp: i32 = -1,
     last_mp: i32 = -1,
     last_max_mp: i32 = -1,
+    last_tier: u8 = std.math.maxInt(u8),
+    last_tier_xp: i32 = -1,
+    last_next_tier_xp: i32 = -1,
     interact_class: game_data.ClassType = game_data.ClassType.game_object,
     container_visible: bool = false,
     container_id: i32 = -1,
@@ -126,6 +129,7 @@ pub const GameScreen = struct {
     penetration_stat_text: *element.Text = undefined,
     piercing_stat_text: *element.Text = undefined,
     tenacity_stat_text: *element.Text = undefined,
+    xp_bar_decor: *element.Image = undefined,
     xp_bar: *element.Bar = undefined,
     health_bar: *element.Bar = undefined,
     mana_bar: *element.Bar = undefined,
@@ -135,6 +139,11 @@ pub const GameScreen = struct {
     container_name: *element.Text = undefined,
     container_items: [9]*element.Item = undefined,
     minimap_decor: *element.Image = undefined,
+    hub_button: *element.Button = undefined,
+    options_button: *element.Button = undefined,
+    current_tier_icon: *element.Image = undefined,
+    next_tier_icon: *element.Image = undefined,
+    combat_indicator: *element.Image = undefined,
 
     inventory_pos_data: [22]utils.Rect = undefined,
     container_pos_data: [9]utils.Rect = undefined,
@@ -162,6 +171,32 @@ pub const GameScreen = struct {
             .minimap_offset_y = 6.0,
             .minimap_width = 174.0,
             .minimap_height = 174.0,
+        });
+
+        const hub_button_data = assets.getUiData("hub_button", 0);
+        screen.hub_button = try element.create(allocator, element.Button{
+            .x = screen.minimap_decor.x + 67 + (24 - hub_button_data.texWRaw()) / 2.0,
+            .y = screen.minimap_decor.y + 182 + (24 - hub_button_data.texHRaw()) / 2.0,
+            .image_data = .{ .base = .{ .normal = .{ .atlas_data = hub_button_data } } },
+            .tooltip_text = .{
+                .text = "Return to Hub",
+                .size = 12,
+                .text_type = .bold_italic,
+            },
+            .press_callback = returnToHub,
+        });
+
+        const options_button_data = assets.getUiData("options_button", 0);
+        screen.options_button = try element.create(allocator, element.Button{
+            .x = screen.minimap_decor.x + 93 + (24 - options_button_data.texWRaw()) / 2.0,
+            .y = screen.minimap_decor.y + 182 + (24 - options_button_data.texHRaw()) / 2.0,
+            .image_data = .{ .base = .{ .normal = .{ .atlas_data = options_button_data } } },
+            .tooltip_text = .{
+                .text = "Open Options",
+                .size = 12,
+                .text_type = .bold_italic,
+            },
+            .press_callback = openOptions,
         });
 
         screen.inventory_decor = try element.create(allocator, element.Image{
@@ -237,20 +272,44 @@ pub const GameScreen = struct {
 
         const decor_offset_x = -60;
         const decor_offset_y = 53;
-        _ = try screen.ability_container.createChild(element.Image{
+        screen.xp_bar_decor = try screen.ability_container.createChild(element.Image{
             .x = decor_offset_x,
             .y = decor_offset_y,
             .image_data = .{ .normal = .{ .atlas_data = xp_bar_decor_data } },
         });
 
+        screen.current_tier_icon = try screen.ability_container.createChild(element.Image{
+            .x = screen.xp_bar_decor.x + 6 + (18 - assets.error_data.texWRaw()) / 2.0,
+            .y = screen.xp_bar_decor.y + 6 + (18 - assets.error_data.texHRaw()) / 2.0,
+            .image_data = .{ .normal = .{ .atlas_data = assets.error_data } },
+            .tooltip_text = .{
+                .text = "",
+                .size = 12,
+                .max_chars = 64,
+            },
+            .ui_quad = false,
+        });
+
+        screen.next_tier_icon = try screen.ability_container.createChild(element.Image{
+            .x = screen.xp_bar_decor.x + 284 + (18 - assets.error_data.texWRaw()) / 2.0,
+            .y = screen.xp_bar_decor.y + 6 + (18 - assets.error_data.texHRaw()) / 2.0,
+            .image_data = .{ .normal = .{ .atlas_data = assets.error_data } },
+            .tooltip_text = .{
+                .text = "",
+                .size = 12,
+                .max_chars = 64,
+            },
+            .ui_quad = false,
+        });
+
         const xp_bar_data = assets.getUiData("player_xp_bar", 0);
         screen.xp_bar = try screen.ability_container.createChild(element.Bar{
-            .x = decor_offset_x + 24,
-            .y = decor_offset_y + 9,
+            .x = screen.xp_bar_decor.x + 24,
+            .y = screen.xp_bar_decor.y + 9,
             .image_data = .{ .normal = .{ .atlas_data = xp_bar_data } },
             .text_data = .{
                 .text = "",
-                .size = 12,
+                .size = 10,
                 .text_type = .bold_italic,
                 .max_chars = 64,
             },
@@ -374,6 +433,36 @@ pub const GameScreen = struct {
         return screen;
     }
 
+    fn getTierAtlasData(tier: u8) assets.AtlasData {
+        if (assets.atlas_data.get("misc_16")) |data| {
+            const idx: u16 = switch (tier) {
+                1 => 0x00,
+                2 => 0x01,
+                3 => 0x02,
+                4 => 0x03,
+                5 => 0x04,
+                6 => 0x05,
+                7 => 0x06,
+                8 => 0x07,
+                9 => 0x08,
+                else => {
+                    std.log.err("Invalid tier given ({d}), returning error data", .{tier});
+                    return assets.error_data;
+                },
+            };
+
+            if (data.len <= idx) {
+                std.log.err("The sheet index for tier {d} was out of bounds, returning error data", .{tier});
+                return assets.error_data;
+            }
+
+            return data[idx];
+        } else {
+            std.log.err("Sheet misc16 was not found, returning error data", .{});
+            return assets.error_data;
+        }
+    }
+
     pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_color: u32, text_color: u32) !void {
         var chat_line = blk: {
             if (name.len > 0) {
@@ -473,6 +562,8 @@ pub const GameScreen = struct {
         element.destroy(self.chat_decor);
         element.destroy(self.chat_input);
         element.destroy(self.fps_text);
+        element.destroy(self.options_button);
+        element.destroy(self.hub_button);
 
         for (self.inventory_items) |item| {
             element.destroy(item);
@@ -517,6 +608,10 @@ pub const GameScreen = struct {
         self.chat_container._scroll_bar.y = self.chat_decor.y + 12;
         self.chat_input.y = self.chat_decor.y + chat_decor_h;
         self.fps_text.y = self.minimap_decor.y + self.minimap_decor.height() + 10;
+        self.hub_button.x = self.minimap_decor.x + 67 + (24 - self.hub_button.width()) / 2.0;
+        self.hub_button.y = self.minimap_decor.y + 182 + (24 - self.hub_button.height()) / 2.0;
+        self.options_button.x = self.minimap_decor.x + 93 + (24 - self.options_button.width()) / 2.0;
+        self.options_button.y = self.minimap_decor.y + 182 + (24 - self.options_button.height()) / 2.0;
 
         for (0..22) |idx| {
             self.inventory_items[idx].x = self.inventory_decor.x + systems.screen.game.inventory_pos_data[idx].x + (systems.screen.game.inventory_pos_data[idx].w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
@@ -542,49 +637,87 @@ pub const GameScreen = struct {
         defer map.object_lock.unlockShared();
 
         if (map.localPlayerConst()) |local_player| {
-            if (game_data.classes.get(local_player.obj_type)) |char_class| {
-                if (!self.abilities_inited) {
-                    var idx: f32 = 0;
-                    try addAbility(self.ability_container, char_class.ability_1, &idx);
-                    try addAbility(self.ability_container, char_class.ability_2, &idx);
-                    try addAbility(self.ability_container, char_class.ability_3, &idx);
-                    try addAbility(self.ability_container, char_class.ultimate_ability, &idx);
-                    self.abilities_inited = true;
-                }
+            if (self.last_tier != local_player.tier) {
+                var current_icon = getTierAtlasData(local_player.tier);
+                current_icon.removePadding();
+                self.current_tier_icon.image_data.normal.atlas_data = current_icon;
+                self.current_tier_icon.x = self.xp_bar_decor.x + 6 + (18 - current_icon.texWRaw()) / 2.0;
+                self.current_tier_icon.y = self.xp_bar_decor.y + 6 + (18 - current_icon.texHRaw()) / 2.0;
 
-                if (self.last_hp != local_player.hp or self.last_max_hp != local_player.max_hp) {
-                    const hp_perc = @as(f32, @floatFromInt(local_player.hp)) / @as(f32, @floatFromInt(local_player.max_hp));
-                    self.health_bar.scissor.max_x = self.health_bar.width() * hp_perc;
+                self.current_tier_icon.tooltip_text.?.text = try std.fmt.bufPrint(
+                    self.current_tier_icon.tooltip_text.?._backing_buffer,
+                    "Current Tier: {s}",
+                    .{utils.toRoman(local_player.tier)},
+                );
+                self.current_tier_icon.tooltip_text.?.recalculateAttributes(self._allocator);
 
-                    var health_text_data = &self.health_bar.text_data;
-                    health_text_data.color = if (local_player.max_hp - local_player.hp_bonus >= char_class.health.max_values[local_player.tier - 1])
-                        0xFFE770
-                    else
-                        0xFFFFFF;
-                    health_text_data.text = try std.fmt.bufPrint(health_text_data._backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp });
-                    health_text_data.recalculateAttributes(self._allocator);
+                var next_icon = getTierAtlasData(local_player.tier + 1);
+                next_icon.removePadding();
+                self.next_tier_icon.image_data.normal.atlas_data = next_icon;
+                self.next_tier_icon.x = self.xp_bar_decor.x + 284 + (18 - next_icon.texWRaw()) / 2.0;
+                self.next_tier_icon.y = self.xp_bar_decor.y + 6 + (18 - next_icon.texHRaw()) / 2.0;
 
-                    self.last_hp = local_player.hp;
-                    self.last_max_hp = local_player.max_hp;
-                }
+                self.next_tier_icon.tooltip_text.?.text = try std.fmt.bufPrint(
+                    self.next_tier_icon.tooltip_text.?._backing_buffer,
+                    "Next Tier: {s}",
+                    .{utils.toRoman(local_player.tier + 1)},
+                );
+                self.next_tier_icon.tooltip_text.?.recalculateAttributes(self._allocator);
 
-                if (self.last_mp != local_player.mp or self.last_max_mp != local_player.max_mp) {
-                    const mp_perc = @as(f32, @floatFromInt(local_player.mp)) / @as(f32, @floatFromInt(local_player.max_mp));
-                    self.mana_bar.scissor.max_x = self.mana_bar.width() * mp_perc;
+                self.last_tier = local_player.tier;
+            }
 
-                    var mana_text_data = &self.mana_bar.text_data;
-                    mana_text_data.color = if (local_player.max_mp - local_player.mp_bonus >= char_class.mana.max_values[local_player.tier - 1])
-                        0xFFE770
-                    else
-                        0xFFFFFF;
-                    mana_text_data.text = try std.fmt.bufPrint(mana_text_data._backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp });
-                    mana_text_data.recalculateAttributes(self._allocator);
+            if (!self.abilities_inited) {
+                var idx: f32 = 0;
+                try addAbility(self.ability_container, local_player.class_data.ability_1, &idx);
+                try addAbility(self.ability_container, local_player.class_data.ability_2, &idx);
+                try addAbility(self.ability_container, local_player.class_data.ability_3, &idx);
+                try addAbility(self.ability_container, local_player.class_data.ultimate_ability, &idx);
+                self.abilities_inited = true;
+            }
 
-                    self.last_mp = local_player.mp;
-                    self.last_max_mp = local_player.max_mp;
-                }
-            } else {
-                std.log.err("Could not update UI: CharacterClass was missing for object type 0x{x}", .{local_player.obj_type});
+            if (self.last_tier_xp != local_player.tier_xp or self.last_next_tier_xp != local_player.next_tier_xp) {
+                const xp_perc = @as(f32, @floatFromInt(local_player.tier_xp)) / @as(f32, @floatFromInt(local_player.next_tier_xp));
+                self.xp_bar.scissor.max_x = self.xp_bar.width() * xp_perc;
+
+                var xp_text_data = &self.xp_bar.text_data;
+                xp_text_data.text = try std.fmt.bufPrint(xp_text_data._backing_buffer, "{d}/{d}", .{ local_player.tier_xp, local_player.next_tier_xp });
+                xp_text_data.recalculateAttributes(self._allocator);
+
+                self.last_tier_xp = local_player.tier_xp;
+                self.last_next_tier_xp = local_player.next_tier_xp;
+            }
+
+            if (self.last_hp != local_player.hp or self.last_max_hp != local_player.max_hp) {
+                const hp_perc = @as(f32, @floatFromInt(local_player.hp)) / @as(f32, @floatFromInt(local_player.max_hp));
+                self.health_bar.scissor.max_x = self.health_bar.width() * hp_perc;
+
+                var health_text_data = &self.health_bar.text_data;
+                health_text_data.color = if (local_player.max_hp - local_player.hp_bonus >= local_player.class_data.health.max_values[local_player.tier - 1])
+                    0xFFE770
+                else
+                    0xFFFFFF;
+                health_text_data.text = try std.fmt.bufPrint(health_text_data._backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp });
+                health_text_data.recalculateAttributes(self._allocator);
+
+                self.last_hp = local_player.hp;
+                self.last_max_hp = local_player.max_hp;
+            }
+
+            if (self.last_mp != local_player.mp or self.last_max_mp != local_player.max_mp) {
+                const mp_perc = @as(f32, @floatFromInt(local_player.mp)) / @as(f32, @floatFromInt(local_player.max_mp));
+                self.mana_bar.scissor.max_x = self.mana_bar.width() * mp_perc;
+
+                var mana_text_data = &self.mana_bar.text_data;
+                mana_text_data.color = if (local_player.max_mp - local_player.mp_bonus >= local_player.class_data.mana.max_values[local_player.tier - 1])
+                    0xFFE770
+                else
+                    0xFFFFFF;
+                mana_text_data.text = try std.fmt.bufPrint(mana_text_data._backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp });
+                mana_text_data.recalculateAttributes(self._allocator);
+
+                self.last_mp = local_player.mp;
+                self.last_max_mp = local_player.max_mp;
             }
         }
     }
@@ -613,87 +746,83 @@ pub const GameScreen = struct {
             return;
 
         if (map.localPlayerConst()) |player| {
-            if (game_data.classes.get(player.obj_type)) |char_class| {
-                updateStat(
-                    self._allocator,
-                    &self.strength_stat_text.text_data,
-                    player.strength,
-                    player.strength_bonus,
-                    char_class.strength.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.resistance_stat_text.text_data,
-                    player.resistance,
-                    player.resistance_bonus,
-                    char_class.resistance.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.intelligence_stat_text.text_data,
-                    player.intelligence,
-                    player.intelligence_bonus,
-                    char_class.intelligence.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.haste_stat_text.text_data,
-                    player.haste,
-                    player.haste_bonus,
-                    char_class.haste.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.wit_stat_text.text_data,
-                    player.wit,
-                    player.wit_bonus,
-                    char_class.wit.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.speed_stat_text.text_data,
-                    player.speed,
-                    player.speed_bonus,
-                    char_class.speed.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.penetration_stat_text.text_data,
-                    player.penetration,
-                    player.penetration_bonus,
-                    char_class.penetration.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.tenacity_stat_text.text_data,
-                    player.tenacity,
-                    player.tenacity_bonus,
-                    char_class.tenacity.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.defense_stat_text.text_data,
-                    player.defense,
-                    player.defense_bonus,
-                    char_class.defense.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.stamina_stat_text.text_data,
-                    player.stamina,
-                    player.stamina_bonus,
-                    char_class.stamina.max_values[player.tier - 1],
-                );
-                updateStat(
-                    self._allocator,
-                    &self.piercing_stat_text.text_data,
-                    player.piercing,
-                    player.piercing_bonus,
-                    char_class.piercing.max_values[player.tier - 1],
-                );
-            } else {
-                std.log.err("Could not update UI stats: CharacterClass was missing for object type 0x{x}", .{player.obj_type});
-            }
+            updateStat(
+                self._allocator,
+                &self.strength_stat_text.text_data,
+                player.strength,
+                player.strength_bonus,
+                player.class_data.strength.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.resistance_stat_text.text_data,
+                player.resistance,
+                player.resistance_bonus,
+                player.class_data.resistance.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.intelligence_stat_text.text_data,
+                player.intelligence,
+                player.intelligence_bonus,
+                player.class_data.intelligence.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.haste_stat_text.text_data,
+                player.haste,
+                player.haste_bonus,
+                player.class_data.haste.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.wit_stat_text.text_data,
+                player.wit,
+                player.wit_bonus,
+                player.class_data.wit.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.speed_stat_text.text_data,
+                player.speed,
+                player.speed_bonus,
+                player.class_data.speed.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.penetration_stat_text.text_data,
+                player.penetration,
+                player.penetration_bonus,
+                player.class_data.penetration.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.tenacity_stat_text.text_data,
+                player.tenacity,
+                player.tenacity_bonus,
+                player.class_data.tenacity.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.defense_stat_text.text_data,
+                player.defense,
+                player.defense_bonus,
+                player.class_data.defense.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.stamina_stat_text.text_data,
+                player.stamina,
+                player.stamina_bonus,
+                player.class_data.stamina.max_values[player.tier - 1],
+            );
+            updateStat(
+                self._allocator,
+                &self.piercing_stat_text.text_data,
+                player.piercing,
+                player.piercing_bonus,
+                player.class_data.piercing.max_values[player.tier - 1],
+            );
         }
     }
 
@@ -848,7 +977,7 @@ pub const GameScreen = struct {
         if (map.localPlayerConst()) |local_player| {
             if (game_data.item_type_to_props.get(@intCast(item._item))) |props| {
                 if (start_slot.is_container) {
-                    const end_slot = Slot.nextAvailableSlot(systems.screen.game.*, local_player.slot_types, props.slot_type);
+                    const end_slot = Slot.nextAvailableSlot(systems.screen.game.*, local_player.class_data.slot_types, props.slot_type);
                     if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
                         item.x = item._drag_start_x;
                         item.y = item._drag_start_y;
@@ -857,7 +986,7 @@ pub const GameScreen = struct {
 
                     systems.screen.game.swapSlots(start_slot, end_slot);
                 } else {
-                    const end_slot = Slot.nextEquippableSlot(local_player.slot_types, props.slot_type);
+                    const end_slot = Slot.nextEquippableSlot(local_player.class_data.slot_types, props.slot_type);
                     if (end_slot.idx == 255 or // we don't want to drop
                         start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container)
                     {
@@ -870,6 +999,14 @@ pub const GameScreen = struct {
                 }
             }
         }
+    }
+
+    fn returnToHub() void {
+        input.tryEscape();
+    }
+
+    fn openOptions() void {
+        input.openOptions();
     }
 
     pub fn statsCallback() void {

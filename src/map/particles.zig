@@ -1,6 +1,6 @@
 const std = @import("std");
-const assets = @import("assets.zig");
-const utils = @import("utils.zig");
+const assets = @import("../assets.zig");
+const utils = @import("../utils.zig");
 const map = @import("map.zig");
 
 pub const ThrowParticle = struct {
@@ -25,8 +25,8 @@ pub const ThrowParticle = struct {
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle = .{ .throw = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -85,8 +85,8 @@ pub const SparkerParticle = struct {
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle = .{ .sparker = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -143,8 +143,8 @@ pub const SparkParticle = struct {
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle = .{ .spark = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -179,8 +179,8 @@ pub const TeleportParticle = struct {
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle = .{ .teleport = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -217,8 +217,8 @@ pub const ExplosionParticle = struct {
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle = .{ .explosion = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -257,8 +257,8 @@ pub const HitParticle = struct {
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle = .{ .hit = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -297,8 +297,8 @@ pub const HealParticle = struct {
         self.obj_id = Particle.getNextObjId();
         Particle.setTexture(&self.atlas_data, 0);
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle = .{ .heal = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -369,8 +369,8 @@ pub const ThrowEffect = struct {
     pub inline fn addToMap(self: *ThrowEffect) void {
         self.obj_id = ParticleEffect.getNextObjId();
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle_effect = .{ .throw = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -405,8 +405,8 @@ pub const AoeEffect = struct {
     pub inline fn addToMap(self: *AoeEffect) void {
         self.obj_id = ParticleEffect.getNextObjId();
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle_effect = .{ .aoe = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -446,8 +446,8 @@ pub const TeleportEffect = struct {
     pub inline fn addToMap(self: *TeleportEffect) void {
         self.obj_id = ParticleEffect.getNextObjId();
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle_effect = .{ .teleport = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -485,8 +485,8 @@ pub const LineEffect = struct {
     pub inline fn addToMap(self: *LineEffect) void {
         self.obj_id = ParticleEffect.getNextObjId();
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle_effect = .{ .line = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -526,8 +526,8 @@ pub const ExplosionEffect = struct {
     pub inline fn addToMap(self: *ExplosionEffect) void {
         self.obj_id = ParticleEffect.getNextObjId();
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle_effect = .{ .explosion = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -571,8 +571,8 @@ pub const HitEffect = struct {
     pub inline fn addToMap(self: *HitEffect) void {
         self.obj_id = ParticleEffect.getNextObjId();
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle_effect = .{ .hit = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -614,8 +614,8 @@ pub const HealEffect = struct {
     pub inline fn addToMap(self: *HealEffect) void {
         self.obj_id = ParticleEffect.getNextObjId();
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle_effect = .{ .heal = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };
@@ -667,8 +667,8 @@ pub const RingEffect = struct {
     pub inline fn addToMap(self: *RingEffect) void {
         self.obj_id = ParticleEffect.getNextObjId();
 
-        map.add_lock.lock();
-        defer map.add_lock.unlock();
+        map.add_lock.lockShared();
+        defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .particle_effect = .{ .ring = self.* } }) catch |e| {
             std.log.err("Out of memory: {any}", .{e});
         };

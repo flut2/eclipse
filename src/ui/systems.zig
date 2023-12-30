@@ -4,7 +4,7 @@ const input = @import("../input.zig");
 const camera = @import("../camera.zig");
 const utils = @import("../utils.zig");
 const main = @import("../main.zig");
-const map = @import("../map.zig");
+const map = @import("../map/map.zig");
 const assets = @import("../assets.zig");
 const tooltip = @import("tooltips/tooltip.zig");
 const dialog = @import("dialogs/dialog.zig");
@@ -47,6 +47,7 @@ pub var temp_elements_to_add: std.ArrayList(element.Temporary) = undefined;
 pub var screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
 
+var last_element_update: i64 = 0;
 var _allocator: std.mem.Allocator = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
@@ -244,7 +245,7 @@ fn lessThan(_: void, lhs: element.UiElement, rhs: element.UiElement) bool {
     };
 }
 
-inline fn updateElements(time: i64, dt: i64) !void {
+inline fn updateElements() !void {
     ui_lock.lock();
     defer ui_lock.unlock();
 
@@ -254,14 +255,18 @@ inline fn updateElements(time: i64, dt: i64) !void {
     };
     elements_to_add.clearRetainingCapacity();
 
+    const time = std.time.microTimestamp() - main.start_time;
+    const dt: f32 = @floatFromInt(if (last_element_update > 0) time - last_element_update else 0);
+    last_element_update = time;
+
     std.sort.block(element.UiElement, elements.items, {}, lessThan);
 
     switch (screen) {
-        inline else => |inner_screen| if (inner_screen.inited) try inner_screen.update(time, @floatFromInt(dt)),
+        inline else => |inner_screen| if (inner_screen.inited) try inner_screen.update(time, dt),
     }
 }
 
-inline fn updateTempElements(time: i64, allocator: std.mem.Allocator) !void {
+inline fn updateTempElements(allocator: std.mem.Allocator) !void {
     temp_elem_lock.lock();
     defer temp_elem_lock.unlock();
 
@@ -273,6 +278,8 @@ inline fn updateTempElements(time: i64, allocator: std.mem.Allocator) !void {
 
     if (temp_elements.items.len <= 0)
         return;
+
+    const time = std.time.microTimestamp() - main.start_time;
 
     // We iterate in reverse in order to preserve integrity, because we remove elements in place
     var iter = std.mem.reverseIterator(temp_elements.items);
@@ -348,7 +355,7 @@ inline fn updateTempElements(time: i64, allocator: std.mem.Allocator) !void {
     }
 }
 
-pub fn update(time: i64, dt: i64, allocator: std.mem.Allocator) !void {
-    try updateElements(time, dt);
-    try updateTempElements(time, allocator);
+pub fn update(allocator: std.mem.Allocator) !void {
+    try updateElements();
+    try updateTempElements(allocator);
 }

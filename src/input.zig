@@ -1,7 +1,7 @@
 const zglfw = @import("zglfw");
 const settings = @import("settings.zig");
 const std = @import("std");
-const map = @import("map.zig");
+const map = @import("map/map.zig");
 const main = @import("main.zig");
 const camera = @import("camera.zig");
 const element = @import("ui/element.zig");
@@ -91,14 +91,7 @@ fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
     } else if (key == settings.ultimate_ability.getKey()) {
         if (map.localPlayerRef()) |player| player.useAbility(3);
     } else if (key == settings.options.getKey()) {
-        if (systems.screen == .game) {
-            systems.screen.game.options.setVisible(true);
-            disable_input = true;
-        }
-
-        if (systems.screen == .editor) {
-            systems.switchScreen(.main_menu);
-        }
+        openOptions();
     } else if (key == settings.escape.getKey()) {
         tryEscape();
     } else if (key == settings.interact.getKey()) {
@@ -189,14 +182,7 @@ fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
     } else if (button == settings.ultimate_ability.getMouse()) {
         if (map.localPlayerRef()) |player| player.useAbility(3);
     } else if (button == settings.options.getMouse()) {
-        if (systems.screen == .game) {
-            systems.screen.game.options.setVisible(true);
-            disable_input = true;
-        }
-
-        if (systems.screen == .editor) {
-            systems.switchScreen(.main_menu);
-        }
+        openOptions();
     } else if (button == settings.escape.getMouse()) {
         tryEscape();
     } else if (button == settings.interact.getMouse()) {
@@ -474,11 +460,22 @@ pub fn scrollEvent(_: *zglfw.Window, x_offset: f64, y_offset: f64) callconv(.C) 
     }
 }
 
-fn tryEscape() void {
+pub fn tryEscape() void {
     if (systems.screen != .game or std.mem.eql(u8, map.name, "Hub"))
         return;
 
     network.queuePacket(.{ .escape = .{} });
+}
+
+pub fn openOptions() void {
+    if (systems.screen == .game) {
+        systems.screen.game.options.setVisible(true);
+        disable_input = true;
+    }
+
+    if (systems.screen == .editor) {
+        systems.switchScreen(.main_menu);
+    }
 }
 
 fn useAbility() void {

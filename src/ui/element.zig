@@ -636,6 +636,7 @@ pub const Button = struct {
     state: InteractableState = .none,
     layer: Layer = .default,
     text_data: ?TextData = null,
+    tooltip_text: ?TextData = null,
     scissor: ScissorRect = .{},
     visible: bool = true,
     _disposed: bool = false,
@@ -664,11 +665,18 @@ pub const Button = struct {
         }
     }
 
-    pub fn mouseMove(self: *Button, x: f32, y: f32, _: f32, _: f32) void {
+    pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
         if (!self.visible)
             return;
 
         if (intersects(self, x, y)) {
+            if (self.tooltip_text) |text| {
+                tooltip.switchTooltip(.text, .{
+                    .x = x + x_offset,
+                    .y = y + y_offset,
+                    .text_data = text,
+                });
+            }
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -679,10 +687,18 @@ pub const Button = struct {
         if (self.text_data) |*text_data| {
             text_data.recalculateAttributes(self._allocator);
         }
+
+        if (self.tooltip_text) |*text_data| {
+            text_data.recalculateAttributes(self._allocator);
+        }
     }
 
     pub fn deinit(self: *Button) void {
         if (self.text_data) |*text_data| {
+            text_data.deinit(self._allocator);
+        }
+
+        if (self.tooltip_text) |*text_data| {
             text_data.deinit(self._allocator);
         }
     }
@@ -916,6 +932,7 @@ pub const Image = struct {
     // hack
     is_minimap_decor: bool = false,
     ability_props: ?game_data.Ability = null,
+    tooltip_text: ?TextData = null,
     minimap_offset_x: f32 = 0.0,
     minimap_offset_y: f32 = 0.0,
     minimap_width: f32 = 0.0,
@@ -927,12 +944,32 @@ pub const Image = struct {
         if (!self.visible)
             return;
 
-        if (self.ability_props != null and intersects(self, x, y)) {
-            tooltip.switchTooltip(.ability, .{
-                .x = x + x_offset,
-                .y = y + y_offset,
-                .props = self.ability_props.?,
-            });
+        if (intersects(self, x, y)) {
+            if (self.ability_props) |props| {
+                tooltip.switchTooltip(.ability, .{
+                    .x = x + x_offset,
+                    .y = y + y_offset,
+                    .props = props,
+                });
+            } else if (self.tooltip_text) |text| {
+                tooltip.switchTooltip(.text, .{
+                    .x = x + x_offset,
+                    .y = y + y_offset,
+                    .text_data = text,
+                });
+            }
+        }
+    }
+
+    pub fn init(self: *Image) void {
+        if (self.tooltip_text) |*text_data| {
+            text_data.recalculateAttributes(self._allocator);
+        }
+    }
+
+    pub fn deinit(self: *Image) void {
+        if (self.tooltip_text) |*text_data| {
+            text_data.deinit(self._allocator);
         }
     }
 

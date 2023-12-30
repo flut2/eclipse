@@ -3,7 +3,7 @@ const element = @import("../element.zig");
 const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const game_data = @import("../../game_data.zig");
-const map = @import("../../map.zig");
+const map = @import("../../map/map.zig");
 const tooltip = @import("tooltip.zig");
 
 pub const ItemTooltip = struct {
@@ -357,7 +357,7 @@ pub const ItemTooltip = struct {
             {
                 if (map.localPlayerConst()) |player| {
                     const has_type = blk: {
-                        for (player.slot_types) |slot_type| {
+                        for (player.class_data.slot_types) |slot_type| {
                             if (slot_type != .any and slot_type.slotsMatch(props.slot_type))
                                 break :blk true;
                         }
@@ -369,7 +369,7 @@ pub const ItemTooltip = struct {
                         footer_text = std.fmt.bufPrint(
                             self.getFooterBuffer(),
                             line_base ++ "&col=\"D00000\"Not usable by: " ++ string_fmt,
-                            .{ footer_text, player.class_name },
+                            .{ footer_text, player.class_data.name },
                         ) catch footer_text;
 
                         self.decor.image_data.nine_slice.color = 0x8B0000;

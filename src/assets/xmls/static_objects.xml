@@ -79,6 +79,7 @@
             <Index>0x01</Index>
         </Texture>
         <Size>160</Size>
+        <Static />
         <ShowEffect color="0xE54242" radius="4" cooldown="1000">Ring</ShowEffect>
         <LightColor>0xE54242</LightColor>
         <LightIntensity>0.25</LightIntensity>
@@ -117,6 +118,7 @@
             </Frame>
         </Animation>
         <Size>160</Size>
+        <Static />
         <ShowEffect color="0x4C8AED" radius="4" cooldown="1000">Ring</ShowEffect>
         <LightColor>0x4C8AED</LightColor>
         <LightIntensity>0.25</LightIntensity>

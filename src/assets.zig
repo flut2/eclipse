@@ -951,6 +951,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     const imply_size = std.math.maxInt(u32);
     try addUiImage("ability_icons", "sheets/ability_icons.png", 40, 40, &ctx, allocator);
+    try addUiImage("hub_button", "ui/hub_button.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("options_button", "ui/options_button.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("rare_slot", "ui/rare_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("epic_slot", "ui/epic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("legendary_slot", "ui/legendary_slot.png", imply_size, imply_size, &ui_ctx, allocator);

@@ -6,13 +6,17 @@ const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const main = @import("../../main.zig");
 const input = @import("../../input.zig");
-const map = @import("../../map.zig");
+const map = @import("../../map/map.zig");
 const element = @import("../element.zig");
 const game_data = @import("../../game_data.zig");
 const settings = @import("../../settings.zig");
 const rpc = @import("rpc");
 
 const systems = @import("../systems.zig");
+
+const Player = @import("../../map/player.zig").Player;
+const GameObject = @import("../../map/game_object.zig").GameObject;
+const Square = @import("../../map/square.zig").Square;
 
 const Interactable = element.InteractableImageData;
 const NineSlice = element.NineSliceImageData;
@@ -296,7 +300,7 @@ pub const EditorBrush = struct {
 
                 self._screen.simulated_object_id_next += 1;
 
-                var obj = map.GameObject{
+                var obj = GameObject{
                     .x = @as(f32, @floatFromInt(offset_x)) + 0.5,
                     .y = @as(f32, @floatFromInt(offset_y)) + 0.5,
                     .obj_id = self._screen.simulated_object_id_next,
@@ -848,19 +852,22 @@ pub const MapEditorScreen = struct {
             for (0..screen.map_size) |x| {
                 const index = y * screen.map_size + x;
                 screen.map_tile_data[index] = MapEditorTile{};
-                map.setSquare(@as(u32, @intCast(x)), @as(u32, @intCast(y)), screen.map_tile_data[index].ground_type);
+                var square = Square{
+                    .x = @as(f32, @floatFromInt(x)),
+                    .y = @as(f32, @floatFromInt(y)),
+                    .tile_type = screen.map_tile_data[index].ground_type,
+                };
+                square.addToMap();
             }
         }
 
-        // simulate wizard
-        var player = map.Player{
+        var player = Player{
             .x = center,
             .y = center,
             .obj_id = map.local_player_id,
-            .obj_type = 0x030e,
+            .obj_type = 0x0300,
             .size = 100,
-            // .speed = 75,
-            .speed = 300, // mabye make it so we can adjust speed locally like shift slows down
+            .speed = 300,
         };
 
         player.addToMap(screen._allocator);
@@ -1118,7 +1125,12 @@ pub const MapEditorScreen = struct {
         }
 
         self.map_tile_data[index].ground_type = value;
-        map.setSquare(x, y, value);
+        var square = Square{
+            .x = @as(f32, @floatFromInt(x)),
+            .y = @as(f32, @floatFromInt(y)),
+            .tile_type = value,
+        };
+        square.addToMap();
     }
 
     fn getTile(self: *MapEditorScreen, x: f32, y: f32) MapEditorTile {
@@ -1149,7 +1161,7 @@ pub const MapEditorScreen = struct {
             self.map_tile_data[index].object_type = value;
             self.map_tile_data[index].object_id = self.simulated_object_id_next;
 
-            var obj = map.GameObject{
+            var obj = GameObject{
                 .x = @as(f32, @floatFromInt(x)) + 0.5,
                 .y = @as(f32, @floatFromInt(y)) + 0.5,
                 .obj_id = self.simulated_object_id_next,

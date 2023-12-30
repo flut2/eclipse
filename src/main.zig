@@ -13,7 +13,7 @@ const zstbi = @import("zstbi");
 const input = @import("input.zig");
 const utils = @import("utils.zig");
 const camera = @import("camera.zig");
-const map = @import("map.zig");
+const map = @import("map/map.zig");
 const element = @import("ui/element.zig");
 const render = @import("render.zig");
 const ztracy = @import("ztracy");
@@ -108,8 +108,7 @@ pub var rpc_client: *rpc = undefined;
 pub var rpc_start: u64 = 0;
 pub var version_text: []const u8 = undefined;
 pub var _allocator: std.mem.Allocator = undefined;
-
-var last_ui_update: i64 = -1;
+pub var start_time: i64 = 0;
 
 fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
     const float_w: f32 = @floatFromInt(w);
@@ -324,7 +323,7 @@ pub fn main() !void {
         main_zone = ztracy.ZoneNC(@src(), "Main Zone", 0x00FF0000);
     defer if (settings.enable_tracy) main_zone.End();
 
-    const start_time = std.time.microTimestamp();
+    start_time = std.time.microTimestamp();
     utils.rng.seed(@as(u64, @intCast(start_time)));
 
     const is_debug = builtin.mode == .Debug;
@@ -475,25 +474,21 @@ pub fn main() !void {
         render_thread.join();
     }
 
-    var last_update: i64 = 0;
+    var last_ui_update: i64 = 0;
     while (!window.shouldClose()) {
         const time = std.time.microTimestamp() - start_time;
         current_time = time;
 
         zglfw.pollEvents();
 
-        const dt = time - last_update;
-
         if (tick_frame or editing_map) {
-            map.update(time, dt, allocator);
+            map.update(allocator);
         }
 
         if (time - last_ui_update > 16 * std.time.us_per_ms) {
-            try systems.update(time, dt, allocator);
+            try systems.update(allocator);
             last_ui_update = time;
         }
-
-        last_update = time;
     }
 }
 

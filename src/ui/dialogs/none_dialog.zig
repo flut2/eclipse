@@ -18,5 +18,5 @@ pub const NoneDialog = struct {
         element.destroy(self.root);
     }
 
-    pub fn update(_: *NoneDialog, _: dialog.ParamsFor(NoneDialog)) void {}
+    pub fn setValues(_: *NoneDialog, _: dialog.ParamsFor(NoneDialog)) void {}
 };

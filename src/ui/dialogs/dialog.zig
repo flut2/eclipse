@@ -118,7 +118,7 @@ pub fn showDialog(comptime dialog_type: DialogType, params: std.meta.TagPayload(
 
     const T = std.meta.TagPayload(Dialog, dialog_type);
     @field(current, fieldName(T)).root.visible = true;
-    @field(current, fieldName(T)).update(params);
+    @field(current, fieldName(T)).setValues(params);
     @field(current, fieldName(T)).root.x = (camera.screen_width - @field(current, fieldName(T)).root.width()) / 2.0;
     @field(current, fieldName(T)).root.y = (camera.screen_height - @field(current, fieldName(T)).root.height()) / 2.0;
 }
