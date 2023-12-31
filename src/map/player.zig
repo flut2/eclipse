@@ -97,7 +97,7 @@ pub const Player = struct {
     class_data: *const game_data.CharacterClass = undefined,
     last_ground_damage_time: i64 = -1,
     anim_data: assets.AnimPlayerData = undefined,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
     render_x_offset: f32 = 0.0,
     move_multiplier: f32 = 1.0,
     sink_level: f32 = 0,
@@ -171,7 +171,7 @@ pub const Player = struct {
                 self.anim_data = assets.error_data_player;
             }
 
-            self.colors = assets.atlas_to_color_data.get(@bitCast(self.anim_data.walk_anims[0][0])) orelse blk: {
+            self.colors = assets.atlas_to_color_data.get(@bitCast(self.anim_data.walk_anims[0])) orelse blk: {
                 std.log.err("Could not parse color data for player with id {d}. Setting it to empty", .{self.obj_id});
                 break :blk &[0]u32{};
             };
@@ -486,7 +486,7 @@ pub const Player = struct {
         }
     }
 
-    pub fn update(self: *Player, time: i64, dt: f32, allocator: std.mem.Allocator) void {
+    pub inline fn update(self: *Player, time: i64, dt: f32, allocator: std.mem.Allocator) void {
         var float_period: f32 = 0.0;
         var action: assets.Action = .stand;
 
@@ -524,30 +524,26 @@ pub const Player = struct {
         };
 
         const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);
+        const dir_idx: u8 = @intFromEnum(dir);
+
+        const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions];
+
         self.atlas_data = switch (action) {
-            .walk => self.anim_data.walk_anims[@intFromEnum(dir)][1 + anim_idx],
-            .attack => self.anim_data.attack_anims[@intFromEnum(dir)][anim_idx],
-            .stand => self.anim_data.walk_anims[@intFromEnum(dir)][0],
+            .walk => self.anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions + 1 + anim_idx],
+            .attack => self.anim_data.attack_anims[dir_idx * assets.AnimPlayerData.attack_actions + anim_idx],
+            .stand => stand_data,
         };
 
         const screen_pos = camera.rotateAroundCamera(self.x, self.y);
-        const h = self.atlas_data.texHRaw() * size;
-        const w = self.atlas_data.texWRaw() * size;
-
-        self.render_x_offset = if (action == .attack and anim_idx == 1)
-            if (dir == .left) -assets.padding * size else w / 4.0
-        else
-            0.0;
+        const w = (self.atlas_data.texWRaw() - assets.padding * 2) * size;
+        const h = (self.atlas_data.texHRaw() - assets.padding * 2) * size;
+        const stand_w = (stand_data.texWRaw() - assets.padding * 2) * size;
+        self.render_x_offset = (if (dir == .left) stand_w - w else w - stand_w) / 2.0;
 
         self.screen_x = screen_pos.x;
-        self.screen_y = screen_pos.y + self.z * -camera.px_per_tile - (h - size * assets.padding) - 30; // account for name
+        self.screen_y = screen_pos.y + self.z * -camera.px_per_tile - h - 30; // account for name
 
         if (self.obj_id == map.local_player_id) {
-            const floor_x: u32 = @intFromFloat(@floor(self.x));
-            const floor_y: u32 = @intFromFloat(@floor(self.y));
-
-            // janky editor movement
-
             if (systems.screen == .editor) {
                 if (!std.math.isNan(self.move_angle)) {
                     const move_angle = camera.angle + self.move_angle;
@@ -559,57 +555,53 @@ pub const Player = struct {
                     self.y = @max(0, @min(new_y, @as(f32, @floatFromInt(map.height - 1))));
                 }
             } else {
-                if (map.validPos(floor_x, floor_y)) {
-                    if (map.squares.get(floor_y * map.width + floor_x)) |square| {
-                        const slide_amount = square.props.slide_amount;
-                        if (!std.math.isNan(self.move_angle)) {
-                            const move_angle = camera.angle + self.move_angle;
-                            const move_speed = self.moveSpeedMultiplier();
-                            const vec_x = move_speed * @cos(move_angle);
-                            const vec_y = move_speed * @sin(move_angle);
+                if (map.getSquare(self.x, self.y)) |square| {
+                    const slide_amount = square.props.slide_amount;
+                    if (!std.math.isNan(self.move_angle)) {
+                        const move_angle = camera.angle + self.move_angle;
+                        const move_speed = self.moveSpeedMultiplier();
+                        const vec_x = move_speed * @cos(move_angle);
+                        const vec_y = move_speed * @sin(move_angle);
 
-                            if (slide_amount > 0.0) {
-                                self.x_dir *= slide_amount;
-                                self.y_dir *= slide_amount;
+                        if (slide_amount > 0.0) {
+                            self.x_dir *= slide_amount;
+                            self.y_dir *= slide_amount;
 
-                                const max_move_length = vec_x * vec_x + vec_y * vec_y;
-                                const move_length = self.x_dir * self.x_dir + self.y_dir * self.y_dir;
-                                if (move_length < max_move_length) {
-                                    self.x_dir += vec_x * -1.0 * (slide_amount - 1.0);
-                                    self.y_dir += vec_y * -1.0 * (slide_amount - 1.0);
-                                }
-                            } else {
-                                self.x_dir = vec_x;
-                                self.y_dir = vec_y;
+                            const max_move_length = vec_x * vec_x + vec_y * vec_y;
+                            const move_length = self.x_dir * self.x_dir + self.y_dir * self.y_dir;
+                            if (move_length < max_move_length) {
+                                self.x_dir += vec_x * -1.0 * (slide_amount - 1.0);
+                                self.y_dir += vec_y * -1.0 * (slide_amount - 1.0);
                             }
                         } else {
-                            const move_length_sqr = self.x_dir * self.x_dir + self.y_dir * self.y_dir;
-                            const min_move_len_sqr = 0.00012 * 0.00012;
-                            if (move_length_sqr > min_move_len_sqr and slide_amount > 0.0) {
-                                self.x_dir *= slide_amount;
-                                self.y_dir *= slide_amount;
-                            } else {
-                                self.x_dir = 0.0;
-                                self.y_dir = 0.0;
-                            }
+                            self.x_dir = vec_x;
+                            self.y_dir = vec_y;
                         }
-
-                        if (square.props.push) {
-                            self.x_dir -= square.props.anim_dx / 1000.0;
-                            self.y_dir -= square.props.anim_dy / 1000.0;
+                    } else {
+                        const move_length_sqr = self.x_dir * self.x_dir + self.y_dir * self.y_dir;
+                        const min_move_len_sqr = 0.00012 * 0.00012;
+                        if (move_length_sqr > min_move_len_sqr and slide_amount > 0.0) {
+                            self.x_dir *= slide_amount;
+                            self.y_dir *= slide_amount;
+                        } else {
+                            self.x_dir = 0.0;
+                            self.y_dir = 0.0;
                         }
                     }
 
-                    const next_x = self.x + self.x_dir * dt;
-                    const next_y = self.y + self.y_dir * dt;
-
-                    modifyMove(self, next_x, next_y, &self.x, &self.y);
+                    if (square.props.push) {
+                        self.x_dir -= square.props.anim_dx / 1000.0;
+                        self.y_dir -= square.props.anim_dy / 1000.0;
+                    }
                 }
-            }
 
-            if (systems.screen != .editor and !self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
-                if (map.validPos(floor_x, floor_y)) {
-                    if (map.squares.get(floor_y * map.width + floor_x)) |square| {
+                const next_x = self.x + self.x_dir * dt;
+                const next_y = self.y + self.y_dir * dt;
+
+                modifyMove(self, next_x, next_y, &self.x, &self.y);
+
+                if (!self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
+                    if (map.getSquare(self.x, self.y)) |square| {
                         const total_damage = square.props.physical_damage + square.props.magic_damage + square.props.true_damage;
                         const protect = blk: {
                             const en = map.findEntityConst(square.static_obj_id) orelse break :blk false;
@@ -633,11 +625,7 @@ pub const Player = struct {
                     }
                 }
             }
-
-            return;
-        }
-
-        if (!std.math.isNan(self.move_angle) and self.move_step > 0.0) {
+        } else if (!std.math.isNan(self.move_angle) and self.move_step > 0.0) {
             const next_x = self.x + dt * self.move_step * @cos(self.move_angle);
             const next_y = self.y + dt * self.move_step * @sin(self.move_angle);
             self.x = if (self.move_x_dir) @min(self.target_x, next_x) else @max(self.target_x, next_x);

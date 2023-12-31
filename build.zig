@@ -26,6 +26,8 @@ pub fn build(b: *std.Build) !void {
     exe.addModule("rpc", zdiscord.getModule(b));
     exe.addModule("nfd", nfd.getModule(b));
 
+    exe.addAnonymousModule("rpmalloc", .{ .source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
+
     const nfd_lib = nfd.makeLib(b, target, optimize);
     if (nfd_lib.target_info.target.os.tag == .macos) {
         nfd_lib.defineCMacro("__kernel_ptr_semantics", "");

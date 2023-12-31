@@ -21,6 +21,7 @@ const zaudio = @import("zaudio");
 const systems = @import("ui/systems.zig");
 const rpc = @import("rpc");
 const dialog = @import("ui/dialogs/dialog.zig");
+const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 
 pub const ServerData = struct {
     name: []const u8 = "",
@@ -123,6 +124,12 @@ fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
 }
 
 fn networkTick(allocator: std.mem.Allocator) void {
+    rpmalloc.initThread() catch |e| {
+        std.log.err("Network thread initialization failed: {any}", .{e});
+        return;
+    };
+    defer rpmalloc.deinitThread(true);
+
     while (tick_network) {
         // ticking can get turned off while in sleep
         if (!tick_network)
@@ -155,6 +162,12 @@ fn networkTick(allocator: std.mem.Allocator) void {
 }
 
 fn renderTick(allocator: std.mem.Allocator) !void {
+    rpmalloc.initThread() catch |e| {
+        std.log.err("Render thread initialization failed: {any}", .{e});
+        return;
+    };
+    defer rpmalloc.deinitThread(true);
+
     var time_start = std.time.nanoTimestamp();
     while (tick_render) {
         // ticking can get turned off while in sleep
@@ -340,10 +353,12 @@ pub fn main() !void {
         .vtable = &tracy_allocator_vtable,
     };
 
+    try rpmalloc.init(null, .{});
+    defer rpmalloc.deinit();
+
     var allocator = if (settings.enable_tracy) tracy_allocator else switch (builtin.mode) {
         .Debug => gpa.allocator(),
-        .ReleaseSafe => std.heap.c_allocator,
-        .ReleaseFast, .ReleaseSmall => std.heap.raw_c_allocator,
+        else => rpmalloc.allocator(),
     };
     _allocator = allocator;
 
@@ -507,6 +522,12 @@ fn ready(cli: *rpc) !void {
 }
 
 fn runRpc(cli: *rpc) void {
+    rpmalloc.initThread() catch |e| {
+        std.log.err("RPC thread initialization failed: {any}", .{e});
+        return;
+    };
+    defer rpmalloc.deinitThread(true);
+
     cli.run(.{ .client_id = "976795120663945227" }) catch |e| {
         std.log.err("Setting up RPC failed: {any}", .{e});
     };

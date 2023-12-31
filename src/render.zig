@@ -561,9 +561,6 @@ fn drawWall(
     const top_y3 = (screen_y_top + radius * @sin(bottom_right_angle + camera.angle)) * camera.clip_scale_y;
     const top_y4 = (screen_y_top + radius * @sin(top_right_angle + camera.angle)) * camera.clip_scale_y;
 
-    const floor_x: u32 = @intFromFloat(@floor(x));
-    const floor_y: u32 = @intFromFloat(@floor(y));
-
     const pi_div_2 = std.math.pi / 2.0;
     const bound_angle = utils.halfBound(camera.angle);
 
@@ -572,21 +569,19 @@ fn drawWall(
     const color = 0x000000;
 
     topSide: {
-        if (bound_angle >= pi_div_2 and bound_angle <= std.math.pi or bound_angle >= -std.math.pi and bound_angle <= -pi_div_2 and floor_y > 0) {
-            if (!map.validPos(floor_x, floor_y - 1)) {
-                atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
-                atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
-            } else {
-                const top_sq = map.squares.get((floor_y - 1) * map.width + floor_x) orelse break :topSide;
-                const en = map.findEntityConst(top_sq.static_obj_id);
+        if (bound_angle >= pi_div_2 and bound_angle <= std.math.pi or bound_angle >= -std.math.pi and bound_angle <= -pi_div_2 and y > 0) {
+            if (map.getSquare(x, y - 1)) |square| {
+                const en = map.findEntityConst(square.static_obj_id);
                 if (en != null and en.? == .object and en.?.object.class == .wall) break :topSide;
 
-                if (top_sq.tile_type == 0xFF) {
+                // no need to set back atlas_data_new here, nothing can override it prior to this
+                if (square.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                     atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
                 }
-
-                // no need to set back atlas_data_new here, nothing can override it prior to this
+            } else {
+                atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
+                atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             }
 
             idx_new = drawQuadVerts(
@@ -607,22 +602,21 @@ fn drawWall(
     }
 
     bottomSide: {
-        if (bound_angle <= pi_div_2 and bound_angle >= -pi_div_2 and floor_y < std.math.maxInt(u32)) {
-            if (!map.validPos(floor_x, floor_y + 1)) {
-                atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
-                atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
-            } else {
-                const bottom_sq = map.squares.get((floor_y + 1) * map.width + floor_x) orelse break :bottomSide;
-                const en = map.findEntityConst(bottom_sq.static_obj_id);
+        if (bound_angle <= pi_div_2 and bound_angle >= -pi_div_2 and y < std.math.maxInt(u32)) {
+            if (map.getSquare(x, y + 1)) |square| {
+                const en = map.findEntityConst(square.static_obj_id);
                 if (en != null and en.? == .object and en.?.object.class == .wall) break :bottomSide;
 
-                if (bottom_sq.tile_type == 0xFF) {
+                if (square.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                     atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
                 } else {
                     atlas_data_new.tex_u = atlas_data.tex_u;
                     atlas_data_new.tex_v = atlas_data.tex_v;
                 }
+            } else {
+                atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
+                atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             }
 
             idx_new = drawQuadVerts(
@@ -643,22 +637,21 @@ fn drawWall(
     }
 
     leftSide: {
-        if (bound_angle >= 0 and bound_angle <= std.math.pi and floor_x > 0) {
-            if (!map.validPos(floor_x - 1, floor_y)) {
-                atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
-                atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
-            } else {
-                const left_sq = map.squares.get(floor_y * map.width + floor_x - 1) orelse break :leftSide;
-                const en = map.findEntityConst(left_sq.static_obj_id);
+        if (bound_angle >= 0 and bound_angle <= std.math.pi and x > 0) {
+            if (map.getSquare(x - 1, y)) |square| {
+                const en = map.findEntityConst(square.static_obj_id);
                 if (en != null and en.? == .object and en.?.object.class == .wall) break :leftSide;
 
-                if (left_sq.tile_type == 0xFF) {
+                if (square.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                     atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
                 } else {
                     atlas_data_new.tex_u = atlas_data.tex_u;
                     atlas_data_new.tex_v = atlas_data.tex_v;
                 }
+            } else {
+                atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
+                atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             }
 
             idx_new = drawQuadVerts(
@@ -679,22 +672,21 @@ fn drawWall(
     }
 
     rightSide: {
-        if (bound_angle <= 0 and bound_angle >= -std.math.pi and floor_x < std.math.maxInt(u32)) {
-            if (!map.validPos(floor_x + 1, floor_y)) {
-                atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
-                atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
-            } else {
-                const right_sq = map.squares.get(floor_y * map.width + floor_x + 1) orelse break :rightSide;
-                const en = map.findEntityConst(right_sq.static_obj_id);
+        if (bound_angle <= 0 and bound_angle >= -std.math.pi and x < std.math.maxInt(u32)) {
+            if (map.getSquare(x + 1, y)) |square| {
+                const en = map.findEntityConst(square.static_obj_id);
                 if (en != null and en.? == .object and en.?.object.class == .wall) break :rightSide;
 
-                if (right_sq.tile_type == 0xFF) {
+                if (square.tile_type == 0xFF) {
                     atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
                     atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
                 } else {
                     atlas_data_new.tex_u = atlas_data.tex_u;
                     atlas_data_new.tex_v = atlas_data.tex_v;
                 }
+            } else {
+                atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
+                atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
             }
 
             idx_new = drawQuadVerts(
@@ -1144,7 +1136,6 @@ const QuadOptions = struct {
     shadow_texel_mult: f32 = 0.0,
     shadow_color: u32 = std.math.maxInt(u32),
     force_glow_off: bool = false,
-    ui_quad: bool = false,
     scissor: element.ScissorRect = .{},
 };
 
@@ -1184,8 +1175,8 @@ fn drawQuad(
     if (opts.shadow_color != std.math.maxInt(u32))
         shadow_rgb = element.RGBF32.fromInt(opts.shadow_color);
 
-    const texel_w = assets.base_texel_w * opts.shadow_texel_mult;
-    const texel_h = assets.base_texel_h * opts.shadow_texel_mult;
+    const texel_w = (if (atlas_data.ui) assets.ui_texel_w else assets.base_texel_w) * opts.shadow_texel_mult;
+    const texel_h = (if (atlas_data.ui) assets.ui_texel_h else assets.base_texel_h) * opts.shadow_texel_mult;
 
     const scaled_w = w * camera.clip_scale_x;
     const scaled_h = h * camera.clip_scale_y;
@@ -1202,9 +1193,9 @@ fn drawQuad(
     var render_type: f32 = quad_render_type;
 
     if (settings.enable_glow and !opts.force_glow_off) {
-        render_type = if (opts.ui_quad) ui_quad_render_type else quad_render_type;
+        render_type = if (atlas_data.ui) ui_quad_render_type else quad_render_type;
     } else {
-        render_type = if (opts.ui_quad) ui_quad_glow_off_render_type else quad_glow_off_render_type;
+        render_type = if (atlas_data.ui) ui_quad_glow_off_render_type else quad_glow_off_render_type;
     }
 
     const dont_scissor = element.ScissorRect.dont_scissor;
@@ -2258,7 +2249,6 @@ fn drawNineSlice(
 
     const opts: *const QuadOptions = &.{
         .alpha_mult = image_data.alpha,
-        .ui_quad = true,
         .base_color = image_data.color,
         .base_color_intensity = image_data.color_intensity,
     };
@@ -2366,7 +2356,6 @@ fn drawElement(
                 .normal => |image_data| {
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = image.ui_quad,
                         .scissor = image.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2412,7 +2401,7 @@ fn drawElement(
                     player_icon_h,
                     player_icon,
                     draw_data,
-                    &.{ .rotation = -camera.angle, .ui_quad = true, .force_glow_off = true, .shadow_texel_mult = 1.0 / scale },
+                    &.{ .rotation = -camera.angle, .force_glow_off = true, .shadow_texel_mult = 1.0 / scale },
                 );
             }
         },
@@ -2435,7 +2424,6 @@ fn drawElement(
                         const opts: *const QuadOptions = &.{
                             .shadow_texel_mult = 2.0 / @max(image_data.scale_x, image_data.scale_y),
                             .alpha_mult = image_data.alpha,
-                            .ui_quad = true,
                             .scissor = item.scissor,
                             .base_color = image_data.color,
                             .base_color_intensity = image_data.color_intensity,
@@ -2453,7 +2441,6 @@ fn drawElement(
                     const opts: *const QuadOptions = &.{
                         .shadow_texel_mult = 2.0 / @max(image_data.scale_x, image_data.scale_y),
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = false,
                         .scissor = item.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2482,7 +2469,6 @@ fn drawElement(
 
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
                         .scissor = bar.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2519,7 +2505,6 @@ fn drawElement(
                     h = image_data.height();
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
                         .scissor = button.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2558,7 +2543,6 @@ fn drawElement(
                     h = image_data.height();
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
                         .scissor = char_box.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2612,7 +2596,6 @@ fn drawElement(
                     h = image_data.height();
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
                         .scissor = input_field.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2634,7 +2617,6 @@ fn drawElement(
                     .normal => |image_data| {
                         const opts: *const QuadOptions = &.{
                             .alpha_mult = image_data.alpha,
-                            .ui_quad = true,
                             .scissor = input_field.scissor,
                             .base_color = image_data.color,
                             .base_color_intensity = image_data.color_intensity,
@@ -2666,7 +2648,6 @@ fn drawElement(
                     h = image_data.height();
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
                         .scissor = toggle.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2706,7 +2687,6 @@ fn drawElement(
                     h = image_data.height();
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
                         .scissor = key_mapper.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2754,7 +2734,6 @@ fn drawElement(
                 .normal => |image_data| {
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
                         .scissor = slider.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2794,7 +2773,6 @@ fn drawElement(
                 .normal => |image_data| {
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
                         .scissor = slider.scissor,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
@@ -2915,7 +2893,9 @@ pub fn draw(
     first_draw = true;
 
     gamePass: {
-        if ((!main.tick_frame and systems.screen == .game or !main.editing_map and systems.screen == .editor) or !map.validPos(@intFromFloat(cam_x), @intFromFloat(cam_y)))
+        if ((!main.tick_frame and systems.screen == .game or
+            !main.editing_map and systems.screen == .editor) or
+            cam_x < 0 or cam_y < 0 or !map.validPos(@intFromFloat(cam_x), @intFromFloat(cam_y)))
             break :gamePass;
 
         const float_time_ms = @as(f32, @floatFromInt(time)) / std.time.us_per_ms;
@@ -2948,74 +2928,77 @@ pub fn draw(
                         square_idx = 0;
                     }
 
-                    const dx = cam_x - @as(f32, @floatFromInt(x)) - 0.5;
-                    const dy = cam_y - @as(f32, @floatFromInt(y)) - 0.5;
+                    const float_x: f32 = @floatFromInt(x);
+                    const float_y: f32 = @floatFromInt(y);
+
+                    const dx = cam_x - float_x - 0.5;
+                    const dy = cam_y - float_y - 0.5;
                     if (dx * dx + dy * dy > camera.max_dist_sq)
                         continue;
 
-                    const map_square_idx: u32 = @intCast(x + y * map.width);
-                    const square = map.squares.get(map_square_idx) orelse continue;
-                    if (square.tile_type == 0xFF)
-                        continue;
+                    if (map.getSquare(float_x, float_y)) |square| {
+                        if (square.tile_type == 0xFF)
+                            continue;
 
-                    const screen_pos = camera.rotateAroundCameraClip(square.x, square.y);
-                    const screen_x = screen_pos.x;
-                    const screen_y = -screen_pos.y;
+                        const screen_pos = camera.rotateAroundCameraClip(square.x, square.y);
+                        const screen_x = screen_pos.x;
+                        const screen_y = -screen_pos.y;
 
-                    var u_offset = square.u_offset;
-                    var v_offset = square.v_offset;
-                    if (settings.enable_lights) {
-                        const light_color = square.props.light_color;
-                        if (light_color != std.math.maxInt(u32)) {
-                            const size = camera.px_per_tile * (square.props.light_radius + square.props.light_pulse *
-                                @sin(float_time_ms / 1000.0 * square.props.light_pulse_speed));
-                            light_idx = drawLight(
-                                light_idx,
-                                size,
-                                size,
-                                screen_pos.x + camera.screen_width / 2.0,
-                                screen_pos.y + camera.screen_height / 2.0,
-                                light_color,
-                                square.props.light_intensity,
-                            );
+                        var u_offset = square.u_offset;
+                        var v_offset = square.v_offset;
+                        if (settings.enable_lights) {
+                            const light_color = square.props.light_color;
+                            if (light_color != std.math.maxInt(u32)) {
+                                const size = camera.px_per_tile * (square.props.light_radius + square.props.light_pulse *
+                                    @sin(float_time_ms / 1000.0 * square.props.light_pulse_speed));
+                                light_idx = drawLight(
+                                    light_idx,
+                                    size,
+                                    size,
+                                    screen_pos.x + camera.screen_width / 2.0,
+                                    screen_pos.y + camera.screen_height / 2.0,
+                                    light_color,
+                                    square.props.light_intensity,
+                                );
+                            }
                         }
-                    }
 
-                    switch (square.props.anim_type) {
-                        .wave => {
-                            u_offset += @sin(square.props.anim_dx * float_time_ms / 1000.0) * assets.base_texel_w;
-                            v_offset += @sin(square.props.anim_dy * float_time_ms / 1000.0) * assets.base_texel_h;
-                        },
-                        .flow => {
-                            u_offset += (square.props.anim_dx * float_time_ms / 1000.0) * assets.base_texel_w;
-                            v_offset += (square.props.anim_dy * float_time_ms / 1000.0) * assets.base_texel_h;
-                        },
-                        else => {},
-                    }
+                        switch (square.props.anim_type) {
+                            .wave => {
+                                u_offset += @sin(square.props.anim_dx * float_time_ms / 1000.0) * assets.base_texel_w;
+                                v_offset += @sin(square.props.anim_dy * float_time_ms / 1000.0) * assets.base_texel_h;
+                            },
+                            .flow => {
+                                u_offset += (square.props.anim_dx * float_time_ms / 1000.0) * assets.base_texel_w;
+                                v_offset += (square.props.anim_dy * float_time_ms / 1000.0) * assets.base_texel_h;
+                            },
+                            else => {},
+                        }
 
-                    const radius = @sqrt(@as(f32, camera.px_per_tile * camera.px_per_tile / 2)) + 1;
-                    const pi_div_4 = std.math.pi / 4.0;
-                    const top_right_angle = pi_div_4;
-                    const bottom_right_angle = 3.0 * pi_div_4;
-                    const bottom_left_angle = 5.0 * pi_div_4;
-                    const top_left_angle = 7.0 * pi_div_4;
+                        const radius = @sqrt(@as(f32, camera.px_per_tile * camera.px_per_tile / 2)) + 1;
+                        const pi_div_4 = std.math.pi / 4.0;
+                        const top_right_angle = pi_div_4;
+                        const bottom_right_angle = 3.0 * pi_div_4;
+                        const bottom_left_angle = 5.0 * pi_div_4;
+                        const top_left_angle = 7.0 * pi_div_4;
 
-                    drawSquare(
-                        square_idx,
-                        (screen_x + radius * @cos(top_left_angle + camera.angle)) * camera.clip_scale_x,
-                        (screen_y + radius * @sin(top_left_angle + camera.angle)) * camera.clip_scale_y,
-                        (screen_x + radius * @cos(bottom_left_angle + camera.angle)) * camera.clip_scale_x,
-                        (screen_y + radius * @sin(bottom_left_angle + camera.angle)) * camera.clip_scale_y,
-                        (screen_x + radius * @cos(bottom_right_angle + camera.angle)) * camera.clip_scale_x,
-                        (screen_y + radius * @sin(bottom_right_angle + camera.angle)) * camera.clip_scale_y,
-                        (screen_x + radius * @cos(top_right_angle + camera.angle)) * camera.clip_scale_x,
-                        (screen_y + radius * @sin(top_right_angle + camera.angle)) * camera.clip_scale_y,
-                        square.atlas_data,
-                        u_offset,
-                        v_offset,
-                        square.blends,
-                    );
-                    square_idx += 4;
+                        drawSquare(
+                            square_idx,
+                            (screen_x + radius * @cos(top_left_angle + camera.angle)) * camera.clip_scale_x,
+                            (screen_y + radius * @sin(top_left_angle + camera.angle)) * camera.clip_scale_y,
+                            (screen_x + radius * @cos(bottom_left_angle + camera.angle)) * camera.clip_scale_x,
+                            (screen_y + radius * @sin(bottom_left_angle + camera.angle)) * camera.clip_scale_y,
+                            (screen_x + radius * @cos(bottom_right_angle + camera.angle)) * camera.clip_scale_x,
+                            (screen_y + radius * @sin(bottom_right_angle + camera.angle)) * camera.clip_scale_y,
+                            (screen_x + radius * @cos(top_right_angle + camera.angle)) * camera.clip_scale_x,
+                            (screen_y + radius * @sin(top_right_angle + camera.angle)) * camera.clip_scale_y,
+                            square.atlas_data,
+                            u_offset,
+                            v_offset,
+                            square.blends,
+                        );
+                        square_idx += 4;
+                    } else continue;
                 }
             }
 
@@ -3300,14 +3283,16 @@ pub fn draw(
 
                         if (bo.props.draw_on_ground) {
                             const tile_size = @as(f32, camera.px_per_tile) * camera.scale;
-                            const h = tile_size / 2.0;
+                            const w = tile_size * (bo.atlas_data.texWRaw() / 8);
+                            const h = tile_size * (bo.atlas_data.texHRaw() / 8);
+                            const h_half = h / 2.0;
 
                             idx = drawQuad(
                                 idx,
-                                screen_pos.x - tile_size / 2.0,
-                                screen_pos.y - h,
-                                tile_size,
-                                tile_size,
+                                screen_pos.x - w / 2.0,
+                                screen_pos.y - h_half,
+                                w,
+                                h,
                                 bo.atlas_data,
                                 draw_data,
                                 &.{ .rotation = camera.angle, .alpha_mult = bo.alpha },
@@ -3319,7 +3304,7 @@ pub fn draw(
                                     idx = drawText(
                                         idx,
                                         screen_pos.x - data._width / 2,
-                                        screen_pos.y - h - data._height,
+                                        screen_pos.y - h_half - data._height - 5,
                                         data,
                                         draw_data,
                                         &.{},
@@ -3334,7 +3319,7 @@ pub fn draw(
                                     idx = drawQuad(
                                         idx,
                                         screen_pos.x - total_w / 2,
-                                        screen_pos.y + h + 5,
+                                        screen_pos.y + h_half + 5,
                                         button_w,
                                         button_h,
                                         settings.interact_key_tex,
@@ -3345,7 +3330,7 @@ pub fn draw(
                                     idx = drawText(
                                         idx,
                                         screen_pos.x - total_w / 2 + button_w,
-                                        screen_pos.y + h + 5,
+                                        screen_pos.y + h_half + 5,
                                         &enter_text_data,
                                         draw_data,
                                         &.{},
@@ -3410,7 +3395,7 @@ pub fn draw(
                                 idx = drawText(
                                     idx,
                                     screen_pos.x - x_offset - data._width / 2,
-                                    screen_pos.y - data._height,
+                                    screen_pos.y - data._height - 5,
                                     data,
                                     draw_data,
                                     &.{},
@@ -3667,7 +3652,6 @@ pub fn draw(
 
                     const opts: *const QuadOptions = &.{
                         .alpha_mult = image_data.alpha,
-                        .ui_quad = true,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                         .shadow_texel_mult = if (image_data.glow) 1.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,

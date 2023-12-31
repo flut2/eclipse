@@ -12,10 +12,15 @@ const zglfw = @import("zglfw");
 
 pub const padding = 2;
 
-pub const atlas_width: u32 = 4096;
-pub const atlas_height: u32 = 4096;
-pub const base_texel_w: f32 = 1.0 / 4096.0;
-pub const base_texel_h: f32 = 1.0 / 4096.0;
+pub const atlas_width: u32 = 2048;
+pub const atlas_height: u32 = 1024;
+pub const base_texel_w: f32 = 1.0 / 2048.0;
+pub const base_texel_h: f32 = 1.0 / 1024.0;
+
+pub const ui_atlas_width: u32 = 2048;
+pub const ui_atlas_height: u32 = 1024;
+pub const ui_texel_w: f32 = 1.0 / 2048.0;
+pub const ui_texel_h: f32 = 1.0 / 1024.0;
 
 pub const Action = enum {
     stand,
@@ -72,58 +77,74 @@ pub const CharacterData = struct {
 };
 
 pub const AnimEnemyData = struct {
-    // left/right dir
-    walk_anims: [2][3]AtlasData,
-    attack_anims: [2][2]AtlasData,
+    pub const directions = 2;
+    pub const walk_actions = 3;
+    pub const attack_actions = 2;
+
+    walk_anims: [directions * walk_actions]AtlasData,
+    attack_anims: [directions * attack_actions]AtlasData,
 };
 
 pub const AnimPlayerData = struct {
-    // all dirs
-    walk_anims: [4][3]AtlasData,
-    attack_anims: [4][2]AtlasData,
+    pub const directions = 4;
+    pub const walk_actions = 3;
+    pub const attack_actions = 2;
+
+    walk_anims: [directions * walk_actions]AtlasData,
+    attack_anims: [directions * attack_actions]AtlasData,
 };
 
-pub const AtlasData = packed struct {
+pub const AtlasData = extern struct {
     tex_u: f32,
     tex_v: f32,
     tex_w: f32,
     tex_h: f32,
+    ui: bool,
 
     pub fn removePadding(self: *AtlasData) void {
+        const w: f32 = if (self.ui) ui_atlas_width else atlas_width;
+        const h: f32 = if (self.ui) ui_atlas_height else atlas_height;
         const float_pad: f32 = padding;
-        self.tex_u += float_pad / @as(f32, atlas_width);
-        self.tex_v += float_pad / @as(f32, atlas_height);
-        self.tex_w -= float_pad * 2 / @as(f32, atlas_width);
-        self.tex_h -= float_pad * 2 / @as(f32, atlas_height);
+        self.tex_u += float_pad / w;
+        self.tex_v += float_pad / h;
+        self.tex_w -= float_pad * 2 / w;
+        self.tex_h -= float_pad * 2 / h;
     }
 
-    pub inline fn fromRaw(u: u32, v: u32, w: u32, h: u32) AtlasData {
-        return fromRawF32(@floatFromInt(u), @floatFromInt(v), @floatFromInt(w), @floatFromInt(h));
+    pub inline fn fromRaw(u: u32, v: u32, w: u32, h: u32, ui: bool) AtlasData {
+        return fromRawF32(@floatFromInt(u), @floatFromInt(v), @floatFromInt(w), @floatFromInt(h), ui);
     }
 
-    pub inline fn fromRawF32(u: f32, v: f32, w: f32, h: f32) AtlasData {
+    pub inline fn fromRawF32(u: f32, v: f32, w: f32, h: f32, ui: bool) AtlasData {
+        const atlas_w: f32 = if (ui) ui_atlas_width else atlas_width;
+        const atlas_h: f32 = if (ui) ui_atlas_height else atlas_height;
         return AtlasData{
-            .tex_u = u / @as(f32, atlas_width),
-            .tex_v = v / @as(f32, atlas_height),
-            .tex_w = w / @as(f32, atlas_width),
-            .tex_h = h / @as(f32, atlas_height),
+            .tex_u = u / atlas_w,
+            .tex_v = v / atlas_h,
+            .tex_w = w / atlas_w,
+            .tex_h = h / atlas_h,
+            .ui = ui,
         };
     }
 
     pub inline fn texURaw(self: AtlasData) f32 {
-        return self.tex_u * atlas_width;
+        const w: f32 = (if (self.ui) ui_atlas_width else atlas_width);
+        return self.tex_u * w;
     }
 
     pub inline fn texVRaw(self: AtlasData) f32 {
-        return self.tex_v * atlas_height;
+        const h: f32 = (if (self.ui) ui_atlas_height else ui_atlas_height);
+        return self.tex_v * h;
     }
 
     pub inline fn texWRaw(self: AtlasData) f32 {
-        return self.tex_w * atlas_width;
+        const w: f32 = (if (self.ui) ui_atlas_width else atlas_width);
+        return self.tex_w * w;
     }
 
     pub inline fn texHRaw(self: AtlasData) f32 {
-        return self.tex_h * atlas_height;
+        const h: f32 = (if (self.ui) ui_atlas_height else ui_atlas_height);
+        return self.tex_h * h;
     }
 };
 
@@ -184,7 +205,7 @@ const RGBA = packed struct(u32) {
     a: u8 = 0,
 };
 
-const AtlasHashHack = [4]u32;
+const AtlasHashHack = [5]u32;
 
 pub var sfx_path_buffer: [256]u8 = undefined;
 pub var audio_state: *AudioState = undefined;
@@ -243,15 +264,36 @@ pub var light_w: f32 = 1.0;
 pub var light_h: f32 = 1.0;
 pub var editor_tile: AtlasData = undefined;
 
-fn isImageEmpty(img: zstbi.Image, x: usize, y: usize, w: u32, h: u32) bool {
-    for (y..y + h) |loop_y| {
-        for (x..x + w) |loop_x| {
-            if (img.data[(loop_y * img.width + loop_x) * 4 + 3] != 0)
-                return false;
+fn imageBounds(img: zstbi.Image, x: usize, y: usize, cut_w: u32, cut_h: u32) struct {
+    w: u32,
+    h: u32,
+    x_offset: u16,
+    y_offset: u16,
+} {
+    var min_x = x + cut_w;
+    var min_y = y + cut_h;
+    var max_x = x;
+    var max_y = y;
+
+    for (y..y + cut_h) |loop_y| {
+        for (x..x + cut_w) |loop_x| {
+            if (img.data[(loop_y * img.width + loop_x) * 4 + 3] != 0) {
+                min_x = @min(min_x, loop_x);
+                min_y = @min(min_y, loop_y);
+                max_x = @max(max_x, loop_x);
+                max_y = @max(max_y, loop_y);
+            }
         }
     }
 
-    return true;
+    const w = if (min_x > max_x) 0 else max_x - min_x + 1;
+    const h = if (min_y > max_y) 0 else max_y - min_y + 1;
+    return .{
+        .w = @intCast(w),
+        .h = @intCast(h),
+        .x_offset = @intCast(if (w == 0 or x > min_x) 0 else min_x - x),
+        .y_offset = @intCast(if (h == 0 or y > min_y) 0 else min_y - y),
+    };
 }
 
 fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, comptime cut_height: u32, allocator: std.mem.Allocator) !void {
@@ -306,27 +348,36 @@ fn addImage(
     comptime image_name: [:0]const u8,
     comptime cut_width: u32,
     comptime cut_height: u32,
+    comptime dont_trim: bool,
     ctx: *zstbrp.PackContext,
     allocator: std.mem.Allocator,
 ) !void {
     var img = try zstbi.Image.loadFromFile(asset_dir ++ "sheets/" ++ image_name, 4);
     defer img.deinit();
 
-    const img_size = cut_width * cut_height;
-    const len = @divFloor(img.width * img.height, img_size);
+    const len = @divFloor(img.width * img.height, cut_width * cut_height);
     var current_rects = try allocator.alloc(zstbrp.PackRect, len);
     defer allocator.free(current_rects);
 
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
         const cur_src_y = @divFloor(i * cut_width, img.width) * cut_height;
-
-        if (!isImageEmpty(img, cur_src_x, cur_src_y, cut_width, cut_height)) {
-            current_rects[i].w = cut_width + padding * 2;
-            current_rects[i].h = cut_height + padding * 2;
+        const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width, cut_height);
+        if (dont_trim) {
+            current_rects[i].src_x = @intCast(cur_src_x);
+            current_rects[i].src_y = @intCast(cur_src_y);
+            if (bounds.w == 0 or bounds.h == 0) {
+                current_rects[i].w = 0;
+                current_rects[i].h = 0;
+            } else {
+                current_rects[i].w = cut_width + padding * 2;
+                current_rects[i].h = cut_height + padding * 2;
+            }
         } else {
-            current_rects[i].w = 0;
-            current_rects[i].h = 0;
+            current_rects[i].src_x = @intCast(cur_src_x + bounds.x_offset);
+            current_rects[i].src_y = @intCast(cur_src_y + bounds.y_offset);
+            current_rects[i].w = bounds.w + padding * 2;
+            current_rects[i].h = bounds.h + padding * 2;
         }
     }
 
@@ -341,34 +392,35 @@ fn addImage(
 
         for (0..len) |i| {
             const rect = current_rects[i];
-            if (rect.w == 0 or rect.h == 0)
+            if (rect.w <= 0 or rect.h <= 0)
                 continue;
 
             const cur_atlas_x = rect.x + padding;
             const cur_atlas_y = rect.y + padding;
-            const cur_src_x = (i * cut_width) % img.width;
-            const cur_src_y = @divFloor(i * cut_width, img.width) * cut_height;
 
             color_counts.clearRetainingCapacity();
 
-            for (0..img_size) |j| {
-                const row_count = @divFloor(j, cut_width);
-                const row_idx = j % cut_width;
-                const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
-                const src_idx = ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
-                @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
+            const w = rect.w - padding * 2;
+            const h = rect.h - padding * 2;
+            for (0..h) |j| {
+                const atlas_idx = ((cur_atlas_y + j) * atlas_width + cur_atlas_x) * 4;
+                const src_idx = ((rect.src_y + j) * img.width + rect.src_x) * 4;
+                @memcpy(atlas.data[atlas_idx .. atlas_idx + w * 4], img.data[src_idx .. src_idx + w * 4]);
 
-                if (img.data[src_idx + 3] > 0) {
-                    const rgba = RGBA{
-                        .r = img.data[src_idx],
-                        .g = img.data[src_idx + 1],
-                        .b = img.data[src_idx + 2],
-                        .a = 255,
-                    };
-                    if (color_counts.get(rgba)) |count| {
-                        try color_counts.put(rgba, count + 1);
-                    } else {
-                        try color_counts.put(rgba, 1);
+                for (0..w) |k| {
+                    const x_offset = k * 4;
+                    if (img.data[src_idx + 3 + x_offset] > 0) {
+                        const rgba = RGBA{
+                            .r = img.data[src_idx + x_offset],
+                            .g = img.data[src_idx + 1 + x_offset],
+                            .b = img.data[src_idx + 2 + x_offset],
+                            .a = 255,
+                        };
+                        if (color_counts.get(rgba)) |count| {
+                            try color_counts.put(rgba, count + 1);
+                        } else {
+                            try color_counts.put(rgba, 1);
+                        }
                     }
                 }
             }
@@ -389,7 +441,7 @@ fn addImage(
                 }
             }
 
-            data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
+            data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, false);
             try atlas_to_color_data.put(@bitCast(data[i]), try allocator.dupe(u32, colors.items));
         }
 
@@ -415,8 +467,7 @@ fn addUiImage(
     const cut_width = if (cut_width_base == imply_size) img.width else cut_width_base;
     const cut_height = if (cut_height_base == imply_size) img.height else cut_height_base;
 
-    const img_size = cut_width * cut_height;
-    const len = @divFloor(img.width * img.height, img_size);
+    const len = @divFloor(img.width * img.height, cut_width * cut_height);
     var current_rects = try allocator.alloc(zstbrp.PackRect, len);
     defer allocator.free(current_rects);
     var data = try allocator.alloc(AtlasData, len);
@@ -424,36 +475,31 @@ fn addUiImage(
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
         const cur_src_y = @divFloor(i * cut_width, img.width) * cut_height;
-
-        if (!isImageEmpty(img, cur_src_x, cur_src_y, cut_width, cut_height)) {
-            current_rects[i].w = cut_width + padding * 2;
-            current_rects[i].h = cut_height + padding * 2;
-        } else {
-            current_rects[i].w = 0;
-            current_rects[i].h = 0;
-        }
+        const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width, cut_height);
+        current_rects[i].src_x = @intCast(cur_src_x + bounds.x_offset);
+        current_rects[i].src_y = @intCast(cur_src_y + bounds.y_offset);
+        current_rects[i].w = bounds.w + padding * 2;
+        current_rects[i].h = bounds.h + padding * 2;
     }
 
     if (zstbrp.packRects(ctx, current_rects)) {
         for (0..len) |i| {
             const rect = current_rects[i];
-            if (rect.w == 0 or rect.h == 0)
+            if (rect.w <= 0 or rect.h <= 0)
                 continue;
 
             const cur_atlas_x = rect.x + padding;
             const cur_atlas_y = rect.y + padding;
-            const cur_src_x = (i * cut_width) % img.width;
-            const cur_src_y = @divFloor(i * cut_width, img.width) * cut_height;
 
-            for (0..img_size) |j| {
-                const row_count = @divFloor(j, cut_width);
-                const row_idx = j % cut_width;
-                const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
-                const src_idx = ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
-                @memcpy(ui_atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
+            const w = rect.w - padding * 2;
+            const h = rect.h - padding * 2;
+            for (0..h) |j| {
+                const atlas_idx = ((cur_atlas_y + j) * atlas_width + cur_atlas_x) * 4;
+                const src_idx = ((rect.src_y + j) * img.width + rect.src_x) * 4;
+                @memcpy(ui_atlas.data[atlas_idx .. atlas_idx + w * 4], img.data[src_idx .. src_idx + w * 4]);
             }
 
-            data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
+            data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, true);
         }
 
         try ui_atlas_data.put(sheet_name, data);
@@ -475,7 +521,6 @@ fn addAnimEnemy(
     var img = try zstbi.Image.loadFromFile(asset_dir ++ "sheets/" ++ image_name, 4);
     defer img.deinit();
 
-    const img_size = cut_width * cut_height;
     const len = @divFloor(img.width, full_cut_width) * @divFloor(img.height, full_cut_height) * 5;
 
     var current_rects = try allocator.alloc(zstbrp.PackRect, len * 2);
@@ -485,15 +530,12 @@ fn addAnimEnemy(
         for (0..len) |j| {
             const cur_src_x = (j % 5) * cut_width;
             const cur_src_y = @divFloor(j, 5) * cut_height;
-
             const attack_scale = @as(u32, @intFromBool(j % 5 == 4)) + 1;
-            if (!isImageEmpty(img, cur_src_x, cur_src_y, cut_width * attack_scale, cut_height)) {
-                current_rects[i * len + j].w = (cut_width + padding * 2) * attack_scale;
-                current_rects[i * len + j].h = cut_height + padding * 2;
-            } else {
-                current_rects[i * len + j].w = 0;
-                current_rects[i * len + j].h = 0;
-            }
+            const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width * attack_scale, cut_height);
+            current_rects[i * len + j].src_x = @intCast(cur_src_x + bounds.x_offset);
+            current_rects[i * len + j].src_y = @intCast(cur_src_y + bounds.y_offset);
+            current_rects[i * len + j].w = bounds.w + padding * 2;
+            current_rects[i * len + j].h = bounds.h + padding * 2;
         }
     }
 
@@ -509,37 +551,36 @@ fn addAnimEnemy(
         for (0..2) |i| {
             for (0..len) |j| {
                 const rect = current_rects[i * len + j];
-                if (rect.w == 0 or rect.h == 0)
+                if (rect.w <= 0 or rect.h <= 0)
                     continue;
 
                 color_counts.clearRetainingCapacity();
 
-                const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
+                const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, false);
                 const frame_idx = j % 5;
                 const set_idx = @divFloor(j, 5);
                 if (frame_idx >= 3) {
-                    enemy_data[set_idx].attack_anims[i][frame_idx - 3] = data;
+                    const dir_idx = i * AnimEnemyData.attack_actions;
+                    enemy_data[set_idx].attack_anims[dir_idx + frame_idx - 3] = data;
                 } else {
-                    enemy_data[set_idx].walk_anims[i][frame_idx] = data;
+                    const dir_idx = i * AnimEnemyData.walk_actions;
+                    enemy_data[set_idx].walk_anims[dir_idx + frame_idx] = data;
                 }
 
                 const cur_atlas_x = rect.x + padding;
                 const cur_atlas_y = rect.y + padding;
-                const cur_src_x = frame_idx * cut_width;
-                const cur_src_y = set_idx * cut_height;
+                const w = rect.w - padding * 2;
+                const h = rect.h - padding * 2;
 
-                const attack_scale = @as(u32, @intFromBool(j % 5 == 4)) + 1;
-                const size = img_size * attack_scale;
-                const scaled_w = cut_width * attack_scale;
-                for (0..size) |k| {
-                    const row_count = @divFloor(k, scaled_w);
-                    const row_idx = k % scaled_w;
+                for (0..w * h) |k| {
+                    const row_count = @divFloor(k, w);
+                    const row_idx = k % w;
                     const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
 
                     const src_idx = if (i == @intFromEnum(Direction.left))
-                        ((cur_src_y + row_count) * img.width + cur_src_x + scaled_w - row_idx - 1) * 4
+                        ((rect.src_y + row_count) * img.width + rect.src_x + w - row_idx - 1) * 4
                     else
-                        ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
+                        ((rect.src_y + row_count) * img.width + rect.src_x + row_idx) * 4;
 
                     @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
 
@@ -598,7 +639,6 @@ fn addAnimPlayer(
     var img = try zstbi.Image.loadFromFile(asset_dir ++ "sheets/" ++ image_name, 4);
     defer img.deinit();
 
-    const img_size = cut_width * cut_height;
     var len = @divFloor(img.width, full_cut_width) * @divFloor(img.height, full_cut_height) * 5;
     len += @divFloor(len, 3);
 
@@ -606,24 +646,21 @@ fn addAnimPlayer(
     defer allocator.free(current_rects);
 
     var left_sub: u32 = 0;
-    for (0..len) |j| {
-        const frame_idx = j % 5;
-        const set_idx = @divFloor(j, 5);
+    for (0..len) |i| {
+        const frame_idx = i % 5;
+        const set_idx = @divFloor(i, 5);
         const cur_src_x = frame_idx * cut_width;
         if (set_idx % 4 == 1 and frame_idx == 0) {
             left_sub += 1;
         }
 
         const cur_src_y = (set_idx - left_sub) * cut_height;
-
         const attack_scale = @as(u32, @intFromBool(frame_idx == 4)) + 1;
-        if (!isImageEmpty(img, cur_src_x, cur_src_y, cut_width * attack_scale, cut_height)) {
-            current_rects[j].w = (cut_width + padding * 2) * attack_scale;
-            current_rects[j].h = cut_height + padding * 2;
-        } else {
-            current_rects[j].w = 0;
-            current_rects[j].h = 0;
-        }
+        const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width * attack_scale, cut_height);
+        current_rects[i].src_x = @intCast(cur_src_x + bounds.x_offset);
+        current_rects[i].src_y = @intCast(cur_src_y + bounds.y_offset);
+        current_rects[i].w = bounds.w + padding * 2;
+        current_rects[i].h = bounds.h + padding * 2;
     }
 
     if (zstbrp.packRects(ctx, current_rects)) {
@@ -639,12 +676,12 @@ fn addAnimPlayer(
 
         for (0..len) |j| {
             const rect = current_rects[j];
-            if (rect.w == 0 or rect.h == 0)
+            if (rect.w <= 0 or rect.h <= 0)
                 continue;
 
             color_counts.clearRetainingCapacity();
 
-            const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h);
+            const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, false);
             const frame_idx = j % 5;
             const set_idx = @divFloor(j, 5);
             if (set_idx % 4 == 1 and frame_idx == 0) {
@@ -653,27 +690,26 @@ fn addAnimPlayer(
 
             const data_idx = @divFloor(set_idx, 4);
             if (frame_idx >= 3) {
-                player_data[data_idx].attack_anims[set_idx % 4][frame_idx - 3] = data;
+                const dir_idx = (set_idx % 4) * AnimPlayerData.attack_actions;
+                player_data[data_idx].attack_anims[dir_idx + frame_idx - 3] = data;
             } else {
-                player_data[data_idx].walk_anims[set_idx % 4][frame_idx] = data;
+                const dir_idx = (set_idx % 4) * AnimPlayerData.walk_actions;
+                player_data[data_idx].walk_anims[dir_idx + frame_idx] = data;
             }
             const cur_atlas_x = rect.x + padding;
             const cur_atlas_y = rect.y + padding;
-            const cur_src_x = frame_idx * cut_width;
-            const cur_src_y = (set_idx - left_sub) * cut_height;
+            const w = rect.w - padding * 2;
+            const h = rect.h - padding * 2;
 
-            const attack_scale = @as(u32, @intFromBool(frame_idx == 4)) + 1;
-            const size = img_size * attack_scale;
-            const scaled_w = cut_width * attack_scale;
-            for (0..size) |k| {
-                const row_count = @divFloor(k, scaled_w);
-                const row_idx = k % scaled_w;
+            for (0..w * h) |k| {
+                const row_count = @divFloor(k, w);
+                const row_idx = k % w;
                 const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
 
                 const src_idx = if (set_idx % 4 == @intFromEnum(Direction.left))
-                    ((cur_src_y + row_count) * img.width + cur_src_x + scaled_w - row_idx - 1) * 4
+                    ((rect.src_y + row_count) * img.width + rect.src_x + w - row_idx - 1) * 4
                 else
-                    ((cur_src_y + row_count) * img.width + cur_src_x + row_idx) * 4;
+                    ((rect.src_y + row_count) * img.width + rect.src_x + row_idx) * 4;
 
                 @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
 
@@ -907,26 +943,26 @@ pub fn init(allocator: std.mem.Allocator) !void {
     defer allocator.free(nodes);
     zstbrp.initPack(&ctx, nodes);
 
-    try addImage("bars", "bars.png", 24, 8, &ctx, allocator);
-    try addImage("conditions", "conditions.png", 16, 16, &ctx, allocator);
-    try addImage("error_texture", "error_texture.png", 8, 8, &ctx, allocator);
-    try addImage("invisible", "invisible.png", 8, 8, &ctx, allocator);
-    try addImage("ground", "ground.png", 8, 8, &ctx, allocator);
-    try addImage("ground_masks", "ground_masks.png", 8, 8, &ctx, allocator);
-    try addImage("key_indicators", "key_indicators.png", 100, 100, &ctx, allocator);
-    try addImage("items", "items.png", 8, 8, &ctx, allocator);
-    try addImage("misc", "misc.png", 8, 8, &ctx, allocator);
-    try addImage("misc_16", "misc_16.png", 16, 16, &ctx, allocator);
-    try addImage("portals", "portals.png", 8, 8, &ctx, allocator);
-    try addImage("portals_16", "portals_16.png", 16, 16, &ctx, allocator);
-    try addImage("props", "props.png", 8, 8, &ctx, allocator);
-    try addImage("props_16", "props_16.png", 16, 16, &ctx, allocator);
-    try addImage("projectiles", "projectiles.png", 8, 8, &ctx, allocator);
-    try addImage("tiered_items", "tiered_items.png", 8, 8, &ctx, allocator);
-    try addImage("tiered_projectiles", "tiered_projectiles.png", 8, 8, &ctx, allocator);
-    try addImage("wall_backface", "wall_backface.png", 8, 8, &ctx, allocator);
-    try addImage("particles", "particles.png", 8, 8, &ctx, allocator);
-    try addImage("editor_tile_base", "editor_tile_base.png", 8, 8, &ctx, allocator);
+    try addImage("bars", "bars.png", 24, 8, false, &ctx, allocator);
+    try addImage("conditions", "conditions.png", 16, 16, false, &ctx, allocator);
+    try addImage("error_texture", "error_texture.png", 8, 8, false, &ctx, allocator);
+    try addImage("invisible", "invisible.png", 8, 8, false, &ctx, allocator);
+    try addImage("ground", "ground.png", 8, 8, false, &ctx, allocator);
+    try addImage("ground_masks", "ground_masks.png", 8, 8, true, &ctx, allocator);
+    try addImage("key_indicators", "key_indicators.png", 100, 100, false, &ctx, allocator);
+    try addImage("items", "items.png", 8, 8, false, &ctx, allocator);
+    try addImage("misc", "misc.png", 8, 8, false, &ctx, allocator);
+    try addImage("misc_16", "misc_16.png", 16, 16, false, &ctx, allocator);
+    try addImage("portals", "portals.png", 8, 8, false, &ctx, allocator);
+    try addImage("portals_16", "portals_16.png", 16, 16, false, &ctx, allocator);
+    try addImage("props", "props.png", 8, 8, false, &ctx, allocator);
+    try addImage("props_16", "props_16.png", 16, 16, false, &ctx, allocator);
+    try addImage("projectiles", "projectiles.png", 8, 8, false, &ctx, allocator);
+    try addImage("tiered_items", "tiered_items.png", 8, 8, false, &ctx, allocator);
+    try addImage("tiered_projectiles", "tiered_projectiles.png", 8, 8, false, &ctx, allocator);
+    try addImage("wall_backface", "wall_backface.png", 8, 8, false, &ctx, allocator);
+    try addImage("particles", "particles.png", 8, 8, false, &ctx, allocator);
+    try addImage("editor_tile_base", "editor_tile_base.png", 8, 8, false, &ctx, allocator);
 
     try addAnimEnemy("low_realm", "low_realm.png", 8, 8, 48, 8, &ctx, allocator);
     try addAnimEnemy("low_realm_16", "low_realm_16.png", 16, 16, 96, 16, &ctx, allocator);
@@ -938,10 +974,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
     if (settings.print_atlas)
         try zstbi.Image.writeToFile(atlas, "atlas.png", .png);
 
-    ui_atlas = try zstbi.Image.createEmpty(atlas_width, atlas_height, 4, .{});
+    ui_atlas = try zstbi.Image.createEmpty(ui_atlas_width, ui_atlas_height, 4, .{});
     var ui_ctx = zstbrp.PackContext{
-        .width = atlas_width,
-        .height = atlas_height,
+        .width = ui_atlas_width,
+        .height = ui_atlas_height,
         .num_nodes = 100,
     };
 
@@ -1050,30 +1086,18 @@ pub fn init(allocator: std.mem.Allocator) !void {
     if (atlas_data.get("error_texture")) |error_tex| {
         error_data = error_tex[0x0];
 
+        const enemy_walk_frames = AnimEnemyData.directions * AnimEnemyData.walk_actions;
+        const enemy_attack_frames = AnimEnemyData.directions * AnimEnemyData.attack_actions;
         error_data_enemy = AnimEnemyData{
-            .walk_anims = [2][3]AtlasData{
-                [_]AtlasData{ error_data, error_data, error_data },
-                [_]AtlasData{ error_data, error_data, error_data },
-            },
-            .attack_anims = [2][2]AtlasData{
-                [_]AtlasData{ error_data, error_data },
-                [_]AtlasData{ error_data, error_data },
-            },
+            .walk_anims = [_]AtlasData{error_data} ** enemy_walk_frames,
+            .attack_anims = [_]AtlasData{error_data} ** enemy_attack_frames,
         };
 
+        const player_walk_frames = AnimPlayerData.directions * AnimPlayerData.walk_actions;
+        const player_attack_frames = AnimPlayerData.directions * AnimPlayerData.attack_actions;
         error_data_player = AnimPlayerData{
-            .walk_anims = [4][3]AtlasData{
-                [_]AtlasData{ error_data, error_data, error_data },
-                [_]AtlasData{ error_data, error_data, error_data },
-                [_]AtlasData{ error_data, error_data, error_data },
-                [_]AtlasData{ error_data, error_data, error_data },
-            },
-            .attack_anims = [4][2]AtlasData{
-                [_]AtlasData{ error_data, error_data },
-                [_]AtlasData{ error_data, error_data },
-                [_]AtlasData{ error_data, error_data },
-                [_]AtlasData{ error_data, error_data },
-            },
+            .walk_anims = [_]AtlasData{error_data} ** player_walk_frames,
+            .attack_anims = [_]AtlasData{error_data} ** player_attack_frames,
         };
     } else std.debug.panic("Could not find error_texture in the atlas", .{});
 

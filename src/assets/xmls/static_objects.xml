@@ -1503,6 +1503,7 @@
                 </Texture>
             </Frame>
         </Animation>
+        <Static/>
         <LightColor>0xf5501d</LightColor>
         <LightIntensity>0.25</LightIntensity>
         <LightRadius>3</LightRadius>
@@ -1540,6 +1541,7 @@
                 </Texture>
             </Frame>
         </Animation>
+        <Static/>
         <LightColor>0xe0d751</LightColor>
         <LightIntensity>0.25</LightIntensity>
         <LightRadius>2</LightRadius>
@@ -1577,6 +1579,7 @@
                 </Texture>
             </Frame>
         </Animation>
+        <Static/>
         <LightColor>0xd03fe0</LightColor>
         <LightIntensity>0.25</LightIntensity>
         <LightRadius>2</LightRadius>
@@ -1617,6 +1620,7 @@
         <LightColor>0xd03fe0</LightColor>
         <LightIntensity>0.25</LightIntensity>
         <LightRadius>2</LightRadius>
+        <Static />
         <OccupySquare/>
     </Object>
 </Objects>

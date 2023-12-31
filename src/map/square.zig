@@ -19,7 +19,7 @@ pub const Square = struct {
     tile_type: u16 = 0xFFFF,
     x: f32 = 0.0,
     y: f32 = 0.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
     blends: [4]Blend = [_]Blend{.{ .u = -1.0, .v = -1.0 }} ** 4,
     props: *const game_data.GroundProps = undefined,
     static_obj_id: i32 = -1,
@@ -67,13 +67,10 @@ pub const Square = struct {
                     map.minimap.data[base_data_idx + 2] = color.b;
                     map.minimap.data[base_data_idx + 3] = color.a;
 
-                    const ux: u32 = floor_x;
-                    const uy: u32 = floor_y;
-
-                    main.minimap_update_min_x = @min(main.minimap_update_min_x, ux);
-                    main.minimap_update_max_x = @max(main.minimap_update_max_x, ux);
-                    main.minimap_update_min_y = @min(main.minimap_update_min_y, uy);
-                    main.minimap_update_max_y = @max(main.minimap_update_max_y, uy);
+                    main.minimap_update_min_x = @min(main.minimap_update_min_x, floor_x);
+                    main.minimap_update_max_x = @max(main.minimap_update_max_x, floor_x);
+                    main.minimap_update_min_y = @min(main.minimap_update_min_y, floor_y);
+                    main.minimap_update_max_y = @max(main.minimap_update_max_y, floor_y);
                 }
 
                 self.updateBlends();
@@ -95,8 +92,9 @@ pub const Square = struct {
         };
     }
 
-    inline fn parseDir(x: u32, y: u32, square: *Square, current_prio: i32, comptime blend_idx: comptime_int) void {
-        if (map.squares.getPtr(x + y * map.width)) |other_sq| {
+    inline fn parseDir(x: f32, y: f32, square: *Square, current_prio: i32, comptime blend_idx: comptime_int) void {
+        const opposite_idx = (blend_idx + 2) % 4;
+        if (map.getSquarePtr(x, y)) |other_sq| {
             const has_wall = blk: {
                 const en = map.findEntityConst(other_sq.static_obj_id) orelse break :blk false;
                 break :blk en == .object and en.object.class == .wall;
@@ -109,16 +107,16 @@ pub const Square = struct {
                         .u = other_sq.atlas_data.tex_u,
                         .v = other_sq.atlas_data.tex_v,
                     };
-                    other_sq.blends[(blend_idx + 2) % 4] = .{ .u = -1.0, .v = -1.0 };
+                    other_sq.blends[opposite_idx] = .{ .u = -1.0, .v = -1.0 };
                 } else if (other_blend_prio < current_prio) {
-                    other_sq.blends[(blend_idx + 2) % 4] = .{
+                    other_sq.blends[opposite_idx] = .{
                         .u = square.atlas_data.tex_u,
                         .v = square.atlas_data.tex_v,
                     };
                     square.blends[blend_idx] = .{ .u = -1.0, .v = -1.0 };
                 } else {
                     square.blends[blend_idx] = .{ .u = -1.0, .v = -1.0 };
-                    other_sq.blends[(blend_idx + 2) % 4] = .{ .u = -1.0, .v = -1.0 };
+                    other_sq.blends[opposite_idx] = .{ .u = -1.0, .v = -1.0 };
                 }
             }
         }
@@ -128,13 +126,11 @@ pub const Square = struct {
         if (square.tile_type == 0xFF)
             return;
 
-        const x: u32 = @intFromFloat(square.x);
-        const y: u32 = @intFromFloat(square.y);
         const current_prio = square.props.blend_prio;
 
-        if (x > 0 and map.validPos(x - 1, y)) parseDir(x - 1, y, square, current_prio, left_blend_idx);
-        if (y > 0 and map.validPos(x, y - 1)) parseDir(x, y - 1, square, current_prio, top_blend_idx);
-        if (x < std.math.maxInt(u32) and map.validPos(x + 1, y)) parseDir(x + 1, y, square, current_prio, right_blend_idx);
-        if (y < std.math.maxInt(u32) and map.validPos(x, y + 1)) parseDir(x, y + 1, square, current_prio, bottom_blend_idx);
+        if (square.x > 0) parseDir(square.x - 1, square.y, square, current_prio, left_blend_idx);
+        if (square.y > 0) parseDir(square.x, square.y - 1, square, current_prio, top_blend_idx);
+        if (square.x < std.math.maxInt(u32)) parseDir(square.x + 1, square.y, square, current_prio, right_blend_idx);
+        if (square.y < std.math.maxInt(u32)) parseDir(square.x, square.y + 1, square, current_prio, bottom_blend_idx);
     }
 };

@@ -1,5 +1,7 @@
 pub const PackRect = extern struct {
-    id: u32,
+    // these are supposed to be id: u32, which is for the user to decide usage. kind of a hack doing this
+    src_x: u16,
+    src_y: u16,
     w: u32,
     h: u32,
     x: u32,

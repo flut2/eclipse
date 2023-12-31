@@ -287,7 +287,6 @@ pub const GameScreen = struct {
                 .size = 12,
                 .max_chars = 64,
             },
-            .ui_quad = false,
         });
 
         screen.next_tier_icon = try screen.ability_container.createChild(element.Image{
@@ -299,7 +298,6 @@ pub const GameScreen = struct {
                 .size = 12,
                 .max_chars = 64,
             },
-            .ui_quad = false,
         });
 
         const xp_bar_data = assets.getUiData("player_xp_bar", 0);

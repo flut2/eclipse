@@ -11,7 +11,7 @@ pub const ThrowParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
 
     initial_size: f32,
     lifetime: f32,
@@ -32,7 +32,7 @@ pub const ThrowParticle = struct {
         };
     }
 
-    pub fn update(self: *ThrowParticle, time: i64, dt: f32) bool {
+    pub inline fn update(self: *ThrowParticle, time: i64, dt: f32) bool {
         self.time_left -= dt;
         if (self.time_left <= 0)
             return false;
@@ -71,7 +71,7 @@ pub const SparkerParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
 
     initial_size: f32,
     lifetime: f32,
@@ -92,7 +92,7 @@ pub const SparkerParticle = struct {
         };
     }
 
-    pub fn update(self: *SparkerParticle, time: i64, dt: f32) bool {
+    pub inline fn update(self: *SparkerParticle, time: i64, dt: f32) bool {
         self.time_left -= dt;
         if (self.time_left <= 0)
             return false;
@@ -131,7 +131,7 @@ pub const SparkParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
 
     initial_size: f32,
     lifetime: f32,
@@ -150,7 +150,7 @@ pub const SparkParticle = struct {
         };
     }
 
-    pub fn update(self: *SparkParticle, _: i64, dt: f32) bool {
+    pub inline fn update(self: *SparkParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
         if (self.time_left <= 0)
             return false;
@@ -170,7 +170,7 @@ pub const TeleportParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
 
     time_left: f32,
     z_dir: f32,
@@ -186,7 +186,7 @@ pub const TeleportParticle = struct {
         };
     }
 
-    pub fn update(self: *TeleportParticle, _: i64, dt: f32) bool {
+    pub inline fn update(self: *TeleportParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
         if (self.time_left <= 0)
             return false;
@@ -205,7 +205,7 @@ pub const ExplosionParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
 
     lifetime: f32,
     time_left: f32,
@@ -224,7 +224,7 @@ pub const ExplosionParticle = struct {
         };
     }
 
-    pub fn update(self: *ExplosionParticle, _: i64, dt: f32) bool {
+    pub inline fn update(self: *ExplosionParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
         if (self.time_left <= 0)
             return false;
@@ -245,7 +245,7 @@ pub const HitParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
 
     lifetime: f32,
     time_left: f32,
@@ -264,7 +264,7 @@ pub const HitParticle = struct {
         };
     }
 
-    pub fn update(self: *HitParticle, _: i64, dt: f32) bool {
+    pub inline fn update(self: *HitParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
         if (self.time_left <= 0)
             return false;
@@ -285,7 +285,7 @@ pub const HealParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
 
     target_id: i32,
     angle: f32,
@@ -304,7 +304,7 @@ pub const HealParticle = struct {
         };
     }
 
-    pub fn update(self: *HealParticle, _: i64, dt: f32) bool {
+    pub inline fn update(self: *HealParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
         if (self.time_left <= 0)
             return false;
@@ -376,7 +376,7 @@ pub const ThrowEffect = struct {
         };
     }
 
-    pub fn update(self: *ThrowEffect, _: i64, _: f32) bool {
+    pub inline fn update(self: *ThrowEffect, _: i64, _: f32) bool {
         const duration: f32 = @floatFromInt((if (self.duration == 0) 1500 else self.duration) * std.time.us_per_ms);
         var particle = ThrowParticle{
             .size = 2.0,
@@ -412,7 +412,7 @@ pub const AoeEffect = struct {
         };
     }
 
-    pub fn update(self: *AoeEffect, _: i64, _: f32) bool {
+    pub inline fn update(self: *AoeEffect, _: i64, _: f32) bool {
         const part_num = 4 + self.radius * 2;
         for (0..@intFromFloat(part_num)) |i| {
             const float_i: f32 = @floatFromInt(i);
@@ -453,7 +453,7 @@ pub const TeleportEffect = struct {
         };
     }
 
-    pub fn update(self: *TeleportEffect, _: i64, _: f32) bool {
+    pub inline fn update(self: *TeleportEffect, _: i64, _: f32) bool {
         for (0..20) |_| {
             const rand = utils.rng.random().float(f32);
             const angle = 2.0 * std.math.pi * rand;
@@ -492,7 +492,7 @@ pub const LineEffect = struct {
         };
     }
 
-    pub fn update(self: *LineEffect, _: i64, _: f32) bool {
+    pub inline fn update(self: *LineEffect, _: i64, _: f32) bool {
         const duration = 0.7 * std.time.us_per_s;
         for (0..30) |i| {
             const f = @as(f32, @floatFromInt(i)) / 30;
@@ -533,7 +533,7 @@ pub const ExplosionEffect = struct {
         };
     }
 
-    pub fn update(self: *ExplosionEffect, _: i64, _: f32) bool {
+    pub inline fn update(self: *ExplosionEffect, _: i64, _: f32) bool {
         if (self.colors.len == 0)
             return false;
 
@@ -578,7 +578,7 @@ pub const HitEffect = struct {
         };
     }
 
-    pub fn update(self: *HitEffect, _: i64, _: f32) bool {
+    pub inline fn update(self: *HitEffect, _: i64, _: f32) bool {
         if (self.colors.len == 0)
             return false;
 
@@ -621,7 +621,7 @@ pub const HealEffect = struct {
         };
     }
 
-    pub fn update(self: *HealEffect, _: i64, _: f32) bool {
+    pub inline fn update(self: *HealEffect, _: i64, _: f32) bool {
         if (map.findEntityConst(self.target_id)) |en| {
             switch (en) {
                 .particle_effect, .particle, .projectile => {},
@@ -674,7 +674,7 @@ pub const RingEffect = struct {
         };
     }
 
-    pub fn update(self: *RingEffect, time: i64, _: f32) bool {
+    pub inline fn update(self: *RingEffect, time: i64, _: f32) bool {
         if (self.cooldown > 0 and time < self.last_activate + self.cooldown)
             return true;
 

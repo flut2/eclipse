@@ -37,8 +37,8 @@ pub const GameObject = struct {
     portal_active: bool = false,
     owner_account_id: i32 = 0,
     anim_data: ?assets.AnimEnemyData = null,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
-    top_atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    top_atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
     move_angle: f32 = std.math.nan(f32),
     move_step: f32 = 0.0,
     target_x: f32 = 0.0,
@@ -58,9 +58,6 @@ pub const GameObject = struct {
     _disposed: bool = false,
 
     pub inline fn addToMap(self: *GameObject, allocator: std.mem.Allocator) void {
-        const floor_y: u32 = @intFromFloat(@floor(self.y));
-        const floor_x: u32 = @intFromFloat(@floor(self.x));
-
         self.class = game_data.obj_type_to_class.get(self.obj_type) orelse blk: {
             std.log.err("Parsing class for object with type 0x{x} failed, using .game_object", .{self.obj_type});
             break :blk .game_object;
@@ -89,8 +86,8 @@ pub const GameObject = struct {
             }
         }
 
-        if (self.props.static and map.validPos(floor_x, floor_y)) {
-            if (map.squares.getPtr(floor_y * map.width + floor_x)) |square| {
+        if (self.props.static) {
+            if (map.getSquarePtr(self.x, self.y)) |square| {
                 square.static_obj_id = self.obj_id;
             }
         }
@@ -112,7 +109,7 @@ pub const GameObject = struct {
                         self.anim_data = assets.error_data_enemy;
                     }
 
-                    self.colors = assets.atlas_to_color_data.get(@bitCast(self.anim_data.?.walk_anims[0][0])) orelse blk: {
+                    self.colors = assets.atlas_to_color_data.get(@bitCast(self.anim_data.?.walk_anims[0])) orelse blk: {
                         std.log.err("Could not parse color data for object with id {d}. Setting it to empty", .{self.obj_id});
                         break :blk &[0]u32{};
                     };
@@ -131,6 +128,9 @@ pub const GameObject = struct {
 
                     if (self.props.static and self.props.occupy_square) {
                         if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
+                            const floor_y: u32 = @intFromFloat(@floor(self.y));
+                            const floor_x: u32 = @intFromFloat(@floor(self.x));
+
                             const color = color_data[tex.index];
                             const base_data_idx: usize = @intCast(floor_y * map.minimap.num_components * map.minimap.width + floor_x * map.minimap.num_components);
                             map.minimap.data[base_data_idx] = color.r;
@@ -173,17 +173,18 @@ pub const GameObject = struct {
             }
         }
 
-        if (self.class == .wall and map.validPos(floor_x, floor_y)) {
-            self.x = @floor(self.x) + 0.5;
-            self.y = @floor(self.y) + 0.5;
-            self.move_angle = std.math.nan(f32);
+        if (self.class == .wall and self.x >= 0 and self.y >= 0) {
+            if (map.getSquarePtr(self.x, self.y)) |square| {
+                self.x = @floor(self.x) + 0.5;
+                self.y = @floor(self.y) + 0.5;
+                self.move_angle = std.math.nan(f32);
 
-            const w: u32 = @intCast(map.width);
-            if (map.squares.getPtr(floor_y * w + floor_x)) |square| {
                 square.static_obj_id = self.obj_id;
                 square.updateBlends();
             }
-        } else if (self.class == .container) {
+        }
+
+        if (self.class == .container) {
             assets.playSfx("loot_appears");
         }
 
@@ -286,7 +287,7 @@ pub const GameObject = struct {
         }
     }
 
-    pub fn update(self: *GameObject, time: i64, dt: f32) void {
+    pub inline fn update(self: *GameObject, time: i64, dt: f32) void {
         const screen_pos = camera.rotateAroundCamera(self.x, self.y);
         const size = camera.size_mult * camera.scale * self.size;
 
@@ -315,23 +316,26 @@ pub const GameObject = struct {
                 0.0
             else
                 utils.halfBound(self.facing) / (std.math.pi / 4.0);
+
             const dir: assets.Direction = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
                 0...1, 6...7 => .left,
                 2...5 => .right,
                 else => unreachable,
             };
+            
             const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);
+            const dir_idx: u8 = @intFromEnum(dir);
+            const stand_data = anim_data.walk_anims[dir_idx * assets.AnimEnemyData.walk_actions];
 
             self.atlas_data = switch (action) {
-                .walk => anim_data.walk_anims[@intFromEnum(dir)][1 + anim_idx],
-                .attack => anim_data.attack_anims[@intFromEnum(dir)][anim_idx],
-                .stand => anim_data.walk_anims[@intFromEnum(dir)][0],
+                .walk => anim_data.walk_anims[dir_idx * assets.AnimEnemyData.walk_actions + 1 + anim_idx],
+                .attack => anim_data.attack_anims[dir_idx * assets.AnimEnemyData.attack_actions + anim_idx],
+                .stand => stand_data,
             };
 
-            if (action == .attack and anim_idx == 1) {
-                const w = self.atlas_data.texWRaw() * size;
-                self.render_x_offset = if (dir == .left) -assets.padding * size else w / 4.0;
-            }
+            const w = (self.atlas_data.texWRaw() - assets.padding * 2) * size;
+            const stand_w = (stand_data.texWRaw() - assets.padding * 2) * size;
+            self.render_x_offset = (if (dir == .left) stand_w - w else w - stand_w) / 2.0;
         } else if (self.props.anim_props) |props| {
             updateAnim: {
                 if (time >= self.next_anim) {

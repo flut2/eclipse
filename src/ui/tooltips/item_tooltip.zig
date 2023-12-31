@@ -52,7 +52,6 @@ pub const ItemTooltip = struct {
                     .glow = true,
                 },
             },
-            .ui_quad = false,
         });
 
         self.item_name = try self.root.createChild(element.Text{

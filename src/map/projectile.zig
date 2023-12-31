@@ -20,7 +20,7 @@ pub const Projectile = struct {
     screen_y: f32 = 0.0,
     size: f32 = 1.0,
     obj_id: i32 = 0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
     start_time: i64 = 0,
     angle: f32 = 0.0,
     visual_angle: f32 = 0.0,
@@ -232,7 +232,7 @@ pub const Projectile = struct {
         }
     }
 
-    pub fn update(self: *Projectile, time: i64, dt: f32, idx: usize, allocator: std.mem.Allocator) bool {
+    pub inline fn update(self: *Projectile, time: i64, dt: f32, idx: usize, allocator: std.mem.Allocator) bool {
         const elapsed = time - self.start_time;
         if (elapsed >= self.props.lifetime)
             return false;
@@ -259,62 +259,58 @@ pub const Projectile = struct {
             const x_dt: f32 = self.x - last_x;
             self.visual_angle = std.math.atan2(f32, y_dt, x_dt);
         }
+        
+        if (map.getSquare(self.x, self.y)) |square| {
+            const en = map.findEntityConst(square.static_obj_id);
+            if (square.tile_type == 0xFF) {
+                if (self.damage_players) {
+                    network.queuePacket(.{ .square_hit = .{
+                        .time = time,
+                        .bullet_id = self.bullet_id,
+                        .obj_id = self.owner_id,
+                    } });
+                } else {
+                    if (en) |_| {
+                        var effect = particles.HitEffect{
+                            .x = self.x,
+                            .y = self.y,
+                            .colors = self.colors,
+                            .angle = self.angle,
+                            .speed = self.props.speed,
+                            .size = 1.0,
+                            .amount = 3,
+                        };
+                        effect.addToMap();
+                    }
+                }
+                return false;
+            }
 
-        const floor_y: u32 = @intFromFloat(@floor(self.y));
-        const floor_x: u32 = @intFromFloat(@floor(self.x));
-        if (map.validPos(floor_x, floor_y)) {
-            if (map.squares.get(floor_y * map.width + floor_x)) |square| {
-                const en = map.findEntityConst(square.static_obj_id);
-                if (square.tile_type == 0xFF) {
+            if (en) |entity| {
+                if (entity == .object and
+                    (entity.object.props.is_enemy or self.damage_players) and
+                    (entity.object.props.enemy_occupy_square or (!self.props.passes_cover and entity.object.props.occupy_square)))
+                {
                     if (self.damage_players) {
-                        network.queuePacket(.{ .square_hit = .{
+                        network.queuePacket(.{ .other_hit = .{
                             .time = time,
                             .bullet_id = self.bullet_id,
-                            .obj_id = self.owner_id,
+                            .object_id = self.owner_id,
+                            .target_id = square.static_obj_id,
                         } });
                     } else {
-                        if (en) |_| {
-                            var effect = particles.HitEffect{
-                                .x = self.x,
-                                .y = self.y,
-                                .colors = self.colors,
-                                .angle = self.angle,
-                                .speed = self.props.speed,
-                                .size = 1.0,
-                                .amount = 3,
-                            };
-                            effect.addToMap();
-                        }
+                        var effect = particles.HitEffect{
+                            .x = self.x,
+                            .y = self.y,
+                            .colors = self.colors,
+                            .angle = self.angle,
+                            .speed = self.props.speed,
+                            .size = 1.0,
+                            .amount = 3,
+                        };
+                        effect.addToMap();
                     }
                     return false;
-                }
-
-                if (en) |entity| {
-                    if (entity == .object and
-                        (entity.object.props.is_enemy or self.damage_players) and
-                        (entity.object.props.enemy_occupy_square or (!self.props.passes_cover and entity.object.props.occupy_square)))
-                    {
-                        if (self.damage_players) {
-                            network.queuePacket(.{ .other_hit = .{
-                                .time = time,
-                                .bullet_id = self.bullet_id,
-                                .object_id = self.owner_id,
-                                .target_id = square.static_obj_id,
-                            } });
-                        } else {
-                            var effect = particles.HitEffect{
-                                .x = self.x,
-                                .y = self.y,
-                                .colors = self.colors,
-                                .angle = self.angle,
-                                .speed = self.props.speed,
-                                .size = 1.0,
-                                .amount = 3,
-                            };
-                            effect.addToMap();
-                        }
-                        return false;
-                    }
                 }
             }
         } else {

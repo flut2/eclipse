@@ -203,6 +203,12 @@ pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
 
             obj._disposed = true;
 
+            if (obj.props.static) {
+                if (getSquarePtr(obj.x, obj.y)) |square| {
+                    if (square.static_obj_id == obj.obj_id) square.static_obj_id = -1;
+                }
+            }
+
             systems.removeAttachedUi(obj.obj_id, allocator);
             if (obj.name) |obj_name|
                 allocator.free(obj_name);
@@ -436,7 +442,7 @@ pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
     std.log.err("Could not remove object with id {d}", .{obj_id});
 }
 
-pub fn update(allocator: std.mem.Allocator) void {
+pub inline fn update(allocator: std.mem.Allocator) void {
     object_lock.lock();
     defer object_lock.unlock();
 
@@ -561,20 +567,26 @@ pub inline fn validPos(x: u32, y: u32) bool {
 }
 
 pub inline fn getSquare(x: f32, y: f32) ?Square {
-    if (x < 0 or x >= @as(f32, @floatFromInt(width)) or y < 0 or y >= @as(f32, @floatFromInt(height)))
+    if (x < 0 or y < 0)
         return null;
 
-    const floor_x: u32 = @intFromFloat(@floor(x));
-    const floor_y: u32 = @intFromFloat(@floor(y));
+    const floor_x: u32 = @intFromFloat(x);
+    const floor_y: u32 = @intFromFloat(y);
+    if (!validPos(floor_x, floor_y))
+        return null;
+
     return squares.get(floor_y * width + floor_x);
 }
 
 pub inline fn getSquarePtr(x: f32, y: f32) ?*Square {
-    if (x < 0 or x >= @as(f32, @floatFromInt(width)) or y < 0 or y >= @as(f32, @floatFromInt(height)))
+    if (x < 0 or y < 0)
         return null;
 
-    const floor_x: u32 = @intFromFloat(@floor(x));
-    const floor_y: u32 = @intFromFloat(@floor(y));
+    const floor_x: u32 = @intFromFloat(x);
+    const floor_y: u32 = @intFromFloat(y);
+    if (!validPos(floor_x, floor_y))
+        return null;
+
     return squares.getPtr(floor_y * width + floor_x);
 }
 

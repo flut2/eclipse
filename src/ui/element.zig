@@ -333,15 +333,15 @@ pub const NineSliceImageData = struct {
             .h = h,
             .alpha = alpha,
             .atlas_data = .{
-                AtlasData.fromRawF32(base_u, base_v, slice_x, slice_y),
-                AtlasData.fromRawF32(base_u + slice_x, base_v, slice_w, slice_y),
-                AtlasData.fromRawF32(base_u + slice_x + slice_w, base_v, base_w - slice_w - slice_x, slice_y),
-                AtlasData.fromRawF32(base_u, base_v + slice_y, slice_x, slice_h),
-                AtlasData.fromRawF32(base_u + slice_x, base_v + slice_y, slice_w, slice_h),
-                AtlasData.fromRawF32(base_u + slice_x + slice_w, base_v + slice_y, base_w - slice_w - slice_x, slice_h),
-                AtlasData.fromRawF32(base_u, base_v + slice_y + slice_h, slice_x, base_h - slice_h - slice_y),
-                AtlasData.fromRawF32(base_u + slice_x, base_v + slice_y + slice_h, slice_w, base_h - slice_h - slice_y),
-                AtlasData.fromRawF32(base_u + slice_x + slice_w, base_v + slice_y + slice_h, base_w - slice_w - slice_x, base_h - slice_h - slice_y),
+                AtlasData.fromRawF32(base_u, base_v, slice_x, slice_y, data.ui),
+                AtlasData.fromRawF32(base_u + slice_x, base_v, slice_w, slice_y, data.ui),
+                AtlasData.fromRawF32(base_u + slice_x + slice_w, base_v, base_w - slice_w - slice_x, slice_y, data.ui),
+                AtlasData.fromRawF32(base_u, base_v + slice_y, slice_x, slice_h, data.ui),
+                AtlasData.fromRawF32(base_u + slice_x, base_v + slice_y, slice_w, slice_h, data.ui),
+                AtlasData.fromRawF32(base_u + slice_x + slice_w, base_v + slice_y, base_w - slice_w - slice_x, slice_h, data.ui),
+                AtlasData.fromRawF32(base_u, base_v + slice_y + slice_h, slice_x, base_h - slice_h - slice_y, data.ui),
+                AtlasData.fromRawF32(base_u + slice_x, base_v + slice_y + slice_h, slice_w, base_h - slice_h - slice_y, data.ui),
+                AtlasData.fromRawF32(base_u + slice_x + slice_w, base_v + slice_y + slice_h, base_w - slice_w - slice_x, base_h - slice_h - slice_y, data.ui),
             },
         };
     }
@@ -927,7 +927,6 @@ pub const Image = struct {
     image_data: ImageData,
     layer: Layer = .default,
     scissor: ScissorRect = .{},
-    ui_quad: bool = true,
     visible: bool = true,
     // hack
     is_minimap_decor: bool = false,
