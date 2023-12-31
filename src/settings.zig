@@ -541,9 +541,9 @@ pub fn resetToDefault() void {
     ultimate_ability = .{ .key = .four };
     sfx_volume = 0.33;
     music_volume = 0.1;
-    enable_glow = false;
-    enable_lights = false;
-    enable_vsync = false;
+    enable_glow = true;
+    enable_lights = true;
+    enable_vsync = true;
     fps_cap = 360.0;
     cursor_type = CursorType.aztec;
     aa_type = .msaa4x;

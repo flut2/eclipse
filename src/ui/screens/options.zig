@@ -10,6 +10,9 @@ const NineSlice = element.NineSliceImageData;
 const Interactable = element.InteractableImageData;
 const systems = @import("../systems.zig");
 
+const button_width = 150;
+const button_height = 50;
+
 pub const TabType = enum {
     general,
     hotkeys,
@@ -20,7 +23,7 @@ pub const TabType = enum {
 pub const Options = struct {
     visible: bool = false,
     inited: bool = false,
-    selected_tab_type: TabType = .general,
+    selected_tab: TabType = .general,
     main: *element.Container = undefined,
     buttons: *element.Container = undefined,
     tabs: *element.Container = undefined,
@@ -28,20 +31,19 @@ pub const Options = struct {
     keys_tab: *element.Container = undefined,
     graphics_tab: *element.Container = undefined,
     misc_tab: *element.Container = undefined,
+    options_bg: *element.Image = undefined,
+    options_text: *element.Text = undefined,
+    continue_button: *element.Button = undefined,
+    disconnect_button: *element.Button = undefined,
+    defaults_button: *element.Button = undefined,
     _allocator: std.mem.Allocator = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*Options {
         var screen = try allocator.create(Options);
         screen.* = .{ ._allocator = allocator };
 
-        const button_width = 150;
-        const button_height = 50;
-        const button_half_width = button_width / 2;
-        const button_half_height = button_height / 2;
         const width = camera.screen_width;
         const height = camera.screen_height;
-        const buttons_x = width / 2;
-        const buttons_y = height - button_height - 50;
 
         screen.main = try element.create(allocator, element.Container{
             .x = 0,
@@ -51,7 +53,7 @@ pub const Options = struct {
 
         screen.buttons = try element.create(allocator, element.Container{
             .x = 0,
-            .y = buttons_y,
+            .y = height - button_height - 50,
             .visible = screen.visible,
         });
 
@@ -64,44 +66,45 @@ pub const Options = struct {
         screen.general_tab = try element.create(allocator, element.Container{
             .x = 100,
             .y = 150,
-            .visible = screen.visible and screen.selected_tab_type == .general,
+            .visible = screen.visible and screen.selected_tab == .general,
         });
 
         screen.keys_tab = try element.create(allocator, element.Container{
             .x = 100,
             .y = 150,
-            .visible = screen.visible and screen.selected_tab_type == .hotkeys,
+            .visible = screen.visible and screen.selected_tab == .hotkeys,
         });
 
         screen.graphics_tab = try element.create(allocator, element.Container{
             .x = 100,
             .y = 150,
-            .visible = screen.visible and screen.selected_tab_type == .graphics,
+            .visible = screen.visible and screen.selected_tab == .graphics,
         });
 
         screen.misc_tab = try element.create(allocator, element.Container{
             .x = 100,
             .y = 150,
-            .visible = screen.visible and screen.selected_tab_type == .misc,
+            .visible = screen.visible and screen.selected_tab == .misc,
         });
 
         const options_background = assets.getUiData("options_background", 0);
-        _ = try screen.main.createChild(element.Image{ .x = 0, .y = 0, .image_data = .{
+        screen.options_bg = try screen.main.createChild(element.Image{ .x = 0, .y = 0, .image_data = .{
             .nine_slice = NineSlice.fromAtlasData(options_background, width, height, 0, 0, 8, 8, 1.0),
         } });
 
-        _ = try screen.main.createChild(element.Text{ .x = buttons_x - 76, .y = 25, .text_data = .{
+        screen.options_text = try screen.main.createChild(element.Text{ .x = 0, .y = 25, .text_data = .{
             .text = "Options",
             .size = 32,
             .text_type = .bold,
         } });
+        screen.options_text.x = (width - screen.options_text.width()) / 2;
 
         const button_data_base = assets.getUiData("button_base", 0);
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
-        _ = try screen.buttons.createChild(element.Button{
-            .x = buttons_x - button_half_width,
-            .y = button_half_height - 20,
+        screen.continue_button = try screen.buttons.createChild(element.Button{
+            .x = (width - button_width) / 2,
+            .y = button_height / 2 - 20,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 11, 9, 3, 3, 1.0),
             .text_data = .{
                 .text = "Continue",
@@ -111,9 +114,9 @@ pub const Options = struct {
             .press_callback = closeCallback,
         });
 
-        _ = try screen.buttons.createChild(element.Button{
+        screen.disconnect_button = try screen.buttons.createChild(element.Button{
             .x = width - button_width - 50,
-            .y = button_half_height - 20,
+            .y = button_height / 2 - 20,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 11, 9, 3, 3, 1.0),
             .text_data = .{
                 .text = "Disconnect",
@@ -123,9 +126,9 @@ pub const Options = struct {
             .press_callback = disconnectCallback,
         });
 
-        _ = try screen.buttons.createChild(element.Button{
+        screen.defaults_button = try screen.buttons.createChild(element.Button{
             .x = 50,
-            .y = button_half_height - 20,
+            .y = button_height / 2 - 20,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 11, 9, 3, 3, 1.0),
             .text_data = .{
                 .text = "Defaults",
@@ -218,7 +221,7 @@ pub const Options = struct {
         try addSlider(screen.misc_tab, &settings.sfx_volume, 0.0, 1.0, "SFX Volume", "Changes the volume of sound effects");
         try addSlider(screen.misc_tab, &settings.music_volume, 0.0, 1.0, "Music Volume", "Changes the volume of music");
 
-        switch (screen.selected_tab_type) {
+        switch (screen.selected_tab) {
             .general => positionElements(screen.general_tab),
             .hotkeys => positionElements(screen.keys_tab),
             .graphics => positionElements(screen.graphics_tab),
@@ -239,6 +242,21 @@ pub const Options = struct {
         element.destroy(self.misc_tab);
 
         self._allocator.destroy(self);
+    }
+
+    pub fn resize(self: *Options, w: f32, h: f32) void {
+        self.options_bg.image_data.nine_slice.w = w;
+        self.options_bg.image_data.nine_slice.h = h;
+        self.options_text.x = (w - self.options_text.width()) / 2;
+        self.buttons.y = h - button_height - 50;
+        self.disconnect_button.x = w - button_width - 50;
+        self.continue_button.x = (w - button_width) / 2;
+        switch (self.selected_tab) {
+            .general => positionElements(self.general_tab),
+            .hotkeys => positionElements(self.keys_tab),
+            .graphics => positionElements(self.graphics_tab),
+            .misc => positionElements(self.misc_tab),
+        }
     }
 
     fn addKeyMap(target_tab: *element.Container, button: *settings.Button, title: []const u8, desc: []const u8) !void {
@@ -342,8 +360,8 @@ pub const Options = struct {
             switch (elem) {
                 .scrollable_container, .container => {},
                 inline else => |inner| {
-                    inner.x = @floatFromInt(@divFloor(i, 6) * 300);
-                    inner.y = @floatFromInt(@mod(i, 6) * 80);
+                    inner.x = @as(f32, @floatFromInt(@divFloor(i, 6))) * (camera.screen_width / 4.0);
+                    inner.y = @as(f32, @floatFromInt(@mod(i, 6))) * (camera.screen_height / 9.0);
                 },
             }
         }
@@ -418,7 +436,7 @@ pub const Options = struct {
     pub fn switchTab(tab: TabType) void {
         var self = systems.screen.game.options;
 
-        self.selected_tab_type = tab;
+        self.selected_tab = tab;
         self.general_tab.visible = tab == .general;
         self.keys_tab.visible = tab == .hotkeys;
         self.graphics_tab.visible = tab == .graphics;
@@ -447,6 +465,4 @@ pub const Options = struct {
             self.misc_tab.visible = false;
         }
     }
-
-    pub fn resize(_: *Options, _: f32, _: f32) void {}
 };

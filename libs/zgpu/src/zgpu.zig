@@ -834,6 +834,7 @@ pub const GraphicsContext = struct {
             BufferHandle => gctx.buffer_pool.destroyResource(handle, true),
             TextureHandle => gctx.texture_pool.destroyResource(handle, true),
             TextureViewHandle => gctx.texture_view_pool.destroyResource(handle, true),
+            RenderPipelineHandle => gctx.render_pipeline_pool.destroyResource(handle, true),
             else => @compileError("[zgpu] GraphicsContext.destroyResource() not implemented for " ++ @typeName(T)),
         }
     }

@@ -161,15 +161,33 @@ fn networkTick(allocator: std.mem.Allocator) void {
     }
 }
 
-fn renderTick(allocator: std.mem.Allocator) !void {
+fn renderTick(allocator: std.mem.Allocator, window: *zglfw.Window) !void {
     rpmalloc.initThread() catch |e| {
         std.log.err("Render thread initialization failed: {any}", .{e});
         return;
     };
     defer rpmalloc.deinitThread(true);
 
+    var last_aa_type = settings.aa_type;
+    var last_vsync = settings.enable_vsync;
     var time_start = std.time.nanoTimestamp();
     while (tick_render) {
+        if (last_vsync != settings.enable_vsync) {
+            gctx.swapchain.release();
+            const framebuffer_size = window.getFramebufferSize();
+            const swapchain_descriptor = zgpu.wgpu.SwapChainDescriptor{
+                .label = "zig-gamedev-gctx-swapchain",
+                .usage = .{ .render_attachment = true },
+                .format = zgpu.wgpu.TextureFormat.bgra8_unorm,
+                .width = @intCast(framebuffer_size[0]),
+                .height = @intCast(framebuffer_size[1]),
+                .present_mode = if (settings.enable_vsync) .fifo else .immediate,
+            };
+            gctx.swapchain = gctx.device.createSwapChain(gctx.surface, swapchain_descriptor);
+            errdefer gctx.swapchain.release();
+            last_vsync = settings.enable_vsync;
+        }
+
         // ticking can get turned off while in sleep
         if (!tick_render)
             return;
@@ -197,8 +215,10 @@ fn renderTick(allocator: std.mem.Allocator) !void {
 
         const commands = encoder.finish(null);
         gctx.submit(&.{commands});
-        if (gctx.present() == .swap_chain_resized)
+        if (gctx.present() == .swap_chain_resized or last_aa_type != settings.aa_type) {
             render.createColorTexture(gctx, gctx.swapchain_descriptor.width, gctx.swapchain_descriptor.height);
+            last_aa_type = settings.aa_type;
+        }
 
         try if (settings.stats_enabled) switch (systems.screen) {
             .game => |game_screen| if (game_screen.inited) game_screen.updateFpsText(gctx.stats.fps, try utils.currentMemoryUse()),
@@ -459,7 +479,6 @@ pub fn main() !void {
         std.log.err("Failed to create graphics context: {any}", .{e});
         return;
     };
-    defer gctx.destroy(allocator);
 
     _ = window.setKeyCallback(input.keyEvent);
     _ = window.setCharCallback(input.charEvent);
@@ -483,7 +502,7 @@ pub fn main() !void {
         network_thread.join();
     }
 
-    render_thread = try std.Thread.spawn(.{}, renderTick, .{allocator});
+    render_thread = try std.Thread.spawn(.{}, renderTick, .{ allocator, window });
     defer {
         tick_render = false;
         render_thread.join();
@@ -505,6 +524,8 @@ pub fn main() !void {
             last_ui_update = time;
         }
     }
+
+    gctx.destroy(allocator);
 }
 
 fn ready(cli: *rpc) !void {

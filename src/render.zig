@@ -131,6 +131,8 @@ pub var linear_sampler: zgpu.SamplerHandle = undefined;
 pub var condition_rects: [@bitSizeOf(utils.Condition)][]const assets.AtlasData = undefined;
 pub var enter_text_data: element.TextData = undefined;
 
+var last_ms_count: u32 = 1;
+
 fn createTexture(gctx: *zgpu.GraphicsContext, tex: *zgpu.TextureHandle, view: *zgpu.TextureViewHandle, img: zstbi.Image) void {
     tex.* = gctx.createTexture(.{
         .usage = .{ .texture_binding = true, .copy_dst = true },
@@ -160,21 +162,209 @@ fn createTexture(gctx: *zgpu.GraphicsContext, tex: *zgpu.TextureHandle, view: *z
     );
 }
 
-pub fn createColorTexture(gctx: *zgpu.GraphicsContext, w: u32, h: u32) void {
-    if (color_tex_set) {
-        gctx.destroyResource(color_texture);
-        gctx.destroyResource(color_texture_view);
-        color_tex_set = false;
-    }
-
+fn createPipelines(gctx: *zgpu.GraphicsContext) void {
     const sample_count: u32 = switch (settings.aa_type) {
         .msaa2x => 2,
         .msaa4x => 4,
         else => 1,
     };
 
-    if (sample_count == 1)
+    const base_bind_group_layout = gctx.createBindGroupLayout(&.{
+        zgpu.samplerEntry(0, .{ .fragment = true }, .filtering),
+        zgpu.samplerEntry(1, .{ .fragment = true }, .filtering),
+        zgpu.textureEntry(2, .{ .fragment = true }, .float, .tvdim_2d, false),
+        zgpu.textureEntry(3, .{ .fragment = true }, .float, .tvdim_2d, false),
+        zgpu.textureEntry(4, .{ .fragment = true }, .float, .tvdim_2d, false),
+        zgpu.textureEntry(5, .{ .fragment = true }, .float, .tvdim_2d, false),
+        zgpu.textureEntry(6, .{ .fragment = true }, .float, .tvdim_2d, false),
+        zgpu.textureEntry(7, .{ .fragment = true }, .float, .tvdim_2d, false),
+        zgpu.textureEntry(8, .{ .fragment = true }, .float, .tvdim_2d, false),
+        zgpu.textureEntry(9, .{ .fragment = true }, .float, .tvdim_2d, false),
+    });
+    defer gctx.releaseResource(base_bind_group_layout);
+
+    const ground_bind_group_layout = gctx.createBindGroupLayout(&.{
+        zgpu.bufferEntry(0, .{ .vertex = true, .fragment = true }, .uniform, false, 0),
+        zgpu.samplerEntry(1, .{ .fragment = true }, .filtering),
+        zgpu.textureEntry(2, .{ .fragment = true }, .float, .tvdim_2d, false),
+    });
+    defer gctx.releaseResource(ground_bind_group_layout);
+
+    const light_bind_group_layout = gctx.createBindGroupLayout(&.{
+        zgpu.samplerEntry(0, .{ .fragment = true }, .filtering),
+        zgpu.textureEntry(1, .{ .fragment = true }, .float, .tvdim_2d, false),
+    });
+    defer gctx.releaseResource(light_bind_group_layout);
+
+    const base_pipeline_layout = gctx.createPipelineLayout(&.{
+        base_bind_group_layout,
+    });
+    defer gctx.releaseResource(base_pipeline_layout);
+
+    const base_shader = zgpu.createWgslShaderModule(gctx.device, @embedFile("./assets/shaders/base.wgsl"), null);
+    defer base_shader.release();
+
+    const base_color_targets = [_]zgpu.wgpu.ColorTargetState{.{
+        .format = zgpu.GraphicsContext.swapchain_format,
+        .blend = &zgpu.wgpu.BlendState{
+            .color = .{ .src_factor = .src_alpha, .dst_factor = .one_minus_src_alpha },
+            .alpha = .{ .src_factor = .src_alpha, .dst_factor = .one_minus_src_alpha },
+        },
+    }};
+
+    const base_vertex_attributes = [_]zgpu.wgpu.VertexAttribute{
+        .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "pos_uv"), .shader_location = 0 },
+        .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "base_color_and_intensity"), .shader_location = 1 },
+        .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "alpha_and_shadow_color"), .shader_location = 2 },
+        .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "texel_and_text_data"), .shader_location = 3 },
+        .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "outline_color_and_w"), .shader_location = 4 },
+        .{ .format = .float32, .offset = @offsetOf(BaseVertexData, "render_type"), .shader_location = 5 },
+    };
+    const base_vertex_buffers = [_]zgpu.wgpu.VertexBufferLayout{.{
+        .array_stride = @sizeOf(BaseVertexData),
+        .attribute_count = base_vertex_attributes.len,
+        .attributes = &base_vertex_attributes,
+    }};
+
+    const base_pipeline_descriptor = .{
+        .vertex = zgpu.wgpu.VertexState{
+            .module = base_shader,
+            .entry_point = "vs_main",
+            .buffer_count = base_vertex_buffers.len,
+            .buffers = &base_vertex_buffers,
+        },
+        .primitive = zgpu.wgpu.PrimitiveState{
+            .front_face = .cw,
+            .cull_mode = .none,
+            .topology = .triangle_list,
+        },
+        .fragment = &zgpu.wgpu.FragmentState{
+            .module = base_shader,
+            .entry_point = "fs_main",
+            .target_count = base_color_targets.len,
+            .targets = &base_color_targets,
+        },
+        .multisample = .{ .count = sample_count },
+    };
+    base_pipeline = gctx.createRenderPipeline(base_pipeline_layout, base_pipeline_descriptor);
+
+    const ground_pipeline_layout = gctx.createPipelineLayout(&.{
+        ground_bind_group_layout,
+    });
+    defer gctx.releaseResource(ground_pipeline_layout);
+
+    const ground_shader = zgpu.createWgslShaderModule(gctx.device, @embedFile("./assets/shaders/ground.wgsl"), null);
+    defer ground_shader.release();
+
+    const ground_color_targets = [_]zgpu.wgpu.ColorTargetState{.{
+        .format = zgpu.GraphicsContext.swapchain_format,
+    }};
+
+    const ground_vertex_attributes = [_]zgpu.wgpu.VertexAttribute{
+        .{ .format = .float32x4, .offset = @offsetOf(GroundVertexData, "pos_uv"), .shader_location = 0 },
+        .{ .format = .float32x4, .offset = @offsetOf(GroundVertexData, "left_top_blend_uv"), .shader_location = 1 },
+        .{ .format = .float32x4, .offset = @offsetOf(GroundVertexData, "right_bottom_blend_uv"), .shader_location = 2 },
+        .{ .format = .float32x4, .offset = @offsetOf(GroundVertexData, "base_and_offset_uv"), .shader_location = 3 },
+    };
+    const ground_vertex_buffers = [_]zgpu.wgpu.VertexBufferLayout{.{
+        .array_stride = @sizeOf(GroundVertexData),
+        .attribute_count = ground_vertex_attributes.len,
+        .attributes = &ground_vertex_attributes,
+    }};
+
+    const ground_pipeline_descriptor = .{
+        .vertex = zgpu.wgpu.VertexState{
+            .module = ground_shader,
+            .entry_point = "vs_main",
+            .buffer_count = ground_vertex_buffers.len,
+            .buffers = &ground_vertex_buffers,
+        },
+        .primitive = zgpu.wgpu.PrimitiveState{
+            .front_face = .cw,
+            .cull_mode = .none,
+            .topology = .triangle_list,
+        },
+        .fragment = &zgpu.wgpu.FragmentState{
+            .module = ground_shader,
+            .entry_point = "fs_main",
+            .target_count = ground_color_targets.len,
+            .targets = &ground_color_targets,
+        },
+        .multisample = .{ .count = sample_count },
+    };
+    ground_pipeline = gctx.createRenderPipeline(ground_pipeline_layout, ground_pipeline_descriptor);
+
+    const light_pipeline_layout = gctx.createPipelineLayout(&.{
+        light_bind_group_layout,
+    });
+    defer gctx.releaseResource(light_pipeline_layout);
+
+    const light_shader = zgpu.createWgslShaderModule(gctx.device, @embedFile("./assets/shaders/light.wgsl"), null);
+    defer light_shader.release();
+
+    const light_color_targets = [_]zgpu.wgpu.ColorTargetState{.{
+        .format = zgpu.GraphicsContext.swapchain_format,
+        .blend = &zgpu.wgpu.BlendState{
+            .color = .{ .src_factor = .src_alpha, .dst_factor = .one },
+            .alpha = .{ .src_factor = .zero, .dst_factor = .zero },
+        },
+    }};
+
+    const light_vertex_attributes = [_]zgpu.wgpu.VertexAttribute{
+        .{ .format = .float32x3, .offset = @offsetOf(LightVertexData, "color"), .shader_location = 2 },
+        .{ .format = .float32x2, .offset = @offsetOf(LightVertexData, "pos"), .shader_location = 0 },
+        .{ .format = .float32x2, .offset = @offsetOf(LightVertexData, "uv"), .shader_location = 1 },
+        .{ .format = .float32, .offset = @offsetOf(LightVertexData, "intensity"), .shader_location = 3 },
+    };
+    const light_vertex_buffers = [_]zgpu.wgpu.VertexBufferLayout{.{
+        .array_stride = @sizeOf(LightVertexData),
+        .attribute_count = light_vertex_attributes.len,
+        .attributes = &light_vertex_attributes,
+    }};
+
+    const light_pipeline_descriptor = .{
+        .vertex = zgpu.wgpu.VertexState{
+            .module = light_shader,
+            .entry_point = "vs_main",
+            .buffer_count = light_vertex_buffers.len,
+            .buffers = &light_vertex_buffers,
+        },
+        .primitive = zgpu.wgpu.PrimitiveState{
+            .front_face = .cw,
+            .cull_mode = .none,
+            .topology = .triangle_list,
+        },
+        .fragment = &zgpu.wgpu.FragmentState{
+            .module = light_shader,
+            .entry_point = "fs_main",
+            .target_count = light_color_targets.len,
+            .targets = &light_color_targets,
+        },
+        .multisample = .{ .count = sample_count },
+    };
+    light_pipeline = gctx.createRenderPipeline(light_pipeline_layout, light_pipeline_descriptor);
+}
+
+pub fn createColorTexture(gctx: *zgpu.GraphicsContext, w: u32, h: u32) void {
+    const sample_count: u32 = switch (settings.aa_type) {
+        .msaa2x => 2,
+        .msaa4x => 4,
+        else => 1,
+    };
+
+    if (color_tex_set) {
+        gctx.destroyResource(color_texture);
+        gctx.destroyResource(color_texture_view);
+        gctx.destroyResource(base_pipeline);
+        gctx.destroyResource(ground_pipeline);
+        gctx.destroyResource(light_pipeline);
+        color_tex_set = false;
+    }
+
+    if (sample_count == 1) {
+        last_ms_count = 1;
         return;
+    }
 
     color_texture = gctx.createTexture(.{
         .usage = .{ .render_attachment = true },
@@ -187,6 +377,10 @@ pub fn createColorTexture(gctx: *zgpu.GraphicsContext, w: u32, h: u32) void {
         .sample_count = sample_count,
     });
     color_texture_view = gctx.createTextureView(color_texture, .{});
+
+    createPipelines(gctx);
+
+    last_ms_count = sample_count;
 
     color_tex_set = true;
 }
@@ -283,12 +477,6 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
     });
     gctx.queue.writeBuffer(index_buffer, 0, u16, index_data[0..]);
 
-    const sample_count: u32 = switch (settings.aa_type) {
-        .msaa2x => 2,
-        .msaa4x => 4,
-        else => 1,
-    };
-
     createColorTexture(gctx, gctx.swapchain_descriptor.width, gctx.swapchain_descriptor.height);
     createTexture(gctx, &minimap_texture, &minimap_texture_view, map.minimap);
 
@@ -361,159 +549,7 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
         .{ .binding = 9, .texture_view_handle = menu_bg_texture_view },
     });
 
-    {
-        const pipeline_layout = gctx.createPipelineLayout(&.{
-            base_bind_group_layout,
-        });
-        defer gctx.releaseResource(pipeline_layout);
-
-        const s_mod = zgpu.createWgslShaderModule(gctx.device, @embedFile("./assets/shaders/base.wgsl"), null);
-        defer s_mod.release();
-
-        const color_targets = [_]zgpu.wgpu.ColorTargetState{.{
-            .format = zgpu.GraphicsContext.swapchain_format,
-            .blend = &zgpu.wgpu.BlendState{
-                .color = .{ .src_factor = .src_alpha, .dst_factor = .one_minus_src_alpha },
-                .alpha = .{ .src_factor = .src_alpha, .dst_factor = .one_minus_src_alpha },
-            },
-        }};
-
-        const vertex_attributes = [_]zgpu.wgpu.VertexAttribute{
-            .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "pos_uv"), .shader_location = 0 },
-            .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "base_color_and_intensity"), .shader_location = 1 },
-            .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "alpha_and_shadow_color"), .shader_location = 2 },
-            .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "texel_and_text_data"), .shader_location = 3 },
-            .{ .format = .float32x4, .offset = @offsetOf(BaseVertexData, "outline_color_and_w"), .shader_location = 4 },
-            .{ .format = .float32, .offset = @offsetOf(BaseVertexData, "render_type"), .shader_location = 5 },
-        };
-        const vertex_buffers = [_]zgpu.wgpu.VertexBufferLayout{.{
-            .array_stride = @sizeOf(BaseVertexData),
-            .attribute_count = vertex_attributes.len,
-            .attributes = &vertex_attributes,
-        }};
-
-        const pipeline_descriptor = zgpu.wgpu.RenderPipelineDescriptor{
-            .vertex = zgpu.wgpu.VertexState{
-                .module = s_mod,
-                .entry_point = "vs_main",
-                .buffer_count = vertex_buffers.len,
-                .buffers = &vertex_buffers,
-            },
-            .primitive = zgpu.wgpu.PrimitiveState{
-                .front_face = .cw,
-                .cull_mode = .none,
-                .topology = .triangle_list,
-            },
-            .fragment = &zgpu.wgpu.FragmentState{
-                .module = s_mod,
-                .entry_point = "fs_main",
-                .target_count = color_targets.len,
-                .targets = &color_targets,
-            },
-            .multisample = .{ .count = sample_count },
-        };
-        base_pipeline = gctx.createRenderPipeline(pipeline_layout, pipeline_descriptor);
-    }
-
-    {
-        const pipeline_layout = gctx.createPipelineLayout(&.{
-            ground_bind_group_layout,
-        });
-        defer gctx.releaseResource(pipeline_layout);
-
-        const s_mod = zgpu.createWgslShaderModule(gctx.device, @embedFile("./assets/shaders/ground.wgsl"), null);
-        defer s_mod.release();
-
-        const color_targets = [_]zgpu.wgpu.ColorTargetState{.{
-            .format = zgpu.GraphicsContext.swapchain_format,
-        }};
-
-        const vertex_attributes = [_]zgpu.wgpu.VertexAttribute{
-            .{ .format = .float32x4, .offset = @offsetOf(GroundVertexData, "pos_uv"), .shader_location = 0 },
-            .{ .format = .float32x4, .offset = @offsetOf(GroundVertexData, "left_top_blend_uv"), .shader_location = 1 },
-            .{ .format = .float32x4, .offset = @offsetOf(GroundVertexData, "right_bottom_blend_uv"), .shader_location = 2 },
-            .{ .format = .float32x4, .offset = @offsetOf(GroundVertexData, "base_and_offset_uv"), .shader_location = 3 },
-        };
-        const vertex_buffers = [_]zgpu.wgpu.VertexBufferLayout{.{
-            .array_stride = @sizeOf(GroundVertexData),
-            .attribute_count = vertex_attributes.len,
-            .attributes = &vertex_attributes,
-        }};
-
-        const pipeline_descriptor = zgpu.wgpu.RenderPipelineDescriptor{
-            .vertex = zgpu.wgpu.VertexState{
-                .module = s_mod,
-                .entry_point = "vs_main",
-                .buffer_count = vertex_buffers.len,
-                .buffers = &vertex_buffers,
-            },
-            .primitive = zgpu.wgpu.PrimitiveState{
-                .front_face = .cw,
-                .cull_mode = .none,
-                .topology = .triangle_list,
-            },
-            .fragment = &zgpu.wgpu.FragmentState{
-                .module = s_mod,
-                .entry_point = "fs_main",
-                .target_count = color_targets.len,
-                .targets = &color_targets,
-            },
-            .multisample = .{ .count = sample_count },
-        };
-        ground_pipeline = gctx.createRenderPipeline(pipeline_layout, pipeline_descriptor);
-    }
-
-    {
-        const pipeline_layout = gctx.createPipelineLayout(&.{
-            light_bind_group_layout,
-        });
-        defer gctx.releaseResource(pipeline_layout);
-
-        const s_mod = zgpu.createWgslShaderModule(gctx.device, @embedFile("./assets/shaders/light.wgsl"), null);
-        defer s_mod.release();
-
-        const color_targets = [_]zgpu.wgpu.ColorTargetState{.{
-            .format = zgpu.GraphicsContext.swapchain_format,
-            .blend = &zgpu.wgpu.BlendState{
-                .color = .{ .src_factor = .src_alpha, .dst_factor = .one },
-                .alpha = .{ .src_factor = .zero, .dst_factor = .zero },
-            },
-        }};
-
-        const vertex_attributes = [_]zgpu.wgpu.VertexAttribute{
-            .{ .format = .float32x3, .offset = @offsetOf(LightVertexData, "color"), .shader_location = 2 },
-            .{ .format = .float32x2, .offset = @offsetOf(LightVertexData, "pos"), .shader_location = 0 },
-            .{ .format = .float32x2, .offset = @offsetOf(LightVertexData, "uv"), .shader_location = 1 },
-            .{ .format = .float32, .offset = @offsetOf(LightVertexData, "intensity"), .shader_location = 3 },
-        };
-        const vertex_buffers = [_]zgpu.wgpu.VertexBufferLayout{.{
-            .array_stride = @sizeOf(LightVertexData),
-            .attribute_count = vertex_attributes.len,
-            .attributes = &vertex_attributes,
-        }};
-
-        const pipeline_descriptor = zgpu.wgpu.RenderPipelineDescriptor{
-            .vertex = zgpu.wgpu.VertexState{
-                .module = s_mod,
-                .entry_point = "vs_main",
-                .buffer_count = vertex_buffers.len,
-                .buffers = &vertex_buffers,
-            },
-            .primitive = zgpu.wgpu.PrimitiveState{
-                .front_face = .cw,
-                .cull_mode = .none,
-                .topology = .triangle_list,
-            },
-            .fragment = &zgpu.wgpu.FragmentState{
-                .module = s_mod,
-                .entry_point = "fs_main",
-                .target_count = color_targets.len,
-                .targets = &color_targets,
-            },
-            .multisample = .{ .count = sample_count },
-        };
-        light_pipeline = gctx.createRenderPipeline(pipeline_layout, pipeline_descriptor);
-    }
+    createPipelines(gctx);
 }
 
 const DrawData = struct {
@@ -2848,13 +2884,7 @@ pub fn draw(
     const cam_x = camera.x.load(.Acquire);
     const cam_y = camera.y.load(.Acquire);
 
-    const sample_count: u8 = switch (settings.aa_type) {
-        .msaa2x => 2,
-        .msaa4x => 4,
-        else => 1,
-    };
-
-    const clear_color_attachments = if (sample_count != 1)
+    const clear_color_attachments = if (last_ms_count > 1)
         [_]zgpu.wgpu.RenderPassColorAttachment{.{
             .view = gctx.lookupResource(color_texture_view).?,
             .resolve_target = back_buffer,
@@ -2872,7 +2902,7 @@ pub fn draw(
         .color_attachments = &clear_color_attachments,
     };
 
-    const load_color_attachments = if (sample_count != 1)
+    const load_color_attachments = if (last_ms_count > 1)
         [_]zgpu.wgpu.RenderPassColorAttachment{.{
             .view = gctx.lookupResource(color_texture_view).?,
             .resolve_target = back_buffer,
