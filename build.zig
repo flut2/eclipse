@@ -83,8 +83,8 @@ pub fn build(b: *std.Build) !void {
 
     const install_assets_step = b.addInstallDirectory(.{
         .source_dir = .{ .path = "src/assets" },
-        .install_dir = .{ .custom = "" },
-        .install_subdir = "bin/assets",
+        .install_dir = .{ .bin = {} },
+        .install_subdir = "assets",
     });
     exe.step.dependOn(&install_assets_step.step);
 
