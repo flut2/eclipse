@@ -6,7 +6,7 @@ const network = @import("../../network.zig");
 const main = @import("../../main.zig");
 const utils = @import("../../utils.zig");
 const game_data = @import("../../game_data.zig");
-const map = @import("../../map/map.zig");
+const map = @import("../../game/map.zig");
 const input = @import("../../input.zig");
 const settings = @import("../../settings.zig");
 
@@ -102,6 +102,7 @@ pub const GameScreen = struct {
     last_tier: u8 = std.math.maxInt(u8),
     last_tier_xp: i32 = -1,
     last_next_tier_xp: i32 = -1,
+    last_in_combat: bool = false,
     interact_class: game_data.ClassType = game_data.ClassType.game_object,
     container_visible: bool = false,
     container_id: i32 = -1,
@@ -255,6 +256,18 @@ pub const GameScreen = struct {
             .x = (camera.screen_width - bars_data.texWRaw()) / 2,
             .y = camera.screen_height - bars_data.texHRaw() - 10 - 25, // -25 for the xp bar to fit
             .image_data = .{ .normal = .{ .atlas_data = bars_data } },
+        });
+
+        const out_of_combat_data = assets.getUiData("out_of_combat_icon", 0);
+        screen.combat_indicator = try element.create(allocator, element.Image{
+            .x = screen.bars_decor.x + (bars_data.texWRaw() - out_of_combat_data.texWRaw()) / 2,
+            .y = screen.bars_decor.y - out_of_combat_data.texHRaw() - 10,
+            .image_data = .{ .normal = .{ .atlas_data = out_of_combat_data } },
+            .tooltip_text = .{
+                .text = "Out of Combat",
+                .size = 16,
+                .text_type = .bold_italic,
+            },
         });
 
         const stats_button_data = assets.getUiData("minimap_icons", 0);
@@ -551,6 +564,7 @@ pub const GameScreen = struct {
         element.destroy(self.inventory_decor);
         element.destroy(self.container_decor);
         element.destroy(self.bars_decor);
+        element.destroy(self.combat_indicator);
         element.destroy(self.stats_button);
         element.destroy(self.stats_container);
         element.destroy(self.ability_container);
@@ -586,6 +600,8 @@ pub const GameScreen = struct {
         self.container_decor.y = h - self.container_decor.height() - 10;
         self.bars_decor.x = (w - self.bars_decor.width()) / 2;
         self.bars_decor.y = h - self.bars_decor.height() - 10 - 25;
+        self.combat_indicator.x = self.bars_decor.x + (self.bars_decor.width() - self.combat_indicator.width()) / 2;
+        self.combat_indicator.y = self.bars_decor.y - self.combat_indicator.height() - 10;
         self.stats_container.x = self.bars_decor.x + (self.bars_decor.width() - self.stats_decor.width()) / 2.0;
         self.stats_container.y = self.bars_decor.y + 32;
         self.ability_container.x = self.bars_decor.x + 7;
@@ -635,6 +651,15 @@ pub const GameScreen = struct {
         defer map.object_lock.unlockShared();
 
         if (map.localPlayerConst()) |local_player| {
+            if (!self.abilities_inited) {
+                var idx: f32 = 0;
+                try addAbility(self.ability_container, local_player.class_data.ability_1, &idx);
+                try addAbility(self.ability_container, local_player.class_data.ability_2, &idx);
+                try addAbility(self.ability_container, local_player.class_data.ability_3, &idx);
+                try addAbility(self.ability_container, local_player.class_data.ultimate_ability, &idx);
+                self.abilities_inited = true;
+            }
+
             if (self.last_tier != local_player.tier) {
                 var current_icon = getTierAtlasData(local_player.tier);
                 current_icon.removePadding();
@@ -665,13 +690,26 @@ pub const GameScreen = struct {
                 self.last_tier = local_player.tier;
             }
 
-            if (!self.abilities_inited) {
-                var idx: f32 = 0;
-                try addAbility(self.ability_container, local_player.class_data.ability_1, &idx);
-                try addAbility(self.ability_container, local_player.class_data.ability_2, &idx);
-                try addAbility(self.ability_container, local_player.class_data.ability_3, &idx);
-                try addAbility(self.ability_container, local_player.class_data.ultimate_ability, &idx);
-                self.abilities_inited = true;
+            if (self.last_in_combat != local_player.in_combat) {
+                if (local_player.in_combat) {
+                    const in_combat_data = assets.getUiData("in_combat_icon", 0);
+                    self.combat_indicator.image_data.normal.atlas_data = in_combat_data;
+                    self.combat_indicator.tooltip_text.?.text = "In Combat&size=\"12\"&type=\"med\"\n\nYou are unable to return to the Hub, teleport or enter portals until you exit combat.";
+                    self.combat_indicator.tooltip_text.?.hori_align = .middle;
+                    self.combat_indicator.tooltip_text.?.max_width = 250;
+                } else {
+                    const out_of_combat_data = assets.getUiData("out_of_combat_icon", 0);
+                    self.combat_indicator.image_data.normal.atlas_data = out_of_combat_data;
+                    self.combat_indicator.tooltip_text.?.text = "Out of Combat";
+                    self.combat_indicator.tooltip_text.?.hori_align = .left;
+                    self.combat_indicator.tooltip_text.?.max_width = std.math.floatMax(f32);
+                }
+
+                self.combat_indicator.tooltip_text.?.recalculateAttributes(self._allocator);
+                self.combat_indicator.x = self.bars_decor.x + (self.bars_decor.width() - self.combat_indicator.width()) / 2;
+                self.combat_indicator.y = self.bars_decor.y - self.combat_indicator.height() - 10;
+
+                self.last_in_combat = local_player.in_combat;
             }
 
             if (self.last_tier_xp != local_player.tier_xp or self.last_next_tier_xp != local_player.next_tier_xp) {

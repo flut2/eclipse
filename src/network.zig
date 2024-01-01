@@ -2,19 +2,19 @@ const std = @import("std");
 const utils = @import("utils.zig");
 const settings = @import("settings.zig");
 const main = @import("main.zig");
-const map = @import("map/map.zig");
+const map = @import("game/map.zig");
 const game_data = @import("game_data.zig");
 const element = @import("ui/element.zig");
 const camera = @import("camera.zig");
 const assets = @import("assets.zig");
-const particles = @import("map/particles.zig");
+const particles = @import("game/particles.zig");
 const systems = @import("ui/systems.zig");
 const dialog = @import("ui/dialogs//dialog.zig");
 
-const Square = @import("map/square.zig").Square;
-const Player = @import("map/player.zig").Player;
-const GameObject = @import("map/game_object.zig").GameObject;
-const Projectile = @import("map/projectile.zig").Projectile;
+const Square = @import("game/square.zig").Square;
+const Player = @import("game/player.zig").Player;
+const GameObject = @import("game/game_object.zig").GameObject;
+const Projectile = @import("game/projectile.zig").Projectile;
 
 pub const FailureType = enum(i8) {
     message_no_disconnect = -1,

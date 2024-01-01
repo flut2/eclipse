@@ -1,0 +1,1105 @@
+const std = @import("std");
+const element = @import("../ui/element.zig");
+const base = @import("base.zig");
+const map = @import("../game/map.zig");
+const camera = @import("../camera.zig");
+const assets = @import("../assets.zig");
+const settings = @import("../settings.zig");
+const ui_systems = @import("../ui/systems.zig");
+
+inline fn drawMinimap(
+    idx: u16,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    target_x: f32,
+    target_y: f32,
+    tex_w: f32,
+    tex_h: f32,
+    rotation: f32,
+    draw_data: base.DrawData,
+    scissor: element.ScissorRect,
+) u16 {
+    var new_idx = idx;
+
+    if (new_idx == base.base_batch_vert_size) {
+        draw_data.encoder.writeBuffer(
+            draw_data.buffer,
+            0,
+            base.BaseVertexData,
+            base.base_vert_data[0..base.base_batch_vert_size],
+        );
+        base.endDraw(
+            draw_data,
+            base.base_batch_vert_size * @sizeOf(base.BaseVertexData),
+            @divExact(base.base_batch_vert_size, 4) * 6,
+            null,
+        );
+        new_idx = 0;
+    }
+
+    const scaled_w = w * camera.clip_scale_x;
+    const scaled_h = h * camera.clip_scale_y;
+    const scaled_x = (x - camera.screen_width / 2.0 + w / 2.0) * camera.clip_scale_x;
+    const scaled_y = -(y - camera.screen_height / 2.0 + h / 2.0) * camera.clip_scale_y;
+
+    const cos_angle = @cos(rotation);
+    const sin_angle = @sin(rotation);
+    const x_cos = cos_angle * scaled_w * 0.5;
+    const x_sin = sin_angle * scaled_w * 0.5;
+    const y_cos = cos_angle * scaled_h * 0.5;
+    const y_sin = sin_angle * scaled_h * 0.5;
+
+    const tex_u = target_x / 4096.0;
+    const tex_v = target_y / 4096.0;
+    const tex_w_scale = tex_w / 4096.0;
+    const tex_h_scale = tex_h / 4096.0;
+    const tex_w_half = tex_w_scale / 2.0;
+    const tex_h_half = tex_h_scale / 2.0;
+
+    const dont_scissor = element.ScissorRect.dont_scissor;
+    const scaled_min_x = if (scissor.min_x != dont_scissor)
+        (scissor.min_x + x - camera.screen_width / 2.0) * camera.clip_scale_x
+    else if (rotation == 0) @as(f32, -1.0) else @as(f32, -2.0);
+    const scaled_max_x = if (scissor.max_x != dont_scissor)
+        (scissor.max_x + x - camera.screen_width / 2.0) * camera.clip_scale_x
+    else if (rotation == 0) @as(f32, 1.0) else @as(f32, 2.0);
+
+    // have to flip these, y is inverted... should be fixed later
+    const scaled_min_y = if (scissor.max_y != dont_scissor)
+        -(scissor.max_y + y - camera.screen_height / 2.0) * camera.clip_scale_y
+    else if (rotation == 0) @as(f32, -1.0) else @as(f32, -2.0);
+    const scaled_max_y = if (scissor.min_y != dont_scissor)
+        -(scissor.min_y + y - camera.screen_height / 2.0) * camera.clip_scale_y
+    else if (rotation == 0) @as(f32, 1.0) else @as(f32, 2.0);
+
+    var x1 = -x_cos + x_sin + scaled_x;
+    var tex_u1 = tex_u - tex_w_half;
+    if (x1 < scaled_min_x) {
+        const scale = (scaled_min_x - x1) / scaled_w;
+        x1 = scaled_min_x;
+        tex_u1 += scale * tex_w_scale;
+    } else if (x1 > scaled_max_x) {
+        const scale = (x1 - scaled_max_x) / scaled_w;
+        x1 = scaled_max_x;
+        tex_u1 -= scale * tex_w_scale;
+    }
+
+    var y1 = -y_sin - y_cos + scaled_y;
+    var tex_v1 = tex_v + tex_h_half;
+    if (y1 < scaled_min_y) {
+        const scale = (scaled_min_y - y1) / scaled_h;
+        y1 = scaled_min_y;
+        tex_v1 -= scale * tex_h_scale;
+    } else if (y1 > scaled_max_y) {
+        const scale = (y1 - scaled_max_y) / scaled_h;
+        y1 = scaled_max_y;
+        tex_v1 += scale * tex_h_scale;
+    }
+
+    base.base_vert_data[new_idx] = base.BaseVertexData{
+        .pos_uv = .{
+            .x = x1,
+            .y = y1,
+            .z = tex_u1,
+            .w = tex_v1,
+        },
+        .render_type = base.minimap_render_type,
+    };
+
+    var x2 = x_cos + x_sin + scaled_x;
+    var tex_u2 = tex_u + tex_w_half;
+    if (x2 < scaled_min_x) {
+        const scale = (scaled_min_x - x2) / scaled_w;
+        x2 = scaled_min_x;
+        tex_u2 += scale * tex_w_scale;
+    } else if (x2 > scaled_max_x) {
+        const scale = (x2 - scaled_max_x) / scaled_w;
+        x2 = scaled_max_x;
+        tex_u2 -= scale * tex_w_scale;
+    }
+
+    var y2 = y_sin - y_cos + scaled_y;
+    var tex_v2 = tex_v + tex_h_half;
+    if (y2 < scaled_min_y) {
+        const scale = (scaled_min_y - y2) / scaled_h;
+        y2 = scaled_min_y;
+        tex_v2 -= scale * tex_h_scale;
+    } else if (y2 > scaled_max_y) {
+        const scale = (y2 - scaled_max_y) / scaled_h;
+        y2 = scaled_max_y;
+        tex_v2 += scale * tex_h_scale;
+    }
+
+    base.base_vert_data[new_idx + 1] = base.BaseVertexData{
+        .pos_uv = .{
+            .x = x2,
+            .y = y2,
+            .z = tex_u2,
+            .w = tex_v2,
+        },
+        .render_type = base.minimap_render_type,
+    };
+
+    var x3 = x_cos - x_sin + scaled_x;
+    var tex_u3 = tex_u + tex_w_half;
+    if (x3 < scaled_min_x) {
+        const scale = (scaled_min_x - x3) / scaled_w;
+        x3 = scaled_min_x;
+        tex_u3 += scale * tex_w_scale;
+    } else if (x3 > scaled_max_x) {
+        const scale = (x3 - scaled_max_x) / scaled_w;
+        x3 = scaled_max_x;
+        tex_u3 -= scale * tex_w_scale;
+    }
+
+    var y3 = y_sin + y_cos + scaled_y;
+    var tex_v3 = tex_v - tex_h_half;
+    if (y3 < scaled_min_y) {
+        const scale = (scaled_min_y - y3) / scaled_h;
+        y3 = scaled_min_y;
+        tex_v3 -= scale * tex_h_scale;
+    } else if (y3 > scaled_max_y) {
+        const scale = (y3 - scaled_max_y) / scaled_h;
+        y3 = scaled_max_y;
+        tex_v3 += scale * tex_h_scale;
+    }
+
+    base.base_vert_data[new_idx + 2] = base.BaseVertexData{
+        .pos_uv = .{
+            .x = x3,
+            .y = y3,
+            .z = tex_u3,
+            .w = tex_v3,
+        },
+        .render_type = base.minimap_render_type,
+    };
+
+    var x4 = -x_cos - x_sin + scaled_x;
+    var tex_u4 = tex_u - tex_w_half;
+    if (x4 < scaled_min_x) {
+        const scale = (scaled_min_x - x4) / scaled_w;
+        x4 = scaled_min_x;
+        tex_u4 += scale * tex_w_scale;
+    } else if (x4 > scaled_max_x) {
+        const scale = (x4 - scaled_max_x) / scaled_w;
+        x4 = scaled_max_x;
+        tex_u4 -= scale * tex_w_scale;
+    }
+
+    var y4 = -y_sin + y_cos + scaled_y;
+    var tex_v4 = tex_v - tex_h_half;
+    if (y4 < scaled_min_y) {
+        const scale = (scaled_min_y - y4) / scaled_h;
+        y4 = scaled_min_y;
+        tex_v4 -= scale * tex_h_scale;
+    } else if (y4 > scaled_max_y) {
+        const scale = (y4 - scaled_max_y) / scaled_h;
+        y4 = scaled_max_y;
+        tex_v4 += scale * tex_h_scale;
+    }
+
+    base.base_vert_data[new_idx + 3] = base.BaseVertexData{
+        .pos_uv = .{
+            .x = x4,
+            .y = y4,
+            .z = tex_u4,
+            .w = tex_v4,
+        },
+        .render_type = base.minimap_render_type,
+    };
+
+    return new_idx + 4;
+}
+
+inline fn drawMenuBackground(
+    idx: u16,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    rotation: f32,
+    draw_data: base.DrawData,
+    scissor: element.ScissorRect,
+) u16 {
+    var new_idx = idx;
+
+    if (new_idx == base.base_batch_vert_size) {
+        draw_data.encoder.writeBuffer(
+            draw_data.buffer,
+            0,
+            base.BaseVertexData,
+            base.base_vert_data[0..base.base_batch_vert_size],
+        );
+        base.endDraw(
+            draw_data,
+            base.base_batch_vert_size * @sizeOf(base.BaseVertexData),
+            @divExact(base.base_batch_vert_size, 4) * 6,
+            null,
+        );
+        new_idx = 0;
+    }
+
+    const scaled_w = w * camera.clip_scale_x;
+    const scaled_h = h * camera.clip_scale_y;
+    const scaled_x = (x - camera.screen_width / 2.0 + w / 2.0) * camera.clip_scale_x;
+    const scaled_y = -(y - camera.screen_height / 2.0 + h / 2.0) * camera.clip_scale_y;
+
+    const cos_angle = @cos(rotation);
+    const sin_angle = @sin(rotation);
+    const x_cos = cos_angle * scaled_w * 0.5;
+    const x_sin = sin_angle * scaled_w * 0.5;
+    const y_cos = cos_angle * scaled_h * 0.5;
+    const y_sin = sin_angle * scaled_h * 0.5;
+
+    const dont_scissor = element.ScissorRect.dont_scissor;
+    const scaled_min_x = if (scissor.min_x != dont_scissor)
+        (scissor.min_x + x - camera.screen_width / 2.0) * camera.clip_scale_x
+    else if (rotation == 0) @as(f32, -1.0) else @as(f32, -2.0);
+    const scaled_max_x = if (scissor.max_x != dont_scissor)
+        (scissor.max_x + x - camera.screen_width / 2.0) * camera.clip_scale_x
+    else if (rotation == 0) @as(f32, 1.0) else @as(f32, 2.0);
+
+    // have to flip these, y is inverted... should be fixed later
+    const scaled_min_y = if (scissor.max_y != dont_scissor)
+        -(scissor.max_y + y - camera.screen_height / 2.0) * camera.clip_scale_y
+    else if (rotation == 0) @as(f32, -1.0) else @as(f32, -2.0);
+    const scaled_max_y = if (scissor.min_y != dont_scissor)
+        -(scissor.min_y + y - camera.screen_height / 2.0) * camera.clip_scale_y
+    else if (rotation == 0) @as(f32, 1.0) else @as(f32, 2.0);
+
+    const tex_w = 1.0;
+    const tex_h = 1.0;
+
+    var x1 = -x_cos + x_sin + scaled_x;
+    var tex_u1: f32 = 0;
+    if (x1 < scaled_min_x) {
+        const scale = (scaled_min_x - x1) / scaled_w;
+        x1 = scaled_min_x;
+        tex_u1 += scale * tex_w;
+    } else if (x1 > scaled_max_x) {
+        const scale = (x1 - scaled_max_x) / scaled_w;
+        x1 = scaled_max_x;
+        tex_u1 -= scale * tex_w;
+    }
+
+    var y1 = -y_sin - y_cos + scaled_y;
+    var tex_v1: f32 = 1;
+    if (y1 < scaled_min_y) {
+        const scale = (scaled_min_y - y1) / scaled_h;
+        y1 = scaled_min_y;
+        tex_v1 -= scale * tex_h;
+    } else if (y1 > scaled_max_y) {
+        const scale = (y1 - scaled_max_y) / scaled_h;
+        y1 = scaled_max_y;
+        tex_v1 += scale * tex_h;
+    }
+
+    base.base_vert_data[new_idx] = base.BaseVertexData{
+        .pos_uv = .{
+            .x = x1,
+            .y = y1,
+            .z = tex_u1,
+            .w = tex_v1,
+        },
+        .render_type = base.menu_bg_render_type,
+    };
+
+    var x2 = x_cos + x_sin + scaled_x;
+    var tex_u2: f32 = 1;
+    if (x2 < scaled_min_x) {
+        const scale = (scaled_min_x - x2) / scaled_w;
+        x2 = scaled_min_x;
+        tex_u2 += scale * tex_w;
+    } else if (x2 > scaled_max_x) {
+        const scale = (x2 - scaled_max_x) / scaled_w;
+        x2 = scaled_max_x;
+        tex_u2 -= scale * tex_w;
+    }
+
+    var y2 = y_sin - y_cos + scaled_y;
+    var tex_v2: f32 = 1;
+    if (y2 < scaled_min_y) {
+        const scale = (scaled_min_y - y2) / scaled_h;
+        y2 = scaled_min_y;
+        tex_v2 -= scale * tex_h;
+    } else if (y2 > scaled_max_y) {
+        const scale = (y2 - scaled_max_y) / scaled_h;
+        y2 = scaled_max_y;
+        tex_v2 += scale * tex_h;
+    }
+
+    base.base_vert_data[new_idx + 1] = base.BaseVertexData{
+        .pos_uv = .{
+            .x = x2,
+            .y = y2,
+            .z = tex_u2,
+            .w = tex_v2,
+        },
+        .render_type = base.menu_bg_render_type,
+    };
+
+    var x3 = x_cos - x_sin + scaled_x;
+    var tex_u3: f32 = 1;
+    if (x3 < scaled_min_x) {
+        const scale = (scaled_min_x - x3) / scaled_w;
+        x3 = scaled_min_x;
+        tex_u3 += scale * tex_w;
+    } else if (x3 > scaled_max_x) {
+        const scale = (x3 - scaled_max_x) / scaled_w;
+        x3 = scaled_max_x;
+        tex_u3 -= scale * tex_w;
+    }
+
+    var y3 = y_sin + y_cos + scaled_y;
+    var tex_v3: f32 = 0;
+    if (y3 < scaled_min_y) {
+        const scale = (scaled_min_y - y3) / scaled_h;
+        y3 = scaled_min_y;
+        tex_v3 -= scale * tex_h;
+    } else if (y3 > scaled_max_y) {
+        const scale = (y3 - scaled_max_y) / scaled_h;
+        y3 = scaled_max_y;
+        tex_v3 += scale * tex_h;
+    }
+
+    base.base_vert_data[new_idx + 2] = base.BaseVertexData{
+        .pos_uv = .{
+            .x = x3,
+            .y = y3,
+            .z = tex_u3,
+            .w = tex_v3,
+        },
+        .render_type = base.menu_bg_render_type,
+    };
+
+    var x4 = -x_cos - x_sin + scaled_x;
+    var tex_u4: f32 = 0;
+    if (x4 < scaled_min_x) {
+        const scale = (scaled_min_x - x4) / scaled_w;
+        x4 = scaled_min_x;
+        tex_u4 += scale * tex_w;
+    } else if (x4 > scaled_max_x) {
+        const scale = (x4 - scaled_max_x) / scaled_w;
+        x4 = scaled_max_x;
+        tex_u4 -= scale * tex_w;
+    }
+
+    var y4 = -y_sin + y_cos + scaled_y;
+    var tex_v4: f32 = 0;
+    if (y4 < scaled_min_y) {
+        const scale = (scaled_min_y - y4) / scaled_h;
+        y4 = scaled_min_y;
+        tex_v4 -= scale * tex_h;
+    } else if (y4 > scaled_max_y) {
+        const scale = (y4 - scaled_max_y) / scaled_h;
+        y4 = scaled_max_y;
+        tex_v4 += scale * tex_h;
+    }
+
+    base.base_vert_data[new_idx + 3] = base.BaseVertexData{
+        .pos_uv = .{
+            .x = x4,
+            .y = y4,
+            .z = tex_u4,
+            .w = tex_v4,
+        },
+        .render_type = base.menu_bg_render_type,
+    };
+
+    return new_idx + 4;
+}
+
+inline fn drawNineSlice(
+    idx: u16,
+    x: f32,
+    y: f32,
+    image_data: element.NineSliceImageData,
+    draw_data: base.DrawData,
+) u16 {
+    var new_idx = idx;
+
+    const opts = base.QuadOptions{
+        .alpha_mult = image_data.alpha,
+        .base_color = image_data.color,
+        .base_color_intensity = image_data.color_intensity,
+    };
+
+    const w = image_data.w;
+    const h = image_data.h;
+
+    const top_left = image_data.topLeft();
+    const top_left_w = top_left.texWRaw();
+    const top_left_h = top_left.texHRaw();
+    new_idx = base.drawQuad(new_idx, x, y, top_left_w, top_left_h, top_left, draw_data, opts);
+
+    const top_right = image_data.topRight();
+    const top_right_w = top_right.texWRaw();
+    new_idx = base.drawQuad(new_idx, x + (w - top_right_w), y, top_right_w, top_right.texHRaw(), top_right, draw_data, opts);
+
+    const bottom_left = image_data.bottomLeft();
+    const bottom_left_w = bottom_left.texWRaw();
+    const bottom_left_h = bottom_left.texHRaw();
+    new_idx = base.drawQuad(new_idx, x, y + (h - bottom_left_h), bottom_left.texWRaw(), bottom_left_h, bottom_left, draw_data, opts);
+
+    const bottom_right = image_data.bottomRight();
+    const bottom_right_w = bottom_right.texWRaw();
+    const bottom_right_h = bottom_right.texHRaw();
+    new_idx = base.drawQuad(new_idx, x + (w - bottom_right_w), y + (h - bottom_right_h), bottom_right_w, bottom_right_h, bottom_right, draw_data, opts);
+
+    const top_center = image_data.topCenter();
+    new_idx = base.drawQuad(new_idx, x + top_left_w, y, w - top_left_w - top_right_w, top_center.texHRaw(), top_center, draw_data, opts);
+
+    const bottom_center = image_data.bottomCenter();
+    const bottom_center_h = bottom_center.texHRaw();
+    new_idx = base.drawQuad(new_idx, x + bottom_left_w, y + (h - bottom_center_h), w - bottom_left_w - bottom_right_w, bottom_center_h, bottom_center, draw_data, opts);
+
+    const middle_center = image_data.middleCenter();
+    new_idx = base.drawQuad(new_idx, x + top_left_w, y + top_left_h, w - top_left_w - top_right_w, h - top_left_h - bottom_left_h, middle_center, draw_data, opts);
+
+    const middle_left = image_data.middleLeft();
+    new_idx = base.drawQuad(new_idx, x, y + top_left_h, middle_left.texWRaw(), h - top_left_h - bottom_left_h, middle_left, draw_data, opts);
+
+    const middle_right = image_data.middleRight();
+    const middle_right_w = middle_right.texWRaw();
+    new_idx = base.drawQuad(new_idx, x + (w - middle_right_w), y + top_left_h, middle_right_w, h - top_left_h - bottom_left_h, middle_right, draw_data, opts);
+
+    return new_idx;
+}
+
+inline fn drawImage(idx: u16, image: *element.Image, draw_data: base.DrawData, x_offset: f32, y_offset: f32, cam_x: f32, cam_y: f32) u16 {
+    var new_idx = idx;
+
+    if (!image.visible)
+        return new_idx;
+
+    switch (image.image_data) {
+        .nine_slice => |nine_slice| new_idx = drawNineSlice(new_idx, image.x + x_offset, image.y + y_offset, nine_slice, draw_data),
+        .normal => |image_data| {
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = image.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+            };
+            new_idx = base.drawQuad(new_idx, image.x + x_offset, image.y + y_offset, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
+        },
+    }
+
+    if (image.is_minimap_decor) {
+        const float_w: f32 = @floatFromInt(map.width);
+        const float_h: f32 = @floatFromInt(map.height);
+        const zoom = camera.minimap_zoom;
+        new_idx = drawMinimap(
+            new_idx,
+            image.x + image.minimap_offset_x + x_offset,
+            image.y + image.minimap_offset_y + y_offset,
+            image.minimap_width,
+            image.minimap_height,
+            cam_x,
+            cam_y,
+            float_w / zoom,
+            float_h / zoom,
+            0,
+            draw_data,
+            .{
+                .min_x = 0,
+                .min_y = 0,
+                .max_x = image.minimap_width,
+                .max_y = image.minimap_height,
+            },
+        );
+
+        const player_icon = assets.getUiData("minimap_icons", 0); // doing a hashmap lookup every frame is not wise. todo
+        const scale = 2.0;
+        const player_icon_w = player_icon.texWRaw() * scale;
+        const player_icon_h = player_icon.texHRaw() * scale;
+        new_idx = base.drawQuad(
+            new_idx,
+            image.x + image.minimap_offset_x + x_offset + (image.minimap_width - player_icon_w) / 2.0,
+            image.y + image.minimap_offset_y + y_offset + (image.minimap_height - player_icon_h) / 2.0,
+            player_icon_w,
+            player_icon_h,
+            player_icon,
+            draw_data,
+            .{ .rotation = -camera.angle, .force_glow_off = true, .shadow_texel_mult = 1.0 / scale },
+        );
+    }
+
+    return new_idx;
+}
+
+inline fn drawItem(idx: u16, item: *element.Item, draw_data: base.DrawData, x_offset: f32, y_offset: f32) u16 {
+    var new_idx = idx;
+
+    if (!item.visible)
+        return new_idx;
+
+    if (item._background_image_data) |background_image_data| {
+        switch (background_image_data) {
+            .nine_slice => |nine_slice| {
+                new_idx = drawNineSlice(new_idx, item.background_x + x_offset, item.background_y + y_offset, nine_slice, draw_data);
+            },
+            .normal => |image_data| {
+                const opts = base.QuadOptions{
+                    .shadow_texel_mult = 2.0 / @max(image_data.scale_x, image_data.scale_y),
+                    .alpha_mult = image_data.alpha,
+                    .scissor = item.scissor,
+                    .base_color = image_data.color,
+                    .base_color_intensity = image_data.color_intensity,
+                };
+                new_idx = base.drawQuad(new_idx, item.background_x + x_offset, item.background_y + y_offset, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
+            },
+        }
+    }
+
+    switch (item.image_data) {
+        .nine_slice => |nine_slice| {
+            new_idx = drawNineSlice(new_idx, item.x + x_offset, item.y + y_offset, nine_slice, draw_data);
+        },
+        .normal => |image_data| {
+            const opts = base.QuadOptions{
+                .shadow_texel_mult = 2.0 / @max(image_data.scale_x, image_data.scale_y),
+                .alpha_mult = image_data.alpha,
+                .scissor = item.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+            };
+            new_idx = base.drawQuad(new_idx, item.x + x_offset, item.y + y_offset, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
+        },
+    }
+
+    return new_idx;
+}
+
+inline fn drawBar(idx: u16, bar: *element.Bar, draw_data: base.DrawData, x_offset: f32, y_offset: f32) u16 {
+    var new_idx = idx;
+
+    if (!bar.visible)
+        return new_idx;
+
+    var w: f32 = 0;
+    var h: f32 = 0;
+    switch (bar.image_data) {
+        .nine_slice => |nine_slice| {
+            w = nine_slice.w;
+            h = nine_slice.h;
+            new_idx = drawNineSlice(new_idx, bar.x + x_offset, bar.y + y_offset, nine_slice, draw_data);
+        },
+        .normal => |image_data| {
+            w = image_data.width();
+            h = image_data.height();
+            const atlas_data = image_data.atlas_data;
+            const scale: f32 = 1.0;
+
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = bar.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+            };
+            new_idx = base.drawQuad(new_idx, bar.x + x_offset, bar.y + y_offset, w * scale, image_data.height(), atlas_data, draw_data, opts);
+        },
+    }
+
+    new_idx = base.drawText(
+        new_idx,
+        bar.x + (w - bar.text_data._width) / 2 + x_offset,
+        bar.y + (h - bar.text_data._height) / 2 + y_offset,
+        &bar.text_data,
+        draw_data,
+        .{},
+    );
+
+    return new_idx;
+}
+
+inline fn drawButton(idx: u16, button: *element.Button, draw_data: base.DrawData, x_offset: f32, y_offset: f32) u16 {
+    var new_idx = idx;
+
+    if (!button.visible)
+        return new_idx;
+
+    var w: f32 = 0;
+    var h: f32 = 0;
+
+    switch (button.image_data.current(button.state)) {
+        .nine_slice => |nine_slice| {
+            w = nine_slice.w;
+            h = nine_slice.h;
+            new_idx = drawNineSlice(new_idx, button.x + x_offset, button.y + y_offset, nine_slice, draw_data);
+        },
+        .normal => |image_data| {
+            w = image_data.width();
+            h = image_data.height();
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = button.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+            };
+            new_idx = base.drawQuad(new_idx, button.x + x_offset, button.y + y_offset, w, h, image_data.atlas_data, draw_data, opts);
+        },
+    }
+
+    if (button.text_data) |*text_data| {
+        new_idx = base.drawText(
+            new_idx,
+            button.x + (w - text_data._width) / 2 + x_offset,
+            button.y + (h - text_data._height) / 2 + y_offset,
+            text_data,
+            draw_data,
+            button.scissor,
+        );
+    }
+
+    return new_idx;
+}
+
+inline fn drawCharacterBox(idx: u16, char_box: *element.CharacterBox, draw_data: base.DrawData, x_offset: f32, y_offset: f32) u16 {
+    var new_idx = idx;
+
+    if (!char_box.visible)
+        return new_idx;
+
+    var w: f32 = 0;
+    var h: f32 = 0;
+
+    switch (char_box.image_data.current(char_box.state)) {
+        .nine_slice => |nine_slice| {
+            w = nine_slice.w;
+            h = nine_slice.h;
+            new_idx = drawNineSlice(new_idx, char_box.x + x_offset, char_box.y + y_offset, nine_slice, draw_data);
+        },
+        .normal => |image_data| {
+            w = image_data.width();
+            h = image_data.height();
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = char_box.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+            };
+            new_idx = base.drawQuad(
+                new_idx,
+                char_box.x + x_offset,
+                char_box.y + y_offset,
+                image_data.width(),
+                image_data.height(),
+                image_data.atlas_data,
+                draw_data,
+                opts,
+            );
+        },
+    }
+
+    if (char_box.text_data) |*text_data| {
+        new_idx = base.drawText(
+            new_idx,
+            char_box.x + (w - text_data._width) / 2 + x_offset,
+            char_box.y + (h - text_data._height) / 2 + y_offset,
+            text_data,
+            draw_data,
+            char_box.scissor,
+        );
+    }
+
+    return new_idx;
+}
+
+inline fn drawInputField(idx: u16, input_field: *element.Input, draw_data: base.DrawData, x_offset: f32, y_offset: f32, time: i64) u16 {
+    var new_idx = idx;
+
+    if (!input_field.visible)
+        return new_idx;
+
+    var w: f32 = 0;
+    var h: f32 = 0;
+
+    switch (input_field.image_data.current(input_field.state)) {
+        .nine_slice => |nine_slice| {
+            w = nine_slice.w;
+            h = nine_slice.h;
+            new_idx = drawNineSlice(new_idx, input_field.x + x_offset, input_field.y + y_offset, nine_slice, draw_data);
+        },
+        .normal => |image_data| {
+            w = image_data.width();
+            h = image_data.height();
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = input_field.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+            };
+            new_idx = base.drawQuad(new_idx, input_field.x + x_offset, input_field.y + y_offset, w, h, image_data.atlas_data, draw_data, opts);
+        },
+    }
+
+    const text_x = input_field.x + input_field.text_inlay_x + x_offset + input_field._x_offset;
+    const text_y = input_field.y + input_field.text_inlay_y + y_offset;
+    new_idx = base.drawText(new_idx, text_x, text_y, &input_field.text_data, draw_data, input_field.scissor);
+
+    const flash_delay = 500 * std.time.us_per_ms;
+    if (input_field._last_input != -1 and (time - input_field._last_input < flash_delay or @mod(@divFloor(time, flash_delay), 2) == 0)) {
+        const cursor_x = text_x + input_field.text_data._width;
+        switch (input_field.cursor_image_data) {
+            .nine_slice => |nine_slice| new_idx = drawNineSlice(new_idx, cursor_x, text_y, nine_slice, draw_data),
+            .normal => |image_data| {
+                const opts = base.QuadOptions{
+                    .alpha_mult = image_data.alpha,
+                    .scissor = input_field.scissor,
+                    .base_color = image_data.color,
+                    .base_color_intensity = image_data.color_intensity,
+                    .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+                };
+                new_idx = base.drawQuad(new_idx, cursor_x, text_y, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
+            },
+        }
+    }
+
+    return new_idx;
+}
+
+inline fn drawToggle(idx: u16, toggle: *element.Toggle, draw_data: base.DrawData, x_offset: f32, y_offset: f32) u16 {
+    var new_idx = idx;
+
+    if (!toggle.visible)
+        return new_idx;
+
+    var w: f32 = 0;
+    var h: f32 = 0;
+
+    switch (if (toggle.toggled.*)
+        toggle.on_image_data.current(toggle.state)
+    else
+        toggle.off_image_data.current(toggle.state)) {
+        .nine_slice => |nine_slice| {
+            w = nine_slice.w;
+            h = nine_slice.h;
+            new_idx = drawNineSlice(new_idx, toggle.x + x_offset, toggle.y + y_offset, nine_slice, draw_data);
+        },
+        .normal => |image_data| {
+            w = image_data.width();
+            h = image_data.height();
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = toggle.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+            };
+            new_idx = base.drawQuad(new_idx, toggle.x + x_offset, toggle.y + y_offset, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
+        },
+    }
+
+    if (toggle.text_data) |*text_data| {
+        const pad = 5;
+        new_idx = base.drawText(
+            new_idx,
+            toggle.x + w + pad + x_offset,
+            toggle.y + (h - text_data._height) / 2 + y_offset,
+            text_data,
+            draw_data,
+            toggle.scissor,
+        );
+    }
+
+    return new_idx;
+}
+
+inline fn drawKeyMapper(idx: u16, key_mapper: *element.KeyMapper, draw_data: base.DrawData, x_offset: f32, y_offset: f32) u16 {
+    var new_idx = idx;
+
+    if (!key_mapper.visible)
+        return new_idx;
+
+    var w: f32 = 0;
+    var h: f32 = 0;
+
+    switch (key_mapper.image_data.current(key_mapper.state)) {
+        .nine_slice => |nine_slice| {
+            w = nine_slice.w;
+            h = nine_slice.h;
+            new_idx = drawNineSlice(new_idx, key_mapper.x + x_offset, key_mapper.y + y_offset, nine_slice, draw_data);
+        },
+        .normal => |image_data| {
+            w = image_data.width();
+            h = image_data.height();
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = key_mapper.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+            };
+            new_idx = base.drawQuad(new_idx, key_mapper.x + x_offset, key_mapper.y + y_offset, w, h, image_data.atlas_data, draw_data, opts);
+        },
+    }
+
+    new_idx = base.drawQuad(
+        new_idx,
+        key_mapper.x + x_offset,
+        key_mapper.y + y_offset,
+        w,
+        h,
+        settings.getKeyTexture(key_mapper.settings_button.*),
+        draw_data,
+        .{ .force_glow_off = true },
+    );
+
+    if (key_mapper.title_text_data) |*text_data| {
+        const pad = 5;
+        new_idx = base.drawText(
+            new_idx,
+            key_mapper.x + w + pad + x_offset,
+            key_mapper.y + (h - text_data._height) / 2 + y_offset,
+            text_data,
+            draw_data,
+            key_mapper.scissor,
+        );
+    }
+
+    return new_idx;
+}
+
+inline fn drawSlider(idx: u16, slider: *element.Slider, draw_data: base.DrawData, x_offset: f32, y_offset: f32) u16 {
+    var new_idx = idx;
+
+    if (!slider.visible)
+        return new_idx;
+
+    switch (slider.decor_image_data) {
+        .nine_slice => |nine_slice| new_idx = drawNineSlice(
+            new_idx,
+            slider.x + x_offset,
+            slider.y + y_offset,
+            nine_slice,
+            draw_data,
+        ),
+        .normal => |image_data| {
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = slider.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+            };
+            new_idx = base.drawQuad(
+                new_idx,
+                slider.x + x_offset,
+                slider.y + y_offset,
+                slider.w,
+                slider.h,
+                image_data.atlas_data,
+                draw_data,
+                opts,
+            );
+        },
+    }
+
+    const knob_image_data = slider.knob_image_data.current(slider.state);
+    const knob_x = slider.x + slider._knob_x + x_offset;
+    const knob_y = slider.y + slider._knob_y + y_offset;
+    var knob_w: f32 = 0.0;
+    var knob_h: f32 = 0.0;
+    switch (knob_image_data) {
+        .nine_slice => |nine_slice| {
+            new_idx = drawNineSlice(
+                new_idx,
+                knob_x,
+                knob_y,
+                nine_slice,
+                draw_data,
+            );
+
+            knob_w = nine_slice.w;
+            knob_h = nine_slice.h;
+        },
+        .normal => |image_data| {
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = slider.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+            };
+            new_idx = base.drawQuad(
+                new_idx,
+                knob_x,
+                knob_y,
+                slider.w,
+                slider.h,
+                image_data.atlas_data,
+                draw_data,
+                opts,
+            );
+
+            knob_w = image_data.width();
+            knob_h = image_data.height();
+        },
+    }
+
+    if (slider.title_text_data) |*text_data| {
+        new_idx = base.drawText(
+            new_idx,
+            slider.x + x_offset,
+            slider.y + y_offset - slider.title_offset,
+            text_data,
+            draw_data,
+            slider.scissor,
+        );
+    }
+
+    if (slider.value_text_data) |*text_data| {
+        new_idx = base.drawText(
+            new_idx,
+            knob_x + if (slider.vertical) knob_w else 0,
+            knob_y + if (slider.vertical) 0 else knob_h,
+            text_data,
+            draw_data,
+            slider.scissor,
+        );
+    }
+
+    return new_idx;
+}
+
+inline fn drawElement(
+    idx: u16,
+    elem: element.UiElement,
+    draw_data: base.DrawData,
+    cam_x: f32,
+    cam_y: f32,
+    x_offset: f32,
+    y_offset: f32,
+    time: i64,
+) u16 {
+    var new_idx = idx;
+
+    switch (elem) {
+        .image => |image| new_idx = drawImage(new_idx, image, draw_data, x_offset, y_offset, cam_x, cam_y),
+        .menu_bg => |menu_bg| {
+            if (menu_bg.visible)
+                new_idx = drawMenuBackground(new_idx, menu_bg.x + x_offset, menu_bg.y + y_offset, menu_bg.w, menu_bg.h, 0, draw_data, menu_bg.scissor);
+        },
+        .item => |item| new_idx = drawItem(new_idx, item, draw_data, x_offset, y_offset),
+        .bar => |bar| new_idx = drawBar(new_idx, bar, draw_data, x_offset, y_offset),
+        .button => |button| new_idx = drawButton(new_idx, button, draw_data, x_offset, y_offset),
+        .char_box => |char_box| new_idx = drawCharacterBox(new_idx, char_box, draw_data, x_offset, y_offset),
+        .text => |text| {
+            if (text.visible)
+                new_idx = base.drawText(new_idx, text.x + x_offset, text.y + y_offset, &text.text_data, draw_data, text.scissor);
+        },
+        .input_field => |input_field| new_idx = drawInputField(new_idx, input_field, draw_data, x_offset, y_offset, time),
+        .toggle => |toggle| new_idx = drawToggle(new_idx, toggle, draw_data, x_offset, y_offset),
+        .key_mapper => |key_mapper| new_idx = drawKeyMapper(new_idx, key_mapper, draw_data, x_offset, y_offset),
+        .slider => |slider| new_idx = drawSlider(new_idx, slider, draw_data, x_offset, y_offset),
+        else => {},
+    }
+
+    return new_idx;
+}
+
+pub inline fn drawTempElements(idx: u16, draw_data: base.DrawData) u16 {
+    ui_systems.temp_elem_lock.lock();
+    defer ui_systems.temp_elem_lock.unlock();
+
+    var new_idx = idx;
+    for (ui_systems.temp_elements.items) |*elem| {
+        switch (elem.*) {
+            .status => |*text| {
+                if (!text.visible)
+                    continue;
+
+                new_idx = base.drawText(new_idx, text._screen_x, text._screen_y, &text.text_data, draw_data, .{});
+            },
+            .balloon => |*balloon| {
+                if (!balloon.visible)
+                    continue;
+
+                const image_data = balloon.image_data.normal; // assume no 9 slice
+                const w = image_data.width();
+                const h = image_data.height();
+
+                const opts = base.QuadOptions{
+                    .alpha_mult = image_data.alpha,
+                    .base_color = image_data.color,
+                    .base_color_intensity = image_data.color_intensity,
+                    .shadow_texel_mult = if (image_data.glow) 1.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+                };
+                new_idx = base.drawQuad(new_idx, balloon._screen_x, balloon._screen_y, w, h, image_data.atlas_data, draw_data, opts);
+
+                const decor_offset = h / 10;
+                new_idx = base.drawText(
+                    new_idx,
+                    balloon._screen_x + ((w - assets.padding * image_data.scale_x) - balloon.text_data._width) / 2,
+                    balloon._screen_y + (h - balloon.text_data._height) / 2 - decor_offset,
+                    &balloon.text_data,
+                    draw_data,
+                    .{},
+                );
+            },
+        }
+    }
+
+    return new_idx;
+}
+
+pub inline fn drawUiElements(idx: u16, draw_data: base.DrawData, cam_x: f32, cam_y: f32, time: i64) u16 {
+    ui_systems.ui_lock.lock();
+    defer ui_systems.ui_lock.unlock();
+
+    var new_idx = idx;
+
+    for (ui_systems.elements.items) |elem| {
+        switch (elem) {
+            .scrollable_container => |scrollable_container| {
+                if (!scrollable_container.visible)
+                    continue;
+
+                for (scrollable_container._container._elements.items) |cont_elem| {
+                    new_idx = drawElement(
+                        new_idx,
+                        cont_elem,
+                        draw_data,
+                        cam_x,
+                        cam_y,
+                        scrollable_container._container.x,
+                        scrollable_container._container.y,
+                        time,
+                    );
+                }
+
+                new_idx = drawElement(
+                    new_idx,
+                    .{ .slider = scrollable_container._scroll_bar },
+                    draw_data,
+                    cam_x,
+                    cam_y,
+                    0,
+                    0,
+                    time,
+                );
+            },
+            .container => |container| {
+                if (!container.visible)
+                    continue;
+
+                for (container._elements.items) |cont_elem| {
+                    new_idx = drawElement(new_idx, cont_elem, draw_data, cam_x, cam_y, container.x, container.y, time);
+                }
+            },
+            else => {
+                new_idx = drawElement(new_idx, elem, draw_data, cam_x, cam_y, 0, 0, time);
+            },
+        }
+    }
+
+    return new_idx;
+}

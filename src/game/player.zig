@@ -97,7 +97,7 @@ pub const Player = struct {
     class_data: *const game_data.CharacterClass = undefined,
     last_ground_damage_time: i64 = -1,
     anim_data: assets.AnimPlayerData = undefined,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
     render_x_offset: f32 = 0.0,
     move_multiplier: f32 = 1.0,
     sink_level: f32 = 0,
@@ -109,6 +109,7 @@ pub const Player = struct {
     facing: f32 = std.math.nan(f32),
     ability_use_times: [4]i64 = [_]i64{-1} ** 4,
     ability_data: std.ArrayList(u8) = undefined,
+    in_combat: bool = false,
     _disposed: bool = false,
 
     pub fn onMove(self: *Player) void {

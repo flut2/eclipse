@@ -94,16 +94,39 @@ pub const AnimPlayerData = struct {
     attack_anims: [directions * attack_actions]AtlasData,
 };
 
+pub const AtlasType = enum(u8) {
+    base,
+    ui,
+
+    pub inline fn width(self: AtlasType) f32 {
+        return switch (self) {
+            .base => atlas_width,
+            .ui => ui_atlas_width,
+        };
+    }
+
+    pub inline fn height(self: AtlasType) f32 {
+        return switch (self) {
+            .base => atlas_height,
+            .ui => ui_atlas_height,
+        };
+    }
+};
+
 pub const AtlasData = extern struct {
+    pub fn whole(atlas_type: AtlasType) AtlasData {
+        return fromRawF32(1.0, 1.0, 1.0, 1.0, atlas_type);
+    }
+
     tex_u: f32,
     tex_v: f32,
     tex_w: f32,
     tex_h: f32,
-    ui: bool,
+    atlas_type: AtlasType,
 
     pub fn removePadding(self: *AtlasData) void {
-        const w: f32 = if (self.ui) ui_atlas_width else atlas_width;
-        const h: f32 = if (self.ui) ui_atlas_height else atlas_height;
+        const w = self.atlas_type.width();
+        const h = self.atlas_type.height();
         const float_pad: f32 = padding;
         self.tex_u += float_pad / w;
         self.tex_v += float_pad / h;
@@ -111,40 +134,36 @@ pub const AtlasData = extern struct {
         self.tex_h -= float_pad * 2 / h;
     }
 
-    pub inline fn fromRaw(u: u32, v: u32, w: u32, h: u32, ui: bool) AtlasData {
+    pub inline fn fromRaw(u: u32, v: u32, w: u32, h: u32, ui: AtlasType) AtlasData {
         return fromRawF32(@floatFromInt(u), @floatFromInt(v), @floatFromInt(w), @floatFromInt(h), ui);
     }
 
-    pub inline fn fromRawF32(u: f32, v: f32, w: f32, h: f32, ui: bool) AtlasData {
-        const atlas_w: f32 = if (ui) ui_atlas_width else atlas_width;
-        const atlas_h: f32 = if (ui) ui_atlas_height else atlas_height;
+    pub inline fn fromRawF32(u: f32, v: f32, w: f32, h: f32, atlas_type: AtlasType) AtlasData {
+        const atlas_w = atlas_type.width();
+        const atlas_h = atlas_type.height();
         return AtlasData{
             .tex_u = u / atlas_w,
             .tex_v = v / atlas_h,
             .tex_w = w / atlas_w,
             .tex_h = h / atlas_h,
-            .ui = ui,
+            .atlas_type = atlas_type,
         };
     }
 
     pub inline fn texURaw(self: AtlasData) f32 {
-        const w: f32 = (if (self.ui) ui_atlas_width else atlas_width);
-        return self.tex_u * w;
+        return self.tex_u * self.atlas_type.width();
     }
 
     pub inline fn texVRaw(self: AtlasData) f32 {
-        const h: f32 = (if (self.ui) ui_atlas_height else ui_atlas_height);
-        return self.tex_v * h;
+        return self.tex_v * self.atlas_type.height();
     }
 
     pub inline fn texWRaw(self: AtlasData) f32 {
-        const w: f32 = (if (self.ui) ui_atlas_width else atlas_width);
-        return self.tex_w * w;
+        return self.tex_w * self.atlas_type.width();
     }
 
     pub inline fn texHRaw(self: AtlasData) f32 {
-        const h: f32 = (if (self.ui) ui_atlas_height else ui_atlas_height);
-        return self.tex_h * h;
+        return self.tex_h * self.atlas_type.height();
     }
 };
 
@@ -213,7 +232,6 @@ pub var main_music: *zaudio.Sound = undefined;
 
 pub var atlas: zstbi.Image = undefined;
 pub var ui_atlas: zstbi.Image = undefined;
-pub var light_tex: zstbi.Image = undefined;
 pub var menu_background: zstbi.Image = undefined;
 
 pub var bold_atlas: zstbi.Image = undefined;
@@ -262,6 +280,7 @@ pub var error_data_enemy: AnimEnemyData = undefined;
 pub var error_data_player: AnimPlayerData = undefined;
 pub var light_w: f32 = 1.0;
 pub var light_h: f32 = 1.0;
+pub var light_data: AtlasData = undefined;
 pub var editor_tile: AtlasData = undefined;
 
 fn imageBounds(img: zstbi.Image, x: usize, y: usize, cut_w: u32, cut_h: u32) struct {
@@ -441,7 +460,7 @@ fn addImage(
                 }
             }
 
-            data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, false);
+            data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
             try atlas_to_color_data.put(@bitCast(data[i]), try allocator.dupe(u32, colors.items));
         }
 
@@ -499,7 +518,7 @@ fn addUiImage(
                 @memcpy(ui_atlas.data[atlas_idx .. atlas_idx + w * 4], img.data[src_idx .. src_idx + w * 4]);
             }
 
-            data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, true);
+            data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .ui);
         }
 
         try ui_atlas_data.put(sheet_name, data);
@@ -556,7 +575,7 @@ fn addAnimEnemy(
 
                 color_counts.clearRetainingCapacity();
 
-                const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, false);
+                const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
                 const frame_idx = j % 5;
                 const set_idx = @divFloor(j, 5);
                 if (frame_idx >= 3) {
@@ -681,7 +700,7 @@ fn addAnimPlayer(
 
             color_counts.clearRetainingCapacity();
 
-            const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, false);
+            const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
             const frame_idx = j % 5;
             const set_idx = @divFloor(j, 5);
             if (set_idx % 4 == 1 and frame_idx == 0) {
@@ -928,10 +947,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     try addCursors("cursors.png", 32, 32, allocator);
 
-    light_tex = try zstbi.Image.loadFromFile(asset_dir ++ "sheets/light.png", 4);
-    light_w = @floatFromInt(light_tex.width);
-    light_h = @floatFromInt(light_tex.height);
-
     atlas = try zstbi.Image.createEmpty(atlas_width, atlas_height, 4, .{});
     var ctx = zstbrp.PackContext{
         .width = atlas_width,
@@ -943,6 +958,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     defer allocator.free(nodes);
     zstbrp.initPack(&ctx, nodes);
 
+    try addImage("light", "light.png", 128, 128, false, &ctx, allocator);
     try addImage("bars", "bars.png", 24, 8, false, &ctx, allocator);
     try addImage("conditions", "conditions.png", 16, 16, false, &ctx, allocator);
     try addImage("error_texture", "error_texture.png", 8, 8, false, &ctx, allocator);
@@ -987,12 +1003,16 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     const imply_size = std.math.maxInt(u32);
     try addUiImage("ability_icons", "sheets/ability_icons.png", 40, 40, &ctx, allocator);
+    try addUiImage("menu_decor_frame", "ui/menu_decor_frame.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("faer_logo", "ui/faer_logo.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("hub_button", "ui/hub_button.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("options_button", "ui/options_button.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("rare_slot", "ui/rare_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("epic_slot", "ui/epic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("legendary_slot", "ui/legendary_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("mythic_slot", "ui/mythic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("in_combat_icon", "ui/in_combat_icon.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("out_of_combat_icon", "ui/out_of_combat_icon.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("out_of_mana_slot", "ui/out_of_mana_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("out_of_health_slot", "ui/out_of_health_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("basic_panel", "ui/basic_panel.png", imply_size, imply_size, &ui_ctx, allocator);
@@ -1044,6 +1064,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     if (settings.print_ui_atlas)
         try zstbi.Image.writeToFile(ui_atlas, "ui_atlas.png", .png);
+
+    if (atlas_data.get("light")) |light| {
+        light_data = light[0x0];
+    } else std.debug.panic("Could not find light in the atlas", .{});
 
     if (atlas_data.get("ground_masks")) |ground_masks| {
         var left_mask_data = ground_masks[0x0];

@@ -1,7 +1,7 @@
 const pad = @import("assets.zig").padding;
 const rotate_speed = @import("settings.zig").rotate_speed;
 const std = @import("std");
-const map = @import("map/map.zig");
+const map = @import("game/map.zig");
 const utils = @import("utils.zig");
 
 pub const px_per_tile: i16 = 88;

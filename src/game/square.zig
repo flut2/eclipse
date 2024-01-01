@@ -19,7 +19,7 @@ pub const Square = struct {
     tile_type: u16 = 0xFFFF,
     x: f32 = 0.0,
     y: f32 = 0.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
     blends: [4]Blend = [_]Blend{.{ .u = -1.0, .v = -1.0 }} ** 4,
     props: *const game_data.GroundProps = undefined,
     static_obj_id: i32 = -1,

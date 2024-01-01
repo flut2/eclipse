@@ -13,9 +13,9 @@ const zstbi = @import("zstbi");
 const input = @import("input.zig");
 const utils = @import("utils.zig");
 const camera = @import("camera.zig");
-const map = @import("map/map.zig");
+const map = @import("game/map.zig");
 const element = @import("ui/element.zig");
-const render = @import("render.zig");
+const render = @import("render/base.zig");
 const ztracy = @import("ztracy");
 const zaudio = @import("zaudio");
 const systems = @import("ui/systems.zig");
@@ -63,7 +63,7 @@ pub const CharacterData = struct {
     health_pots: i8 = 0,
     magic_pots: i8 = 0,
     has_backpack: bool = false,
-    equipment: [20]u16 = [_]u16{0} ** 20,
+    equipment: [22]u16 = [_]u16{0} ** 22,
 
     pub fn parse(allocator: std.mem.Allocator, node: xml.Node, id: u32) !CharacterData {
         const obj_type = try node.getValueInt("ObjectType", u16, 0);
@@ -192,7 +192,7 @@ fn renderTick(allocator: std.mem.Allocator, window: *zglfw.Window) !void {
         if (!tick_render)
             return;
 
-        if (!settings.enable_vsync and settings.fps_cap > 0) {
+        if (!settings.enable_vsync and settings.fps_cap >= 999.99) {
             // Sleep is unreliable, the fps cap would be slightly lower than the actual cap.
             // So we have to sleep 1.3x shorter and just loop for the rest of the time remaining
             const sleep_time: i64 = @intFromFloat(1000 * std.time.ns_per_ms / settings.fps_cap / 1.3);

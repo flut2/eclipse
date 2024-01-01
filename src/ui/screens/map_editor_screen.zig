@@ -6,7 +6,7 @@ const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const main = @import("../../main.zig");
 const input = @import("../../input.zig");
-const map = @import("../../map/map.zig");
+const map = @import("../../game/map.zig");
 const element = @import("../element.zig");
 const game_data = @import("../../game_data.zig");
 const settings = @import("../../settings.zig");
@@ -14,9 +14,9 @@ const rpc = @import("rpc");
 
 const systems = @import("../systems.zig");
 
-const Player = @import("../../map/player.zig").Player;
-const GameObject = @import("../../map/game_object.zig").GameObject;
-const Square = @import("../../map/square.zig").Square;
+const Player = @import("../../game/player.zig").Player;
+const GameObject = @import("../../game/game_object.zig").GameObject;
+const Square = @import("../../game/square.zig").Square;
 
 const Interactable = element.InteractableImageData;
 const NineSlice = element.NineSliceImageData;

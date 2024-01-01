@@ -3,7 +3,7 @@ const element = @import("../element.zig");
 const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const game_data = @import("../../game_data.zig");
-const map = @import("../../map/map.zig");
+const map = @import("../../game/map.zig");
 const tooltip = @import("tooltip.zig");
 
 const NineSlice = element.NineSliceImageData;

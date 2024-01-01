@@ -11,7 +11,7 @@ pub const ThrowParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
 
     initial_size: f32,
     lifetime: f32,
@@ -71,7 +71,7 @@ pub const SparkerParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
 
     initial_size: f32,
     lifetime: f32,
@@ -131,7 +131,7 @@ pub const SparkParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
 
     initial_size: f32,
     lifetime: f32,
@@ -170,7 +170,7 @@ pub const TeleportParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
 
     time_left: f32,
     z_dir: f32,
@@ -205,7 +205,7 @@ pub const ExplosionParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
 
     lifetime: f32,
     time_left: f32,
@@ -245,7 +245,7 @@ pub const HitParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
 
     lifetime: f32,
     time_left: f32,
@@ -285,7 +285,7 @@ pub const HealParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, false),
+    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
 
     target_id: i32,
     angle: f32,

@@ -165,6 +165,7 @@ pub var add_lock: std.Thread.RwLock = .{};
 pub var object_lock: std.Thread.RwLock = .{};
 pub var entities: std.ArrayList(Entity) = undefined;
 pub var entities_to_add: std.ArrayList(Entity) = undefined;
+pub var entity_indices_to_remove: std.ArrayList(usize) = undefined;
 pub var move_records: std.ArrayList(network.TimedPosition) = undefined;
 pub var local_player_id: i32 = -1;
 pub var interactive_id = std.atomic.Value(i32).init(-1);
@@ -189,6 +190,7 @@ var last_sort: i64 = 0;
 pub fn init(allocator: std.mem.Allocator) !void {
     entities = try std.ArrayList(Entity).initCapacity(allocator, 256);
     entities_to_add = try std.ArrayList(Entity).initCapacity(allocator, 128);
+    entity_indices_to_remove = try std.ArrayList(usize).initCapacity(allocator, 128);
     move_records = try std.ArrayList(network.TimedPosition).initCapacity(allocator, 10);
     squares = std.AutoHashMap(u32, Square).init(allocator);
 
@@ -268,6 +270,7 @@ pub fn dispose(allocator: std.mem.Allocator) void {
     squares.clearRetainingCapacity();
     entities.clearRetainingCapacity();
     entities_to_add.clearRetainingCapacity();
+    entity_indices_to_remove.clearRetainingCapacity();
     @memset(minimap.data, 0);
 }
 
@@ -286,6 +289,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     squares.deinit();
     entities.deinit();
     entities_to_add.deinit();
+    entity_indices_to_remove.deinit();
     move_records.deinit();
     minimap.deinit();
 
@@ -457,6 +461,8 @@ pub inline fn update(allocator: std.mem.Allocator) void {
     if (entities.items.len <= 0)
         return;
 
+    entity_indices_to_remove.clearRetainingCapacity();
+
     interactive_id.store(-1, .Release);
     interactive_type.store(.game_object, .Release);
 
@@ -468,7 +474,6 @@ pub inline fn update(allocator: std.mem.Allocator) void {
     const cam_y = camera.y.load(.Acquire);
 
     var interactive_set = false;
-    var force_sort = false;
     @prefetch(entities.items, .{ .rw = .write });
     var iter = std.mem.reverseIterator(entities.items);
     var i: usize = entities.items.len - 1;
@@ -514,18 +519,20 @@ pub inline fn update(allocator: std.mem.Allocator) void {
             },
             .projectile => |*projectile| {
                 if (!projectile.update(time, dt, i, allocator)) {
-                    disposeEntity(allocator, &entities.items[i]);
-                    _ = entities.swapRemove(i);
-                    force_sort = true;
+                    entity_indices_to_remove.append(i) catch |e| {
+                        std.log.err("Disposing entity at idx {d} failed: {any}", .{ i, e });
+                        return;
+                    };
                 }
             },
             .particle => |*pt| {
                 switch (pt.*) {
                     inline else => |*particle| {
                         if (!particle.update(time, dt)) {
-                            disposeEntity(allocator, &entities.items[i]);
-                            _ = entities.swapRemove(i);
-                            force_sort = true;
+                            entity_indices_to_remove.append(i) catch |e| {
+                                std.log.err("Disposing entity at idx {d} failed: {any}", .{ i, e });
+                                return;
+                            };
                         }
                     },
                 }
@@ -534,9 +541,10 @@ pub inline fn update(allocator: std.mem.Allocator) void {
                 switch (pt_eff.*) {
                     inline else => |*effect| {
                         if (!effect.update(time, dt)) {
-                            disposeEntity(allocator, &entities.items[i]);
-                            _ = entities.swapRemove(i);
-                            force_sort = true;
+                            entity_indices_to_remove.append(i) catch |e| {
+                                std.log.err("Disposing entity at idx {d} failed: {any}", .{ i, e });
+                                return;
+                            };
                         }
                     },
                 }
@@ -555,7 +563,12 @@ pub inline fn update(allocator: std.mem.Allocator) void {
         systems.screen.game.setContainerVisible(false);
     }
 
-    if (force_sort or time - last_sort > 100 * std.time.us_per_ms) {
+    for (entity_indices_to_remove.items) |idx| {
+        disposeEntity(allocator, &entities.items[idx]);
+        _ = entities.swapRemove(idx);
+    }
+
+    if (entity_indices_to_remove.items.len > 0 or time - last_sort > 100 * std.time.us_per_ms) {
         std.sort.pdq(Entity, entities.items, {}, lessThan);
         last_sort = time;
     }
