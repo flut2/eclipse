@@ -1176,6 +1176,8 @@ pub const ScrollableContainer = struct {
     scroll_decor_image_data: ImageData,
     scroll_knob_image_data: InteractableImageData,
     layer: Layer = .default,
+    // Range is [0.0, 1.0]
+    start_value: f32 = 0.0,
 
     visible: bool = true,
     base_y: f32 = 0.0,
@@ -1237,6 +1239,10 @@ pub const ScrollableContainer = struct {
     }
 
     pub fn init(self: *ScrollableContainer) void {
+        if (self.start_value < 0.0 or self.start_value > 1.0) {
+            std.debug.panic("Invalid start_value for ScrollableContainer: {d:.2}", .{self.start_value});
+        }
+        
         self.base_y = self.y;
 
         self._container = self._allocator.create(Container) catch std.debug.panic("ScrollableContainer child container alloc failed", .{});
@@ -1264,7 +1270,7 @@ pub const ScrollableContainer = struct {
             .vertical = true,
             .visible = false,
             ._parent_container = self,
-            ._current_value = 1.0,
+            ._current_value = self.start_value,
         };
         self._scroll_bar._allocator = self._allocator;
         self._scroll_bar.init();

@@ -22,11 +22,14 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.strip = optimize != .Debug and optimize != .ReleaseSafe;
+    exe.root_module.strip = optimize == .ReleaseFast or optimize == .ReleaseSmall;
     exe.root_module.addImport("rpc", zdiscord.getModule(b));
     exe.root_module.addImport("nfd", nfd.getModule(b));
 
     exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
+    exe.root_module.addAnonymousImport("xev", .{ 
+        .root_source_file = .{ .path = "libs/libxev/src/main.zig" }
+    });
 
     const nfd_lib = nfd.makeLib(b, target, optimize);
     if (target.result.os.tag == .macos) {

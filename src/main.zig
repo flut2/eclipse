@@ -490,6 +490,19 @@ pub fn main() !void {
     render.init(gctx, allocator);
     defer render.deinit(gctx, allocator);
 
+    // var thread_pool = xev.ThreadPool.init(.{});
+    // defer thread_pool.deinit();
+    // defer thread_pool.shutdown();
+
+    // var server_loop = try xev.Loop.init(.{
+    //     .entries = std.math.pow(u13, 2, 12),
+    //     .thread_pool = &thread_pool,
+    // });
+    // defer server_loop.deinit();
+
+    // server = try network.Server.init(allocator, &server_loop);
+    // defer server.deinit();
+
     var rpc_thread = try std.Thread.spawn(.{}, runRpc, .{rpc_client});
     defer {
         rpc_client.stop();
