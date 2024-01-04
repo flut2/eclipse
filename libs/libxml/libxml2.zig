@@ -22,21 +22,20 @@ pub const Version = struct {
 
 /// This is the type returned by create.
 pub const Library = struct {
-    step: *std.build.LibExeObjStep,
+    step: *std.Build.Step.Compile,
 
     /// statically link this library into the given step
-    pub fn link(self: Library, other: *std.build.LibExeObjStep) void {
-        self.addIncludePaths(other);
-        other.linkLibrary(self.step);
+    pub fn link(self: Library, other: *std.Build.Step.Compile) void {
+        addIncludePaths(other);
+        other.root_module.linkLibrary(self.step);
     }
 
     /// only add the include dirs to the given step. This is useful if building
     /// a static library that you don't want to fully link in the code of this
     /// library.
-    pub fn addIncludePaths(self: Library, other: *std.build.LibExeObjStep) void {
-        _ = self;
-        other.addIncludePath(.{ .path = include_dir });
-        other.addIncludePath(.{ .path = override_include_dir });
+    pub fn addIncludePaths(other: *std.Build.Step.Compile) void {
+        other.root_module.addIncludePath(.{ .path = include_dir });
+        other.root_module.addIncludePath(.{ .path = override_include_dir });
     }
 };
 
@@ -84,8 +83,8 @@ pub const Options = struct {
 /// use to link this library to their application. On the resulting Library,
 /// call the link function and given your own application step.
 pub fn create(
-    b: *std.build.Builder,
-    target: std.zig.CrossTarget,
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     opts: Options,
 ) !Library {
@@ -117,7 +116,7 @@ pub fn create(
         "-DWITHOUT_TRIO=1",
     });
 
-    if (!target.isWindows()) {
+    if (target.result.os.tag != .windows) {
         try flags.appendSlice(&.{
             "-DHAVE_ARPA_INET_H=1",
             "-DHAVE_ARPA_NAMESER_H=1",
@@ -169,15 +168,15 @@ pub fn create(
     }
 
     // C files
-    ret.addCSourceFiles(.{ .files = srcs, .flags = flags.items });
+    ret.root_module.addCSourceFiles(.{ .files = srcs, .flags = flags.items });
 
-    ret.addIncludePath(.{ .path = include_dir });
-    ret.addIncludePath(.{ .path = override_include_dir });
-    if (target.isWindows()) {
-        ret.addIncludePath(.{ .path = win32_include_dir });
-        ret.linkSystemLibrary("ws2_32");
+    ret.root_module.addIncludePath(.{ .path = include_dir });
+    ret.root_module.addIncludePath(.{ .path = override_include_dir });
+    if (target.result.os.tag == .windows) {
+        ret.root_module.addIncludePath(.{ .path = win32_include_dir });
+        ret.root_module.linkSystemLibrary("ws2_32", .{});
     } else {
-        ret.addIncludePath(.{ .path = posix_include_dir });
+        ret.root_module.addIncludePath(.{ .path = posix_include_dir });
     }
     ret.linkLibC();
 

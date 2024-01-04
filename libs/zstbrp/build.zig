@@ -2,22 +2,22 @@ const std = @import("std");
 
 pub const Package = struct {
     zstbrp: *std.Build.Module,
-    zstbrp_c_cpp: *std.Build.CompileStep,
+    zstbrp_c_cpp: *std.Build.Step.Compile,
 
-    pub fn link(pkg: Package, exe: *std.Build.CompileStep) void {
-        exe.linkLibrary(pkg.zstbrp_c_cpp);
-        exe.addModule("zstbrp", pkg.zstbrp);
+    pub fn link(pkg: Package, exe: *std.Build.Step.Compile) void {
+        exe.root_module.linkLibrary(pkg.zstbrp_c_cpp);
+        exe.root_module.addImport("zstbrp", pkg.zstbrp);
     }
 };
 
 pub fn package(
     b: *std.Build,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
     _: struct {},
 ) Package {
     const zstbrp = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/src/zstbrp.zig" },
+        .root_source_file = .{ .path = thisDir() ++ "/src/zstbrp.zig" },
     });
 
     const zstbrp_c_cpp = b.addStaticLibrary(.{
@@ -27,7 +27,7 @@ pub fn package(
     });
     if (optimize == .Debug) {
         // TODO: Workaround for Zig bug.
-        zstbrp_c_cpp.addCSourceFile(.{
+        zstbrp_c_cpp.root_module.addCSourceFile(.{
             .file = .{ .path = thisDir() ++ "/libs/stbrp/stb_rect_pack.c" },
             .flags = &.{
                 "-std=c99",
@@ -37,7 +37,7 @@ pub fn package(
             },
         });
     } else {
-        zstbrp_c_cpp.addCSourceFile(.{
+        zstbrp_c_cpp.root_module.addCSourceFile(.{
             .file = .{ .path = thisDir() ++ "/libs/stbrp/stb_rect_pack.c" },
             .flags = &.{
                 "-std=c99",
@@ -64,7 +64,7 @@ pub fn build(b: *std.Build) void {
 pub fn runTests(
     b: *std.Build,
     optimize: std.builtin.Mode,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
 ) *std.Build.Step {
     const tests = b.addTest(.{
         .name = "zstbrp-tests",

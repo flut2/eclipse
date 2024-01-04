@@ -970,7 +970,7 @@ inline fn drawSlider(idx: u16, slider: *element.Slider, draw_data: base.DrawData
     return new_idx;
 }
 
-inline fn drawElement(
+fn drawElement(
     idx: u16,
     elem: element.UiElement,
     draw_data: base.DrawData,
@@ -983,6 +983,19 @@ inline fn drawElement(
     var new_idx = idx;
 
     switch (elem) {
+        .scrollable_container => |scrollable_container| {
+            if (scrollable_container.visible) {
+                new_idx = drawElement(new_idx, .{ .container = scrollable_container._container }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
+                new_idx = drawElement(new_idx, .{ .slider = scrollable_container._scroll_bar }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
+            }
+        },
+        .container => |container| {
+            if (container.visible) {
+                for (container._elements.items) |cont_elem| {
+                    new_idx = drawElement(new_idx, cont_elem, draw_data, cam_x, cam_y, x_offset + container.x, y_offset + container.y, time);
+                }
+            }
+        },
         .image => |image| new_idx = drawImage(new_idx, image, draw_data, x_offset, y_offset, cam_x, cam_y),
         .menu_bg => |menu_bg| {
             if (menu_bg.visible)
@@ -1000,7 +1013,6 @@ inline fn drawElement(
         .toggle => |toggle| new_idx = drawToggle(new_idx, toggle, draw_data, x_offset, y_offset),
         .key_mapper => |key_mapper| new_idx = drawKeyMapper(new_idx, key_mapper, draw_data, x_offset, y_offset),
         .slider => |slider| new_idx = drawSlider(new_idx, slider, draw_data, x_offset, y_offset),
-        else => {},
     }
 
     return new_idx;
@@ -1014,36 +1026,34 @@ pub inline fn drawTempElements(idx: u16, draw_data: base.DrawData) u16 {
     for (ui_systems.temp_elements.items) |*elem| {
         switch (elem.*) {
             .status => |*text| {
-                if (!text.visible)
-                    continue;
-
-                new_idx = base.drawText(new_idx, text._screen_x, text._screen_y, &text.text_data, draw_data, .{});
+                if (text.visible) {
+                    new_idx = base.drawText(new_idx, text._screen_x, text._screen_y, &text.text_data, draw_data, .{});
+                }
             },
             .balloon => |*balloon| {
-                if (!balloon.visible)
-                    continue;
+                if (balloon.visible) {
+                    const image_data = balloon.image_data.normal; // assume no 9 slice
+                    const w = image_data.width();
+                    const h = image_data.height();
 
-                const image_data = balloon.image_data.normal; // assume no 9 slice
-                const w = image_data.width();
-                const h = image_data.height();
+                    const opts = base.QuadOptions{
+                        .alpha_mult = image_data.alpha,
+                        .base_color = image_data.color,
+                        .base_color_intensity = image_data.color_intensity,
+                        .shadow_texel_mult = if (image_data.glow) 1.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
+                    };
+                    new_idx = base.drawQuad(new_idx, balloon._screen_x, balloon._screen_y, w, h, image_data.atlas_data, draw_data, opts);
 
-                const opts = base.QuadOptions{
-                    .alpha_mult = image_data.alpha,
-                    .base_color = image_data.color,
-                    .base_color_intensity = image_data.color_intensity,
-                    .shadow_texel_mult = if (image_data.glow) 1.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
-                };
-                new_idx = base.drawQuad(new_idx, balloon._screen_x, balloon._screen_y, w, h, image_data.atlas_data, draw_data, opts);
-
-                const decor_offset = h / 10;
-                new_idx = base.drawText(
-                    new_idx,
-                    balloon._screen_x + ((w - assets.padding * image_data.scale_x) - balloon.text_data._width) / 2,
-                    balloon._screen_y + (h - balloon.text_data._height) / 2 - decor_offset,
-                    &balloon.text_data,
-                    draw_data,
-                    .{},
-                );
+                    const decor_offset = h / 10;
+                    new_idx = base.drawText(
+                        new_idx,
+                        balloon._screen_x + ((w - assets.padding * image_data.scale_x) - balloon.text_data._width) / 2,
+                        balloon._screen_y + (h - balloon.text_data._height) / 2 - decor_offset,
+                        &balloon.text_data,
+                        draw_data,
+                        .{},
+                    );
+                }
             },
         }
     }
@@ -1056,50 +1066,8 @@ pub inline fn drawUiElements(idx: u16, draw_data: base.DrawData, cam_x: f32, cam
     defer ui_systems.ui_lock.unlock();
 
     var new_idx = idx;
-
     for (ui_systems.elements.items) |elem| {
-        switch (elem) {
-            .scrollable_container => |scrollable_container| {
-                if (!scrollable_container.visible)
-                    continue;
-
-                for (scrollable_container._container._elements.items) |cont_elem| {
-                    new_idx = drawElement(
-                        new_idx,
-                        cont_elem,
-                        draw_data,
-                        cam_x,
-                        cam_y,
-                        scrollable_container._container.x,
-                        scrollable_container._container.y,
-                        time,
-                    );
-                }
-
-                new_idx = drawElement(
-                    new_idx,
-                    .{ .slider = scrollable_container._scroll_bar },
-                    draw_data,
-                    cam_x,
-                    cam_y,
-                    0,
-                    0,
-                    time,
-                );
-            },
-            .container => |container| {
-                if (!container.visible)
-                    continue;
-
-                for (container._elements.items) |cont_elem| {
-                    new_idx = drawElement(new_idx, cont_elem, draw_data, cam_x, cam_y, container.x, container.y, time);
-                }
-            },
-            else => {
-                new_idx = drawElement(new_idx, elem, draw_data, cam_x, cam_y, 0, 0, time);
-            },
-        }
+        new_idx = drawElement(new_idx, elem, draw_data, cam_x, cam_y, 0, 0, time);
     }
-
     return new_idx;
 }

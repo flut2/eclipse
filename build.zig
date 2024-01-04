@@ -22,14 +22,14 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    exe.strip = optimize != .Debug and optimize != .ReleaseSafe;
-    exe.addModule("rpc", zdiscord.getModule(b));
-    exe.addModule("nfd", nfd.getModule(b));
+    exe.root_module.strip = optimize != .Debug and optimize != .ReleaseSafe;
+    exe.root_module.addImport("rpc", zdiscord.getModule(b));
+    exe.root_module.addImport("nfd", nfd.getModule(b));
 
-    exe.addAnonymousModule("rpmalloc", .{ .source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
+    exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
 
     const nfd_lib = nfd.makeLib(b, target, optimize);
-    if (nfd_lib.target_info.target.os.tag == .macos) {
+    if (target.result.os.tag == .macos) {
         nfd_lib.defineCMacro("__kernel_ptr_semantics", "");
     }
     exe.linkLibrary(nfd_lib);
@@ -67,6 +67,9 @@ pub fn build(b: *std.Build) !void {
 
     ini.link(ini.getModule(b), exe);
 
+    // const xev = b.dependency("libxev", .{ .target = target, .optimize = optimize });
+    // exe.root_module.addImport("xev", xev.module("xev"));
+
     zglfw_pkg.link(exe);
     zgpu_pkg.link(exe);
 
@@ -78,7 +81,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     const exe_options = b.addOptions();
-    exe.addOptions("build_options", exe_options);
+    exe.root_module.addOptions("build_options", exe_options);
     exe_options.addOption([]const u8, "asset_dir", "./assets/");
 
     const install_assets_step = b.addInstallDirectory(.{

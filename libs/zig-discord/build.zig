@@ -8,15 +8,15 @@ fn sdkPath(comptime suffix: []const u8) []const u8 {
     };
 }
 
-pub fn getModule(b: *std.Build) *std.build.Module {
-    return b.createModule(.{ .source_file = .{ .path = sdkPath("/src/rpc.zig") } });
+pub fn getModule(b: *std.Build) *std.Build.Module {
+    return b.createModule(.{ .root_source_file = .{ .path = sdkPath("/src/rpc.zig") } });
 }
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const rpc = b.addModule("rpc", .{ .source_file = .{ .path = "src/rpc.zig" } });
+    const rpc = b.addModule("rpc", .{ .root_source_file = .{ .path = "src/rpc.zig" } });
 
     const exe = b.addExecutable(.{
         .name = "zig-discord",
@@ -24,7 +24,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe.addModule("rpc", rpc);
+    exe.root_module.addImport("rpc", rpc);
     exe.linkLibC();
 
     b.installArtifact(exe);
