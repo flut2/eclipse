@@ -69,7 +69,7 @@ pub const Projectile = struct {
         map.add_lock.lockShared();
         defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .projectile = self.* }) catch |e| {
-            std.log.err("Could not add projectile to map (obj_id={d}, x={d}, y={d}): {any}", .{ self.obj_id, self.x, self.y, e });
+            std.log.err("Could not add projectile to map (obj_id={d}, x={d}, y={d}): {}", .{ self.obj_id, self.x, self.y, e });
         };
     }
 
@@ -243,7 +243,7 @@ pub const Projectile = struct {
         self.updatePosition(elapsed, dt);
         if (self.x < 0 or self.y < 0) {
             if (self.damage_players)
-                network.queuePacket(.{ .square_hit = .{
+                main.server.queuePacket(.{ .square_hit = .{
                     .time = time,
                     .bullet_id = self.bullet_id,
                     .obj_id = self.owner_id,
@@ -259,12 +259,12 @@ pub const Projectile = struct {
             const x_dt: f32 = self.x - last_x;
             self.visual_angle = std.math.atan2(f32, y_dt, x_dt);
         }
-        
+
         if (map.getSquare(self.x, self.y)) |square| {
             const en = map.findEntityConst(square.static_obj_id);
             if (square.tile_type == 0xFF) {
                 if (self.damage_players) {
-                    network.queuePacket(.{ .square_hit = .{
+                    main.server.queuePacket(.{ .square_hit = .{
                         .time = time,
                         .bullet_id = self.bullet_id,
                         .obj_id = self.owner_id,
@@ -292,7 +292,7 @@ pub const Projectile = struct {
                     (entity.object.props.enemy_occupy_square or (!self.props.passes_cover and entity.object.props.occupy_square)))
                 {
                     if (self.damage_players) {
-                        network.queuePacket(.{ .other_hit = .{
+                        main.server.queuePacket(.{ .other_hit = .{
                             .time = time,
                             .bullet_id = self.bullet_id,
                             .object_id = self.owner_id,
@@ -315,7 +315,7 @@ pub const Projectile = struct {
             }
         } else {
             if (self.damage_players) {
-                network.queuePacket(.{ .square_hit = .{
+                main.server.queuePacket(.{ .square_hit = .{
                     .time = time,
                     .bullet_id = self.bullet_id,
                     .obj_id = self.owner_id,
@@ -351,7 +351,7 @@ pub const Projectile = struct {
                             self.props.speed,
                             allocator,
                         );
-                        network.queuePacket(.{ .player_hit = .{ .bullet_id = self.bullet_id, .object_id = self.owner_id } });
+                        main.server.queuePacket(.{ .player_hit = .{ .bullet_id = self.bullet_id, .object_id = self.owner_id } });
                     } else if (!self.props.multi_hit) {
                         var effect = particles.HitEffect{
                             .x = self.x,
@@ -364,7 +364,7 @@ pub const Projectile = struct {
                         };
                         effect.addToMap();
 
-                        network.queuePacket(.{ .other_hit = .{
+                        main.server.queuePacket(.{ .other_hit = .{
                             .time = time,
                             .bullet_id = self.bullet_id,
                             .object_id = self.owner_id,
@@ -376,7 +376,7 @@ pub const Projectile = struct {
 
                     if (self.props.multi_hit) {
                         self.hit_list.put(player.obj_id, {}) catch |e| {
-                            std.log.err("failed to add player to hit_list: {any}", .{e});
+                            std.log.err("failed to add player to hit_list: {}", .{e});
                         };
                     } else {
                         return false;
@@ -410,7 +410,7 @@ pub const Projectile = struct {
                             allocator,
                         );
 
-                        network.queuePacket(.{ .enemy_hit = .{
+                        main.server.queuePacket(.{ .enemy_hit = .{
                             .time = time,
                             .bullet_id = self.bullet_id,
                             .target_id = object.obj_id,
@@ -428,7 +428,7 @@ pub const Projectile = struct {
                         };
                         effect.addToMap();
 
-                        network.queuePacket(.{ .other_hit = .{
+                        main.server.queuePacket(.{ .other_hit = .{
                             .time = time,
                             .bullet_id = self.bullet_id,
                             .object_id = self.owner_id,
@@ -438,7 +438,7 @@ pub const Projectile = struct {
 
                     if (self.props.multi_hit) {
                         self.hit_list.put(object.obj_id, {}) catch |e| {
-                            std.log.err("failed to add object to hit_list: {any}", .{e});
+                            std.log.err("failed to add object to hit_list: {}", .{e});
                         };
                     } else {
                         return false;

@@ -88,7 +88,7 @@ pub fn switchTooltip(comptime tooltip_type: TooltipType, params: std.meta.TagPay
     }
 
     current = map.get(tooltip_type) orelse blk: {
-        std.log.err("Tooltip for {any} was not found, using .none", .{tooltip_type});
+        std.log.err("Tooltip for {} was not found, using .none", .{tooltip_type});
         break :blk map.get(.none) orelse std.debug.panic(".none was not a valid tooltip", .{});
     };
 

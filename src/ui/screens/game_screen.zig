@@ -918,13 +918,13 @@ pub const GameScreen = struct {
         if (end_slot.idx == 255) {
             if (start_slot.is_container) {
                 self.setContainerItem(std.math.maxInt(u16), start_slot.idx);
-                network.queuePacket(.{ .inv_drop = .{
+                main.server.queuePacket(.{ .inv_drop = .{
                     .obj_id = int_id,
                     .slot_id = start_slot.idx,
                 } });
             } else {
                 self.setInvItem(std.math.maxInt(u16), start_slot.idx);
-                network.queuePacket(.{ .inv_drop = .{
+                main.server.queuePacket(.{ .inv_drop = .{
                     .obj_id = map.local_player_id,
                     .slot_id = start_slot.idx,
                 } });
@@ -967,7 +967,7 @@ pub const GameScreen = struct {
                     self.setInvItem(start_item, end_slot.idx);
                 }
 
-                network.queuePacket(.{ .inv_swap = .{
+                main.server.queuePacket(.{ .inv_swap = .{
                     .time = main.current_time,
                     .x = local_player.x,
                     .y = local_player.y,
@@ -993,7 +993,7 @@ pub const GameScreen = struct {
                 defer map.object_lock.unlockShared();
 
                 if (map.localPlayerConst()) |local_player| {
-                    network.queuePacket(.{ .use_item = .{
+                    main.server.queuePacket(.{ .use_item = .{
                         .obj_id = map.local_player_id,
                         .slot_id = start_slot.idx,
                         .x = local_player.x,
@@ -1064,7 +1064,7 @@ pub const GameScreen = struct {
 
     fn chatCallback(input_text: []const u8) void {
         if (input_text.len > 0) {
-            network.queuePacket(.{ .player_text = .{ .text = input_text } });
+            main.server.queuePacket(.{ .player_text = .{ .text = input_text } });
 
             const current_screen = systems.screen.game;
             const text_copy = current_screen._allocator.dupe(u8, input_text) catch unreachable;
@@ -1112,7 +1112,7 @@ pub const GameScreen = struct {
                 defer map.object_lock.unlockShared();
 
                 if (map.localPlayerConst()) |local_player| {
-                    network.queuePacket(.{ .use_item = .{
+                    main.server.queuePacket(.{ .use_item = .{
                         .obj_id = if (slot.is_container) current_screen.container_id else map.local_player_id,
                         .slot_id = slot.idx,
                         .x = local_player.x,

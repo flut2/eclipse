@@ -22,6 +22,7 @@ const systems = @import("ui/systems.zig");
 const rpc = @import("rpc");
 const dialog = @import("ui/dialogs/dialog.zig");
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
+const xev = @import("xev");
 
 pub const ServerData = struct {
     name: []const u8 = "",
@@ -85,19 +86,13 @@ pub var gctx: *zgpu.GraphicsContext = undefined;
 pub var current_account = AccountData{};
 pub var character_list: []CharacterData = undefined;
 pub var server_list: ?[]ServerData = null;
-pub var selected_char_id: u32 = 65535;
-pub var char_create_type: u16 = 0;
-pub var char_create_skin_type: u16 = 0;
-pub var selected_server: ?ServerData = null;
 pub var next_char_id: u32 = 0;
 pub var max_chars: u32 = 0;
 pub var current_time: i64 = 0;
-pub var network_thread: std.Thread = undefined;
 pub var render_thread: std.Thread = undefined;
-pub var tick_network = true;
+pub var network_thread: ?std.Thread = null;
 pub var tick_render = true;
 pub var tick_frame = false;
-pub var sent_hello = false;
 pub var editing_map = false;
 pub var need_minimap_update = false;
 pub var need_force_update = false;
@@ -110,6 +105,7 @@ pub var rpc_start: u64 = 0;
 pub var version_text: []const u8 = undefined;
 pub var _allocator: std.mem.Allocator = undefined;
 pub var start_time: i64 = 0;
+pub var server: network.Server = undefined;
 
 fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
     const float_w: f32 = @floatFromInt(w);
@@ -123,47 +119,40 @@ fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
     systems.resize(float_w, float_h);
 }
 
-fn networkTick(allocator: std.mem.Allocator) void {
-    rpmalloc.initThread() catch |e| {
-        std.log.err("Network thread initialization failed: {any}", .{e});
+fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) void {
+    if (server.socket != null)
+        return;
+
+    server.connect(ip, port, hello_data) catch |e| {
+        std.log.err("Connection failed: {}", .{e});
         return;
     };
-    defer rpmalloc.deinitThread(true);
 
-    while (tick_network) {
-        // ticking can get turned off while in sleep
-        if (!tick_network)
-            return;
+    if (network_thread) |self| self.join();
+}
 
-        if (selected_server) |sel_srv| {
-            if (!network.connected)
-                network.init(sel_srv.dns, sel_srv.port, allocator);
+pub fn enterGame(sel_srv: ServerData, selected_char_id: u32, char_create_type: u16, char_create_skin_type: u16) void {
+    if (network_thread != null)
+        return;
 
-            if (network.connected) {
-                if (selected_char_id != 65535 and !sent_hello) {
-                    network.queuePacket(.{ .hello = .{
-                        .build_ver = settings.build_version,
-                        .game_id = -2,
-                        .email = current_account.email,
-                        .password = current_account.password,
-                        .char_id = @intCast(selected_char_id),
-                        .class_type = char_create_type,
-                        .skin_type = char_create_skin_type,
-                    } });
-                    sent_hello = true;
-                }
-
-                network.accept();
-            }
-        }
-
-        std.time.sleep(10 * std.time.ns_per_ms);
-    }
+    systems.switchScreen(.game);
+    network_thread = std.Thread.spawn(.{}, networkCallback, .{ sel_srv.dns, sel_srv.port, network.C2SPacket{ .hello = .{
+        .build_ver = settings.build_version,
+        .game_id = -2,
+        .email = current_account.email,
+        .password = current_account.password,
+        .char_id = @intCast(selected_char_id),
+        .class_type = char_create_type,
+        .skin_type = char_create_skin_type,
+    } } }) catch |e| {
+        std.log.err("Connection failed: {}", .{e});
+        return;
+    };
 }
 
 fn renderTick(allocator: std.mem.Allocator, window: *zglfw.Window) !void {
     rpmalloc.initThread() catch |e| {
-        std.log.err("Render thread initialization failed: {any}", .{e});
+        std.log.err("Render thread initialization failed: {}", .{e});
         return;
     };
     defer rpmalloc.deinitThread(true);
@@ -246,7 +235,7 @@ fn renderTick(allocator: std.mem.Allocator, window: *zglfw.Window) !void {
 
                 const comp_len = map.minimap.num_components * map.minimap.bytes_per_component;
                 const copy = allocator.alloc(u8, w * h * comp_len) catch |e| {
-                    std.log.err("Minimap alloc failed: {any}", .{e});
+                    std.log.err("Minimap alloc failed: {}", .{e});
                     need_minimap_update = false;
                     minimap_update_min_x = std.math.maxInt(u32);
                     minimap_update_max_x = std.math.minInt(u32);
@@ -318,18 +307,10 @@ pub fn clear() void {
 }
 
 pub fn disconnect() void {
-    if (network.connected) {
-        network.deinit(_allocator);
-    }
-
-    selected_server = null;
-    sent_hello = false;
-
+    server.shutdown();
     clear();
     input.reset();
-
     systems.switchScreen(.char_select);
-
     dialog.showDialog(.none, {});
 }
 
@@ -392,11 +373,6 @@ pub fn main() !void {
         if (current_account.password.len > 0)
             allocator.free(current_account.password);
 
-        if (network.connected) {
-            tick_network = false;
-            network.deinit(allocator);
-        }
-
         if (character_list.len > 0) {
             for (character_list) |char| {
                 allocator.free(char.name);
@@ -420,7 +396,7 @@ pub fn main() !void {
     std.os.maybeIgnoreSigpipe();
 
     zglfw.init() catch |e| {
-        std.log.err("Failed to initialize GLFW library: {any}", .{e});
+        std.log.err("Failed to initialize GLFW library: {}", .{e});
         return;
     };
     defer zglfw.terminate();
@@ -456,7 +432,7 @@ pub fn main() !void {
 
     zglfw.WindowHint.set(.client_api, @intFromEnum(zglfw.ClientApi.no_api));
     const window = zglfw.Window.create(1280, 720, "Faer", null) catch |e| {
-        std.log.err("Failed to create window: {any}", .{e});
+        std.log.err("Failed to create window: {}", .{e});
         return;
     };
     defer window.destroy();
@@ -476,7 +452,7 @@ pub fn main() !void {
         window,
         .{ .present_mode = if (settings.enable_vsync) .fifo else .immediate },
     ) catch |e| {
-        std.log.err("Failed to create graphics context: {any}", .{e});
+        std.log.err("Failed to create graphics context: {}", .{e});
         return;
     };
 
@@ -490,29 +466,23 @@ pub fn main() !void {
     render.init(gctx, allocator);
     defer render.deinit(gctx, allocator);
 
-    // var thread_pool = xev.ThreadPool.init(.{});
-    // defer thread_pool.deinit();
-    // defer thread_pool.shutdown();
+    var thread_pool = xev.ThreadPool.init(.{});
+    defer thread_pool.deinit();
+    defer thread_pool.shutdown();
 
-    // var server_loop = try xev.Loop.init(.{
-    //     .entries = std.math.pow(u13, 2, 12),
-    //     .thread_pool = &thread_pool,
-    // });
-    // defer server_loop.deinit();
+    var server_loop = try xev.Loop.init(.{
+        .entries = std.math.pow(u13, 2, 12),
+        .thread_pool = &thread_pool,
+    });
+    defer server_loop.deinit();
 
-    // server = try network.Server.init(allocator, &server_loop);
-    // defer server.deinit();
+    server = try network.Server.init(allocator, &server_loop);
+    defer server.deinit();
 
     var rpc_thread = try std.Thread.spawn(.{}, runRpc, .{rpc_client});
     defer {
         rpc_client.stop();
         rpc_thread.join();
-    }
-
-    network_thread = try std.Thread.spawn(.{}, networkTick, .{allocator});
-    defer {
-        tick_network = false;
-        network_thread.join();
     }
 
     render_thread = try std.Thread.spawn(.{}, renderTick, .{ allocator, window });
@@ -557,12 +527,12 @@ fn ready(cli: *rpc) !void {
 
 fn runRpc(cli: *rpc) void {
     rpmalloc.initThread() catch |e| {
-        std.log.err("RPC thread initialization failed: {any}", .{e});
+        std.log.err("RPC thread initialization failed: {}", .{e});
         return;
     };
     defer rpmalloc.deinitThread(true);
 
     cli.run(.{ .client_id = "976795120663945227" }) catch |e| {
-        std.log.err("Setting up RPC failed: {any}", .{e});
+        std.log.err("Setting up RPC failed: {}", .{e});
     };
 }

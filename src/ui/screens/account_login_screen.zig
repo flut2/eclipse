@@ -242,7 +242,7 @@ pub const AccountLoginScreen = struct {
             current_screen.email_input.text_data.text,
             current_screen.password_input.text_data.text,
         ) catch |e| {
-            std.log.err("Login failed: {any}", .{e});
+            std.log.err("Login failed: {}", .{e});
         };
     }
 

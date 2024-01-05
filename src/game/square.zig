@@ -87,7 +87,7 @@ pub const Square = struct {
         self.v_offset += self.props.y_offset * 10.0 * assets.base_texel_h;
 
         map.squares.put(floor_x + floor_y * map.width, self.*) catch |e| {
-            std.log.err("Setting square at x={d}, y={d} failed: {any}", .{ self.x, self.y, e });
+            std.log.err("Setting square at x={d}, y={d} failed: {}", .{ self.x, self.y, e });
             return;
         };
     }

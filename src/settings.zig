@@ -358,7 +358,7 @@ pub fn getKeyTexture(button: Button) assets.AtlasData {
 
 pub fn deinit(allocator: std.mem.Allocator) void {
     save() catch |e| {
-        std.log.err("Settings save failed: {any}", .{e});
+        std.log.err("Settings save failed: {}", .{e});
     };
 
     key_tex_map.deinit();

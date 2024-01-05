@@ -70,6 +70,7 @@ pub const PacketWriter = struct {
 pub const PacketReader = struct {
     index: u16 = 0,
     buffer: []u8 = undefined,
+    size: usize = 0,
 
     pub fn read(self: *PacketReader, comptime T: type) T {
         const type_info = @typeInfo(T);
@@ -83,7 +84,10 @@ pub const PacketReader = struct {
                     var value: T = undefined;
                     inline for (type_info.Struct.fields) |field| {
                         const byte_size = (@bitSizeOf(field.type) + 7) / 8;
-                        const buf = self.buffer[self.index .. self.index + byte_size];
+                        const next_idx = self.index + byte_size;
+                        if (next_idx > self.size)
+                            std.debug.panic("Buffer attempted to read out of bounds", .{});
+                        const buf = self.buffer[self.index..next_idx];
                         self.index += byte_size;
                         @field(value, field.name) = std.mem.bytesToValue(field.type, buf[0..byte_size]);
                     }
@@ -94,14 +98,21 @@ pub const PacketReader = struct {
         }
 
         const byte_size = (@bitSizeOf(T) + 7) / 8;
-        var buf = self.buffer[self.index .. self.index + byte_size];
+
+        const next_idx = self.index + byte_size;
+        if (next_idx > self.size)
+            std.debug.panic("Buffer attempted to read out of bounds", .{});
+        var buf = self.buffer[self.index..next_idx];
         self.index += byte_size;
         return std.mem.bytesToValue(T, buf[0..byte_size]);
     }
 
     pub fn readArray(self: *PacketReader, comptime T: type) []align(1) T {
         const byte_size = (@bitSizeOf(T) + 7) / 8 * self.read(u16);
-        const buf = self.buffer[self.index .. self.index + byte_size];
+        const next_idx = self.index + byte_size;
+        if (next_idx > self.size)
+            std.debug.panic("Buffer attempted to read out of bounds", .{});
+        const buf = self.buffer[self.index..next_idx];
         self.index += byte_size;
         return std.mem.bytesAsSlice(T, buf);
     }
@@ -218,7 +229,7 @@ pub const Condition = packed struct(u32) {
             .hidden => self.hidden = value,
             .targeted => self.targeted = value,
             .invisible => self.invisible = value,
-            else => std.log.err("Invalid enum specified for condition set: {any}", .{@errorReturnTrace() orelse return}),
+            else => std.log.err("Invalid enum specified for condition set: {}", .{@errorReturnTrace() orelse return}),
         }
     }
 
@@ -237,7 +248,7 @@ pub const Condition = packed struct(u32) {
             .hidden => self.hidden = !self.hidden,
             .targeted => self.targeted = !self.targeted,
             .invisible => self.invisible = !self.invisible,
-            else => std.log.err("Invalid enum specified for condition toggle: {any}", .{@errorReturnTrace() orelse return}),
+            else => std.log.err("Invalid enum specified for condition toggle: {}", .{@errorReturnTrace() orelse return}),
         }
     }
 };

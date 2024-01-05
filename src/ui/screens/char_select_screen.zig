@@ -95,11 +95,9 @@ pub const CharSelectScreen = struct {
     pub fn update(_: *CharSelectScreen, _: i64, _: f32) !void {}
 
     fn boxClickCallback(box: *element.CharacterBox) void {
-        main.selected_char_id = box.id;
         if (main.server_list) |server_list| {
             if (server_list.len > 0) {
-                main.selected_server = server_list[0];
-                systems.switchScreen(.game);
+                main.enterGame(server_list[0], box.id, 0, 0);
                 return;
             }
         }

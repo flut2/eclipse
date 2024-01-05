@@ -75,16 +75,14 @@ pub const CharCreateScreen = struct {
     pub fn update(_: *CharCreateScreen, _: i64, _: f32) !void {}
 
     fn boxClickCallback(box: *element.CharacterBox) void {
-        main.char_create_type = box.obj_type;
-        main.char_create_skin_type = 0;
-        main.selected_char_id = main.next_char_id;
-        main.next_char_id += 1;
-
         if (main.server_list) |server_list| {
-            main.selected_server = server_list[0];
-        } else {
-            std.log.err("No servers found", .{});
+            if (server_list.len > 0) {
+                main.enterGame(server_list[0], main.next_char_id, box.obj_type, 0);
+                main.next_char_id += 1;
+                return;
+            }
         }
-        systems.switchScreen(.game);
+
+        std.log.err("No servers found", .{});
     }
 };

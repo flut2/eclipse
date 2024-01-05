@@ -65,7 +65,7 @@ pub fn showDamageText(phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i
             },
             .initial_size = 22,
         }) catch |e| {
-            std.log.err("Allocation for physical damage text \"-{d}\" failed: {any}", .{ phys_dmg, e });
+            std.log.err("Allocation for physical damage text \"-{d}\" failed: {}", .{ phys_dmg, e });
         };
         delay += 100;
     }
@@ -82,7 +82,7 @@ pub fn showDamageText(phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i
             },
             .initial_size = 22,
         }) catch |e| {
-            std.log.err("Allocation for magic damage text \"-{d}\" failed: {any}", .{ magic_dmg, e });
+            std.log.err("Allocation for magic damage text \"-{d}\" failed: {}", .{ magic_dmg, e });
         };
         delay += 100;
     }
@@ -99,7 +99,7 @@ pub fn showDamageText(phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i
             },
             .initial_size = 22,
         }) catch |e| {
-            std.log.err("Allocation for true damage text \"-{d}\" failed: {any}", .{ true_dmg, e });
+            std.log.err("Allocation for true damage text \"-{d}\" failed: {}", .{ true_dmg, e });
         };
         delay += 100;
     }
@@ -318,7 +318,7 @@ pub fn setWH(w: u32, h: u32) void {
 
     minimap.deinit();
     minimap = zstbi.Image.createEmpty(w, h, 4, .{}) catch |e| {
-        std.debug.panic("Minimap allocation failed: {any}", .{e});
+        std.debug.panic("Minimap allocation failed: {}", .{e});
         return;
     };
     main.need_force_update = true;
@@ -452,7 +452,7 @@ pub inline fn update(allocator: std.mem.Allocator) void {
 
     add_lock.lock();
     entities.appendSlice(entities_to_add.items) catch |e| {
-        std.log.err("Adding new entities failed: {any}, returning", .{e});
+        std.log.err("Adding new entities failed: {}, returning", .{e});
         return;
     };
     entities_to_add.clearRetainingCapacity();
@@ -520,7 +520,7 @@ pub inline fn update(allocator: std.mem.Allocator) void {
             .projectile => |*projectile| {
                 if (!projectile.update(time, dt, i, allocator)) {
                     entity_indices_to_remove.append(i) catch |e| {
-                        std.log.err("Disposing entity at idx {d} failed: {any}", .{ i, e });
+                        std.log.err("Disposing entity at idx {d} failed: {}", .{ i, e });
                         return;
                     };
                 }
@@ -530,7 +530,7 @@ pub inline fn update(allocator: std.mem.Allocator) void {
                     inline else => |*particle| {
                         if (!particle.update(time, dt)) {
                             entity_indices_to_remove.append(i) catch |e| {
-                                std.log.err("Disposing entity at idx {d} failed: {any}", .{ i, e });
+                                std.log.err("Disposing entity at idx {d} failed: {}", .{ i, e });
                                 return;
                             };
                         }
@@ -542,7 +542,7 @@ pub inline fn update(allocator: std.mem.Allocator) void {
                     inline else => |*effect| {
                         if (!effect.update(time, dt)) {
                             entity_indices_to_remove.append(i) catch |e| {
-                                std.log.err("Disposing entity at idx {d} failed: {any}", .{ i, e });
+                                std.log.err("Disposing entity at idx {d} failed: {}", .{ i, e });
                                 return;
                             };
                         }
@@ -613,7 +613,7 @@ pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
 
     if (move_records.items.len == 0) {
         move_records.append(.{ .time = time, .x = x, .y = y }) catch |e| {
-            std.log.err("Adding move record failed: {any}", .{e});
+            std.log.err("Adding move record failed: {}", .{e});
         };
         return;
     }
@@ -623,7 +623,7 @@ pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
     const curr_id = getId(curr_record.time);
     if (id != curr_id) {
         move_records.append(.{ .time = time, .x = x, .y = y }) catch |e| {
-            std.log.err("Adding move record failed: {any}", .{e});
+            std.log.err("Adding move record failed: {}", .{e});
         };
         return;
     }

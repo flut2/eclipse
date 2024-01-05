@@ -222,7 +222,7 @@ pub const Player = struct {
                     },
                 };
                 main.rpc_client.setPresence(presence) catch |e| {
-                    std.log.err("Setting Discord RPC failed: {any}", .{e});
+                    std.log.err("Setting Discord RPC failed: {}", .{e});
                 };
                 rpc_set = true;
             }
@@ -231,7 +231,7 @@ pub const Player = struct {
         map.add_lock.lockShared();
         defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .player = self.* }) catch |e| {
-            std.log.err("Could not add player to map (obj_id={d}, obj_type={d}, x={d}, y={d}): {any}", .{ self.obj_id, self.obj_type, self.x, self.y, e });
+            std.log.err("Could not add player to map (obj_id={d}, obj_type={d}, x={d}, y={d}): {}", .{ self.obj_id, self.obj_type, self.x, self.y, e });
         };
     }
 
@@ -321,17 +321,17 @@ pub const Player = struct {
             }
 
             self.ability_data.writer().writeAll(&std.mem.toBytes(attack_angle)) catch |e| {
-                std.log.err("Writing to ability data buffer failed: {any}", .{e});
+                std.log.err("Writing to ability data buffer failed: {}", .{e});
                 return;
             };
         } else if (std.mem.eql(u8, abil_props.name, "Possession")) {
             self.ability_data.writer().writeAll(&std.mem.toBytes(@as(f32, -1))) catch |e| {
-                std.log.err("Writing to ability data buffer failed: {any}", .{e});
+                std.log.err("Writing to ability data buffer failed: {}", .{e});
                 return;
             };
         }
 
-        network.queuePacket(.{ .use_ability = .{ .time = main.current_time, .ability_type = idx, .data = self.ability_data.items } });
+        main.server.queuePacket(.{ .use_ability = .{ .time = main.current_time, .ability_type = idx, .data = self.ability_data.items } });
     }
 
     pub fn doShoot(self: *Player, time: i64, weapon_type: i32, item_props: ?*game_data.ItemProps, attack_angle: f32) void {
@@ -368,7 +368,7 @@ pub const Player = struct {
             };
             proj.addToMap();
 
-            network.queuePacket(.{
+            main.server.queuePacket(.{
                 .player_shoot = .{
                     .time = time,
                     .bullet_id = bullet_id,
@@ -476,7 +476,7 @@ pub const Player = struct {
                         },
                         .initial_size = 22,
                     }) catch |e| {
-                        std.log.err("Allocation for condition text \"{s}\" failed: {any}", .{ cond_str, e });
+                        std.log.err("Allocation for condition text \"{s}\" failed: {}", .{ cond_str, e });
                     };
                 }
             }
@@ -609,7 +609,7 @@ pub const Player = struct {
                             break :blk en == .object and en.object.props.protect_from_ground_damage;
                         };
                         if (total_damage > 0 and !protect) {
-                            network.queuePacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
+                            main.server.queuePacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
                             self.takeDamage(
                                 @intCast(square.props.physical_damage),
                                 @intCast(square.props.magic_damage),

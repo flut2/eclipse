@@ -200,7 +200,7 @@ pub const GameObject = struct {
         map.add_lock.lockShared();
         defer map.add_lock.unlockShared();
         map.entities_to_add.append(.{ .object = self.* }) catch |e| {
-            std.log.err("Could not add object to map (obj_id={d}, obj_type={d}, x={d}, y={d}): {any}", .{ self.obj_id, self.obj_type, self.x, self.y, e });
+            std.log.err("Could not add object to map (obj_id={d}, obj_type={d}, x={d}, y={d}): {}", .{ self.obj_id, self.obj_type, self.x, self.y, e });
         };
     }
 
@@ -276,7 +276,7 @@ pub const GameObject = struct {
                         },
                         .initial_size = 22,
                     }) catch |e| {
-                        std.log.err("Allocation for condition text \"{s}\" failed: {any}", .{ cond_str, e });
+                        std.log.err("Allocation for condition text \"{s}\" failed: {}", .{ cond_str, e });
                     };
                 }
             }
@@ -322,7 +322,7 @@ pub const GameObject = struct {
                 2...5 => .right,
                 else => unreachable,
             };
-            
+
             const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);
             const dir_idx: u8 = @intFromEnum(dir);
             const stand_data = anim_data.walk_anims[dir_idx * assets.AnimEnemyData.walk_actions];

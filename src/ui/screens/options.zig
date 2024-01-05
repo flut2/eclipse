@@ -428,7 +428,7 @@ pub const Options = struct {
 
     fn trySave() void {
         settings.save() catch |err| {
-            std.debug.print("Caught error. {any}", .{err});
+            std.debug.print("Caught error. {}", .{err});
             return;
         };
     }

@@ -1115,19 +1115,19 @@ pub fn init(allocator: std.mem.Allocator) !void {
             const root_name = std.mem.span(root_node.impl.name);
             if (std.mem.eql(u8, root_name, "Items")) {
                 parseItems(doc, allocator) catch |e| {
-                    std.log.err("Item parsing error for path {s}: {any}", .{ path, e });
+                    std.log.err("Item parsing error for path {s}: {}", .{ path, e });
                 };
             } else if (std.mem.eql(u8, root_name, "Objects")) {
                 parseObjects(doc, allocator) catch |e| {
-                    std.log.err("Object parsing error for path {s}: {any}", .{ path, e });
+                    std.log.err("Object parsing error for path {s}: {}", .{ path, e });
                 };
             } else if (std.mem.eql(u8, root_name, "GroundTypes")) {
                 parseGrounds(doc, allocator) catch |e| {
-                    std.log.err("Ground parsing error for path {s}: {any}", .{ path, e });
+                    std.log.err("Ground parsing error for path {s}: {}", .{ path, e });
                 };
             } else if (std.mem.eql(u8, root_name, "Regions")) {
                 parseRegions(doc, allocator) catch |e| {
-                    std.log.err("Region parsing error for path {s}: {any}", .{ path, e });
+                    std.log.err("Region parsing error for path {s}: {}", .{ path, e });
                 };
             } else {
                 std.log.err("Invalid root node for path {s}: {s}", .{ path, root_name });

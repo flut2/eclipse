@@ -98,7 +98,7 @@ fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
         const int_id = map.interactive_id.load(.Acquire);
         if (int_id != -1) {
             switch (map.interactive_type.load(.Acquire)) {
-                .portal => network.queuePacket(.{ .use_portal = .{ .obj_id = int_id } }),
+                .portal => main.server.queuePacket(.{ .use_portal = .{ .obj_id = int_id } }),
                 else => {},
             }
         }
@@ -189,7 +189,7 @@ fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
         const int_id = map.interactive_id.load(.Acquire);
         if (int_id != -1) {
             switch (map.interactive_type.load(.Acquire)) {
-                .portal => network.queuePacket(.{ .use_portal = .{ .obj_id = int_id } }),
+                .portal => main.server.queuePacket(.{ .use_portal = .{ .obj_id = int_id } }),
                 else => {},
             }
         }
@@ -464,7 +464,7 @@ pub fn tryEscape() void {
     if (systems.screen != .game or std.mem.eql(u8, map.name, "Hub"))
         return;
 
-    network.queuePacket(.{ .escape = .{} });
+    main.server.queuePacket(.{ .escape = .{} });
 }
 
 pub fn openOptions() void {

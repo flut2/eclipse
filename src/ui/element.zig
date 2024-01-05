@@ -168,7 +168,7 @@ pub const TextData = struct {
             if (offset_i >= self.text.len) {
                 self._width = @max(x_max, x_pointer);
                 self._line_widths.?.append(x_pointer) catch |e| {
-                    std.log.err("Attribute recalculation for text data failed: {any}", .{e});
+                    std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
                 self._height = y_pointer;
@@ -268,7 +268,7 @@ pub const TextData = struct {
             if (char == '\n' or next_x_pointer > self.max_width) {
                 self._width = @max(x_max, x_pointer);
                 self._line_widths.?.append(x_pointer) catch |e| {
-                    std.log.err("Attribute recalculation for text data failed: {any}", .{e});
+                    std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
                 self._line_count += 1;
@@ -283,7 +283,7 @@ pub const TextData = struct {
 
         self._width = @max(x_max, x_pointer);
         self._line_widths.?.append(x_pointer) catch |e| {
-            std.log.err("Attribute recalculation for text data failed: {any}", .{e});
+            std.log.err("Attribute recalculation for text data failed: {}", .{e});
             return;
         };
         self._height = y_pointer;
@@ -1242,7 +1242,7 @@ pub const ScrollableContainer = struct {
         if (self.start_value < 0.0 or self.start_value > 1.0) {
             std.debug.panic("Invalid start_value for ScrollableContainer: {d:.2}", .{self.start_value});
         }
-        
+
         self.base_y = self.y;
 
         self._container = self._allocator.create(Container) catch std.debug.panic("ScrollableContainer child container alloc failed", .{});

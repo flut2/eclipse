@@ -2750,7 +2750,7 @@ test "zaudio.soundgroup.basic" {
     {
         const gdir = sgroup.getDirection();
         expect(sdir[0] == gdir[0] and sdir[1] == gdir[1] and sdir[2] == gdir[2]) catch |err| {
-            std.debug.print("Direction is: {any} should be: {any}\n", .{ gdir, sdir });
+            std.debug.print("Direction is: {} should be: {}\n", .{ gdir, sdir });
             return err;
         };
     }

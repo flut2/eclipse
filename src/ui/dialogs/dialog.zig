@@ -112,7 +112,7 @@ pub fn showDialog(comptime dialog_type: DialogType, params: std.meta.TagPayload(
     }
 
     current = map.get(dialog_type) orelse blk: {
-        std.log.err("Dialog for {any} was not found, using .none", .{dialog_type});
+        std.log.err("Dialog for {} was not found, using .none", .{dialog_type});
         break :blk map.get(.none) orelse std.debug.panic(".none was not a valid dialog", .{});
     };
 

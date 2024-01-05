@@ -124,7 +124,7 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
         Screen,
         @tagName(screen_type),
         @typeInfo(std.meta.TagPayloadByName(Screen, @tagName(screen_type))).Pointer.child.init(_allocator) catch |e| {
-            std.log.err("Initializing screen for {any} failed: {any}", .{ screen_type, e });
+            std.log.err("Initializing screen for {} failed: {}", .{ screen_type, e });
             return;
         },
     );
@@ -250,7 +250,7 @@ inline fn updateElements() !void {
     defer ui_lock.unlock();
 
     elements.appendSlice(elements_to_add.items) catch |e| {
-        std.log.err("Adding new elements failed: {any}, returning", .{e});
+        std.log.err("Adding new elements failed: {}, returning", .{e});
         return;
     };
     elements_to_add.clearRetainingCapacity();
@@ -271,7 +271,7 @@ inline fn updateTempElements(allocator: std.mem.Allocator) !void {
     defer temp_elem_lock.unlock();
 
     temp_elements.appendSlice(temp_elements_to_add.items) catch |e| {
-        std.log.err("Adding new temporary elements failed: {any}, returning", .{e});
+        std.log.err("Adding new temporary elements failed: {}, returning", .{e});
         return;
     };
     temp_elements_to_add.clearRetainingCapacity();

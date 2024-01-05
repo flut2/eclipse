@@ -359,7 +359,7 @@ pub const AccountRegisterScreen = struct {
             current_screen.password_input.text_data.text,
             current_screen.username_input.text_data.text,
         ) catch |e| {
-            std.log.err("Register failed: {any}", .{e});
+            std.log.err("Register failed: {}", .{e});
             return;
         };
 
@@ -368,7 +368,7 @@ pub const AccountRegisterScreen = struct {
             current_screen.email_input.text_data.text,
             current_screen.password_input.text_data.text,
         ) catch |e| {
-            std.log.err("Login failed: {any}", .{e});
+            std.log.err("Login failed: {}", .{e});
             return;
         };
     }

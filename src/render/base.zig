@@ -388,7 +388,7 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
     }
 
     light_list = std.ArrayList(LightData).initCapacity(allocator, 256) catch |e| {
-        std.debug.panic("Light list initialization failed: {any}", .{e});
+        std.debug.panic("Light list initialization failed: {}", .{e});
     };
 
     enter_text_data = element.TextData{
