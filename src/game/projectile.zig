@@ -38,7 +38,6 @@ pub const Projectile = struct {
     penetration: i32 = 0,
     piercing: i32 = 0,
     props: game_data.ProjProps,
-    last_hit_check: i64 = 0,
     colors: []u32 = &[0]u32{},
     hit_list: std.AutoHashMap(i32, void) = undefined,
     _disposed: bool = false,
@@ -323,129 +322,126 @@ pub const Projectile = struct {
             }
         }
 
-        if (time - self.last_hit_check > 16 * std.time.us_per_ms) {
-            if (self.damage_players) {
-                if (findTargetPlayer(self.x, self.y, 0.57, idx)) |player| {
-                    if (self.hit_list.contains(player.obj_id))
-                        return true;
+        if (self.damage_players) {
+            if (findTargetPlayer(self.x, self.y, 0.57, idx)) |player| {
+                if (self.hit_list.contains(player.obj_id))
+                    return true;
 
-                    if (player.condition.invulnerable) {
-                        assets.playSfx(player.props.hit_sound);
-                        return false;
-                    }
-
-                    if (map.local_player_id == player.obj_id) {
-                        const phys_dmg = map.physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(player.defense - self.penetration), player.condition);
-                        const magic_dmg = map.magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(player.resistance - self.piercing), player.condition);
-                        const true_dmg: f32 = @floatFromInt(self.true_damage);
-                        const dead = @as(f32, @floatFromInt(player.hp)) <= (phys_dmg + magic_dmg + true_dmg);
-
-                        player.takeDamage(
-                            @intFromFloat(phys_dmg * player.hit_multiplier),
-                            @intFromFloat(magic_dmg * player.hit_multiplier),
-                            @intFromFloat(true_dmg * player.hit_multiplier),
-                            dead,
-                            utils.Condition.fromCondSlice(self.props.effects),
-                            self.colors,
-                            self.angle,
-                            self.props.speed,
-                            allocator,
-                        );
-                        main.server.queuePacket(.{ .player_hit = .{ .bullet_id = self.bullet_id, .object_id = self.owner_id } });
-                    } else if (!self.props.multi_hit) {
-                        var effect = particles.HitEffect{
-                            .x = self.x,
-                            .y = self.y,
-                            .colors = self.colors,
-                            .angle = self.angle,
-                            .speed = self.props.speed,
-                            .size = 1.0,
-                            .amount = 3,
-                        };
-                        effect.addToMap();
-
-                        main.server.queuePacket(.{ .other_hit = .{
-                            .time = time,
-                            .bullet_id = self.bullet_id,
-                            .object_id = self.owner_id,
-                            .target_id = player.obj_id,
-                        } });
-                    } else {
-                        std.log.err("Unknown logic for player side of hit logic unexpected branch, todo figure out how to fix this mabye implement send_message check: {s}", .{player.name orelse "Unknown"});
-                    }
-
-                    if (self.props.multi_hit) {
-                        self.hit_list.put(player.obj_id, {}) catch |e| {
-                            std.log.err("failed to add player to hit_list: {}", .{e});
-                        };
-                    } else {
-                        return false;
-                    }
+                if (player.condition.invulnerable) {
+                    assets.playSfx(player.props.hit_sound);
+                    return false;
                 }
-            } else {
-                if (findTargetObject(self.x, self.y, 0.57, idx)) |object| {
-                    if (self.hit_list.contains(object.obj_id))
-                        return true;
 
-                    if (object.condition.invulnerable) {
-                        assets.playSfx(object.props.hit_sound);
-                        return false;
-                    }
+                if (map.local_player_id == player.obj_id) {
+                    const phys_dmg = map.physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(player.defense - self.penetration), player.condition);
+                    const magic_dmg = map.magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(player.resistance - self.piercing), player.condition);
+                    const true_dmg: f32 = @floatFromInt(self.true_damage);
+                    const dead = @as(f32, @floatFromInt(player.hp)) <= (phys_dmg + magic_dmg + true_dmg);
 
-                    if (object.props.is_enemy) {
-                        const phys_dmg = map.physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(object.defense - self.penetration), object.condition);
-                        const magic_dmg = map.magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(object.resistance - self.piercing), object.condition);
-                        const true_dmg: f32 = @floatFromInt(self.true_damage);
-                        const dead = @as(f32, @floatFromInt(object.hp)) <= (phys_dmg + magic_dmg + true_dmg);
+                    player.takeDamage(
+                        @intFromFloat(phys_dmg * player.hit_multiplier),
+                        @intFromFloat(magic_dmg * player.hit_multiplier),
+                        @intFromFloat(true_dmg * player.hit_multiplier),
+                        dead,
+                        utils.Condition.fromCondSlice(self.props.effects),
+                        self.colors,
+                        self.angle,
+                        self.props.speed,
+                        allocator,
+                    );
+                    main.server.queuePacket(.{ .player_hit = .{ .bullet_id = self.bullet_id, .object_id = self.owner_id } });
+                } else if (!self.props.multi_hit) {
+                    var effect = particles.HitEffect{
+                        .x = self.x,
+                        .y = self.y,
+                        .colors = self.colors,
+                        .angle = self.angle,
+                        .speed = self.props.speed,
+                        .size = 1.0,
+                        .amount = 3,
+                    };
+                    effect.addToMap();
 
-                        object.takeDamage(
-                            @intFromFloat(phys_dmg),
-                            @intFromFloat(magic_dmg),
-                            @intFromFloat(true_dmg),
-                            dead,
-                            utils.Condition.fromCondSlice(self.props.effects),
-                            self.colors,
-                            self.angle,
-                            self.props.speed,
-                            allocator,
-                        );
+                    main.server.queuePacket(.{ .other_hit = .{
+                        .time = time,
+                        .bullet_id = self.bullet_id,
+                        .object_id = self.owner_id,
+                        .target_id = player.obj_id,
+                    } });
+                } else {
+                    std.log.err("Unknown logic for player side of hit logic unexpected branch, todo figure out how to fix this mabye implement send_message check: {s}", .{player.name orelse "Unknown"});
+                }
 
-                        main.server.queuePacket(.{ .enemy_hit = .{
-                            .time = time,
-                            .bullet_id = self.bullet_id,
-                            .target_id = object.obj_id,
-                            .killed = dead,
-                        } });
-                    } else if (!self.props.multi_hit) {
-                        var effect = particles.HitEffect{
-                            .x = self.x,
-                            .y = self.y,
-                            .colors = self.colors,
-                            .angle = self.angle,
-                            .speed = self.props.speed,
-                            .size = 1.0,
-                            .amount = 3,
-                        };
-                        effect.addToMap();
-
-                        main.server.queuePacket(.{ .other_hit = .{
-                            .time = time,
-                            .bullet_id = self.bullet_id,
-                            .object_id = self.owner_id,
-                            .target_id = object.obj_id,
-                        } });
-                    }
-
-                    if (self.props.multi_hit) {
-                        self.hit_list.put(object.obj_id, {}) catch |e| {
-                            std.log.err("failed to add object to hit_list: {}", .{e});
-                        };
-                    } else {
-                        return false;
-                    }
+                if (self.props.multi_hit) {
+                    self.hit_list.put(player.obj_id, {}) catch |e| {
+                        std.log.err("failed to add player to hit_list: {}", .{e});
+                    };
+                } else {
+                    return false;
                 }
             }
-            self.last_hit_check = time;
+        } else {
+            if (findTargetObject(self.x, self.y, 0.57, idx)) |object| {
+                if (self.hit_list.contains(object.obj_id))
+                    return true;
+
+                if (object.condition.invulnerable) {
+                    assets.playSfx(object.props.hit_sound);
+                    return false;
+                }
+
+                if (object.props.is_enemy) {
+                    const phys_dmg = map.physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(object.defense - self.penetration), object.condition);
+                    const magic_dmg = map.magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(object.resistance - self.piercing), object.condition);
+                    const true_dmg: f32 = @floatFromInt(self.true_damage);
+                    const dead = @as(f32, @floatFromInt(object.hp)) <= (phys_dmg + magic_dmg + true_dmg);
+
+                    object.takeDamage(
+                        @intFromFloat(phys_dmg),
+                        @intFromFloat(magic_dmg),
+                        @intFromFloat(true_dmg),
+                        dead,
+                        utils.Condition.fromCondSlice(self.props.effects),
+                        self.colors,
+                        self.angle,
+                        self.props.speed,
+                        allocator,
+                    );
+
+                    main.server.queuePacket(.{ .enemy_hit = .{
+                        .time = time,
+                        .bullet_id = self.bullet_id,
+                        .target_id = object.obj_id,
+                        .killed = dead,
+                    } });
+                } else if (!self.props.multi_hit) {
+                    var effect = particles.HitEffect{
+                        .x = self.x,
+                        .y = self.y,
+                        .colors = self.colors,
+                        .angle = self.angle,
+                        .speed = self.props.speed,
+                        .size = 1.0,
+                        .amount = 3,
+                    };
+                    effect.addToMap();
+
+                    main.server.queuePacket(.{ .other_hit = .{
+                        .time = time,
+                        .bullet_id = self.bullet_id,
+                        .object_id = self.owner_id,
+                        .target_id = object.obj_id,
+                    } });
+                }
+
+                if (self.props.multi_hit) {
+                    self.hit_list.put(object.obj_id, {}) catch |e| {
+                        std.log.err("failed to add object to hit_list: {}", .{e});
+                    };
+                } else {
+                    return false;
+                }
+            }
         }
 
         return true;

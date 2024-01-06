@@ -22,6 +22,10 @@
             .url = "https://github.com/michal-z/webgpu_dawn-x86_64-macos/archive/901716b10b31ce3e0d3fe479326b41e91d59c661.tar.gz",
             .hash = "1220b1f02f2f7edd98a078c64e3100907d90311d94880a3cc5927e1ac009d002667a",
         },
+        .libxev = .{
+            .url = "https://github.com/mitchellh/libxev/archive/2494978bedec01a856e8f3c47a33148ad1755fab.tar.gz",
+            .hash = "12203de3dbf9c235903c71122448ef031622ba8d64b250205934e2a65018b92b9717",
+        },
     },
     .paths = .{""},
 }

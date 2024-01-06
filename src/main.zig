@@ -105,6 +105,8 @@ pub var rpc_start: u64 = 0;
 pub var version_text: []const u8 = undefined;
 pub var _allocator: std.mem.Allocator = undefined;
 pub var start_time: i64 = 0;
+pub var thread_pool: xev.ThreadPool = undefined;
+pub var server_loop: xev.Loop = undefined;
 pub var server: network.Server = undefined;
 
 fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
@@ -120,6 +122,15 @@ fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
 }
 
 fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) void {
+    rpmalloc.initThread() catch |e| {
+        std.log.err("Network thread initialization failed: {}", .{e});
+        return;
+    };
+    defer {
+        network_thread = null;
+        rpmalloc.deinitThread(true);
+    }
+
     if (server.socket != null)
         return;
 
@@ -127,8 +138,6 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
         std.log.err("Connection failed: {}", .{e});
         return;
     };
-
-    if (network_thread) |self| self.join();
 }
 
 pub fn enterGame(sel_srv: ServerData, selected_char_id: u32, char_create_type: u16, char_create_skin_type: u16) void {
@@ -466,11 +475,11 @@ pub fn main() !void {
     render.init(gctx, allocator);
     defer render.deinit(gctx, allocator);
 
-    var thread_pool = xev.ThreadPool.init(.{});
+    thread_pool = xev.ThreadPool.init(.{});
     defer thread_pool.deinit();
     defer thread_pool.shutdown();
 
-    var server_loop = try xev.Loop.init(.{
+    server_loop = try xev.Loop.init(.{
         .entries = std.math.pow(u13, 2, 12),
         .thread_pool = &thread_pool,
     });

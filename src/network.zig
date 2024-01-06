@@ -191,7 +191,19 @@ pub const Server = struct {
         return ret;
     }
 
+    fn disposeRequestQueue(self: *Server) void {
+        while (self.write_queue.pop()) |wr| {
+            self.write_buffer_pool.destroy(
+                @alignCast(
+                    @as(*[65535]u8, @ptrFromInt(@intFromPtr(wr.full_write_buffer.slice.ptr))),
+                ),
+            );
+            self.write_request_pool.destroy(wr);
+        }
+    }
+
     pub fn deinit(self: *Server) void {
+        self.disposeRequestQueue();
         self.completion_pool.deinit();
         self.write_buffer_pool.deinit();
         self._allocator.free(self.reader.buffer);
@@ -225,6 +237,12 @@ pub const Server = struct {
             (settings.log_packets == .c2s_non_tick or settings.log_packets == .all_non_tick) and packet != .move and packet != .update_ack)
         {
             std.log.info("Send: {}", .{packet}); // todo custom formatting
+        }
+
+        if (packet == .use_portal or packet == .escape) {
+            self.disposeRequestQueue();
+            main.clear();
+            main.tick_frame = false;
         }
 
         var writer = utils.PacketWriter{ .buffer = self.write_buffer_pool.create() catch unreachable };
@@ -270,11 +288,15 @@ pub const Server = struct {
         return .disarm;
     }
 
-    fn writeCallback(self: ?*Server, l: *xev.Loop, c: *xev.Completion, socket: xev.TCP, buf: xev.WriteBuffer, result: xev.TCP.WriteError!usize) xev.CallbackAction {
+    fn writeCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, _: xev.TCP, buf: xev.WriteBuffer, result: xev.TCP.WriteError!usize) xev.CallbackAction {
         if (self) |srv| {
             _ = result catch |e| {
                 std.log.err("Write error: {}", .{e});
-                socket.shutdown(l, c, Server, srv, shutdownCallback);
+                main.disconnect();
+                dialog.showDialog(.text, .{
+                    .title = "Connection Error",
+                    .body = "Writing was interrupted",
+                });
                 return .disarm;
             };
 
@@ -289,11 +311,15 @@ pub const Server = struct {
         return .disarm;
     }
 
-    fn readCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, socket: xev.TCP, _: xev.ReadBuffer, result: xev.TCP.ReadError!usize) xev.CallbackAction {
+    fn readCallback(self: ?*Server, _: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, result: xev.TCP.ReadError!usize) xev.CallbackAction {
         if (self) |srv| {
             const size = result catch |e| {
                 std.log.err("Read error: {}", .{e});
-                socket.shutdown(srv.loop, c, Server, srv, shutdownCallback);
+                main.disconnect();
+                dialog.showDialog(.text, .{
+                    .title = "Connection Error",
+                    .body = "Reading was interrupted",
+                });
                 return .disarm;
             };
             srv.reader.index = 0;
