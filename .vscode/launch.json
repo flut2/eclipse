@@ -3,7 +3,7 @@
     "configurations": [
         {
             "name": "Debug",
-            "type": "lldb",
+            "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/zig-out/bin/Faer",
             "args": [],
@@ -12,7 +12,7 @@
         },
         {
             "name": "ReleaseSafe",
-            "type": "lldb",
+            "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/zig-out/bin/Faer",
             "args": [],
@@ -21,7 +21,7 @@
         },
         {
             "name": "ReleaseFast",
-            "type": "lldb",
+            "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/zig-out/bin/Faer",
             "args": [],
@@ -30,7 +30,7 @@
         },
         {
             "name": "ReleaseSmall",
-            "type": "lldb",
+            "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/zig-out/bin/Faer",
             "args": [],

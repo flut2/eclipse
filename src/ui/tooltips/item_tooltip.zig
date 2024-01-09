@@ -354,6 +354,9 @@ pub const ItemTooltip = struct {
                 props.slot_type != .boots and
                 props.slot_type != .artifact)
             {
+                map.object_lock.lockShared();
+                defer map.object_lock.unlockShared();
+                
                 if (map.localPlayerConst()) |player| {
                     const has_type = blk: {
                         for (player.class_data.slot_types) |slot_type| {

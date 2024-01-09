@@ -126,6 +126,9 @@ pub const Square = struct {
         if (square.tile_type == 0xFF)
             return;
 
+        map.object_lock.lockShared();
+        defer map.object_lock.unlockShared();
+
         const current_prio = square.props.blend_prio;
 
         if (square.x > 0) parseDir(square.x - 1, square.y, square, current_prio, left_blend_idx);

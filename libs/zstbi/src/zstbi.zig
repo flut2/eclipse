@@ -96,7 +96,7 @@ pub const Image = struct {
                 @as(c_int, @intCast(forced_num_components)),
             );
             if (ptr == null) {
-                std.log.err("Image parsing error for path {s}: {s}", .{pathname, stbi_failure_reason()});
+                std.log.err("Image parsing error for path {s}: {s}", .{ pathname, stbi_failure_reason() });
                 return error.ImageInitFailed;
             }
 
@@ -134,7 +134,7 @@ pub const Image = struct {
                 @as(c_int, @intCast(forced_num_components)),
             );
             if (ptr == null) {
-                std.log.err("Image parsing error for path {s}: {s}", .{pathname, stbi_failure_reason()});
+                std.log.err("Image parsing error for path {s}: {s}", .{ pathname, stbi_failure_reason() });
                 return error.ImageInitFailed;
             }
 

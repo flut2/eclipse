@@ -267,7 +267,8 @@ inline fn updateElements() !void {
 }
 
 inline fn updateTempElements(allocator: std.mem.Allocator) !void {
-    temp_elem_lock.lock();
+    if (!temp_elem_lock.tryLock())
+        return;
     defer temp_elem_lock.unlock();
 
     temp_elements.appendSlice(temp_elements_to_add.items) catch |e| {
@@ -278,6 +279,10 @@ inline fn updateTempElements(allocator: std.mem.Allocator) !void {
 
     if (temp_elements.items.len <= 0)
         return;
+
+    if (!map.object_lock.tryLockShared())
+        return;
+    defer map.object_lock.unlockShared();
 
     const time = std.time.microTimestamp() - main.start_time;
 

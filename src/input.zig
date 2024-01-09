@@ -83,13 +83,13 @@ fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
             attacking = true;
         }
     } else if (key == settings.ability_1.getKey()) {
-        if (map.localPlayerRef()) |player| player.useAbility(0);
+        useAbility(0);
     } else if (key == settings.ability_2.getKey()) {
-        if (map.localPlayerRef()) |player| player.useAbility(1);
+        useAbility(1);
     } else if (key == settings.ability_3.getKey()) {
-        if (map.localPlayerRef()) |player| player.useAbility(2);
+        useAbility(2);
     } else if (key == settings.ultimate_ability.getKey()) {
-        if (map.localPlayerRef()) |player| player.useAbility(3);
+        useAbility(3);
     } else if (key == settings.options.getKey()) {
         openOptions();
     } else if (key == settings.escape.getKey()) {
@@ -174,13 +174,13 @@ fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
             attacking = true;
         }
     } else if (button == settings.ability_1.getMouse()) {
-        if (map.localPlayerRef()) |player| player.useAbility(0);
+        useAbility(0);
     } else if (button == settings.ability_2.getMouse()) {
-        if (map.localPlayerRef()) |player| player.useAbility(1);
+        useAbility(1);
     } else if (button == settings.ability_3.getMouse()) {
-        if (map.localPlayerRef()) |player| player.useAbility(2);
+        useAbility(2);
     } else if (button == settings.ultimate_ability.getMouse()) {
-        if (map.localPlayerRef()) |player| player.useAbility(3);
+        useAbility(3);
     } else if (button == settings.options.getMouse()) {
         openOptions();
     } else if (button == settings.escape.getMouse()) {
@@ -239,6 +239,13 @@ fn mouseRelease(button: zglfw.MouseButton) void {
             attacking = false;
         }
     }
+}
+
+fn useAbility(index: u8) void {
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
+
+    if (map.localPlayerRef()) |player| player.useAbility(index);
 }
 
 pub fn charEvent(_: *zglfw.Window, char: zglfw.Char) callconv(.C) void {
@@ -475,14 +482,5 @@ pub fn openOptions() void {
 
     if (systems.screen == .editor) {
         systems.switchScreen(.main_menu);
-    }
-}
-
-fn useAbility() void {
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
-
-    if (map.localPlayerRef()) |local_player| {
-        local_player.useAbility(mouse_x, mouse_y, game_data.UseType.start);
     }
 }

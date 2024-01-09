@@ -167,6 +167,8 @@ const S2CPacketId = enum(u8) {
     failure = 28,
 };
 
+const WrSelf = struct { wr: *xev.TCP.WriteRequest, self: *Server };
+
 pub const Server = struct {
     loop: *xev.Loop,
     socket: ?xev.TCP = null,
@@ -175,6 +177,7 @@ pub const Server = struct {
     write_request_pool: std.heap.MemoryPool(xev.TCP.WriteRequest),
     write_buffer_pool: std.heap.MemoryPool([65535]u8),
     reader: utils.PacketReader = .{},
+    read_comp: ?*xev.Completion = null,
     _allocator: std.mem.Allocator = undefined,
     _hello_data: C2SPacket = undefined,
 
@@ -191,21 +194,42 @@ pub const Server = struct {
         return ret;
     }
 
+    fn disposeCallback(
+        ud: ?*anyopaque,
+        _: *xev.Loop,
+        _: *xev.Completion,
+        _: xev.Result,
+    ) xev.CallbackAction {
+        const wr_self: *WrSelf = @ptrCast(@alignCast(ud.?));
+        wr_self.self.write_buffer_pool.destroy(
+            @alignCast(
+                @as(*[65535]u8, @ptrFromInt(@intFromPtr(wr_self.wr.full_write_buffer.slice.ptr))),
+            ),
+        );
+        wr_self.self.write_request_pool.destroy(wr_self.wr);
+        return .disarm;
+    }
+
     fn disposeRequestQueue(self: *Server) void {
         while (self.write_queue.pop()) |wr| {
-            self.write_buffer_pool.destroy(
-                @alignCast(
-                    @as(*[65535]u8, @ptrFromInt(@intFromPtr(wr.full_write_buffer.slice.ptr))),
-                ),
-            );
-            self.write_request_pool.destroy(wr);
+            var ud = WrSelf{ .wr = wr, .self = self };
+            var c_cancel = xev.Completion{
+                .op = .{ .cancel = .{ .c = self.read_comp.? } },
+                .userdata = &ud,
+                .callback = disposeCallback,
+            };
+            self.loop.add(&c_cancel);
         }
     }
 
     pub fn deinit(self: *Server) void {
         self.disposeRequestQueue();
+        self.loop.stop();
+        while (self.loop.flags.in_run) {}
+        self.loop.deinit();
         self.completion_pool.deinit();
         self.write_buffer_pool.deinit();
+        self.write_request_pool.deinit();
         self._allocator.free(self.reader.buffer);
     }
 
@@ -311,8 +335,9 @@ pub const Server = struct {
         return .disarm;
     }
 
-    fn readCallback(self: ?*Server, _: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, result: xev.TCP.ReadError!usize) xev.CallbackAction {
+    fn readCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, result: xev.TCP.ReadError!usize) xev.CallbackAction {
         if (self) |srv| {
+            srv.read_comp = c;
             const size = result catch |e| {
                 std.log.err("Read error: {}", .{e});
                 main.disconnect();
@@ -851,6 +876,9 @@ pub const Server = struct {
         const message = reader.readArray(u8);
         const color = reader.read(u32);
 
+        map.object_lock.lockShared();
+        defer map.object_lock.unlockShared();
+
         if (map.findEntityConst(object_id)) |en| {
             const text_data = element.TextData{
                 .text = self._allocator.dupe(u8, message) catch return,
@@ -921,7 +949,6 @@ pub const Server = struct {
 
         if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
             std.log.debug("Recv - ServerPlayerShoot: bullet_id={d}, owner_id={d}, container_type={d}, x={e}, y={e}, angle={e}, damage={d}", .{ bullet_id, owner_id, container_type, start_x, start_y, angle, damage });
-
         map.object_lock.lockShared();
         defer map.object_lock.unlockShared();
 
@@ -1077,7 +1104,6 @@ pub const Server = struct {
             systems.screen.game.addChatLine(name, text, name_color, text_color) catch |e| {
                 std.log.err("Adding message with name {s} and text {s} failed: {}", .{ name, text, e });
             };
-
         map.object_lock.lockShared();
         defer map.object_lock.unlockShared();
 
@@ -1224,9 +1250,6 @@ pub const Server = struct {
                             continue;
                         }
                     }
-
-                    if (obj_id == map.local_player_id and systems.screen == .game)
-                        systems.screen.game.updateStats();
 
                     player.addToMap(self._allocator);
                 },
@@ -1394,6 +1417,7 @@ pub const Server = struct {
             },
             .tex_1 => _ = stat_reader.read(i32),
             .tex_2 => _ = stat_reader.read(i32),
+            .merch_price => _ = stat_reader.read(u8),
             .merch_type => obj.merchant_obj_type = stat_reader.read(u16),
             .merch_count => obj.merchant_rem_count = stat_reader.read(i8),
             .sellable_price => obj.sellable_price = stat_reader.read(u16),

@@ -351,6 +351,7 @@ pub fn localPlayerRef() ?*Player {
 }
 
 pub fn findEntityConst(obj_id: i32) ?Entity {
+    std.debug.assert(!object_lock.tryLock());
     for (entities.items) |en| {
         switch (en) {
             .particle => |pt| {
@@ -380,6 +381,7 @@ pub fn findEntityConst(obj_id: i32) ?Entity {
 }
 
 pub fn findEntityRef(obj_id: i32) ?*Entity {
+    std.debug.assert(!object_lock.tryLock());
     for (entities.items) |*en| {
         switch (en.*) {
             .particle => |*pt| {
@@ -447,10 +449,12 @@ pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
 }
 
 pub inline fn update(allocator: std.mem.Allocator) void {
-    object_lock.lock();
+    if (!object_lock.tryLock())
+        return;
     defer object_lock.unlock();
 
-    add_lock.lock();
+    if (!add_lock.tryLock())
+        return;
     entities.appendSlice(entities_to_add.items) catch |e| {
         std.log.err("Adding new entities failed: {}, returning", .{e});
         return;

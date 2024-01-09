@@ -27,7 +27,7 @@ pub fn build(b: *std.Build) !void {
     exe.root_module.addImport("nfd", nfd.getModule(b));
 
     exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
-    
+
     const xev = b.dependency("libxev", .{ .target = target, .optimize = optimize });
     exe.root_module.addImport("xev", xev.module("xev"));
 

@@ -105,8 +105,6 @@ pub var rpc_start: u64 = 0;
 pub var version_text: []const u8 = undefined;
 pub var _allocator: std.mem.Allocator = undefined;
 pub var start_time: i64 = 0;
-pub var thread_pool: xev.ThreadPool = undefined;
-pub var server_loop: xev.Loop = undefined;
 pub var server: network.Server = undefined;
 
 fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
@@ -473,18 +471,17 @@ pub fn main() !void {
     _ = window.setFramebufferSizeCallback(onResize);
 
     render.init(gctx, allocator);
+    defer gctx.destroy(allocator);
     defer render.deinit(gctx, allocator);
 
-    thread_pool = xev.ThreadPool.init(.{});
+    var thread_pool = xev.ThreadPool.init(.{});
     defer thread_pool.deinit();
     defer thread_pool.shutdown();
 
-    server_loop = try xev.Loop.init(.{
+    var server_loop = try xev.Loop.init(.{
         .entries = std.math.pow(u13, 2, 12),
         .thread_pool = &thread_pool,
     });
-    defer server_loop.deinit();
-
     server = try network.Server.init(allocator, &server_loop);
     defer server.deinit();
 
@@ -516,8 +513,6 @@ pub fn main() !void {
             last_ui_update = time;
         }
     }
-
-    gctx.destroy(allocator);
 }
 
 fn ready(cli: *rpc) !void {

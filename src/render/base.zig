@@ -1495,7 +1495,6 @@ pub fn draw(
     encoder: zgpu.wgpu.CommandEncoder,
 ) void {
     map.object_lock.lockShared();
-    defer map.object_lock.unlockShared();
 
     const cam_x = camera.x.load(.Acquire);
     const cam_y = camera.y.load(.Acquire);
@@ -1579,6 +1578,7 @@ pub fn draw(
         }
 
         idx = game_render.drawEntities(idx, base_draw_data, float_time_ms);
+        map.object_lock.unlockShared();
 
         if (settings.enable_lights) {
             const opts = QuadOptions{ .base_color = map.bg_light_color, .base_color_intensity = 1.0, .alpha_mult = map.getLightIntensity(time) };
@@ -1597,7 +1597,7 @@ pub fn draw(
                 .{ .base_color = data.color, .base_color_intensity = 1.0, .alpha_mult = data.intensity },
             );
         }
-    }
+    } else map.object_lock.unlockShared();
 
     idx = ui_render.drawTempElements(idx, base_draw_data);
     idx = ui_render.drawUiElements(idx, base_draw_data, cam_x, cam_y, time);

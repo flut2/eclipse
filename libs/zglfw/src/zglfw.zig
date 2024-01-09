@@ -137,7 +137,7 @@ pub const Action = enum(i32) {
 
 pub const MouseButton = enum(i32) {
     unknown = -1,
-    
+
     left,
     right,
     middle,

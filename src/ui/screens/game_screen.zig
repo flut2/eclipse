@@ -1053,6 +1053,10 @@ pub const GameScreen = struct {
             systems.screen.game.stats_button.image_data.base.normal.atlas_data = abil_button_data;
 
             systems.screen.game.ability_container.visible = false;
+
+            map.object_lock.lockShared();
+            defer map.object_lock.unlockShared();
+
             systems.screen.game.updateStats();
         } else {
             const stats_button_data = assets.getUiData("minimap_icons", 0);
