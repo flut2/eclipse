@@ -432,7 +432,14 @@ pub const GameScreen = struct {
             .max_width = screen.minimap_decor.width(),
             .max_chars = 256,
         };
-        fps_text_data.recalculateAttributes(allocator);
+
+        {
+            fps_text_data._lock.lock();
+            defer fps_text_data._lock.unlock();
+
+            fps_text_data.recalculateAttributes(allocator);
+        }
+
         screen.fps_text = try element.create(allocator, element.Text{
             .x = screen.minimap_decor.x,
             .y = screen.minimap_decor.y + screen.minimap_decor.height() + 10,
@@ -668,12 +675,11 @@ pub const GameScreen = struct {
                 self.current_tier_icon.x = self.xp_bar_decor.x + 6 + (18 - current_icon.texWRaw()) / 2.0;
                 self.current_tier_icon.y = self.xp_bar_decor.y + 6 + (18 - current_icon.texHRaw()) / 2.0;
 
-                self.current_tier_icon.tooltip_text.?.text = try std.fmt.bufPrint(
+                self.current_tier_icon.tooltip_text.?.setText(try std.fmt.bufPrint(
                     self.current_tier_icon.tooltip_text.?._backing_buffer,
                     "Current Tier: {s}",
                     .{utils.toRoman(local_player.tier)},
-                );
-                self.current_tier_icon.tooltip_text.?.recalculateAttributes(self._allocator);
+                ), self._allocator);
 
                 var next_icon = getTierAtlasData(local_player.tier + 1);
                 next_icon.removePadding();
@@ -681,12 +687,11 @@ pub const GameScreen = struct {
                 self.next_tier_icon.x = self.xp_bar_decor.x + 284 + (18 - next_icon.texWRaw()) / 2.0;
                 self.next_tier_icon.y = self.xp_bar_decor.y + 6 + (18 - next_icon.texHRaw()) / 2.0;
 
-                self.next_tier_icon.tooltip_text.?.text = try std.fmt.bufPrint(
+                self.next_tier_icon.tooltip_text.?.setText(try std.fmt.bufPrint(
                     self.next_tier_icon.tooltip_text.?._backing_buffer,
                     "Next Tier: {s}",
                     .{utils.toRoman(local_player.tier + 1)},
-                );
-                self.next_tier_icon.tooltip_text.?.recalculateAttributes(self._allocator);
+                ), self._allocator);
 
                 self.last_tier = local_player.tier;
             }
@@ -706,6 +711,9 @@ pub const GameScreen = struct {
                     self.combat_indicator.tooltip_text.?.max_width = std.math.floatMax(f32);
                 }
 
+                self.combat_indicator.tooltip_text.?._lock.lock();
+                defer self.combat_indicator.tooltip_text.?._lock.unlock();
+
                 self.combat_indicator.tooltip_text.?.recalculateAttributes(self._allocator);
                 self.combat_indicator.x = self.bars_decor.x + (self.bars_decor.width() - self.combat_indicator.width()) / 2;
                 self.combat_indicator.y = self.bars_decor.y - self.combat_indicator.height() - 10;
@@ -718,8 +726,7 @@ pub const GameScreen = struct {
                 self.xp_bar.scissor.max_x = self.xp_bar.width() * xp_perc;
 
                 var xp_text_data = &self.xp_bar.text_data;
-                xp_text_data.text = try std.fmt.bufPrint(xp_text_data._backing_buffer, "{d}/{d}", .{ local_player.tier_xp, local_player.next_tier_xp });
-                xp_text_data.recalculateAttributes(self._allocator);
+                xp_text_data.setText(try std.fmt.bufPrint(xp_text_data._backing_buffer, "{d}/{d}", .{ local_player.tier_xp, local_player.next_tier_xp }), self._allocator,);
 
                 self.last_tier_xp = local_player.tier_xp;
                 self.last_next_tier_xp = local_player.next_tier_xp;
@@ -734,8 +741,7 @@ pub const GameScreen = struct {
                     0xFFE770
                 else
                     0xFFFFFF;
-                health_text_data.text = try std.fmt.bufPrint(health_text_data._backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp });
-                health_text_data.recalculateAttributes(self._allocator);
+                health_text_data.setText(try std.fmt.bufPrint(health_text_data._backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp }), self._allocator,);
 
                 self.last_hp = local_player.hp;
                 self.last_max_hp = local_player.max_hp;
@@ -750,8 +756,7 @@ pub const GameScreen = struct {
                     0xFFE770
                 else
                     0xFFFFFF;
-                mana_text_data.text = try std.fmt.bufPrint(mana_text_data._backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp });
-                mana_text_data.recalculateAttributes(self._allocator);
+                mana_text_data.setText(try std.fmt.bufPrint(mana_text_data._backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp }), self._allocator,);
 
                 self.last_mp = local_player.mp;
                 self.last_max_mp = local_player.max_mp;
@@ -761,7 +766,7 @@ pub const GameScreen = struct {
 
     fn updateStat(allocator: std.mem.Allocator, text_data: *element.TextData, base_val: i32, bonus_val: i32, max_val: i32) void {
         text_data.color = if (base_val - bonus_val >= max_val) 0xFFE770 else 0xFFFFFF;
-        text_data.text = (if (bonus_val > 0)
+        text_data.setText((if (bonus_val > 0)
             std.fmt.bufPrint(
                 text_data._backing_buffer,
                 "{d}&size=\"8\"&col=\"65E698\"\n(+{d})",
@@ -774,8 +779,7 @@ pub const GameScreen = struct {
                 .{ base_val, bonus_val },
             )
         else
-            std.fmt.bufPrint(text_data._backing_buffer, "{d}", .{base_val})) catch text_data.text;
-        text_data.recalculateAttributes(allocator);
+            std.fmt.bufPrint(text_data._backing_buffer, "{d}", .{base_val})) catch text_data.text, allocator);
     }
 
     pub fn updateStats(self: *GameScreen) void {
@@ -868,8 +872,7 @@ pub const GameScreen = struct {
             \\FPS: {d:.1}
             \\Memory: {d:.1} MB
         ;
-        self.fps_text.text_data.text = try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, fmt, .{ fps, mem });
-        self.fps_text.text_data.recalculateAttributes(self._allocator);
+        self.fps_text.text_data.setText(try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, fmt, .{ fps, mem }), self._allocator);
     }
 
     fn parseItemRects(self: *GameScreen) void {

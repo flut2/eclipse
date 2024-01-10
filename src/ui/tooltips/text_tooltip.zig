@@ -37,7 +37,10 @@ pub const TextTooltip = struct {
         self.text = try self.root.createChild(element.Text{
             .x = 16,
             .y = 16,
-            .text_data = undefined, // must be set in update
+            .text_data = .{
+                .text = "",
+                .size = 0,
+            },
         });
     }
 
@@ -46,7 +49,18 @@ pub const TextTooltip = struct {
     }
 
     pub fn update(self: *TextTooltip, params: tooltip.ParamsFor(TextTooltip)) void {
-        self.text.text_data = params.text_data;
+        inline for (std.meta.fields(element.TextData)) |field| {
+            if (field.name.len > 0 and field.name[0] != '_')
+                @field(self.text.text_data, field.name) = @field(params.text_data, field.name);
+        }
+
+        {
+            self.text.text_data._lock.lock();
+            defer self.text.text_data._lock.unlock();
+
+            self.text.text_data.recalculateAttributes(self._allocator);
+        }
+
         switch (self.decor.image_data) {
             .nine_slice => |*nine_slice| {
                 nine_slice.w = self.text.width() + 16 * 2;

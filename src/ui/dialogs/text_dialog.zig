@@ -115,8 +115,7 @@ pub const TextDialog = struct {
             self._allocator.free(self.title_text.text_data.text);
 
         if (params.title) |title| {
-            self.title_text.text_data.text = title;
-            self.title_text.text_data.recalculateAttributes(self._allocator);
+            self.title_text.text_data.setText(title, self._allocator);
             switch (self.title_decor.image_data) {
                 .nine_slice => |*nine_slice| {
                     nine_slice.w = self.title_text.width() + 25 * 2;
@@ -136,8 +135,7 @@ pub const TextDialog = struct {
             self.title_text.text_data.max_height = self.title_decor.height();
         }
 
-        self.base_text.text_data.text = params.body;
-        self.base_text.text_data.recalculateAttributes(self._allocator);
+        self.base_text.text_data.setText(params.body, self._allocator);
 
         self.dispose_title = params.title != null and params.dispose_title;
         self.dispose_body = params.dispose_body;

@@ -179,21 +179,18 @@ pub const ItemTooltip = struct {
                 rarity_text_color = 0x2575E6;
             }
 
-            self.rarity.text_data.text = std.fmt.bufPrint(
+            self.rarity.text_data.setText(std.fmt.bufPrint(
                 self.rarity.text_data._backing_buffer,
                 "{s} {s}",
                 .{ props.tier, props.slot_type.toString() },
-            ) catch self.rarity.text_data.text;
-
+            ) catch self.rarity.text_data.text, self._allocator);
             self.rarity.text_data.color = rarity_text_color;
-            self.rarity.text_data.recalculateAttributes(self._allocator);
 
             if (assets.atlas_data.get(props.texture_data.sheet)) |data| {
                 self.image.image_data.normal.atlas_data = data[props.texture_data.index];
             }
 
-            self.item_name.text_data.text = props.display_id;
-            self.item_name.text_data.recalculateAttributes(self._allocator);
+            self.item_name.text_data.setText(props.display_id, self._allocator);
 
             self.line_break_one.y = self.image.y + self.image.height() + 10;
             self.main_text.y = self.line_break_one.y - 5;
@@ -338,8 +335,7 @@ pub const ItemTooltip = struct {
             if (props.usable)
                 text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Cooldown: " ++ decimal_fmt ++ " seconds", .{ text, props.cooldown }) catch text;
 
-            self.main_text.text_data.text = text;
-            self.main_text.text_data.recalculateAttributes(self._allocator);
+            self.main_text.text_data.setText(text, self._allocator);
 
             self.line_break_two.y = self.main_text.y + self.main_text.text_data._height + 5;
             self.footer.y = self.line_break_two.y - 5;
@@ -408,8 +404,7 @@ pub const ItemTooltip = struct {
             if (props.consumable)
                 footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Can be consumed", .{footer_text}) catch footer_text;
 
-            self.footer.text_data.text = footer_text;
-            self.footer.text_data.recalculateAttributes(self._allocator);
+            self.footer.text_data.setText(footer_text, self._allocator);
 
             if (footer_text.len == 0) {
                 self.line_break_two.visible = false;

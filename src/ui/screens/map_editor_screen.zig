@@ -435,7 +435,14 @@ pub const MapEditorScreen = struct {
             .max_chars = 32,
             .color = 0x00FFFF00,
         };
-        fps_text_data.recalculateAttributes(allocator);
+
+        {
+            fps_text_data._lock.lock();
+            defer fps_text_data._lock.unlock();
+
+            fps_text_data.recalculateAttributes(allocator);
+        }
+
         screen.fps_text = try element.create(allocator, element.Text{
             .x = camera.screen_width - fps_text_data._width - 10,
             .y = 16,
@@ -537,7 +544,14 @@ pub const MapEditorScreen = struct {
             },
             .visible = false,
         };
-        text_size_64.text_data.recalculateAttributes(allocator);
+
+        {
+            text_size_64.text_data._lock.lock();
+            defer text_size_64.text_data._lock.unlock();
+
+            text_size_64.text_data.recalculateAttributes(allocator);
+        }
+
         text_size_64.x -= text_size_64.text_data._width / 2;
         text_size_64.y -= text_size_64.text_data._height / 2;
 
@@ -553,7 +567,14 @@ pub const MapEditorScreen = struct {
             },
             .visible = true,
         };
-        text_size_128.text_data.recalculateAttributes(allocator);
+
+        {
+            text_size_128.text_data._lock.lock();
+            defer text_size_128.text_data._lock.unlock();
+
+            text_size_128.text_data.recalculateAttributes(allocator);
+        }
+
         text_size_128.x -= text_size_128.text_data._width / 2;
         text_size_128.y -= text_size_128.text_data._height / 2;
 
@@ -569,7 +590,14 @@ pub const MapEditorScreen = struct {
             },
             .visible = false,
         };
-        text_size_256.text_data.recalculateAttributes(allocator);
+
+        {
+            text_size_256.text_data._lock.lock();
+            defer text_size_256.text_data._lock.unlock();
+
+            text_size_256.text_data.recalculateAttributes(allocator);
+        }
+
         text_size_256.x -= text_size_256.text_data._width / 2;
         text_size_256.y -= text_size_256.text_data._height / 2;
 
@@ -1322,8 +1350,10 @@ pub const MapEditorScreen = struct {
         if (!self.inited)
             return;
 
-        self.fps_text.text_data.text = try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, "FPS: {d:.1}\nMemory: {d:.1} MB", .{ fps, mem });
-        self.fps_text.text_data.recalculateAttributes(self._allocator);
+        self.fps_text.text_data.setText(
+            try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, "FPS: {d:.1}\nMemory: {d:.1} MB", .{ fps, mem }),
+            self._allocator,
+        );
         self.fps_text.x = camera.screen_width - self.fps_text.text_data._width - 10;
     }
 };

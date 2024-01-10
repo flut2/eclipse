@@ -198,7 +198,13 @@ pub const Player = struct {
                 .color = 0xFCDF00,
                 .max_width = 200,
             };
-            self.name_text_data.?.recalculateAttributes(allocator);
+            
+            {
+                self.name_text_data.?._lock.lock();
+                defer self.name_text_data.?._lock.unlock();
+
+                self.name_text_data.?.recalculateAttributes(allocator);
+            }
         }
 
         setRpc: {

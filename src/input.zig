@@ -413,11 +413,12 @@ pub fn mouseEvent(window: *zglfw.Window, button: zglfw.MouseButton, action: zglf
             }
         }
     } else if (action == .release) {
-        if (systems.screen == .editor) {
-            systems.screen.editor.onMouseRelease();
+        if (!systems.mouseRelease(mouse_x, mouse_y)) {
+            if (systems.screen == .editor) {
+                systems.screen.editor.onMouseRelease();
+            }
+            mouseRelease(button);
         }
-        systems.mouseRelease(mouse_x, mouse_y);
-        mouseRelease(button);
     }
 
     updateState();
@@ -447,7 +448,7 @@ pub fn mouseMoveEvent(_: *zglfw.Window, x_pos: f64, y_pos: f64) callconv(.C) voi
     mouse_x = @floatCast(x_pos);
     mouse_y = @floatCast(y_pos);
 
-    systems.mouseMove(mouse_x, mouse_y);
+    _ = systems.mouseMove(mouse_x, mouse_y);
 
     if (systems.screen == .editor) {
         if (main.editing_map) {

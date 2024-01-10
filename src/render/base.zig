@@ -396,7 +396,13 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
         .text_type = .bold,
         .size = 16,
     };
-    enter_text_data.recalculateAttributes(main._allocator);
+
+    {
+        enter_text_data._lock.lock();
+        defer enter_text_data._lock.unlock();
+        
+        enter_text_data.recalculateAttributes(main._allocator);
+    }
 
     base_vb = gctx.device.createBuffer(.{
         .usage = .{ .copy_dst = true, .vertex = true },

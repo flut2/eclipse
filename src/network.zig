@@ -1333,8 +1333,7 @@ pub const Server = struct {
                 plr.name = allocator.dupe(u8, stat_reader.readArray(u8)) catch &[0]u8{};
 
                 if (plr.name_text_data) |*data| {
-                    data.text = plr.name.?;
-                    data.recalculateAttributes(allocator);
+                    data.setText(plr.name.?, allocator);
                 } else {
                     plr.name_text_data = element.TextData{
                         .text = plr.name.?,
@@ -1343,7 +1342,13 @@ pub const Server = struct {
                         .color = 0xFCDF00,
                         .max_width = 200,
                     };
-                    plr.name_text_data.?.recalculateAttributes(allocator);
+
+                    {
+                        plr.name_text_data.?._lock.lock();
+                        defer plr.name_text_data.?._lock.unlock();
+
+                        plr.name_text_data.?.recalculateAttributes(allocator);
+                    }
                 }
             },
             .tex_1 => plr.tex_1 = stat_reader.read(i32),
@@ -1404,15 +1409,20 @@ pub const Server = struct {
                 obj.name = allocator.dupe(u8, new_name) catch &[0]u8{};
 
                 if (obj.name_text_data) |*data| {
-                    data.text = obj.name.?;
-                    data.recalculateAttributes(allocator);
+                    data.setText(obj.name.?, allocator);
                 } else {
                     obj.name_text_data = element.TextData{
                         .text = obj.name.?,
                         .text_type = .bold,
                         .size = 16,
                     };
-                    obj.name_text_data.?.recalculateAttributes(allocator);
+
+                    {
+                        obj.name_text_data.?._lock.lock();
+                        defer obj.name_text_data.?._lock.unlock();
+
+                        obj.name_text_data.?.recalculateAttributes(allocator);
+                    }
                 }
             },
             .tex_1 => _ = stat_reader.read(i32),

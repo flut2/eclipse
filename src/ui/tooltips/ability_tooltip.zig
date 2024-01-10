@@ -105,8 +105,7 @@ pub const AbilityTooltip = struct {
                 self.image.image_data.normal.atlas_data = data[params.props.icon.index];
             }
 
-            self.title.text_data.text = params.props.name;
-            self.title.text_data.recalculateAttributes(self._allocator);
+            self.title.text_data.setText(params.props.name, self._allocator);
 
             const has_mana_cost = params.props.mana_cost > 0;
             const has_health_cost = params.props.health_cost > 0;
@@ -137,8 +136,7 @@ pub const AbilityTooltip = struct {
                 }
             }
 
-            self.description.text_data.text = params.props.description;
-            self.description.text_data.recalculateAttributes(self._allocator);
+            self.description.text_data.setText(params.props.description, self._allocator);
 
             self.line_break.y = self.image.y + self.image.height() + 10;
             self.description.y = self.line_break.y + 20;

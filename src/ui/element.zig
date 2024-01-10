@@ -74,6 +74,13 @@ pub const Layer = enum(u8) {
     tooltip = 2,
 };
 
+pub const EventPolicy = struct {
+    pass_press: bool = false,
+    pass_release: bool = false,
+    pass_move: bool = false,
+    pass_scroll: bool = false,
+};
+
 pub const RGBF32 = extern struct {
     r: f32,
     g: f32,
@@ -140,9 +147,16 @@ pub const TextData = struct {
     _line_count: f32 = 0.0,
     _line_widths: ?std.ArrayList(f32) = null,
 
-    pub fn recalculateAttributes(self: *TextData, allocator: std.mem.Allocator) void {
+    pub fn setText(self: *TextData, text: []const u8, allocator: std.mem.Allocator) void {
         self._lock.lock();
         defer self._lock.unlock();
+
+        self.text = text;
+        self.recalculateAttributes(allocator);
+    }
+
+    pub fn recalculateAttributes(self: *TextData, allocator: std.mem.Allocator) void {
+        std.debug.assert(!self._lock.tryLock());
 
         if (self._backing_buffer.len == 0 and self.max_chars > 0)
             self._backing_buffer = allocator.alloc(u8, self.max_chars) catch std.debug.panic("Failed to allocate the backing buffer", .{});
@@ -521,6 +535,7 @@ pub const Input = struct {
     is_chat: bool = false,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     // -1 means not selected
     _last_input: i64 = -1,
     _x_offset: f32 = 0.0,
@@ -539,27 +554,31 @@ pub const Input = struct {
             return true;
         }
 
-        return false;
+        return !(self.event_policy.pass_press or !intersects(self, x, y));
     }
 
-    pub fn mouseRelease(self: *Input, x: f32, y: f32, _: f32, _: f32) void {
+    pub fn mouseRelease(self: *Input, x: f32, y: f32, _: f32, _: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
 
-    pub fn mouseMove(self: *Input, x: f32, y: f32, _: f32, _: f32) void {
+    pub fn mouseMove(self: *Input, x: f32, y: f32, _: f32, _: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             self.state = .hovered;
         } else {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn init(self: *Input) void {
@@ -572,7 +591,12 @@ pub const Input = struct {
             };
         }
 
-        self.text_data.recalculateAttributes(self._allocator);
+        {
+            self.text_data._lock.lock();
+            defer self.text_data._lock.unlock();
+
+            self.text_data.recalculateAttributes(self._allocator);
+        }
 
         switch (self.cursor_image_data) {
             .nine_slice => |*nine_slice| nine_slice.h = self.text_data._height,
@@ -602,15 +626,20 @@ pub const Input = struct {
     }
 
     pub fn clear(self: *Input) void {
-        self.text_data.text = "";
-        self.text_data.recalculateAttributes(self._allocator);
+        self.text_data.setText("", self._allocator);
         self._index = 0;
         self.inputUpdate();
     }
 
     pub fn inputUpdate(self: *Input) void {
         self._last_input = main.current_time;
-        self.text_data.recalculateAttributes(self._allocator);
+
+        {
+            self.text_data._lock.lock();
+            defer self.text_data._lock.unlock();
+
+            self.text_data.recalculateAttributes(self._allocator);
+        }
 
         const cursor_width = switch (self.cursor_image_data) {
             .nine_slice => |nine_slice| if (nine_slice.alpha > 0) nine_slice.w else 0.0,
@@ -639,6 +668,7 @@ pub const Button = struct {
     tooltip_text: ?TextData = null,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
@@ -653,21 +683,23 @@ pub const Button = struct {
             return true;
         }
 
-        return false;
+        return !(self.event_policy.pass_press or !intersects(self, x, y));
     }
 
-    pub fn mouseRelease(self: *Button, x: f32, y: f32, _: f32, _: f32) void {
+    pub fn mouseRelease(self: *Button, x: f32, y: f32, _: f32, _: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
 
-    pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             if (self.tooltip_text) |text| {
@@ -676,19 +708,28 @@ pub const Button = struct {
                     .y = y + y_offset,
                     .text_data = text,
                 });
+                return true;
             }
             self.state = .hovered;
         } else {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn init(self: *Button) void {
         if (self.text_data) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.recalculateAttributes(self._allocator);
         }
 
         if (self.tooltip_text) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.recalculateAttributes(self._allocator);
         }
     }
@@ -746,6 +787,7 @@ pub const KeyMapper = struct {
     layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     listening: bool = false,
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
@@ -766,21 +808,23 @@ pub const KeyMapper = struct {
             return true;
         }
 
-        return false;
+        return !(self.event_policy.pass_press or !intersects(self, x, y));
     }
 
-    pub fn mouseRelease(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32) void {
+    pub fn mouseRelease(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
 
-    pub fn mouseMove(self: *KeyMapper, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseMove(self: *KeyMapper, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             if (self.tooltip_text) |text_data| {
@@ -789,19 +833,29 @@ pub const KeyMapper = struct {
                     .y = y + y_offset,
                     .text_data = text_data,
                 });
+                return true;
             }
 
             self.state = .hovered;
         } else {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn init(self: *KeyMapper) void {
         if (self.title_text_data) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.recalculateAttributes(self._allocator);
         }
+
         if (self.tooltip_text) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.recalculateAttributes(self._allocator);
         }
     }
@@ -810,6 +864,7 @@ pub const KeyMapper = struct {
         if (self.title_text_data) |*text_data| {
             text_data.deinit(self._allocator);
         }
+
         if (self.tooltip_text) |*text_data| {
             text_data.deinit(self._allocator);
         }
@@ -843,6 +898,7 @@ pub const CharacterBox = struct {
     text_data: ?TextData = null,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
@@ -857,31 +913,38 @@ pub const CharacterBox = struct {
             return true;
         }
 
-        return false;
+        return !(self.event_policy.pass_press or !intersects(self, x, y));
     }
 
-    pub fn mouseRelease(self: *CharacterBox, x: f32, y: f32, _: f32, _: f32) void {
+    pub fn mouseRelease(self: *CharacterBox, x: f32, y: f32, _: f32, _: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
 
-    pub fn mouseMove(self: *CharacterBox, x: f32, y: f32, _: f32, _: f32) void {
+    pub fn mouseMove(self: *CharacterBox, x: f32, y: f32, _: f32, _: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             self.state = .hovered;
         } else {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn init(self: *CharacterBox) void {
         if (self.text_data) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.recalculateAttributes(self._allocator);
         }
     }
@@ -928,6 +991,7 @@ pub const Image = struct {
     layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     // hack
     is_minimap_decor: bool = false,
     ability_props: ?game_data.Ability = null,
@@ -939,9 +1003,9 @@ pub const Image = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             if (self.ability_props) |props| {
@@ -950,18 +1014,25 @@ pub const Image = struct {
                     .y = y + y_offset,
                     .props = props,
                 });
+                return true;
             } else if (self.tooltip_text) |text| {
                 tooltip.switchTooltip(.text, .{
                     .x = x + x_offset,
                     .y = y + y_offset,
                     .text_data = text,
                 });
+                return true;
             }
         }
+
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn init(self: *Image) void {
         if (self.tooltip_text) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.recalculateAttributes(self._allocator);
         }
     }
@@ -995,6 +1066,7 @@ pub const MenuBackground = struct {
     layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
@@ -1020,6 +1092,7 @@ pub const Item = struct {
     layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     draggable: bool = false,
     // don't set this to anything, it's used for item tier backgrounds
     _background_image_data: ?ImageData = null,
@@ -1058,20 +1131,21 @@ pub const Item = struct {
             return true;
         }
 
-        return false;
+        return !(self.event_policy.pass_press or !intersects(self, x, y));
     }
 
-    pub fn mouseRelease(self: *Item, _: f32, _: f32, _: f32, _: f32) void {
+    pub fn mouseRelease(self: *Item, x: f32, y: f32, _: f32, _: f32) bool {
         if (!self._is_dragging)
-            return;
+            return false;
 
         self._is_dragging = false;
         self.drag_end_callback(self);
+        return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
 
-    pub fn mouseMove(self: *Item, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseMove(self: *Item, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             tooltip.switchTooltip(.item, .{
@@ -1079,13 +1153,15 @@ pub const Item = struct {
                 .y = y + y_offset,
                 .item = self._item,
             });
+            return true;
         }
 
         if (!self._is_dragging)
-            return;
+            return false;
 
         self.x = x + self._drag_offset_x;
         self.y = y + self._drag_offset_y;
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn width(self: Item) f32 {
@@ -1110,11 +1186,15 @@ pub const Bar = struct {
     layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     text_data: TextData,
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *Bar) void {
+        self.text_data._lock.lock();
+        defer self.text_data._lock.unlock();
+
         self.text_data.recalculateAttributes(self._allocator);
     }
 
@@ -1144,10 +1224,14 @@ pub const Text = struct {
     layer: Layer = .default,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *Text) void {
+        self.text_data._lock.lock();
+        defer self.text_data._lock.unlock();
+
         self.text_data.recalculateAttributes(self._allocator);
     }
 
@@ -1180,6 +1264,7 @@ pub const ScrollableContainer = struct {
     start_value: f32 = 0.0,
 
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     base_y: f32 = 0.0,
     _container: *Container = undefined,
     _scroll_bar: *Slider = undefined,
@@ -1195,25 +1280,31 @@ pub const ScrollableContainer = struct {
             self._scroll_bar.mousePress(x, y, x_offset, y_offset, mods))
             return true;
 
-        return false;
+        return !(self.event_policy.pass_press or !intersects(self, x, y));
     }
 
-    pub fn mouseRelease(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseRelease(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         var container = self._container;
-        container.mouseRelease(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset);
-        self._scroll_bar.mouseRelease(x, y, x_offset, y_offset);
+        if (container.mouseRelease(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset) or
+            self._scroll_bar.mouseRelease(x, y, x_offset, y_offset))
+            return true;
+
+        return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
 
-    pub fn mouseMove(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseMove(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         var container = self._container;
-        container.mouseMove(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset);
-        self._scroll_bar.mouseMove(x, y, x_offset, y_offset);
+        if (container.mouseMove(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset) or
+            self._scroll_bar.mouseMove(x, y, x_offset, y_offset))
+            return true;
+
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn mouseScroll(self: *ScrollableContainer, x: f32, y: f32, _: f32, _: f32, _: f32, y_scroll: f32) bool {
@@ -1235,7 +1326,7 @@ pub const ScrollableContainer = struct {
             return true;
         }
 
-        return false;
+        return !(self.event_policy.pass_scroll or !intersects(self, x, y));
     }
 
     pub fn init(self: *ScrollableContainer) void {
@@ -1353,6 +1444,7 @@ pub const Container = struct {
     y: f32,
     scissor: ScissorRect = .{},
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     draggable: bool = false,
     layer: Layer = .default,
 
@@ -1392,12 +1484,12 @@ pub const Container = struct {
             self._drag_offset_y = self.y - y;
         }
 
-        return false;
+        return !(self.event_policy.pass_press or !intersects(self, x, y));
     }
 
-    pub fn mouseRelease(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseRelease(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (self._is_dragging)
             self._is_dragging = false;
@@ -1406,16 +1498,19 @@ pub const Container = struct {
         while (iter.next()) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
-                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease"))
-                        inner_elem.mouseRelease(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset);
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease") and
+                        inner_elem.mouseRelease(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
+                        return true;
                 },
             }
         }
+
+        return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
 
-    pub fn mouseMove(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseMove(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (self._is_dragging) {
             if (!self._clamp_x) {
@@ -1446,11 +1541,14 @@ pub const Container = struct {
         while (iter.next()) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
-                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove"))
-                        inner_elem.mouseMove(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset);
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove") and
+                        inner_elem.mouseMove(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
+                        return true;
                 },
             }
         }
+
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn mouseScroll(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32, x_scroll: f32, y_scroll: f32) bool {
@@ -1468,7 +1566,7 @@ pub const Container = struct {
             }
         }
 
-        return false;
+        return !(self.event_policy.pass_scroll or !intersects(self, x, y));
     }
 
     pub fn init(self: *Container) void {
@@ -1619,6 +1717,7 @@ pub const Toggle = struct {
     tooltip_text: ?TextData = null,
     state_change: ?*const fn (*Toggle) void = null,
     visible: bool = true,
+    event_policy: EventPolicy = .{},
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
@@ -1636,21 +1735,23 @@ pub const Toggle = struct {
             return true;
         }
 
-        return false;
+        return !(self.event_policy.pass_press or !intersects(self, x, y));
     }
 
-    pub fn mouseRelease(self: *Toggle, x: f32, y: f32, _: f32, _: f32) void {
+    pub fn mouseRelease(self: *Toggle, x: f32, y: f32, _: f32, _: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
 
-    pub fn mouseMove(self: *Toggle, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseMove(self: *Toggle, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (intersects(self, x, y)) {
             if (self.tooltip_text) |text_data| {
@@ -1659,19 +1760,29 @@ pub const Toggle = struct {
                     .y = y + y_offset,
                     .text_data = text_data,
                 });
+                return true;
             }
 
             self.state = .hovered;
         } else {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn init(self: *Toggle) void {
         if (self.text_data) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.recalculateAttributes(self._allocator);
         }
+
         if (self.tooltip_text) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.recalculateAttributes(self._allocator);
         }
     }
@@ -1680,6 +1791,7 @@ pub const Toggle = struct {
         if (self.text_data) |*text_data| {
             text_data.deinit(self._allocator);
         }
+
         if (self.tooltip_text) |*text_data| {
             text_data.deinit(self._allocator);
         }
@@ -1730,8 +1842,12 @@ pub const Slider = struct {
     stored_value: ?*f32 = null, // options hack. remove when callbacks will be able to take in arbitrary params...
     _parent_container: ?*ScrollableContainer = null, // another hack...
     visible: bool = true,
-    _knob_x: f32 = 0,
-    _knob_y: f32 = 0,
+    // will be overwritten
+    event_policy: EventPolicy = .{},
+    _knob_x: f32 = 0.0,
+    _knob_y: f32 = 0.0,
+    _knob_offset_x: f32 = 0.0,
+    _knob_offset_y: f32 = 0.0,
     _current_value: f32 = 0.0,
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
@@ -1751,15 +1867,17 @@ pub const Slider = struct {
                 .normal => |normal| normal.height(),
             };
 
+            self._knob_offset_x = -((x - self.x) - self._knob_x);
+            self._knob_offset_y = -((y - self.y) - self._knob_y);
             self.pressed(x, y, knob_h, knob_w);
         }
 
-        return false;
+        return !(self.event_policy.pass_press or !intersects(self, x, y));
     }
 
-    pub fn mouseRelease(self: *Slider, x: f32, y: f32, _: f32, _: f32) void {
+    pub fn mouseRelease(self: *Slider, x: f32, y: f32, _: f32, _: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         if (self.state == .pressed) {
             const knob_w = switch (self.knob_image_data.current(self.state)) {
@@ -1779,11 +1897,13 @@ pub const Slider = struct {
             }
             self.state_change(self);
         }
+
+        return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
 
-    pub fn mouseMove(self: *Slider, x: f32, y: f32, x_offset: f32, y_offset: f32) void {
+    pub fn mouseMove(self: *Slider, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
-            return;
+            return false;
 
         const knob_w = switch (self.knob_image_data.current(self.state)) {
             .nine_slice => |nine_slice| nine_slice.w,
@@ -1812,6 +1932,8 @@ pub const Slider = struct {
         } else if (self.state == .hovered) {
             self.state = .none;
         }
+
+        return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
     pub fn mouseScroll(self: *Slider, x: f32, y: f32, _: f32, _: f32, _: f32, y_scroll: f32) bool {
@@ -1828,10 +1950,17 @@ pub const Slider = struct {
             return true;
         }
 
-        return false;
+        return !(self.event_policy.pass_scroll or !intersects(self, x, y));
     }
 
     pub fn init(self: *Slider) void {
+        self.event_policy = .{
+            .pass_move = true,
+            .pass_press = true,
+            .pass_scroll = true,
+            .pass_release = true,
+        };
+
         if (self.stored_value) |value_ptr| {
             value_ptr.* = @min(self.max_value, @max(self.min_value, value_ptr.*));
             self._current_value = value_ptr.*;
@@ -1891,12 +2020,20 @@ pub const Slider = struct {
 
         if (self.value_text_data) |*text_data| {
             // have to do it for the backing buffer init
-            text_data.recalculateAttributes(self._allocator);
-            text_data.text = std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00";
-            text_data.recalculateAttributes(self._allocator);
+            {
+                text_data._lock.lock();
+                defer text_data._lock.unlock();
+
+                text_data.recalculateAttributes(self._allocator);
+            }
+
+            text_data.setText(std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00", self._allocator);
         }
 
         if (self.title_text_data) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.vert_align = .middle;
             text_data.hori_align = .middle;
             text_data.max_width = self.w;
@@ -1905,6 +2042,9 @@ pub const Slider = struct {
         }
 
         if (self.tooltip_text) |*text_data| {
+            text_data._lock.lock();
+            defer text_data._lock.unlock();
+
             text_data.recalculateAttributes(self._allocator);
         }
     }
@@ -1913,9 +2053,11 @@ pub const Slider = struct {
         if (self.value_text_data) |*text_data| {
             text_data.deinit(self._allocator);
         }
+
         if (self.title_text_data) |*text_data| {
             text_data.deinit(self._allocator);
         }
+
         if (self.tooltip_text) |*text_data| {
             text_data.deinit(self._allocator);
         }
@@ -1953,17 +2095,16 @@ pub const Slider = struct {
         const prev_value = self._current_value;
 
         if (self.vertical) {
-            self._knob_y = @min(self.h - knob_h, @max(0, y - knob_h - self.y));
+            self._knob_y = @min(self.h - knob_h, @max(0, y - self.y + self._knob_offset_y));
             self._current_value = self._knob_y / (self.h - knob_h) * (self.max_value - self.min_value) + self.min_value;
         } else {
-            self._knob_x = @min(self.w - knob_w, @max(0, x - knob_w - self.x));
+            self._knob_x = @min(self.w - knob_w, @max(0, x - self.x + self._knob_offset_x));
             self._current_value = self._knob_x / (self.w - knob_w) * (self.max_value - self.min_value) + self.min_value;
         }
 
         if (self._current_value != prev_value) {
             if (self.value_text_data) |*text_data| {
-                text_data.text = std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00";
-                text_data.recalculateAttributes(self._allocator);
+                text_data.setText(std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00", self._allocator);
             }
 
             if (self.continous_event_fire)
@@ -1995,8 +2136,7 @@ pub const Slider = struct {
 
         if (self._current_value != prev_value) {
             if (self.value_text_data) |*text_data| {
-                text_data.text = std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00";
-                text_data.recalculateAttributes(self._allocator);
+                text_data.setText(std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00", self._allocator);
             }
 
             if (self.continous_event_fire)
@@ -2033,7 +2173,13 @@ pub const SpeechBalloon = struct {
     pub fn add(data: SpeechBalloon) !void {
         var balloon = Temporary{ .balloon = data };
         balloon.balloon.start_time = main.current_time;
-        balloon.balloon.text_data.recalculateAttributes(main._allocator);
+        {
+            balloon.balloon.text_data._lock.lock();
+            defer balloon.balloon.text_data._lock.unlock();
+
+            balloon.balloon.text_data.recalculateAttributes(main._allocator);
+        }
+
         try systems.temp_elements_to_add.append(balloon);
     }
 
@@ -2075,7 +2221,12 @@ pub const StatusText = struct {
     pub fn add(data: StatusText) !void {
         var status = Temporary{ .status = data };
         status.status.start_time = main.current_time + data.delay;
-        status.status.text_data.recalculateAttributes(main._allocator);
+        {
+            status.status.text_data._lock.lock();
+            defer status.status.text_data._lock.unlock();
+
+            status.status.text_data.recalculateAttributes(main._allocator);
+        }
         try systems.temp_elements_to_add.append(status);
     }
 

@@ -194,7 +194,13 @@ pub const GameObject = struct {
                 .text_type = .bold,
                 .size = 16,
             };
-            self.name_text_data.?.recalculateAttributes(allocator);
+
+            {
+                self.name_text_data.?._lock.lock();
+                defer self.name_text_data.?._lock.unlock();
+
+                self.name_text_data.?.recalculateAttributes(allocator);
+            }
         }
 
         map.add_lock.lockShared();

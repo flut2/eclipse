@@ -174,16 +174,32 @@ pub fn removeAttachedUi(obj_id: i32, allocator: std.mem.Allocator) void {
     }
 }
 
-pub fn mouseMove(x: f32, y: f32) void {
+pub fn mouseMove(x: f32, y: f32) bool {
     tooltip.switchTooltip(.none, {});
 
-    for (elements.items) |elem| {
+    var elem_iter_1 = std.mem.reverseIterator(elements.items);
+    while (elem_iter_1.next()) |elem| {
         switch (elem) {
-            inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove")) inner_elem.mouseMove(x, y, 0, 0);
+            else => {},
+            inline .slider => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove") and inner_elem.mouseMove(x, y, 0, 0))
+                    return true;
             },
         }
     }
+
+    var elem_iter_2 = std.mem.reverseIterator(elements.items);
+    while (elem_iter_2.next()) |elem| {
+        switch (elem) {
+            .slider => {},
+            inline else => |inner_elem| {
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove") and inner_elem.mouseMove(x, y, 0, 0))
+                    return true;
+            },
+        }
+    }
+
+    return false;
 }
 
 pub fn mousePress(x: f32, y: f32, mods: zglfw.Mods, button: zglfw.MouseButton) bool {
@@ -213,14 +229,18 @@ pub fn mousePress(x: f32, y: f32, mods: zglfw.Mods, button: zglfw.MouseButton) b
     return false;
 }
 
-pub fn mouseRelease(x: f32, y: f32) void {
-    for (elements.items) |elem| {
+pub fn mouseRelease(x: f32, y: f32) bool {
+    var elem_iter = std.mem.reverseIterator(elements.items);
+    while (elem_iter.next()) |elem| {
         switch (elem) {
             inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease")) inner_elem.mouseRelease(x, y, 0, 0);
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease") and inner_elem.mouseRelease(x, y, 0, 0))
+                    return true;
             },
         }
     }
+
+    return false;
 }
 
 pub fn mouseScroll(x: f32, y: f32, x_scroll: f32, y_scroll: f32) bool {
