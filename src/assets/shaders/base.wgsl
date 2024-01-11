@@ -150,11 +150,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_6), dx, dy).a;
             sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_6), dx, dy).a;
             sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_6), dx, dy).a;
-
-            if sum == 0.0 {
-                discard;
-            }
-
             return vec4(in.alpha_and_shadow_color.yzw, sum / 49.0 * in.alpha_and_shadow_color.x);
         }
 
@@ -237,11 +232,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_6), dx, dy).a;
             sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_6), dx, dy).a;
             sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_6), dx, dy).a;
-
-            if sum == 0.0 {
-                discard;
-            }
-
             return vec4(in.alpha_and_shadow_color.yzw, sum / 49.0 * in.alpha_and_shadow_color.x);
         }
 
@@ -412,10 +402,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         return textureSampleGrad(menu_bg_tex, linear_sampler, in.pos_uv.zw, dx, dy);
     } else if in.render_type == simple_render_type {
         let pixel = textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw, dx, dy);
-        if pixel.a == 0.0 {
-            discard;
-        }           
-
         return vec4(mix(pixel.rgb, in.base_color_and_intensity.rgb, in.base_color_and_intensity.a), pixel.a * in.alpha_and_shadow_color.x);
     }
 
