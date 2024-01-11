@@ -148,11 +148,11 @@ inline fn drawParticle(idx: u16, pt: Particle, draw_data: base.DrawData) u16 {
                 particle.atlas_data,
                 draw_data,
                 .{
-                    .shadow_texel_mult = 1.0 / particle.size,
+                    //.shadow_texel_mult = 1.0 / particle.size,
                     .alpha_mult = particle.alpha_mult,
                     .base_color = particle.color,
                     .base_color_intensity = 1.0,
-                    .force_glow_off = true,
+                    .is_simple = true,
                 },
             );
         },
@@ -237,20 +237,24 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
     _ = &color_intensity;
     // flash
 
-    if (settings.enable_lights and player.props.light_color != std.math.maxInt(u32)) {
+    if (settings.enable_lights and
+        base.light_idx < base.max_lights and
+        player.props.light_color != std.math.maxInt(u32))
+    {
         const light_size = player.props.light_radius + player.props.light_pulse *
             @sin(float_time_ms / 1000.0 * player.props.light_pulse_speed);
 
         const light_w = w * light_size * 4;
         const light_h = h * light_size * 4;
-        base.light_list.append(.{
+        base.lights[base.light_idx] = .{
             .x = screen_pos.x - light_w / 2.0,
             .y = screen_pos.y - h * light_size * 1.5,
             .w = light_w,
             .h = light_h,
             .color = player.props.light_color,
             .intensity = player.props.light_intensity,
-        }) catch unreachable;
+        };
+        base.light_idx += 1;
     }
 
     if (player.name_text_data) |*data| {
@@ -478,18 +482,22 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
     _ = &color_intensity;
     // flash
 
-    if (settings.enable_lights and obj.props.light_color != std.math.maxInt(u32)) {
+    if (settings.enable_lights and
+        base.light_idx < base.max_lights and
+        obj.props.light_color != std.math.maxInt(u32))
+    {
         const light_size = obj.props.light_radius + obj.props.light_pulse * @sin(float_time_ms / 1000.0 * obj.props.light_pulse_speed);
         const light_w = w * light_size * 4;
         const light_h = h * light_size * 4;
-        base.light_list.append(.{
+        base.lights[base.light_idx] = .{
             .x = screen_pos.x - light_w / 2.0,
             .y = screen_pos.y - h * light_size * 1.5,
             .w = light_w,
             .h = light_h,
             .color = obj.props.light_color,
             .intensity = obj.props.light_intensity,
-        }) catch unreachable;
+        };
+        base.light_idx += 1;
     }
 
     const is_portal = obj.class == .portal;
@@ -615,18 +623,22 @@ inline fn drawProjectile(idx: u16, proj: Projectile, draw_data: base.DrawData, f
     const angle = -(proj.visual_angle + proj.props.angle_correction +
         (if (rotation == 0) 0 else float_time_ms / rotation) - camera.angle);
 
-    if (settings.enable_lights and proj.props.light_color != std.math.maxInt(u32)) {
+    if (settings.enable_lights and
+        base.light_idx < base.max_lights and
+        proj.props.light_color != std.math.maxInt(u32))
+    {
         const light_size = proj.props.light_radius + proj.props.light_pulse * @sin(float_time_ms / 1000.0 * proj.props.light_pulse_speed);
         const light_w = w * light_size * 4;
         const light_h = h * light_size * 4;
-        base.light_list.append(.{
+        base.lights[base.light_idx] = .{
             .x = screen_pos.x - light_w / 2.0,
             .y = screen_pos.y + z_offset - h * light_size * 1.5,
             .w = light_w,
             .h = light_h,
             .color = proj.props.light_color,
             .intensity = proj.props.light_intensity,
-        }) catch unreachable;
+        };
+        base.light_idx += 1;
     }
 
     new_idx = base.drawQuad(

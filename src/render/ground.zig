@@ -189,7 +189,7 @@ pub inline fn drawSquares(idx: u16, draw_data: base.DrawData, float_time_ms: f32
 
                 var u_offset = square.u_offset;
                 var v_offset = square.v_offset;
-                if (settings.enable_lights) {
+                if (settings.enable_lights and base.light_idx < base.max_lights) {
                     const light_color = square.props.light_color;
                     if (light_color != std.math.maxInt(u32)) {
                         const size = camera.px_per_tile * (square.props.light_radius + square.props.light_pulse *
@@ -197,14 +197,15 @@ pub inline fn drawSquares(idx: u16, draw_data: base.DrawData, float_time_ms: f32
 
                         const light_w = size * 4;
                         const light_h = size * 4;
-                        base.light_list.append(.{
+                        base.lights[base.light_idx] = .{
                             .x = (screen_pos.x + camera.screen_width / 2.0) - light_w / 2.0,
                             .y = (screen_pos.y + camera.screen_height / 2.0) - size * 1.5,
                             .w = light_w,
                             .h = light_h,
                             .color = light_color,
                             .intensity = square.props.light_intensity,
-                        }) catch unreachable;
+                        };
+                        base.light_idx += 1;
                     }
                 }
 

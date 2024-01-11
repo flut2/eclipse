@@ -24,6 +24,7 @@ const text_normal_no_subpixel_render_type = 6.0;
 const text_drop_shadow_no_subpixel_render_type = 7.0;
 const minimap_render_type = 8.0;
 const menu_bg_render_type = 9.0;
+const simple_render_type = 10.0;
 
 struct VertexInput {
     @location(0) pos_uv: vec4<f32>,
@@ -409,6 +410,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         return textureSampleGrad(minimap_tex, default_sampler, in.pos_uv.zw, dx, dy);
     } else if in.render_type == menu_bg_render_type {
         return textureSampleGrad(menu_bg_tex, linear_sampler, in.pos_uv.zw, dx, dy);
+    } else if in.render_type == simple_render_type {
+        let pixel = textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw, dx, dy);
+        if pixel.a == 0.0 {
+            discard;
+        }           
+
+        return vec4(mix(pixel.rgb, in.base_color_and_intensity.rgb, in.base_color_and_intensity.a), pixel.a * in.alpha_and_shadow_color.x);
     }
 
     return vec4(0.0, 0.0, 0.0, 0.0);

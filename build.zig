@@ -70,9 +70,6 @@ pub fn build(b: *std.Build) !void {
 
     ini.link(ini.getModule(b), exe);
 
-    // const xev = b.dependency("libxev", .{ .target = target, .optimize = optimize });
-    // exe.root_module.addImport("xev", xev.module("xev"));
-
     zglfw_pkg.link(exe);
     zgpu_pkg.link(exe);
 

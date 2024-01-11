@@ -328,7 +328,13 @@ inline fn updateTempElements(allocator: std.mem.Allocator) !void {
                     const frac = @as(f32, @floatFromInt(elapsed)) / @as(f32, @floatFromInt(status_text.lifetime * std.time.us_per_ms));
                     status_text.text_data.size = status_text.initial_size * @min(1.0, @max(0.7, 1.0 - frac * 0.3 + 0.075));
                     status_text.text_data.alpha = 1.0 - frac + 0.33;
-                    status_text.text_data.recalculateAttributes(allocator);
+
+                    {
+                        status_text.text_data._lock.lock();
+                        defer status_text.text_data._lock.unlock();
+
+                        status_text.text_data.recalculateAttributes(allocator);
+                    }
 
                     switch (en) {
                         .particle, .particle_effect, .projectile => {},

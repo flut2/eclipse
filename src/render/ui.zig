@@ -1022,6 +1022,7 @@ pub inline fn drawTempElements(idx: u16, draw_data: base.DrawData) u16 {
     ui_systems.temp_elem_lock.lock();
     defer ui_systems.temp_elem_lock.unlock();
 
+    @prefetch(ui_systems.temp_elements.items, .{ .locality = 0 });
     var new_idx = idx;
     for (ui_systems.temp_elements.items) |*elem| {
         switch (elem.*) {
@@ -1065,6 +1066,7 @@ pub inline fn drawUiElements(idx: u16, draw_data: base.DrawData, cam_x: f32, cam
     ui_systems.ui_lock.lock();
     defer ui_systems.ui_lock.unlock();
 
+    @prefetch(ui_systems.elements.items, .{ .locality = 0 });
     var new_idx = idx;
     for (ui_systems.elements.items) |elem| {
         new_idx = drawElement(new_idx, elem, draw_data, cam_x, cam_y, 0, 0, time);

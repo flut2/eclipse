@@ -45,7 +45,7 @@ pub const QuadOptions = struct {
     shadow_texel_mult: f32 = 0.0,
     shadow_color: u32 = std.math.maxInt(u32),
     force_glow_off: bool = false,
-    is_light: bool = false,
+    is_simple: bool = false,
     scissor: element.ScissorRect = .{},
 };
 
@@ -101,9 +101,11 @@ pub const text_normal_no_subpixel_render_type = 6.0;
 pub const text_drop_shadow_no_subpixel_render_type = 7.0;
 pub const minimap_render_type = 8.0;
 pub const menu_bg_render_type = 9.0;
+pub const simple_render_type = 10.0;
 
 pub const base_batch_vert_size = 40000;
 pub const ground_batch_vert_size = 40000;
+pub const max_lights = 1000;
 
 pub var base_pipeline: zgpu.RenderPipelineHandle = .{};
 pub var base_bind_group: zgpu.BindGroupHandle = undefined;
@@ -146,7 +148,8 @@ pub var linear_sampler: zgpu.SamplerHandle = undefined;
 
 pub var condition_rects: [@bitSizeOf(utils.Condition)][]const assets.AtlasData = undefined;
 pub var enter_text_data: element.TextData = undefined;
-pub var light_list: std.ArrayList(LightData) = undefined;
+pub var light_idx: usize = 0;
+pub var lights: [max_lights]LightData = undefined;
 
 var last_ms_count: u32 = 1;
 
@@ -352,7 +355,6 @@ pub fn deinit(_: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
     }
 
     enter_text_data.deinit(allocator);
-    light_list.deinit();
 }
 
 pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
@@ -387,10 +389,6 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
         condition_rects[i] = rects;
     }
 
-    light_list = std.ArrayList(LightData).initCapacity(allocator, 256) catch |e| {
-        std.debug.panic("Light list initialization failed: {}", .{e});
-    };
-
     enter_text_data = element.TextData{
         .text = "Enter",
         .text_type = .bold,
@@ -400,7 +398,7 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
     {
         enter_text_data._lock.lock();
         defer enter_text_data._lock.unlock();
-        
+
         enter_text_data.recalculateAttributes(main._allocator);
     }
 
@@ -558,10 +556,14 @@ pub inline fn drawQuad(
 
     var render_type: f32 = quad_render_type;
 
-    if (settings.enable_glow and !opts.force_glow_off) {
-        render_type = if (atlas_data.atlas_type == .ui) ui_quad_render_type else quad_render_type;
+    if (opts.is_simple) {
+        render_type = simple_render_type;
     } else {
-        render_type = if (atlas_data.atlas_type == .ui) ui_quad_glow_off_render_type else quad_glow_off_render_type;
+        if (settings.enable_glow and !opts.force_glow_off) {
+            render_type = if (atlas_data.atlas_type == .ui) ui_quad_render_type else quad_render_type;
+        } else {
+            render_type = if (atlas_data.atlas_type == .ui) ui_quad_glow_off_render_type else quad_glow_off_render_type;
+        }
     }
 
     const dont_scissor = element.ScissorRect.dont_scissor;
@@ -1563,8 +1565,7 @@ pub fn draw(
         map.validPos(@intFromFloat(cam_x), @intFromFloat(cam_y)))
     {
         const float_time_ms = @as(f32, @floatFromInt(time)) / std.time.us_per_ms;
-
-        light_list.clearRetainingCapacity();
+        light_idx = 0;
 
         square_idx = ground_render.drawSquares(square_idx, ground_draw_data, float_time_ms, cam_x, cam_y);
 
@@ -1583,25 +1584,27 @@ pub fn draw(
             );
         }
 
+        @prefetch(map.entities.items, .{ .locality = 0 });
         idx = game_render.drawEntities(idx, base_draw_data, float_time_ms);
         map.object_lock.unlockShared();
 
         if (settings.enable_lights) {
             const opts = QuadOptions{ .base_color = map.bg_light_color, .base_color_intensity = 1.0, .alpha_mult = map.getLightIntensity(time) };
             idx = drawQuad(idx, 0, 0, camera.screen_width, camera.screen_height, assets.wall_backface_data, base_draw_data, opts);
-        }
 
-        for (light_list.items) |data| {
-            idx = drawQuad(
-                idx,
-                data.x,
-                data.y,
-                data.w,
-                data.h,
-                assets.light_data,
-                base_draw_data,
-                .{ .base_color = data.color, .base_color_intensity = 1.0, .alpha_mult = data.intensity },
-            );
+            @prefetch(&lights[0..light_idx], .{ .locality = 0 });
+            for (lights[0..light_idx]) |data| {
+                idx = drawQuad(
+                    idx,
+                    data.x,
+                    data.y,
+                    data.w,
+                    data.h,
+                    assets.light_data,
+                    base_draw_data,
+                    .{ .base_color = data.color, .base_color_intensity = 1.0, .alpha_mult = data.intensity, .is_simple = true },
+                );
+            }
         }
     } else map.object_lock.unlockShared();
 
