@@ -40,12 +40,7 @@ pub const AbilityTooltip = struct {
         self.image = try self.root.createChild(element.Image{
             .x = 10,
             .y = 10,
-            .image_data = .{
-                .normal = .{
-                    .atlas_data = undefined,
-                    .glow = true,
-                },
-            },
+            .image_data = .{ .normal = .{ .atlas_data = undefined } },
         });
 
         self.title = try self.root.createChild(element.Text{

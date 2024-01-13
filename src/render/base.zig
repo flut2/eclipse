@@ -44,8 +44,6 @@ pub const QuadOptions = struct {
     alpha_mult: f32 = 1.0,
     shadow_texel_mult: f32 = 0.0,
     shadow_color: u32 = std.math.maxInt(u32),
-    force_glow_off: bool = false,
-    is_simple: bool = false,
     scissor: element.ScissorRect = .{},
 };
 
@@ -93,15 +91,12 @@ pub const GroundUniformData = extern struct {
 
 pub const quad_render_type = 0.0;
 pub const ui_quad_render_type = 1.0;
-pub const quad_glow_off_render_type = 2.0;
-pub const ui_quad_glow_off_render_type = 3.0;
+pub const minimap_render_type = 2.0;
+pub const menu_bg_render_type = 3.0;
 pub const text_normal_render_type = 4.0;
 pub const text_drop_shadow_render_type = 5.0;
 pub const text_normal_no_subpixel_render_type = 6.0;
 pub const text_drop_shadow_no_subpixel_render_type = 7.0;
-pub const minimap_render_type = 8.0;
-pub const menu_bg_render_type = 9.0;
-pub const simple_render_type = 10.0;
 
 pub const base_batch_vert_size = 40000;
 pub const ground_batch_vert_size = 40000;
@@ -554,17 +549,7 @@ pub inline fn drawQuad(
     const y_cos = cos_angle * scaled_h * 0.5;
     const y_sin = sin_angle * scaled_h * 0.5;
 
-    var render_type: f32 = quad_render_type;
-
-    if (opts.is_simple) {
-        render_type = simple_render_type;
-    } else {
-        if (settings.enable_glow and !opts.force_glow_off) {
-            render_type = if (atlas_data.atlas_type == .ui) ui_quad_render_type else quad_render_type;
-        } else {
-            render_type = if (atlas_data.atlas_type == .ui) ui_quad_glow_off_render_type else quad_glow_off_render_type;
-        }
-    }
+    const render_type: f32 = if (atlas_data.atlas_type == .ui) ui_quad_render_type else quad_render_type;
 
     const dont_scissor = element.ScissorRect.dont_scissor;
     const scaled_min_x = if (opts.scissor.min_x != dont_scissor)
@@ -860,10 +845,7 @@ pub inline fn drawQuadVerts(
     const texel_w = assets.base_texel_w * opts.shadow_texel_mult;
     const texel_h = assets.base_texel_h * opts.shadow_texel_mult;
 
-    const render_type: f32 = if (settings.enable_glow)
-        quad_render_type
-    else
-        quad_glow_off_render_type;
+    const render_type = quad_render_type;
 
     base_vert_data[idx_new] = BaseVertexData{
         .pos_uv = .{
@@ -1148,7 +1130,7 @@ pub inline fn drawText(
                                 quad_size,
                                 data[index],
                                 draw_data,
-                                .{ .shadow_texel_mult = 0.5, .force_glow_off = true, .alpha_mult = text_data.alpha },
+                                .{ .alpha_mult = text_data.alpha },
                             );
 
                             x_pointer += quad_size;
@@ -1602,7 +1584,7 @@ pub fn draw(
                     data.h,
                     assets.light_data,
                     base_draw_data,
-                    .{ .base_color = data.color, .base_color_intensity = 1.0, .alpha_mult = data.intensity, .is_simple = true },
+                    .{ .base_color = data.color, .base_color_intensity = 1.0, .alpha_mult = data.intensity },
                 );
             }
         }

@@ -125,7 +125,6 @@ const keys_format =
 
 const misc_format =
     \\[Misc]
-    \\enable_glow={s} 
     \\enable_lights={s}
     \\enable_vsync={s}
     \\stats_enabled={s}
@@ -178,7 +177,6 @@ pub var toggle_stats = Button{ .key = .b };
 pub var sfx_volume: f32 = 0.33;
 pub var music_volume: f32 = 0.1;
 pub var fps_cap: f32 = 360.0; // 0 to disable
-pub var enable_glow = true;
 pub var enable_lights = true;
 pub var enable_vsync = true;
 pub var stats_enabled = true;
@@ -337,7 +335,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try float_name_map.put("music_volume", &music_volume);
     try float_name_map.put("fps_cap", &fps_cap);
 
-    try bool_name_map.put("enable_glow", &enable_glow);
     try bool_name_map.put("enable_lights", &enable_lights);
     try bool_name_map.put("enable_vsync", &enable_vsync);
     try bool_name_map.put("save_email", &save_email);
@@ -499,7 +496,6 @@ fn saveData(file: std.fs.File) !void {
     _ = try file.write(keys_buf);
 
     const misc_buf = try std.fmt.allocPrint(main._allocator, misc_format, .{
-        boolToString(enable_glow),
         boolToString(enable_lights),
         boolToString(enable_vsync),
         boolToString(stats_enabled),
@@ -541,7 +537,6 @@ pub fn resetToDefault() void {
     ultimate_ability = .{ .key = .four };
     sfx_volume = 0.33;
     music_volume = 0.1;
-    enable_glow = true;
     enable_lights = true;
     enable_vsync = true;
     fps_cap = 360.0;

@@ -16,15 +16,12 @@ const bold_italic_text_type = 3.0;
 
 const quad_render_type = 0.0;
 const ui_quad_render_type = 1.0;
-const quad_glow_off_render_type = 2.0;
-const ui_quad_glow_off_render_type = 3.0;
+const minimap_render_type = 2.0;
+const menu_bg_render_type = 3.0;
 const text_normal_render_type = 4.0;
 const text_drop_shadow_render_type = 5.0;
 const text_normal_no_subpixel_render_type = 6.0;
 const text_drop_shadow_no_subpixel_render_type = 7.0;
-const minimap_render_type = 8.0;
-const menu_bg_render_type = 9.0;
-const simple_render_type = 10.0;
 
 struct VertexInput {
     @location(0) pos_uv: vec4<f32>,
@@ -73,201 +70,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     if in.render_type == quad_render_type {
         let pixel = textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw, dx, dy);
-        if pixel.a == 0.0 {
-            let alpha = textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw - in.texel_and_text_data.xy, dx, dy).a +
-                textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, in.pos_uv.w + in.texel_and_text_data.y), dx, dy).a +
-                textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, in.pos_uv.w - in.texel_and_text_data.y), dx, dy).a +
-                textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw + in.texel_and_text_data.xy, dx, dy).a;
-
-            if alpha > 0.0 {
-                return vec4(in.alpha_and_shadow_color.yzw, in.alpha_and_shadow_color.x);
-            }
-
-            var sum = 0.0;
-
-            let tex_x_2 = in.texel_and_text_data.x * 2.0;
-            let tex_x_3 = in.texel_and_text_data.x * 3.0;
-
-            let uv_y_0 = in.pos_uv.w + in.texel_and_text_data.y * -3.5;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_0), dx, dy).a;
-
-            let uv_y_1 = in.pos_uv.w + in.texel_and_text_data.y * -2.5;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_1), dx, dy).a;
-
-            let uv_y_2 = in.pos_uv.w + in.texel_and_text_data.y * -1.5;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_2), dx, dy).a;
-
-            let uv_y_3 = in.pos_uv.w + in.texel_and_text_data.y * -0.5;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_3), dx, dy).a;
-
-            let uv_y_4 = in.pos_uv.w + in.texel_and_text_data.y * 0.5;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_4), dx, dy).a;
-
-            let uv_y_5 = in.pos_uv.w + in.texel_and_text_data.y * 1.5;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_5), dx, dy).a;
-
-            let uv_y_6 = in.pos_uv.w + in.texel_and_text_data.y * 2.5;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_6), dx, dy).a;
-            return vec4(in.alpha_and_shadow_color.yzw, sum / 49.0 * in.alpha_and_shadow_color.x);
-        }
-
         return vec4(mix(pixel.rgb, in.base_color_and_intensity.rgb, in.base_color_and_intensity.a), pixel.a * in.alpha_and_shadow_color.x);
     } else if in.render_type == ui_quad_render_type {
         let pixel = textureSampleGrad(ui_tex, default_sampler, in.pos_uv.zw, dx, dy);
-        if pixel.a == 0.0 {
-            let alpha = textureSampleGrad(ui_tex, default_sampler, in.pos_uv.zw - in.texel_and_text_data.xy, dx, dy).a +
-                textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, in.pos_uv.w + in.texel_and_text_data.y), dx, dy).a +
-                textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, in.pos_uv.w - in.texel_and_text_data.y), dx, dy).a +
-                textureSampleGrad(ui_tex, default_sampler, in.pos_uv.zw + in.texel_and_text_data.xy, dx, dy).a;
-
-            if alpha > 0.0 {
-                return vec4(in.alpha_and_shadow_color.yzw, in.alpha_and_shadow_color.x);
-            }
-
-            var sum = 0.0;
-            let tex_x_2 = in.texel_and_text_data.x * 2.0;
-            let tex_x_3 = in.texel_and_text_data.x * 3.0;
-
-            let uv_y_0 = in.pos_uv.w + in.texel_and_text_data.y * -3.5;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_0), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_0), dx, dy).a;
-
-            let uv_y_1 = in.pos_uv.w + in.texel_and_text_data.y * -2.5;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_1), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_1), dx, dy).a;
-
-            let uv_y_2 = in.pos_uv.w + in.texel_and_text_data.y * -1.5;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_2), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_2), dx, dy).a;
-
-            let uv_y_3 = in.pos_uv.w + in.texel_and_text_data.y * -0.5;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_3), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_3), dx, dy).a;
-
-            let uv_y_4 = in.pos_uv.w + in.texel_and_text_data.y * 0.5;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_4), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_4), dx, dy).a;
-
-            let uv_y_5 = in.pos_uv.w + in.texel_and_text_data.y * 1.5;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_5), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_5), dx, dy).a;
-
-            let uv_y_6 = in.pos_uv.w + in.texel_and_text_data.y * 2.5;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_3, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - tex_x_2, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_2, uv_y_6), dx, dy).a;
-            sum += textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + tex_x_3, uv_y_6), dx, dy).a;
-            return vec4(in.alpha_and_shadow_color.yzw, sum / 49.0 * in.alpha_and_shadow_color.x);
-        }
-
         return vec4(mix(pixel.rgb, in.base_color_and_intensity.rgb, in.base_color_and_intensity.a), pixel.a * in.alpha_and_shadow_color.x);
-    } else if in.render_type == quad_glow_off_render_type {
-        let pixel = textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw, dx, dy);
-        if pixel.a == 0.0 {
-            let alpha = textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw - in.texel_and_text_data.xy, dx, dy).a +
-                textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, in.pos_uv.w + in.texel_and_text_data.y), dx, dy).a +
-                textureSampleGrad(base_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, in.pos_uv.w - in.texel_and_text_data.y), dx, dy).a +
-                textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw + in.texel_and_text_data.xy, dx, dy).a;
-
-            if alpha > 0.0 {
-                return vec4(in.alpha_and_shadow_color.yzw, in.alpha_and_shadow_color.x);
-            }
-
-            discard;
-        }
-
-        return vec4(mix(pixel.rgb, in.base_color_and_intensity.rgb, in.base_color_and_intensity.a), pixel.a * in.alpha_and_shadow_color.x);
-    } else if in.render_type == ui_quad_glow_off_render_type {
-        let pixel = textureSampleGrad(ui_tex, default_sampler, in.pos_uv.zw, dx, dy);
-        if pixel.a == 0.0 {
-            let alpha = textureSampleGrad(ui_tex, default_sampler, in.pos_uv.zw - in.texel_and_text_data.xy, dx, dy).a +
-                textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z - in.texel_and_text_data.x, in.pos_uv.w + in.texel_and_text_data.y), dx, dy).a +
-                textureSampleGrad(ui_tex, default_sampler, vec2(in.pos_uv.z + in.texel_and_text_data.x, in.pos_uv.w - in.texel_and_text_data.y), dx, dy).a +
-                textureSampleGrad(ui_tex, default_sampler, in.pos_uv.zw + in.texel_and_text_data.xy, dx, dy).a;
-
-            if alpha > 0.0 {
-                return vec4(in.alpha_and_shadow_color.yzw, in.alpha_and_shadow_color.x);
-            }
-
-            discard;
-        }
-
-        return vec4(mix(pixel.rgb, in.base_color_and_intensity.rgb, in.base_color_and_intensity.a), pixel.a * in.alpha_and_shadow_color.x);
+    } else if in.render_type == minimap_render_type {
+        return textureSampleGrad(minimap_tex, default_sampler, in.pos_uv.zw, dx, dy);
+    } else if in.render_type == menu_bg_render_type {
+        return textureSampleGrad(menu_bg_tex, linear_sampler, in.pos_uv.zw, dx, dy);
     } else if in.render_type == text_normal_render_type {
         const subpixel = 1.0 / 3.0;
         let subpixel_width = (abs(dx.x) + abs(dy.x)) * subpixel; // this is just fwidth(in.uv).x * subpixel
@@ -396,13 +206,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let offset_pixel = vec4(in.alpha_and_shadow_color.yzw, offset_opacity);
 
         return mix(offset_pixel, base_pixel, outline_alpha);
-    } else if in.render_type == minimap_render_type {
-        return textureSampleGrad(minimap_tex, default_sampler, in.pos_uv.zw, dx, dy);
-    } else if in.render_type == menu_bg_render_type {
-        return textureSampleGrad(menu_bg_tex, linear_sampler, in.pos_uv.zw, dx, dy);
-    } else if in.render_type == simple_render_type {
-        let pixel = textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw, dx, dy);
-        return vec4(mix(pixel.rgb, in.base_color_and_intensity.rgb, in.base_color_and_intensity.a), pixel.a * in.alpha_and_shadow_color.x);
     }
 
     return vec4(0.0, 0.0, 0.0, 0.0);

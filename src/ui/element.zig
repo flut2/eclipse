@@ -404,7 +404,6 @@ pub const NormalImageData = struct {
     color: u32 = std.math.maxInt(u32),
     color_intensity: f32 = 0,
     atlas_data: assets.AtlasData,
-    glow: bool = false,
 
     pub fn width(self: NormalImageData) f32 {
         return self.atlas_data.texWRaw() * self.scale_x;

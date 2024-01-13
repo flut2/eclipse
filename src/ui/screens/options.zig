@@ -215,7 +215,6 @@ pub const Options = struct {
 
         try addToggle(screen.graphics_tab, &settings.enable_vsync, "V-Sync", "Toggles vertical syncing, which can reduce screen tearing");
         try addToggle(screen.graphics_tab, &settings.enable_lights, "Lights", "Toggles lights, which can reduce frame rates");
-        try addToggle(screen.graphics_tab, &settings.enable_glow, "Sprite Glow", "Toggles the glow effect on sprites, which can reduce frame rates");
         try addSlider(screen.graphics_tab, &settings.fps_cap, 60.0, 999.99, "FPS Cap", "Changes the FPS cap");
 
         try addSlider(screen.misc_tab, &settings.sfx_volume, 0.0, 1.0, "SFX Volume", "Changes the volume of sound effects");

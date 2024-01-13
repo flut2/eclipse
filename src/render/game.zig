@@ -148,11 +148,9 @@ inline fn drawParticle(idx: u16, pt: Particle, draw_data: base.DrawData) u16 {
                 particle.atlas_data,
                 draw_data,
                 .{
-                    //.shadow_texel_mult = 1.0 / particle.size,
                     .alpha_mult = particle.alpha_mult,
                     .base_color = particle.color,
                     .base_color_intensity = 1.0,
-                    .is_simple = true,
                 },
             );
         },
@@ -188,7 +186,7 @@ inline fn drawConditions(idx: u16, draw_data: base.DrawData, cond_int: @typeInfo
                     cond_h,
                     current_frame,
                     draw_data,
-                    .{ .shadow_texel_mult = 0.5, .force_glow_off = true },
+                    .{},
                 );
                 cond_new_idx += 1.0;
             }
@@ -276,12 +274,7 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
         h,
         atlas_data,
         draw_data,
-        .{
-            .shadow_texel_mult = 2.0 / size,
-            .alpha_mult = alpha_mult,
-            .base_color = color,
-            .base_color_intensity = color_intensity,
-        },
+        .{ .alpha_mult = alpha_mult, .base_color = color, .base_color_intensity = color_intensity },
     );
 
     // todo make sink calculate actual values based on h, pad, etc
@@ -302,7 +295,7 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
             hp_bar_h,
             assets.empty_bar_data,
             draw_data,
-            .{ .shadow_texel_mult = 0.5, .force_glow_off = true },
+            .{},
         );
 
         const float_hp: f32 = @floatFromInt(player.hp);
@@ -323,7 +316,7 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
             hp_bar_h,
             hp_bar_data,
             draw_data,
-            .{ .shadow_texel_mult = 0.5, .force_glow_off = true },
+            .{},
         );
 
         y_pos += hp_bar_h - pad_scale_bar;
@@ -342,7 +335,7 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
             mp_bar_h,
             assets.empty_bar_data,
             draw_data,
-            .{ .shadow_texel_mult = 0.5, .force_glow_off = true },
+            .{},
         );
 
         const float_mp: f32 = @floatFromInt(player.mp);
@@ -363,7 +356,7 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
             mp_bar_h,
             mp_bar_data,
             draw_data,
-            .{ .shadow_texel_mult = 0.5, .force_glow_off = true },
+            .{},
         );
 
         y_pos += mp_bar_h - pad_scale_bar;
@@ -430,7 +423,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
                     button_h,
                     settings.interact_key_tex,
                     draw_data,
-                    .{ .force_glow_off = true },
+                    .{},
                 );
 
                 new_idx = base.drawText(
@@ -526,7 +519,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
                 button_h,
                 settings.interact_key_tex,
                 draw_data,
-                .{ .force_glow_off = true },
+                .{},
             );
 
             new_idx = base.drawText(
@@ -548,12 +541,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
         h,
         atlas_data,
         draw_data,
-        .{
-            .shadow_texel_mult = 2.0 / size,
-            .alpha_mult = alpha_mult,
-            .base_color = color,
-            .base_color_intensity = color_intensity,
-        },
+        .{ .alpha_mult = alpha_mult, .base_color = color, .base_color_intensity = color_intensity },
     );
 
     if (!obj.props.is_enemy)
@@ -576,7 +564,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
             hp_bar_h,
             assets.empty_bar_data,
             draw_data,
-            .{ .shadow_texel_mult = 0.5, .force_glow_off = true },
+            .{},
         );
 
         const float_hp: f32 = @floatFromInt(obj.hp);
@@ -593,7 +581,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
             hp_bar_h,
             hp_bar_data,
             draw_data,
-            .{ .shadow_texel_mult = 0.5, .force_glow_off = true },
+            .{},
         );
 
         y_pos += hp_bar_h - pad_scale_bar;
@@ -649,7 +637,7 @@ inline fn drawProjectile(idx: u16, proj: Projectile, draw_data: base.DrawData, f
         h,
         proj.atlas_data,
         draw_data,
-        .{ .shadow_texel_mult = 2.0 / size, .rotation = angle, .force_glow_off = true },
+        .{ .rotation = angle },
     );
 
     return new_idx;

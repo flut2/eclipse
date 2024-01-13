@@ -482,7 +482,6 @@ inline fn drawImage(idx: u16, image: *element.Image, draw_data: base.DrawData, x
                 .scissor = image.scissor,
                 .base_color = image_data.color,
                 .base_color_intensity = image_data.color_intensity,
-                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
             };
             new_idx = base.drawQuad(new_idx, image.x + x_offset, image.y + y_offset, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
         },
@@ -524,7 +523,7 @@ inline fn drawImage(idx: u16, image: *element.Image, draw_data: base.DrawData, x
             player_icon_h,
             player_icon,
             draw_data,
-            .{ .rotation = -camera.angle, .force_glow_off = true, .shadow_texel_mult = 1.0 / scale },
+            .{ .rotation = -camera.angle },
         );
     }
 
@@ -544,7 +543,6 @@ inline fn drawItem(idx: u16, item: *element.Item, draw_data: base.DrawData, x_of
             },
             .normal => |image_data| {
                 const opts = base.QuadOptions{
-                    .shadow_texel_mult = 2.0 / @max(image_data.scale_x, image_data.scale_y),
                     .alpha_mult = image_data.alpha,
                     .scissor = item.scissor,
                     .base_color = image_data.color,
@@ -561,7 +559,6 @@ inline fn drawItem(idx: u16, item: *element.Item, draw_data: base.DrawData, x_of
         },
         .normal => |image_data| {
             const opts = base.QuadOptions{
-                .shadow_texel_mult = 2.0 / @max(image_data.scale_x, image_data.scale_y),
                 .alpha_mult = image_data.alpha,
                 .scissor = item.scissor,
                 .base_color = image_data.color,
@@ -599,7 +596,6 @@ inline fn drawBar(idx: u16, bar: *element.Bar, draw_data: base.DrawData, x_offse
                 .scissor = bar.scissor,
                 .base_color = image_data.color,
                 .base_color_intensity = image_data.color_intensity,
-                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
             };
             new_idx = base.drawQuad(new_idx, bar.x + x_offset, bar.y + y_offset, w * scale, image_data.height(), atlas_data, draw_data, opts);
         },
@@ -640,7 +636,6 @@ inline fn drawButton(idx: u16, button: *element.Button, draw_data: base.DrawData
                 .scissor = button.scissor,
                 .base_color = image_data.color,
                 .base_color_intensity = image_data.color_intensity,
-                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
             };
             new_idx = base.drawQuad(new_idx, button.x + x_offset, button.y + y_offset, w, h, image_data.atlas_data, draw_data, opts);
         },
@@ -683,7 +678,6 @@ inline fn drawCharacterBox(idx: u16, char_box: *element.CharacterBox, draw_data:
                 .scissor = char_box.scissor,
                 .base_color = image_data.color,
                 .base_color_intensity = image_data.color_intensity,
-                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
             };
             new_idx = base.drawQuad(
                 new_idx,
@@ -735,7 +729,6 @@ inline fn drawInputField(idx: u16, input_field: *element.Input, draw_data: base.
                 .scissor = input_field.scissor,
                 .base_color = image_data.color,
                 .base_color_intensity = image_data.color_intensity,
-                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
             };
             new_idx = base.drawQuad(new_idx, input_field.x + x_offset, input_field.y + y_offset, w, h, image_data.atlas_data, draw_data, opts);
         },
@@ -756,7 +749,6 @@ inline fn drawInputField(idx: u16, input_field: *element.Input, draw_data: base.
                     .scissor = input_field.scissor,
                     .base_color = image_data.color,
                     .base_color_intensity = image_data.color_intensity,
-                    .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
                 };
                 new_idx = base.drawQuad(new_idx, cursor_x, text_y, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
             },
@@ -792,7 +784,6 @@ inline fn drawToggle(idx: u16, toggle: *element.Toggle, draw_data: base.DrawData
                 .scissor = toggle.scissor,
                 .base_color = image_data.color,
                 .base_color_intensity = image_data.color_intensity,
-                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
             };
             new_idx = base.drawQuad(new_idx, toggle.x + x_offset, toggle.y + y_offset, image_data.width(), image_data.height(), image_data.atlas_data, draw_data, opts);
         },
@@ -836,7 +827,6 @@ inline fn drawKeyMapper(idx: u16, key_mapper: *element.KeyMapper, draw_data: bas
                 .scissor = key_mapper.scissor,
                 .base_color = image_data.color,
                 .base_color_intensity = image_data.color_intensity,
-                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
             };
             new_idx = base.drawQuad(new_idx, key_mapper.x + x_offset, key_mapper.y + y_offset, w, h, image_data.atlas_data, draw_data, opts);
         },
@@ -850,7 +840,7 @@ inline fn drawKeyMapper(idx: u16, key_mapper: *element.KeyMapper, draw_data: bas
         h,
         settings.getKeyTexture(key_mapper.settings_button.*),
         draw_data,
-        .{ .force_glow_off = true },
+        .{},
     );
 
     if (key_mapper.title_text_data) |*text_data| {
@@ -888,7 +878,6 @@ inline fn drawSlider(idx: u16, slider: *element.Slider, draw_data: base.DrawData
                 .scissor = slider.scissor,
                 .base_color = image_data.color,
                 .base_color_intensity = image_data.color_intensity,
-                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
             };
             new_idx = base.drawQuad(
                 new_idx,
@@ -927,7 +916,6 @@ inline fn drawSlider(idx: u16, slider: *element.Slider, draw_data: base.DrawData
                 .scissor = slider.scissor,
                 .base_color = image_data.color,
                 .base_color_intensity = image_data.color_intensity,
-                .shadow_texel_mult = if (image_data.glow) 2.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
             };
             new_idx = base.drawQuad(
                 new_idx,
@@ -1041,7 +1029,6 @@ pub inline fn drawTempElements(idx: u16, draw_data: base.DrawData) u16 {
                         .alpha_mult = image_data.alpha,
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
-                        .shadow_texel_mult = if (image_data.glow) 1.0 / @max(image_data.scale_x, image_data.scale_y) else 0.0,
                     };
                     new_idx = base.drawQuad(new_idx, balloon._screen_x, balloon._screen_y, w, h, image_data.atlas_data, draw_data, opts);
 

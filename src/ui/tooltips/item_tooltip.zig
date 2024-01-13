@@ -49,7 +49,6 @@ pub const ItemTooltip = struct {
                     .atlas_data = undefined,
                     .scale_x = 4,
                     .scale_y = 4,
-                    .glow = true,
                 },
             },
         });
