@@ -212,7 +212,7 @@ pub const GameScreen = struct {
                 .y = screen.inventory_decor.y + screen.inventory_pos_data[i].y + (screen.inventory_pos_data[i].h - assets.error_data.texHRaw() * 4.0 + assets.padding * 2) / 2,
                 .background_x = screen.inventory_decor.x + screen.inventory_pos_data[i].x,
                 .background_y = screen.inventory_decor.y + screen.inventory_pos_data[i].y,
-                .image_data = .{ .normal = .{ .scale_x = 4.0, .scale_y = 4.0, .atlas_data = assets.error_data } },
+                .image_data = .{ .normal = .{ .scale_x = 3.0, .scale_y = 3.0, .atlas_data = assets.error_data } },
                 .visible = false,
                 .draggable = true,
                 .drag_start_callback = itemDragStartCallback,
@@ -236,11 +236,7 @@ pub const GameScreen = struct {
                 .y = screen.container_decor.y + screen.container_pos_data[i].y + (screen.container_pos_data[i].h - assets.error_data.texHRaw() * 4.0 + assets.padding * 2) / 2,
                 .background_x = screen.container_decor.x + screen.container_pos_data[i].x,
                 .background_y = screen.container_decor.y + screen.container_pos_data[i].y,
-                .image_data = .{ .normal = .{
-                    .scale_x = 4.0,
-                    .scale_y = 4.0,
-                    .atlas_data = assets.error_data,
-                } },
+                .image_data = .{ .normal = .{ .scale_x = 3.0, .scale_y = 3.0, .atlas_data = assets.error_data } },
                 .visible = false,
                 .draggable = true,
                 .drag_start_callback = itemDragStartCallback,
@@ -726,7 +722,10 @@ pub const GameScreen = struct {
                 self.xp_bar.scissor.max_x = self.xp_bar.width() * xp_perc;
 
                 var xp_text_data = &self.xp_bar.text_data;
-                xp_text_data.setText(try std.fmt.bufPrint(xp_text_data._backing_buffer, "{d}/{d}", .{ local_player.tier_xp, local_player.next_tier_xp }), self._allocator,);
+                xp_text_data.setText(
+                    try std.fmt.bufPrint(xp_text_data._backing_buffer, "{d}/{d}", .{ local_player.tier_xp, local_player.next_tier_xp }),
+                    self._allocator,
+                );
 
                 self.last_tier_xp = local_player.tier_xp;
                 self.last_next_tier_xp = local_player.next_tier_xp;
@@ -741,7 +740,10 @@ pub const GameScreen = struct {
                     0xFFE770
                 else
                     0xFFFFFF;
-                health_text_data.setText(try std.fmt.bufPrint(health_text_data._backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp }), self._allocator,);
+                health_text_data.setText(
+                    try std.fmt.bufPrint(health_text_data._backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp }),
+                    self._allocator,
+                );
 
                 self.last_hp = local_player.hp;
                 self.last_max_hp = local_player.max_hp;
@@ -756,7 +758,10 @@ pub const GameScreen = struct {
                     0xFFE770
                 else
                     0xFFFFFF;
-                mana_text_data.setText(try std.fmt.bufPrint(mana_text_data._backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp }), self._allocator,);
+                mana_text_data.setText(
+                    try std.fmt.bufPrint(mana_text_data._backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp }),
+                    self._allocator,
+                );
 
                 self.last_mp = local_player.mp;
                 self.last_max_mp = local_player.max_mp;

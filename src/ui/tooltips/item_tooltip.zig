@@ -55,7 +55,7 @@ pub const ItemTooltip = struct {
 
         self.item_name = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
-            .y = 10,
+            .y = 14,
             .text_data = .{
                 .text = "",
                 .size = 16,
@@ -65,7 +65,7 @@ pub const ItemTooltip = struct {
 
         self.rarity = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
-            .y = self.item_name.text_data._height + 10,
+            .y = self.item_name.text_data._height + 14,
             .text_data = .{
                 .text = "",
                 .size = 14,
