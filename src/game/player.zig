@@ -194,7 +194,7 @@ pub const Player = struct {
                 // name could have been set (usually is) before adding to map
                 .text = if (self.name) |player_name| player_name else self.class_data.name,
                 .text_type = .bold,
-                .size = 16,
+                .size = 12,
                 .color = 0xFCDF00,
                 .max_width = 200,
             };
@@ -477,10 +477,10 @@ pub const Player = struct {
                         .text_data = .{
                             .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
                             .text_type = .bold,
-                            .size = 22,
+                            .size = 16,
                             .color = 0xB02020,
                         },
-                        .initial_size = 22,
+                        .initial_size = 16,
                     }) catch |e| {
                         std.log.err("Allocation for condition text \"{s}\" failed: {}", .{ cond_str, e });
                     };

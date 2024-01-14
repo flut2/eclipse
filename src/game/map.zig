@@ -60,10 +60,10 @@ pub fn showDamageText(phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i
             .text_data = .{
                 .text = std.fmt.allocPrint(allocator, "-{d}", .{phys_dmg}) catch unreachable,
                 .text_type = .bold,
-                .size = 22,
+                .size = 16,
                 .color = 0xB02020,
             },
-            .initial_size = 22,
+            .initial_size = 16,
         }) catch |e| {
             std.log.err("Allocation for physical damage text \"-{d}\" failed: {}", .{ phys_dmg, e });
         };
@@ -77,10 +77,10 @@ pub fn showDamageText(phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i
             .text_data = .{
                 .text = std.fmt.allocPrint(allocator, "-{d}", .{magic_dmg}) catch unreachable,
                 .text_type = .bold,
-                .size = 22,
+                .size = 16,
                 .color = 0x6E15AD,
             },
-            .initial_size = 22,
+            .initial_size = 16,
         }) catch |e| {
             std.log.err("Allocation for magic damage text \"-{d}\" failed: {}", .{ magic_dmg, e });
         };
@@ -94,10 +94,10 @@ pub fn showDamageText(phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i
             .text_data = .{
                 .text = std.fmt.allocPrint(allocator, "-{d}", .{true_dmg}) catch unreachable,
                 .text_type = .bold,
-                .size = 22,
+                .size = 16,
                 .color = 0xC2C2C2,
             },
-            .initial_size = 22,
+            .initial_size = 16,
         }) catch |e| {
             std.log.err("Allocation for true damage text \"-{d}\" failed: {}", .{ true_dmg, e });
         };

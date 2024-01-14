@@ -98,8 +98,8 @@ pub const text_drop_shadow_render_type = 5.0;
 pub const text_normal_no_subpixel_render_type = 6.0;
 pub const text_drop_shadow_no_subpixel_render_type = 7.0;
 
-pub const base_batch_vert_size = 40000;
-pub const ground_batch_vert_size = 40000;
+pub const base_batch_vert_size = 10000 * 4;
+pub const ground_batch_vert_size = 10000 * 4;
 pub const max_lights = 1000;
 
 pub var base_pipeline: zgpu.RenderPipelineHandle = .{};
@@ -387,7 +387,7 @@ pub fn init(gctx: *zgpu.GraphicsContext, allocator: std.mem.Allocator) void {
     enter_text_data = element.TextData{
         .text = "Enter",
         .text_type = .bold,
-        .size = 16,
+        .size = 12,
     };
 
     {

@@ -192,7 +192,7 @@ pub const GameObject = struct {
             self.name_text_data = element.TextData{
                 .text = if (self.name) |obj_name| obj_name else self.props.display_id,
                 .text_type = .bold,
-                .size = 16,
+                .size = 12,
             };
 
             {
@@ -277,10 +277,10 @@ pub const GameObject = struct {
                         .text_data = .{
                             .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
                             .text_type = .bold,
-                            .size = 22,
+                            .size = 16,
                             .color = 0xB02020,
                         },
-                        .initial_size = 22,
+                        .initial_size = 16,
                     }) catch |e| {
                         std.log.err("Allocation for condition text \"{s}\" failed: {}", .{ cond_str, e });
                     };

@@ -883,7 +883,7 @@ pub const Server = struct {
             const text_data = element.TextData{
                 .text = self._allocator.dupe(u8, message) catch return,
                 .text_type = .bold,
-                .size = 22,
+                .size = 16,
                 .color = color,
             };
 
@@ -892,14 +892,14 @@ pub const Server = struct {
                     .obj_id = en.player.obj_id,
                     .lifetime = 2000,
                     .text_data = text_data,
-                    .initial_size = 22,
+                    .initial_size = 16,
                 }) catch unreachable;
             } else if (en == .object) {
                 element.StatusText.add(.{
                     .obj_id = en.object.obj_id,
                     .lifetime = 2000,
                     .text_data = text_data,
-                    .initial_size = 22,
+                    .initial_size = 16,
                 }) catch unreachable;
             }
         }
@@ -1338,7 +1338,7 @@ pub const Server = struct {
                     plr.name_text_data = element.TextData{
                         .text = plr.name.?,
                         .text_type = .bold,
-                        .size = 16,
+                        .size = 12,
                         .color = 0xFCDF00,
                         .max_width = 200,
                     };
@@ -1414,7 +1414,7 @@ pub const Server = struct {
                     obj.name_text_data = element.TextData{
                         .text = obj.name.?,
                         .text_type = .bold,
-                        .size = 16,
+                        .size = 12,
                     };
 
                     {

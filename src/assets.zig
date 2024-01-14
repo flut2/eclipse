@@ -967,12 +967,12 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("ground_masks", "ground_masks.png", 8, 8, true, &ctx, allocator);
     try addImage("key_indicators", "key_indicators.png", 100, 100, false, &ctx, allocator);
     try addImage("items", "items.png", 10, 10, false, &ctx, allocator);
-    try addImage("misc", "misc.png", 8, 8, false, &ctx, allocator);
-    try addImage("misc_16", "misc_16.png", 16, 16, false, &ctx, allocator);
-    try addImage("portals", "portals.png", 8, 8, false, &ctx, allocator);
-    try addImage("portals_16", "portals_16.png", 16, 16, false, &ctx, allocator);
-    try addImage("props", "props.png", 8, 8, false, &ctx, allocator);
-    try addImage("props_16", "props_16.png", 16, 16, false, &ctx, allocator);
+    try addImage("misc", "misc.png", 10, 10, false, &ctx, allocator);
+    try addImage("misc_16", "misc_16.png", 18, 18, false, &ctx, allocator);
+    try addImage("portals", "portals.png", 10, 10, false, &ctx, allocator);
+    try addImage("portals_16", "portals_16.png", 18, 18, false, &ctx, allocator);
+    try addImage("props", "props.png", 10, 10, false, &ctx, allocator);
+    try addImage("props_16", "props_16.png", 18, 18, false, &ctx, allocator);
     try addImage("projectiles", "projectiles.png", 8, 8, false, &ctx, allocator);
     try addImage("tiered_items", "tiered_items.png", 8, 8, false, &ctx, allocator);
     try addImage("tiered_projectiles", "tiered_projectiles.png", 8, 8, false, &ctx, allocator);
