@@ -8,7 +8,7 @@ const map = @import("../game/map.zig");
 const assets = @import("../assets.zig");
 const tooltip = @import("tooltips/tooltip.zig");
 const dialog = @import("dialogs/dialog.zig");
-const zglfw = @import("zglfw");
+const glfw = @import("mach-glfw");
 
 const AccountLoginScreen = @import("screens/account_login_screen.zig").AccountLoginScreen;
 const AccountRegisterScreen = @import("screens/account_register_screen.zig").AccountRegisterScreen;
@@ -202,7 +202,7 @@ pub fn mouseMove(x: f32, y: f32) bool {
     return false;
 }
 
-pub fn mousePress(x: f32, y: f32, mods: zglfw.Mods, button: zglfw.MouseButton) bool {
+pub fn mousePress(x: f32, y: f32, mods: glfw.Mods, button: glfw.MouseButton) bool {
     if (input.selected_input_field) |input_field| {
         input_field._last_input = -1;
         input.selected_input_field = null;

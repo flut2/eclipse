@@ -1,6 +1,6 @@
 const std = @import("std");
 const Allocator = @import("std").mem.Allocator;
-const zglfw = @import("zglfw");
+const glfw = @import("mach-glfw");
 const nfd = @import("nfd");
 const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
@@ -1013,7 +1013,7 @@ pub const MapEditorScreen = struct {
         // self.active_brush.update(floor_x, floor_y);
     }
 
-    pub fn onMousePress(self: *MapEditorScreen, x: f64, y: f64, button: zglfw.MouseButton) void {
+    pub fn onMousePress(self: *MapEditorScreen, x: f64, y: f64, button: glfw.MouseButton) void {
         self.action = if (button == self.place_key_settings.getMouse()) .place else if (button == self.erase_key_settings.getMouse()) .erase else .none;
 
         if (button == self.sample_key_settings.getMouse()) {
@@ -1063,7 +1063,7 @@ pub const MapEditorScreen = struct {
         self.action = .none;
     }
 
-    pub fn onKeyPress(self: *MapEditorScreen, key: zglfw.Key) void {
+    pub fn onKeyPress(self: *MapEditorScreen, key: glfw.Key) void {
         // could convert into as witch statement
 
         // switch (key) {
@@ -1139,7 +1139,7 @@ pub const MapEditorScreen = struct {
         }
     }
 
-    pub fn onKeyRelease(self: *MapEditorScreen, key: zglfw.Key) void {
+    pub fn onKeyRelease(self: *MapEditorScreen, key: glfw.Key) void {
         _ = key;
         if (self.action == .redo or self.action == .undo) {
             self.action = .none;
@@ -1346,12 +1346,12 @@ pub const MapEditorScreen = struct {
         });
     }
 
-    pub fn updateFpsText(self: *MapEditorScreen, fps: f64, mem: f32) !void {
+    pub fn updateFpsText(self: *MapEditorScreen, fps: usize, mem: f32) !void {
         if (!self.inited)
             return;
 
         self.fps_text.text_data.setText(
-            try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, "FPS: {d:.1}\nMemory: {d:.1} MB", .{ fps, mem }),
+            try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, "FPS: {d}\nMemory: {d:.1} MB", .{ fps, mem }),
             self._allocator,
         );
         self.fps_text.x = camera.screen_width - self.fps_text.text_data._width - 10;

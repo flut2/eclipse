@@ -1,20 +1,17 @@
 const std = @import("std");
 const libxml2 = @import("libs/libxml/libxml2.zig");
 const nfd = @import("libs/nfd-zig/build.zig");
-const zglfw = @import("libs/zglfw/build.zig");
-const zgpu = @import("libs/zgpu/build.zig");
-const zpool = @import("libs/zpool/build.zig");
 const zstbi = @import("libs/zstbi/build.zig");
 const zstbrp = @import("libs/zstbrp/build.zig");
 const ztracy = @import("libs/ztracy/build.zig");
 const zaudio = @import("libs/zaudio/build.zig");
 const ini = @import("libs/ini/build.zig");
 const zdiscord = @import("libs/zig-discord/build.zig");
+const gpu = @import("mach_gpu");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const is_debug = optimize == .Debug;
 
     const exe = b.addExecutable(.{
         .name = "Faer",
@@ -25,6 +22,19 @@ pub fn build(b: *std.Build) !void {
     exe.root_module.strip = optimize == .ReleaseFast or optimize == .ReleaseSmall;
     exe.root_module.addImport("rpc", zdiscord.getModule(b));
     exe.root_module.addImport("nfd", nfd.getModule(b));
+
+    const mach_glfw_dep = b.dependency("mach_glfw", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("mach-glfw", mach_glfw_dep.module("mach-glfw"));
+
+    const mach_gpu_dep = b.dependency("mach_gpu", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    try gpu.link(mach_gpu_dep.builder, exe, .{});
+    exe.root_module.addImport("mach-gpu", mach_gpu_dep.module("mach-gpu"));
 
     exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
 
@@ -58,20 +68,7 @@ pub fn build(b: *std.Build) !void {
     const zaudio_pkg = zaudio.package(b, target, optimize, .{});
     zaudio_pkg.link(exe);
 
-    const zglfw_pkg = zglfw.package(b, target, optimize, .{});
-    const zpool_pkg = zpool.package(b, target, optimize, .{});
-    const zgpu_pkg = zgpu.package(b, target, optimize, .{
-        .deps = .{ .zpool = zpool_pkg.zpool, .zglfw = zglfw_pkg.zglfw },
-        .options = .{
-            .dawn_skip_validation = !is_debug,
-            .disable_robustness = !is_debug,
-        },
-    });
-
     ini.link(ini.getModule(b), exe);
-
-    zglfw_pkg.link(exe);
-    zgpu_pkg.link(exe);
 
     b.installArtifact(exe);
     const run_cmd = b.addRunArtifact(exe);

@@ -1,4 +1,4 @@
-const zglfw = @import("zglfw");
+const glfw = @import("mach-glfw");
 const settings = @import("settings.zig");
 const std = @import("std");
 const map = @import("game/map.zig");
@@ -55,7 +55,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 
 // todo isolate the ingame and editor logic
 
-fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
+fn keyPress(window: glfw.Window, key: glfw.Key) void {
     if (systems.screen != .game and systems.screen != .editor)
         return;
 
@@ -106,7 +106,7 @@ fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
         selected_input_field = systems.screen.game.chat_input;
         selected_input_field.?._last_input = 0;
     } else if (key == settings.chat_cmd.getKey()) {
-        charEvent(window, .slash);
+        charEvent(window, @intFromEnum(glfw.Key.slash));
         selected_input_field = systems.screen.game.chat_input;
         selected_input_field.?._last_input = 0;
     } else if (key == settings.toggle_perf_stats.getKey()) {
@@ -118,7 +118,7 @@ fn keyPress(window: *zglfw.Window, key: zglfw.Key) void {
     }
 }
 
-fn keyRelease(key: zglfw.Key) void {
+fn keyRelease(key: glfw.Key) void {
     if (systems.screen != .game and systems.screen != .editor)
         return;
 
@@ -146,7 +146,7 @@ fn keyRelease(key: zglfw.Key) void {
     }
 }
 
-fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
+fn mousePress(window: glfw.Window, button: glfw.MouseButton) void {
     if (systems.screen != .game and systems.screen != .editor)
         return;
 
@@ -200,7 +200,7 @@ fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
         }
     } else if (button == settings.chat_cmd.getMouse()) {
         if (systems.screen == .game) {
-            charEvent(window, .slash);
+            charEvent(window, @intFromEnum(glfw.Key.slash));
             selected_input_field = systems.screen.game.chat_input;
             selected_input_field.?._last_input = 0;
         }
@@ -213,7 +213,7 @@ fn mousePress(window: *zglfw.Window, button: zglfw.MouseButton) void {
     }
 }
 
-fn mouseRelease(button: zglfw.MouseButton) void {
+fn mouseRelease(button: glfw.MouseButton) void {
     if (systems.screen != .game and systems.screen != .editor)
         return;
 
@@ -248,14 +248,13 @@ fn useAbility(index: u8) void {
     if (map.localPlayerRef()) |player| player.useAbility(index);
 }
 
-pub fn charEvent(_: *zglfw.Window, char: zglfw.Char) callconv(.C) void {
+pub fn charEvent(_: glfw.Window, char: u21) void {
     if (selected_input_field) |input_field| {
-        const char_code = @intFromEnum(char);
-        if (char_code > std.math.maxInt(u8) or char_code < std.math.minInt(u8)) {
+        if (char > std.math.maxInt(u8) or char < std.math.minInt(u8)) {
             return;
         }
 
-        const byte_code: u8 = @intCast(char_code);
+        const byte_code: u8 = @intCast(char);
         if (!std.ascii.isASCII(byte_code) or input_field._index >= 256)
             return;
 
@@ -267,10 +266,10 @@ pub fn charEvent(_: *zglfw.Window, char: zglfw.Char) callconv(.C) void {
     }
 }
 
-pub fn keyEvent(window: *zglfw.Window, key: zglfw.Key, _: i32, action: zglfw.Action, mods: zglfw.Mods) callconv(.C) void {
+pub fn keyEvent(window: glfw.Window, key: glfw.Key, _: i32, action: glfw.Action, mods: glfw.Mods) void {
     if (action == .press or action == .repeat) {
         if (selected_key_mapper) |key_mapper| {
-            key_mapper.mouse = .unknown;
+            key_mapper.mouse = .eight;
             key_mapper.key = key;
             key_mapper.listening = false;
             key_mapper.set_key_callback(key_mapper);
@@ -283,22 +282,22 @@ pub fn keyEvent(window: *zglfw.Window, key: zglfw.Key, _: i32, action: zglfw.Act
                     .c => {
                         const old = input_field.text_data.text;
                         input_field.text_data._backing_buffer[input_field._index] = 0;
-                        window.setClipboardString(input_field.text_data._backing_buffer[0..input_field._index :0]);
+                        //window.setClipboardString(input_field.text_data._backing_buffer[0..input_field._index :0]);
                         input_field.text_data.text = old;
                     },
                     .v => {
-                        if (window.getClipboardString()) |clip_str| {
-                            const clip_len = clip_str.len;
-                            @memcpy(input_field.text_data._backing_buffer[input_field._index .. input_field._index + clip_len], clip_str);
-                            input_field._index += @intCast(clip_len);
-                            input_field.text_data.text = input_field.text_data._backing_buffer[0..input_field._index];
-                            input_field.inputUpdate();
-                            return;
-                        }
+                        // if (window.getClipboardString()) |clip_str| {
+                        //     const clip_len = clip_str.len;
+                        //     @memcpy(input_field.text_data._backing_buffer[input_field._index .. input_field._index + clip_len], clip_str);
+                        //     input_field._index += @intCast(clip_len);
+                        //     input_field.text_data.text = input_field.text_data._backing_buffer[0..input_field._index];
+                        //     input_field.inputUpdate();
+                        //     return;
+                        // }
                     },
                     .x => {
                         input_field.text_data._backing_buffer[input_field._index] = 0;
-                        window.setClipboardString(input_field.text_data._backing_buffer[0..input_field._index :0]);
+                        //window.setClipboardString(input_field.text_data._backing_buffer[0..input_field._index :0]);
                         input_field.clear();
                         return;
                     },
@@ -382,7 +381,7 @@ pub fn keyEvent(window: *zglfw.Window, key: zglfw.Key, _: i32, action: zglfw.Act
     updateState();
 }
 
-pub fn mouseEvent(window: *zglfw.Window, button: zglfw.MouseButton, action: zglfw.Action, mods: zglfw.Mods) callconv(.C) void {
+pub fn mouseEvent(window: glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) void {
     if (action == .press) {
         window.setCursor(switch (settings.cursor_type) {
             .basic => assets.default_cursor_pressed,
@@ -444,7 +443,7 @@ pub fn updateState() void {
     }
 }
 
-pub fn mouseMoveEvent(_: *zglfw.Window, x_pos: f64, y_pos: f64) callconv(.C) void {
+pub fn mouseMoveEvent(_: glfw.Window, x_pos: f64, y_pos: f64) void {
     mouse_x = @floatCast(x_pos);
     mouse_y = @floatCast(y_pos);
 
@@ -457,7 +456,7 @@ pub fn mouseMoveEvent(_: *zglfw.Window, x_pos: f64, y_pos: f64) callconv(.C) voi
     }
 }
 
-pub fn scrollEvent(_: *zglfw.Window, x_offset: f64, y_offset: f64) callconv(.C) void {
+pub fn scrollEvent(_: glfw.Window, x_offset: f64, y_offset: f64) void {
     if (!systems.mouseScroll(mouse_x, mouse_y, @floatCast(x_offset), @floatCast(y_offset))) {
         const size = @max(map.width, map.height);
         const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));

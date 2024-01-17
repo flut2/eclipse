@@ -259,7 +259,7 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
         new_idx = base.drawText(
             new_idx,
             screen_pos.x - x_offset - data._width / 2,
-            screen_pos.y - data._height,
+            screen_pos.y - data._height - 5,
             data,
             draw_data,
             .{},
@@ -411,8 +411,8 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
             }
 
             if (is_portal and map.interactive_id.load(.Acquire) == obj.obj_id) {
-                const button_w = 100 / 4;
-                const button_h = 100 / 4;
+                const button_w = 100 / 5;
+                const button_h = 100 / 5;
                 const total_w = base.enter_text_data._width + button_w;
 
                 new_idx = base.drawQuad(
@@ -507,8 +507,8 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
         }
 
         if (is_portal and map.interactive_id.load(.Acquire) == obj.obj_id) {
-            const button_w = 100 / 4;
-            const button_h = 100 / 4;
+            const button_w = 100 / 5;
+            const button_h = 100 / 5;
             const total_w = base.enter_text_data._width + button_w;
 
             new_idx = base.drawQuad(

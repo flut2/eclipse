@@ -8,9 +8,9 @@ const settings = @import("settings.zig");
 const builtin = @import("builtin");
 const zaudio = @import("zaudio");
 const main = @import("main.zig");
-const zglfw = @import("zglfw");
+const glfw = @import("mach-glfw");
 
-pub const padding = 2;
+pub const padding = 0;
 
 pub const atlas_width: u32 = 2048;
 pub const atlas_height: u32 = 1024;
@@ -244,20 +244,20 @@ pub var medium_italic_atlas: zstbi.Image = undefined;
 pub var medium_italic_chars: [256]CharacterData = undefined;
 
 // horrible, but no other option since cursor is opaque
-pub var default_cursor_pressed: *zglfw.Cursor = undefined;
-pub var default_cursor: *zglfw.Cursor = undefined;
-pub var royal_cursor_pressed: *zglfw.Cursor = undefined;
-pub var royal_cursor: *zglfw.Cursor = undefined;
-pub var ranger_cursor_pressed: *zglfw.Cursor = undefined;
-pub var ranger_cursor: *zglfw.Cursor = undefined;
-pub var aztec_cursor_pressed: *zglfw.Cursor = undefined;
-pub var aztec_cursor: *zglfw.Cursor = undefined;
-pub var fiery_cursor_pressed: *zglfw.Cursor = undefined;
-pub var fiery_cursor: *zglfw.Cursor = undefined;
-pub var target_enemy_cursor_pressed: *zglfw.Cursor = undefined;
-pub var target_enemy_cursor: *zglfw.Cursor = undefined;
-pub var target_ally_cursor_pressed: *zglfw.Cursor = undefined;
-pub var target_ally_cursor: *zglfw.Cursor = undefined;
+pub var default_cursor_pressed: glfw.Cursor = undefined;
+pub var default_cursor: glfw.Cursor = undefined;
+pub var royal_cursor_pressed: glfw.Cursor = undefined;
+pub var royal_cursor: glfw.Cursor = undefined;
+pub var ranger_cursor_pressed: glfw.Cursor = undefined;
+pub var ranger_cursor: glfw.Cursor = undefined;
+pub var aztec_cursor_pressed: glfw.Cursor = undefined;
+pub var aztec_cursor: glfw.Cursor = undefined;
+pub var fiery_cursor_pressed: glfw.Cursor = undefined;
+pub var fiery_cursor: glfw.Cursor = undefined;
+pub var target_enemy_cursor_pressed: glfw.Cursor = undefined;
+pub var target_enemy_cursor: glfw.Cursor = undefined;
+pub var target_ally_cursor_pressed: glfw.Cursor = undefined;
+pub var target_ally_cursor: glfw.Cursor = undefined;
 
 pub var sfx_copy_map: std.AutoHashMap(*zaudio.Sound, std.ArrayList(*zaudio.Sound)) = undefined;
 pub var sfx_map: std.StringHashMap(*zaudio.Sound) = undefined;
@@ -337,27 +337,28 @@ fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, compti
             @memcpy(temp[target_idx .. target_idx + 4], img.data[src_idx .. src_idx + 4]);
         }
 
-        const cursor = try zglfw.Cursor.create(
-            &zglfw.Image{ .w = cut_width, .h = cut_height, .pixels = @ptrCast(temp) },
+        if (glfw.Cursor.create(
+            glfw.Image{ .width = cut_width, .height = cut_height, .pixels = temp, .owned = true },
             cut_width / 2,
             cut_height / 2,
-        );
-        switch (i) {
-            0 => default_cursor_pressed = cursor,
-            1 => default_cursor = cursor,
-            2 => royal_cursor_pressed = cursor,
-            3 => royal_cursor = cursor,
-            4 => ranger_cursor_pressed = cursor,
-            5 => ranger_cursor = cursor,
-            6 => aztec_cursor_pressed = cursor,
-            7 => aztec_cursor = cursor,
-            8 => fiery_cursor_pressed = cursor,
-            9 => fiery_cursor = cursor,
-            10 => target_enemy_cursor_pressed = cursor,
-            11 => target_enemy_cursor = cursor,
-            12 => target_ally_cursor_pressed = cursor,
-            13 => target_ally_cursor = cursor,
-            else => {},
+        )) |cursor| {
+            switch (i) {
+                0 => default_cursor_pressed = cursor,
+                1 => default_cursor = cursor,
+                2 => royal_cursor_pressed = cursor,
+                3 => royal_cursor = cursor,
+                4 => ranger_cursor_pressed = cursor,
+                5 => ranger_cursor = cursor,
+                6 => aztec_cursor_pressed = cursor,
+                7 => aztec_cursor = cursor,
+                8 => fiery_cursor_pressed = cursor,
+                9 => fiery_cursor = cursor,
+                10 => target_enemy_cursor_pressed = cursor,
+                11 => target_enemy_cursor = cursor,
+                12 => target_ally_cursor_pressed = cursor,
+                13 => target_ally_cursor = cursor,
+                else => {},
+            }
         }
     }
 }
@@ -984,7 +985,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addAnimEnemy("low_realm_16", "low_realm_16.png", 16, 16, 96, 16, &ctx, allocator);
     try addAnimEnemy("mid_realm", "mid_realm.png", 8, 8, 48, 8, &ctx, allocator);
     try addAnimEnemy("mid_realm_16", "mid_realm_16.png", 16, 16, 96, 16, &ctx, allocator);
-    try addAnimPlayer("players", "players.png", 8, 8, 48, 8, &ctx, allocator);
+    try addAnimPlayer("players", "players.png", 10, 10, 60, 10, &ctx, allocator);
     try addAnimPlayer("player_skins", "player_skins.png", 8, 8, 48, 8, &ctx, allocator);
 
     if (settings.print_atlas)

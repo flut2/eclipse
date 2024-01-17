@@ -2,7 +2,7 @@ const std = @import("std");
 const camera = @import("../camera.zig");
 const assets = @import("../assets.zig");
 const main = @import("../main.zig");
-const zglfw = @import("zglfw");
+const glfw = @import("mach-glfw");
 const game_data = @import("../game_data.zig");
 const settings = @import("../settings.zig");
 const systems = @import("systems.zig");
@@ -542,7 +542,7 @@ pub const Input = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn mousePress(self: *Input, x: f32, y: f32, _: f32, _: f32, _: zglfw.Mods) bool {
+    pub fn mousePress(self: *Input, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
@@ -671,7 +671,7 @@ pub const Button = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: zglfw.Mods) bool {
+    pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
@@ -778,8 +778,8 @@ pub const KeyMapper = struct {
     set_key_callback: *const fn (*KeyMapper) void,
     image_data: InteractableImageData,
     settings_button: *settings.Button,
-    key: zglfw.Key = .unknown,
-    mouse: zglfw.MouseButton = .unknown,
+    key: glfw.Key = .unknown,
+    mouse: glfw.MouseButton = .eight,
     title_text_data: ?TextData = null,
     tooltip_text: ?TextData = null,
     state: InteractableState = .none,
@@ -791,7 +791,7 @@ pub const KeyMapper = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn mousePress(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32, _: zglfw.Mods) bool {
+    pub fn mousePress(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
@@ -901,7 +901,7 @@ pub const CharacterBox = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn mousePress(self: *CharacterBox, x: f32, y: f32, _: f32, _: f32, _: zglfw.Mods) bool {
+    pub fn mousePress(self: *CharacterBox, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
@@ -1105,7 +1105,7 @@ pub const Item = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: zglfw.Mods) bool {
+    pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: glfw.Mods) bool {
         if (!self.visible or !self.draggable)
             return false;
 
@@ -1270,7 +1270,7 @@ pub const ScrollableContainer = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn mousePress(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: zglfw.Mods) bool {
+    pub fn mousePress(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
@@ -1460,7 +1460,7 @@ pub const Container = struct {
     _clamp_y: bool = false,
     _clamp_to_screen: bool = false,
 
-    pub fn mousePress(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: zglfw.Mods) bool {
+    pub fn mousePress(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
@@ -1720,7 +1720,7 @@ pub const Toggle = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn mousePress(self: *Toggle, x: f32, y: f32, _: f32, _: f32, _: zglfw.Mods) bool {
+    pub fn mousePress(self: *Toggle, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
@@ -1851,7 +1851,7 @@ pub const Slider = struct {
     _disposed: bool = false,
     _allocator: std.mem.Allocator = undefined,
 
-    pub fn mousePress(self: *Slider, x: f32, y: f32, _: f32, _: f32, _: zglfw.Mods) bool {
+    pub fn mousePress(self: *Slider, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
             return false;
 

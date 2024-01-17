@@ -872,9 +872,9 @@ pub const GameScreen = struct {
         }
     }
 
-    pub fn updateFpsText(self: *GameScreen, fps: f64, mem: f32) !void {
+    pub fn updateFpsText(self: *GameScreen, fps: usize, mem: f32) !void {
         const fmt =
-            \\FPS: {d:.1}
+            \\FPS: {d}
             \\Memory: {d:.1} MB
         ;
         self.fps_text.text_data.setText(try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, fmt, .{ fps, mem }), self._allocator);

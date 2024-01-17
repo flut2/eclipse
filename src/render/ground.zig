@@ -28,7 +28,6 @@ inline fn drawSquare(
         draw_data.encoder.writeBuffer(
             base.ground_vb,
             0,
-            base.GroundVertexData,
             base.ground_vert_data[0..base.ground_batch_vert_size],
         );
         base.endDraw(

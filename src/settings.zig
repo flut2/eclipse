@@ -1,5 +1,5 @@
 const std = @import("std");
-const zglfw = @import("zglfw");
+const glfw = @import("mach-glfw");
 const builtin = @import("builtin");
 const assets = @import("assets.zig");
 const ini = @import("ini");
@@ -35,19 +35,19 @@ pub const AaType = enum(u8) {
 };
 
 pub const Button = union(enum) {
-    key: zglfw.Key,
-    mouse: zglfw.MouseButton,
+    key: glfw.Key,
+    mouse: glfw.MouseButton,
 
-    pub fn getKey(self: Button) zglfw.Key {
+    pub fn getKey(self: Button) glfw.Key {
         switch (self) {
             .key => |key| return key,
             .mouse => return .unknown,
         }
     }
 
-    pub fn getMouse(self: Button) zglfw.MouseButton {
+    pub fn getMouse(self: Button) glfw.MouseButton {
         switch (self) {
-            .key => return .unknown,
+            .key => return .eight,
             .mouse => |mouse| return mouse,
         }
     }
@@ -57,34 +57,24 @@ pub const Button = union(enum) {
             .key => "",
             .mouse => "mouse_",
         }, switch (self) {
-            .key => |key| blk: {
-                if (key == .unknown)
-                    break :blk "unknown";
-
-                break :blk @tagName(key);
-            },
-            .mouse => |mouse| blk: {
-                if (mouse == .unknown)
-                    break :blk "unknown";
-
-                break :blk @tagName(mouse);
-            },
+            .key => |key| @tagName(key),
+            .mouse => |mouse| @tagName(mouse),
         } }) catch "unknown";
     }
 
     pub fn findButton(name: []const u8) Button {
         const mouse = std.mem.indexOf(u8, name, "mouse_");
         if (mouse) |mouse_idx| {
-            const mouse_enum = std.meta.stringToEnum(zglfw.MouseButton, name[mouse_idx + "mouse_".len ..]);
+            const mouse_enum = std.meta.stringToEnum(glfw.MouseButton, name[mouse_idx + "mouse_".len ..]);
             if (mouse_enum == null) {
-                std.log.err("Mouse parsing for {s} failed. Using the default of unknown mouse", .{name});
-                return .{ .mouse = .unknown };
+                std.log.err("Mouse parsing for {s} failed. Using the default of mouse eight", .{name});
+                return .{ .mouse = .eight };
             }
 
             return .{ .mouse = mouse_enum.? };
         }
 
-        const key_enum = std.meta.stringToEnum(zglfw.Key, name);
+        const key_enum = std.meta.stringToEnum(glfw.Key, name);
         if (key_enum == null) {
             std.log.err("Key parsing for {s} failed. Using the default of unknown key", .{name});
             return .{ .key = .unknown };

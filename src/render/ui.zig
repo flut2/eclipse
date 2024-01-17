@@ -27,7 +27,6 @@ inline fn drawMinimap(
         draw_data.encoder.writeBuffer(
             draw_data.buffer,
             0,
-            base.BaseVertexData,
             base.base_vert_data[0..base.base_batch_vert_size],
         );
         base.endDraw(
@@ -229,7 +228,6 @@ inline fn drawMenuBackground(
         draw_data.encoder.writeBuffer(
             draw_data.buffer,
             0,
-            base.BaseVertexData,
             base.base_vert_data[0..base.base_batch_vert_size],
         );
         base.endDraw(

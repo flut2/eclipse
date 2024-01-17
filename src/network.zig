@@ -17,6 +17,9 @@ const Player = @import("game/player.zig").Player;
 const GameObject = @import("game/game_object.zig").GameObject;
 const Projectile = @import("game/projectile.zig").Projectile;
 
+const read_buffer_size = 65535;
+const write_buffer_size = 65535;
+
 pub const FailureType = enum(i8) {
     message_no_disconnect = -1,
     message_with_disconnect = 0,
@@ -167,17 +170,14 @@ const S2CPacketId = enum(u8) {
     failure = 28,
 };
 
-const WrSelf = struct { wr: *xev.TCP.WriteRequest, self: *Server };
-
 pub const Server = struct {
     loop: *xev.Loop,
     socket: ?xev.TCP = null,
     write_queue: xev.TCP.WriteQueue = .{},
     completion_pool: std.heap.MemoryPool(xev.Completion),
     write_request_pool: std.heap.MemoryPool(xev.TCP.WriteRequest),
-    write_buffer_pool: std.heap.MemoryPool([65535]u8),
+    write_buffer_pool: std.heap.MemoryPool([write_buffer_size]u8),
     reader: utils.PacketReader = .{},
-    read_comp: ?*xev.Completion = null,
     _allocator: std.mem.Allocator = undefined,
     _hello_data: C2SPacket = undefined,
 
@@ -185,45 +185,40 @@ pub const Server = struct {
         var ret = Server{
             .loop = loop,
             .completion_pool = std.heap.MemoryPool(xev.Completion).init(allocator),
-            .write_buffer_pool = std.heap.MemoryPool([65535]u8).init(allocator),
+            .write_buffer_pool = std.heap.MemoryPool([write_buffer_size]u8).init(allocator),
             .write_request_pool = std.heap.MemoryPool(xev.TCP.WriteRequest).init(allocator),
             ._allocator = allocator,
         };
 
-        ret.reader.buffer = try allocator.alloc(u8, 65535);
+        ret.reader.buffer = try allocator.alloc(u8, read_buffer_size);
         return ret;
     }
 
     fn disposeCallback(
         ud: ?*anyopaque,
         _: *xev.Loop,
-        _: *xev.Completion,
+        c: *xev.Completion,
         _: xev.Result,
     ) xev.CallbackAction {
-        const wr_self: *WrSelf = @ptrCast(@alignCast(ud.?));
-        wr_self.self.write_buffer_pool.destroy(
-            @alignCast(
-                @as(*[65535]u8, @ptrFromInt(@intFromPtr(wr_self.wr.full_write_buffer.slice.ptr))),
-            ),
-        );
-        wr_self.self.write_request_pool.destroy(wr_self.wr);
+        const self: *Server = @ptrCast(@alignCast(ud.?));
+        self.completion_pool.destroy(c);
         return .disarm;
     }
 
-    fn disposeRequestQueue(self: *Server) void {
-        while (self.write_queue.pop()) |wr| {
-            var ud = WrSelf{ .wr = wr, .self = self };
-            var c_cancel = xev.Completion{
-                .op = .{ .cancel = .{ .c = self.read_comp.? } },
-                .userdata = &ud,
-                .callback = disposeCallback,
-            };
-            self.loop.add(&c_cancel);
+    fn cancelWriteQueue(self: *Server) !void {
+        var head = self.write_queue.head;
+        while (head) |wr| {
+            var c = try self.completion_pool.create();
+            c.op = .{ .cancel = .{ .c = &wr.completion } };
+            c.userdata = self;
+            c.callback = disposeCallback;
+            self.loop.add(c);
+
+            head = wr.next;
         }
     }
 
     pub fn deinit(self: *Server) void {
-        self.disposeRequestQueue();
         self.loop.stop();
         while (self.loop.flags.in_run) {}
         self.loop.deinit();
@@ -264,7 +259,9 @@ pub const Server = struct {
         }
 
         if (packet == .use_portal or packet == .escape) {
-            self.disposeRequestQueue();
+            self.cancelWriteQueue() catch |e| {
+                std.log.err("Cancelling the write queue failed: {}", .{e});
+            };
             main.clear();
             main.tick_frame = false;
         }
@@ -326,7 +323,7 @@ pub const Server = struct {
 
             srv.write_buffer_pool.destroy(
                 @alignCast(
-                    @as(*[65535]u8, @ptrFromInt(@intFromPtr(buf.slice.ptr))),
+                    @as(*[write_buffer_size]u8, @ptrFromInt(@intFromPtr(buf.slice.ptr))),
                 ),
             );
             srv.write_request_pool.destroy(xev.TCP.WriteRequest.from(c));
@@ -335,9 +332,8 @@ pub const Server = struct {
         return .disarm;
     }
 
-    fn readCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, result: xev.TCP.ReadError!usize) xev.CallbackAction {
+    fn readCallback(self: ?*Server, _: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, result: xev.TCP.ReadError!usize) xev.CallbackAction {
         if (self) |srv| {
-            srv.read_comp = c;
             const size = result catch |e| {
                 std.log.err("Read error: {}", .{e});
                 main.disconnect();

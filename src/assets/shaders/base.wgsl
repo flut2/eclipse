@@ -71,14 +71,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     if in.render_type == quad_render_type {
         let pixel = textureSampleGrad(base_tex, default_sampler, in.pos_uv.zw, dx, dy);
         return vec4(mix(pixel.rgb, in.base_color_and_intensity.rgb, in.base_color_and_intensity.a), pixel.a * in.alpha_and_shadow_color.x);
-    } else if in.render_type == ui_quad_render_type {
+    }
+    
+    if in.render_type == ui_quad_render_type {
         let pixel = textureSampleGrad(ui_tex, default_sampler, in.pos_uv.zw, dx, dy);
         return vec4(mix(pixel.rgb, in.base_color_and_intensity.rgb, in.base_color_and_intensity.a), pixel.a * in.alpha_and_shadow_color.x);
-    } else if in.render_type == minimap_render_type {
+    }
+    
+    if in.render_type == minimap_render_type {
         return textureSampleGrad(minimap_tex, default_sampler, in.pos_uv.zw, dx, dy);
-    } else if in.render_type == menu_bg_render_type {
+    }
+    
+    if in.render_type == menu_bg_render_type {
         return textureSampleGrad(menu_bg_tex, linear_sampler, in.pos_uv.zw, dx, dy);
-    } else if in.render_type == text_normal_render_type {
+    }
+    
+    if in.render_type == text_normal_render_type {
         const subpixel = 1.0 / 3.0;
         let subpixel_width = (abs(dx.x) + abs(dy.x)) * subpixel; // this is just fwidth(in.uv).x * subpixel
 
@@ -112,10 +120,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let base_pixel = vec4(red * in.base_color_and_intensity.r, green * in.base_color_and_intensity.g, blue * in.base_color_and_intensity.b, alpha);
 
         let outline_alpha = sample_msdf(green_tex, in.texel_and_text_data.z, in.alpha_and_shadow_color.x, in.outline_color_and_w.w);
-        let outlined_pixel = mix(vec4(in.outline_color_and_w.rgb, outline_alpha), base_pixel, alpha);
-
-        return outlined_pixel;
-    } else if in.render_type == text_normal_no_subpixel_render_type {
+        return mix(vec4(in.outline_color_and_w.rgb, outline_alpha), base_pixel, alpha);
+    }
+    
+    if in.render_type == text_normal_no_subpixel_render_type {
         var tex = vec4(0.0, 0.0, 0.0, 0.0);
         if in.texel_and_text_data.w == medium_text_type {
             tex = textureSampleGrad(medium_tex, linear_sampler, in.pos_uv.zw, dx, dy);
@@ -131,10 +139,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let base_pixel = vec4(in.base_color_and_intensity.rgb, alpha);
 
         let outline_alpha = sample_msdf(tex, in.texel_and_text_data.z, in.alpha_and_shadow_color.x, in.outline_color_and_w.w);
-        let outlined_pixel = mix(vec4(in.outline_color_and_w.rgb, outline_alpha), base_pixel, alpha);
-
-        return outlined_pixel;
-    } else if in.render_type == text_drop_shadow_render_type {
+        return mix(vec4(in.outline_color_and_w.rgb, outline_alpha), base_pixel, alpha);
+    }
+    
+    if in.render_type == text_drop_shadow_render_type {
         const subpixel = 1.0 / 3.0;
         let subpixel_width = (abs(dx.x) + abs(dy.x)) * subpixel; // this is just fwidth(in.uv).x * subpixel
 
@@ -179,7 +187,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let offset_pixel = vec4(in.alpha_and_shadow_color.yzw, offset_opacity);
 
         return mix(offset_pixel, base_pixel, outline_alpha);
-    } else if in.render_type == text_drop_shadow_no_subpixel_render_type {
+    }
+    
+    if in.render_type == text_drop_shadow_no_subpixel_render_type {
         var tex = vec4(0.0, 0.0, 0.0, 0.0);
         var tex_offset = vec4(0.0, 0.0, 0.0, 0.0);
         if in.texel_and_text_data.w == medium_text_type {

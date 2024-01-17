@@ -7,8 +7,8 @@ const network = @import("network.zig");
 const builtin = @import("builtin");
 const xml = @import("xml.zig");
 const asset_dir = @import("build_options").asset_dir;
-const zglfw = @import("zglfw");
-const zgpu = @import("zgpu");
+const glfw = @import("mach-glfw");
+const gpu = @import("mach-gpu");
 const zstbi = @import("zstbi");
 const input = @import("input.zig");
 const utils = @import("utils.zig");
@@ -23,6 +23,8 @@ const rpc = @import("rpc");
 const dialog = @import("ui/dialogs/dialog.zig");
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 const xev = @import("xev");
+
+pub const GPUInterface = gpu.dawn.Interface;
 
 pub const ServerData = struct {
     name: []const u8 = "",
@@ -82,7 +84,6 @@ pub const CharacterData = struct {
     }
 };
 
-pub var gctx: *zgpu.GraphicsContext = undefined;
 pub var current_account = AccountData{};
 pub var character_list: []CharacterData = undefined;
 pub var server_list: ?[]ServerData = null;
@@ -96,6 +97,7 @@ pub var tick_frame = false;
 pub var editing_map = false;
 pub var need_minimap_update = false;
 pub var need_force_update = false;
+pub var need_swap_chain_update = false;
 pub var minimap_update_min_x: u32 = std.math.maxInt(u32);
 pub var minimap_update_max_x: u32 = std.math.minInt(u32);
 pub var minimap_update_min_y: u32 = std.math.maxInt(u32);
@@ -107,7 +109,7 @@ pub var _allocator: std.mem.Allocator = undefined;
 pub var start_time: i64 = 0;
 pub var server: network.Server = undefined;
 
-fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
+fn onResize(_: glfw.Window, w: u32, h: u32) void {
     const float_w: f32 = @floatFromInt(w);
     const float_h: f32 = @floatFromInt(h);
 
@@ -117,6 +119,8 @@ fn onResize(_: *zglfw.Window, w: i32, h: i32) callconv(.C) void {
     camera.clip_scale_y = 2.0 / float_h;
 
     systems.resize(float_w, float_h);
+
+    need_swap_chain_update = true;
 }
 
 fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) void {
@@ -157,7 +161,7 @@ pub fn enterGame(sel_srv: ServerData, selected_char_id: u32, char_create_type: u
     };
 }
 
-fn renderTick(allocator: std.mem.Allocator, window: *zglfw.Window) !void {
+fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
     rpmalloc.initThread() catch |e| {
         std.log.err("Render thread initialization failed: {}", .{e});
         return;
@@ -167,21 +171,25 @@ fn renderTick(allocator: std.mem.Allocator, window: *zglfw.Window) !void {
     var last_aa_type = settings.aa_type;
     var last_vsync = settings.enable_vsync;
     var time_start = std.time.nanoTimestamp();
+    var fps_time_start = current_time;
+    var frames: usize = 0;
     while (tick_render) {
-        if (last_vsync != settings.enable_vsync) {
-            gctx.swapchain.release();
+        defer frames += 1;
+
+        if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
+            render.swap_chain.release();
             const framebuffer_size = window.getFramebufferSize();
-            const swapchain_descriptor = zgpu.wgpu.SwapChainDescriptor{
-                .label = "zig-gamedev-gctx-swapchain",
+            render.swap_chain_desc = gpu.SwapChain.Descriptor{
+                .label = "Main Swap Chain",
                 .usage = .{ .render_attachment = true },
-                .format = zgpu.wgpu.TextureFormat.bgra8_unorm,
-                .width = @intCast(framebuffer_size[0]),
-                .height = @intCast(framebuffer_size[1]),
+                .format = .bgra8_unorm,
+                .width = framebuffer_size.width,
+                .height = framebuffer_size.height,
                 .present_mode = if (settings.enable_vsync) .fifo else .immediate,
             };
-            gctx.swapchain = gctx.device.createSwapChain(gctx.surface, swapchain_descriptor);
-            errdefer gctx.swapchain.release();
+            render.swap_chain = render.device.createSwapChain(render.surface, &render.swap_chain_desc);
             last_vsync = settings.enable_vsync;
+            need_swap_chain_update = false;
         }
 
         // ticking can get turned off while in sleep
@@ -204,27 +212,22 @@ fn renderTick(allocator: std.mem.Allocator, window: *zglfw.Window) !void {
             time_start = time;
         }
 
-        const back_buffer = gctx.swapchain.getCurrentTextureView();
-        const encoder = gctx.device.createCommandEncoder(null);
+        render.draw(current_time);
 
-        render.draw(current_time, gctx, back_buffer, encoder);
-
-        const commands = encoder.finish(null);
-        gctx.submit(&.{commands});
-        if (gctx.present() == .swap_chain_resized or last_aa_type != settings.aa_type) {
-            render.createColorTexture(gctx, gctx.swapchain_descriptor.width, gctx.swapchain_descriptor.height);
+        if (last_aa_type != settings.aa_type) {
+            render.createColorTexture();
             last_aa_type = settings.aa_type;
         }
 
-        try if (settings.stats_enabled) switch (systems.screen) {
-            .game => |game_screen| if (game_screen.inited) game_screen.updateFpsText(gctx.stats.fps, try utils.currentMemoryUse()),
-            .editor => |editor_screen| editor_screen.updateFpsText(gctx.stats.fps, try utils.currentMemoryUse()),
-            else => {},
-        };
-
-        back_buffer.release();
-        encoder.release();
-        commands.release();
+        if (current_time - fps_time_start > 1 * std.time.us_per_s) {
+            try if (settings.stats_enabled) switch (systems.screen) {
+                .game => |game_screen| if (game_screen.inited) game_screen.updateFpsText(frames, try utils.currentMemoryUse()),
+                .editor => |editor_screen| if (editor_screen.inited) editor_screen.updateFpsText(frames, try utils.currentMemoryUse()),
+                else => {},
+            };
+            frames = 0;
+            fps_time_start = current_time;
+        }
 
         minimapUpdate: {
             if (need_minimap_update) {
@@ -262,23 +265,22 @@ fn renderTick(allocator: std.mem.Allocator, window: *zglfw.Window) !void {
                     idx += 1;
                 }
 
-                gctx.queue.writeTexture(
-                    .{
-                        .texture = gctx.lookupResource(render.minimap_texture).?,
+                render.queue.writeTexture(
+                    &.{
+                        .texture = render.minimap_texture,
                         .origin = .{
                             .x = min_x,
                             .y = min_y,
                         },
                     },
-                    .{
+                    &.{
                         .bytes_per_row = comp_len * w,
                         .rows_per_image = h,
                     },
-                    .{
+                    &.{
                         .width = w,
                         .height = h,
                     },
-                    u8,
                     copy,
                 );
 
@@ -288,19 +290,18 @@ fn renderTick(allocator: std.mem.Allocator, window: *zglfw.Window) !void {
                 minimap_update_min_y = std.math.maxInt(u32);
                 minimap_update_max_y = std.math.minInt(u32);
             } else if (need_force_update) {
-                gctx.queue.writeTexture(
-                    .{
-                        .texture = gctx.lookupResource(render.minimap_texture).?,
+                render.queue.writeTexture(
+                    &.{
+                        .texture = render.minimap_texture,
                     },
-                    .{
+                    &.{
                         .bytes_per_row = map.minimap.bytes_per_row,
                         .rows_per_image = map.minimap.height,
                     },
-                    .{
+                    &.{
                         .width = map.minimap.width,
                         .height = map.minimap.height,
                     },
-                    u8,
                     map.minimap.data,
                 );
                 need_force_update = false;
@@ -402,11 +403,15 @@ pub fn main() !void {
 
     std.os.maybeIgnoreSigpipe();
 
-    zglfw.init() catch |e| {
-        std.log.err("Failed to initialize GLFW library: {}", .{e});
-        return;
-    };
-    defer zglfw.terminate();
+    if (!glfw.init(.{})) {
+        glfw.getErrorCode() catch |err| switch (err) {
+            error.PlatformError,
+            error.PlatformUnavailable,
+            => return err,
+            else => unreachable,
+        };
+    }
+    defer glfw.terminate();
 
     zstbi.init(allocator);
     defer zstbi.deinit();
@@ -437,13 +442,26 @@ pub fn main() !void {
 
     systems.switchScreen(.main_menu);
 
-    zglfw.WindowHint.set(.client_api, @intFromEnum(zglfw.ClientApi.no_api));
-    const window = zglfw.Window.create(1280, 720, "Faer", null) catch |e| {
-        std.log.err("Failed to create window: {}", .{e});
-        return;
+    const window = glfw.Window.create(
+        1280,
+        720,
+        "Faer",
+        null,
+        null,
+        .{ .client_api = .no_api, .cocoa_retina_framebuffer = true },
+    ) orelse switch (glfw.mustGetErrorCode()) {
+        error.InvalidEnum,
+        error.InvalidValue,
+        error.FormatUnavailable,
+        => unreachable,
+        error.APIUnavailable,
+        error.VersionUnavailable,
+        error.PlatformError,
+        => |err| return err,
+        else => unreachable,
     };
     defer window.destroy();
-    window.setSizeLimits(1280, 720, -1, -1);
+    window.setSizeLimits(.{ .width = 1280, .height = 720 }, .{ .width = null, .height = null });
     window.setCursor(switch (settings.cursor_type) {
         .basic => assets.default_cursor,
         .royal => assets.royal_cursor,
@@ -454,15 +472,6 @@ pub fn main() !void {
         .target_ally => assets.target_ally_cursor,
     });
 
-    gctx = zgpu.GraphicsContext.create(
-        allocator,
-        window,
-        .{ .present_mode = if (settings.enable_vsync) .fifo else .immediate },
-    ) catch |e| {
-        std.log.err("Failed to create graphics context: {}", .{e});
-        return;
-    };
-
     _ = window.setKeyCallback(input.keyEvent);
     _ = window.setCharCallback(input.charEvent);
     _ = window.setCursorPosCallback(input.mouseMoveEvent);
@@ -470,9 +479,8 @@ pub fn main() !void {
     _ = window.setScrollCallback(input.scrollEvent);
     _ = window.setFramebufferSizeCallback(onResize);
 
-    render.init(gctx, allocator);
-    defer gctx.destroy(allocator);
-    defer render.deinit(gctx, allocator);
+    render.init(window, allocator);
+    defer render.deinit();
 
     var thread_pool = xev.ThreadPool.init(.{});
     defer thread_pool.deinit();
@@ -502,7 +510,7 @@ pub fn main() !void {
         const time = std.time.microTimestamp() - start_time;
         current_time = time;
 
-        zglfw.pollEvents();
+        glfw.pollEvents();
 
         if (tick_frame or editing_map) {
             map.update(allocator);
