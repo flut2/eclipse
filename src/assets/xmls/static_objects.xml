@@ -319,7 +319,7 @@
     <Object type="0x119" id="Gravestone T6">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>misc_16</Sheet>
+            <Sheet>misc_big</Sheet>
             <Index>0x13</Index>
         </Texture>
         <ShowName/>
@@ -329,7 +329,7 @@
     <Object type="0x11a" id="Gravestone T7">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>misc_16</Sheet>
+            <Sheet>misc_big</Sheet>
             <Index>0x14</Index>
         </Texture>
         <ShowName/>
@@ -339,7 +339,7 @@
     <Object type="0x11b" id="Gravestone T8">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>misc_16</Sheet>
+            <Sheet>misc_big</Sheet>
             <Index>0x15</Index>
         </Texture>
         <ShowName/>
@@ -349,7 +349,7 @@
     <Object type="0x11c" id="Gravestone T9">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>misc_16</Sheet>
+            <Sheet>misc_big</Sheet>
             <Index>0x15</Index>
         </Texture>
         <ShowName/>
@@ -359,7 +359,7 @@
     <Object type="0x11d" id="Bazaar">
         <Class>Bazaar</Class>
         <Texture>
-            <Sheet>misc_16</Sheet>
+            <Sheet>misc_big</Sheet>
             <Index>0x09</Index>
         </Texture>
         <ShowName/>
