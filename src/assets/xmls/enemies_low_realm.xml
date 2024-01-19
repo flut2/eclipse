@@ -91,7 +91,7 @@
     <Object type="0x0719" id="Woodland Warden">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>0</Index>
         </AnimatedTexture>
         <Health>40000</Health>
@@ -137,7 +137,7 @@
     <Object type="0x071e" id="Tribal Totem">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>1</Index>
         </AnimatedTexture>
         <Health>75000</Health>
@@ -294,7 +294,7 @@
     <Object type="0x0723" id="Skeletal Skull">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>3</Index>
         </AnimatedTexture>
         <Health>150000</Health>
@@ -385,7 +385,7 @@
     <Object type="0x0724" id="Hellfire Hydra">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>4</Index>
         </AnimatedTexture>
         <Health>100000</Health>
@@ -410,7 +410,7 @@
     <Object type="0x0725" id="Hellfire Hydra Head">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>4</Index>
         </AnimatedTexture>
         <Health>15000</Health>
@@ -432,7 +432,7 @@
     <Object type="0x0726" id="Avatar of Anger">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>2</Index>
         </AnimatedTexture>
         <Health>200000</Health>
@@ -605,7 +605,7 @@
     <Object type="0x072b" id="Sobek">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>5</Index>
         </AnimatedTexture>
         <Health>200000</Health>
@@ -640,7 +640,7 @@
     <Object type="0x072c" id="Lamia">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>6</Index>
         </AnimatedTexture>
         <Health>150000</Health>
@@ -689,7 +689,7 @@
     <Object type="0x072e" id="Dust Devil">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>7</Index>
         </AnimatedTexture>
         <Health>200000</Health>
@@ -737,7 +737,7 @@
     <Object type="0x0730" id="Giant Slime">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>8</Index>
         </AnimatedTexture>
         <Health>45000</Health>
@@ -773,7 +773,7 @@
     <Object type="0x0731" id="Ethereal Phantom">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>9</Index>
         </AnimatedTexture>
         <Health>35000</Health>
@@ -809,7 +809,7 @@
     <Object type="0x0732" id="King Slime">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>10</Index>
         </AnimatedTexture>
         <Health>55000</Health>
@@ -842,7 +842,7 @@
     <Object type="0x0733" id="Rahu">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>11</Index>
         </AnimatedTexture>
         <Health>175000</Health>
@@ -879,7 +879,7 @@
     <Object type="0x0734" id="Blood Elemental">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>12</Index>
         </AnimatedTexture>
         <Health>125000</Health>
@@ -1053,7 +1053,7 @@
     <Object type="0x0756" id="Slime Piece">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>8</Index>
         </AnimatedTexture>
         <Health>9000</Health>
@@ -1077,7 +1077,7 @@
         <DisplayId>Giant Slime</DisplayId>
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>low_realm_16</Sheet>
+            <Sheet>low_realmBig</Sheet>
             <Index>8</Index>
         </AnimatedTexture>
         <Health>45000</Health>
