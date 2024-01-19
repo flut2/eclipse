@@ -449,7 +449,7 @@ pub const GameScreen = struct {
     }
 
     fn getTierAtlasData(tier: u8) assets.AtlasData {
-        if (assets.atlas_data.get("misc_16")) |data| {
+        if (assets.atlas_data.get("misc_big")) |data| {
             const idx: u16 = switch (tier) {
                 1 => 0x00,
                 2 => 0x01,
