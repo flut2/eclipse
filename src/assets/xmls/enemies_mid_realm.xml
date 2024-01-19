@@ -3,7 +3,7 @@
     <Object type="0x0735" id="The Mothership">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>0</Index>
         </AnimatedTexture>
         <Health>225000</Health>
@@ -70,7 +70,7 @@
     <Object type="0x0736" id="Eldritch Horror">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>10</Index>
         </AnimatedTexture>
         <Health>250000</Health>
@@ -110,7 +110,7 @@
     <Object type="0x0737" id="The Amalgam">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>2</Index>
         </AnimatedTexture>
         <Health>250000</Health>
@@ -735,7 +735,7 @@
     <Object type="0x074e" id="Earth Elemental">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>6</Index>
         </AnimatedTexture>
         <Health>275000</Health>
@@ -770,7 +770,7 @@
     <Object type="0x074f" id="Fire Elemental">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>7</Index>
         </AnimatedTexture>
         <Health>275000</Health>
@@ -805,7 +805,7 @@
     <Object type="0x0750" id="Water Elemental">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>8</Index>
         </AnimatedTexture>
         <Health>275000</Health>
@@ -839,7 +839,7 @@
     <Object type="0x0751" id="Air Elemental">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>9</Index>
         </AnimatedTexture>
         <Health>275000</Health>
@@ -874,7 +874,7 @@
     <Object type="0x0752" id="Bone Wyrm">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>1</Index>
         </AnimatedTexture>
         <Health>200000</Health>
@@ -915,7 +915,7 @@
     <Object type="0x0753" id="Carbon Sentry">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>3</Index>
         </AnimatedTexture>
         <Health>250000</Health>
@@ -983,7 +983,7 @@
     <Object type="0x0754" id="Martian Defender">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>4</Index>
         </AnimatedTexture>
         <Health>250000</Health>
@@ -1023,7 +1023,7 @@
     <Object type="0x0755" id="The Overseer">
         <Class>Character</Class>
         <AnimatedTexture>
-            <Sheet>mid_realmBig</Sheet>
+            <Sheet>mid_realm_big</Sheet>
             <Index>5</Index>
         </AnimatedTexture>
         <Health>250000</Health>

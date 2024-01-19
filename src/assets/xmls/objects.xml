@@ -29,7 +29,7 @@
   <Object type="0x1002" id="Founding Table">
     <Class>FoundingTable</Class>
     <Texture>
-      <Sheet>miscBig</Sheet>
+      <Sheet>misc_big</Sheet>
       <Index>0x0c</Index>
     </Texture>
     <Size>123</Size>
@@ -39,7 +39,7 @@
   <Object type="0x1003" id="Guild Manager">
     <Class>GuildManager</Class>
     <Texture>
-      <Sheet>miscBig</Sheet>
+      <Sheet>misc_big</Sheet>
       <Index>0x0d</Index>
     </Texture>
     <Size>123</Size>
@@ -68,7 +68,7 @@
   <Object type="0x1006" id="Wardrobe">
     <Class>SkinChanger</Class>
     <Texture>
-      <Sheet>miscBig</Sheet>
+      <Sheet>misc_big</Sheet>
       <Index>0x0e</Index>
     </Texture>
     <Size>80</Size>

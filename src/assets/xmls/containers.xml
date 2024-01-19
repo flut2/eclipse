@@ -6,7 +6,7 @@
     <CanPutNormalObjects />
     <CanPutUntradableObjects />
     <Texture>
-      <Sheet>miscBig</Sheet>
+      <Sheet>misc_big</Sheet>
       <Index>0x0a</Index>
     </Texture>
     <Size>62</Size>
@@ -15,7 +15,7 @@
   <Object type="0x0505" id="Closed Stash Chest">
     <Class>ClosedStashChest</Class>
     <Texture>
-      <Sheet>miscBig</Sheet>
+      <Sheet>misc_big</Sheet>
       <Index>0x0b</Index>
     </Texture>
     <Size>62</Size>
@@ -80,7 +80,7 @@
     <CanPutNormalObjects/>
     <CanPutUntradableObjects/>
     <Texture>
-      <Sheet>miscBig</Sheet>
+      <Sheet>misc_big</Sheet>
       <Index>0x13</Index>
     </Texture>
     <Cost>1000</Cost>

@@ -969,11 +969,11 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("key_indicators", "key_indicators.png", 100, 100, false, &ctx, allocator);
     try addImage("items", "items.png", 10, 10, false, &ctx, allocator);
     try addImage("misc", "misc.png", 10, 10, false, &ctx, allocator);
-    try addImage("miscBig", "miscBig.png", 18, 18, false, &ctx, allocator);
+    try addImage("misc_big", "misc_big.png", 18, 18, false, &ctx, allocator);
     try addImage("portals", "portals.png", 10, 10, false, &ctx, allocator);
-    try addImage("portalsBig", "portalsBig.png", 18, 18, false, &ctx, allocator);
+    try addImage("portals_big", "portals_big.png", 18, 18, false, &ctx, allocator);
     try addImage("props", "props.png", 10, 10, false, &ctx, allocator);
-    try addImage("propsBig", "propsBig.png", 18, 18, false, &ctx, allocator);
+    try addImage("props_big", "props_big.png", 18, 18, false, &ctx, allocator);
     try addImage("projectiles", "projectiles.png", 8, 8, false, &ctx, allocator);
     try addImage("tiered_items", "tiered_items.png", 8, 8, false, &ctx, allocator);
     try addImage("tiered_projectiles", "tiered_projectiles.png", 8, 8, false, &ctx, allocator);
@@ -982,9 +982,9 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("editor_tile_base", "editor_tile_base.png", 8, 8, false, &ctx, allocator);
 
     try addAnimEnemy("low_realm", "low_realm.png", 10, 10, 60, 10, &ctx, allocator);
-    try addAnimEnemy("low_realmBig", "low_realmBig.png", 18, 18, 108, 18, &ctx, allocator);
+    try addAnimEnemy("low_realm_big", "low_realm_big.png", 18, 18, 108, 18, &ctx, allocator);
     try addAnimEnemy("mid_realm", "mid_realm.png", 10, 10, 60, 10, &ctx, allocator);
-    try addAnimEnemy("mid_realmBig", "mid_realmBig.png", 18, 18, 108, 18, &ctx, allocator);
+    try addAnimEnemy("mid_realm_big", "mid_realm_big.png", 18, 18, 108, 18, &ctx, allocator);
     try addAnimPlayer("players", "players.png", 10, 10, 60, 10, &ctx, allocator);
     try addAnimPlayer("player_skins", "player_skins.png", 8, 8, 48, 8, &ctx, allocator);
 
