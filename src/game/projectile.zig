@@ -40,6 +40,7 @@ pub const Projectile = struct {
     props: game_data.ProjProps,
     colors: []u32 = &[0]u32{},
     hit_list: std.AutoHashMap(i32, void) = undefined,
+    _last_hit_check: i64 = 0,
     _disposed: bool = false,
 
     pub inline fn addToMap(self: *Projectile) void {
@@ -72,43 +73,16 @@ pub const Projectile = struct {
         };
     }
 
-    // We abuse the fact that the entities array is y-sorted in the below target finding functions.
-    // These functions have to be reimagined if the array ever ceases to be y-sorted
-
-    fn findTargetPlayer(x: f32, y: f32, radius: f32, start_idx: usize) ?*Player {
+    fn findTargetPlayer(x: f32, y: f32, radius: f32) ?*Player {
         var min_dist = radius * radius;
         var target: ?*Player = null;
 
-        const items = map.entities.items;
-        loopBelow: for (0..start_idx) |i| {
-            const idx = start_idx - i;
-            if (items[idx] == .player) {
-                const player = items[idx].player;
-                if (@abs(y - player.y) > radius)
-                    break :loopBelow;
-
-                if (!player.condition.dead) {
-                    const dist_sqr = utils.distSqr(player.x, player.y, x, y);
-                    if (dist_sqr < min_dist) {
-                        min_dist = dist_sqr;
-                        target = &items[idx].player;
-                    }
-                }
-            }
-        }
-
-        loopAbove: for (start_idx..items.len) |i| {
-            if (items[i] == .player) {
-                const player = items[i].player;
-                if (@abs(y - player.y) > radius)
-                    break :loopAbove;
-
-                if (!player.condition.dead) {
-                    const dist_sqr = utils.distSqr(player.x, player.y, x, y);
-                    if (dist_sqr < min_dist) {
-                        min_dist = dist_sqr;
-                        target = &items[i].player;
-                    }
+        for (map.entities.items) |*en| {
+            if (en.* == .player) {
+                const dist_sqr = utils.distSqr(en.player.x, en.player.y, x, y);
+                if (dist_sqr < min_dist) {
+                    min_dist = dist_sqr;
+                    target = &en.player;
                 }
             }
         }
@@ -116,43 +90,17 @@ pub const Projectile = struct {
         return target;
     }
 
-    fn findTargetObject(x: f32, y: f32, radius: f32, start_idx: usize) ?*GameObject {
+    fn findTargetObject(x: f32, y: f32, radius: f32) ?*GameObject {
         var min_dist = radius * radius;
         var target: ?*GameObject = null;
 
-        const items = map.entities.items;
-        loopBelow: for (0..start_idx) |i| {
-            const idx = start_idx - i;
-            if (items[idx] == .object) {
-                const object = items[idx].object;
-                if (@abs(y - object.y) > radius)
-                    break :loopBelow;
-
-                if ((object.props.is_enemy or object.props.occupy_square or object.props.enemy_occupy_square) and
-                    !object.condition.dead)
-                {
-                    const dist_sqr = utils.distSqr(object.x, object.y, x, y);
+        for (map.entities.items) |*en| {
+            if (en.* == .object) {
+                if (en.object.props.is_enemy or en.object.props.occupy_square or en.object.props.enemy_occupy_square) {
+                    const dist_sqr = utils.distSqr(en.object.x, en.object.y, x, y);
                     if (dist_sqr < min_dist) {
                         min_dist = dist_sqr;
-                        target = &items[idx].object;
-                    }
-                }
-            }
-        }
-
-        loopAbove: for (start_idx..items.len) |i| {
-            if (items[i] == .object) {
-                const object = items[i].object;
-                if (@abs(y - object.y) > radius)
-                    break :loopAbove;
-
-                if ((object.props.is_enemy or object.props.occupy_square or object.props.enemy_occupy_square) and
-                    !object.condition.dead)
-                {
-                    const dist_sqr = utils.distSqr(object.x, object.y, x, y);
-                    if (dist_sqr < min_dist) {
-                        min_dist = dist_sqr;
-                        target = &items[i].object;
+                        target = &en.object;
                     }
                 }
             }
@@ -231,7 +179,7 @@ pub const Projectile = struct {
         }
     }
 
-    pub inline fn update(self: *Projectile, time: i64, dt: f32, idx: usize, allocator: std.mem.Allocator) bool {
+    pub inline fn update(self: *Projectile, time: i64, dt: f32, allocator: std.mem.Allocator) bool {
         const elapsed = time - self.start_time;
         if (elapsed >= self.props.lifetime)
             return false;
@@ -258,6 +206,11 @@ pub const Projectile = struct {
             const x_dt: f32 = self.x - last_x;
             self.visual_angle = std.math.atan2(f32, y_dt, x_dt);
         }
+
+        if (time - self._last_hit_check < 16 * std.time.us_per_ms)
+            return true;
+
+        self._last_hit_check = time;
 
         if (map.getSquare(self.x, self.y)) |square| {
             const en = map.findEntityConst(square.static_obj_id);
@@ -323,7 +276,7 @@ pub const Projectile = struct {
         }
 
         if (self.damage_players) {
-            if (findTargetPlayer(self.x, self.y, 0.57, idx)) |player| {
+            if (findTargetPlayer(self.x, self.y, 0.57)) |player| {
                 if (self.hit_list.contains(player.obj_id))
                     return true;
 
@@ -381,7 +334,7 @@ pub const Projectile = struct {
                 }
             }
         } else {
-            if (findTargetObject(self.x, self.y, 0.57, idx)) |object| {
+            if (findTargetObject(self.x, self.y, 0.57)) |object| {
                 if (self.hit_list.contains(object.obj_id))
                     return true;
 

@@ -168,8 +168,8 @@ pub const GameScreen = struct {
             .y = 10,
             .image_data = .{ .normal = .{ .atlas_data = minimap_data } },
             .is_minimap_decor = true,
-            .minimap_offset_x = 6.0,
-            .minimap_offset_y = 6.0,
+            .minimap_offset_x = 4.0 + assets.padding,
+            .minimap_offset_y = 4.0 + assets.padding,
             .minimap_width = 174.0,
             .minimap_height = 174.0,
         });
@@ -386,8 +386,8 @@ pub const GameScreen = struct {
         screen.chat_input = try element.create(allocator, element.Input{
             .x = screen.chat_decor.x,
             .y = screen.chat_decor.y + screen.chat_decor.height(),
-            .text_inlay_x = 9,
-            .text_inlay_y = 8,
+            .text_inlay_x = 7 + assets.padding,
+            .text_inlay_y = 6 + assets.padding,
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = input_data } } },
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{

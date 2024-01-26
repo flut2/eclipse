@@ -3,7 +3,7 @@ const map = @import("../game/map.zig");
 const assets = @import("../assets.zig");
 const camera = @import("../camera.zig");
 const settings = @import("../settings.zig");
-const gpu = @import("mach-gpu");
+const gpu = @import("mach-sysgpu").sysgpu;
 const utils = @import("../utils.zig");
 const zstbi = @import("zstbi");
 const element = @import("../ui/element.zig");
@@ -111,6 +111,7 @@ pub var ground_bind_group: *gpu.BindGroup = undefined;
 
 pub var base_vb: *gpu.Buffer = undefined;
 pub var ground_vb: *gpu.Buffer = undefined;
+pub var ground_uniforms: *gpu.Buffer = undefined;
 pub var index_buffer: *gpu.Buffer = undefined;
 
 pub var base_vert_data: [base_batch_vert_size]BaseVertexData = undefined;
@@ -155,6 +156,7 @@ pub var device: *gpu.Device = undefined;
 pub var swap_chain: *gpu.SwapChain = undefined;
 pub var swap_chain_desc: gpu.SwapChain.Descriptor = undefined;
 
+var instance: *gpu.Instance = undefined;
 var allocator: std.mem.Allocator = undefined;
 var last_ms_count: u32 = 1;
 
@@ -329,10 +331,8 @@ pub fn createColorTexture() void {
     };
 
     if (color_tex_set) {
-        color_texture.destroy();
+        color_texture.release();
         color_texture_view.release();
-        base_pipeline.release();
-        ground_pipeline.release();
         color_tex_set = false;
     }
 
@@ -353,6 +353,8 @@ pub fn createColorTexture() void {
     });
     color_texture_view = color_texture.createView(null);
 
+    base_pipeline.release();
+    ground_pipeline.release();
     createPipelines();
 
     last_ms_count = sample_count;
@@ -367,20 +369,61 @@ pub fn deinit() void {
     }
 
     enter_text_data.deinit(allocator);
+
+    base_pipeline.release();
+    base_bind_group.release();
+    ground_pipeline.release();
+    ground_bind_group.release();
+
+    base_vb.release();
+    ground_vb.release();
+    ground_uniforms.release();
+    index_buffer.release();
+
+    bold_text_texture.release();
+    bold_text_texture_view.release();
+    bold_italic_text_texture.release();
+    bold_italic_text_texture_view.release();
+    medium_text_texture.release();
+    medium_text_texture_view.release();
+    medium_italic_text_texture.release();
+    medium_italic_text_texture_view.release();
+    texture.release();
+    texture_view.release();
+    ui_texture.release();
+    ui_texture_view.release();
+    minimap_texture.release();
+    minimap_texture_view.release();
+    menu_bg_texture.release();
+    menu_bg_texture_view.release();
+    if (color_tex_set) {
+        color_texture.release();
+        color_texture_view.release();
+    }
+
+    sampler.release();
+    linear_sampler.release();
+
+    swap_chain.release();
+    surface.release();
+    queue.release();
+    adapter.release();
+    device.release();
+
+    instance.release();
 }
 
-fn deviceLostCallback(reason: gpu.Device.LostReason, msg: [*:0]const u8, userdata: ?*anyopaque) callconv(.C) void {
-    _ = userdata;
-    _ = reason;
-    std.log.err("Device lost: {s}", .{msg});
-    @panic("Device lost");
+fn deviceLostCallback(reason: gpu.Device.LostReason, msg: [*:0]const u8, _: ?*anyopaque) callconv(.C) void {
+    if (reason != .destroyed)
+        std.log.err("Device lost: {s}", .{msg});
 }
 
-pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) void {
-    try main.GPUInterface.init(allocator, .{});
-    const instance = gpu.createInstance(null) orelse {
-        std.log.err("Failed to create GPU instance", .{});
-        std.process.exit(1);
+pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) !void {
+    allocator = _allocator;
+
+    try main.SYSGPUInterface.init(allocator, .{});
+    instance = gpu.createInstance(null) orelse {
+        std.debug.panic("Failed to create GPU instance", .{});
     };
     surface = try gpu_util.createSurfaceForWindow(instance, window, comptime gpu_util.detectGLFWOptions());
 
@@ -391,8 +434,7 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) void {
         .force_fallback_adapter = .false,
     }, &response, gpu_util.requestAdapterCallback);
     if (response.status != .success) {
-        std.log.err("Failed to create GPU adapter: {?s}", .{response.message});
-        std.process.exit(1);
+        std.debug.panic("Failed to create GPU adapter: {?s}", .{response.message});
     }
 
     adapter = response.adapter.?;
@@ -400,8 +442,7 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) void {
     var props = std.mem.zeroes(gpu.Adapter.Properties);
     response.adapter.?.getProperties(&props);
     if (props.backend_type == .null) {
-        std.log.err("No backend found for {s} adapter", .{props.adapter_type.name()});
-        std.process.exit(1);
+        std.debug.panic("No backend found for {s} adapter", .{props.adapter_type.name()});
     }
 
     device = response.adapter.?.createDevice(&.{
@@ -419,8 +460,7 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) void {
         .device_lost_callback = &deviceLostCallback,
         .device_lost_userdata = null,
     }) orelse {
-        std.log.err("Failed to create GPU device\n", .{});
-        std.process.exit(1);
+        std.debug.panic("Failed to create GPU device\n", .{});
     };
     device.setUncapturedErrorCallback({}, gpu_util.printUnhandledErrorCallback);
     queue = device.getQueue();
@@ -435,8 +475,6 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) void {
         .present_mode = if (settings.enable_vsync) .fifo else .immediate,
     };
     swap_chain = device.createSwapChain(surface, &swap_chain_desc);
-
-    allocator = _allocator;
 
     for (0..@bitSizeOf(utils.Condition)) |i| {
         const sheet_name = "conditions";
@@ -494,7 +532,7 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) void {
     });
     queue.writeBuffer(ground_vb, 0, ground_vert_data[0..]);
 
-    const ground_uniforms = device.createBuffer(&.{
+    ground_uniforms = device.createBuffer(&.{
         .usage = .{ .copy_dst = true, .uniform = true },
         .size = @sizeOf(GroundUniformData),
     });
@@ -519,8 +557,6 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) void {
         .size = index_data.len * @sizeOf(u16),
     });
     queue.writeBuffer(index_buffer, 0, index_data[0..]);
-
-    createColorTexture();
 
     createTexture(&minimap_texture, &minimap_texture_view, map.minimap);
     createTexture(&medium_text_texture, &medium_text_texture_view, assets.medium_atlas);
@@ -563,7 +599,7 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) void {
         .label = "Ground bind group",
         .layout = ground_bind_group_layout,
         .entries = &[_]gpu.BindGroup.Entry{
-            bufferEntry(0, ground_uniforms, 0, @sizeOf(GroundUniformData)),
+            bufferEntry(0, ground_uniforms, 0, @sizeOf(GroundUniformData), 0),
             samplerEntry(1, sampler),
             textureEntry(2, texture_view),
         },
@@ -604,6 +640,7 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) void {
     }));
 
     createPipelines();
+    createColorTexture();
 }
 
 pub inline fn drawQuad(
@@ -1589,11 +1626,12 @@ pub fn draw(time: i64) void {
 
     defer {
         const command = encoder.finish(null);
+        encoder.release();
+
         queue.submit(&[_]*gpu.CommandBuffer{command});
+        command.release();
         swap_chain.present();
 
-        command.release();
-        encoder.release();
         back_buffer.?.release();
     }
 

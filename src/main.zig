@@ -8,7 +8,7 @@ const builtin = @import("builtin");
 const xml = @import("xml.zig");
 const asset_dir = @import("build_options").asset_dir;
 const glfw = @import("mach-glfw");
-const gpu = @import("mach-gpu");
+const gpu = @import("mach-sysgpu").sysgpu;
 const zstbi = @import("zstbi");
 const input = @import("input.zig");
 const utils = @import("utils.zig");
@@ -24,7 +24,7 @@ const dialog = @import("ui/dialogs/dialog.zig");
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 const xev = @import("xev");
 
-pub const GPUInterface = gpu.dawn.Interface;
+pub const SYSGPUInterface = @import("mach-sysgpu").Impl;
 
 pub const ServerData = struct {
     name: []const u8 = "",
@@ -128,10 +128,6 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
         std.log.err("Network thread initialization failed: {}", .{e});
         return;
     };
-    defer {
-        network_thread = null;
-        rpmalloc.deinitThread(true);
-    }
 
     if (server.socket != null)
         return;
@@ -140,6 +136,11 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
         std.log.err("Connection failed: {}", .{e});
         return;
     };
+
+    std.log.err("done2", .{});
+
+    network_thread = null;
+    rpmalloc.deinitThread(true);
 }
 
 pub fn enterGame(sel_srv: ServerData, selected_char_id: u32, char_create_type: u16, char_create_skin_type: u16) void {
@@ -174,20 +175,14 @@ fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
     var fps_time_start = current_time;
     var frames: usize = 0;
     while (tick_render) {
-        defer frames += 1;
-
         if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
             render.swap_chain.release();
             const framebuffer_size = window.getFramebufferSize();
-            render.swap_chain_desc = gpu.SwapChain.Descriptor{
-                .label = "Main Swap Chain",
-                .usage = .{ .render_attachment = true },
-                .format = .bgra8_unorm,
-                .width = framebuffer_size.width,
-                .height = framebuffer_size.height,
-                .present_mode = if (settings.enable_vsync) .fifo else .immediate,
-            };
+            render.swap_chain_desc.width = framebuffer_size.width;
+            render.swap_chain_desc.height = framebuffer_size.height;
+            render.swap_chain_desc.present_mode = if (settings.enable_vsync) .fifo else .immediate;
             render.swap_chain = render.device.createSwapChain(render.surface, &render.swap_chain_desc);
+            render.createColorTexture();
             last_vsync = settings.enable_vsync;
             need_swap_chain_update = false;
         }
@@ -196,7 +191,7 @@ fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
         if (!tick_render)
             return;
 
-        if (!settings.enable_vsync and settings.fps_cap >= 999.99) {
+        if (!settings.enable_vsync and settings.fps_cap < 999.99) {
             // Sleep is unreliable, the fps cap would be slightly lower than the actual cap.
             // So we have to sleep 1.3x shorter and just loop for the rest of the time remaining
             const sleep_time: i64 = @intFromFloat(1000 * std.time.ns_per_ms / settings.fps_cap / 1.3);
@@ -212,6 +207,7 @@ fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
             time_start = time;
         }
 
+        defer frames += 1;
         render.draw(current_time);
 
         if (last_aa_type != settings.aa_type) {
@@ -221,8 +217,7 @@ fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
 
         if (current_time - fps_time_start > 1 * std.time.us_per_s) {
             try if (settings.stats_enabled) switch (systems.screen) {
-                .game => |game_screen| if (game_screen.inited) game_screen.updateFpsText(frames, try utils.currentMemoryUse()),
-                .editor => |editor_screen| if (editor_screen.inited) editor_screen.updateFpsText(frames, try utils.currentMemoryUse()),
+                inline .game, .editor => |screen| if (screen.inited) screen.updateFpsText(frames, try utils.currentMemoryUse()),
                 else => {},
             };
             frames = 0;
@@ -479,7 +474,7 @@ pub fn main() !void {
     _ = window.setScrollCallback(input.scrollEvent);
     _ = window.setFramebufferSizeCallback(onResize);
 
-    render.init(window, allocator);
+    try render.init(window, allocator);
     defer render.deinit();
 
     var thread_pool = xev.ThreadPool.init(.{});

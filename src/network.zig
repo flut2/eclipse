@@ -20,6 +20,100 @@ const Projectile = @import("game/projectile.zig").Projectile;
 const read_buffer_size = 65535;
 const write_buffer_size = 65535;
 
+const C2SQueue = struct {
+    pub const PollResult = enum { Empty, Retry, Item };
+    pub const Node = struct { buf: []u8, next_opt: ?*Node };
+
+    head: *Node,
+    tail: *Node,
+    stub: *Node,
+
+    pub fn init(self: *C2SQueue, stub: *Node) void {
+        @atomicStore(*Node, &self.stub, stub, .Monotonic);
+        @atomicStore(?*Node, &self.stub.next_opt, null, .Monotonic);
+        @atomicStore(*Node, &self.head, self.stub, .Monotonic);
+        @atomicStore(*Node, &self.tail, self.stub, .Monotonic);
+    }
+
+    pub fn push(self: *C2SQueue, node: *Node) void {
+        @atomicStore(?*Node, &node.next_opt, null, .Monotonic);
+        const prev = @atomicRmw(*Node, &self.head, .Xchg, node, .AcqRel);
+        @atomicStore(?*Node, &prev.next_opt, node, .Release);
+    }
+
+    pub fn isEmpty(self: *C2SQueue) bool {
+        var tail = @atomicLoad(*Node, &self.tail, .Monotonic);
+        const next_opt = @atomicLoad(?*Node, &tail.next_opt, .Acquire);
+        const head = @atomicLoad(*Node, &self.head, .Acquire);
+        return tail == self.stub and next_opt == null and tail == head;
+    }
+
+    pub fn poll(self: *C2SQueue, node: **Node) PollResult {
+        var head: *Node = undefined;
+        var tail = @atomicLoad(*Node, &self.tail, .Monotonic);
+        var next_opt = @atomicLoad(?*Node, &tail.next_opt, .Acquire);
+
+        if (tail == self.stub) {
+            if (next_opt) |next| {
+                @atomicStore(*Node, &self.tail, next, .Monotonic);
+                tail = next;
+                next_opt = @atomicLoad(?*Node, &tail.next_opt, .Acquire);
+            } else {
+                head = @atomicLoad(*Node, &self.head, .Acquire);
+                return if (tail != head) .Retry else .Empty;
+            }
+        }
+
+        if (next_opt) |next| {
+            @atomicStore(*Node, &self.tail, next, .Monotonic);
+            node.* = tail;
+            return .Item;
+        }
+
+        head = @atomicLoad(*Node, &self.head, .Acquire);
+        if (tail != head) {
+            return .Retry;
+        }
+
+        self.push(self.stub);
+
+        next_opt = @atomicLoad(?*Node, &tail.next_opt, .Acquire);
+        if (next_opt) |next| {
+            @atomicStore(*Node, &self.tail, next, .Monotonic);
+            node.* = tail;
+            return .Item;
+        }
+
+        return .Retry;
+    }
+
+    pub fn pop(self: *C2SQueue) ?*Node {
+        var result = PollResult.Retry;
+        var node: *Node = undefined;
+
+        while (result == .Retry) {
+            result = self.poll(&node);
+            if (result == .Empty) {
+                return null;
+            }
+        }
+
+        return node;
+    }
+
+    pub fn getNext(self: *C2SQueue, prev: *Node) ?*Node {
+        var next_opt = @atomicLoad(?*Node, &prev.next_opt, .Acquire);
+
+        if (next_opt) |next| {
+            if (next == self.stub) {
+                next_opt = @atomicLoad(?*Node, &next.next_opt, .Acquire);
+            }
+        }
+
+        return next_opt;
+    }
+};
+
 pub const FailureType = enum(i8) {
     message_no_disconnect = -1,
     message_with_disconnect = 0,
@@ -173,11 +267,13 @@ const S2CPacketId = enum(u8) {
 pub const Server = struct {
     loop: *xev.Loop,
     socket: ?xev.TCP = null,
-    write_queue: xev.TCP.WriteQueue = .{},
+    write_queue: C2SQueue = undefined,
     completion_pool: std.heap.MemoryPool(xev.Completion),
-    write_request_pool: std.heap.MemoryPool(xev.TCP.WriteRequest),
+    node_pool: std.heap.MemoryPool(C2SQueue.Node),
     write_buffer_pool: std.heap.MemoryPool([write_buffer_size]u8),
     reader: utils.PacketReader = .{},
+    _write_lock: std.Thread.Mutex = .{},
+    _write_comp: ?*xev.Completion = null,
     _allocator: std.mem.Allocator = undefined,
     _hello_data: C2SPacket = undefined,
 
@@ -185,36 +281,32 @@ pub const Server = struct {
         var ret = Server{
             .loop = loop,
             .completion_pool = std.heap.MemoryPool(xev.Completion).init(allocator),
+            .node_pool = std.heap.MemoryPool(C2SQueue.Node).init(allocator),
             .write_buffer_pool = std.heap.MemoryPool([write_buffer_size]u8).init(allocator),
-            .write_request_pool = std.heap.MemoryPool(xev.TCP.WriteRequest).init(allocator),
             ._allocator = allocator,
         };
 
+        ret.write_queue.init(try allocator.create(C2SQueue.Node));
         ret.reader.buffer = try allocator.alloc(u8, read_buffer_size);
         return ret;
     }
 
-    fn disposeCallback(
-        ud: ?*anyopaque,
-        _: *xev.Loop,
-        c: *xev.Completion,
-        _: xev.Result,
-    ) xev.CallbackAction {
+    fn disposeCallback(ud: ?*anyopaque, _: *xev.Loop, c: *xev.Completion, _: xev.Result) xev.CallbackAction {
         const self: *Server = @ptrCast(@alignCast(ud.?));
         self.completion_pool.destroy(c);
+        self._write_comp = null;
         return .disarm;
     }
 
-    fn cancelWriteQueue(self: *Server) !void {
-        var head = self.write_queue.head;
-        while (head) |wr| {
-            var c = try self.completion_pool.create();
-            c.op = .{ .cancel = .{ .c = &wr.completion } };
+    fn cancelWriteQueue(self: *Server) void {
+        self.write_queue.init(self.write_queue.stub);
+
+        if (self._write_comp) |wc| {
+            var c = self.completion_pool.create() catch unreachable;
+            c.op = .{ .cancel = .{ .c = wc } };
             c.userdata = self;
             c.callback = disposeCallback;
             self.loop.add(c);
-
-            head = wr.next;
         }
     }
 
@@ -224,7 +316,8 @@ pub const Server = struct {
         self.loop.deinit();
         self.completion_pool.deinit();
         self.write_buffer_pool.deinit();
-        self.write_request_pool.deinit();
+        self.node_pool.deinit();
+        self._allocator.destroy(self.write_queue.stub);
         self._allocator.free(self.reader.buffer);
     }
 
@@ -237,6 +330,7 @@ pub const Server = struct {
         const c = try self.completion_pool.create();
         socket.connect(self.loop, c, addr, Server, self, connectCallback);
         try self.loop.run(.until_done);
+        std.log.err("done1", .{});
     }
 
     pub fn shutdown(self: *Server) void {
@@ -251,19 +345,27 @@ pub const Server = struct {
         if (self.socket == null)
             return;
 
+        const needs_cancel = packet == .use_portal or packet == .escape;
+
+        // What's the point of the MPSC queue if we're going to have to lock either way for MemoryPool? todo thread safe MemoryPool
+        self._write_lock.lock();
+
+        defer {
+            self._write_lock.unlock();
+            if (needs_cancel) {
+                main.clear();
+                main.tick_frame = false;
+            }
+        }
+
+        if (needs_cancel)
+            self.cancelWriteQueue();
+
         if (settings.log_packets == .all or
             settings.log_packets == .c2s or
             (settings.log_packets == .c2s_non_tick or settings.log_packets == .all_non_tick) and packet != .move and packet != .update_ack)
         {
             std.log.info("Send: {}", .{packet}); // todo custom formatting
-        }
-
-        if (packet == .use_portal or packet == .escape) {
-            self.cancelWriteQueue() catch |e| {
-                std.log.err("Cancelling the write queue failed: {}", .{e});
-            };
-            main.clear();
-            main.tick_frame = false;
         }
 
         var writer = utils.PacketWriter{ .buffer = self.write_buffer_pool.create() catch unreachable };
@@ -295,8 +397,14 @@ pub const Server = struct {
         }
         writer.updateLength();
 
-        const wr = self.write_request_pool.create() catch unreachable;
-        self.socket.?.queueWrite(self.loop, &self.write_queue, wr, .{ .slice = writer.buffer[0..writer.index] }, Server, self, writeCallback);
+        const empty = self.write_queue.isEmpty();
+        const node = self.node_pool.create() catch unreachable;
+        node.buf = writer.buffer[0..writer.index];
+        self.write_queue.push(node);
+        if (empty) {
+            self._write_comp = self.completion_pool.create() catch unreachable;
+            self.socket.?.write(self.loop, self._write_comp.?, .{ .slice = node.buf }, Server, self, writeCallback);
+        }
     }
 
     fn connectCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, socket: xev.TCP, _: xev.TCP.ConnectError!void) xev.CallbackAction {
@@ -309,7 +417,7 @@ pub const Server = struct {
         return .disarm;
     }
 
-    fn writeCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, _: xev.TCP, buf: xev.WriteBuffer, result: xev.TCP.WriteError!usize) xev.CallbackAction {
+    fn writeCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.WriteBuffer, result: xev.TCP.WriteError!usize) xev.CallbackAction {
         if (self) |srv| {
             _ = result catch |e| {
                 std.log.err("Write error: {}", .{e});
@@ -321,12 +429,21 @@ pub const Server = struct {
                 return .disarm;
             };
 
-            srv.write_buffer_pool.destroy(
-                @alignCast(
-                    @as(*[write_buffer_size]u8, @ptrFromInt(@intFromPtr(buf.slice.ptr))),
-                ),
-            );
-            srv.write_request_pool.destroy(xev.TCP.WriteRequest.from(c));
+            if (srv.write_queue.pop()) |node| {
+                if (srv.write_queue.getNext(node)) |next| {
+                    srv.socket.?.write(srv.loop, c, .{ .slice = next.buf }, Server, srv, writeCallback);
+                } else {
+                    srv.completion_pool.destroy(c);
+                    srv._write_comp = null;
+                }
+
+                srv.write_buffer_pool.destroy(
+                    @alignCast(
+                        @as(*[write_buffer_size]u8, @ptrFromInt(@intFromPtr(node.buf.ptr))),
+                    ),
+                );
+                srv.node_pool.destroy(node);
+            }
         }
 
         return .disarm;
@@ -411,11 +528,16 @@ pub const Server = struct {
         return .disarm;
     }
 
-    fn closeCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.TCP.CloseError!void) xev.CallbackAction {
+    fn closeCallback(self: ?*Server, _: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.TCP.CloseError!void) xev.CallbackAction {
         if (self) |srv| {
-            srv.socket = null;
-            srv.completion_pool.destroy(c);
             srv.loop.stop();
+            while (srv.loop.flags.in_run) {}
+
+            srv.socket = null;
+            srv._write_comp = null;
+            _ = srv.completion_pool.reset(.free_all);
+            _ = srv.node_pool.reset(.free_all);
+            _ = srv.write_buffer_pool.reset(.free_all);
         }
 
         return .disarm;

@@ -172,7 +172,7 @@ pub var enable_vsync = true;
 pub var stats_enabled = true;
 pub var save_email = true;
 pub var cursor_type = CursorType.aztec;
-pub var aa_type = AaType.msaa4x;
+pub var aa_type = AaType.none;
 pub var email: []const u8 = "";
 
 var key_name_map: std.StringHashMap(*Button) = undefined;

@@ -522,7 +522,7 @@ pub inline fn update(allocator: std.mem.Allocator) void {
                 object.update(time, dt);
             },
             .projectile => |*projectile| {
-                if (!projectile.update(time, dt, i, allocator)) {
+                if (!projectile.update(time, dt, allocator)) {
                     entity_indices_to_remove.append(i) catch |e| {
                         std.log.err("Disposing entity at idx {d} failed: {}", .{ i, e });
                         return;

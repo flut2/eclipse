@@ -324,9 +324,8 @@ pub const GameObject = struct {
                 utils.halfBound(self.facing) / (std.math.pi / 4.0);
 
             const dir: assets.Direction = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
-                0...1, 6...7 => .left,
                 2...5 => .right,
-                else => unreachable,
+                else => .left,
             };
 
             const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);

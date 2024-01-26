@@ -7,7 +7,6 @@ const ztracy = @import("libs/ztracy/build.zig");
 const zaudio = @import("libs/zaudio/build.zig");
 const ini = @import("libs/ini/build.zig");
 const zdiscord = @import("libs/zig-discord/build.zig");
-const gpu = @import("mach_gpu");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -29,12 +28,11 @@ pub fn build(b: *std.Build) !void {
     });
     exe.root_module.addImport("mach-glfw", mach_glfw_dep.module("mach-glfw"));
 
-    const mach_gpu_dep = b.dependency("mach_gpu", .{
+    const mach_gpu_dep = b.dependency("mach_sysgpu", .{
         .target = target,
         .optimize = optimize,
     });
-    try gpu.link(mach_gpu_dep.builder, exe, .{});
-    exe.root_module.addImport("mach-gpu", mach_gpu_dep.module("mach-gpu"));
+    exe.root_module.addImport("mach-sysgpu", mach_gpu_dep.module("mach-sysgpu"));
 
     exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
 
