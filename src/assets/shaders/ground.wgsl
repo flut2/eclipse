@@ -8,10 +8,11 @@ struct Uniforms {
 @group(0) @binding(2) var tex: texture_2d<f32>;
 
 struct VertexInput {
-  @location(0) pos_uv: vec4<f32>,
-  @location(1) left_top_blend_uv: vec4<f32>,
-  @location(2) right_bottom_blend_uv: vec4<f32>,
-  @location(3) base_and_offset_uv: vec4<f32>,
+  @builtin(position) position: vec4<f32>,
+  @location(0) @interpolate(linear) pos_uv: vec4<f32>,
+  @location(1) @interpolate(flat) left_top_blend_uv: vec4<f32>,
+  @location(2) @interpolate(flat) right_bottom_blend_uv: vec4<f32>,
+  @location(3) @interpolate(flat) base_and_offset_uv: vec4<f32>,
 }
 
 struct VertexOutput {
