@@ -235,7 +235,7 @@ fn createPipelines() void {
 
     const base_color_targets = [_]gpu.ColorTargetState{.{
         .format = swap_chain_desc.format,
-        .blend = &gpu.BlendState{
+        .blend = &.{
             .color = .{ .src_factor = .src_alpha, .dst_factor = .one_minus_src_alpha },
             .alpha = .{ .src_factor = .src_alpha, .dst_factor = .one_minus_src_alpha },
         },
@@ -257,18 +257,18 @@ fn createPipelines() void {
 
     const base_pipeline_descriptor = gpu.RenderPipeline.Descriptor{
         .layout = base_pipeline_layout,
-        .vertex = gpu.VertexState{
+        .vertex = .{
             .module = base_shader,
             .entry_point = "vs_main",
             .buffer_count = base_vertex_buffers.len,
             .buffers = &base_vertex_buffers,
         },
-        .primitive = gpu.PrimitiveState{
+        .primitive = .{
             .front_face = .cw,
             .cull_mode = .none,
             .topology = .triangle_list,
         },
-        .fragment = &gpu.FragmentState{
+        .fragment = &.{
             .module = base_shader,
             .entry_point = "fs_main",
             .target_count = base_color_targets.len,
@@ -301,18 +301,18 @@ fn createPipelines() void {
 
     const ground_pipeline_descriptor = gpu.RenderPipeline.Descriptor{
         .layout = ground_pipeline_layout,
-        .vertex = gpu.VertexState{
+        .vertex = .{
             .module = ground_shader,
             .entry_point = "vs_main",
             .buffer_count = ground_vertex_buffers.len,
             .buffers = &ground_vertex_buffers,
         },
-        .primitive = gpu.PrimitiveState{
+        .primitive = .{
             .front_face = .cw,
             .cull_mode = .none,
             .topology = .triangle_list,
         },
-        .fragment = &gpu.FragmentState{
+        .fragment = &.{
             .module = ground_shader,
             .entry_point = "fs_main",
             .target_count = ground_color_targets.len,
@@ -428,7 +428,7 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) !void {
     surface = try gpu_util.createSurfaceForWindow(instance, window, comptime gpu_util.detectGLFWOptions());
 
     var response: gpu_util.RequestAdapterResponse = undefined;
-    instance.requestAdapter(&gpu.RequestAdapterOptions{
+    instance.requestAdapter(&.{
         .compatible_surface = surface,
         .power_preference = .high_performance,
         .force_fallback_adapter = .false,
@@ -446,14 +446,6 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) !void {
     }
 
     device = response.adapter.?.createDevice(&.{
-        .next_in_chain = .{
-            .dawn_toggles_descriptor = &gpu.dawn.TogglesDescriptor.init(.{
-                .enabled_toggles = &[_][*:0]const u8{
-                    "allow_unsafe_apis",
-                },
-            }),
-        },
-
         .required_features_count = 0,
         .required_features = null,
         .required_limits = null,

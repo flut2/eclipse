@@ -137,8 +137,6 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
         return;
     };
 
-    std.log.err("done2", .{});
-
     network_thread = null;
     rpmalloc.deinitThread(true);
 }

@@ -2,12 +2,8 @@
     .name = "Faer",
     .version = "0.5.0",
     .dependencies = .{
-        .mach_gpu = .{
-            .url = "https://pkg.machengine.org/mach-gpu/7f6792dbc5cd41da5f54b322b6d5be79d6dda2f1.tar.gz",
-            .hash = "122044bcebd28b7d54fb40cbebc04ef6bab0a385952e3193bcf90b37e062ce382495",
-        },
         .mach_sysgpu = .{
-            .url = "https://github.com/alichraghi/mach-dusk/archive/61ab45984a14fa51c38278a2ae5b0e597039f602.tar.gz",
+            .url = "https://github.com/hexops/mach-sysgpu/archive/61ab45984a14fa51c38278a2ae5b0e597039f602.tar.gz",
             .hash = "1220fa25d604eb2049765f95b02af72787b033cf4ca8be0b250648db4911976ba27b",
         },
         .mach_glfw = .{

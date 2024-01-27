@@ -330,7 +330,6 @@ pub const Server = struct {
         const c = try self.completion_pool.create();
         socket.connect(self.loop, c, addr, Server, self, connectCallback);
         try self.loop.run(.until_done);
-        std.log.err("done1", .{});
     }
 
     pub fn shutdown(self: *Server) void {
