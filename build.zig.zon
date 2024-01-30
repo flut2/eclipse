@@ -3,8 +3,8 @@
     .version = "0.5.0",
     .dependencies = .{
         .mach_sysgpu = .{
-            .url = "https://github.com/hexops/mach-sysgpu/archive/61ab45984a14fa51c38278a2ae5b0e597039f602.tar.gz",
-            .hash = "1220fa25d604eb2049765f95b02af72787b033cf4ca8be0b250648db4911976ba27b",
+            .url = "https://github.com/alichraghi/mach-dusk/archive/b689b6e8b05ed79872a9e65d3c6208e7e9910917.tar.gz",
+            .hash = "122015075f8882f82e14cf59baaf63ad4fc0bccdc916d05055ca67e7b62e7bcdbde9",
         },
         .mach_glfw = .{
             .url = "https://pkg.machengine.org/mach-glfw/d686078fcf2f4d8d94532ae28ba45e4b38aab31c.tar.gz",
