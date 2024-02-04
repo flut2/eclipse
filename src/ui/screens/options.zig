@@ -372,6 +372,9 @@ pub const Options = struct {
             // another hack, but i don't see a better way of handling this without rearchitecting everything
             if (value_ptr == &settings.music_volume)
                 assets.main_music.setVolume(slider._current_value);
+
+            if (value_ptr == &settings.fps_cap)
+                settings.fps_us = @intFromFloat(std.time.us_per_s / slider._current_value);
         }
 
         trySave();

@@ -24,13 +24,12 @@ const text_normal_no_subpixel_render_type = 6.0;
 const text_drop_shadow_no_subpixel_render_type = 7.0;
 
 struct VertexInput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) @interpolate(linear) pos_uv: vec4<f32>,
-    @location(1) @interpolate(flat) base_color_and_intensity: vec4<f32>,
-    @location(2) @interpolate(flat) alpha_and_shadow_color: vec4<f32>,
-    @location(3) @interpolate(flat) texel_and_text_data: vec4<f32>,
-    @location(4) @interpolate(flat) outline_color_and_w: vec4<f32>,
-    @location(5) @interpolate(flat) render_type: f32,
+    @location(0) pos_uv: vec4<f32>,
+    @location(1) base_color_and_intensity: vec4<f32>,
+    @location(2) alpha_and_shadow_color: vec4<f32>,
+    @location(3) texel_and_text_data: vec4<f32>,
+    @location(4) outline_color_and_w: vec4<f32>,
+    @location(5) render_type: f32,
 }
 
 struct VertexOutput {

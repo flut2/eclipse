@@ -169,8 +169,7 @@ fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
 
     var last_aa_type = settings.aa_type;
     var last_vsync = settings.enable_vsync;
-    var time_start = std.time.nanoTimestamp();
-    var fps_time_start = current_time;
+    var fps_time_start: i64 = 0;
     var frames: usize = 0;
     while (tick_render) {
         if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
@@ -189,37 +188,24 @@ fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
         if (!tick_render)
             return;
 
-        if (!settings.enable_vsync and settings.fps_cap < 999.99) {
-            // Sleep is unreliable, the fps cap would be slightly lower than the actual cap.
-            // So we have to sleep 1.3x shorter and just loop for the rest of the time remaining
-            const sleep_time: i64 = @intFromFloat(1000 * std.time.ns_per_ms / settings.fps_cap / 1.3);
-            const time_offset = std.time.nanoTimestamp() - time_start;
-            if (time_offset < sleep_time)
-                std.time.sleep(@intCast(sleep_time - time_offset));
-
-            const cap_time: i64 = @intFromFloat(1000 * std.time.ns_per_ms / settings.fps_cap);
-            const time = std.time.nanoTimestamp();
-            if (time - time_start < cap_time)
-                continue;
-
-            time_start = time;
-        }
-
+        defer std.time.sleep(@intCast(std.time.ns_per_us * settings.fps_us));
         defer frames += 1;
-        render.draw(current_time);
+
+        const time = std.time.microTimestamp();
+        render.draw(time);
 
         if (last_aa_type != settings.aa_type) {
             render.createColorTexture();
             last_aa_type = settings.aa_type;
         }
 
-        if (current_time - fps_time_start > 1 * std.time.us_per_s) {
+        if (time - fps_time_start > 1 * std.time.us_per_s) {
             try if (settings.stats_enabled) switch (systems.screen) {
                 inline .game, .editor => |screen| if (screen.inited) screen.updateFpsText(frames, try utils.currentMemoryUse()),
                 else => {},
             };
             frames = 0;
-            fps_time_start = current_time;
+            fps_time_start = time;
         }
 
         minimapUpdate: {
@@ -498,6 +484,7 @@ pub fn main() !void {
         render_thread.join();
     }
 
+    var last_update: i64 = 0;
     var last_ui_update: i64 = 0;
     while (!window.shouldClose()) {
         const time = std.time.microTimestamp() - start_time;
@@ -507,18 +494,21 @@ pub fn main() !void {
 
         if (tick_frame or editing_map) {
             map.update(allocator);
+            last_update = time;
         }
 
         if (time - last_ui_update > 16 * std.time.us_per_ms) {
             try systems.update(allocator);
             last_ui_update = time;
         }
+
+        std.time.sleep(@intCast(std.time.ns_per_us * settings.fps_us));
     }
 }
 
 fn ready(cli: *rpc) !void {
     rpc_start = @intCast(std.time.timestamp());
-    const presence = rpc.Packet.Presence{
+    try cli.setPresence(.{
         .assets = .{
             .large_image = rpc.Packet.ArrayString(256).create("logo"),
             .large_text = rpc.Packet.ArrayString(128).create(version_text),
@@ -526,8 +516,7 @@ fn ready(cli: *rpc) !void {
         .timestamps = .{
             .start = rpc_start,
         },
-    };
-    try cli.setPresence(presence);
+    });
 }
 
 fn runRpc(cli: *rpc) void {
