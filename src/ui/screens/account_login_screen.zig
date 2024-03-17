@@ -252,7 +252,12 @@ pub const AccountLoginScreen = struct {
 };
 
 fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) !bool {
-    const response = try requests.sendAccountVerify(email, password);
+    var verify_data = std.StringHashMap([]const u8).init(allocator);
+    try verify_data.put("email", email);
+    try verify_data.put("password", password);
+    defer verify_data.deinit();
+
+    const response = try requests.sendRequest("account/verify", verify_data);
     if (std.mem.eql(u8, response, "<Error />")) {
         dialog.showDialog(.text, .{
             .title = "Login Failed",
@@ -283,7 +288,12 @@ fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) 
     main.current_account.guild_name = try guild_node.?.getValueAlloc("Name", allocator, "");
     main.current_account.guild_rank = try guild_node.?.getValueInt("Rank", u8, 0);
 
-    const list_response = try requests.sendCharList(email, password);
+    var list_data = std.StringHashMap([]const u8).init(allocator);
+    try list_data.put("email", email);
+    try list_data.put("password", password);
+    defer list_data.deinit();
+
+    const list_response = try requests.sendRequest("char/list", list_data);
     const list_doc = try xml.Doc.fromMemory(list_response);
     defer list_doc.deinit();
     const list_root = try list_doc.getRootElement();

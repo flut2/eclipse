@@ -270,8 +270,14 @@ pub const AccountRegisterScreen = struct {
 
     pub fn update(_: *AccountRegisterScreen, _: i64, _: f32) !void {}
 
-    fn register(email: []const u8, password: []const u8, username: []const u8) !bool {
-        const response = try requests.sendAccountRegister(email, password, username);
+    fn register(allocator: std.mem.Allocator, email: []const u8, password: []const u8, username: []const u8) !bool {
+        var data = std.StringHashMap([]const u8).init(allocator);
+        try data.put("email", email);
+        try data.put("password", password);
+        try data.put("username", username);
+        defer data.deinit();
+
+        const response = try requests.sendRequest("account/register", data);
         if (std.mem.eql(u8, response, "<Error />")) {
             dialog.showDialog(.text, .{
                 .title = "Register Failed",
@@ -284,7 +290,12 @@ pub const AccountRegisterScreen = struct {
     }
 
     fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) !bool {
-        const response = try requests.sendAccountVerify(email, password);
+        var verify_data = std.StringHashMap([]const u8).init(allocator);
+        try verify_data.put("email", email);
+        try verify_data.put("password", password);
+        defer verify_data.deinit();
+
+        const response = try requests.sendRequest("account/verify", verify_data);
         if (std.mem.eql(u8, response, "<Error />")) {
             dialog.showDialog(.text, .{
                 .title = "Login Failed",
@@ -315,7 +326,12 @@ pub const AccountRegisterScreen = struct {
         main.current_account.guild_name = try guild_node.?.getValueAlloc("Name", allocator, "");
         main.current_account.guild_rank = try guild_node.?.getValueInt("Rank", u8, 0);
 
-        const list_response = try requests.sendCharList(email, password);
+        var list_data = std.StringHashMap([]const u8).init(allocator);
+        try list_data.put("email", email);
+        try list_data.put("password", password);
+        defer list_data.deinit();
+
+        const list_response = try requests.sendRequest("char/list", list_data);
         const list_doc = try xml.Doc.fromMemory(list_response);
         defer list_doc.deinit();
         const list_root = try list_doc.getRootElement();
@@ -355,6 +371,7 @@ pub const AccountRegisterScreen = struct {
     fn registerCallback() void {
         const current_screen = systems.screen.register;
         _ = register(
+            current_screen._allocator,
             current_screen.email_input.text_data.text,
             current_screen.password_input.text_data.text,
             current_screen.username_input.text_data.text,
