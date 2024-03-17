@@ -433,11 +433,11 @@ pub fn updateState() void {
     if (map.localPlayerRef()) |local_player| {
         const y_dt = move_down - move_up;
         const x_dt = move_right - move_left;
-        local_player.move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(f32, y_dt, x_dt);
+        local_player.move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
         local_player.walk_speed_multiplier = walking_speed_multiplier;
 
         if (attacking) {
-            const shoot_angle = std.math.atan2(f32, mouse_y - camera.screen_height / 2.0, mouse_x - camera.screen_width / 2.0) + camera.angle;
+            const shoot_angle = std.math.atan2(mouse_y - camera.screen_height / 2.0, mouse_x - camera.screen_width / 2.0) + camera.angle;
             local_player.weaponShoot(shoot_angle, main.current_time);
         }
     }

@@ -129,7 +129,7 @@ const misc_format =
 ;
 
 pub const build_version = "0.5";
-pub const app_engine_url = "http://127.0.0.1:8080/";
+pub const app_engine_uri = "http://127.0.0.1:8080/";
 pub const log_packets = LogType.off;
 pub const print_atlas = false;
 pub const print_ui_atlas = false;

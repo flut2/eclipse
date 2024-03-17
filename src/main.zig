@@ -8,7 +8,7 @@ const builtin = @import("builtin");
 const xml = @import("xml.zig");
 const asset_dir = @import("build_options").asset_dir;
 const glfw = @import("mach-glfw");
-const gpu = @import("mach-sysgpu").sysgpu;
+const gpu = @import("mach").sysgpu.sysgpu;
 const zstbi = @import("zstbi");
 const input = @import("input.zig");
 const utils = @import("utils.zig");
@@ -24,7 +24,7 @@ const dialog = @import("ui/dialogs/dialog.zig");
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 const xev = @import("xev");
 
-pub const SYSGPUInterface = @import("mach-sysgpu").Impl;
+pub const SYSGPUInterface = @import("mach").sysgpu.Impl;
 
 pub const ServerData = struct {
     name: []const u8 = "",

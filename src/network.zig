@@ -922,7 +922,7 @@ pub const Server = struct {
                                 player.y = y;
                             }
 
-                            player.move_angle = if (y_dt <= 0 and x_dt <= 0) std.math.nan(f32) else std.math.atan2(f32, y_dt, x_dt);
+                            player.move_angle = if (y_dt <= 0 and x_dt <= 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
                         }
 
                         while (stat_reader.index < stat_reader.buffer.len) {
@@ -959,7 +959,7 @@ pub const Server = struct {
                                 object.y = y;
                             }
 
-                            object.move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(f32, y_dt, x_dt);
+                            object.move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
                         }
 
                         while (stat_reader.index < stat_reader.buffer.len) {

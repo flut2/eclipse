@@ -28,11 +28,11 @@ pub fn build(b: *std.Build) !void {
     });
     exe.root_module.addImport("mach-glfw", mach_glfw_dep.module("mach-glfw"));
 
-    const mach_gpu_dep = b.dependency("mach_sysgpu", .{
+    const mach_dep = b.dependency("mach", .{
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.addImport("mach-sysgpu", mach_gpu_dep.module("mach-sysgpu"));
+    exe.root_module.addImport("mach", mach_dep.module("mach"));
 
     exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
 

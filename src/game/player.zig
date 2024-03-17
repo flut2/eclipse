@@ -198,7 +198,7 @@ pub const Player = struct {
                 .color = 0xFCDF00,
                 .max_width = 200,
             };
-            
+
             {
                 self.name_text_data.?._lock.lock();
                 defer self.name_text_data.?._lock.unlock();
@@ -271,7 +271,7 @@ pub const Player = struct {
                 return;
             }
 
-            const attack_angle = std.math.atan2(f32, input.mouse_y, input.mouse_x);
+            const attack_angle = std.math.atan2(input.mouse_y, input.mouse_x);
             const num_projs: u16 = @intCast(6 + @divFloor(self.speed, 30));
             const arc_gap = std.math.degreesToRadians(f32, 24);
             const float_str: f32 = @floatFromInt(self.strength);
@@ -507,7 +507,7 @@ pub const Player = struct {
             const float_time: f32 = @floatFromInt(time);
             float_period = 3.5 / self.moveSpeedMultiplier();
             float_period = @mod(float_time, float_period) / float_period;
-            self.facing = std.math.atan2(f32, self.y_dir, self.x_dir);
+            self.facing = std.math.atan2(self.y_dir, self.x_dir);
             action = .walk;
         } else {
             float_period = 0.0;

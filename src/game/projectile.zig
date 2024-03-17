@@ -204,7 +204,7 @@ pub const Projectile = struct {
         } else {
             const y_dt: f32 = self.y - last_y;
             const x_dt: f32 = self.x - last_x;
-            self.visual_angle = std.math.atan2(f32, y_dt, x_dt);
+            self.visual_angle = std.math.atan2(y_dt, x_dt);
         }
 
         if (time - self._last_hit_check < 16 * std.time.us_per_ms)

@@ -491,7 +491,7 @@ pub inline fn update(allocator: std.mem.Allocator) void {
                     camera.update(player.x, player.y, dt, input.rotate);
                     addMoveRecord(time, player.x, player.y);
                     if (input.attacking) {
-                        const shoot_angle = std.math.atan2(f32, input.mouse_y - camera.screen_height / 2.0, input.mouse_x - camera.screen_width / 2.0) + camera.angle;
+                        const shoot_angle = std.math.atan2(input.mouse_y - camera.screen_height / 2.0, input.mouse_x - camera.screen_width / 2.0) + camera.angle;
                         player.weaponShoot(shoot_angle, time);
                     }
                 }
