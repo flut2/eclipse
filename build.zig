@@ -1,12 +1,11 @@
 const std = @import("std");
 const libxml2 = @import("libs/libxml/libxml2.zig");
-const nfd = @import("libs/nfd-zig/build.zig");
 const zstbi = @import("libs/zstbi/build.zig");
 const zstbrp = @import("libs/zstbrp/build.zig");
 const ztracy = @import("libs/ztracy/build.zig");
 const zaudio = @import("libs/zaudio/build.zig");
 const ini = @import("libs/ini/build.zig");
-const zdiscord = @import("libs/zig-discord/build.zig");
+const nfd = @import("libs/nfd-zig/build.zig");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -18,26 +17,30 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.strip = optimize == .ReleaseFast or optimize == .ReleaseSmall;
-    exe.root_module.addImport("rpc", zdiscord.getModule(b));
-    exe.root_module.addImport("nfd", nfd.getModule(b));
-
-    const mach_glfw_dep = b.dependency("mach_glfw", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.root_module.addImport("mach-glfw", mach_glfw_dep.module("mach-glfw"));
-
-    const mach_dep = b.dependency("mach", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.root_module.addImport("mach", mach_dep.module("mach"));
 
     exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
+    exe.root_module.addImport("rpc", @import("libs/zig-discord/build.zig").getModule(b));
+    exe.root_module.addImport("nfd", nfd.getModule(b));
 
-    const xev = b.dependency("libxev", .{ .target = target, .optimize = optimize });
-    exe.root_module.addImport("xev", xev.module("xev"));
+    exe.root_module.addImport("mach-glfw", b.dependency("mach_glfw", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("mach-glfw"));
+
+    exe.root_module.addImport("mach", b.dependency("mach", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("mach"));
+
+    exe.root_module.addImport("mach-gpu", b.dependency("mach_gpu", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("mach-gpu"));
+
+    exe.root_module.addImport("xev", b.dependency("libxev", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("xev"));
 
     const nfd_lib = nfd.makeLib(b, target, optimize);
     if (target.result.os.tag == .macos) {
@@ -45,28 +48,23 @@ pub fn build(b: *std.Build) !void {
     }
     exe.linkLibrary(nfd_lib);
 
-    const libxml = try libxml2.create(b, target, optimize, .{
+    (try libxml2.create(b, target, optimize, .{
         .iconv = false,
         .lzma = false,
         .zlib = false,
-    });
-    libxml.link(exe);
+    })).link(exe);
 
-    const zstbi_pkg = zstbi.package(b, target, optimize, .{});
-    zstbi_pkg.link(exe);
-
-    const zstbrp_pkg = zstbrp.package(b, target, optimize, .{});
-    zstbrp_pkg.link(exe);
-
-    const ztracy_pkg = ztracy.package(b, target, optimize, .{
-        .options = .{ .enable_ztracy = true },
-    });
-    ztracy_pkg.link(exe);
-
-    const zaudio_pkg = zaudio.package(b, target, optimize, .{});
-    zaudio_pkg.link(exe);
+    zstbi.package(b, target, optimize, .{}).link(exe);
+    zstbrp.package(b, target, optimize, .{}).link(exe);
+    ztracy.package(b, target, optimize, .{ .options = .{ .enable_ztracy = true } }).link(exe);
+    zaudio.package(b, target, optimize, .{}).link(exe);
 
     ini.link(ini.getModule(b), exe);
+
+    @import("mach_gpu").link(b.dependency("mach_gpu", .{
+        .target = target,
+        .optimize = optimize,
+    }).builder, exe, &exe.root_module, .{}) catch unreachable;
 
     b.installArtifact(exe);
     const run_cmd = b.addRunArtifact(exe);
@@ -77,15 +75,14 @@ pub fn build(b: *std.Build) !void {
 
     const exe_options = b.addOptions();
     exe.root_module.addOptions("build_options", exe_options);
+    exe_options.addOption(bool, "use_dawn", target.result.os.tag == .windows);
     exe_options.addOption([]const u8, "asset_dir", "./assets/");
 
-    const install_assets_step = b.addInstallDirectory(.{
+    exe.step.dependOn(&b.addInstallDirectory(.{
         .source_dir = .{ .path = "src/assets" },
         .install_dir = .{ .bin = {} },
         .install_subdir = "assets",
-    });
-    exe.step.dependOn(&install_assets_step.step);
+    }).step);
 
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
+    b.step("run", "Run the app").dependOn(&run_cmd.step);
 }

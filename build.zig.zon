@@ -6,6 +6,10 @@
             .url = "https://github.com/hexops/mach/archive/279290bbf2f1adab0af00323280a07d6bfff47a5.tar.gz",
             .hash = "1220ba5472217ef81455b19d540967049bbfaf768b30d04534865707e907ee1c4aec",
         },
+        .mach_gpu = .{
+            .url = "https://pkg.machengine.org/mach-gpu/f60434e10a9e8d0b6dc5419960267188c960f5ec.tar.gz",
+            .hash = "122058c8775820ff0b1f6feb7373364abe1182f5f72ca4d0830d13d861c08a246179",
+        },
         .mach_glfw = .{
             .url = "https://github.com/hexops/mach-glfw/archive/1a9a03399058fd83f7fbb597f3f8304007ff6a3c.tar.gz",
             .hash = "1220b4d58ec6cf53abfd8d7547d39afb9bffa41822d4d58f52625230466e51cc93bb",

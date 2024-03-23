@@ -3,7 +3,10 @@ const map = @import("../game/map.zig");
 const assets = @import("../assets.zig");
 const camera = @import("../camera.zig");
 const settings = @import("../settings.zig");
-const gpu = @import("mach").sysgpu.sysgpu;
+const sysgpu = @import("mach").sysgpu;
+const wgpu = @import("mach-gpu");
+const use_dawn = @import("build_options").use_dawn;
+const gpu = if (use_dawn) wgpu else sysgpu.sysgpu;
 const utils = @import("../utils.zig");
 const zstbi = @import("zstbi");
 const element = @import("../ui/element.zig");
@@ -421,7 +424,12 @@ fn deviceLostCallback(reason: gpu.Device.LostReason, msg: [*:0]const u8, _: ?*an
 pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) !void {
     allocator = _allocator;
 
-    try main.SYSGPUInterface.init(allocator, .{});
+    if (use_dawn) {
+        try main.GPUInterface.init(allocator, .{});
+    } else {
+        try main.SYSGPUInterface.init(allocator, .{});
+    }
+    
     instance = gpu.createInstance(null) orelse {
         std.debug.panic("Failed to create GPU instance", .{});
     };
@@ -591,7 +599,10 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) !void {
         .label = "Ground bind group",
         .layout = ground_bind_group_layout,
         .entries = &[_]gpu.BindGroup.Entry{
-            bufferEntry(0, ground_uniforms, 0, @sizeOf(GroundUniformData), 0),
+            if (use_dawn)
+                bufferEntry(0, ground_uniforms, 0, @sizeOf(GroundUniformData))
+            else
+                bufferEntry(0, ground_uniforms, 0, @sizeOf(GroundUniformData), 0),
             samplerEntry(1, sampler),
             textureEntry(2, texture_view),
         },

@@ -1,7 +1,11 @@
 const std = @import("std");
 const objc = @import("objc_message.zig");
 const glfw = @import("mach-glfw");
-const gpu = @import("mach").sysgpu.sysgpu;
+const sysgpu = @import("mach").sysgpu;
+const wgpu = @import("mach-gpu");
+const use_dawn = @import("build_options").use_dawn;
+const gpu = if (use_dawn) wgpu else sysgpu.sysgpu;
+const utils = @import("../utils.zig");
 
 pub inline fn printUnhandledErrorCallback(_: void, typ: gpu.ErrorType, message: [*:0]const u8) void {
     switch (typ) {
