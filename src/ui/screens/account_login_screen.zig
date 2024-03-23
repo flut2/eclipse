@@ -268,7 +268,6 @@ fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) 
         return false;
     }
 
-    std.log.err("login {s}", .{response});
     const verify_doc = try xml.Doc.fromMemory(response);
     defer verify_doc.deinit();
     const verify_root = try verify_doc.getRootElement();

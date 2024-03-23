@@ -40,6 +40,7 @@ pub const Projectile = struct {
     props: game_data.ProjProps,
     colors: []u32 = &[0]u32{},
     hit_list: std.AutoHashMap(i32, void) = undefined,
+    heat_seek_fired: bool = false,
     _last_hit_check: i64 = 0,
     _disposed: bool = false,
 
@@ -110,6 +111,28 @@ pub const Projectile = struct {
     }
 
     fn updatePosition(self: *Projectile, elapsed: i64, dt: f32) void {
+        if (self.props.heat_seek_radius > 0 and elapsed >= self.props.heat_seek_delay and !self.heat_seek_fired) {
+            var target_x: f32 = -1.0;
+            var target_y: f32 = -1.0;
+
+            if (self.damage_players) {
+                if (findTargetPlayer(self.x, self.y, self.props.heat_seek_radius * self.props.heat_seek_radius)) |player| {
+                    target_x = player.x;
+                    target_y = player.y;
+                }
+            } else {
+                if (findTargetObject(self.x, self.y, self.props.heat_seek_radius * self.props.heat_seek_radius)) |object| {
+                    target_x = object.x;
+                    target_y = object.y;
+                }
+            }
+
+            if (target_x > 0 and target_y > 0) {
+                self.angle = @mod(std.math.atan2(target_y - self.y, target_x - self.x), std.math.tau);
+                self.heat_seek_fired = true;
+            }
+        }
+
         var angle_change: f32 = 0.0;
         if (self.props.angle_change != 0 and elapsed < self.props.angle_change_end and elapsed >= self.props.angle_change_delay) {
             angle_change += dt / std.time.us_per_s * self.props.angle_change;

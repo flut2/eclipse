@@ -399,7 +399,7 @@ pub fn main() !void {
     defer zaudio.deinit();
 
     try settings.init(allocator);
-    defer settings.deinit();
+    defer settings.deinit(allocator);
 
     try assets.init(allocator);
     defer assets.deinit(allocator);

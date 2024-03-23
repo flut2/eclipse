@@ -280,11 +280,12 @@ pub fn getKeyTexture(button: Button) assets.AtlasData {
     return tex_list[key_tex_map.get(button) orelse unset_key_tex_idx];
 }
 
-pub fn deinit() void {
+pub fn deinit(allocator: std.mem.Allocator) void {
     save() catch |e| {
         std.log.err("Settings save failed: {}", .{e});
     };
 
+    allocator.free(email);
     key_tex_map.deinit();
 }
 
