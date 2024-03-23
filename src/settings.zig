@@ -52,81 +52,65 @@ pub const Button = union(enum) {
         }
     }
 
-    pub inline fn getName(self: Button, allocator: std.mem.Allocator) []const u8 {
-        return std.mem.concat(allocator, u8, &[_][]const u8{ switch (self) {
+    pub inline fn getPrefix(self: Button) []const u8 {
+        return switch (self) {
             .key => "",
             .mouse => "mouse_",
-        }, switch (self) {
-            .key => |key| @tagName(key),
-            .mouse => |mouse| @tagName(mouse),
-        } }) catch "unknown";
+        };
     }
 
-    pub fn findButton(name: []const u8) Button {
-        const mouse = std.mem.indexOf(u8, name, "mouse_");
-        if (mouse) |mouse_idx| {
-            const mouse_enum = std.meta.stringToEnum(glfw.MouseButton, name[mouse_idx + "mouse_".len ..]);
-            if (mouse_enum == null) {
-                std.log.err("Mouse parsing for {s} failed. Using the default of mouse eight", .{name});
-                return .{ .mouse = .eight };
-            }
-
-            return .{ .mouse = mouse_enum.? };
-        }
-
-        const key_enum = std.meta.stringToEnum(glfw.Key, name);
-        if (key_enum == null) {
-            std.log.err("Key parsing for {s} failed. Using the default of unknown key", .{name});
-            return .{ .key = .unknown };
-        }
-
-        return .{ .key = key_enum.? };
+    pub inline fn getTagName(self: Button) []const u8 {
+        return switch (self) {
+            .key => |key| @tagName(key),
+            .mouse => |mouse| @tagName(mouse),
+        };
     }
 };
 
-const keys_format =
-    \\[Keys]
-    \\move_left={s}
-    \\move_right={s}
-    \\move_down={s}
-    \\move_up={s}
-    \\walk={s}
-    \\reset_camera={s}
-    \\rotate_left={s}
-    \\rotate_right={s}
-    \\shoot={s}
-    \\ability_1={s}
-    \\ability_2={s}
-    \\ability_3={s}
-    \\ultimate_ability={s}
-    \\interact={s}
-    \\options={s}
-    \\escape={s}
-    \\chat_up={s}
-    \\chat_down={s}
-    \\chat={s}
-    \\chat_cmd={s}
-    \\respond={s}
-    \\toggle_stats={s}
-    \\toggle_perf_stats={s}
-    \\toggle_centering={s}
-    \\
-;
+const key_name_map = std.ComptimeStringMap(*Button, .{
+    .{"move_left", &move_left},
+    .{"move_right", &move_right},
+    .{"move_up", &move_up},
+    .{"move_down", &move_down},
+    .{"rotate_left", &rotate_left},
+    .{"rotate_right", &rotate_right},
+    .{"interact", &interact},
+    .{"options", &options},
+    .{"escape", &escape},
+    .{"chat_up", &chat_up},
+    .{"chat_down", &chat_down},
+    .{"walk", &walk},
+    .{"reset_camera", &reset_camera},
+    .{"toggle_perf_stats", &toggle_perf_stats},
+    .{"chat", &chat},
+    .{"chat_cmd", &chat_cmd},
+    .{"respond", &respond},
+    .{"toggle_centering", &toggle_centering},
+    .{"toggle_stats", &toggle_stats},
+    .{"shoot", &shoot},
+    .{"ability_1", &ability_1},
+    .{"ability_2", &ability_2},
+    .{"ability_3", &ability_3},
+    .{"ultimate_ability", &ultimate_ability},
+});
 
-const misc_format =
-    \\[Misc]
-    \\enable_lights={s}
-    \\enable_vsync={s}
-    \\stats_enabled={s}
-    \\save_email={s}
-    \\fps_cap={d:.2}
-    \\music_volume={d:.2}
-    \\sfx_volume={d:.2}
-    \\aa_type={s}
-    \\cursor_type={s}
-    \\email={s}
-    \\
-;
+const bool_name_map = std.ComptimeStringMap(*bool, .{
+    .{"enable_lights", &enable_lights},
+    .{"enable_vsync", &enable_vsync},
+    .{"save_email", &save_email},
+});
+
+const float_name_map = std.ComptimeStringMap(*f32, .{
+    .{"sfx_volume", &sfx_volume},
+    .{"music_volume", &music_volume},
+    .{"fps_cap", &fps_cap},
+});
+
+const int_name_map = std.ComptimeStringMap(*i32, .{});
+
+const string_name_map = std.ComptimeStringMap(*[]const u8, .{
+    .{"email", &email},
+});
 
 pub const build_version = "0.5";
 pub const app_engine_uri = "http://127.0.0.1:8080/";
@@ -175,12 +159,6 @@ pub var save_email = true;
 pub var cursor_type = CursorType.aztec;
 pub var aa_type = AaType.none;
 pub var email: []const u8 = "";
-
-var key_name_map: std.StringHashMap(*Button) = undefined;
-var bool_name_map: std.StringHashMap(*bool) = undefined;
-var float_name_map: std.StringHashMap(*f32) = undefined;
-var int_name_map: std.StringHashMap(*i32) = undefined;
-var string_name_map: std.StringHashMap(*[]const u8) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     key_tex_map = std.AutoHashMap(Button, u16).init(allocator);
@@ -289,49 +267,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try key_tex_map.put(.{ .key = .left_super }, if (builtin.os.tag == .windows) 0x0b else 0x30);
     try key_tex_map.put(.{ .key = .right_super }, if (builtin.os.tag == .windows) 0x0b else 0x30);
 
-    try createFile();
-
-    key_name_map = std.StringHashMap(*Button).init(allocator);
-    bool_name_map = std.StringHashMap(*bool).init(allocator);
-    float_name_map = std.StringHashMap(*f32).init(allocator);
-    int_name_map = std.StringHashMap(*i32).init(allocator);
-    string_name_map = std.StringHashMap(*[]const u8).init(allocator);
-
-    try key_name_map.put("move_up", &move_up);
-    try key_name_map.put("move_down", &move_down);
-    try key_name_map.put("move_right", &move_right);
-    try key_name_map.put("move_left", &move_left);
-    try key_name_map.put("rotate_left", &rotate_left);
-    try key_name_map.put("rotate_right", &rotate_right);
-    try key_name_map.put("interact", &interact);
-    try key_name_map.put("options", &options);
-    try key_name_map.put("escape", &escape);
-    try key_name_map.put("chat_up", &chat_up);
-    try key_name_map.put("chat_down", &chat_down);
-    try key_name_map.put("walk", &walk);
-    try key_name_map.put("reset_camera", &reset_camera);
-    try key_name_map.put("toggle_perf_stats", &toggle_perf_stats);
-    try key_name_map.put("chat", &chat);
-    try key_name_map.put("chat_cmd", &chat_cmd);
-    try key_name_map.put("respond", &respond);
-    try key_name_map.put("toggle_centering", &toggle_centering);
-    try key_name_map.put("toggle_stats", &toggle_stats);
-    try key_name_map.put("shoot", &shoot);
-    try key_name_map.put("ability_1", &ability_1);
-    try key_name_map.put("ability_2", &ability_2);
-    try key_name_map.put("ability_3", &ability_3);
-    try key_name_map.put("ultimate_ability", &ultimate_ability);
-
-    try float_name_map.put("sfx_volume", &sfx_volume);
-    try float_name_map.put("music_volume", &music_volume);
-    try float_name_map.put("fps_cap", &fps_cap);
-
-    try bool_name_map.put("enable_lights", &enable_lights);
-    try bool_name_map.put("enable_vsync", &enable_vsync);
-    try bool_name_map.put("save_email", &save_email);
-
-    try string_name_map.put("email", &email);
-
+    try save();
     try parseSettings(allocator);
 }
 
@@ -344,22 +280,12 @@ pub fn getKeyTexture(button: Button) assets.AtlasData {
     return tex_list[key_tex_map.get(button) orelse unset_key_tex_idx];
 }
 
-pub fn deinit(allocator: std.mem.Allocator) void {
+pub fn deinit() void {
     save() catch |e| {
         std.log.err("Settings save failed: {}", .{e});
     };
 
     key_tex_map.deinit();
-    key_name_map.deinit();
-    float_name_map.deinit();
-    int_name_map.deinit();
-    bool_name_map.deinit();
-    var iter = string_name_map.valueIterator();
-    while (iter.next()) |value| {
-        if (value.*.len > 0)
-            allocator.free(value.*.*);
-    }
-    string_name_map.deinit();
 }
 
 fn parseSettings(allocator: std.mem.Allocator) !void {
@@ -374,7 +300,27 @@ fn parseSettings(allocator: std.mem.Allocator) !void {
         switch (record) {
             .property => |kv| {
                 if (key_name_map.get(kv.key)) |button| {
-                    button.* = Button.findButton(kv.value);
+                    const mouse = std.mem.indexOf(u8, kv.value, "mouse_");
+                    if (mouse) |mouse_idx| {
+                        const mouse_enum = std.meta.stringToEnum(glfw.MouseButton, kv.value[mouse_idx + "mouse_".len ..]);
+                        if (mouse_enum == null) {
+                            std.log.err("Mouse parsing for {s} failed. Using the default of mouse eight", .{kv.value});
+                            button.* = .{ .mouse = .eight };
+                            continue;
+                        }
+
+                        button.* = .{ .mouse = mouse_enum.? };
+                        continue;
+                    }
+
+                    const key_enum = std.meta.stringToEnum(glfw.Key, kv.value);
+                    if (key_enum == null) {
+                        std.log.err("Key parsing for {s} failed. Using the default of unknown key", .{kv.value});
+                        button.* = .{ .key = .unknown };
+                        continue;
+                    }
+
+                    button.* = .{ .key = key_enum.? };
                     continue;
                 } else if (bool_name_map.get(kv.key)) |bool_var| {
                     if (std.mem.eql(u8, kv.value, "true") or std.mem.eql(u8, kv.value, "false")) {
@@ -431,77 +377,37 @@ fn parseSettings(allocator: std.mem.Allocator) !void {
     }
 }
 
-fn createFile() !void {
-    const file = std.fs.cwd().createFile("settings.ini", .{ .exclusive = true }) catch |e| {
-        switch (e) {
-            error.PathAlreadyExists => return,
-            else => return e,
-        }
-    };
-    defer file.close();
-
-    try saveData(file);
-}
-
 pub fn save() !void {
     const file = try std.fs.cwd().createFile("settings.ini", .{});
     defer file.close();
 
-    try saveData(file);
-}
-
-inline fn boolToString(b: bool) []const u8 {
-    return if (b) "true" else "false";
-}
-
-fn saveData(file: std.fs.File) !void {
     var buf: [2048]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&buf);
-    const allocator = fba.allocator();
+    var stream = std.io.fixedBufferStream(&buf);
 
-    const keys_buf = try std.fmt.allocPrint(main._allocator, keys_format, .{
-        move_left.getName(allocator),
-        move_right.getName(allocator),
-        move_down.getName(allocator),
-        move_up.getName(allocator),
-        walk.getName(allocator),
-        reset_camera.getName(allocator),
-        rotate_left.getName(allocator),
-        rotate_right.getName(allocator),
-        shoot.getName(allocator),
-        ability_1.getName(allocator),
-        ability_2.getName(allocator),
-        ability_3.getName(allocator),
-        ultimate_ability.getName(allocator),
-        interact.getName(allocator),
-        options.getName(allocator),
-        escape.getName(allocator),
-        chat_up.getName(allocator),
-        chat_down.getName(allocator),
-        chat.getName(allocator),
-        chat_cmd.getName(allocator),
-        respond.getName(allocator),
-        toggle_stats.getName(allocator),
-        toggle_perf_stats.getName(allocator),
-        toggle_centering.getName(allocator),
-    });
-    defer main._allocator.free(keys_buf);
-    _ = try file.write(keys_buf);
+    _ = try stream.write("[Keys]");
+    for (key_name_map.kvs) |kv| {
+        try stream.writer().print("\n{s}={s}{s}", .{kv.key, kv.value.getPrefix(), kv.value.getTagName()});
+    }
+    _ = try file.write(stream.getWritten());
 
-    const misc_buf = try std.fmt.allocPrint(main._allocator, misc_format, .{
-        boolToString(enable_lights),
-        boolToString(enable_vsync),
-        boolToString(stats_enabled),
-        boolToString(save_email),
-        fps_cap,
-        music_volume,
-        sfx_volume,
-        @tagName(aa_type),
-        @tagName(cursor_type),
-        email,
-    });
-    defer main._allocator.free(misc_buf);
-    _ = try file.write(misc_buf);
+    try stream.seekTo(0);
+    _ = try stream.write("\n[Misc]");
+    for (bool_name_map.kvs) |kv| {
+        try stream.writer().print("\n{s}={s}", .{kv.key, if (kv.value.*) "true" else "false"});
+    }
+    for (float_name_map.kvs) |kv| {
+        try stream.writer().print("\n{s}={d:.2}", .{kv.key, kv.value.*});
+    }
+    // Uncomment when int settings are added. Would error otherwise
+    // for (int_name_map.kvs) |kv| {
+    //     try stream.writer().print("\n{s}={d}", .{kv.key, kv.value.*});
+    // }
+    for (string_name_map.kvs) |kv| {
+        try stream.writer().print("\n{s}={s}", .{kv.key, kv.value.*});
+    }
+    _ = try stream.writer().print("\naa_type={s}", .{@tagName(aa_type)});
+    _ = try stream.writer().print("\ncursor_type={s}", .{@tagName(cursor_type)});
+    _ = try file.write(stream.getWritten());
 }
 
 pub fn resetToDefault() void {
@@ -534,7 +440,7 @@ pub fn resetToDefault() void {
     enable_vsync = true;
     fps_cap = 360.0;
     fps_us = std.time.us_per_s / 360;
-    cursor_type = CursorType.aztec;
+    cursor_type = .aztec;
     aa_type = .msaa4x;
     save_email = true;
 }

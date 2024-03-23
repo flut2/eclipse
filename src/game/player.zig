@@ -402,7 +402,7 @@ pub const Player = struct {
         if (time < self.attack_start + attack_delay)
             return;
 
-        assets.playSfx(item_props.?.old_sound);
+        assets.playSfx(item_props.?.sound);
 
         self.attack_period = attack_delay;
         self.attack_angle = angle - camera.angle;

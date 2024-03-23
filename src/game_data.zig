@@ -4,55 +4,27 @@ const utils = @import("utils.zig");
 const asset_dir = @import("build_options").asset_dir;
 
 pub const ClassType = enum(u8) {
-    cave_wall,
     character,
-    character_changer,
-    closed_vault_chest,
-    connected_wall,
     container,
     game_object,
-    guild_board,
     guild_chronicle,
     guild_hall_portal,
-    guild_merchant,
-    guild_register,
     merchant,
-    money_changer,
-    name_changer,
-    reskin_vendor,
-    one_way_container,
     player,
     portal,
     projectile,
-    sign,
-    spider_web,
-    stalagmite,
     wall,
 
     const map = std.ComptimeStringMap(ClassType, .{
-        .{ "CaveWall", .cave_wall },
         .{ "Character", .character },
-        .{ "CharacterChanger", .character_changer },
-        .{ "ClosedVaultChest", .closed_vault_chest },
-        .{ "ConnectedWall", .connected_wall },
         .{ "Container", .container },
         .{ "GameObject", .game_object },
-        .{ "GuildBoard", .guild_board },
         .{ "GuildChronicle", .guild_chronicle },
         .{ "GuildHallPortal", .guild_hall_portal },
-        .{ "GuildMerchant", .guild_merchant },
-        .{ "GuildRegister", .guild_register },
         .{ "Merchant", .merchant },
-        .{ "MoneyChanger", .money_changer },
-        .{ "NameChanger", .name_changer },
-        .{ "ReskinVendor", .reskin_vendor },
-        .{ "OneWayContainer", .one_way_container },
         .{ "Player", .player },
         .{ "Portal", .portal },
         .{ "Projectile", .projectile },
-        .{ "Sign", .sign },
-        .{ "SpiderWeb", .spider_web },
-        .{ "Stalagmite", .stalagmite },
         .{ "Wall", .wall },
     });
 
@@ -61,20 +33,7 @@ pub const ClassType = enum(u8) {
     }
 
     pub fn isInteractive(class: ClassType) bool {
-        return class == .portal or
-            class == .container or
-            class == .merchant or
-            class == .guild_board or
-            class == .guild_chronicle or
-            class == .guild_register or
-            class == .guild_merchant;
-    }
-
-    pub fn hasPanel(class: ClassType) bool {
-        return class == .guild_board or
-            class == .guild_chronicle or
-            class == .guild_merchant or
-            class == .guild_register;
+        return class == .portal or class == .container or class == .merchant or class == .guild_chronicle;
     }
 };
 
@@ -89,6 +48,10 @@ pub const TextureData = struct {
             .index = try node.getValueInt("Index", u16, 0),
             .animated = animated,
         };
+    }
+
+    pub fn deinit(self: TextureData, allocator: std.mem.Allocator) void {
+        allocator.free(self.sheet);
     }
 };
 
@@ -129,6 +92,12 @@ pub const Ability = struct {
             .cooldown = try node.getValueFloat("Cooldown", f32, 0.0),
             .description = try node.getValueAlloc("Description", allocator, "Unknown"),
         };
+    }
+
+    pub fn deinit(self: Ability, allocator: std.mem.Allocator) void {
+        self.icon.deinit(allocator);
+        allocator.free(self.name);
+        allocator.free(self.description);
     }
 };
 
@@ -257,6 +226,25 @@ pub const CharacterClass = struct {
             .projs = try allocator.dupe(ProjProps, proj_list.items),
         };
     }
+
+    pub fn deinit(self: CharacterClass, allocator: std.mem.Allocator) void {
+        self.texture.deinit(allocator);
+        allocator.free(self.hit_sound);
+        allocator.free(self.death_sound);
+        allocator.free(self.name);
+        allocator.free(self.rpc_name);
+        for (self.projs) |props| {
+            props.deinit(allocator);
+        }
+        allocator.free(self.projs);
+        allocator.free(self.desc);
+        allocator.free(self.slot_types);
+        allocator.free(self.equipment);
+        self.ability_1.deinit(allocator);
+        self.ability_2.deinit(allocator);
+        self.ability_3.deinit(allocator);
+        self.ultimate_ability.deinit(allocator);
+    }
 };
 
 pub const AnimFrame = struct {
@@ -290,6 +278,13 @@ pub const AnimProps = struct {
             .period_jitter = @intFromFloat(try node.getAttributeFloat("periodJitter", f32, 0.0) * std.time.us_per_s),
             .frames = try allocator.dupe(AnimFrame, frame_list.items),
         };
+    }
+
+    pub fn deinit(self: AnimProps, allocator: std.mem.Allocator) void {
+        for (self.frames) |frame| {
+            frame.tex.deinit(allocator);
+        }
+        allocator.free(self.frames);
     }
 };
 
@@ -549,6 +544,29 @@ pub const ObjProps = struct {
         };
     }
 
+    pub fn deinit(self: ObjProps, allocator: std.mem.Allocator) void {
+        allocator.free(self.obj_id);
+        allocator.free(self.display_id);
+        allocator.free(self.death_sound);
+        allocator.free(self.hit_sound);
+
+        if (self.portrait) |tex_data| {
+            tex_data.deinit(allocator);
+        }
+
+        allocator.free(self.show_effects);
+
+        for (self.projectiles) |proj_props| {
+            proj_props.deinit(allocator);
+        }
+
+        allocator.free(self.projectiles);
+
+        if (self.anim_props) |anim_props| {
+            anim_props.deinit(allocator);
+        }
+    }
+
     pub fn getSize(self: *const ObjProps) f32 {
         if (self.min_size == self.max_size)
             return self.min_size;
@@ -653,6 +671,15 @@ pub const ProjProps = struct {
             .angle_change_clamp = try node.getValueFloat("AngleChangeClamp", f32, 0.0),
             .zero_velocity_delay = try node.getValueInt("ZeroVelocityDelay", i64, -1) * std.time.us_per_ms,
         };
+    }
+
+    pub fn deinit(self: ProjProps, allocator: std.mem.Allocator) void {
+        for (self.texture_data) |tex_data| {
+            tex_data.deinit(allocator);
+        }
+        allocator.free(self.texture_data);
+        allocator.free(self.object_id);
+        allocator.free(self.effects);
     }
 };
 
@@ -896,6 +923,12 @@ pub const ActivationData = struct {
             .amount = try node.getAttributeInt("amount", i16, 0),
         };
     }
+
+    pub fn deinit(self: *ActivationData, allocator: std.mem.Allocator) void {
+        allocator.free(self.id);
+        allocator.free(self.object_id);
+        allocator.free(self.dungeon_name);
+    }
 };
 
 pub const StatIncrementData = struct {
@@ -920,17 +953,17 @@ pub const EffectInfo = struct {
             .description = try node.getAttributeAlloc("description", allocator, ""),
         };
     }
+
+    pub fn deinit(self: *EffectInfo, allocator: std.mem.Allocator) void {
+        allocator.free(self.name);
+        allocator.free(self.description);
+    }
 };
 
 pub const ItemProps = struct {
     consumable: bool,
     untradeable: bool,
     usable: bool,
-    is_potion: bool,
-    xp_boost: bool,
-    lt_boosted: bool,
-    ld_boosted: bool,
-    backpack: bool,
     slot_type: ItemType,
     tier: []const u8,
     tier_req: u8,
@@ -947,8 +980,6 @@ pub const ItemProps = struct {
     activations: ?[]ActivationData,
     cooldown: f32,
     sound: []const u8,
-    old_sound: []const u8,
-    timer: f32,
     extra_tooltip_data: ?[]EffectInfo,
     description: []const u8,
 
@@ -992,17 +1023,41 @@ pub const ItemProps = struct {
             .stat_increments = try allocator.dupe(StatIncrementData, incr_list.items),
             .activations = try allocator.dupe(ActivationData, activate_list.items),
             .sound = try node.getValueAlloc("Sound", allocator, "Unknown"),
-            .old_sound = try node.getValueAlloc("OldSound", allocator, "Unknown"),
-            .is_potion = node.elementExists("Potion"),
             .cooldown = try node.getValueFloat("Cooldown", f32, 0.5),
-            .timer = try node.getValueFloat("Timer", f32, 0.0),
-            .xp_boost = node.elementExists("XpBoost"),
-            .lt_boosted = node.elementExists("LTBoosted"),
-            .ld_boosted = node.elementExists("LDBoosted"),
-            .backpack = node.elementExists("Backpack"),
             .extra_tooltip_data = try allocator.dupe(EffectInfo, extra_tooltip_list.items),
             .description = try node.getValueAlloc("Description", allocator, ""),
         };
+    }
+
+    pub fn deinit(self: *ItemProps, allocator: std.mem.Allocator) void {
+        if (self.stat_increments) |incr| {
+            allocator.free(incr);
+        }
+
+        if (self.activations) |activate| {
+            for (activate) |*data| {
+                data.deinit(allocator);
+            }
+            allocator.free(activate);
+        }
+
+        if (self.extra_tooltip_data) |data| {
+            for (data) |*effect| {
+                effect.deinit(allocator);
+            }
+            allocator.free(data);
+        }
+
+        allocator.free(self.texture_data.sheet);
+        allocator.free(self.tier);
+        allocator.free(self.sound);
+        allocator.free(self.id);
+        allocator.free(self.display_id);
+        allocator.free(self.description);
+
+        if (self.projectile) |*props| {
+            props.deinit(allocator);
+        }
     }
 };
 
@@ -1154,78 +1209,12 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 
     var obj_props_iter = obj_type_to_props.valueIterator();
     while (obj_props_iter.next()) |props| {
-        allocator.free(props.obj_id);
-        allocator.free(props.display_id);
-        allocator.free(props.death_sound);
-        allocator.free(props.hit_sound);
-
-        if (props.portrait) |tex_data| {
-            allocator.free(tex_data.sheet);
-        }
-
-        allocator.free(props.show_effects);
-
-        for (props.projectiles) |proj_props| {
-            for (proj_props.texture_data) |tex| {
-                allocator.free(tex.sheet);
-            }
-            allocator.free(proj_props.texture_data);
-            allocator.free(proj_props.object_id);
-            allocator.free(proj_props.effects);
-        }
-
-        allocator.free(props.projectiles);
-
-        if (props.anim_props) |anim_props| {
-            for (anim_props.frames) |frame| {
-                allocator.free(frame.tex.sheet);
-            }
-
-            allocator.free(anim_props.frames);
-        }
+        props.deinit(allocator);
     }
 
     var item_props_iter = item_type_to_props.valueIterator();
     while (item_props_iter.next()) |props| {
-        if (props.stat_increments) |stat_increment| {
-            allocator.free(stat_increment);
-        }
-
-        if (props.activations) |activate| {
-            for (activate) |data| {
-                allocator.free(data.id);
-                allocator.free(data.object_id);
-                allocator.free(data.dungeon_name);
-            }
-
-            allocator.free(activate);
-        }
-
-        if (props.extra_tooltip_data) |data| {
-            for (data) |effect| {
-                allocator.free(effect.name);
-                allocator.free(effect.description);
-            }
-
-            allocator.free(data);
-        }
-
-        allocator.free(props.texture_data.sheet);
-        allocator.free(props.tier);
-        allocator.free(props.old_sound);
-        allocator.free(props.sound);
-        allocator.free(props.id);
-        allocator.free(props.display_id);
-        allocator.free(props.description);
-
-        if (props.projectile) |proj_props| {
-            for (proj_props.texture_data) |tex| {
-                allocator.free(tex.sheet);
-            }
-            allocator.free(proj_props.texture_data);
-            allocator.free(proj_props.object_id);
-            allocator.free(proj_props.effects);
-        }
+        props.deinit(allocator);
     }
 
     var item_name_iter = item_type_to_name.valueIterator();
@@ -1251,7 +1240,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     var ground_tex_iter = ground_type_to_tex_data.valueIterator();
     while (ground_tex_iter.next()) |tex_list| {
         for (tex_list.*) |tex| {
-            allocator.free(tex.sheet);
+            tex.deinit(allocator);
         }
         allocator.free(tex_list.*);
     }
@@ -1259,7 +1248,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     var obj_tex_iter = obj_type_to_tex_data.valueIterator();
     while (obj_tex_iter.next()) |tex_list| {
         for (tex_list.*) |tex| {
-            allocator.free(tex.sheet);
+            tex.deinit(allocator);
         }
         allocator.free(tex_list.*);
     }
@@ -1267,42 +1256,14 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     var obj_top_tex_iter = obj_type_to_top_tex_data.valueIterator();
     while (obj_top_tex_iter.next()) |tex_list| {
         for (tex_list.*) |tex| {
-            allocator.free(tex.sheet);
+            tex.deinit(allocator);
         }
         allocator.free(tex_list.*);
     }
 
     var class_iter = classes.valueIterator();
     while (class_iter.next()) |class| {
-        allocator.free(class.texture.sheet);
-        allocator.free(class.hit_sound);
-        allocator.free(class.death_sound);
-        allocator.free(class.name);
-        allocator.free(class.rpc_name);
-        for (class.projs) |proj_props| {
-            for (proj_props.texture_data) |tex| {
-                allocator.free(tex.sheet);
-            }
-            allocator.free(proj_props.texture_data);
-            allocator.free(proj_props.object_id);
-            allocator.free(proj_props.effects);
-        }
-        allocator.free(class.projs);
-        allocator.free(class.desc);
-        allocator.free(class.slot_types);
-        allocator.free(class.equipment);
-        allocator.free(class.ability_1.icon.sheet);
-        allocator.free(class.ability_1.name);
-        allocator.free(class.ability_1.description);
-        allocator.free(class.ability_2.icon.sheet);
-        allocator.free(class.ability_2.name);
-        allocator.free(class.ability_2.description);
-        allocator.free(class.ability_3.icon.sheet);
-        allocator.free(class.ability_3.name);
-        allocator.free(class.ability_3.description);
-        allocator.free(class.ultimate_ability.icon.sheet);
-        allocator.free(class.ultimate_ability.name);
-        allocator.free(class.ultimate_ability.description);
+        class.deinit(allocator);
     }
 
     classes.deinit();
