@@ -278,6 +278,8 @@ pub const AccountRegisterScreen = struct {
         defer data.deinit();
 
         const response = try requests.sendRequest("account/register", data);
+        defer requests.freeResponse(response);
+
         if (std.mem.eql(u8, response, "<Error />")) {
             dialog.showDialog(.text, .{
                 .title = "Register Failed",
@@ -296,6 +298,8 @@ pub const AccountRegisterScreen = struct {
         defer verify_data.deinit();
 
         const response = try requests.sendRequest("account/verify", verify_data);
+        defer requests.freeResponse(response);
+
         if (std.mem.eql(u8, response, "<Error />")) {
             dialog.showDialog(.text, .{
                 .title = "Login Failed",
@@ -332,6 +336,8 @@ pub const AccountRegisterScreen = struct {
         defer list_data.deinit();
 
         const list_response = try requests.sendRequest("char/list", list_data);
+        defer requests.freeResponse(list_response);
+
         const list_doc = try xml.Doc.fromMemory(list_response);
         defer list_doc.deinit();
         const list_root = try list_doc.getRootElement();

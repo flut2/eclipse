@@ -19,7 +19,7 @@ pub fn deinit() void {
     body_pool.deinit();
 }
 
-pub fn sendRequest(comptime endpoint: []const u8, values: std.StringHashMap([]const u8)) ![]const u8 {
+pub fn sendRequest(comptime endpoint: []const u8, values: std.StringHashMap([]const u8)) ![]u8 {
     const header_buffer = try header_pool.create();
     defer header_pool.destroy(header_buffer);
 
@@ -42,7 +42,7 @@ pub fn sendRequest(comptime endpoint: []const u8, values: std.StringHashMap([]co
         }
 
         std.log.err("Could not send " ++ endpoint ++ " ({s}): {}", .{ stream.getWritten(), e });
-        return "<Error />";
+        return @constCast("<RequestError/>"); // inelegant is an understatement
     };
     defer req.deinit();
 
@@ -51,17 +51,27 @@ pub fn sendRequest(comptime endpoint: []const u8, values: std.StringHashMap([]co
 
     const writer = req.writer();
     var iter = values.iterator();
+    _ = try writer.write("?");
     while (iter.next()) |entry| {
         try writer.writeAll(entry.key_ptr.*);
         try writer.writeAll("=");
         try writer.writeAll(entry.value_ptr.*);
+        if (iter.index < iter.hm.capacity()) {
+            try writer.writeAll("&");
+        }
     }
 
     try req.finish();
     try req.wait();
 
     const body_buffer = try body_pool.create();
-    defer body_pool.destroy(body_buffer);
     const len = try req.readAll(body_buffer);
     return body_buffer[0..len];
+}
+
+pub fn freeResponse(buf: []u8) void {
+    if (std.mem.eql(u8, buf, "<RequestError/>"))
+        return;
+
+    body_pool.destroy(@ptrCast(@alignCast(buf)));
 }
