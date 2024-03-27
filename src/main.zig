@@ -32,8 +32,8 @@ pub const GPUInterface = wgpu.dawn.Interface;
 pub const SYSGPUInterface = sysgpu.Impl;
 
 pub const ServerData = struct {
-    name: []const u8 = "",
-    dns: []const u8 = "",
+    name: []const u8,
+    dns: []const u8,
     port: u16,
     max_players: u16,
     admin_only: bool,
@@ -47,6 +47,11 @@ pub const ServerData = struct {
             .admin_only = node.elementExists("AdminOnly") and std.mem.eql(u8, node.getValue("AdminOnly").?, "true"),
         };
     }
+
+    pub fn deinit(self: ServerData, allocator: std.mem.Allocator) void {
+        allocator.free(self.name);
+        allocator.free(self.dns);
+    }
 };
 
 pub const AccountData = struct {
@@ -58,34 +63,64 @@ pub const AccountData = struct {
     guild_rank: u8 = 0,
 };
 
-// todo faer stats
 pub const CharacterData = struct {
-    id: u32 = 0,
-    obj_type: u16 = 0,
-    name: []const u8 = "",
-    health: u16 = 100,
-    mana: u16 = 0,
-    tex_1: u32 = 0,
-    tex_2: u32 = 0,
-    texture: u16 = 0,
-    health_pots: i8 = 0,
-    magic_pots: i8 = 0,
-    has_backpack: bool = false,
-    equipment: [22]u16 = [_]u16{0} ** 22,
+    id: u32,
+    obj_type: u16,
+    name: []const u8,
+    health: u16,
+    mana: u16,
+    strength: u16,
+    wit: u16,
+    defense: u16,
+    resistance: u16,
+    speed: u16,
+    haste: u16,
+    stamina: u16,
+    intelligence: u16,
+    piercing: u16,
+    penetration: u16,
+    tenacity: u16,
+    tex_1: u32,
+    tex_2: u32,
+    texture: u16,
+    equipment: []u16,
 
     pub fn parse(allocator: std.mem.Allocator, node: xml.Node, id: u32) !CharacterData {
         const obj_type = try node.getValueInt("ObjectType", u16, 0);
+
+        var equip_list = try std.ArrayList(u16).initCapacity(allocator, 22);
+        defer equip_list.deinit();
+        var equip_iter = std.mem.split(u8, node.getValue("Equipment") orelse "", ", ");
+        while (equip_iter.next()) |s|
+            try equip_list.append(try std.fmt.parseInt(u16, s, 0));
+
         return CharacterData{
             .id = id,
             .obj_type = obj_type,
+            .health = try node.getValueInt("Health", u16, 0),
+            .mana = try node.getValueInt("Mana", u16, 0),
+            .strength = try node.getValueInt("Strength", u16, 0),
+            .wit = try node.getValueInt("Wit", u16, 0),
+            .defense = try node.getValueInt("Defense", u16, 0),
+            .resistance = try node.getValueInt("Resistance", u16, 0),
+            .speed = try node.getValueInt("Speed", u16, 0),
+            .haste = try node.getValueInt("Haste", u16, 0),
+            .stamina = try node.getValueInt("Stamina", u16, 0),
+            .intelligence = try node.getValueInt("Intelligence", u16, 0),
+            .piercing = try node.getValueInt("Piercing", u16, 0),
+            .penetration = try node.getValueInt("Penetration", u16, 0),
+            .tenacity = try node.getValueInt("Tenacity", u16, 0),
             .tex_1 = try node.getValueInt("Tex1", u32, 0),
             .tex_2 = try node.getValueInt("Tex2", u32, 0),
             .texture = try node.getValueInt("Texture", u16, 0),
-            .health_pots = try node.getValueInt("HealthStackCount", i8, 0),
-            .magic_pots = try node.getValueInt("MagicStackCount", i8, 0),
-            .has_backpack = try node.getValueInt("HasBackpack", i8, 0) > 0,
+            .equipment = try allocator.dupe(u16, equip_list.items),
             .name = try allocator.dupe(u8, game_data.obj_type_to_name.get(obj_type) orelse "Unknown Class"),
         };
+    }
+
+    pub fn deinit(self: CharacterData, allocator: std.mem.Allocator) void {
+        allocator.free(self.name);
+        allocator.free(self.equipment);
     }
 };
 
@@ -367,15 +402,14 @@ pub fn main() !void {
 
         if (character_list.len > 0) {
             for (character_list) |char| {
-                allocator.free(char.name);
+                char.deinit(allocator);
             }
             allocator.free(character_list);
         }
 
         if (server_list) |srv_list| {
             for (srv_list) |srv| {
-                allocator.free(srv.name);
-                allocator.free(srv.dns);
+                srv.deinit(allocator);
             }
             allocator.free(srv_list);
         }
@@ -384,8 +418,6 @@ pub fn main() !void {
     version_text = "v" ++ settings.build_version;
     rpc_client = try rpc.init(allocator, &ready);
     defer rpc_client.deinit();
-
-    std.os.maybeIgnoreSigpipe();
 
     if (!glfw.init(.{})) {
         glfw.getErrorCode() catch |err| switch (err) {

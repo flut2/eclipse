@@ -68,48 +68,48 @@ pub const Button = union(enum) {
 };
 
 const key_name_map = std.ComptimeStringMap(*Button, .{
-    .{"move_left", &move_left},
-    .{"move_right", &move_right},
-    .{"move_up", &move_up},
-    .{"move_down", &move_down},
-    .{"rotate_left", &rotate_left},
-    .{"rotate_right", &rotate_right},
-    .{"interact", &interact},
-    .{"options", &options},
-    .{"escape", &escape},
-    .{"chat_up", &chat_up},
-    .{"chat_down", &chat_down},
-    .{"walk", &walk},
-    .{"reset_camera", &reset_camera},
-    .{"toggle_perf_stats", &toggle_perf_stats},
-    .{"chat", &chat},
-    .{"chat_cmd", &chat_cmd},
-    .{"respond", &respond},
-    .{"toggle_centering", &toggle_centering},
-    .{"toggle_stats", &toggle_stats},
-    .{"shoot", &shoot},
-    .{"ability_1", &ability_1},
-    .{"ability_2", &ability_2},
-    .{"ability_3", &ability_3},
-    .{"ultimate_ability", &ultimate_ability},
+    .{ "move_left", &move_left },
+    .{ "move_right", &move_right },
+    .{ "move_up", &move_up },
+    .{ "move_down", &move_down },
+    .{ "rotate_left", &rotate_left },
+    .{ "rotate_right", &rotate_right },
+    .{ "interact", &interact },
+    .{ "options", &options },
+    .{ "escape", &escape },
+    .{ "chat_up", &chat_up },
+    .{ "chat_down", &chat_down },
+    .{ "walk", &walk },
+    .{ "reset_camera", &reset_camera },
+    .{ "toggle_perf_stats", &toggle_perf_stats },
+    .{ "chat", &chat },
+    .{ "chat_cmd", &chat_cmd },
+    .{ "respond", &respond },
+    .{ "toggle_centering", &toggle_centering },
+    .{ "toggle_stats", &toggle_stats },
+    .{ "shoot", &shoot },
+    .{ "ability_1", &ability_1 },
+    .{ "ability_2", &ability_2 },
+    .{ "ability_3", &ability_3 },
+    .{ "ultimate_ability", &ultimate_ability },
 });
 
 const bool_name_map = std.ComptimeStringMap(*bool, .{
-    .{"enable_lights", &enable_lights},
-    .{"enable_vsync", &enable_vsync},
-    .{"save_email", &save_email},
+    .{ "enable_lights", &enable_lights },
+    .{ "enable_vsync", &enable_vsync },
+    .{ "save_email", &save_email },
 });
 
 const float_name_map = std.ComptimeStringMap(*f32, .{
-    .{"sfx_volume", &sfx_volume},
-    .{"music_volume", &music_volume},
-    .{"fps_cap", &fps_cap},
+    .{ "sfx_volume", &sfx_volume },
+    .{ "music_volume", &music_volume },
+    .{ "fps_cap", &fps_cap },
 });
 
 const int_name_map = std.ComptimeStringMap(*i32, .{});
 
 const string_name_map = std.ComptimeStringMap(*[]const u8, .{
-    .{"email", &email},
+    .{ "email", &email },
 });
 
 pub const build_version = "0.5";
@@ -267,7 +267,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try key_tex_map.put(.{ .key = .left_super }, if (builtin.os.tag == .windows) 0x0b else 0x30);
     try key_tex_map.put(.{ .key = .right_super }, if (builtin.os.tag == .windows) 0x0b else 0x30);
 
-    try save();
     try parseSettings(allocator);
 }
 
@@ -387,24 +386,24 @@ pub fn save() !void {
 
     _ = try stream.write("[Keys]");
     for (key_name_map.kvs) |kv| {
-        try stream.writer().print("\n{s}={s}{s}", .{kv.key, kv.value.getPrefix(), kv.value.getTagName()});
+        try stream.writer().print("\n{s}={s}{s}", .{ kv.key, kv.value.getPrefix(), kv.value.getTagName() });
     }
     _ = try file.write(stream.getWritten());
 
     try stream.seekTo(0);
     _ = try stream.write("\n[Misc]");
     for (bool_name_map.kvs) |kv| {
-        try stream.writer().print("\n{s}={s}", .{kv.key, if (kv.value.*) "true" else "false"});
+        try stream.writer().print("\n{s}={s}", .{ kv.key, if (kv.value.*) "true" else "false" });
     }
     for (float_name_map.kvs) |kv| {
-        try stream.writer().print("\n{s}={d:.2}", .{kv.key, kv.value.*});
+        try stream.writer().print("\n{s}={d:.2}", .{ kv.key, kv.value.* });
     }
     // Uncomment when int settings are added. Would error otherwise
     // for (int_name_map.kvs) |kv| {
     //     try stream.writer().print("\n{s}={d}", .{kv.key, kv.value.*});
     // }
     for (string_name_map.kvs) |kv| {
-        try stream.writer().print("\n{s}={s}", .{kv.key, kv.value.*});
+        try stream.writer().print("\n{s}={s}", .{ kv.key, kv.value.* });
     }
     _ = try stream.writer().print("\naa_type={s}", .{@tagName(aa_type)});
     _ = try stream.writer().print("\ncursor_type={s}", .{@tagName(cursor_type)});
