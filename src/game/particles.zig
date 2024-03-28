@@ -19,7 +19,7 @@ pub const ThrowParticle = struct {
     dx: f32,
     dy: f32,
 
-    _last_update: i64 = 0,
+    last_update: i64 = 0,
 
     pub inline fn addToMap(self: *ThrowParticle) void {
         self.obj_id = Particle.getNextObjId();
@@ -41,7 +41,7 @@ pub const ThrowParticle = struct {
         self.x += self.dx * dt / std.time.us_per_ms;
         self.y += self.dy * dt / std.time.us_per_ms;
 
-        if (time - self._last_update >= 16 * std.time.us_per_ms) {
+        if (time - self.last_update >= 16 * std.time.us_per_ms) {
             const duration: f32 = 0.4 * std.time.us_per_s;
             var particle = SparkParticle{
                 .size = @floor(self.z + 1),
@@ -57,7 +57,7 @@ pub const ThrowParticle = struct {
             };
             particle.addToMap();
 
-            self._last_update = time;
+            self.last_update = time;
         }
         return true;
     }
@@ -79,7 +79,7 @@ pub const SparkerParticle = struct {
     dx: f32,
     dy: f32,
 
-    _last_update: i64 = 0,
+    last_update: i64 = 0,
 
     pub inline fn addToMap(self: *SparkerParticle) void {
         self.obj_id = Particle.getNextObjId();
@@ -100,7 +100,7 @@ pub const SparkerParticle = struct {
         self.x += self.dx * dt;
         self.y += self.dy * dt;
 
-        if (time - self._last_update >= 16 * std.time.us_per_ms) {
+        if (time - self.last_update >= 16 * std.time.us_per_ms) {
             const duration: f32 = 0.6 * std.time.us_per_s;
             var particle = SparkParticle{
                 .size = 0.5,
@@ -116,7 +116,7 @@ pub const SparkerParticle = struct {
             };
             particle.addToMap();
 
-            self._last_update = time;
+            self.last_update = time;
         }
 
         return true;

@@ -1,5 +1,4 @@
 const std = @import("std");
-const Allocator = @import("std").mem.Allocator;
 const glfw = @import("mach-glfw");
 const nfd = @import("nfd");
 const assets = @import("../../assets.zig");
@@ -138,7 +137,7 @@ const CommandQueue = struct {
     command_list: std.ArrayList(EditorCommand) = undefined,
     current_position: u32 = 0,
 
-    pub fn init(self: *CommandQueue, allocator: Allocator) void {
+    pub fn init(self: *CommandQueue, allocator: std.mem.Allocator) void {
         self.command_list = std.ArrayList(EditorCommand).init(allocator);
     }
 
@@ -203,63 +202,57 @@ const CommandQueue = struct {
 
 pub const EditorBrush = struct {
     size: i8 = 1,
-    brush_type: enum(u8) {
-        rectangle = 0,
-        circle = 1,
-        line = 2,
-    } = .rectangle,
+    brush_type: enum { rectangle, circle, line } = .rectangle,
+    visual_objects: std.ArrayList(i32) = undefined,
+    screen: *MapEditorScreen = undefined,
+    last_x: i32 = 0,
+    last_y: i32 = 0,
+    need_update: bool = false,
 
-    _visual_objects: std.ArrayList(i32) = undefined,
-
-    _screen: *MapEditorScreen = undefined,
-    _last_x: i32 = 0,
-    _last_y: i32 = 0,
-    _need_update: bool = false,
-
-    pub fn init(self: *EditorBrush, allocator: Allocator, screen: *MapEditorScreen) void {
-        self._visual_objects = std.ArrayList(i32).initCapacity(allocator, 5 * 5) catch return; // max brush size if 5 * 5
-        self._screen = screen;
+    pub fn init(self: *EditorBrush, allocator: std.mem.Allocator, screen: *MapEditorScreen) void {
+        self.visual_objects = std.ArrayList(i32).initCapacity(allocator, 5 * 5) catch return; // max brush size if 5 * 5
+        self.screen = screen;
     }
 
     pub fn reset(self: *EditorBrush) void {
         self.size = 1;
         self.brush_type = .rectangle;
-        self._visual_objects.clearAndFree();
-        self._need_update = false;
-        self._last_x = 0;
-        self._last_y = 0;
+        self.visual_objects.clearAndFree();
+        self.need_update = false;
+        self.last_x = 0;
+        self.last_y = 0;
     }
 
     pub fn update(self: *EditorBrush) void {
-        self._need_update = true;
+        self.need_update = true;
     }
 
     pub fn deinit(self: *EditorBrush) void {
-        self._visual_objects.deinit();
+        self.visual_objects.deinit();
     }
 
     pub fn increaseSize(self: *EditorBrush) void {
         self.size = if (self.size + 1 > 5) 1 else self.size + 1;
-        self._need_update = true;
+        self.need_update = true;
     }
 
     pub fn decreaseSize(self: *EditorBrush) void {
         self.size = if (self.size - 1 <= 0) 5 else self.size - 1;
-        self._need_update = true;
+        self.need_update = true;
     }
 
     fn updateVisual(self: *EditorBrush, center_x: u32, center_y: u32, place_type: u16) void {
         const casted_x = @as(i32, @intCast(center_x));
         const casted_y = @as(i32, @intCast(center_y));
 
-        if (!self._need_update) {
-            const dx = (casted_x - self._last_x);
-            const dy = (casted_y - self._last_y);
+        if (!self.need_update) {
+            const dx = (casted_x - self.last_x);
+            const dy = (casted_y - self.last_y);
             if (dx != 0 or dy != 0) {
                 const dx_cast = @as(f32, @floatFromInt(dx));
                 const dy_cast = @as(f32, @floatFromInt(dy));
 
-                for (self._visual_objects.items) |obj_id| {
+                for (self.visual_objects.items) |obj_id| {
                     if (map.findEntityRef(obj_id)) |en| {
                         if (en.* == .object) {
                             const o = &en.object;
@@ -268,18 +261,18 @@ pub const EditorBrush = struct {
                         }
                     }
                 }
-                self._last_x = casted_x;
-                self._last_y = casted_y;
+                self.last_x = casted_x;
+                self.last_y = casted_y;
             }
             return;
         }
 
-        self._need_update = false;
+        self.need_update = false;
 
-        for (self._visual_objects.items) |obj_id| {
-            map.removeEntity(self._screen._allocator, obj_id);
+        for (self.visual_objects.items) |obj_id| {
+            map.removeEntity(self.screen.allocator, obj_id);
         }
-        self._visual_objects.clearRetainingCapacity();
+        self.visual_objects.clearRetainingCapacity();
 
         var x: i32 = -self.size;
         while (x <= self.size) {
@@ -293,24 +286,24 @@ pub const EditorBrush = struct {
                     continue;
                 }
 
-                if (offset_x < 0 or offset_y < 0 or offset_x >= self._screen.map_size or offset_y >= self._screen.map_size) {
+                if (offset_x < 0 or offset_y < 0 or offset_x >= self.screen.map_size or offset_y >= self.screen.map_size) {
                     y += 1;
                     continue;
                 }
 
-                self._screen.simulated_object_id_next += 1;
+                self.screen.simulated_object_id_next += 1;
 
                 var obj = GameObject{
                     .x = @as(f32, @floatFromInt(offset_x)) + 0.5,
                     .y = @as(f32, @floatFromInt(offset_y)) + 0.5,
-                    .obj_id = self._screen.simulated_object_id_next,
+                    .obj_id = self.screen.simulated_object_id_next,
                     .obj_type = place_type,
                     .size = 100,
                     .alpha = 0.6,
                 };
-                obj.addToMap(self._screen._allocator);
+                obj.addToMap(self.screen.allocator);
 
-                self._visual_objects.append(obj.obj_id) catch return;
+                self.visual_objects.append(obj.obj_id) catch return;
 
                 y += 1;
             }
@@ -318,13 +311,13 @@ pub const EditorBrush = struct {
             x += 1;
         }
 
-        self._last_x = casted_x;
-        self._last_y = casted_y;
+        self.last_x = casted_x;
+        self.last_y = casted_y;
     }
 };
 
 pub const MapEditorScreen = struct {
-    _allocator: Allocator,
+    allocator: std.mem.Allocator,
     inited: bool = false,
 
     simulated_object_id_next: i32 = -1,
@@ -377,9 +370,9 @@ pub const MapEditorScreen = struct {
     cycle_up_setting: settings.Button = .{ .key = .one },
     cycle_down_setting: settings.Button = .{ .key = .two },
 
-    pub fn init(allocator: Allocator) !*MapEditorScreen {
+    pub fn init(allocator: std.mem.Allocator) !*MapEditorScreen {
         var screen = try allocator.create(MapEditorScreen);
-        screen.* = .{ ._allocator = allocator };
+        screen.* = .{ .allocator = allocator };
 
         const presence = rpc.Packet.Presence{
             .assets = .{
@@ -437,14 +430,14 @@ pub const MapEditorScreen = struct {
         };
 
         {
-            fps_text_data._lock.lock();
-            defer fps_text_data._lock.unlock();
+            fps_text_data.lock.lock();
+            defer fps_text_data.lock.unlock();
 
             fps_text_data.recalculateAttributes(allocator);
         }
 
         screen.fps_text = try element.create(allocator, element.Text{
-            .x = camera.screen_width - fps_text_data._width - 10,
+            .x = camera.screen_width - fps_text_data.width - 10,
             .y = 16,
             .text_data = fps_text_data,
         });
@@ -546,14 +539,14 @@ pub const MapEditorScreen = struct {
         };
 
         {
-            text_size_64.text_data._lock.lock();
-            defer text_size_64.text_data._lock.unlock();
+            text_size_64.text_data.lock.lock();
+            defer text_size_64.text_data.lock.unlock();
 
             text_size_64.text_data.recalculateAttributes(allocator);
         }
 
-        text_size_64.x -= text_size_64.text_data._width / 2;
-        text_size_64.y -= text_size_64.text_data._height / 2;
+        text_size_64.x -= text_size_64.text_data.width / 2;
+        text_size_64.y -= text_size_64.text_data.height / 2;
 
         var text_size_128 = element.Text{
             .x = new_container_width / 2,
@@ -569,14 +562,14 @@ pub const MapEditorScreen = struct {
         };
 
         {
-            text_size_128.text_data._lock.lock();
-            defer text_size_128.text_data._lock.unlock();
+            text_size_128.text_data.lock.lock();
+            defer text_size_128.text_data.lock.unlock();
 
             text_size_128.text_data.recalculateAttributes(allocator);
         }
 
-        text_size_128.x -= text_size_128.text_data._width / 2;
-        text_size_128.y -= text_size_128.text_data._height / 2;
+        text_size_128.x -= text_size_128.text_data.width / 2;
+        text_size_128.y -= text_size_128.text_data.height / 2;
 
         var text_size_256 = element.Text{
             .x = new_container_width / 2,
@@ -592,14 +585,14 @@ pub const MapEditorScreen = struct {
         };
 
         {
-            text_size_256.text_data._lock.lock();
-            defer text_size_256.text_data._lock.unlock();
+            text_size_256.text_data.lock.lock();
+            defer text_size_256.text_data.lock.unlock();
 
             text_size_256.text_data.recalculateAttributes(allocator);
         }
 
-        text_size_256.x -= text_size_256.text_data._width / 2;
-        text_size_256.y -= text_size_256.text_data._height / 2;
+        text_size_256.x -= text_size_256.text_data.width / 2;
+        text_size_256.y -= text_size_256.text_data.height / 2;
 
         const check_padding = 5.0;
 
@@ -867,9 +860,9 @@ pub const MapEditorScreen = struct {
         map.setWH(screen.map_size, screen.map_size);
 
         if (screen.map_tile_data.len == 0) {
-            screen.map_tile_data = screen._allocator.alloc(MapEditorTile, screen.map_size * screen.map_size) catch return;
+            screen.map_tile_data = screen.allocator.alloc(MapEditorTile, screen.map_size * screen.map_size) catch return;
         } else {
-            screen.map_tile_data = screen._allocator.realloc(screen.map_tile_data, screen.map_size * screen.map_size) catch return;
+            screen.map_tile_data = screen.allocator.realloc(screen.map_tile_data, screen.map_size * screen.map_size) catch return;
         }
 
         map.local_player_id = 0xFFFC;
@@ -898,7 +891,7 @@ pub const MapEditorScreen = struct {
             .speed = 300,
         };
 
-        player.addToMap(screen._allocator);
+        player.addToMap(screen.allocator);
 
         main.editing_map = true;
 
@@ -972,15 +965,15 @@ pub const MapEditorScreen = struct {
         element.destroy(self.buttons_container);
 
         if (self.map_tile_data.len > 0) {
-            self._allocator.free(self.map_tile_data);
+            self.allocator.free(self.map_tile_data);
         }
 
         if (main.editing_map) {
             main.editing_map = false;
-            map.dispose(self._allocator);
+            map.dispose(self.allocator);
         }
 
-        self._allocator.destroy(self);
+        self.allocator.destroy(self);
     }
 
     pub fn resize(self: *MapEditorScreen, width: f32, height: f32) void {
@@ -1175,13 +1168,13 @@ pub const MapEditorScreen = struct {
         }
 
         if (value == 0xFFFF) {
-            map.removeEntity(self._allocator, self.map_tile_data[index].object_id);
+            map.removeEntity(self.allocator, self.map_tile_data[index].object_id);
 
             self.map_tile_data[index].object_type = value;
             self.map_tile_data[index].object_id = value;
         } else {
             if (self.map_tile_data[index].object_id != -1) {
-                map.removeEntity(self._allocator, self.map_tile_data[index].object_id);
+                map.removeEntity(self.allocator, self.map_tile_data[index].object_id);
             }
 
             self.simulated_object_id_next += 1;
@@ -1198,7 +1191,7 @@ pub const MapEditorScreen = struct {
                 .alpha = 1.0,
             };
 
-            obj.addToMap(self._allocator);
+            obj.addToMap(self.allocator);
         }
     }
 
@@ -1327,7 +1320,7 @@ pub const MapEditorScreen = struct {
         const layer_name = if (self.active_layer == .ground) "Ground" else if (self.active_layer == .object) "Object" else "Region";
         const mode = if (self.action == .none) "None" else if (self.action == .place) "Placing" else if (self.action == .erase) "Erasing" else if (self.action == .sample) "Sampling" else if (self.action == .undo) "Undoing" else if (self.action == .redo) "Redoing" else "Idle";
 
-        self.text_statistics.text_data.text = try std.fmt.bufPrint(self.text_statistics.text_data._backing_buffer, "Size: ({d}x{d})\n\nLayer: {s}\nPlacing: {s}\n\nMode:{s}\nBrush Size {d}\n\nGround Type: {s}\nObject Type: {s}\nRegion Type: {d}\n\nPosition ({d:.1}, {d:.1}),\nFloor: ({d}, {d})\nWorld Coordinate ({d:.1}, {d:.1})", .{
+        self.text_statistics.text_data.text = try std.fmt.bufPrint(self.text_statistics.text_data.backing_buffer, "Size: ({d}x{d})\n\nLayer: {s}\nPlacing: {s}\n\nMode:{s}\nBrush Size {d}\n\nGround Type: {s}\nObject Type: {s}\nRegion Type: {d}\n\nPosition ({d:.1}, {d:.1}),\nFloor: ({d}, {d})\nWorld Coordinate ({d:.1}, {d:.1})", .{
             self.map_size,
             self.map_size,
             layer_name,
@@ -1351,9 +1344,9 @@ pub const MapEditorScreen = struct {
             return;
 
         self.fps_text.text_data.setText(
-            try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, "FPS: {d}\nMemory: {d:.1} MB", .{ fps, mem }),
-            self._allocator,
+            try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, "FPS: {d}\nMemory: {d:.1} MB", .{ fps, mem }),
+            self.allocator,
         );
-        self.fps_text.x = camera.screen_width - self.fps_text.text_data._width - 10;
+        self.fps_text.x = camera.screen_width - self.fps_text.text_data.width - 10;
     }
 };

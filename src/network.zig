@@ -272,10 +272,10 @@ pub const Server = struct {
     node_pool: std.heap.MemoryPool(C2SQueue.Node),
     write_buffer_pool: std.heap.MemoryPool([write_buffer_size]u8),
     reader: utils.PacketReader = .{},
-    _write_lock: std.Thread.Mutex = .{},
-    _write_comp: ?*xev.Completion = null,
-    _allocator: std.mem.Allocator = undefined,
-    _hello_data: C2SPacket = undefined,
+    write_lock: std.Thread.Mutex = .{},
+    write_comp: ?*xev.Completion = null,
+    allocator: std.mem.Allocator = undefined,
+    hello_data: C2SPacket = undefined,
 
     pub fn init(allocator: std.mem.Allocator, loop: *xev.Loop) !Server {
         var ret = Server{
@@ -283,7 +283,7 @@ pub const Server = struct {
             .completion_pool = std.heap.MemoryPool(xev.Completion).init(allocator),
             .node_pool = std.heap.MemoryPool(C2SQueue.Node).init(allocator),
             .write_buffer_pool = std.heap.MemoryPool([write_buffer_size]u8).init(allocator),
-            ._allocator = allocator,
+            .allocator = allocator,
         };
 
         ret.write_queue.init(try allocator.create(C2SQueue.Node));
@@ -294,14 +294,14 @@ pub const Server = struct {
     fn disposeCallback(ud: ?*anyopaque, _: *xev.Loop, c: *xev.Completion, _: xev.Result) xev.CallbackAction {
         const self: *Server = @ptrCast(@alignCast(ud.?));
         self.completion_pool.destroy(c);
-        self._write_comp = null;
+        self.write_comp = null;
         return .disarm;
     }
 
     fn cancelWriteQueue(self: *Server) void {
         self.write_queue.init(self.write_queue.stub);
 
-        if (self._write_comp) |wc| {
+        if (self.write_comp) |wc| {
             var c = self.completion_pool.create() catch unreachable;
             c.op = .{ .cancel = .{ .c = wc } };
             c.userdata = self;
@@ -317,15 +317,15 @@ pub const Server = struct {
         self.completion_pool.deinit();
         self.write_buffer_pool.deinit();
         self.node_pool.deinit();
-        self._allocator.destroy(self.write_queue.stub);
-        self._allocator.free(self.reader.buffer);
+        self.allocator.destroy(self.write_queue.stub);
+        self.allocator.free(self.reader.buffer);
     }
 
     pub fn connect(self: *Server, ip: []const u8, port: u16, hello_data: C2SPacket) !void {
         const addr = try std.net.Address.parseIp4(ip, port);
         const socket = try xev.TCP.init(addr);
 
-        self._hello_data = hello_data;
+        self.hello_data = hello_data;
 
         const c = try self.completion_pool.create();
         socket.connect(self.loop, c, addr, Server, self, connectCallback);
@@ -347,10 +347,10 @@ pub const Server = struct {
         const needs_cancel = packet == .use_portal or packet == .escape;
 
         // What's the point of the MPSC queue if we're going to have to lock either way for MemoryPool? todo thread safe MemoryPool
-        self._write_lock.lock();
+        self.write_lock.lock();
 
         defer {
-            self._write_lock.unlock();
+            self.write_lock.unlock();
             if (needs_cancel) {
                 main.clear();
                 main.tick_frame = false;
@@ -401,8 +401,8 @@ pub const Server = struct {
         node.buf = writer.buffer[0..writer.index];
         self.write_queue.push(node);
         if (empty) {
-            self._write_comp = self.completion_pool.create() catch unreachable;
-            self.socket.?.write(self.loop, self._write_comp.?, .{ .slice = node.buf }, Server, self, writeCallback);
+            self.write_comp = self.completion_pool.create() catch unreachable;
+            self.socket.?.write(self.loop, self.write_comp.?, .{ .slice = node.buf }, Server, self, writeCallback);
         }
     }
 
@@ -410,7 +410,7 @@ pub const Server = struct {
         if (self) |srv| {
             srv.socket = socket;
             socket.read(srv.loop, c, .{ .slice = srv.reader.buffer }, Server, srv, readCallback);
-            srv.queuePacket(srv._hello_data);
+            srv.queuePacket(srv.hello_data);
         }
 
         return .disarm;
@@ -433,7 +433,7 @@ pub const Server = struct {
                     srv.socket.?.write(srv.loop, c, .{ .slice = next.buf }, Server, srv, writeCallback);
                 } else {
                     srv.completion_pool.destroy(c);
-                    srv._write_comp = null;
+                    srv.write_comp = null;
                 }
 
                 srv.write_buffer_pool.destroy(
@@ -533,7 +533,7 @@ pub const Server = struct {
             while (srv.loop.flags.in_run) {}
 
             srv.socket = null;
-            srv._write_comp = null;
+            srv.write_comp = null;
             _ = srv.completion_pool.reset(.free_all);
             _ = srv.node_pool.reset(.free_all);
             _ = srv.write_buffer_pool.reset(.free_all);
@@ -652,7 +652,7 @@ pub const Server = struct {
                         player.colors,
                         0.0,
                         100.0 / 10000.0,
-                        self._allocator,
+                        self.allocator,
                     );
                 },
                 .object => |*object| {
@@ -665,7 +665,7 @@ pub const Server = struct {
                         object.colors,
                         0.0,
                         100.0 / 10000.0,
-                        self._allocator,
+                        self.allocator,
                     );
                 },
                 else => {},
@@ -758,7 +758,7 @@ pub const Server = struct {
     fn handleFailure(self: *Server) void {
         var reader = &self.reader;
         const error_id = reader.read(FailureType);
-        const error_description = self._allocator.dupe(u8, reader.readArray(u8)) catch &[0]u8{};
+        const error_description = self.allocator.dupe(u8, reader.readArray(u8)) catch &[0]u8{};
 
         if (error_id == .message_with_disconnect or error_id == .force_close_game) {
             main.disconnect();
@@ -832,8 +832,8 @@ pub const Server = struct {
         map.setWH(width, height);
         map.rpc_set = false;
         if (map.name.len > 0)
-            self._allocator.free(map.name);
-        map.name = self._allocator.dupe(u8, reader.readArray(u8)) catch "";
+            self.allocator.free(map.name);
+        map.name = self.allocator.dupe(u8, reader.readArray(u8)) catch "";
 
         map.bg_light_color = reader.read(u32);
         map.bg_light_intensity = reader.read(f32);
@@ -931,7 +931,7 @@ pub const Server = struct {
                                 std.log.err("Could not parse stat {d}: {}", .{ stat_id, e });
                                 continue;
                             };
-                            if (!parsePlayerStat(&player.*, stat, &stat_reader, self._allocator)) {
+                            if (!parsePlayerStat(&player.*, stat, &stat_reader, self.allocator)) {
                                 std.log.err("Stat data parsing for stat {} failed, player: {}", .{ stat, player });
                                 continue;
                             }
@@ -968,7 +968,7 @@ pub const Server = struct {
                                 std.log.err("Could not parse stat {d}: {}", .{ stat_id, e });
                                 continue;
                             };
-                            if (!parseObjectStat(&object.*, stat, &stat_reader, self._allocator)) {
+                            if (!parseObjectStat(&object.*, stat, &stat_reader, self.allocator)) {
                                 std.log.err("Stat data parsing for stat {} failed, object: {}", .{ stat, object });
                                 continue;
                             }
@@ -998,7 +998,7 @@ pub const Server = struct {
 
         if (map.findEntityConst(object_id)) |en| {
             const text_data = element.TextData{
-                .text = self._allocator.dupe(u8, message) catch return,
+                .text = self.allocator.dupe(u8, message) catch return,
                 .text_type = .bold,
                 .size = 16,
                 .color = color,
@@ -1253,7 +1253,7 @@ pub const Server = struct {
                     .atlas_data = atlas_data,
                 } },
                 .text_data = .{
-                    .text = self._allocator.dupe(u8, text) catch unreachable,
+                    .text = self.allocator.dupe(u8, text) catch unreachable,
                     .size = 16,
                     .max_width = 160,
                     .outline_width = 1.5,
@@ -1334,7 +1334,7 @@ pub const Server = struct {
             map.object_lock.lock();
             defer map.object_lock.unlock();
             for (drops) |drop| {
-                map.removeEntity(self._allocator, drop);
+                map.removeEntity(self.allocator, drop);
             }
         }
 
@@ -1362,13 +1362,13 @@ pub const Server = struct {
                             std.log.err("Could not parse stat {d}: {}", .{ stat_id, e });
                             continue;
                         };
-                        if (!parsePlayerStat(&player, stat, &stat_reader, self._allocator)) {
+                        if (!parsePlayerStat(&player, stat, &stat_reader, self.allocator)) {
                             std.log.err("Stat data parsing for stat {} failed, player: {}", .{ stat, player });
                             continue;
                         }
                     }
 
-                    player.addToMap(self._allocator);
+                    player.addToMap(self.allocator);
                 },
                 inline else => {
                     var obj = GameObject{ .x = x, .y = y, .obj_id = obj_id, .obj_type = obj_type };
@@ -1379,13 +1379,13 @@ pub const Server = struct {
                             std.log.err("Could not parse stat {d}: {}", .{ stat_id, e });
                             continue;
                         };
-                        if (!parseObjectStat(&obj, stat, &stat_reader, self._allocator)) {
+                        if (!parseObjectStat(&obj, stat, &stat_reader, self.allocator)) {
                             std.log.err("Stat data parsing for stat {} failed, object: {}", .{ stat, obj });
                             continue;
                         }
                     }
 
-                    obj.addToMap(self._allocator);
+                    obj.addToMap(self.allocator);
                 },
             }
         }
@@ -1461,8 +1461,8 @@ pub const Server = struct {
                     };
 
                     {
-                        plr.name_text_data.?._lock.lock();
-                        defer plr.name_text_data.?._lock.unlock();
+                        plr.name_text_data.?.lock.lock();
+                        defer plr.name_text_data.?.lock.unlock();
 
                         plr.name_text_data.?.recalculateAttributes(allocator);
                     }
@@ -1535,8 +1535,8 @@ pub const Server = struct {
                     };
 
                     {
-                        obj.name_text_data.?._lock.lock();
-                        defer obj.name_text_data.?._lock.unlock();
+                        obj.name_text_data.?.lock.lock();
+                        defer obj.name_text_data.?.lock.unlock();
 
                         obj.name_text_data.?.recalculateAttributes(allocator);
                     }

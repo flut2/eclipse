@@ -98,7 +98,7 @@ pub const Player = struct {
     last_ground_damage_time: i64 = -1,
     anim_data: assets.AnimPlayerData = undefined,
     atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
-    render_x_offset: f32 = 0.0,
+    renderx_offset: f32 = 0.0,
     move_multiplier: f32 = 1.0,
     sink_level: f32 = 0,
     colors: []u32 = &[0]u32{},
@@ -110,7 +110,7 @@ pub const Player = struct {
     ability_use_times: [4]i64 = [_]i64{-1} ** 4,
     ability_data: std.ArrayList(u8) = undefined,
     in_combat: bool = false,
-    _disposed: bool = false,
+    disposed: bool = false,
 
     pub fn onMove(self: *Player) void {
         if (map.getSquare(self.x, self.y)) |square| {
@@ -200,8 +200,8 @@ pub const Player = struct {
             };
 
             {
-                self.name_text_data.?._lock.lock();
-                defer self.name_text_data.?._lock.unlock();
+                self.name_text_data.?.lock.lock();
+                defer self.name_text_data.?.lock.unlock();
 
                 self.name_text_data.?.recalculateAttributes(allocator);
             }
@@ -545,7 +545,7 @@ pub const Player = struct {
         const w = (self.atlas_data.texWRaw() - assets.padding * 2) * size;
         const h = (self.atlas_data.texHRaw() - assets.padding * 2) * size;
         const stand_w = (stand_data.texWRaw() - assets.padding * 2) * size;
-        self.render_x_offset = (if (dir == .left) stand_w - w else w - stand_w) / 2.0;
+        self.renderx_offset = (if (dir == .left) stand_w - w else w - stand_w) / 2.0;
 
         self.screen_x = screen_pos.x;
         self.screen_y = screen_pos.y + self.z * -camera.px_per_tile - h - 30; // account for name

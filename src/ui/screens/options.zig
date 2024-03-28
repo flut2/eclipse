@@ -36,11 +36,11 @@ pub const Options = struct {
     continue_button: *element.Button = undefined,
     disconnect_button: *element.Button = undefined,
     defaults_button: *element.Button = undefined,
-    _allocator: std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*Options {
         var screen = try allocator.create(Options);
-        screen.* = .{ ._allocator = allocator };
+        screen.* = .{ .allocator = allocator };
 
         const width = camera.screen_width;
         const height = camera.screen_height;
@@ -138,11 +138,11 @@ pub const Options = struct {
             .press_callback = resetToDefaultsCallback,
         });
 
-        var tab_x_offset: f32 = 50;
+        var tabx_offset: f32 = 50;
         const tab_y = 50;
 
         _ = try screen.tabs.createChild(element.Button{
-            .x = tab_x_offset,
+            .x = tabx_offset,
             .y = tab_y,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 11, 9, 3, 3, 1.0),
             .text_data = .{
@@ -153,10 +153,10 @@ pub const Options = struct {
             .press_callback = generalTabCallback,
         });
 
-        tab_x_offset += button_width + 10;
+        tabx_offset += button_width + 10;
 
         _ = try screen.tabs.createChild(element.Button{
-            .x = tab_x_offset,
+            .x = tabx_offset,
             .y = tab_y,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 11, 9, 3, 3, 1.0),
             .text_data = .{
@@ -167,10 +167,10 @@ pub const Options = struct {
             .press_callback = hotkeysTabCallback,
         });
 
-        tab_x_offset += button_width + 10;
+        tabx_offset += button_width + 10;
 
         _ = try screen.tabs.createChild(element.Button{
-            .x = tab_x_offset,
+            .x = tabx_offset,
             .y = tab_y,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 11, 9, 3, 3, 1.0),
             .text_data = .{
@@ -181,10 +181,10 @@ pub const Options = struct {
             .press_callback = graphicsTabCallback,
         });
 
-        tab_x_offset += button_width + 10;
+        tabx_offset += button_width + 10;
 
         _ = try screen.tabs.createChild(element.Button{
-            .x = tab_x_offset,
+            .x = tabx_offset,
             .y = tab_y,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 11, 9, 3, 3, 1.0),
             .text_data = .{
@@ -240,7 +240,7 @@ pub const Options = struct {
         element.destroy(self.graphics_tab);
         element.destroy(self.misc_tab);
 
-        self._allocator.destroy(self);
+        self.allocator.destroy(self);
     }
 
     pub fn resize(self: *Options, w: f32, h: f32) void {
@@ -355,7 +355,7 @@ pub const Options = struct {
     }
 
     fn positionElements(container: *element.Container) void {
-        for (container._elements.items, 0..) |elem, i| {
+        for (container.elements.items, 0..) |elem, i| {
             switch (elem) {
                 .scrollable_container, .container => {},
                 inline else => |inner| {
@@ -368,13 +368,13 @@ pub const Options = struct {
 
     fn sliderCallback(slider: *element.Slider) void {
         if (slider.stored_value) |value_ptr| {
-            value_ptr.* = slider._current_value;
+            value_ptr.* = slider.current_value;
             // another hack, but i don't see a better way of handling this without rearchitecting everything
             if (value_ptr == &settings.music_volume)
-                assets.main_music.setVolume(slider._current_value);
+                assets.main_music.setVolume(slider.current_value);
 
             if (value_ptr == &settings.fps_cap)
-                settings.fps_us = @intFromFloat(std.time.us_per_s / slider._current_value);
+                settings.fps_us = @intFromFloat(std.time.us_per_s / slider.current_value);
         }
 
         trySave();
@@ -430,7 +430,7 @@ pub const Options = struct {
 
     fn trySave() void {
         settings.save() catch |err| {
-            std.debug.print("Caught error. {}", .{err});
+            std.log.err("Error while saving settings in Options: {}", .{err});
             return;
         };
     }

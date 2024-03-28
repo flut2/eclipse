@@ -270,10 +270,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try parseSettings(allocator);
 }
 
-pub fn assetsLoaded() void {
-    interact_key_tex = getKeyTexture(interact);
-}
-
 pub fn getKeyTexture(button: Button) assets.AtlasData {
     const tex_list = assets.atlas_data.get("key_indicators") orelse std.debug.panic("Key texture parsing failed, the key_indicators sheet is missing", .{});
     return tex_list[key_tex_map.get(button) orelse unset_key_tex_idx];

@@ -104,11 +104,11 @@ fn keyPress(window: glfw.Window, key: glfw.Key) void {
         }
     } else if (key == settings.chat.getKey()) {
         selected_input_field = systems.screen.game.chat_input;
-        selected_input_field.?._last_input = 0;
+        selected_input_field.?.last_input = 0;
     } else if (key == settings.chat_cmd.getKey()) {
         charEvent(window, @intFromEnum(glfw.Key.slash));
         selected_input_field = systems.screen.game.chat_input;
-        selected_input_field.?._last_input = 0;
+        selected_input_field.?.last_input = 0;
     } else if (key == settings.toggle_perf_stats.getKey()) {
         settings.stats_enabled = !settings.stats_enabled;
     } else if (key == settings.toggle_stats.getKey()) {
@@ -196,13 +196,13 @@ fn mousePress(window: glfw.Window, button: glfw.MouseButton) void {
     } else if (button == settings.chat.getMouse()) {
         if (systems.screen == .game) {
             selected_input_field = systems.screen.game.chat_input;
-            selected_input_field.?._last_input = 0;
+            selected_input_field.?.last_input = 0;
         }
     } else if (button == settings.chat_cmd.getMouse()) {
         if (systems.screen == .game) {
             charEvent(window, @intFromEnum(glfw.Key.slash));
             selected_input_field = systems.screen.game.chat_input;
-            selected_input_field.?._last_input = 0;
+            selected_input_field.?.last_input = 0;
         }
     } else if (button == settings.toggle_perf_stats.getMouse()) {
         settings.stats_enabled = !settings.stats_enabled;
@@ -255,12 +255,12 @@ pub fn charEvent(_: glfw.Window, char: u21) void {
         }
 
         const byte_code: u8 = @intCast(char);
-        if (!std.ascii.isASCII(byte_code) or input_field._index >= 256)
+        if (!std.ascii.isASCII(byte_code) or input_field.index >= 256)
             return;
 
-        input_field.text_data._backing_buffer[input_field._index] = byte_code;
-        input_field._index += 1;
-        input_field.text_data.text = input_field.text_data._backing_buffer[0..input_field._index];
+        input_field.text_data.backing_buffer[input_field.index] = byte_code;
+        input_field.index += 1;
+        input_field.text_data.text = input_field.text_data.backing_buffer[0..input_field.index];
         input_field.inputUpdate();
         return;
     }
@@ -281,23 +281,23 @@ pub fn keyEvent(window: glfw.Window, key: glfw.Key, _: i32, action: glfw.Action,
                 switch (key) {
                     .c => {
                         const old = input_field.text_data.text;
-                        input_field.text_data._backing_buffer[input_field._index] = 0;
-                        //window.setClipboardString(input_field.text_data._backing_buffer[0..input_field._index :0]);
+                        input_field.text_data.backing_buffer[input_field.index] = 0;
+                        //window.setClipboardString(input_field.text_data.backing_buffer[0..input_field._index :0]);
                         input_field.text_data.text = old;
                     },
                     .v => {
                         // if (window.getClipboardString()) |clip_str| {
                         //     const clip_len = clip_str.len;
-                        //     @memcpy(input_field.text_data._backing_buffer[input_field._index .. input_field._index + clip_len], clip_str);
+                        //     @memcpy(input_field.text_data.backing_buffer[input_field._index .. input_field._index + clip_len], clip_str);
                         //     input_field._index += @intCast(clip_len);
-                        //     input_field.text_data.text = input_field.text_data._backing_buffer[0..input_field._index];
+                        //     input_field.text_data.text = input_field.text_data.backing_buffer[0..input_field._index];
                         //     input_field.inputUpdate();
                         //     return;
                         // }
                     },
                     .x => {
-                        input_field.text_data._backing_buffer[input_field._index] = 0;
-                        //window.setClipboardString(input_field.text_data._backing_buffer[0..input_field._index :0]);
+                        input_field.text_data.backing_buffer[input_field.index] = 0;
+                        //window.setClipboardString(input_field.text_data.backing_buffer[0..input_field._index :0]);
                         input_field.clear();
                         return;
                     },
@@ -310,16 +310,16 @@ pub fn keyEvent(window: glfw.Window, key: glfw.Key, _: i32, action: glfw.Action,
                     if (input_field.enter_callback) |enter_cb| {
                         enter_cb(input_field.text_data.text);
                         input_field.clear();
-                        input_field._last_input = -1;
+                        input_field.last_input = -1;
                         selected_input_field = null;
                     }
 
                     return;
                 },
                 .backspace => {
-                    if (input_field._index > 0) {
-                        input_field._index -= 1;
-                        input_field.text_data.text = input_field.text_data._backing_buffer[0..input_field._index];
+                    if (input_field.index > 0) {
+                        input_field.index -= 1;
+                        input_field.text_data.text = input_field.text_data.backing_buffer[0..input_field.index];
                         input_field.inputUpdate();
                         return;
                     }
@@ -333,9 +333,9 @@ pub fn keyEvent(window: glfw.Window, key: glfw.Key, _: i32, action: glfw.Action,
                         input_history_idx -= 1;
                         const msg = input_history.items[input_history_idx];
                         const msg_len = msg.len;
-                        @memcpy(input_field.text_data._backing_buffer[0..msg_len], msg);
-                        input_field.text_data.text = input_field.text_data._backing_buffer[0..msg_len];
-                        input_field._index = @intCast(msg_len);
+                        @memcpy(input_field.text_data.backing_buffer[0..msg_len], msg);
+                        input_field.text_data.text = input_field.text_data.backing_buffer[0..msg_len];
+                        input_field.index = @intCast(msg_len);
                         input_field.inputUpdate();
                     }
 
@@ -351,9 +351,9 @@ pub fn keyEvent(window: glfw.Window, key: glfw.Key, _: i32, action: glfw.Action,
                         } else {
                             const msg = input_history.items[input_history_idx];
                             const msg_len = msg.len;
-                            @memcpy(input_field.text_data._backing_buffer[0..msg_len], msg);
-                            input_field.text_data.text = input_field.text_data._backing_buffer[0..msg_len];
-                            input_field._index = @intCast(msg_len);
+                            @memcpy(input_field.text_data.backing_buffer[0..msg_len], msg);
+                            input_field.text_data.text = input_field.text_data.backing_buffer[0..msg_len];
+                            input_field.index = @intCast(msg_len);
                             input_field.inputUpdate();
                         }
                     }

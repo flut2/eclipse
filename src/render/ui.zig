@@ -534,7 +534,7 @@ inline fn drawItem(idx: u16, item: *element.Item, draw_data: base.DrawData, x_of
     if (!item.visible)
         return new_idx;
 
-    if (item._background_image_data) |background_image_data| {
+    if (item.background_image_data) |background_image_data| {
         switch (background_image_data) {
             .nine_slice => |nine_slice| {
                 new_idx = drawNineSlice(new_idx, item.background_x + x_offset, item.background_y + y_offset, nine_slice, draw_data);
@@ -601,8 +601,8 @@ inline fn drawBar(idx: u16, bar: *element.Bar, draw_data: base.DrawData, x_offse
 
     new_idx = base.drawText(
         new_idx,
-        bar.x + (w - bar.text_data._width) / 2 + x_offset,
-        bar.y + (h - bar.text_data._height) / 2 + y_offset,
+        bar.x + (w - bar.text_data.width) / 2 + x_offset,
+        bar.y + (h - bar.text_data.height) / 2 + y_offset,
         &bar.text_data,
         draw_data,
         .{},
@@ -642,8 +642,8 @@ inline fn drawButton(idx: u16, button: *element.Button, draw_data: base.DrawData
     if (button.text_data) |*text_data| {
         new_idx = base.drawText(
             new_idx,
-            button.x + (w - text_data._width) / 2 + x_offset,
-            button.y + (h - text_data._height) / 2 + y_offset,
+            button.x + (w - text_data.width) / 2 + x_offset,
+            button.y + (h - text_data.height) / 2 + y_offset,
             text_data,
             draw_data,
             button.scissor,
@@ -693,8 +693,8 @@ inline fn drawCharacterBox(idx: u16, char_box: *element.CharacterBox, draw_data:
     if (char_box.text_data) |*text_data| {
         new_idx = base.drawText(
             new_idx,
-            char_box.x + (w - text_data._width) / 2 + x_offset,
-            char_box.y + (h - text_data._height) / 2 + y_offset,
+            char_box.x + (w - text_data.width) / 2 + x_offset,
+            char_box.y + (h - text_data.height) / 2 + y_offset,
             text_data,
             draw_data,
             char_box.scissor,
@@ -732,13 +732,13 @@ inline fn drawInputField(idx: u16, input_field: *element.Input, draw_data: base.
         },
     }
 
-    const text_x = input_field.x + input_field.text_inlay_x + x_offset + input_field._x_offset;
+    const text_x = input_field.x + input_field.text_inlay_x + x_offset + input_field.x_offset;
     const text_y = input_field.y + input_field.text_inlay_y + y_offset;
     new_idx = base.drawText(new_idx, text_x, text_y, &input_field.text_data, draw_data, input_field.scissor);
 
     const flash_delay = 500 * std.time.us_per_ms;
-    if (input_field._last_input != -1 and (time - input_field._last_input < flash_delay or @mod(@divFloor(time, flash_delay), 2) == 0)) {
-        const cursor_x = text_x + input_field.text_data._width;
+    if (input_field.last_input != -1 and (time - input_field.last_input < flash_delay or @mod(@divFloor(time, flash_delay), 2) == 0)) {
+        const cursor_x = text_x + input_field.text_data.width;
         switch (input_field.cursor_image_data) {
             .nine_slice => |nine_slice| new_idx = drawNineSlice(new_idx, cursor_x, text_y, nine_slice, draw_data),
             .normal => |image_data| {
@@ -792,7 +792,7 @@ inline fn drawToggle(idx: u16, toggle: *element.Toggle, draw_data: base.DrawData
         new_idx = base.drawText(
             new_idx,
             toggle.x + w + pad + x_offset,
-            toggle.y + (h - text_data._height) / 2 + y_offset,
+            toggle.y + (h - text_data.height) / 2 + y_offset,
             text_data,
             draw_data,
             toggle.scissor,
@@ -846,7 +846,7 @@ inline fn drawKeyMapper(idx: u16, key_mapper: *element.KeyMapper, draw_data: bas
         new_idx = base.drawText(
             new_idx,
             key_mapper.x + w + pad + x_offset,
-            key_mapper.y + (h - text_data._height) / 2 + y_offset,
+            key_mapper.y + (h - text_data.height) / 2 + y_offset,
             text_data,
             draw_data,
             key_mapper.scissor,
@@ -891,8 +891,8 @@ inline fn drawSlider(idx: u16, slider: *element.Slider, draw_data: base.DrawData
     }
 
     const knob_image_data = slider.knob_image_data.current(slider.state);
-    const knob_x = slider.x + slider._knob_x + x_offset;
-    const knob_y = slider.y + slider._knob_y + y_offset;
+    const knob_x = slider.x + slider.knob_x + x_offset;
+    const knob_y = slider.y + slider.knob_y + y_offset;
     var knob_w: f32 = 0.0;
     var knob_h: f32 = 0.0;
     switch (knob_image_data) {
@@ -971,13 +971,13 @@ fn drawElement(
     switch (elem) {
         .scrollable_container => |scrollable_container| {
             if (scrollable_container.visible) {
-                new_idx = drawElement(new_idx, .{ .container = scrollable_container._container }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
-                new_idx = drawElement(new_idx, .{ .slider = scrollable_container._scroll_bar }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
+                new_idx = drawElement(new_idx, .{ .container = scrollable_container.container }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
+                new_idx = drawElement(new_idx, .{ .slider = scrollable_container.scroll_bar }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
             }
         },
         .container => |container| {
             if (container.visible) {
-                for (container._elements.items) |cont_elem| {
+                for (container.elements.items) |cont_elem| {
                     new_idx = drawElement(new_idx, cont_elem, draw_data, cam_x, cam_y, x_offset + container.x, y_offset + container.y, time);
                 }
             }
@@ -1014,7 +1014,7 @@ pub inline fn drawTempElements(idx: u16, draw_data: base.DrawData) u16 {
         switch (elem.*) {
             .status => |*text| {
                 if (text.visible) {
-                    new_idx = base.drawText(new_idx, text._screen_x, text._screen_y, &text.text_data, draw_data, .{});
+                    new_idx = base.drawText(new_idx, text.screen_x, text.screen_y, &text.text_data, draw_data, .{});
                 }
             },
             .balloon => |*balloon| {
@@ -1028,13 +1028,13 @@ pub inline fn drawTempElements(idx: u16, draw_data: base.DrawData) u16 {
                         .base_color = image_data.color,
                         .base_color_intensity = image_data.color_intensity,
                     };
-                    new_idx = base.drawQuad(new_idx, balloon._screen_x, balloon._screen_y, w, h, image_data.atlas_data, draw_data, opts);
+                    new_idx = base.drawQuad(new_idx, balloon.screen_x, balloon.screen_y, w, h, image_data.atlas_data, draw_data, opts);
 
                     const decor_offset = h / 10;
                     new_idx = base.drawText(
                         new_idx,
-                        balloon._screen_x + ((w - assets.padding * image_data.scale_x) - balloon.text_data._width) / 2,
-                        balloon._screen_y + (h - balloon.text_data._height) / 2 - decor_offset,
+                        balloon.screen_x + ((w - assets.padding * image_data.scale_x) - balloon.text_data.width) / 2,
+                        balloon.screen_y + (h - balloon.text_data.height) / 2 - decor_offset,
                         &balloon.text_data,
                         draw_data,
                         .{},

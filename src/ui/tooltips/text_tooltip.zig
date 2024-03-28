@@ -13,10 +13,10 @@ pub const TextTooltip = struct {
     decor: *element.Image = undefined,
     text: *element.Text = undefined,
 
-    _allocator: std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *TextTooltip, allocator: std.mem.Allocator) !void {
-        self._allocator = allocator;
+        self.allocator = allocator;
 
         self.root = try element.create(allocator, element.Container{
             .visible = false,
@@ -55,10 +55,10 @@ pub const TextTooltip = struct {
         }
 
         {
-            self.text.text_data._lock.lock();
-            defer self.text.text_data._lock.unlock();
+            self.text.text_data.lock.lock();
+            defer self.text.text_data.lock.unlock();
 
-            self.text.text_data.recalculateAttributes(self._allocator);
+            self.text.text_data.recalculateAttributes(self.allocator);
         }
 
         switch (self.decor.image_data) {

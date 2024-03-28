@@ -421,15 +421,15 @@ fn deviceLostCallback(reason: gpu.Device.LostReason, msg: [*:0]const u8, _: ?*an
         std.log.err("Device lost: {s}", .{msg});
 }
 
-pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) !void {
-    allocator = _allocator;
+pub fn init(window: glfw.Window, ally: std.mem.Allocator) !void {
+    allocator = ally;
 
     if (use_dawn) {
-        try main.GPUInterface.init(allocator, .{});
+        try main.GPUInterface.init(ally, .{});
     } else {
-        try main.SYSGPUInterface.init(allocator, .{});
+        try main.SYSGPUInterface.init(ally, .{});
     }
-    
+
     instance = gpu.createInstance(null) orelse {
         std.debug.panic("Failed to create GPU instance", .{});
     };
@@ -499,7 +499,7 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) !void {
             continue;
         }
 
-        var rects = allocator.alloc(assets.AtlasData, indices_len) catch continue;
+        var rects = ally.alloc(assets.AtlasData, indices_len) catch continue;
         for (0..indices_len) |j| {
             rects[j] = (assets.atlas_data.get(sheet_name) orelse std.debug.panic("Could not find sheet {s} for cond parsing", .{sheet_name}))[sheet_indices[j]];
         }
@@ -514,10 +514,10 @@ pub fn init(window: glfw.Window, _allocator: std.mem.Allocator) !void {
     };
 
     {
-        enter_text_data._lock.lock();
-        defer enter_text_data._lock.unlock();
+        enter_text_data.lock.lock();
+        defer enter_text_data.lock.unlock();
 
-        enter_text_data.recalculateAttributes(main._allocator);
+        enter_text_data.recalculateAttributes(main.allocator);
     }
 
     base_vb = device.createBuffer(&.{
@@ -1140,11 +1140,11 @@ pub inline fn drawText(
     draw_data: DrawData,
     scissor_override: element.ScissorRect,
 ) u16 {
-    text_data._lock.lock();
-    defer text_data._lock.unlock();
+    text_data.lock.lock();
+    defer text_data.lock.unlock();
 
     // text data not initiated
-    if (text_data._line_widths == null)
+    if (text_data.line_widths == null)
         return idx;
 
     var idx_new = idx;
@@ -1171,14 +1171,14 @@ pub inline fn drawText(
     const start_y = y - camera.screen_height / 2.0 + line_height;
     const y_base = switch (text_data.vert_align) {
         .top => start_y,
-        .middle => if (max_height_off) start_y else start_y + (text_data.max_height - text_data._height) / 2,
-        .bottom => if (max_height_off) start_y else start_y + text_data.max_height - text_data._height,
+        .middle => if (max_height_off) start_y else start_y + (text_data.max_height - text_data.height) / 2,
+        .bottom => if (max_height_off) start_y else start_y + text_data.max_height - text_data.height,
     };
     var line_idx: u16 = 1;
     var x_base = switch (text_data.hori_align) {
         .left => start_x,
-        .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data._line_widths.?.items[0]) / 2,
-        .right => if (max_width_off) start_x else start_x + text_data.max_width - text_data._line_widths.?.items[0],
+        .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[0]) / 2,
+        .right => if (max_width_off) start_x else start_x + text_data.max_width - text_data.line_widths.?.items[0],
     };
     var x_pointer = x_base;
     var y_pointer = y_base;
@@ -1308,8 +1308,8 @@ pub inline fn drawText(
 
             x_base = switch (text_data.hori_align) {
                 .left => start_x,
-                .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data._line_widths.?.items[line_idx]) / 2,
-                .right => if (max_width_off) start_x else start_x + text_data.max_width - text_data._line_widths.?.items[line_idx],
+                .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]) / 2,
+                .right => if (max_width_off) start_x else start_x + text_data.max_width - text_data.line_widths.?.items[line_idx],
             };
             x_pointer = x_base;
             next_x_pointer = x_base + char_data.x_advance * current_size;

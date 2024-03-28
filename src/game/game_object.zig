@@ -50,12 +50,12 @@ pub const GameObject = struct {
     props: *const game_data.ObjProps = undefined,
     class: game_data.ClassType = .game_object,
     colors: []u32 = &[0]u32{},
-    render_x_offset: f32 = 0.0,
+    renderx_offset: f32 = 0.0,
     anim_idx: u8 = 0,
     facing: f32 = std.math.nan(f32),
     next_anim: i64 = -1,
     float_time_offset: i64 = 0,
-    _disposed: bool = false,
+    disposed: bool = false,
 
     pub inline fn addToMap(self: *GameObject, allocator: std.mem.Allocator) void {
         self.class = game_data.obj_type_to_class.get(self.obj_type) orelse blk: {
@@ -196,8 +196,8 @@ pub const GameObject = struct {
             };
 
             {
-                self.name_text_data.?._lock.lock();
-                defer self.name_text_data.?._lock.unlock();
+                self.name_text_data.?.lock.lock();
+                defer self.name_text_data.?.lock.unlock();
 
                 self.name_text_data.?.recalculateAttributes(allocator);
             }
@@ -340,7 +340,7 @@ pub const GameObject = struct {
 
             const w = (self.atlas_data.texWRaw() - assets.padding * 2) * size;
             const stand_w = (stand_data.texWRaw() - assets.padding * 2) * size;
-            self.render_x_offset = (if (dir == .left) stand_w - w else w - stand_w) / 2.0;
+            self.renderx_offset = (if (dir == .left) stand_w - w else w - stand_w) / 2.0;
         } else if (self.props.anim_props) |props| {
             updateAnim: {
                 if (time >= self.next_anim) {

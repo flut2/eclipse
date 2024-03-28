@@ -17,7 +17,7 @@ const element = @import("ui/element.zig");
 const render = @import("render/base.zig");
 const ztracy = @import("ztracy");
 const zaudio = @import("zaudio");
-const systems = @import("ui/systems.zig");
+const ui_systems = @import("ui/systems.zig");
 const rpc = @import("rpc");
 const dialog = @import("ui/dialogs/dialog.zig");
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
@@ -31,29 +31,6 @@ const gpu = if (use_dawn) wgpu else sysgpu.sysgpu;
 pub const GPUInterface = wgpu.dawn.Interface;
 pub const SYSGPUInterface = sysgpu.Impl;
 
-pub const ServerData = struct {
-    name: []const u8,
-    dns: []const u8,
-    port: u16,
-    max_players: u16,
-    admin_only: bool,
-
-    pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ServerData {
-        return ServerData{
-            .name = try node.getValueAlloc("Name", allocator, "Unknown"),
-            .dns = try node.getValueAlloc("DNS", allocator, "127.0.0.1"),
-            .port = try node.getValueInt("Port", u16, 2050),
-            .max_players = try node.getValueInt("MaxPlayers", u16, 0),
-            .admin_only = node.elementExists("AdminOnly") and std.mem.eql(u8, node.getValue("AdminOnly").?, "true"),
-        };
-    }
-
-    pub fn deinit(self: ServerData, allocator: std.mem.Allocator) void {
-        allocator.free(self.name);
-        allocator.free(self.dns);
-    }
-};
-
 pub const AccountData = struct {
     name: []const u8 = "",
     email: []const u8 = "",
@@ -63,70 +40,9 @@ pub const AccountData = struct {
     guild_rank: u8 = 0,
 };
 
-pub const CharacterData = struct {
-    id: u32,
-    obj_type: u16,
-    name: []const u8,
-    health: u16,
-    mana: u16,
-    strength: u16,
-    wit: u16,
-    defense: u16,
-    resistance: u16,
-    speed: u16,
-    haste: u16,
-    stamina: u16,
-    intelligence: u16,
-    piercing: u16,
-    penetration: u16,
-    tenacity: u16,
-    tex_1: u32,
-    tex_2: u32,
-    texture: u16,
-    equipment: []u16,
-
-    pub fn parse(allocator: std.mem.Allocator, node: xml.Node, id: u32) !CharacterData {
-        const obj_type = try node.getValueInt("ObjectType", u16, 0);
-
-        var equip_list = try std.ArrayList(u16).initCapacity(allocator, 22);
-        defer equip_list.deinit();
-        var equip_iter = std.mem.split(u8, node.getValue("Equipment") orelse "", ", ");
-        while (equip_iter.next()) |s|
-            try equip_list.append(try std.fmt.parseInt(u16, s, 0));
-
-        return CharacterData{
-            .id = id,
-            .obj_type = obj_type,
-            .health = try node.getValueInt("Health", u16, 0),
-            .mana = try node.getValueInt("Mana", u16, 0),
-            .strength = try node.getValueInt("Strength", u16, 0),
-            .wit = try node.getValueInt("Wit", u16, 0),
-            .defense = try node.getValueInt("Defense", u16, 0),
-            .resistance = try node.getValueInt("Resistance", u16, 0),
-            .speed = try node.getValueInt("Speed", u16, 0),
-            .haste = try node.getValueInt("Haste", u16, 0),
-            .stamina = try node.getValueInt("Stamina", u16, 0),
-            .intelligence = try node.getValueInt("Intelligence", u16, 0),
-            .piercing = try node.getValueInt("Piercing", u16, 0),
-            .penetration = try node.getValueInt("Penetration", u16, 0),
-            .tenacity = try node.getValueInt("Tenacity", u16, 0),
-            .tex_1 = try node.getValueInt("Tex1", u32, 0),
-            .tex_2 = try node.getValueInt("Tex2", u32, 0),
-            .texture = try node.getValueInt("Texture", u16, 0),
-            .equipment = try allocator.dupe(u16, equip_list.items),
-            .name = try allocator.dupe(u8, game_data.obj_type_to_name.get(obj_type) orelse "Unknown Class"),
-        };
-    }
-
-    pub fn deinit(self: CharacterData, allocator: std.mem.Allocator) void {
-        allocator.free(self.name);
-        allocator.free(self.equipment);
-    }
-};
-
 pub var current_account = AccountData{};
-pub var character_list: []CharacterData = undefined;
-pub var server_list: ?[]ServerData = null;
+pub var character_list: []game_data.CharacterData = undefined;
+pub var server_list: ?[]game_data.ServerData = null;
 pub var next_char_id: u32 = 0;
 pub var max_chars: u32 = 0;
 pub var current_time: i64 = 0;
@@ -145,7 +61,7 @@ pub var minimap_update_max_y: u32 = std.math.minInt(u32);
 pub var rpc_client: *rpc = undefined;
 pub var rpc_start: u64 = 0;
 pub var version_text: []const u8 = undefined;
-pub var _allocator: std.mem.Allocator = undefined;
+pub var allocator: std.mem.Allocator = undefined;
 pub var start_time: i64 = 0;
 pub var server: network.Server = undefined;
 
@@ -158,7 +74,7 @@ fn onResize(_: glfw.Window, w: u32, h: u32) void {
     camera.clip_scale_x = 2.0 / float_w;
     camera.clip_scale_y = 2.0 / float_h;
 
-    systems.resize(float_w, float_h);
+    ui_systems.resize(float_w, float_h);
 
     need_swap_chain_update = true;
 }
@@ -181,12 +97,12 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
     rpmalloc.deinitThread(true);
 }
 
-pub fn enterGame(sel_srv: ServerData, selected_char_id: u32, char_create_type: u16, char_create_skin_type: u16) void {
+pub fn enterGame(selected_server: game_data.ServerData, selected_char_id: u32, char_create_type: u16, char_create_skin_type: u16) void {
     if (network_thread != null)
         return;
 
-    systems.switchScreen(.game);
-    network_thread = std.Thread.spawn(.{}, networkCallback, .{ sel_srv.dns, sel_srv.port, network.C2SPacket{ .hello = .{
+    ui_systems.switchScreen(.game);
+    network_thread = std.Thread.spawn(.{}, networkCallback, .{ selected_server.dns, selected_server.port, network.C2SPacket{ .hello = .{
         .build_ver = settings.build_version,
         .game_id = -2,
         .email = current_account.email,
@@ -200,7 +116,7 @@ pub fn enterGame(sel_srv: ServerData, selected_char_id: u32, char_create_type: u
     };
 }
 
-fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
+fn renderTick(window: glfw.Window) !void {
     rpmalloc.initThread() catch |e| {
         std.log.err("Render thread initialization failed: {}", .{e});
         return;
@@ -240,7 +156,7 @@ fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
         }
 
         if (time - fps_time_start > 1 * std.time.us_per_s) {
-            try if (settings.stats_enabled) switch (systems.screen) {
+            try if (settings.stats_enabled) switch (ui_systems.screen) {
                 inline .game, .editor => |screen| if (screen.inited) screen.updateFpsText(frames, try utils.currentMemoryUse()),
                 else => {},
             };
@@ -330,14 +246,14 @@ fn renderTick(allocator: std.mem.Allocator, window: glfw.Window) !void {
 }
 
 pub fn clear() void {
-    map.dispose(_allocator);
+    map.dispose(allocator);
 }
 
 pub fn disconnect() void {
     server.shutdown();
     clear();
     input.reset();
-    systems.switchScreen(.char_select);
+    ui_systems.switchScreen(.char_select);
     dialog.showDialog(.none, {});
 }
 
@@ -384,11 +300,10 @@ pub fn main() !void {
     try rpmalloc.init(null, .{});
     defer rpmalloc.deinit();
 
-    var allocator = if (settings.enable_tracy) tracy_allocator else switch (builtin.mode) {
+    allocator = if (settings.enable_tracy) tracy_allocator else switch (builtin.mode) {
         .Debug => gpa.allocator(),
         else => rpmalloc.allocator(),
     };
-    _allocator = allocator;
 
     defer {
         if (current_account.name.len > 0)
@@ -453,10 +368,10 @@ pub fn main() !void {
     input.init(allocator);
     defer input.deinit(allocator);
 
-    try systems.init(allocator);
-    defer systems.deinit(allocator);
+    try ui_systems.init(allocator);
+    defer ui_systems.deinit();
 
-    systems.switchScreen(.main_menu);
+    ui_systems.switchScreen(.main_menu);
 
     const window = glfw.Window.create(
         1280,
@@ -515,7 +430,7 @@ pub fn main() !void {
         rpc_thread.join();
     }
 
-    render_thread = try std.Thread.spawn(.{}, renderTick, .{ allocator, window });
+    render_thread = try std.Thread.spawn(.{}, renderTick, .{ window });
     defer {
         tick_render = false;
         render_thread.join();
@@ -535,7 +450,7 @@ pub fn main() !void {
         }
 
         if (time - last_ui_update > 16 * std.time.us_per_ms) {
-            try systems.update(allocator);
+            try ui_systems.update();
             last_ui_update = time;
         }
 

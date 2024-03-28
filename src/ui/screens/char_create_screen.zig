@@ -12,11 +12,11 @@ const Interactable = element.InteractableImageData;
 pub const CharCreateScreen = struct {
     inited: bool = false,
     boxes: std.ArrayList(*element.CharacterBox) = undefined, //TODO change 'CharacterBox' to 'NewCharacterBox' when implemented
-    _allocator: std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*CharCreateScreen {
         var screen = try allocator.create(CharCreateScreen);
-        screen.* = .{ ._allocator = allocator };
+        screen.* = .{ .allocator = allocator };
 
         const presence = rpc.Packet.Presence{
             .assets = .{
@@ -67,7 +67,7 @@ pub const CharCreateScreen = struct {
         }
         self.boxes.clearAndFree();
 
-        self._allocator.destroy(self);
+        self.allocator.destroy(self);
     }
 
     pub fn resize(_: *CharCreateScreen, _: f32, _: f32) void {}

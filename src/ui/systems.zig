@@ -48,30 +48,30 @@ pub var screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
 
 var last_element_update: i64 = 0;
-var _allocator: std.mem.Allocator = undefined;
+var allocator: std.mem.Allocator = undefined;
 
-pub fn init(allocator: std.mem.Allocator) !void {
-    _allocator = allocator;
+pub fn init(ally: std.mem.Allocator) !void {
+    allocator = ally;
 
-    elements = try std.ArrayList(element.UiElement).initCapacity(allocator, 32);
-    elements_to_add = try std.ArrayList(element.UiElement).initCapacity(allocator, 16);
-    temp_elements = try std.ArrayList(element.Temporary).initCapacity(allocator, 32);
-    temp_elements_to_add = try std.ArrayList(element.Temporary).initCapacity(allocator, 16);
+    elements = try std.ArrayList(element.UiElement).initCapacity(ally, 32);
+    elements_to_add = try std.ArrayList(element.UiElement).initCapacity(ally, 16);
+    temp_elements = try std.ArrayList(element.Temporary).initCapacity(ally, 32);
+    temp_elements_to_add = try std.ArrayList(element.Temporary).initCapacity(ally, 16);
 
-    menu_background = try element.create(allocator, element.MenuBackground{
+    menu_background = try element.create(ally, element.MenuBackground{
         .x = 0,
         .y = 0,
         .w = camera.screen_width,
         .h = camera.screen_height,
     });
 
-    screen = .{ .empty = EmptyScreen.init(allocator) catch std.debug.panic("Initializing EmptyScreen failed", .{}) };
+    screen = .{ .empty = EmptyScreen.init(ally) catch std.debug.panic("Initializing EmptyScreen failed", .{}) };
 
-    try tooltip.init(allocator);
-    try dialog.init(allocator);
+    try tooltip.init(ally);
+    try dialog.init(ally);
 }
 
-pub fn deinit(allocator: std.mem.Allocator) void {
+pub fn deinit() void {
     ui_lock.lock();
     defer ui_lock.unlock();
 
@@ -92,10 +92,10 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     for (temp_elements.items) |*elem| {
         switch (elem.*) {
             inline else => |*inner| {
-                if (inner._disposed)
+                if (inner.disposed)
                     return;
 
-                inner._disposed = true;
+                inner.disposed = true;
 
                 allocator.free(inner.text_data.text);
                 inner.text_data.deinit(allocator);
@@ -123,7 +123,7 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
     screen = @unionInit(
         Screen,
         @tagName(screen_type),
-        @typeInfo(std.meta.TagPayloadByName(Screen, @tagName(screen_type))).Pointer.child.init(_allocator) catch |e| {
+        @typeInfo(std.meta.TagPayloadByName(Screen, @tagName(screen_type))).Pointer.child.init(allocator) catch |e| {
             std.log.err("Initializing screen for {} failed: {}", .{ screen_type, e });
             return;
         },
@@ -144,7 +144,7 @@ pub fn resize(w: f32, h: f32) void {
     dialog.resize(w, h);
 }
 
-pub fn removeAttachedUi(obj_id: i32, allocator: std.mem.Allocator) void {
+pub fn removeAttachedUi(obj_id: i32) void {
     temp_elem_lock.lock();
     defer temp_elem_lock.unlock();
 
@@ -204,7 +204,7 @@ pub fn mouseMove(x: f32, y: f32) bool {
 
 pub fn mousePress(x: f32, y: f32, mods: glfw.Mods, button: glfw.MouseButton) bool {
     if (input.selected_input_field) |input_field| {
-        input_field._last_input = -1;
+        input_field.last_input = -1;
         input.selected_input_field = null;
     }
 
@@ -286,7 +286,7 @@ inline fn updateElements() !void {
     }
 }
 
-inline fn updateTempElements(allocator: std.mem.Allocator) !void {
+inline fn updateTempElements() !void {
     if (!temp_elem_lock.tryLock())
         return;
     defer temp_elem_lock.unlock();
@@ -330,8 +330,8 @@ inline fn updateTempElements(allocator: std.mem.Allocator) !void {
                     status_text.text_data.alpha = 1.0 - frac + 0.33;
 
                     {
-                        status_text.text_data._lock.lock();
-                        defer status_text.text_data._lock.unlock();
+                        status_text.text_data.lock.lock();
+                        defer status_text.text_data.lock.unlock();
 
                         status_text.text_data.recalculateAttributes(allocator);
                     }
@@ -344,8 +344,8 @@ inline fn updateTempElements(allocator: std.mem.Allocator) !void {
                                 _ = temp_elements.swapRemove(i);
                                 continue;
                             }
-                            status_text._screen_x = obj.screen_x - status_text.text_data._width / 2;
-                            status_text._screen_y = obj.screen_y - status_text.text_data._height - frac * 40;
+                            status_text.screen_x = obj.screen_x - status_text.text_data.width / 2;
+                            status_text.screen_y = obj.screen_y - status_text.text_data.height - frac * 40;
                         },
                     }
                 }
@@ -376,8 +376,8 @@ inline fn updateTempElements(allocator: std.mem.Allocator) !void {
                                 _ = temp_elements.swapRemove(i);
                                 continue;
                             }
-                            speech_balloon._screen_x = obj.screen_x - speech_balloon.width() / 2;
-                            speech_balloon._screen_y = obj.screen_y - speech_balloon.height();
+                            speech_balloon.screen_x = obj.screen_x - speech_balloon.width() / 2;
+                            speech_balloon.screen_y = obj.screen_y - speech_balloon.height();
                         },
                     }
                 }
@@ -386,7 +386,7 @@ inline fn updateTempElements(allocator: std.mem.Allocator) !void {
     }
 }
 
-pub fn update(allocator: std.mem.Allocator) !void {
+pub fn update() !void {
     try updateElements();
-    try updateTempElements(allocator);
+    try updateTempElements();
 }

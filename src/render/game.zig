@@ -205,7 +205,7 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
     const size = camera.size_mult * camera.scale * player.size;
 
     var atlas_data = player.atlas_data;
-    const x_offset = player.render_x_offset;
+    const x_offset = player.renderx_offset;
 
     var sink: f32 = 1.0;
     if (map.getSquare(player.x, player.y)) |square| {
@@ -258,8 +258,8 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
     if (player.name_text_data) |*data| {
         new_idx = base.drawText(
             new_idx,
-            screen_pos.x - x_offset - data._width / 2,
-            screen_pos.y - data._height - 5,
+            screen_pos.x - x_offset - data.width / 2,
+            screen_pos.y - data.height - 5,
             data,
             draw_data,
             .{},
@@ -402,8 +402,8 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
             if (obj.name_text_data) |*data| {
                 new_idx = base.drawText(
                     new_idx,
-                    screen_pos.x - data._width / 2,
-                    screen_pos.y - h_half - data._height - 5,
+                    screen_pos.x - data.width / 2,
+                    screen_pos.y - h_half - data.height - 5,
                     data,
                     draw_data,
                     .{},
@@ -413,7 +413,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
             if (is_portal and map.interactive_id.load(.Acquire) == obj.obj_id) {
                 const button_w = 100 / 5;
                 const button_h = 100 / 5;
-                const total_w = base.enter_text_data._width + button_w;
+                const total_w = base.enter_text_data.width + button_w;
 
                 new_idx = base.drawQuad(
                     new_idx,
@@ -446,7 +446,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
     }
 
     var atlas_data = obj.atlas_data;
-    const x_offset = obj.render_x_offset;
+    const x_offset = obj.renderx_offset;
 
     var sink: f32 = 1.0;
     if (map.getSquare(obj.x, obj.y)) |square| {
@@ -498,8 +498,8 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
         if (obj.name_text_data) |*data| {
             new_idx = base.drawText(
                 new_idx,
-                screen_pos.x - x_offset - data._width / 2,
-                screen_pos.y - data._height - 5,
+                screen_pos.x - x_offset - data.width / 2,
+                screen_pos.y - data.height - 5,
                 data,
                 draw_data,
                 .{},
@@ -509,7 +509,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
         if (is_portal and map.interactive_id.load(.Acquire) == obj.obj_id) {
             const button_w = 100 / 5;
             const button_h = 100 / 5;
-            const total_w = base.enter_text_data._width + button_w;
+            const total_w = base.enter_text_data.width + button_w;
 
             new_idx = base.drawQuad(
                 new_idx,

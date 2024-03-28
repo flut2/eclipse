@@ -83,7 +83,7 @@ pub const GameScreen = struct {
 
         pub fn nextAvailableSlot(screen: GameScreen, slot_types: []game_data.ItemType, base_slot_type: game_data.ItemType) Slot {
             for (0..slot_types.len) |idx| {
-                if (screen.inventory_items[idx]._item == std.math.maxInt(u16) and slot_types[idx].slotsMatch(base_slot_type))
+                if (screen.inventory_items[idx].item == std.math.maxInt(u16) and slot_types[idx].slotsMatch(base_slot_type))
                     return .{ .idx = @intCast(idx) };
             }
             return .{ .idx = 255 };
@@ -151,11 +151,11 @@ pub const GameScreen = struct {
 
     abilities_inited: bool = false,
     inited: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*GameScreen {
         var screen = try allocator.create(GameScreen);
-        screen.* = .{ ._allocator = allocator };
+        screen.* = .{ .allocator = allocator };
 
         screen.chat_lines = std.ArrayList(*element.Text).init(allocator);
 
@@ -430,8 +430,8 @@ pub const GameScreen = struct {
         };
 
         {
-            fps_text_data._lock.lock();
-            defer fps_text_data._lock.unlock();
+            fps_text_data.lock.lock();
+            defer fps_text_data.lock.unlock();
 
             fps_text_data.recalculateAttributes(allocator);
         }
@@ -481,7 +481,7 @@ pub const GameScreen = struct {
     pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_color: u32, text_color: u32) !void {
         var chat_line = blk: {
             if (name.len > 0) {
-                const line_str = try std.fmt.allocPrint(self._allocator, "&col=\"{x}\"[{s}]: &col=\"{x}\"{s}", .{ name_color, name, text_color, text });
+                const line_str = try std.fmt.allocPrint(self.allocator, "&col=\"{x}\"[{s}]: &col=\"{x}\"{s}", .{ name_color, name, text_color, text });
                 break :blk try self.chat_container.createChild(element.Text{
                     .x = 0,
                     .y = 0,
@@ -490,11 +490,11 @@ pub const GameScreen = struct {
                         .size = 12,
                         .text_type = .bold,
                         .max_width = 370,
-                        ._backing_buffer = line_str, // putting it here to dispose automatically. kind of a hack
+                        .backing_buffer = line_str, // putting it here to dispose automatically. kind of a hack
                     },
                 });
             } else {
-                const line_str = try std.fmt.allocPrint(self._allocator, "&col=\"{x}\"{s}", .{ text_color, text });
+                const line_str = try std.fmt.allocPrint(self.allocator, "&col=\"{x}\"{s}", .{ text_color, text });
                 break :blk try self.chat_container.createChild(element.Text{
                     .x = 0,
                     .y = 0,
@@ -503,20 +503,20 @@ pub const GameScreen = struct {
                         .size = 12,
                         .text_type = .bold,
                         .max_width = 370,
-                        ._backing_buffer = line_str, // putting it here to dispose automatically. kind of a hack
+                        .backing_buffer = line_str, // putting it here to dispose automatically. kind of a hack
                     },
                 });
             }
         };
         const line_h = chat_line.height();
 
-        if (self.chat_container.scissor_h >= self.chat_container._container.height()) {
+        if (self.chat_container.scissor_h >= self.chat_container.container.height()) {
             chat_line.y = self.chat_container.scissor_h - line_h;
             for (self.chat_lines.items) |line| {
                 line.y -= line_h;
             }
         } else {
-            chat_line.y = self.chat_container._container.height();
+            chat_line.y = self.chat_container.container.height();
         }
 
         self.chat_container.update();
@@ -592,7 +592,7 @@ pub const GameScreen = struct {
         self.chat_lines.deinit();
         self.options.deinit();
 
-        self._allocator.destroy(self);
+        self.allocator.destroy(self);
     }
 
     pub fn resize(self: *GameScreen, w: f32, h: f32) void {
@@ -618,12 +618,12 @@ pub const GameScreen = struct {
         self.mana_bar.y = self.bars_decor.y + 18;
         const chat_decor_h = self.chat_decor.height();
         self.chat_decor.y = h - chat_decor_h - self.chat_input.image_data.current(self.chat_input.state).normal.height() - 10;
-        self.chat_container._container.x = self.chat_decor.x + 9;
+        self.chat_container.container.x = self.chat_decor.x + 9;
         const old_y = self.chat_container.base_y;
         self.chat_container.base_y = self.chat_decor.y + 9;
-        self.chat_container._container.y += (self.chat_container.base_y - old_y);
-        self.chat_container._scroll_bar.x = self.chat_decor.x + 386;
-        self.chat_container._scroll_bar.y = self.chat_decor.y + 12;
+        self.chat_container.container.y += (self.chat_container.base_y - old_y);
+        self.chat_container.scroll_bar.x = self.chat_decor.x + 386;
+        self.chat_container.scroll_bar.y = self.chat_decor.y + 12;
         self.chat_input.y = self.chat_decor.y + chat_decor_h;
         self.fps_text.y = self.minimap_decor.y + self.minimap_decor.height() + 10;
         self.hub_button.x = self.minimap_decor.x + 67 + (24 - self.hub_button.width()) / 2.0;
@@ -672,10 +672,10 @@ pub const GameScreen = struct {
                 self.current_tier_icon.y = self.xp_bar_decor.y + 6 + (18 - current_icon.texHRaw()) / 2.0;
 
                 self.current_tier_icon.tooltip_text.?.setText(try std.fmt.bufPrint(
-                    self.current_tier_icon.tooltip_text.?._backing_buffer,
+                    self.current_tier_icon.tooltip_text.?.backing_buffer,
                     "Current Tier: {s}",
                     .{utils.toRoman(local_player.tier)},
-                ), self._allocator);
+                ), self.allocator);
 
                 var next_icon = getTierAtlasData(local_player.tier + 1);
                 next_icon.removePadding();
@@ -684,10 +684,10 @@ pub const GameScreen = struct {
                 self.next_tier_icon.y = self.xp_bar_decor.y + 6 + (18 - next_icon.texHRaw()) / 2.0;
 
                 self.next_tier_icon.tooltip_text.?.setText(try std.fmt.bufPrint(
-                    self.next_tier_icon.tooltip_text.?._backing_buffer,
+                    self.next_tier_icon.tooltip_text.?.backing_buffer,
                     "Next Tier: {s}",
                     .{utils.toRoman(local_player.tier + 1)},
-                ), self._allocator);
+                ), self.allocator);
 
                 self.last_tier = local_player.tier;
             }
@@ -707,10 +707,10 @@ pub const GameScreen = struct {
                     self.combat_indicator.tooltip_text.?.max_width = std.math.floatMax(f32);
                 }
 
-                self.combat_indicator.tooltip_text.?._lock.lock();
-                defer self.combat_indicator.tooltip_text.?._lock.unlock();
+                self.combat_indicator.tooltip_text.?.lock.lock();
+                defer self.combat_indicator.tooltip_text.?.lock.unlock();
 
-                self.combat_indicator.tooltip_text.?.recalculateAttributes(self._allocator);
+                self.combat_indicator.tooltip_text.?.recalculateAttributes(self.allocator);
                 self.combat_indicator.x = self.bars_decor.x + (self.bars_decor.width() - self.combat_indicator.width()) / 2;
                 self.combat_indicator.y = self.bars_decor.y - self.combat_indicator.height() - 10;
 
@@ -723,8 +723,8 @@ pub const GameScreen = struct {
 
                 var xp_text_data = &self.xp_bar.text_data;
                 xp_text_data.setText(
-                    try std.fmt.bufPrint(xp_text_data._backing_buffer, "{d}/{d}", .{ local_player.tier_xp, local_player.next_tier_xp }),
-                    self._allocator,
+                    try std.fmt.bufPrint(xp_text_data.backing_buffer, "{d}/{d}", .{ local_player.tier_xp, local_player.next_tier_xp }),
+                    self.allocator,
                 );
 
                 self.last_tier_xp = local_player.tier_xp;
@@ -741,8 +741,8 @@ pub const GameScreen = struct {
                 else
                     0xFFFFFF;
                 health_text_data.setText(
-                    try std.fmt.bufPrint(health_text_data._backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp }),
-                    self._allocator,
+                    try std.fmt.bufPrint(health_text_data.backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp }),
+                    self.allocator,
                 );
 
                 self.last_hp = local_player.hp;
@@ -759,8 +759,8 @@ pub const GameScreen = struct {
                 else
                     0xFFFFFF;
                 mana_text_data.setText(
-                    try std.fmt.bufPrint(mana_text_data._backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp }),
-                    self._allocator,
+                    try std.fmt.bufPrint(mana_text_data.backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp }),
+                    self.allocator,
                 );
 
                 self.last_mp = local_player.mp;
@@ -773,18 +773,18 @@ pub const GameScreen = struct {
         text_data.color = if (base_val - bonus_val >= max_val) 0xFFE770 else 0xFFFFFF;
         text_data.setText((if (bonus_val > 0)
             std.fmt.bufPrint(
-                text_data._backing_buffer,
+                text_data.backing_buffer,
                 "{d}&size=\"8\"&col=\"65E698\"\n(+{d})",
                 .{ base_val, bonus_val },
             )
         else if (bonus_val < 0)
             std.fmt.bufPrint(
-                text_data._backing_buffer,
+                text_data.backing_buffer,
                 "{d}&size=\"8\"&col=\"FF7070\"\n({d})",
                 .{ base_val, bonus_val },
             )
         else
-            std.fmt.bufPrint(text_data._backing_buffer, "{d}", .{base_val})) catch text_data.text, allocator);
+            std.fmt.bufPrint(text_data.backing_buffer, "{d}", .{base_val})) catch text_data.text, allocator);
     }
 
     pub fn updateStats(self: *GameScreen) void {
@@ -793,77 +793,77 @@ pub const GameScreen = struct {
 
         if (map.localPlayerConst()) |player| {
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.strength_stat_text.text_data,
                 player.strength,
                 player.strength_bonus,
                 player.class_data.strength.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.resistance_stat_text.text_data,
                 player.resistance,
                 player.resistance_bonus,
                 player.class_data.resistance.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.intelligence_stat_text.text_data,
                 player.intelligence,
                 player.intelligence_bonus,
                 player.class_data.intelligence.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.haste_stat_text.text_data,
                 player.haste,
                 player.haste_bonus,
                 player.class_data.haste.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.wit_stat_text.text_data,
                 player.wit,
                 player.wit_bonus,
                 player.class_data.wit.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.speed_stat_text.text_data,
                 player.speed,
                 player.speed_bonus,
                 player.class_data.speed.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.penetration_stat_text.text_data,
                 player.penetration,
                 player.penetration_bonus,
                 player.class_data.penetration.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.tenacity_stat_text.text_data,
                 player.tenacity,
                 player.tenacity_bonus,
                 player.class_data.tenacity.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.defense_stat_text.text_data,
                 player.defense,
                 player.defense_bonus,
                 player.class_data.defense.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.stamina_stat_text.text_data,
                 player.stamina,
                 player.stamina_bonus,
                 player.class_data.stamina.max_values[player.tier - 1],
             );
             updateStat(
-                self._allocator,
+                self.allocator,
                 &self.piercing_stat_text.text_data,
                 player.piercing,
                 player.piercing_bonus,
@@ -877,7 +877,7 @@ pub const GameScreen = struct {
             \\FPS: {d}
             \\Memory: {d:.1} MB
         ;
-        self.fps_text.text_data.setText(try std.fmt.bufPrint(self.fps_text.text_data._backing_buffer, fmt, .{ fps, mem }), self._allocator);
+        self.fps_text.text_data.setText(try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, fmt, .{ fps, mem }), self.allocator);
     }
 
     fn parseItemRects(self: *GameScreen) void {
@@ -943,9 +943,9 @@ pub const GameScreen = struct {
 
             if (map.localPlayerConst()) |local_player| {
                 const start_item = if (start_slot.is_container)
-                    self.container_items[start_slot.idx]._item
+                    self.container_items[start_slot.idx].item
                 else
-                    self.inventory_items[start_slot.idx]._item;
+                    self.inventory_items[start_slot.idx].item;
 
                 if (end_slot.idx >= 4 + 9 and local_player.tier < 2) {
                     if (start_slot.is_container) {
@@ -959,9 +959,9 @@ pub const GameScreen = struct {
                 }
 
                 const end_item = if (end_slot.is_container)
-                    self.container_items[end_slot.idx]._item
+                    self.container_items[end_slot.idx].item
                 else
-                    self.inventory_items[end_slot.idx]._item;
+                    self.inventory_items[end_slot.idx].item;
 
                 if (start_slot.is_container) {
                     self.setContainerItem(end_item, start_slot.idx);
@@ -991,11 +991,11 @@ pub const GameScreen = struct {
     }
 
     fn itemDoubleClickCallback(item: *element.Item) void {
-        if (item._item < 0)
+        if (item.item < 0)
             return;
 
         const start_slot = Slot.findSlotId(systems.screen.game.*, item.x + 4, item.y + 4);
-        if (game_data.item_type_to_props.get(@intCast(item._item))) |props| {
+        if (game_data.item_type_to_props.get(@intCast(item.item))) |props| {
             if (props.consumable and !start_slot.is_container) {
                 map.object_lock.lockShared();
                 defer map.object_lock.unlockShared();
@@ -1020,12 +1020,12 @@ pub const GameScreen = struct {
         defer map.object_lock.unlockShared();
 
         if (map.localPlayerConst()) |local_player| {
-            if (game_data.item_type_to_props.get(@intCast(item._item))) |props| {
+            if (game_data.item_type_to_props.get(@intCast(item.item))) |props| {
                 if (start_slot.is_container) {
                     const end_slot = Slot.nextAvailableSlot(systems.screen.game.*, local_player.class_data.slot_types, props.slot_type);
                     if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
-                        item.x = item._drag_start_x;
-                        item.y = item._drag_start_y;
+                        item.x = item.drag_start_x;
+                        item.y = item.drag_start_y;
                         return;
                     }
 
@@ -1035,8 +1035,8 @@ pub const GameScreen = struct {
                     if (end_slot.idx == 255 or // we don't want to drop
                         start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container)
                     {
-                        item.x = item._drag_start_x;
-                        item.y = item._drag_start_y;
+                        item.x = item.drag_start_x;
+                        item.y = item.drag_start_y;
                         return;
                     }
 
@@ -1079,7 +1079,7 @@ pub const GameScreen = struct {
             main.server.queuePacket(.{ .player_text = .{ .text = input_text } });
 
             const current_screen = systems.screen.game;
-            const text_copy = current_screen._allocator.dupe(u8, input_text) catch unreachable;
+            const text_copy = current_screen.allocator.dupe(u8, input_text) catch unreachable;
             input.input_history.append(text_copy) catch unreachable;
             input.input_history_idx = @intCast(input.input_history.items.len);
         }
@@ -1088,22 +1088,22 @@ pub const GameScreen = struct {
     fn interactCallback() void {}
 
     fn itemDragStartCallback(item: *element.Item) void {
-        item._background_image_data = null;
+        item.background_image_data = null;
     }
 
     fn itemDragEndCallback(item: *element.Item) void {
         var current_screen = systems.screen.game;
-        const start_slot = Slot.findSlotId(current_screen.*, item._drag_start_x + 4, item._drag_start_y + 4);
-        const end_slot = Slot.findSlotId(current_screen.*, item.x - item._drag_offset_x, item.y - item._drag_offset_y);
+        const start_slot = Slot.findSlotId(current_screen.*, item.drag_start_x + 4, item.drag_start_y + 4);
+        const end_slot = Slot.findSlotId(current_screen.*, item.x - item.drag_offset_x, item.y - item.drag_offset_y);
         if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
-            item.x = item._drag_start_x;
-            item.y = item._drag_start_y;
+            item.x = item.drag_start_x;
+            item.y = item.drag_start_y;
 
             // to update the background image
             if (start_slot.is_container) {
-                current_screen.setContainerItem(item._item, start_slot.idx);
+                current_screen.setContainerItem(item.item, start_slot.idx);
             } else {
-                current_screen.setInvItem(item._item, start_slot.idx);
+                current_screen.setInvItem(item.item, start_slot.idx);
             }
             return;
         }
@@ -1112,13 +1112,13 @@ pub const GameScreen = struct {
     }
 
     fn itemShiftClickCallback(item: *element.Item) void {
-        if (item._item < 0)
+        if (item.item < 0)
             return;
 
         const current_screen = systems.screen.game.*;
         const slot = Slot.findSlotId(current_screen, item.x + 4, item.y + 4);
 
-        if (game_data.item_type_to_props.get(@intCast(item._item))) |props| {
+        if (game_data.item_type_to_props.get(@intCast(item.item))) |props| {
             if (props.consumable) {
                 map.object_lock.lockShared();
                 defer map.object_lock.unlockShared();
@@ -1146,7 +1146,7 @@ pub const GameScreen = struct {
 
     pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
         if (item == std.math.maxInt(u16)) {
-            self.container_items[idx]._item = std.math.maxInt(u16);
+            self.container_items[idx].item = std.math.maxInt(u16);
             self.container_items[idx].visible = false;
             return;
         }
@@ -1161,21 +1161,21 @@ pub const GameScreen = struct {
                 const pos_w = self.container_pos_data[idx].w;
                 const pos_h = self.container_pos_data[idx].h;
 
-                self.container_items[idx]._item = item;
+                self.container_items[idx].item = item;
                 self.container_items[idx].image_data.normal.atlas_data = atlas_data;
                 self.container_items[idx].x = base_x + (pos_w - self.container_items[idx].width() + assets.padding * 2) / 2;
                 self.container_items[idx].y = base_y + (pos_h - self.container_items[idx].height() + assets.padding * 2) / 2;
 
                 if (std.mem.eql(u8, props.tier, "Mythic")) {
-                    self.container_items[idx]._background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
+                    self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
                 } else if (std.mem.eql(u8, props.tier, "Legendary")) {
-                    self.container_items[idx]._background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
+                    self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
                 } else if (std.mem.eql(u8, props.tier, "Epic")) {
-                    self.container_items[idx]._background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
+                    self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
                 } else if (std.mem.eql(u8, props.tier, "Rare")) {
-                    self.container_items[idx]._background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
+                    self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
                 } else {
-                    self.container_items[idx]._background_image_data = null;
+                    self.container_items[idx].background_image_data = null;
                 }
 
                 return;
@@ -1186,16 +1186,16 @@ pub const GameScreen = struct {
             std.log.err("Attempted to populate inventory index {d} with item 0x{x}, but props was not found", .{ idx, item });
         }
 
-        self.container_items[idx]._item = std.math.maxInt(u16);
+        self.container_items[idx].item = std.math.maxInt(u16);
         self.container_items[idx].image_data.normal.atlas_data = assets.error_data;
         self.container_items[idx].x = self.container_decor.x + self.container_pos_data[idx].x + (self.container_pos_data[idx].w - self.container_items[idx].width() + assets.padding * 2) / 2;
         self.container_items[idx].y = self.container_decor.y + self.container_pos_data[idx].y + (self.container_pos_data[idx].h - self.container_items[idx].height() + assets.padding * 2) / 2;
-        self.container_items[idx]._background_image_data = null;
+        self.container_items[idx].background_image_data = null;
     }
 
     pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
         if (item == std.math.maxInt(u16)) {
-            self.inventory_items[idx]._item = std.math.maxInt(u16);
+            self.inventory_items[idx].item = std.math.maxInt(u16);
             self.inventory_items[idx].visible = false;
             return;
         }
@@ -1210,21 +1210,21 @@ pub const GameScreen = struct {
                 const pos_w = self.inventory_pos_data[idx].w;
                 const pos_h = self.inventory_pos_data[idx].h;
 
-                self.inventory_items[idx]._item = item;
+                self.inventory_items[idx].item = item;
                 self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
                 self.inventory_items[idx].x = base_x + (pos_w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
                 self.inventory_items[idx].y = base_y + (pos_h - self.inventory_items[idx].height() + assets.padding * 2) / 2;
 
                 if (std.mem.eql(u8, props.tier, "Mythic")) {
-                    self.inventory_items[idx]._background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
+                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
                 } else if (std.mem.eql(u8, props.tier, "Legendary")) {
-                    self.inventory_items[idx]._background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
+                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
                 } else if (std.mem.eql(u8, props.tier, "Epic")) {
-                    self.inventory_items[idx]._background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
+                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
                 } else if (std.mem.eql(u8, props.tier, "Rare")) {
-                    self.inventory_items[idx]._background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
+                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
                 } else {
-                    self.inventory_items[idx]._background_image_data = null;
+                    self.inventory_items[idx].background_image_data = null;
                 }
 
                 return;
@@ -1236,11 +1236,11 @@ pub const GameScreen = struct {
         }
 
         const atlas_data = assets.error_data;
-        self.inventory_items[idx]._item = std.math.maxInt(u16);
+        self.inventory_items[idx].item = std.math.maxInt(u16);
         self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
         self.inventory_items[idx].x = self.inventory_decor.x + self.inventory_pos_data[idx].x + (self.inventory_pos_data[idx].w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
         self.inventory_items[idx].y = self.inventory_decor.y + self.inventory_pos_data[idx].y + (self.inventory_pos_data[idx].h - self.inventory_items[idx].height() + assets.padding * 2) / 2;
-        self.inventory_items[idx]._background_image_data = null;
+        self.inventory_items[idx].background_image_data = null;
     }
 
     pub inline fn setContainerVisible(self: *GameScreen, visible: bool) void {

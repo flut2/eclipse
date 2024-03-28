@@ -16,10 +16,10 @@ pub const AbilityTooltip = struct {
     description: *element.Text = undefined,
 
     last_abil_name: []const u8 = &[0]u8{},
-    _allocator: std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *AbilityTooltip, allocator: std.mem.Allocator) !void {
-        self._allocator = allocator;
+        self.allocator = allocator;
 
         self.root = try element.create(allocator, element.Container{
             .visible = false,
@@ -55,7 +55,7 @@ pub const AbilityTooltip = struct {
 
         self.cost_text = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
-            .y = self.title.text_data._height + 10,
+            .y = self.title.text_data.height + 10,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -100,7 +100,7 @@ pub const AbilityTooltip = struct {
                 self.image.image_data.normal.atlas_data = data[params.props.icon.index];
             }
 
-            self.title.text_data.setText(params.props.name, self._allocator);
+            self.title.text_data.setText(params.props.name, self.allocator);
 
             const has_mana_cost = params.props.mana_cost > 0;
             const has_health_cost = params.props.health_cost > 0;
@@ -112,31 +112,31 @@ pub const AbilityTooltip = struct {
 
                 if (has_health_cost and has_mana_cost) {
                     self.cost_text.text_data.text = std.fmt.bufPrint(
-                        self.cost_text.text_data._backing_buffer,
+                        self.cost_text.text_data.backing_buffer,
                         "{d} " ++ mana_icon ++ " {d} " ++ health_icon,
                         .{ params.props.mana_cost, params.props.health_cost },
                     ) catch self.cost_text.text_data.text;
                 } else if (has_health_cost) {
                     self.cost_text.text_data.text = std.fmt.bufPrint(
-                        self.cost_text.text_data._backing_buffer,
+                        self.cost_text.text_data.backing_buffer,
                         "{d} " ++ health_icon,
                         .{params.props.health_cost},
                     ) catch self.cost_text.text_data.text;
                 } else {
                     self.cost_text.text_data.text = std.fmt.bufPrint(
-                        self.cost_text.text_data._backing_buffer,
+                        self.cost_text.text_data.backing_buffer,
                         "{d} " ++ mana_icon,
                         .{params.props.mana_cost},
                     ) catch self.cost_text.text_data.text;
                 }
             }
 
-            self.description.text_data.setText(params.props.description, self._allocator);
+            self.description.text_data.setText(params.props.description, self.allocator);
 
             self.line_break.y = self.image.y + self.image.height() + 10;
             self.description.y = self.line_break.y + 20;
 
-            const new_h = self.description.y + self.description.text_data._height + 10;
+            const new_h = self.description.y + self.description.text_data.height + 10;
             switch (self.decor.image_data) {
                 .nine_slice => |*nine_slice| nine_slice.h = new_h,
                 .normal => |*image_data| image_data.scale_y = new_h / image_data.height(),

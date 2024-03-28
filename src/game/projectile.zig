@@ -41,11 +41,11 @@ pub const Projectile = struct {
     colors: []u32 = &[0]u32{},
     hit_list: std.AutoHashMap(i32, void) = undefined,
     heat_seek_fired: bool = false,
-    _last_hit_check: i64 = 0,
-    _disposed: bool = false,
+    last_hit_check: i64 = 0,
+    disposed: bool = false,
 
     pub inline fn addToMap(self: *Projectile) void {
-        self.hit_list = std.AutoHashMap(i32, void).init(main._allocator);
+        self.hit_list = std.AutoHashMap(i32, void).init(main.allocator);
         self.start_time = main.current_time;
 
         const tex_list = self.props.texture_data;
@@ -230,10 +230,10 @@ pub const Projectile = struct {
             self.visual_angle = std.math.atan2(y_dt, x_dt);
         }
 
-        if (time - self._last_hit_check < 16 * std.time.us_per_ms)
+        if (time - self.last_hit_check < 16 * std.time.us_per_ms)
             return true;
 
-        self._last_hit_check = time;
+        self.last_hit_check = time;
 
         if (map.getSquare(self.x, self.y)) |square| {
             const en = map.findEntityConst(square.static_obj_id);

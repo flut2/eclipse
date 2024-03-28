@@ -12,11 +12,11 @@ pub const CharSelectScreen = struct {
     boxes: std.ArrayList(*element.CharacterBox) = undefined,
     inited: bool = false,
 
-    _allocator: std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
     new_char_button: *element.Button = undefined,
     pub fn init(allocator: std.mem.Allocator) !*CharSelectScreen {
         var screen = try allocator.create(CharSelectScreen);
-        screen.* = .{ ._allocator = allocator };
+        screen.* = .{ .allocator = allocator };
 
         const presence = rpc.Packet.Presence{
             .assets = .{
@@ -87,7 +87,7 @@ pub const CharSelectScreen = struct {
 
         element.destroy(self.new_char_button);
 
-        self._allocator.destroy(self);
+        self.allocator.destroy(self);
     }
 
     pub fn resize(_: *CharSelectScreen, _: f32, _: f32) void {}

@@ -21,10 +21,10 @@ pub const TextDialog = struct {
     dispose_title: bool = false,
     dispose_body: bool = false,
 
-    _allocator: std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *TextDialog, allocator: std.mem.Allocator) !void {
-        self._allocator = allocator;
+        self.allocator = allocator;
 
         self.root = try element.create(allocator, element.Container{
             .visible = false,
@@ -99,23 +99,23 @@ pub const TextDialog = struct {
 
     pub fn deinit(self: *TextDialog) void {
         if (self.dispose_body)
-            self._allocator.free(self.base_text.text_data.text);
+            self.allocator.free(self.base_text.text_data.text);
 
         if (self.dispose_title)
-            self._allocator.free(self.title_text.text_data.text);
+            self.allocator.free(self.title_text.text_data.text);
 
         element.destroy(self.root);
     }
 
     pub fn setValues(self: *TextDialog, params: dialog.ParamsFor(TextDialog)) void {
         if (self.dispose_body)
-            self._allocator.free(self.base_text.text_data.text);
+            self.allocator.free(self.base_text.text_data.text);
 
         if (self.dispose_title)
-            self._allocator.free(self.title_text.text_data.text);
+            self.allocator.free(self.title_text.text_data.text);
 
         if (params.title) |title| {
-            self.title_text.text_data.setText(title, self._allocator);
+            self.title_text.text_data.setText(title, self.allocator);
             switch (self.title_decor.image_data) {
                 .nine_slice => |*nine_slice| {
                     nine_slice.w = self.title_text.width() + 25 * 2;
@@ -135,7 +135,7 @@ pub const TextDialog = struct {
             self.title_text.text_data.max_height = self.title_decor.height();
         }
 
-        self.base_text.text_data.setText(params.body, self._allocator);
+        self.base_text.text_data.setText(params.body, self.allocator);
 
         self.dispose_title = params.title != null and params.dispose_title;
         self.dispose_body = params.dispose_body;

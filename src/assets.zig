@@ -805,7 +805,7 @@ pub fn playSfx(name: []const u8) void {
 
         var audio_copies = sfx_copy_map.get(audio);
         if (audio_copies == null)
-            audio_copies = std.ArrayList(*zaudio.Sound).init(main._allocator);
+            audio_copies = std.ArrayList(*zaudio.Sound).init(main.allocator);
 
         for (audio_copies.?.items) |copy_audio| {
             if (!copy_audio.isPlaying()) {
@@ -1126,7 +1126,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
         };
     } else std.debug.panic("Could not find error_texture in the atlas", .{});
 
-    settings.assetsLoaded();
+    settings.interact_key_tex = settings.getKeyTexture(settings.interact);
 }
 
 pub inline fn getUiData(comptime name: []const u8, idx: usize) AtlasData {

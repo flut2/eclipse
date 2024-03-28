@@ -200,10 +200,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
 pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
     switch (en.*) {
         .object => |*obj| {
-            if (obj._disposed)
+            if (obj.disposed)
                 return;
 
-            obj._disposed = true;
+            obj.disposed = true;
 
             if (obj.props.static) {
                 if (getSquarePtr(obj.x, obj.y)) |square| {
@@ -211,7 +211,7 @@ pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
                 }
             }
 
-            systems.removeAttachedUi(obj.obj_id, allocator);
+            systems.removeAttachedUi(obj.obj_id);
             if (obj.name) |obj_name|
                 allocator.free(obj_name);
 
@@ -220,18 +220,18 @@ pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
             }
         },
         .projectile => |*projectile| {
-            if (projectile._disposed)
+            if (projectile.disposed)
                 return;
 
-            projectile._disposed = true;
+            projectile.disposed = true;
             projectile.hit_list.deinit();
         },
         .player => |*player| {
-            if (player._disposed)
+            if (player.disposed)
                 return;
 
-            player._disposed = true;
-            systems.removeAttachedUi(player.obj_id, allocator);
+            player.disposed = true;
+            systems.removeAttachedUi(player.obj_id);
             player.ability_data.deinit();
 
             if (player.name_text_data) |*data| {

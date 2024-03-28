@@ -204,7 +204,7 @@ pub const Condition = packed struct(u32) {
     hidden: bool = false,
     targeted: bool = false,
     invisible: bool = false,
-    _padding: u18 = 0,
+    padding: u18 = 0,
 
     pub inline fn fromCondSlice(slice: []game_data.ConditionEffect) Condition {
         var ret = Condition{};

@@ -20,10 +20,10 @@ pub const ItemTooltip = struct {
 
     main_buffer_front: bool = false,
     footer_buffer_front: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *ItemTooltip, allocator: std.mem.Allocator) !void {
-        self._allocator = allocator;
+        self.allocator = allocator;
 
         self.root = try element.create(allocator, element.Container{
             .visible = false,
@@ -65,7 +65,7 @@ pub const ItemTooltip = struct {
 
         self.rarity = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
-            .y = self.item_name.text_data._height + 14,
+            .y = self.item_name.text_data.height + 14,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -99,7 +99,7 @@ pub const ItemTooltip = struct {
 
         self.line_break_two = try self.root.createChild(element.Image{
             .x = 20,
-            .y = self.main_text.y + self.main_text.text_data._height,
+            .y = self.main_text.y + self.main_text.text_data.height,
             .image_data = .{
                 .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 14, 13, 0, 1, 14, 1.0),
             },
@@ -124,9 +124,9 @@ pub const ItemTooltip = struct {
     }
 
     fn getMainBuffer(self: *ItemTooltip) []u8 {
-        const buffer_len_half = @divExact(self.main_text.text_data._backing_buffer.len, 2);
-        const back_buffer = self.main_text.text_data._backing_buffer[0..buffer_len_half];
-        const front_buffer = self.main_text.text_data._backing_buffer[buffer_len_half..];
+        const buffer_len_half = @divExact(self.main_text.text_data.backing_buffer.len, 2);
+        const back_buffer = self.main_text.text_data.backing_buffer[0..buffer_len_half];
+        const front_buffer = self.main_text.text_data.backing_buffer[buffer_len_half..];
 
         if (self.main_buffer_front) {
             self.main_buffer_front = false;
@@ -138,9 +138,9 @@ pub const ItemTooltip = struct {
     }
 
     fn getFooterBuffer(self: *ItemTooltip) []u8 {
-        const buffer_len_half = @divExact(self.footer.text_data._backing_buffer.len, 2);
-        const back_buffer = self.footer.text_data._backing_buffer[0..buffer_len_half];
-        const front_buffer = self.footer.text_data._backing_buffer[buffer_len_half..];
+        const buffer_len_half = @divExact(self.footer.text_data.backing_buffer.len, 2);
+        const back_buffer = self.footer.text_data.backing_buffer[0..buffer_len_half];
+        const front_buffer = self.footer.text_data.backing_buffer[buffer_len_half..];
 
         if (self.footer_buffer_front) {
             self.footer_buffer_front = false;
@@ -179,17 +179,17 @@ pub const ItemTooltip = struct {
             }
 
             self.rarity.text_data.setText(std.fmt.bufPrint(
-                self.rarity.text_data._backing_buffer,
+                self.rarity.text_data.backing_buffer,
                 "{s} {s}",
                 .{ props.tier, props.slot_type.toString() },
-            ) catch self.rarity.text_data.text, self._allocator);
+            ) catch self.rarity.text_data.text, self.allocator);
             self.rarity.text_data.color = rarity_text_color;
 
             if (assets.atlas_data.get(props.texture_data.sheet)) |data| {
                 self.image.image_data.normal.atlas_data = data[props.texture_data.index];
             }
 
-            self.item_name.text_data.setText(props.display_id, self._allocator);
+            self.item_name.text_data.setText(props.display_id, self.allocator);
 
             self.line_break_one.y = self.image.y + self.image.height() + 10;
             self.main_text.y = self.line_break_one.y - 5;
@@ -334,9 +334,9 @@ pub const ItemTooltip = struct {
             if (props.usable)
                 text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Cooldown: " ++ decimal_fmt ++ " seconds", .{ text, props.cooldown }) catch text;
 
-            self.main_text.text_data.setText(text, self._allocator);
+            self.main_text.text_data.setText(text, self.allocator);
 
-            self.line_break_two.y = self.main_text.y + self.main_text.text_data._height + 5;
+            self.line_break_two.y = self.main_text.y + self.main_text.text_data.height + 5;
             self.footer.y = self.line_break_two.y - 5;
 
             var footer_text: []u8 = "";
@@ -351,7 +351,7 @@ pub const ItemTooltip = struct {
             {
                 map.object_lock.lockShared();
                 defer map.object_lock.unlockShared();
-                
+
                 if (map.localPlayerConst()) |player| {
                     const has_type = blk: {
                         for (player.class_data.slot_types) |slot_type| {
@@ -403,14 +403,14 @@ pub const ItemTooltip = struct {
             if (props.consumable)
                 footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Can be consumed", .{footer_text}) catch footer_text;
 
-            self.footer.text_data.setText(footer_text, self._allocator);
+            self.footer.text_data.setText(footer_text, self.allocator);
 
             if (footer_text.len == 0) {
                 self.line_break_two.visible = false;
                 self.decor.image_data.nine_slice.h = self.line_break_two.y;
             } else {
                 self.line_break_two.visible = true;
-                self.decor.image_data.nine_slice.h = self.footer.y + self.footer.text_data._height + 10;
+                self.decor.image_data.nine_slice.h = self.footer.y + self.footer.text_data.height + 10;
             }
 
             self.root.x = params.x - self.decor.width() - 15;

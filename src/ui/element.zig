@@ -13,7 +13,7 @@ const utils = @import("../utils.zig");
 pub fn create(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data) {
     var elem = try allocator.create(@TypeOf(data));
     elem.* = data;
-    elem._allocator = allocator;
+    elem.allocator = allocator;
     if (std.meta.hasFn(@TypeOf(data), "init")) elem.init();
 
     comptime var field_name: []const u8 = "";
@@ -34,10 +34,10 @@ pub fn create(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data) {
 }
 
 pub fn destroy(self: anytype) void {
-    if (self._disposed)
+    if (self.disposed)
         return;
 
-    self._disposed = true;
+    self.disposed = true;
 
     comptime var field_name: []const u8 = "";
     comptime {
@@ -61,7 +61,7 @@ pub fn destroy(self: anytype) void {
     }
 
     if (std.meta.hasFn(@typeInfo(@TypeOf(self)).Pointer.child, "deinit")) self.deinit();
-    self._allocator.destroy(self);
+    self.allocator.destroy(self);
 }
 
 inline fn intersects(self: anytype, x: f32, y: f32) bool {
@@ -140,31 +140,31 @@ pub const TextData = struct {
     vert_align: AlignVert = .top,
     max_width: f32 = std.math.floatMax(f32),
     max_height: f32 = std.math.floatMax(f32),
-    _backing_buffer: []u8 = &[0]u8{},
-    _lock: std.Thread.Mutex = .{},
-    _width: f32 = 0.0,
-    _height: f32 = 0.0,
-    _line_count: f32 = 0.0,
-    _line_widths: ?std.ArrayList(f32) = null,
+    backing_buffer: []u8 = &[0]u8{},
+    lock: std.Thread.Mutex = .{},
+    width: f32 = 0.0,
+    height: f32 = 0.0,
+    line_count: f32 = 0.0,
+    line_widths: ?std.ArrayList(f32) = null,
 
     pub fn setText(self: *TextData, text: []const u8, allocator: std.mem.Allocator) void {
-        self._lock.lock();
-        defer self._lock.unlock();
+        self.lock.lock();
+        defer self.lock.unlock();
 
         self.text = text;
         self.recalculateAttributes(allocator);
     }
 
     pub fn recalculateAttributes(self: *TextData, allocator: std.mem.Allocator) void {
-        std.debug.assert(!self._lock.tryLock());
+        std.debug.assert(!self.lock.tryLock());
 
-        if (self._backing_buffer.len == 0 and self.max_chars > 0)
-            self._backing_buffer = allocator.alloc(u8, self.max_chars) catch std.debug.panic("Failed to allocate the backing buffer", .{});
+        if (self.backing_buffer.len == 0 and self.max_chars > 0)
+            self.backing_buffer = allocator.alloc(u8, self.max_chars) catch std.debug.panic("Failed to allocate the backing buffer", .{});
 
-        if (self._line_widths) |*line_widths| {
+        if (self.line_widths) |*line_widths| {
             line_widths.clearRetainingCapacity();
         } else {
-            self._line_widths = std.ArrayList(f32).init(allocator);
+            self.line_widths = std.ArrayList(f32).init(allocator);
         }
 
         const size_scale = self.size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
@@ -180,12 +180,12 @@ pub const TextData = struct {
         for (0..self.text.len) |i| {
             const offset_i = i + index_offset;
             if (offset_i >= self.text.len) {
-                self._width = @max(x_max, x_pointer);
-                self._line_widths.?.append(x_pointer) catch |e| {
+                self.width = @max(x_max, x_pointer);
+                self.line_widths.?.append(x_pointer) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
-                self._height = y_pointer;
+                self.height = y_pointer;
                 return;
             }
 
@@ -280,12 +280,12 @@ pub const TextData = struct {
 
             var next_x_pointer = x_pointer + char_data.x_advance * current_size;
             if (char == '\n' or next_x_pointer > self.max_width) {
-                self._width = @max(x_max, x_pointer);
-                self._line_widths.?.append(x_pointer) catch |e| {
+                self.width = @max(x_max, x_pointer);
+                self.line_widths.?.append(x_pointer) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
-                self._line_count += 1;
+                self.line_count += 1;
                 next_x_pointer = char_data.x_advance * current_size;
                 y_pointer += line_height;
             }
@@ -295,24 +295,24 @@ pub const TextData = struct {
                 x_max = x_pointer;
         }
 
-        self._width = @max(x_max, x_pointer);
-        self._line_widths.?.append(x_pointer) catch |e| {
+        self.width = @max(x_max, x_pointer);
+        self.line_widths.?.append(x_pointer) catch |e| {
             std.log.err("Attribute recalculation for text data failed: {}", .{e});
             return;
         };
-        self._height = y_pointer;
+        self.height = y_pointer;
     }
 
     pub fn deinit(self: *TextData, allocator: std.mem.Allocator) void {
-        self._lock.lock();
-        defer self._lock.unlock();
+        self.lock.lock();
+        defer self.lock.unlock();
 
-        if (self._backing_buffer.len > 0)
-            allocator.free(self._backing_buffer);
+        if (self.backing_buffer.len > 0)
+            allocator.free(self.backing_buffer);
 
-        if (self._line_widths) |line_widths| {
+        if (self.line_widths) |line_widths| {
             line_widths.deinit();
-            self._line_widths = null;
+            self.line_widths = null;
         }
     }
 };
@@ -536,11 +536,10 @@ pub const Input = struct {
     visible: bool = true,
     event_policy: EventPolicy = .{},
     // -1 means not selected
-    _last_input: i64 = -1,
-    _x_offset: f32 = 0.0,
-    _index: u32 = 0,
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    last_input: i64 = -1,
+    x_offset: f32 = 0.0,
+    index: u32 = 0,
+    disposed: bool = false,
 
     pub fn mousePress(self: *Input, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
@@ -548,7 +547,7 @@ pub const Input = struct {
 
         if (intersects(self, x, y)) {
             input.selected_input_field = self;
-            self._last_input = 0;
+            self.last_input = 0;
             self.state = .pressed;
             return true;
         }
@@ -591,15 +590,15 @@ pub const Input = struct {
         }
 
         {
-            self.text_data._lock.lock();
-            defer self.text_data._lock.unlock();
+            self.text_data.lock.lock();
+            defer self.text_data.lock.unlock();
 
-            self.text_data.recalculateAttributes(self._allocator);
+            self.text_data.recalculateAttributes(self.allocator);
         }
 
         switch (self.cursor_image_data) {
-            .nine_slice => |*nine_slice| nine_slice.h = self.text_data._height,
-            .normal => |*image_data| image_data.scale_y = self.text_data._height / image_data.height(),
+            .nine_slice => |*nine_slice| nine_slice.h = self.text_data.height,
+            .normal => |*image_data| image_data.scale_y = self.text_data.height / image_data.height(),
         }
     }
 
@@ -607,37 +606,37 @@ pub const Input = struct {
         if (self == input.selected_input_field)
             input.selected_input_field = null;
 
-        self.text_data.deinit(self._allocator);
+        self.text_data.deinit(self.allocator);
     }
 
     pub fn width(self: Input) f32 {
-        return @max(self.text_data._width, switch (self.image_data.current(self.state)) {
+        return @max(self.text_data.width, switch (self.image_data.current(self.state)) {
             .nine_slice => |nine_slice| return nine_slice.w,
             .normal => |image_data| return image_data.width(),
         });
     }
 
     pub fn height(self: Input) f32 {
-        return @max(self.text_data._height, switch (self.image_data.current(self.state)) {
+        return @max(self.text_data.height, switch (self.image_data.current(self.state)) {
             .nine_slice => |nine_slice| return nine_slice.h,
             .normal => |image_data| return image_data.height(),
         });
     }
 
     pub fn clear(self: *Input) void {
-        self.text_data.setText("", self._allocator);
-        self._index = 0;
+        self.text_data.setText("", self.allocator);
+        self.index = 0;
         self.inputUpdate();
     }
 
     pub fn inputUpdate(self: *Input) void {
-        self._last_input = main.current_time;
+        self.last_input = main.current_time;
 
         {
-            self.text_data._lock.lock();
-            defer self.text_data._lock.unlock();
+            self.text_data.lock.lock();
+            defer self.text_data.lock.unlock();
 
-            self.text_data.recalculateAttributes(self._allocator);
+            self.text_data.recalculateAttributes(self.allocator);
         }
 
         const cursor_width = switch (self.cursor_image_data) {
@@ -649,8 +648,8 @@ pub const Input = struct {
             .nine_slice => |nine_slice| nine_slice.w,
             .normal => |image_data| image_data.width(),
         } - self.text_inlay_x * 2 - cursor_width;
-        const offset = @max(0, self.text_data._width - img_width);
-        self._x_offset = -offset;
+        const offset = @max(0, self.text_data.width - img_width);
+        self.x_offset = -offset;
         self.text_data.scissor.min_x = offset;
         self.text_data.scissor.max_x = offset + img_width;
     }
@@ -668,8 +667,8 @@ pub const Button = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
@@ -719,33 +718,33 @@ pub const Button = struct {
 
     pub fn init(self: *Button) void {
         if (self.text_data) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
 
         if (self.tooltip_text) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
     }
 
     pub fn deinit(self: *Button) void {
         if (self.text_data) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
 
         if (self.tooltip_text) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
     }
 
     pub fn width(self: Button) f32 {
         if (self.text_data) |text| {
-            return @max(text._width, switch (self.image_data.current(self.state)) {
+            return @max(text.width, switch (self.image_data.current(self.state)) {
                 .nine_slice => |nine_slice| return nine_slice.w,
                 .normal => |image_data| return image_data.width(),
             });
@@ -759,7 +758,7 @@ pub const Button = struct {
 
     pub fn height(self: Button) f32 {
         if (self.text_data) |text| {
-            return @max(text._height, switch (self.image_data.current(self.state)) {
+            return @max(text.height, switch (self.image_data.current(self.state)) {
                 .nine_slice => |nine_slice| return nine_slice.h,
                 .normal => |image_data| return image_data.height(),
             });
@@ -788,8 +787,8 @@ pub const KeyMapper = struct {
     visible: bool = true,
     event_policy: EventPolicy = .{},
     listening: bool = false,
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
@@ -845,32 +844,32 @@ pub const KeyMapper = struct {
 
     pub fn init(self: *KeyMapper) void {
         if (self.title_text_data) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
 
         if (self.tooltip_text) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
     }
 
     pub fn deinit(self: *KeyMapper) void {
         if (self.title_text_data) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
 
         if (self.tooltip_text) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
     }
 
     pub fn width(self: KeyMapper) f32 {
-        const extra = if (self.title_text_data) |t| t._width else 0;
+        const extra = if (self.title_text_data) |t| t.width else 0;
         return switch (self.image_data.current(self.state)) {
             .nine_slice => |nine_slice| return nine_slice.w + extra,
             .normal => |image_data| return image_data.width() + extra,
@@ -898,8 +897,8 @@ pub const CharacterBox = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *CharacterBox, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
@@ -941,22 +940,22 @@ pub const CharacterBox = struct {
 
     pub fn init(self: *CharacterBox) void {
         if (self.text_data) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
     }
 
     pub fn deinit(self: *CharacterBox) void {
         if (self.text_data) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
     }
 
     pub fn width(self: CharacterBox) f32 {
         if (self.text_data) |text| {
-            return @max(text._width, switch (self.image_data.current(self.state)) {
+            return @max(text.width, switch (self.image_data.current(self.state)) {
                 .nine_slice => |nine_slice| return nine_slice.w,
                 .normal => |image_data| return image_data.width(),
             });
@@ -970,7 +969,7 @@ pub const CharacterBox = struct {
 
     pub fn height(self: CharacterBox) f32 {
         if (self.text_data) |text| {
-            return @max(text._height, switch (self.image_data.current(self.state)) {
+            return @max(text.height, switch (self.image_data.current(self.state)) {
                 .nine_slice => |nine_slice| return nine_slice.h,
                 .normal => |image_data| return image_data.height(),
             });
@@ -999,8 +998,8 @@ pub const Image = struct {
     minimap_offset_y: f32 = 0.0,
     minimap_width: f32 = 0.0,
     minimap_height: f32 = 0.0,
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
         if (!self.visible)
@@ -1029,16 +1028,16 @@ pub const Image = struct {
 
     pub fn init(self: *Image) void {
         if (self.tooltip_text) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
     }
 
     pub fn deinit(self: *Image) void {
         if (self.tooltip_text) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
     }
 
@@ -1066,8 +1065,8 @@ pub const MenuBackground = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn width(_: MenuBackground) f32 {
         return @floatFromInt(assets.menu_background.width);
@@ -1094,16 +1093,16 @@ pub const Item = struct {
     event_policy: EventPolicy = .{},
     draggable: bool = false,
     // don't set this to anything, it's used for item tier backgrounds
-    _background_image_data: ?ImageData = null,
-    _is_dragging: bool = false,
-    _drag_start_x: f32 = 0,
-    _drag_start_y: f32 = 0,
-    _drag_offset_x: f32 = 0,
-    _drag_offset_y: f32 = 0,
-    _last_click_time: i64 = 0,
-    _item: u16 = std.math.maxInt(u16),
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    background_image_data: ?ImageData = null,
+    is_dragging: bool = false,
+    drag_start_x: f32 = 0,
+    drag_start_y: f32 = 0,
+    drag_offset_x: f32 = 0,
+    drag_offset_y: f32 = 0,
+    last_click_time: i64 = 0,
+    item: u16 = std.math.maxInt(u16),
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: glfw.Mods) bool {
         if (!self.visible or !self.draggable)
@@ -1115,17 +1114,17 @@ pub const Item = struct {
                 return true;
             }
 
-            if (self._last_click_time + 333 * std.time.us_per_ms > main.current_time) {
+            if (self.last_click_time + 333 * std.time.us_per_ms > main.current_time) {
                 self.double_click_callback(self);
                 return true;
             }
 
-            self._is_dragging = true;
-            self._drag_start_x = self.x;
-            self._drag_start_y = self.y;
-            self._drag_offset_x = self.x - x;
-            self._drag_offset_y = self.y - y;
-            self._last_click_time = main.current_time;
+            self.is_dragging = true;
+            self.drag_start_x = self.x;
+            self.drag_start_y = self.y;
+            self.drag_offset_x = self.x - x;
+            self.drag_offset_y = self.y - y;
+            self.last_click_time = main.current_time;
             self.drag_start_callback(self);
             return true;
         }
@@ -1134,10 +1133,10 @@ pub const Item = struct {
     }
 
     pub fn mouseRelease(self: *Item, x: f32, y: f32, _: f32, _: f32) bool {
-        if (!self._is_dragging)
+        if (!self.is_dragging)
             return false;
 
-        self._is_dragging = false;
+        self.is_dragging = false;
         self.drag_end_callback(self);
         return !(self.event_policy.pass_release or !intersects(self, x, y));
     }
@@ -1150,16 +1149,16 @@ pub const Item = struct {
             tooltip.switchTooltip(.item, .{
                 .x = x + x_offset,
                 .y = y + y_offset,
-                .item = self._item,
+                .item = self.item,
             });
             return true;
         }
 
-        if (!self._is_dragging)
+        if (!self.is_dragging)
             return false;
 
-        self.x = x + self._drag_offset_x;
-        self.y = y + self._drag_offset_y;
+        self.x = x + self.drag_offset_x;
+        self.y = y + self.drag_offset_y;
         return !(self.event_policy.pass_move or !intersects(self, x, y));
     }
 
@@ -1187,18 +1186,18 @@ pub const Bar = struct {
     visible: bool = true,
     event_policy: EventPolicy = .{},
     text_data: TextData,
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *Bar) void {
-        self.text_data._lock.lock();
-        defer self.text_data._lock.unlock();
+        self.text_data.lock.lock();
+        defer self.text_data.lock.unlock();
 
-        self.text_data.recalculateAttributes(self._allocator);
+        self.text_data.recalculateAttributes(self.allocator);
     }
 
     pub fn deinit(self: *Bar) void {
-        self.text_data.deinit(self._allocator);
+        self.text_data.deinit(self.allocator);
     }
 
     pub fn width(self: Bar) f32 {
@@ -1224,26 +1223,26 @@ pub const Text = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *Text) void {
-        self.text_data._lock.lock();
-        defer self.text_data._lock.unlock();
+        self.text_data.lock.lock();
+        defer self.text_data.lock.unlock();
 
-        self.text_data.recalculateAttributes(self._allocator);
+        self.text_data.recalculateAttributes(self.allocator);
     }
 
     pub fn deinit(self: *Text) void {
-        self.text_data.deinit(self._allocator);
+        self.text_data.deinit(self.allocator);
     }
 
     pub fn width(self: Text) f32 {
-        return self.text_data._width;
+        return self.text_data.width;
     }
 
     pub fn height(self: Text) f32 {
-        return self.text_data._height;
+        return self.text_data.height;
     }
 };
 
@@ -1265,18 +1264,18 @@ pub const ScrollableContainer = struct {
     visible: bool = true,
     event_policy: EventPolicy = .{},
     base_y: f32 = 0.0,
-    _container: *Container = undefined,
-    _scroll_bar: *Slider = undefined,
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    container: *Container = undefined,
+    scroll_bar: *Slider = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
-        var container = self._container;
+        var container = self.container;
         if (container.mousePress(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset, mods) or
-            self._scroll_bar.mousePress(x, y, x_offset, y_offset, mods))
+            self.scroll_bar.mousePress(x, y, x_offset, y_offset, mods))
             return true;
 
         return !(self.event_policy.pass_press or !intersects(self, x, y));
@@ -1286,9 +1285,9 @@ pub const ScrollableContainer = struct {
         if (!self.visible)
             return false;
 
-        var container = self._container;
+        var container = self.container;
         if (container.mouseRelease(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset) or
-            self._scroll_bar.mouseRelease(x, y, x_offset, y_offset))
+            self.scroll_bar.mouseRelease(x, y, x_offset, y_offset))
             return true;
 
         return !(self.event_policy.pass_release or !intersects(self, x, y));
@@ -1298,9 +1297,9 @@ pub const ScrollableContainer = struct {
         if (!self.visible)
             return false;
 
-        var container = self._container;
+        var container = self.container;
         if (container.mouseMove(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset) or
-            self._scroll_bar.mouseMove(x, y, x_offset, y_offset))
+            self.scroll_bar.mouseMove(x, y, x_offset, y_offset))
             return true;
 
         return !(self.event_policy.pass_move or !intersects(self, x, y));
@@ -1310,15 +1309,15 @@ pub const ScrollableContainer = struct {
         if (!self.visible)
             return false;
 
-        const container = self._container;
+        const container = self.container;
         if (intersects(container, x, y)) {
-            const scroll_bar = self._scroll_bar;
-            self._scroll_bar.setValue(
+            const scroll_bar = self.scroll_bar;
+            self.scroll_bar.setValue(
                 @min(
                     scroll_bar.max_value,
                     @max(
                         scroll_bar.min_value,
-                        scroll_bar._current_value + (scroll_bar.max_value - scroll_bar.min_value) * -y_scroll / 64.0,
+                        scroll_bar.current_value + (scroll_bar.max_value - scroll_bar.min_value) * -y_scroll / 64.0,
                     ),
                 ),
             );
@@ -1335,18 +1334,18 @@ pub const ScrollableContainer = struct {
 
         self.base_y = self.y;
 
-        self._container = self._allocator.create(Container) catch std.debug.panic("ScrollableContainer child container alloc failed", .{});
-        self._container.* = .{ .x = self.x, .y = self.y, .scissor = .{
+        self.container = self.allocator.create(Container) catch std.debug.panic("ScrollableContainer child container alloc failed", .{});
+        self.container.* = .{ .x = self.x, .y = self.y, .scissor = .{
             .min_x = 0,
             .min_y = 0,
             .max_x = self.scissor_w,
             .max_y = self.scissor_h,
         } };
-        self._container._allocator = self._allocator;
-        self._container.init();
+        self.container.allocator = self.allocator;
+        self.container.init();
 
-        self._scroll_bar = self._allocator.create(Slider) catch std.debug.panic("ScrollableContainer scroll bar alloc failed", .{});
-        self._scroll_bar.* = .{
+        self.scroll_bar = self.allocator.create(Slider) catch std.debug.panic("ScrollableContainer scroll bar alloc failed", .{});
+        self.scroll_bar.* = .{
             .x = self.scroll_x,
             .y = self.scroll_y,
             .w = self.scroll_w,
@@ -1359,54 +1358,54 @@ pub const ScrollableContainer = struct {
             .state_change = onScrollChanged,
             .vertical = true,
             .visible = false,
-            ._parent_container = self,
-            ._current_value = self.start_value,
+            .parent_container = self,
+            .current_value = self.start_value,
         };
-        self._scroll_bar._allocator = self._allocator;
-        self._scroll_bar.init();
+        self.scroll_bar.allocator = self.allocator;
+        self.scroll_bar.init();
     }
 
     pub fn deinit(self: *ScrollableContainer) void {
-        self._container.deinit();
-        self._allocator.destroy(self._container);
+        self.container.deinit();
+        self.allocator.destroy(self.container);
 
-        self._scroll_bar.deinit();
-        self._allocator.destroy(self._scroll_bar);
+        self.scroll_bar.deinit();
+        self.allocator.destroy(self.scroll_bar);
     }
 
     pub fn width(self: ScrollableContainer) f32 {
-        return @max(self._container.width(), (self._scroll_bar.x - self._container.x) + self._scroll_bar.width());
+        return @max(self.container.width(), (self.scroll_bar.x - self.container.x) + self.scroll_bar.width());
     }
 
     pub fn height(self: ScrollableContainer) f32 {
-        return @max(self._container.height(), (self._scroll_bar.y - self._container.y) + self._scroll_bar.height());
+        return @max(self.container.height(), (self.scroll_bar.y - self.container.y) + self.scroll_bar.height());
     }
 
     pub fn createChild(self: *ScrollableContainer, data: anytype) !*@TypeOf(data) {
-        const elem = self._container.createChild(data);
+        const elem = self.container.createChild(data);
         self.update();
         return elem;
     }
 
     pub fn update(self: *ScrollableContainer) void {
-        if (self.scissor_h >= self._container.height()) {
-            self._scroll_bar.visible = false;
+        if (self.scissor_h >= self.container.height()) {
+            self.scroll_bar.visible = false;
             return;
         }
 
-        const h_dt_base = (self.scissor_h - self._container.height());
-        const h_dt = self._scroll_bar._current_value * h_dt_base;
-        const new_h = self._scroll_bar.h / (2.0 + -h_dt_base / self.scissor_h);
-        scaleImageData(&self._scroll_bar.knob_image_data.base, new_h);
-        if (self._scroll_bar.knob_image_data.hover) |*image_data| scaleImageData(image_data, new_h);
-        if (self._scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
-        self._scroll_bar.setValue(self._scroll_bar._current_value);
-        self._scroll_bar.visible = true;
+        const h_dt_base = (self.scissor_h - self.container.height());
+        const h_dt = self.scroll_bar.current_value * h_dt_base;
+        const new_h = self.scroll_bar.h / (2.0 + -h_dt_base / self.scissor_h);
+        scaleImageData(&self.scroll_bar.knob_image_data.base, new_h);
+        if (self.scroll_bar.knob_image_data.hover) |*image_data| scaleImageData(image_data, new_h);
+        if (self.scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
+        self.scroll_bar.setValue(self.scroll_bar.current_value);
+        self.scroll_bar.visible = true;
 
-        self._container.y = self.base_y + h_dt;
-        self._container.scissor.min_y = -h_dt;
-        self._container.scissor.max_y = -h_dt + self.scissor_h;
-        self._container.updateScissors();
+        self.container.y = self.base_y + h_dt;
+        self.container.scissor.min_y = -h_dt;
+        self.container.scissor.max_y = -h_dt + self.scissor_h;
+        self.container.updateScissors();
     }
 
     fn scaleImageData(image_data: *ImageData, new_h: f32) void {
@@ -1417,24 +1416,24 @@ pub const ScrollableContainer = struct {
     }
 
     fn onScrollChanged(scroll_bar: *Slider) void {
-        var parent = scroll_bar._parent_container.?;
-        if (parent.scissor_h >= parent._container.height()) {
-            parent._scroll_bar.visible = false;
+        var parent = scroll_bar.parent_container.?;
+        if (parent.scissor_h >= parent.container.height()) {
+            parent.scroll_bar.visible = false;
             return;
         }
 
-        const h_dt_base = (parent.scissor_h - parent._container.height());
-        const h_dt = scroll_bar._current_value * h_dt_base;
-        const new_h = parent._scroll_bar.h / (2.0 + -h_dt_base / parent.scissor_h);
-        scaleImageData(&parent._scroll_bar.knob_image_data.base, new_h);
-        if (parent._scroll_bar.knob_image_data.hover) |*image_data| scaleImageData(image_data, new_h);
-        if (parent._scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
-        parent._scroll_bar.visible = true;
+        const h_dt_base = (parent.scissor_h - parent.container.height());
+        const h_dt = scroll_bar.current_value * h_dt_base;
+        const new_h = parent.scroll_bar.h / (2.0 + -h_dt_base / parent.scissor_h);
+        scaleImageData(&parent.scroll_bar.knob_image_data.base, new_h);
+        if (parent.scroll_bar.knob_image_data.hover) |*image_data| scaleImageData(image_data, new_h);
+        if (parent.scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
+        parent.scroll_bar.visible = true;
 
-        parent._container.y = parent.base_y + h_dt;
-        parent._container.scissor.min_y = -h_dt;
-        parent._container.scissor.max_y = -h_dt + parent.scissor_h;
-        parent._container.updateScissors();
+        parent.container.y = parent.base_y + h_dt;
+        parent.container.scissor.min_y = -h_dt;
+        parent.container.scissor.max_y = -h_dt + parent.scissor_h;
+        parent.container.updateScissors();
     }
 };
 
@@ -1447,24 +1446,24 @@ pub const Container = struct {
     draggable: bool = false,
     layer: Layer = .default,
 
-    _elements: std.ArrayList(UiElement) = undefined,
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    elements: std.ArrayList(UiElement) = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
-    _drag_start_x: f32 = 0,
-    _drag_start_y: f32 = 0,
-    _drag_offset_x: f32 = 0,
-    _drag_offset_y: f32 = 0,
-    _is_dragging: bool = false,
-    _clamp_x: bool = false,
-    _clamp_y: bool = false,
-    _clamp_to_screen: bool = false,
+    drag_start_x: f32 = 0,
+    drag_start_y: f32 = 0,
+    drag_offset_x: f32 = 0,
+    drag_offset_y: f32 = 0,
+    is_dragging: bool = false,
+    clamp_x: bool = false,
+    clamp_y: bool = false,
+    clamp_to_screen: bool = false,
 
     pub fn mousePress(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
-        var iter = std.mem.reverseIterator(self._elements.items);
+        var iter = std.mem.reverseIterator(self.elements.items);
         while (iter.next()) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
@@ -1476,11 +1475,11 @@ pub const Container = struct {
         }
 
         if (self.draggable and intersects(self, x, y)) {
-            self._is_dragging = true;
-            self._drag_start_x = self.x;
-            self._drag_start_y = self.y;
-            self._drag_offset_x = self.x - x;
-            self._drag_offset_y = self.y - y;
+            self.is_dragging = true;
+            self.drag_start_x = self.x;
+            self.drag_start_y = self.y;
+            self.drag_offset_x = self.x - x;
+            self.drag_offset_y = self.y - y;
         }
 
         return !(self.event_policy.pass_press or !intersects(self, x, y));
@@ -1490,10 +1489,10 @@ pub const Container = struct {
         if (!self.visible)
             return false;
 
-        if (self._is_dragging)
-            self._is_dragging = false;
+        if (self.is_dragging)
+            self.is_dragging = false;
 
-        var iter = std.mem.reverseIterator(self._elements.items);
+        var iter = std.mem.reverseIterator(self.elements.items);
         while (iter.next()) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
@@ -1511,10 +1510,10 @@ pub const Container = struct {
         if (!self.visible)
             return false;
 
-        if (self._is_dragging) {
-            if (!self._clamp_x) {
-                self.x = x + self._drag_offset_x;
-                if (self._clamp_to_screen) {
+        if (self.is_dragging) {
+            if (!self.clamp_x) {
+                self.x = x + self.drag_offset_x;
+                if (self.clamp_to_screen) {
                     if (self.x > 0)
                         self.x = 0;
 
@@ -1523,9 +1522,9 @@ pub const Container = struct {
                         self.x = self.width();
                 }
             }
-            if (!self._clamp_y) {
-                self.y = y + self._drag_offset_y;
-                if (self._clamp_to_screen) {
+            if (!self.clamp_y) {
+                self.y = y + self.drag_offset_y;
+                if (self.clamp_to_screen) {
                     if (self.y > 0)
                         self.y = 0;
 
@@ -1536,7 +1535,7 @@ pub const Container = struct {
             }
         }
 
-        var iter = std.mem.reverseIterator(self._elements.items);
+        var iter = std.mem.reverseIterator(self.elements.items);
         while (iter.next()) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
@@ -1554,7 +1553,7 @@ pub const Container = struct {
         if (!self.visible)
             return false;
 
-        var iter = std.mem.reverseIterator(self._elements.items);
+        var iter = std.mem.reverseIterator(self.elements.items);
         while (iter.next()) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
@@ -1569,28 +1568,28 @@ pub const Container = struct {
     }
 
     pub fn init(self: *Container) void {
-        self._elements = std.ArrayList(UiElement).initCapacity(self._allocator, 8) catch std.debug.panic("Container element buffer alloc failed", .{});
+        self.elements = std.ArrayList(UiElement).initCapacity(self.allocator, 8) catch std.debug.panic("Container element buffer alloc failed", .{});
     }
 
     pub fn deinit(self: *Container) void {
-        for (self._elements.items) |*elem| {
+        for (self.elements.items) |*elem| {
             switch (elem.*) {
                 inline else => |inner_elem| {
                     if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "deinit")) inner_elem.deinit();
-                    self._allocator.destroy(inner_elem);
+                    self.allocator.destroy(inner_elem);
                 },
             }
         }
-        self._elements.deinit();
+        self.elements.deinit();
     }
 
     pub fn width(self: Container) f32 {
-        if (self._elements.items.len <= 0)
+        if (self.elements.items.len <= 0)
             return 0.0;
 
         var min_x: f32 = std.math.floatMax(f32);
         var max_x: f32 = std.math.floatMin(f32);
-        for (self._elements.items) |elem| {
+        for (self.elements.items) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
                     if (min_x > inner_elem.x) {
@@ -1609,12 +1608,12 @@ pub const Container = struct {
     }
 
     pub fn height(self: Container) f32 {
-        if (self._elements.items.len <= 0)
+        if (self.elements.items.len <= 0)
             return 0.0;
 
         var min_y: f32 = std.math.floatMax(f32);
         var max_y: f32 = std.math.floatMin(f32);
-        for (self._elements.items) |elem| {
+        for (self.elements.items) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
                     if (min_y > inner_elem.y) {
@@ -1634,9 +1633,9 @@ pub const Container = struct {
 
     pub fn createChild(self: *Container, data: anytype) !*@TypeOf(data) {
         const T = @TypeOf(data);
-        var elem = try self._allocator.create(T);
+        var elem = try self.allocator.create(T);
         elem.* = data;
-        elem._allocator = self._allocator;
+        elem.allocator = self.allocator;
         if (std.meta.hasFn(T, "init")) elem.init();
         elem.scissor = .{
             .min_x = if (self.scissor.min_x == ScissorRect.dont_scissor)
@@ -1670,12 +1669,12 @@ pub const Container = struct {
         if (field_name.len == 0)
             @compileError("Could not find field name");
 
-        try self._elements.append(@unionInit(UiElement, field_name, elem));
+        try self.elements.append(@unionInit(UiElement, field_name, elem));
         return elem;
     }
 
     pub fn updateScissors(self: *Container) void {
-        for (self._elements.items) |elem| {
+        for (self.elements.items) |elem| {
             switch (elem) {
                 .scrollable_container => {},
                 inline else => |inner_elem| {
@@ -1717,8 +1716,8 @@ pub const Toggle = struct {
     state_change: ?*const fn (*Toggle) void = null,
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *Toggle, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
@@ -1772,27 +1771,27 @@ pub const Toggle = struct {
 
     pub fn init(self: *Toggle) void {
         if (self.text_data) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
 
         if (self.tooltip_text) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
     }
 
     pub fn deinit(self: *Toggle) void {
         if (self.text_data) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
 
         if (self.tooltip_text) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
     }
 
@@ -1839,17 +1838,17 @@ pub const Slider = struct {
     tooltip_text: ?TextData = null,
     title_offset: f32 = 30.0,
     stored_value: ?*f32 = null, // options hack. remove when callbacks will be able to take in arbitrary params...
-    _parent_container: ?*ScrollableContainer = null, // another hack...
+    parent_container: ?*ScrollableContainer = null, // another hack...
     visible: bool = true,
     // will be overwritten
     event_policy: EventPolicy = .{},
-    _knob_x: f32 = 0.0,
-    _knob_y: f32 = 0.0,
-    _knob_offset_x: f32 = 0.0,
-    _knob_offset_y: f32 = 0.0,
-    _current_value: f32 = 0.0,
-    _disposed: bool = false,
-    _allocator: std.mem.Allocator = undefined,
+    knob_x: f32 = 0.0,
+    knob_y: f32 = 0.0,
+    knob_offset_x: f32 = 0.0,
+    knob_offset_y: f32 = 0.0,
+    current_value: f32 = 0.0,
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *Slider, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
@@ -1866,8 +1865,8 @@ pub const Slider = struct {
                 .normal => |normal| normal.height(),
             };
 
-            self._knob_offset_x = -((x - self.x) - self._knob_x);
-            self._knob_offset_y = -((y - self.y) - self._knob_y);
+            self.knob_offset_x = -((x - self.x) - self.knob_x);
+            self.knob_offset_y = -((y - self.y) - self.knob_y);
             self.pressed(x, y, knob_h, knob_w);
         }
 
@@ -1889,7 +1888,7 @@ pub const Slider = struct {
                 .normal => |normal| normal.height(),
             };
 
-            if (utils.isInBounds(x, y, self._knob_x, self._knob_y, knob_w, knob_h)) {
+            if (utils.isInBounds(x, y, self.knob_x, self.knob_y, knob_w, knob_h)) {
                 self.state = .hovered;
             } else {
                 self.state = .none;
@@ -1926,7 +1925,7 @@ pub const Slider = struct {
 
         if (self.state == .pressed) {
             self.pressed(x, y, knob_h, knob_w);
-        } else if (utils.isInBounds(x, y, self.x + self._knob_x, self.y + self._knob_y, knob_w, knob_h)) {
+        } else if (utils.isInBounds(x, y, self.x + self.knob_x, self.y + self.knob_y, knob_w, knob_h)) {
             self.state = .hovered;
         } else if (self.state == .hovered) {
             self.state = .none;
@@ -1942,7 +1941,7 @@ pub const Slider = struct {
                     self.max_value,
                     @max(
                         self.min_value,
-                        self._current_value + (self.max_value - self.min_value) * -y_scroll / 64.0,
+                        self.current_value + (self.max_value - self.min_value) * -y_scroll / 64.0,
                     ),
                 ),
             );
@@ -1962,7 +1961,7 @@ pub const Slider = struct {
 
         if (self.stored_value) |value_ptr| {
             value_ptr.* = @min(self.max_value, @max(self.min_value, value_ptr.*));
-            self._current_value = value_ptr.*;
+            self.current_value = value_ptr.*;
         }
 
         switch (self.decor_image_data) {
@@ -1990,7 +1989,7 @@ pub const Slider = struct {
             if (offset < 0) {
                 self.x = -offset;
             }
-            self._knob_x = offset;
+            self.knob_x = offset;
 
             if (self.value_text_data) |*text_data| {
                 text_data.hori_align = .left;
@@ -1998,14 +1997,14 @@ pub const Slider = struct {
                 text_data.max_height = knob_h;
             }
 
-            if (self._current_value != 0.0)
-                self._knob_y = (self._current_value - self.min_value) / (self.max_value - self.min_value) * self.h - knob_h / 2.0;
+            if (self.current_value != 0.0)
+                self.knob_y = (self.current_value - self.min_value) / (self.max_value - self.min_value) * self.h - knob_h / 2.0;
         } else {
             const offset = (self.h - knob_h) / 2.0;
             if (offset < 0) {
                 self.y = -offset;
             }
-            self._knob_y = offset;
+            self.knob_y = offset;
 
             if (self.value_text_data) |*text_data| {
                 text_data.hori_align = .middle;
@@ -2013,52 +2012,52 @@ pub const Slider = struct {
                 text_data.max_width = knob_w;
             }
 
-            if (self._current_value != 0.0)
-                self._knob_x = (self._current_value - self.min_value) / (self.max_value - self.min_value) * self.w - knob_w / 2.0;
+            if (self.current_value != 0.0)
+                self.knob_x = (self.current_value - self.min_value) / (self.max_value - self.min_value) * self.w - knob_w / 2.0;
         }
 
         if (self.value_text_data) |*text_data| {
             // have to do it for the backing buffer init
             {
-                text_data._lock.lock();
-                defer text_data._lock.unlock();
+                text_data.lock.lock();
+                defer text_data.lock.unlock();
 
-                text_data.recalculateAttributes(self._allocator);
+                text_data.recalculateAttributes(self.allocator);
             }
 
-            text_data.setText(std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00", self._allocator);
+            text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00", self.allocator);
         }
 
         if (self.title_text_data) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
             text_data.vert_align = .middle;
             text_data.hori_align = .middle;
             text_data.max_width = self.w;
             text_data.max_height = self.title_offset;
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
 
         if (self.tooltip_text) |*text_data| {
-            text_data._lock.lock();
-            defer text_data._lock.unlock();
+            text_data.lock.lock();
+            defer text_data.lock.unlock();
 
-            text_data.recalculateAttributes(self._allocator);
+            text_data.recalculateAttributes(self.allocator);
         }
     }
 
     pub fn deinit(self: *Slider) void {
         if (self.value_text_data) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
 
         if (self.title_text_data) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
 
         if (self.tooltip_text) |*text_data| {
-            text_data.deinit(self._allocator);
+            text_data.deinit(self.allocator);
         }
     }
 
@@ -2091,19 +2090,19 @@ pub const Slider = struct {
     }
 
     fn pressed(self: *Slider, x: f32, y: f32, knob_h: f32, knob_w: f32) void {
-        const prev_value = self._current_value;
+        const prev_value = self.current_value;
 
         if (self.vertical) {
-            self._knob_y = @min(self.h - knob_h, @max(0, y - self.y + self._knob_offset_y));
-            self._current_value = self._knob_y / (self.h - knob_h) * (self.max_value - self.min_value) + self.min_value;
+            self.knob_y = @min(self.h - knob_h, @max(0, y - self.y + self.knob_offset_y));
+            self.current_value = self.knob_y / (self.h - knob_h) * (self.max_value - self.min_value) + self.min_value;
         } else {
-            self._knob_x = @min(self.w - knob_w, @max(0, x - self.x + self._knob_offset_x));
-            self._current_value = self._knob_x / (self.w - knob_w) * (self.max_value - self.min_value) + self.min_value;
+            self.knob_x = @min(self.w - knob_w, @max(0, x - self.x + self.knob_offset_x));
+            self.current_value = self.knob_x / (self.w - knob_w) * (self.max_value - self.min_value) + self.min_value;
         }
 
-        if (self._current_value != prev_value) {
+        if (self.current_value != prev_value) {
             if (self.value_text_data) |*text_data| {
-                text_data.setText(std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00", self._allocator);
+                text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00", self.allocator);
             }
 
             if (self.continous_event_fire)
@@ -2114,7 +2113,7 @@ pub const Slider = struct {
     }
 
     pub fn setValue(self: *Slider, value: f32) void {
-        const prev_value = self._current_value;
+        const prev_value = self.current_value;
 
         const knob_w = switch (self.knob_image_data.current(self.state)) {
             .nine_slice => |nine_slice| nine_slice.w,
@@ -2126,16 +2125,16 @@ pub const Slider = struct {
             .normal => |normal| normal.height(),
         };
 
-        self._current_value = value;
+        self.current_value = value;
         if (self.vertical) {
-            self._knob_y = (value - self.min_value) / (self.max_value - self.min_value) * (self.h - knob_h);
+            self.knob_y = (value - self.min_value) / (self.max_value - self.min_value) * (self.h - knob_h);
         } else {
-            self._knob_x = (value - self.min_value) / (self.max_value - self.min_value) * (self.w - knob_w);
+            self.knob_x = (value - self.min_value) / (self.max_value - self.min_value) * (self.w - knob_w);
         }
 
-        if (self._current_value != prev_value) {
+        if (self.current_value != prev_value) {
             if (self.value_text_data) |*text_data| {
-                text_data.setText(std.fmt.bufPrint(text_data._backing_buffer, "{d:.2}", .{self._current_value}) catch "-1.00", self._allocator);
+                text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00", self.allocator);
             }
 
             if (self.continous_event_fire)
@@ -2151,19 +2150,19 @@ pub const SpeechBalloon = struct {
     start_time: i64 = 0,
     visible: bool = true,
     // the texts' internal x/y, don't touch outside of systems.update()
-    _screen_x: f32 = 0.0,
-    _screen_y: f32 = 0.0,
-    _disposed: bool = false,
+    screen_x: f32 = 0.0,
+    screen_y: f32 = 0.0,
+    disposed: bool = false,
 
     pub fn width(self: SpeechBalloon) f32 {
-        return @max(self.text_data._width, switch (self.image_data) {
+        return @max(self.text_data.width, switch (self.image_data) {
             .nine_slice => |nine_slice| return nine_slice.w,
             .normal => |image_data| return image_data.width(),
         });
     }
 
     pub fn height(self: SpeechBalloon) f32 {
-        return @max(self.text_data._height, switch (self.image_data) {
+        return @max(self.text_data.height, switch (self.image_data) {
             .nine_slice => |nine_slice| return nine_slice.h,
             .normal => |image_data| return image_data.height(),
         });
@@ -2173,24 +2172,24 @@ pub const SpeechBalloon = struct {
         var balloon = Temporary{ .balloon = data };
         balloon.balloon.start_time = main.current_time;
         {
-            balloon.balloon.text_data._lock.lock();
-            defer balloon.balloon.text_data._lock.unlock();
+            balloon.balloon.text_data.lock.lock();
+            defer balloon.balloon.text_data.lock.unlock();
 
-            balloon.balloon.text_data.recalculateAttributes(main._allocator);
+            balloon.balloon.text_data.recalculateAttributes(main.allocator);
         }
 
         try systems.temp_elements_to_add.append(balloon);
     }
 
     pub fn destroy(self: *SpeechBalloon, allocator: std.mem.Allocator) void {
-        if (self._disposed)
+        if (self.disposed)
             return;
 
-        self._disposed = true;
+        self.disposed = true;
 
-        self.text_data._lock.lock();
+        self.text_data.lock.lock();
         allocator.free(self.text_data.text);
-        self.text_data._lock.unlock();
+        self.text_data.lock.unlock();
 
         self.text_data.deinit(allocator);
     }
@@ -2205,39 +2204,39 @@ pub const StatusText = struct {
     obj_id: i32 = -1,
     visible: bool = true,
     // the texts' internal x/y, don't touch outside of systems.update()
-    _screen_x: f32 = 0.0,
-    _screen_y: f32 = 0.0,
-    _disposed: bool = false,
+    screen_x: f32 = 0.0,
+    screen_y: f32 = 0.0,
+    disposed: bool = false,
 
     pub fn width(self: StatusText) f32 {
-        return self.text_data._width;
+        return self.text_data.width;
     }
 
     pub fn height(self: StatusText) f32 {
-        return self.text_data._height;
+        return self.text_data.height;
     }
 
     pub fn add(data: StatusText) !void {
         var status = Temporary{ .status = data };
         status.status.start_time = main.current_time + data.delay;
         {
-            status.status.text_data._lock.lock();
-            defer status.status.text_data._lock.unlock();
+            status.status.text_data.lock.lock();
+            defer status.status.text_data.lock.unlock();
 
-            status.status.text_data.recalculateAttributes(main._allocator);
+            status.status.text_data.recalculateAttributes(main.allocator);
         }
         try systems.temp_elements_to_add.append(status);
     }
 
     pub fn destroy(self: *StatusText, allocator: std.mem.Allocator) void {
-        if (self._disposed)
+        if (self.disposed)
             return;
 
-        self._disposed = true;
+        self.disposed = true;
 
-        self.text_data._lock.lock();
+        self.text_data.lock.lock();
         allocator.free(self.text_data.text);
-        self.text_data._lock.unlock();
+        self.text_data.lock.unlock();
 
         self.text_data.deinit(allocator);
     }

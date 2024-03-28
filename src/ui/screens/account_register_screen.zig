@@ -5,6 +5,7 @@ const camera = @import("../../camera.zig");
 const requests = @import("../../requests.zig");
 const xml = @import("../../xml.zig");
 const main = @import("../../main.zig");
+const game_data = @import("../../game_data.zig");
 const rpc = @import("rpc");
 const dialog = @import("../dialogs/dialog.zig");
 
@@ -25,11 +26,11 @@ pub const AccountRegisterScreen = struct {
     back_button: *element.Button = undefined,
     inited: bool = false,
 
-    _allocator: std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*AccountRegisterScreen {
         var screen = try allocator.create(AccountRegisterScreen);
-        screen.* = .{ ._allocator = allocator };
+        screen.* = .{ .allocator = allocator };
 
         const presence = rpc.Packet.Presence{
             .assets = .{
@@ -242,7 +243,7 @@ pub const AccountRegisterScreen = struct {
         element.destroy(self.confirm_button);
         element.destroy(self.back_button);
 
-        self._allocator.destroy(self);
+        self.allocator.destroy(self);
     }
 
     pub fn resize(self: *AccountRegisterScreen, w: f32, h: f32) void {
@@ -344,25 +345,25 @@ pub const AccountRegisterScreen = struct {
         main.next_char_id = try list_root.getAttributeInt("nextCharId", u8, 0);
         main.max_chars = try list_root.getAttributeInt("maxNumChars", u8, 0);
 
-        var char_list = try std.ArrayList(main.CharacterData).initCapacity(allocator, 4);
+        var char_list = try std.ArrayList(game_data.CharacterData).initCapacity(allocator, 4);
         defer char_list.deinit();
 
         var char_iter = list_root.iterate(&.{}, "Char");
         while (char_iter.next()) |node|
-            try char_list.append(try main.CharacterData.parse(allocator, node, try node.getAttributeInt("id", u32, 0)));
+            try char_list.append(try game_data.CharacterData.parse(allocator, node, try node.getAttributeInt("id", u32, 0)));
 
-        main.character_list = try allocator.dupe(main.CharacterData, char_list.items);
+        main.character_list = try allocator.dupe(game_data.CharacterData, char_list.items);
 
         const server_root = list_root.findChild("Servers");
         if (server_root) |srv_root| {
-            var server_data_list = try std.ArrayList(main.ServerData).initCapacity(allocator, 4);
+            var server_data_list = try std.ArrayList(game_data.ServerData).initCapacity(allocator, 4);
             defer server_data_list.deinit();
 
             var server_iter = srv_root.iterate(&.{}, "Server");
             while (server_iter.next()) |server_node|
-                try server_data_list.append(try main.ServerData.parse(server_node, allocator));
+                try server_data_list.append(try game_data.ServerData.parse(server_node, allocator));
 
-            main.server_list = try allocator.dupe(main.ServerData, server_data_list.items);
+            main.server_list = try allocator.dupe(game_data.ServerData, server_data_list.items);
         }
 
         if (main.character_list.len > 0) {
@@ -377,7 +378,7 @@ pub const AccountRegisterScreen = struct {
     fn registerCallback() void {
         const current_screen = systems.screen.register;
         _ = register(
-            current_screen._allocator,
+            current_screen.allocator,
             current_screen.email_input.text_data.text,
             current_screen.password_input.text_data.text,
             current_screen.username_input.text_data.text,
@@ -387,7 +388,7 @@ pub const AccountRegisterScreen = struct {
         };
 
         _ = login(
-            current_screen._allocator,
+            current_screen.allocator,
             current_screen.email_input.text_data.text,
             current_screen.password_input.text_data.text,
         ) catch |e| {
