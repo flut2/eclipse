@@ -4,8 +4,8 @@ const std = @import("std");
 const map = @import("game/map.zig");
 const utils = @import("utils.zig");
 
-pub const px_per_tile: i16 = 64;
-pub const size_mult: f32 = 6.0;
+pub const px_per_tile = 64;
+pub const size_mult = 6.0;
 
 pub var x = std.atomic.Value(f32).init(0.0);
 pub var y = std.atomic.Value(f32).init(0.0);

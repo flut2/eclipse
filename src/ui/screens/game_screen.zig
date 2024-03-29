@@ -99,7 +99,6 @@ pub const GameScreen = struct {
     last_max_hp: i32 = -1,
     last_mp: i32 = -1,
     last_max_mp: i32 = -1,
-    last_tier: u8 = std.math.maxInt(u8),
     last_tier_xp: i32 = -1,
     last_next_tier_xp: i32 = -1,
     last_in_combat: bool = false,
@@ -130,7 +129,6 @@ pub const GameScreen = struct {
     penetration_stat_text: *element.Text = undefined,
     piercing_stat_text: *element.Text = undefined,
     tenacity_stat_text: *element.Text = undefined,
-    xp_bar_decor: *element.Image = undefined,
     xp_bar: *element.Bar = undefined,
     health_bar: *element.Bar = undefined,
     mana_bar: *element.Bar = undefined,
@@ -140,10 +138,9 @@ pub const GameScreen = struct {
     container_name: *element.Text = undefined,
     container_items: [9]*element.Item = undefined,
     minimap_decor: *element.Image = undefined,
+    minimap_slots: *element.Image = undefined,
     hub_button: *element.Button = undefined,
     options_button: *element.Button = undefined,
-    current_tier_icon: *element.Image = undefined,
-    next_tier_icon: *element.Image = undefined,
     combat_indicator: *element.Image = undefined,
 
     inventory_pos_data: [22]utils.Rect = undefined,
@@ -164,20 +161,27 @@ pub const GameScreen = struct {
 
         const minimap_data = assets.getUiData("minimap", 0);
         screen.minimap_decor = try element.create(allocator, element.Image{
-            .x = camera.screen_width - minimap_data.texWRaw() - 10,
-            .y = 10,
+            .x = camera.screen_width - minimap_data.texWRaw() + 10,
+            .y = -10,
             .image_data = .{ .normal = .{ .atlas_data = minimap_data } },
             .is_minimap_decor = true,
-            .minimap_offset_x = 4.0 + assets.padding,
-            .minimap_offset_y = 4.0 + assets.padding,
-            .minimap_width = 174.0,
-            .minimap_height = 174.0,
+            .minimap_offset_x = 21.0 + assets.padding,
+            .minimap_offset_y = 21.0 + assets.padding,
+            .minimap_width = 212.0,
+            .minimap_height = 212.0,
+        });
+
+        const minimap_slots_data = assets.getUiData("minimap_slots", 0);
+        screen.minimap_slots = try element.create(allocator, element.Image{
+            .x = screen.minimap_decor.x + 15,
+            .y = screen.minimap_decor.y + 209,
+            .image_data = .{ .normal = .{ .atlas_data = minimap_slots_data } },
         });
 
         const hub_button_data = assets.getUiData("hub_button", 0);
         screen.hub_button = try element.create(allocator, element.Button{
-            .x = screen.minimap_decor.x + 67 + (24 - hub_button_data.texWRaw()) / 2.0,
-            .y = screen.minimap_decor.y + 182 + (24 - hub_button_data.texHRaw()) / 2.0,
+            .x = screen.minimap_slots.x + 6 + (18 - hub_button_data.texWRaw()) / 2.0,
+            .y = screen.minimap_slots.y + 6 + (18 - hub_button_data.texHRaw()) / 2.0,
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = hub_button_data } } },
             .tooltip_text = .{
                 .text = "Return to Hub",
@@ -189,8 +193,8 @@ pub const GameScreen = struct {
 
         const options_button_data = assets.getUiData("options_button", 0);
         screen.options_button = try element.create(allocator, element.Button{
-            .x = screen.minimap_decor.x + 93 + (24 - options_button_data.texWRaw()) / 2.0,
-            .y = screen.minimap_decor.y + 182 + (24 - options_button_data.texHRaw()) / 2.0,
+            .x = screen.minimap_slots.x + 36 + (18 - options_button_data.texWRaw()) / 2.0,
+            .y = screen.minimap_slots.y + 6 + (18 - options_button_data.texHRaw()) / 2.0,
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = options_button_data } } },
             .tooltip_text = .{
                 .text = "Open Options",
@@ -201,18 +205,19 @@ pub const GameScreen = struct {
         });
 
         screen.inventory_decor = try element.create(allocator, element.Image{
-            .x = camera.screen_width - inventory_data.texWRaw() - 10,
-            .y = camera.screen_height - inventory_data.texHRaw() - 10,
+            .x = camera.screen_width - inventory_data.texWRaw() + 10,
+            .y = camera.screen_height - inventory_data.texHRaw() + 10,
             .image_data = .{ .normal = .{ .atlas_data = inventory_data } },
         });
 
         for (0..22) |i| {
+            const scale: f32 = if (i < 4) 4.0 else 3.0;
             screen.inventory_items[i] = try element.create(allocator, element.Item{
                 .x = screen.inventory_decor.x + screen.inventory_pos_data[i].x + (screen.inventory_pos_data[i].w - assets.error_data.texWRaw() * 4.0 + assets.padding * 2) / 2,
                 .y = screen.inventory_decor.y + screen.inventory_pos_data[i].y + (screen.inventory_pos_data[i].h - assets.error_data.texHRaw() * 4.0 + assets.padding * 2) / 2,
                 .background_x = screen.inventory_decor.x + screen.inventory_pos_data[i].x,
                 .background_y = screen.inventory_decor.y + screen.inventory_pos_data[i].y,
-                .image_data = .{ .normal = .{ .scale_x = 3.0, .scale_y = 3.0, .atlas_data = assets.error_data } },
+                .image_data = .{ .normal = .{ .scale_x = scale, .scale_y = scale, .atlas_data = assets.error_data } },
                 .visible = false,
                 .draggable = true,
                 .drag_start_callback = itemDragStartCallback,
@@ -224,8 +229,8 @@ pub const GameScreen = struct {
 
         const container_data = assets.getUiData("container_view", 0);
         screen.container_decor = try element.create(allocator, element.Image{
-            .x = screen.inventory_decor.x - container_data.texWRaw() - 10,
-            .y = camera.screen_height - container_data.texHRaw() - 10,
+            .x = screen.inventory_decor.x - container_data.texWRaw() + 10,
+            .y = camera.screen_height - container_data.texHRaw() + 10,
             .image_data = .{ .normal = .{ .atlas_data = container_data } },
             .visible = false,
         });
@@ -246,18 +251,17 @@ pub const GameScreen = struct {
             });
         }
 
-        const xp_bar_decor_data = assets.getUiData("player_xp_decor", 0);
         const bars_data = assets.getUiData("player_abilities_bars", 0);
         screen.bars_decor = try element.create(allocator, element.Image{
             .x = (camera.screen_width - bars_data.texWRaw()) / 2,
-            .y = camera.screen_height - bars_data.texHRaw() - 10 - 25, // -25 for the xp bar to fit
+            .y = camera.screen_height - bars_data.texHRaw() + 10,
             .image_data = .{ .normal = .{ .atlas_data = bars_data } },
         });
 
         const out_of_combat_data = assets.getUiData("out_of_combat_icon", 0);
         screen.combat_indicator = try element.create(allocator, element.Image{
-            .x = screen.bars_decor.x + (bars_data.texWRaw() - out_of_combat_data.texWRaw()) / 2,
-            .y = screen.bars_decor.y - out_of_combat_data.texHRaw() - 10,
+            .x = screen.bars_decor.x + 15 + (44 - out_of_combat_data.texWRaw()) / 2,
+            .y = screen.bars_decor.y + 111 - out_of_combat_data.texHRaw() - 10,
             .image_data = .{ .normal = .{ .atlas_data = out_of_combat_data } },
             .tooltip_text = .{
                 .text = "Out of Combat",
@@ -268,64 +272,21 @@ pub const GameScreen = struct {
 
         const stats_button_data = assets.getUiData("minimap_icons", 0);
         screen.stats_button = try element.create(allocator, element.Button{
-            .x = screen.bars_decor.x + 23 + (22 - stats_button_data.texWRaw() + assets.padding * 2) / 2.0,
-            .y = screen.bars_decor.y + 10 + (24 - stats_button_data.texHRaw() + assets.padding * 2) / 2.0,
+            .x = screen.bars_decor.x + 21 + (32 - stats_button_data.texWRaw() + assets.padding * 2) / 2.0,
+            .y = screen.bars_decor.y + 117 + (32 - stats_button_data.texHRaw() + assets.padding * 2) / 2.0,
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = stats_button_data } } },
             .press_callback = statsCallback,
         });
 
         screen.ability_container = try element.create(allocator, element.Container{
-            .x = screen.bars_decor.x + 7,
-            .y = screen.bars_decor.y + 39,
-        });
-
-        const decor_offset_x = -60;
-        const decor_offset_y = 53;
-        screen.xp_bar_decor = try screen.ability_container.createChild(element.Image{
-            .x = decor_offset_x,
-            .y = decor_offset_y,
-            .image_data = .{ .normal = .{ .atlas_data = xp_bar_decor_data } },
-        });
-
-        screen.current_tier_icon = try screen.ability_container.createChild(element.Image{
-            .x = screen.xp_bar_decor.x + 6 + (18 - assets.error_data.texWRaw()) / 2.0,
-            .y = screen.xp_bar_decor.y + 6 + (18 - assets.error_data.texHRaw()) / 2.0,
-            .image_data = .{ .normal = .{ .atlas_data = assets.error_data } },
-            .tooltip_text = .{
-                .text = "",
-                .size = 12,
-                .max_chars = 64,
-            },
-        });
-
-        screen.next_tier_icon = try screen.ability_container.createChild(element.Image{
-            .x = screen.xp_bar_decor.x + 284 + (18 - assets.error_data.texWRaw()) / 2.0,
-            .y = screen.xp_bar_decor.y + 6 + (18 - assets.error_data.texHRaw()) / 2.0,
-            .image_data = .{ .normal = .{ .atlas_data = assets.error_data } },
-            .tooltip_text = .{
-                .text = "",
-                .size = 12,
-                .max_chars = 64,
-            },
-        });
-
-        const xp_bar_data = assets.getUiData("player_xp_bar", 0);
-        screen.xp_bar = try screen.ability_container.createChild(element.Bar{
-            .x = screen.xp_bar_decor.x + 24,
-            .y = screen.xp_bar_decor.y + 9,
-            .image_data = .{ .normal = .{ .atlas_data = xp_bar_data } },
-            .text_data = .{
-                .text = "",
-                .size = 10,
-                .text_type = .bold_italic,
-                .max_chars = 64,
-            },
+            .x = screen.bars_decor.x + 71,
+            .y = screen.bars_decor.y + 47,
         });
 
         const stats_decor_data = assets.getUiData("player_stats", 0);
         screen.stats_container = try element.create(allocator, element.Container{
-            .x = screen.bars_decor.x + (bars_data.texWRaw() - stats_decor_data.texWRaw()) / 2.0,
-            .y = screen.bars_decor.y + 32,
+            .x = screen.bars_decor.x + 63 - 15,
+            .y = screen.bars_decor.y + 95 - stats_decor_data.texHRaw(),
             .visible = false,
         });
 
@@ -337,25 +298,25 @@ pub const GameScreen = struct {
 
         var idx: f32 = 0;
         try addStatText(screen.stats_container, &screen.strength_stat_text, &idx);
-        try addStatText(screen.stats_container, &screen.resistance_stat_text, &idx);
-        try addStatText(screen.stats_container, &screen.intelligence_stat_text, &idx);
-        try addStatText(screen.stats_container, &screen.haste_stat_text, &idx);
-        try addStatText(screen.stats_container, &screen.wit_stat_text, &idx);
-        try addStatText(screen.stats_container, &screen.speed_stat_text, &idx);
-        try addStatText(screen.stats_container, &screen.penetration_stat_text, &idx);
-        try addStatText(screen.stats_container, &screen.tenacity_stat_text, &idx);
         try addStatText(screen.stats_container, &screen.defense_stat_text, &idx);
-        try addStatText(screen.stats_container, &screen.stamina_stat_text, &idx);
         try addStatText(screen.stats_container, &screen.piercing_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.wit_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.resistance_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.penetration_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.stamina_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.intelligence_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.speed_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.haste_stat_text, &idx);
+        try addStatText(screen.stats_container, &screen.tenacity_stat_text, &idx);
 
         const health_bar_data = assets.getUiData("player_health_bar", 0);
         screen.health_bar = try element.create(allocator, element.Bar{
-            .x = screen.bars_decor.x + 47,
-            .y = screen.bars_decor.y + 4,
+            .x = screen.bars_decor.x + 70,
+            .y = screen.bars_decor.y + 102,
             .image_data = .{ .normal = .{ .atlas_data = health_bar_data } },
             .text_data = .{
                 .text = "",
-                .size = 10,
+                .size = 12,
                 .text_type = .bold_italic,
                 .max_chars = 64,
             },
@@ -363,9 +324,22 @@ pub const GameScreen = struct {
 
         const mana_bar_data = assets.getUiData("player_mana_bar", 0);
         screen.mana_bar = try element.create(allocator, element.Bar{
-            .x = screen.bars_decor.x + 47,
-            .y = screen.bars_decor.y + 18,
+            .x = screen.bars_decor.x + 70,
+            .y = screen.bars_decor.y + 132,
             .image_data = .{ .normal = .{ .atlas_data = mana_bar_data } },
+            .text_data = .{
+                .text = "",
+                .size = 12,
+                .text_type = .bold_italic,
+                .max_chars = 64,
+            },
+        });
+
+        const xp_bar_data = assets.getUiData("player_xp_bar", 0);
+        screen.xp_bar = try screen.ability_container.createChild(element.Bar{
+            .x = 0,
+            .y = -25,
+            .image_data = .{ .normal = .{ .atlas_data = xp_bar_data } },
             .text_data = .{
                 .text = "",
                 .size = 10,
@@ -377,17 +351,17 @@ pub const GameScreen = struct {
         const chat_data = assets.getUiData("chatbox_background", 0);
         const input_data = assets.getUiData("chatbox_input", 0);
         screen.chat_decor = try element.create(allocator, element.Image{
-            .x = 10,
-            .y = camera.screen_height - chat_data.texHRaw() - input_data.texHRaw() - 10,
+            .x = -10,
+            .y = camera.screen_height - chat_data.texHRaw() - input_data.texHRaw() + 15,
             .image_data = .{ .normal = .{ .atlas_data = chat_data } },
         });
 
         const cursor_data = assets.getUiData("chatbox_cursor", 0);
         screen.chat_input = try element.create(allocator, element.Input{
             .x = screen.chat_decor.x,
-            .y = screen.chat_decor.y + screen.chat_decor.height(),
-            .text_inlay_x = 7 + assets.padding,
-            .text_inlay_y = 6 + assets.padding,
+            .y = screen.chat_decor.y + screen.chat_decor.height() - 10,
+            .text_inlay_x = 21 + assets.padding,
+            .text_inlay_y = 21 + assets.padding,
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = input_data } } },
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
@@ -407,15 +381,15 @@ pub const GameScreen = struct {
         const chat_scroll_knob_hover = assets.getUiData("chatbox_scroll_wheel_hover", 0);
         const chat_scroll_knob_press = assets.getUiData("chatbox_scroll_wheel_press", 0);
         screen.chat_container = try element.create(allocator, element.ScrollableContainer{
-            .x = screen.chat_decor.x + 9,
-            .y = screen.chat_decor.y + 9,
+            .x = screen.chat_decor.x + 26,
+            .y = screen.chat_decor.y + 26,
             .scissor_w = 380,
             .scissor_h = 240,
             .scroll_x = screen.chat_decor.x + 386,
-            .scroll_y = screen.chat_decor.y + 12,
+            .scroll_y = screen.chat_decor.y + 26,
             .scroll_w = 12,
-            .scroll_h = 241,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_background_data, 12, 240, 5, 0, 2, 2, 1.0) },
+            .scroll_h = 240,
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_background_data, 6, 240, 5, 0, 2, 2, 1.0) },
             .scroll_knob_image_data = Interactable.fromNineSlices(chat_scroll_knob_base, chat_scroll_knob_hover, chat_scroll_knob_press, 8, 16, 3, 3, 2, 2, 1.0),
             .start_value = 1.0,
         });
@@ -438,7 +412,7 @@ pub const GameScreen = struct {
 
         screen.fps_text = try element.create(allocator, element.Text{
             .x = screen.minimap_decor.x,
-            .y = screen.minimap_decor.y + screen.minimap_decor.height() + 10,
+            .y = screen.minimap_decor.y + screen.minimap_decor.height() - 10,
             .text_data = fps_text_data,
         });
 
@@ -534,7 +508,7 @@ pub const GameScreen = struct {
             }
 
             _ = try container.createChild(element.Image{
-                .x = idx.* * 48.0,
+                .x = idx.* * 56.0,
                 .y = 0,
                 .image_data = .{ .normal = .{ .atlas_data = data[index] } },
                 .ability_props = ability,
@@ -547,14 +521,14 @@ pub const GameScreen = struct {
     fn addStatText(container: *element.Container, text: **element.Text, idx: *f32) !void {
         defer idx.* += 1;
 
-        const x = 33.0 + 74.0 * @mod(idx.*, 4.0);
-        const y = 5.0 + 28.0 * @floor(idx.* / 4.0);
+        const x = 50.0 + 70.0 * @mod(idx.*, 3.0);
+        const y = 27.0 + 28.0 * @floor(idx.* / 3.0);
         text.* = try container.createChild(element.Text{ .x = x, .y = y, .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 10,
             .text_type = .bold,
-            .max_width = 45,
-            .max_height = 26,
+            .max_width = 37,
+            .max_height = 18,
             .hori_align = .middle,
             .vert_align = .middle,
             .max_chars = 64,
@@ -565,6 +539,7 @@ pub const GameScreen = struct {
         self.inited = false;
 
         element.destroy(self.minimap_decor);
+        element.destroy(self.minimap_slots);
         element.destroy(self.inventory_decor);
         element.destroy(self.container_decor);
         element.destroy(self.bars_decor);
@@ -596,40 +571,42 @@ pub const GameScreen = struct {
     }
 
     pub fn resize(self: *GameScreen, w: f32, h: f32) void {
-        self.minimap_decor.x = w - self.minimap_decor.width() - 10;
+        self.minimap_decor.x = w - self.minimap_decor.width() + 10;
+        self.minimap_slots.x = self.minimap_decor.x + 15;
+        self.minimap_slots.y = self.minimap_decor.y + 209;
         self.fps_text.x = self.minimap_decor.x;
-        self.inventory_decor.x = w - self.inventory_decor.width() - 10;
-        self.inventory_decor.y = h - self.inventory_decor.height() - 10;
-        self.container_decor.x = self.inventory_decor.x - self.container_decor.width() - 10;
-        self.container_decor.y = h - self.container_decor.height() - 10;
+        self.fps_text.y = self.minimap_decor.y + self.minimap_decor.height() - 10;
+        self.inventory_decor.x = w - self.inventory_decor.width() + 10;
+        self.inventory_decor.y = h - self.inventory_decor.height() + 10;
+        self.container_decor.x = self.inventory_decor.x - self.container_decor.width() + 10;
+        self.container_decor.y = h - self.container_decor.height() + 10;
         self.bars_decor.x = (w - self.bars_decor.width()) / 2;
-        self.bars_decor.y = h - self.bars_decor.height() - 10 - 25;
-        self.combat_indicator.x = self.bars_decor.x + (self.bars_decor.width() - self.combat_indicator.width()) / 2;
-        self.combat_indicator.y = self.bars_decor.y - self.combat_indicator.height() - 10;
-        self.stats_container.x = self.bars_decor.x + (self.bars_decor.width() - self.stats_decor.width()) / 2.0;
-        self.stats_container.y = self.bars_decor.y + 32;
-        self.ability_container.x = self.bars_decor.x + 7;
-        self.ability_container.y = self.bars_decor.y + 39;
-        self.stats_button.x = self.bars_decor.x + 23 + (22 - self.stats_button.width() + assets.padding * 2) / 2.0;
-        self.stats_button.y = self.bars_decor.y + 10 + (24 - self.stats_button.height() + assets.padding * 2) / 2.0;
-        self.health_bar.x = self.bars_decor.x + 47;
-        self.health_bar.y = self.bars_decor.y + 4;
-        self.mana_bar.x = self.bars_decor.x + 47;
-        self.mana_bar.y = self.bars_decor.y + 18;
+        self.bars_decor.y = h - self.bars_decor.height() + 10;
+        self.combat_indicator.x = self.bars_decor.x + 15 + (44 - self.combat_indicator.width()) / 2;
+        self.combat_indicator.y = self.bars_decor.y + 111 - self.combat_indicator.height() - 10;
+        self.stats_container.x = self.bars_decor.x + 63 - 15;
+        self.stats_container.y = self.bars_decor.y + 95 - self.stats_decor.height();
+        self.ability_container.x = self.bars_decor.x + 71;
+        self.ability_container.y = self.bars_decor.y + 47;
+        self.stats_button.x = self.bars_decor.x + 21 + (32 - self.stats_button.width() + assets.padding * 2) / 2.0;
+        self.stats_button.y = self.bars_decor.y + 117 + (32 - self.stats_button.height() + assets.padding * 2) / 2.0;
+        self.health_bar.x = self.bars_decor.x + 70;
+        self.health_bar.y = self.bars_decor.y + 102;
+        self.mana_bar.x = self.bars_decor.x + 70;
+        self.mana_bar.y = self.bars_decor.y + 132;
         const chat_decor_h = self.chat_decor.height();
-        self.chat_decor.y = h - chat_decor_h - self.chat_input.image_data.current(self.chat_input.state).normal.height() - 10;
-        self.chat_container.container.x = self.chat_decor.x + 9;
+        self.chat_decor.y = h - chat_decor_h - self.chat_input.image_data.current(self.chat_input.state).normal.height() + 15;
+        self.chat_container.container.x = self.chat_decor.x + 26;
         const old_y = self.chat_container.base_y;
-        self.chat_container.base_y = self.chat_decor.y + 9;
+        self.chat_container.base_y = self.chat_decor.y + 26;
         self.chat_container.container.y += (self.chat_container.base_y - old_y);
         self.chat_container.scroll_bar.x = self.chat_decor.x + 386;
-        self.chat_container.scroll_bar.y = self.chat_decor.y + 12;
-        self.chat_input.y = self.chat_decor.y + chat_decor_h;
-        self.fps_text.y = self.minimap_decor.y + self.minimap_decor.height() + 10;
-        self.hub_button.x = self.minimap_decor.x + 67 + (24 - self.hub_button.width()) / 2.0;
-        self.hub_button.y = self.minimap_decor.y + 182 + (24 - self.hub_button.height()) / 2.0;
-        self.options_button.x = self.minimap_decor.x + 93 + (24 - self.options_button.width()) / 2.0;
-        self.options_button.y = self.minimap_decor.y + 182 + (24 - self.options_button.height()) / 2.0;
+        self.chat_container.scroll_bar.y = self.chat_decor.y + 26;
+        self.chat_input.y = self.chat_decor.y + chat_decor_h - 10;
+        self.hub_button.x = self.minimap_slots.x + 6 + (18 - self.hub_button.width()) / 2.0;
+        self.hub_button.y = self.minimap_slots.y + 6 + (18 - self.hub_button.height()) / 2.0;
+        self.options_button.x = self.minimap_slots.x + 36 + (18 - self.options_button.width()) / 2.0;
+        self.options_button.y = self.minimap_slots.y + 6 + (18 - self.options_button.height()) / 2.0;
 
         for (0..22) |idx| {
             self.inventory_items[idx].x = self.inventory_decor.x + systems.screen.game.inventory_pos_data[idx].x + (systems.screen.game.inventory_pos_data[idx].w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
@@ -662,34 +639,6 @@ pub const GameScreen = struct {
                 try addAbility(self.ability_container, local_player.class_data.ability_3, &idx);
                 try addAbility(self.ability_container, local_player.class_data.ultimate_ability, &idx);
                 self.abilities_inited = true;
-            }
-
-            if (self.last_tier != local_player.tier) {
-                var current_icon = getTierAtlasData(local_player.tier);
-                current_icon.removePadding();
-                self.current_tier_icon.image_data.normal.atlas_data = current_icon;
-                self.current_tier_icon.x = self.xp_bar_decor.x + 6 + (18 - current_icon.texWRaw()) / 2.0;
-                self.current_tier_icon.y = self.xp_bar_decor.y + 6 + (18 - current_icon.texHRaw()) / 2.0;
-
-                self.current_tier_icon.tooltip_text.?.setText(try std.fmt.bufPrint(
-                    self.current_tier_icon.tooltip_text.?.backing_buffer,
-                    "Current Tier: {s}",
-                    .{utils.toRoman(local_player.tier)},
-                ), self.allocator);
-
-                var next_icon = getTierAtlasData(local_player.tier + 1);
-                next_icon.removePadding();
-                self.next_tier_icon.image_data.normal.atlas_data = next_icon;
-                self.next_tier_icon.x = self.xp_bar_decor.x + 284 + (18 - next_icon.texWRaw()) / 2.0;
-                self.next_tier_icon.y = self.xp_bar_decor.y + 6 + (18 - next_icon.texHRaw()) / 2.0;
-
-                self.next_tier_icon.tooltip_text.?.setText(try std.fmt.bufPrint(
-                    self.next_tier_icon.tooltip_text.?.backing_buffer,
-                    "Next Tier: {s}",
-                    .{utils.toRoman(local_player.tier + 1)},
-                ), self.allocator);
-
-                self.last_tier = local_player.tier;
             }
 
             if (self.last_in_combat != local_player.in_combat) {
@@ -885,23 +834,23 @@ pub const GameScreen = struct {
             if (i < 4) {
                 const hori_idx: f32 = @floatFromInt(@mod(i, 4));
                 self.inventory_pos_data[i] = utils.Rect{
-                    .x = 51 + hori_idx * 48,
-                    .y = 7,
-                    .w = 40,
-                    .h = 40,
-                    .w_pad = 4,
-                    .h_pad = 4,
+                    .x = 113 + hori_idx * 56,
+                    .y = 15,
+                    .w = 56,
+                    .h = 56,
+                    .w_pad = 0,
+                    .h_pad = 0,
                 };
             } else {
                 const hori_idx: f32 = @floatFromInt(@mod(i - 4, 6));
                 const vert_idx: f32 = @floatFromInt(@divFloor(i - 4, 6));
                 self.inventory_pos_data[i] = utils.Rect{
-                    .x = 3 + hori_idx * 48,
-                    .y = 59 + vert_idx * 48,
-                    .w = 40,
-                    .h = 40,
-                    .w_pad = 4,
-                    .h_pad = 4,
+                    .x = 15 + hori_idx * 46,
+                    .y = 75 + vert_idx * 46,
+                    .w = 46,
+                    .h = 46,
+                    .w_pad = 0,
+                    .h_pad = 0,
                 };
             }
         }
@@ -910,14 +859,24 @@ pub const GameScreen = struct {
             const hori_idx: f32 = @floatFromInt(@mod(i, 3));
             const vert_idx: f32 = @floatFromInt(@divFloor(i, 3));
             self.container_pos_data[i] = utils.Rect{
-                .x = 7 + hori_idx * 48,
-                .y = 33 + vert_idx * 48,
-                .w = 40,
-                .h = 40,
-                .w_pad = 4,
-                .h_pad = 4,
+                .x = 15 + hori_idx * 46,
+                .y = 15 + vert_idx * 46,
+                .w = 46,
+                .h = 46,
+                .w_pad = 0,
+                .h_pad = 0,
             };
         }
+    }
+
+    fn swapError(self: *GameScreen, start_slot: Slot, start_item: u16) void {
+        if (start_slot.is_container) {
+            self.setContainerItem(start_item, start_slot.idx);
+        } else {
+            self.setInvItem(start_item, start_slot.idx);
+        }
+
+        assets.playSfx("error");
     }
 
     pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
@@ -947,21 +906,25 @@ pub const GameScreen = struct {
                 else
                     self.inventory_items[start_slot.idx].item;
 
-                if (end_slot.idx >= 4 + 9 and local_player.tier < 2) {
-                    if (start_slot.is_container) {
-                        self.setContainerItem(start_item, start_slot.idx);
-                    } else {
-                        self.setInvItem(start_item, start_slot.idx);
-                    }
-
-                    assets.playSfx("error");
-                    return;
-                }
-
                 const end_item = if (end_slot.is_container)
                     self.container_items[end_slot.idx].item
                 else
                     self.inventory_items[end_slot.idx].item;
+
+                const start_props = game_data.item_type_to_props.get(start_item) orelse {
+                    self.swapError();
+                    return;
+                };
+
+                const end_props = game_data.item_type_to_props.get(end_item) orelse {
+                    self.swapError();
+                    return;
+                };
+
+                if (game_data.ItemType.slotsMatch(start_props.slot_type, end_props.slot_type)) {
+                    self.swapError();
+                    return;
+                }
 
                 if (start_slot.is_container) {
                     self.setContainerItem(end_item, start_slot.idx);
@@ -1161,11 +1124,6 @@ pub const GameScreen = struct {
                 const pos_w = self.container_pos_data[idx].w;
                 const pos_h = self.container_pos_data[idx].h;
 
-                self.container_items[idx].item = item;
-                self.container_items[idx].image_data.normal.atlas_data = atlas_data;
-                self.container_items[idx].x = base_x + (pos_w - self.container_items[idx].width() + assets.padding * 2) / 2;
-                self.container_items[idx].y = base_y + (pos_h - self.container_items[idx].height() + assets.padding * 2) / 2;
-
                 if (std.mem.eql(u8, props.tier, "Mythic")) {
                     self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
                 } else if (std.mem.eql(u8, props.tier, "Legendary")) {
@@ -1177,6 +1135,11 @@ pub const GameScreen = struct {
                 } else {
                     self.container_items[idx].background_image_data = null;
                 }
+
+                self.container_items[idx].item = item;
+                self.container_items[idx].image_data.normal.atlas_data = atlas_data;
+                self.container_items[idx].x = base_x + (pos_w - self.container_items[idx].width() + assets.padding * 2) / 2;
+                self.container_items[idx].y = base_y + (pos_h - self.container_items[idx].height() + assets.padding * 2) / 2;
 
                 return;
             } else {
@@ -1210,22 +1173,42 @@ pub const GameScreen = struct {
                 const pos_w = self.inventory_pos_data[idx].w;
                 const pos_h = self.inventory_pos_data[idx].h;
 
+                if (idx < 4) {
+                    self.inventory_items[idx].image_data.normal.scale_x = 4.0;
+                    self.inventory_items[idx].image_data.normal.scale_y = 4.0;
+
+                    if (std.mem.eql(u8, props.tier, "Mythic")) {
+                        self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot_equip", 0) } };
+                    } else if (std.mem.eql(u8, props.tier, "Legendary")) {
+                        self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot_equip", 0) } };
+                    } else if (std.mem.eql(u8, props.tier, "Epic")) {
+                        self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot_equip", 0) } };
+                    } else if (std.mem.eql(u8, props.tier, "Rare")) {
+                        self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot_equip", 0) } };
+                    } else {
+                        self.inventory_items[idx].background_image_data = null;
+                    }
+                } else {
+                    self.inventory_items[idx].image_data.normal.scale_x = 3.0;
+                    self.inventory_items[idx].image_data.normal.scale_y = 3.0;
+
+                    if (std.mem.eql(u8, props.tier, "Mythic")) {
+                        self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
+                    } else if (std.mem.eql(u8, props.tier, "Legendary")) {
+                        self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
+                    } else if (std.mem.eql(u8, props.tier, "Epic")) {
+                        self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
+                    } else if (std.mem.eql(u8, props.tier, "Rare")) {
+                        self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
+                    } else {
+                        self.inventory_items[idx].background_image_data = null;
+                    }
+                }
+
                 self.inventory_items[idx].item = item;
                 self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
                 self.inventory_items[idx].x = base_x + (pos_w - self.inventory_items[idx].width() + assets.padding * 2) / 2;
                 self.inventory_items[idx].y = base_y + (pos_h - self.inventory_items[idx].height() + assets.padding * 2) / 2;
-
-                if (std.mem.eql(u8, props.tier, "Mythic")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
-                } else if (std.mem.eql(u8, props.tier, "Legendary")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
-                } else if (std.mem.eql(u8, props.tier, "Epic")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
-                } else if (std.mem.eql(u8, props.tier, "Rare")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
-                } else {
-                    self.inventory_items[idx].background_image_data = null;
-                }
 
                 return;
             } else {
@@ -1233,6 +1216,14 @@ pub const GameScreen = struct {
             }
         } else {
             std.log.err("Attempted to populate inventory index {d} with item 0x{x}, but props was not found", .{ idx, item });
+        }
+
+        if (idx < 4) {
+            self.inventory_items[idx].image_data.normal.scale_x = 4.0;
+            self.inventory_items[idx].image_data.normal.scale_y = 4.0;
+        } else {
+            self.inventory_items[idx].image_data.normal.scale_x = 3.0;
+            self.inventory_items[idx].image_data.normal.scale_y = 3.0;
         }
 
         const atlas_data = assets.error_data;

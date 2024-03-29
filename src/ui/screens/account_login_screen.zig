@@ -132,7 +132,7 @@ pub const AccountLoginScreen = struct {
 
         screen.save_email_toggle = try element.create(allocator, element.Toggle{
             .x = screen.password_input.x + (input_w - text_w - check_box_base_on.texWRaw()) / 2,
-            .y = screen.password_input.y + 100 - (100 - check_box_base_on.texHRaw()) / 2,
+            .y = screen.password_input.y + 75 - (100 - check_box_base_on.texHRaw()) / 2,
             .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
             .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
             .toggled = &settings.save_email,

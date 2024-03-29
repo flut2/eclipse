@@ -1432,10 +1432,7 @@ pub const Server = struct {
             .hit_multiplier => plr.hit_multiplier = stat_reader.read(f32),
             .damage_multiplier => plr.damage_multiplier = stat_reader.read(f32),
             .condition => plr.condition = stat_reader.read(utils.Condition),
-            // zig fmt: off
-        .inv_0, .inv_1, .inv_2, .inv_3, .inv_4, .inv_5, .inv_6, .inv_7, .inv_8, .inv_9, .inv_10, .inv_11,
-        .inv_12, .inv_13, .inv_14, .inv_15, .inv_16, .inv_17, .inv_18, .inv_19, .inv_20, .inv_21 => {
-        // zig fmt: on
+            .inv_0, .inv_1, .inv_2, .inv_3, .inv_4, .inv_5, .inv_6, .inv_7, .inv_8, .inv_9, .inv_10, .inv_11, .inv_12, .inv_13, .inv_14, .inv_15, .inv_16, .inv_17, .inv_18, .inv_19, .inv_20, .inv_21 => {
                 const inv_idx = @intFromEnum(stat_type) - @intFromEnum(game_data.StatType.inv_0);
                 const item = stat_reader.read(u16);
                 plr.inventory[inv_idx] = item;

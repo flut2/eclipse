@@ -53,6 +53,7 @@ pub fn destroy(self: anytype) void {
         @compileError("Could not find field name");
 
     const tag = std.meta.stringToEnum(std.meta.Tag(UiElement), field_name);
+    std.debug.assert(!systems.ui_lock.tryLock());
     for (systems.elements.items, 0..) |element, i| {
         if (std.meta.activeTag(element) == tag and @field(element, field_name) == self) {
             _ = systems.elements.swapRemove(i);
@@ -1145,17 +1146,18 @@ pub const Item = struct {
         if (!self.visible)
             return false;
 
-        if (intersects(self, x, y)) {
-            tooltip.switchTooltip(.item, .{
-                .x = x + x_offset,
-                .y = y + y_offset,
-                .item = self.item,
-            });
-            return true;
-        }
+        if (!self.is_dragging) {
+            if (intersects(self, x, y)) {
+                tooltip.switchTooltip(.item, .{
+                    .x = x + x_offset,
+                    .y = y + y_offset,
+                    .item = self.item,
+                });
+                return true;
+            }
 
-        if (!self.is_dragging)
             return false;
+        }
 
         self.x = x + self.drag_offset_x;
         self.y = y + self.drag_offset_y;

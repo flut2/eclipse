@@ -572,7 +572,7 @@ pub inline fn update(allocator: std.mem.Allocator) void {
         _ = entities.swapRemove(idx);
     }
 
-    if (entity_indices_to_remove.items.len > 0 or time - last_sort > 100 * std.time.us_per_ms) {
+    if (entity_indices_to_remove.items.len > 0 or time - last_sort > 16 * std.time.us_per_ms) {
         std.sort.pdq(Entity, entities.items, {}, lessThan);
         last_sort = time;
     }

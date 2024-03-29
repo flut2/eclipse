@@ -91,13 +91,13 @@ pub const Projectile = struct {
         return target;
     }
 
-    fn findTargetObject(x: f32, y: f32, radius: f32) ?*GameObject {
+    fn findTargetObject(x: f32, y: f32, radius: f32, enemy_only: bool) ?*GameObject {
         var min_dist = radius * radius;
         var target: ?*GameObject = null;
 
         for (map.entities.items) |*en| {
             if (en.* == .object) {
-                if (en.object.props.is_enemy or en.object.props.occupy_square or en.object.props.enemy_occupy_square) {
+                if (en.object.props.is_enemy or !enemy_only and (en.object.props.occupy_square or en.object.props.enemy_occupy_square)) {
                     const dist_sqr = utils.distSqr(en.object.x, en.object.y, x, y);
                     if (dist_sqr < min_dist) {
                         min_dist = dist_sqr;
@@ -121,7 +121,7 @@ pub const Projectile = struct {
                     target_y = player.y;
                 }
             } else {
-                if (findTargetObject(self.x, self.y, self.props.heat_seek_radius * self.props.heat_seek_radius)) |object| {
+                if (findTargetObject(self.x, self.y, self.props.heat_seek_radius * self.props.heat_seek_radius, true)) |object| {
                     target_x = object.x;
                     target_y = object.y;
                 }
@@ -357,7 +357,7 @@ pub const Projectile = struct {
                 }
             }
         } else {
-            if (findTargetObject(self.x, self.y, 0.57)) |object| {
+            if (findTargetObject(self.x, self.y, 0.57, false)) |object| {
                 if (self.hit_list.contains(object.obj_id))
                     return true;
 

@@ -1013,6 +1013,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addUiImage("epic_slot", "ui/epic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("legendary_slot", "ui/legendary_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("mythic_slot", "ui/mythic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("rare_slot_equip", "ui/rare_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("epic_slot_equip", "ui/epic_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("legendary_slot_equip", "ui/legendary_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("mythic_slot_equip", "ui/mythic_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("in_combat_icon", "ui/in_combat_icon.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("out_of_combat_icon", "ui/out_of_combat_icon.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("out_of_mana_slot", "ui/out_of_mana_slot.png", imply_size, imply_size, &ui_ctx, allocator);
@@ -1053,6 +1057,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addUiImage("unchecked_box_press", "ui/screens/unchecked_box_press.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("container_view", "ui/container_view.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("minimap", "ui/minimap.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("minimap_slots", "ui/minimap_slots.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("minimap_icons", "ui/minimap_icons.png", 8, 8, &ui_ctx, allocator);
     try addUiImage("player_inventory", "ui/player_inventory.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("player_health_bar", "ui/player_health_bar.png", imply_size, imply_size, &ui_ctx, allocator);
