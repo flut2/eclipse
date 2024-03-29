@@ -110,8 +110,7 @@ pub fn deinit() void {
 }
 
 pub fn switchScreen(comptime screen_type: ScreenType) void {
-    ui_lock.lock();
-    defer ui_lock.unlock();
+    std.debug.assert(!ui_lock.tryLock());
 
     menu_background.visible = screen_type != .game and screen_type != .editor;
     input.selected_key_mapper = null;
@@ -177,6 +176,9 @@ pub fn removeAttachedUi(obj_id: i32) void {
 pub fn mouseMove(x: f32, y: f32) bool {
     tooltip.switchTooltip(.none, {});
 
+    ui_lock.lock();
+    defer ui_lock.unlock();
+
     var elem_iter_1 = std.mem.reverseIterator(elements.items);
     while (elem_iter_1.next()) |elem| {
         switch (elem) {
@@ -216,6 +218,9 @@ pub fn mousePress(x: f32, y: f32, mods: glfw.Mods, button: glfw.MouseButton) boo
         input.selected_key_mapper = null;
     }
 
+    ui_lock.lock();
+    defer ui_lock.unlock();
+
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| {
         switch (elem) {
@@ -230,6 +235,9 @@ pub fn mousePress(x: f32, y: f32, mods: glfw.Mods, button: glfw.MouseButton) boo
 }
 
 pub fn mouseRelease(x: f32, y: f32) bool {
+    ui_lock.lock();
+    defer ui_lock.unlock();
+
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| {
         switch (elem) {
@@ -244,6 +252,9 @@ pub fn mouseRelease(x: f32, y: f32) bool {
 }
 
 pub fn mouseScroll(x: f32, y: f32, x_scroll: f32, y_scroll: f32) bool {
+    ui_lock.lock();
+    defer ui_lock.unlock();
+
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| {
         switch (elem) {

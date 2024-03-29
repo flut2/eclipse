@@ -37,13 +37,13 @@ pub const ItemTooltip = struct {
             .x = 0,
             .y = 0,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 14, 14, 2, 2, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0),
             },
         });
 
         self.image = try self.root.createChild(element.Image{
-            .x = 10,
-            .y = 10,
+            .x = 15,
+            .y = 15,
             .image_data = .{
                 .normal = .{
                     .atlas_data = undefined,
@@ -55,7 +55,7 @@ pub const ItemTooltip = struct {
 
         self.item_name = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
-            .y = 14,
+            .y = 12,
             .text_data = .{
                 .text = "",
                 .size = 16,
@@ -65,7 +65,7 @@ pub const ItemTooltip = struct {
 
         self.rarity = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
-            .y = self.item_name.text_data.height + 14,
+            .y = self.item_name.text_data.height + 12,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -75,18 +75,18 @@ pub const ItemTooltip = struct {
             },
         });
 
-        const tooltip_line_spacer_data = assets.getUiData("tooltip_line_spacer", 0);
+        const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top", 0);
         self.line_break_one = try self.root.createChild(element.Image{
             .x = 20,
-            .y = self.image.y + self.image.height(),
+            .y = self.image.y + 40 + 10,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 14, 13, 0, 1, 14, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0),
             },
         });
 
         self.main_text = try self.root.createChild(element.Text{
             .x = 10,
-            .y = self.line_break_one.y + self.line_break_one.height() + 20,
+            .y = self.line_break_one.y + self.line_break_one.height() - 10,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -97,17 +97,18 @@ pub const ItemTooltip = struct {
             },
         });
 
+        const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom", 0);
         self.line_break_two = try self.root.createChild(element.Image{
             .x = 20,
-            .y = self.main_text.y + self.main_text.text_data.height,
+            .y = self.main_text.y + self.main_text.text_data.height + 10,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 14, 13, 0, 1, 14, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0),
             },
         });
 
         self.footer = try self.root.createChild(element.Text{
             .x = 10,
-            .y = self.line_break_two.y + self.line_break_two.height() + 20,
+            .y = self.line_break_two.y + self.line_break_two.height() - 10,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -169,13 +170,44 @@ pub const ItemTooltip = struct {
 
             var rarity_text_color: u32 = 0xB3B3B3;
             if (std.mem.eql(u8, props.tier, "Mythic")) {
+                const tooltip_background_data = assets.getUiData("tooltip_background_mythic", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_mythic", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_mythic", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 rarity_text_color = 0xB80000;
             } else if (std.mem.eql(u8, props.tier, "Legendary")) {
+                const tooltip_background_data = assets.getUiData("tooltip_background_legendary", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_legendary", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_legendary", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 rarity_text_color = 0xE6A100;
             } else if (std.mem.eql(u8, props.tier, "Epic")) {
+                const tooltip_background_data = assets.getUiData("tooltip_background_epic", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_epic", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_epic", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 rarity_text_color = 0xA825E6;
             } else if (std.mem.eql(u8, props.tier, "Rare")) {
+                const tooltip_background_data = assets.getUiData("tooltip_background_rare", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_rare", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_rare", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 rarity_text_color = 0x2575E6;
+            } else {
+                const tooltip_background_data = assets.getUiData("tooltip_background", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
             }
 
             self.rarity.text_data.setText(std.fmt.bufPrint(
@@ -191,8 +223,8 @@ pub const ItemTooltip = struct {
 
             self.item_name.text_data.setText(props.display_id, self.allocator);
 
-            self.line_break_one.y = self.image.y + self.image.height() + 10;
-            self.main_text.y = self.line_break_one.y - 5;
+            self.line_break_one.y = self.image.y + 40 + 10;
+            self.main_text.y = self.line_break_one.y - 10;
 
             const line_base = "{s}\n";
             const line_base_inset = line_base ++ "- ";
@@ -337,7 +369,7 @@ pub const ItemTooltip = struct {
             self.main_text.text_data.setText(text, self.allocator);
 
             self.line_break_two.y = self.main_text.y + self.main_text.text_data.height + 5;
-            self.footer.y = self.line_break_two.y - 5;
+            self.footer.y = self.line_break_two.y - 10;
 
             var footer_text: []u8 = "";
             if (props.untradeable)

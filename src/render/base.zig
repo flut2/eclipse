@@ -1144,7 +1144,7 @@ pub inline fn drawText(
     defer text_data.lock.unlock();
 
     // text data not initiated
-    if (text_data.line_widths == null)
+    if (text_data.line_widths == null or text_data.break_indices == null)
         return idx;
 
     var idx_new = idx;
@@ -1191,28 +1191,35 @@ pub inline fn drawText(
         if (offset_i >= text_data.text.len)
             return idx_new;
 
-        const char = text_data.text[offset_i];
+        var char = text_data.text[offset_i];
         specialChar: {
             if (!text_data.handle_special_chars)
                 break :specialChar;
 
             if (char == '&') {
                 const name_start = text_data.text[offset_i + 1 ..];
+                const reset = "reset";
+                if (text_data.text.len > offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
+                    current_type = text_data.text_type;
+                    current_color = rgb;
+                    current_size = size_scale;
+                    line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
+                    y_pointer += line_height - start_line_height;
+                    index_offset += @intCast(reset.len);
+                    continue;
+                }
+
+                const space = "space";
+                if (text_data.text.len > offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
+                    char = ' ';
+                    index_offset += @intCast(space.len);
+                    break :specialChar;
+                }
+
                 if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
                     const value_start_idx = offset_i + 1 + eql_idx + 1;
                     if (text_data.text.len <= value_start_idx or text_data.text[value_start_idx] != '"')
                         break :specialChar;
-
-                    const reset = "reset";
-                    if (text_data.text.len > offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
-                        current_type = text_data.text_type;
-                        current_color = rgb;
-                        current_size = size_scale;
-                        line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
-                        y_pointer += line_height - start_line_height;
-                        index_offset += @intCast(reset.len);
-                        continue;
-                    }
 
                     const value_start = text_data.text[value_start_idx + 1 ..];
                     if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
@@ -1267,6 +1274,20 @@ pub inline fn drawText(
                                 break :specialChar;
                             }
 
+                            if (std.mem.indexOfScalar(usize, text_data.break_indices.?.items, i) != null) {
+                                y_pointer += line_height;
+                                if (y_pointer - y_base > text_data.max_height)
+                                    return idx_new;
+
+                                x_base = switch (text_data.hori_align) {
+                                    .left => start_x,
+                                    .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]) / 2,
+                                    .right => if (max_width_off) start_x else start_x + text_data.max_width - text_data.line_widths.?.items[line_idx],
+                                };
+                                x_pointer = x_base;
+                                line_idx += 1;
+                            }
+
                             const quad_size = current_size * assets.CharacterData.size;
                             idx_new = drawQuad(
                                 idx_new,
@@ -1288,6 +1309,7 @@ pub inline fn drawText(
                 } else break :specialChar;
             }
         }
+
         const mod_char = if (text_data.password) '*' else char;
 
         const char_data = switch (current_type) {
@@ -1301,7 +1323,7 @@ pub inline fn drawText(
         const shadow_texel_h = text_data.shadow_texel_offset_mult / char_data.atlas_h;
 
         var next_x_pointer = x_pointer + char_data.x_advance * current_size;
-        if (char == '\n' or next_x_pointer - x_base > text_data.max_width) {
+        if (std.mem.indexOfScalar(usize, text_data.break_indices.?.items, i) != null) {
             y_pointer += line_height;
             if (y_pointer - y_base > text_data.max_height)
                 return idx_new;

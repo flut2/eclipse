@@ -261,7 +261,7 @@ pub const GameScreen = struct {
         const out_of_combat_data = assets.getUiData("out_of_combat_icon", 0);
         screen.combat_indicator = try element.create(allocator, element.Image{
             .x = screen.bars_decor.x + 15 + (44 - out_of_combat_data.texWRaw()) / 2,
-            .y = screen.bars_decor.y + 111 - out_of_combat_data.texHRaw() - 10,
+            .y = screen.bars_decor.y + 66 - out_of_combat_data.texHRaw() - 10,
             .image_data = .{ .normal = .{ .atlas_data = out_of_combat_data } },
             .tooltip_text = .{
                 .text = "Out of Combat",
@@ -583,7 +583,7 @@ pub const GameScreen = struct {
         self.bars_decor.x = (w - self.bars_decor.width()) / 2;
         self.bars_decor.y = h - self.bars_decor.height() + 10;
         self.combat_indicator.x = self.bars_decor.x + 15 + (44 - self.combat_indicator.width()) / 2;
-        self.combat_indicator.y = self.bars_decor.y + 111 - self.combat_indicator.height() - 10;
+        self.combat_indicator.y = self.bars_decor.y + 66 - self.combat_indicator.height() - 10;
         self.stats_container.x = self.bars_decor.x + 63 - 15;
         self.stats_container.y = self.bars_decor.y + 95 - self.stats_decor.height();
         self.ability_container.x = self.bars_decor.x + 71;

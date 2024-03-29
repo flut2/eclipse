@@ -33,7 +33,7 @@ pub const AbilityTooltip = struct {
             .x = 0,
             .y = 0,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 14, 14, 2, 2, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0),
             },
         });
 
@@ -64,12 +64,12 @@ pub const AbilityTooltip = struct {
             },
         });
 
-        const tooltip_line_spacer_data = assets.getUiData("tooltip_line_spacer", 0);
+        const tooltip_line_spacer_data = assets.getUiData("tooltip_line_spacer_top", 0);
         self.line_break = try self.root.createChild(element.Image{
             .x = 20,
-            .y = self.image.y + self.image.height() + 10,
+            .y = self.image.y + self.image.height() + 15,
             .image_data = .{
-                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 14, 13, 0, 1, 14, 1.0),
+                .nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0),
             },
         });
 

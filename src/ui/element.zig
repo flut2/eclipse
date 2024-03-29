@@ -147,6 +147,7 @@ pub const TextData = struct {
     height: f32 = 0.0,
     line_count: f32 = 0.0,
     line_widths: ?std.ArrayList(f32) = null,
+    break_indices: ?std.ArrayList(usize) = null,
 
     pub fn setText(self: *TextData, text: []const u8, allocator: std.mem.Allocator) void {
         self.lock.lock();
@@ -168,6 +169,12 @@ pub const TextData = struct {
             self.line_widths = std.ArrayList(f32).init(allocator);
         }
 
+        if (self.break_indices) |*break_indices| {
+            break_indices.clearRetainingCapacity();
+        } else {
+            self.break_indices = std.ArrayList(usize).init(allocator);
+        }
+
         const size_scale = self.size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
         const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
         var line_height = start_line_height;
@@ -178,6 +185,10 @@ pub const TextData = struct {
         var current_size = size_scale;
         var current_type = self.text_type;
         var index_offset: u16 = 0;
+        var word_start: usize = 0;
+        var last_word_start_pointer: f32 = 0.0;
+        var last_word_end_pointer: f32 = 0.0;
+        var needs_new_word_idx = true;
         for (0..self.text.len) |i| {
             const offset_i = i + index_offset;
             if (offset_i >= self.text.len) {
@@ -190,27 +201,36 @@ pub const TextData = struct {
                 return;
             }
 
-            const char = self.text[offset_i];
+            var skip_space_check = false;
+            var char = self.text[offset_i];
             specialChar: {
                 if (!self.handle_special_chars)
                     break :specialChar;
 
                 if (char == '&') {
                     const name_start = self.text[offset_i + 1 ..];
+                    const reset = "reset";
+                    if (self.text.len > offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
+                        current_type = self.text_type;
+                        current_size = size_scale;
+                        line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
+                        y_pointer += line_height - start_line_height;
+                        index_offset += @intCast(reset.len);
+                        continue;
+                    }
+
+                    const space = "space";
+                    if (self.text.len > offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
+                        char = ' ';
+                        skip_space_check = true;
+                        index_offset += @intCast(space.len);
+                        break :specialChar;
+                    }
+
                     if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
                         const value_start_idx = offset_i + 1 + eql_idx + 1;
                         if (self.text.len <= value_start_idx or self.text[value_start_idx] != '"')
                             break :specialChar;
-
-                        const reset = "reset";
-                        if (self.text.len > offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
-                            current_type = self.text_type;
-                            current_size = size_scale;
-                            line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
-                            y_pointer += line_height - start_line_height;
-                            index_offset += @intCast(reset.len);
-                            continue;
-                        }
 
                         const value_start = self.text[value_start_idx + 1 ..];
                         if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
@@ -259,7 +279,27 @@ pub const TextData = struct {
                                     break :specialChar;
                                 }
 
+                                if (needs_new_word_idx) {
+                                    word_start = i;
+                                    last_word_start_pointer = x_pointer;
+                                    needs_new_word_idx = false;
+                                }
+
                                 x_pointer += current_size * assets.CharacterData.size;
+                                if (x_pointer > self.max_width) {
+                                    self.width = @max(x_max, last_word_end_pointer);
+                                    self.line_widths.?.append(last_word_end_pointer) catch |e| {
+                                        std.log.err("Attribute recalculation for text data failed: {}", .{e});
+                                        return;
+                                    };
+                                    self.break_indices.?.append(word_start) catch |e| {
+                                        std.log.err("Attribute recalculation for text data failed: {}", .{e});
+                                        return;
+                                    };
+                                    self.line_count += 1;
+                                    x_pointer = x_pointer - last_word_start_pointer;
+                                    y_pointer += line_height;
+                                }
                             } else if (!std.mem.eql(u8, name, "col"))
                                 break :specialChar;
 
@@ -279,15 +319,29 @@ pub const TextData = struct {
                 .bold_italic => assets.bold_italic_chars[mod_char],
             };
 
+            if (!skip_space_check and std.ascii.isWhitespace(char)) {
+                last_word_end_pointer = x_pointer + char_data.x_advance * current_size;
+                needs_new_word_idx = true;
+            } else if (needs_new_word_idx) {
+                word_start = i;
+                last_word_start_pointer = x_pointer;
+                needs_new_word_idx = false;
+            }
+
             var next_x_pointer = x_pointer + char_data.x_advance * current_size;
             if (char == '\n' or next_x_pointer > self.max_width) {
-                self.width = @max(x_max, x_pointer);
-                self.line_widths.?.append(x_pointer) catch |e| {
+                const next_pointer = if (char == '\n') next_x_pointer else last_word_end_pointer;
+                self.width = @max(x_max, next_pointer);
+                self.line_widths.?.append(next_pointer) catch |e| {
+                    std.log.err("Attribute recalculation for text data failed: {}", .{e});
+                    return;
+                };
+                self.break_indices.?.append(if (char == '\n') i else word_start) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
                 self.line_count += 1;
-                next_x_pointer = char_data.x_advance * current_size;
+                next_x_pointer = if (char == '\n') char_data.x_advance * current_size else next_x_pointer - last_word_start_pointer;
                 y_pointer += line_height;
             }
 
@@ -314,6 +368,11 @@ pub const TextData = struct {
         if (self.line_widths) |line_widths| {
             line_widths.deinit();
             self.line_widths = null;
+        }
+
+        if (self.break_indices) |break_indices| {
+            break_indices.deinit();
+            self.break_indices = null;
         }
     }
 };

@@ -371,7 +371,11 @@ pub fn main() !void {
     try ui_systems.init(allocator);
     defer ui_systems.deinit();
 
-    ui_systems.switchScreen(.main_menu);
+    {
+        ui_systems.ui_lock.lock();
+        defer ui_systems.ui_lock.unlock();
+        ui_systems.switchScreen(.main_menu);
+    }
 
     const window = glfw.Window.create(
         1280,
@@ -430,7 +434,7 @@ pub fn main() !void {
         rpc_thread.join();
     }
 
-    render_thread = try std.Thread.spawn(.{}, renderTick, .{ window });
+    render_thread = try std.Thread.spawn(.{}, renderTick, .{window});
     defer {
         tick_render = false;
         render_thread.join();

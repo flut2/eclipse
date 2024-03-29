@@ -11,7 +11,7 @@ pub const ServerData = struct {
     admin_only: bool,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ServerData {
-        return ServerData{
+        return .{
             .name = try node.getValueAlloc("Name", allocator, "Unknown"),
             .dns = try node.getValueAlloc("DNS", allocator, "127.0.0.1"),
             .port = try node.getValueInt("Port", u16, 2050),
@@ -59,7 +59,7 @@ pub const CharacterData = struct {
                 try equip_list.append(try std.fmt.parseInt(u16, s, 0));
         }
 
-        return CharacterData{
+        return .{
             .id = id,
             .obj_type = obj_type,
             .health = try node.getValueInt("Health", u16, 0),
@@ -129,7 +129,7 @@ pub const TextureData = struct {
     animated: bool,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator, animated: bool) !TextureData {
-        return TextureData{
+        return .{
             .sheet = try node.getValueAlloc("Sheet", allocator, "Unknown"),
             .index = try node.getValueInt("Index", u16, 0),
             .animated = animated,
@@ -147,7 +147,7 @@ pub const CharacterSkin = struct {
     texture: TextureData,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) CharacterSkin {
-        return CharacterSkin{
+        return .{
             .obj_type = try node.getAttributeInt("type", u16, 0),
             .name = try node.getAttributeAlloc("id", allocator, "Unknown"),
             .texture = try TextureData.parse(
@@ -169,7 +169,7 @@ pub const Ability = struct {
     description: []const u8,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !Ability {
-        return Ability{
+        return .{
             .icon = try TextureData.parse(node.findChild("Icon") orelse
                 std.debug.panic("Could not parse Ability: Icon node is missing", .{}), allocator, false),
             .name = try node.getValueAlloc("Name", allocator, "Unknown"),
@@ -266,7 +266,7 @@ pub const CharacterClass = struct {
         while (proj_iter.next()) |proj_node|
             try proj_list.append(try ProjProps.parse(proj_node, allocator));
 
-        return CharacterClass{
+        return .{
             .obj_type = try node.getAttributeInt("type", u16, 0),
             .name = name,
             .rpc_name = rpc_name,
@@ -342,7 +342,7 @@ pub const AnimFrame = struct {
     tex: TextureData,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !AnimFrame {
-        return AnimFrame{
+        return .{
             .time = @intFromFloat(try node.getAttributeFloat("time", f32, 0.0) * std.time.us_per_s),
             .tex = try TextureData.parse(node.findChild("Texture").?, allocator, false),
         };
@@ -362,7 +362,7 @@ pub const AnimProps = struct {
         while (frame_iter.next()) |anim_node|
             try frame_list.append(try AnimFrame.parse(anim_node, allocator));
 
-        return AnimProps{
+        return .{
             .prob = try node.getAttributeFloat("prob", f32, 0.0),
             .period = @intFromFloat(try node.getAttributeFloat("period", f32, 0.0) * std.time.us_per_s),
             .period_jitter = @intFromFloat(try node.getAttributeFloat("periodJitter", f32, 0.0) * std.time.us_per_s),
@@ -429,7 +429,7 @@ pub const GroundProps = struct {
             dy = try anim_node.getAttributeFloat("dy", f32, 0.0);
         }
 
-        return GroundProps{
+        return .{
             .obj_type = try node.getAttributeInt("type", i32, 0),
             .obj_id = try node.getAttributeAlloc("id", allocator, "Unknown"),
             .no_walk = node.elementExists("NoWalk"),
@@ -510,7 +510,7 @@ pub const ShowEffProps = struct {
     color: u32,
 
     pub fn parse(node: xml.Node) !ShowEffProps {
-        return ShowEffProps{
+        return .{
             .effect = ShowEffect.fromString(node.currentValue() orelse ""),
             .radius = try node.getAttributeFloat("radius", f32, 5.0),
             .cooldown = try node.getAttributeInt("cooldown", i64, 1000) * std.time.us_per_ms,
@@ -596,7 +596,7 @@ pub const ObjProps = struct {
             try eff_list.append(try ShowEffProps.parse(eff_node));
 
         const float_node = node.findChild("Float");
-        return ObjProps{
+        return .{
             .obj_type = try node.getAttributeInt("type", u16, 0),
             .obj_id = obj_id,
             .display_id = try node.getValueAlloc("DisplayId", allocator, obj_id),
@@ -683,10 +683,29 @@ pub const ConditionEffect = struct {
     condition: utils.ConditionEnum,
 
     pub fn parse(node: xml.Node) !ConditionEffect {
-        return ConditionEffect{
+        return .{
             .duration = try node.getAttributeFloat("duration", f32, 0.0),
             .condition = utils.ConditionEnum.fromString(node.currentValue().?),
         };
+    }
+};
+
+pub const CardProps = struct {
+    card_type: u16,
+    title: []const u8,
+    description: []const u8,
+
+    pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !CardProps {
+        return .{
+            .card_type = try node.getAttributeInt("type", u16, 0),
+            .title = try node.getValueAlloc("Title", allocator, "Unknown"),
+            .description = try node.getValueAlloc("Description", allocator, ""),
+        };
+    }
+
+    pub fn deinit(self: CardProps, allocator: std.mem.Allocator) void {
+        allocator.free(self.title);
+        allocator.free(self.description);
     }
 };
 
@@ -738,7 +757,7 @@ pub const ProjProps = struct {
         while (effect_it.next()) |effect_node|
             try effect_list.append(try ConditionEffect.parse(effect_node));
 
-        return ProjProps{
+        return .{
             .texture_data = try parseTexture(node, allocator),
             .angle_correction = try node.getValueFloat("AngleCorrection", f32, 0.0) * (std.math.pi / 4.0),
             .rotation = try node.getValueFloat("Rotation", f32, 0.0),
@@ -1013,7 +1032,7 @@ pub const ActivationData = struct {
     amount: i16,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ActivationData {
-        return ActivationData{
+        return .{
             .activation_type = ActivationType.fromString(node.currentValue() orelse "IncrementStat"),
             .object_id = try node.getAttributeAlloc("objectId", allocator, ""),
             .obj_type = try node.getAttributeInt("objType", u16, std.math.maxInt(u16)),
@@ -1044,7 +1063,7 @@ pub const StatIncrementData = struct {
     amount: i16,
 
     pub fn parse(node: xml.Node) !StatIncrementData {
-        return StatIncrementData{
+        return .{
             .stat = StatType.fromString(node.getAttribute("stat") orelse "MaxHP"),
             .amount = try node.getAttributeInt("amount", i16, 0),
         };
@@ -1056,7 +1075,7 @@ pub const EffectInfo = struct {
     description: []const u8,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !EffectInfo {
-        return EffectInfo{
+        return .{
             .name = try node.getAttributeAlloc("name", allocator, ""),
             .description = try node.getAttributeAlloc("description", allocator, ""),
         };
@@ -1112,7 +1131,7 @@ pub const ItemProps = struct {
 
         const id = try node.getAttributeAlloc("id", allocator, "Unknown");
 
-        return ItemProps{
+        return .{
             .consumable = node.elementExists("Consumable"),
             .untradeable = node.elementExists("Soulbound"),
             .usable = node.elementExists("Usable"),
@@ -1222,6 +1241,7 @@ pub const ItemType = enum(i8) {
 pub const Currency = enum(u8) { gold = 0, gems = 1, crowns = 2 };
 
 pub var classes: std.AutoHashMap(u16, CharacterClass) = undefined;
+pub var card_type_to_props: std.AutoHashMap(u16, CardProps) = undefined;
 pub var item_name_to_type: std.StringHashMap(u16) = undefined;
 pub var item_type_to_props: std.AutoHashMap(u16, ItemProps) = undefined;
 pub var item_type_to_name: std.AutoHashMap(u16, []const u8) = undefined;
@@ -1241,6 +1261,7 @@ pub var region_type_to_color: std.AutoHashMap(u16, u32) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     classes = std.AutoHashMap(u16, CharacterClass).init(allocator);
+    card_type_to_props = std.AutoHashMap(u16, CardProps).init(allocator);
     item_name_to_type = std.StringHashMap(u16).init(allocator);
     item_type_to_props = std.AutoHashMap(u16, ItemProps).init(allocator);
     item_type_to_name = std.AutoHashMap(u16, []const u8).init(allocator);
@@ -1292,6 +1313,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
                 parseRegions(doc, allocator) catch |e| {
                     std.log.err("Region parsing error for path {s}: {}", .{ path, e });
                 };
+            } else if (std.mem.eql(u8, root_name, "Cards")) {
+                parseCards(doc, allocator) catch |e| {
+                    std.log.err("Card parsing error for path {s}: {}", .{ path, e });
+                };
             } else {
                 std.log.err("Invalid root node for path {s}: {s}", .{ path, root_name });
             }
@@ -1321,6 +1346,11 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 
     var obj_props_iter = obj_type_to_props.valueIterator();
     while (obj_props_iter.next()) |props| {
+        props.deinit(allocator);
+    }
+
+    var card_props_iter = card_type_to_props.valueIterator();
+    while (card_props_iter.next()) |props| {
         props.deinit(allocator);
     }
 
@@ -1502,5 +1532,14 @@ pub fn parseRegions(doc: xml.Doc, allocator: std.mem.Allocator) !void {
         const id = try node.getAttributeAlloc("id", allocator, "Unknown");
         try region_type_to_name.put(obj_type, id);
         try region_type_to_color.put(obj_type, try node.getValueInt("Color", u32, 0));
+    }
+}
+
+pub fn parseCards(doc: xml.Doc, allocator: std.mem.Allocator) !void {
+    const root = try doc.getRootElement();
+    var iter = root.iterate(&.{}, "Card");
+    while (iter.next()) |node| {
+        const card_type = try node.getAttributeInt("type", u16, 0);
+        try card_type_to_props.put(card_type, try CardProps.parse(node, allocator));
     }
 }
