@@ -916,12 +916,19 @@ pub const GameScreen = struct {
                     return;
                 };
 
-                const end_props = game_data.item_type_to_props.get(end_item) orelse {
+                const end_slot_types = switch (map.findEntityConst(if (end_slot.is_container) self.container_id else map.local_player_id) orelse {
                     self.swapError(start_slot, start_item);
                     return;
+                }) {
+                    .object => |obj| obj.props.slot_types,
+                    .player => |player| player.class_data.slot_types,
+                    else => {
+                        self.swapError(start_slot, start_item);
+                        return;
+                    },
                 };
 
-                if (game_data.ItemType.slotsMatch(start_props.slot_type, end_props.slot_type)) {
+                if (!game_data.ItemType.slotsMatch(start_props.slot_type, end_slot_types[end_slot.idx])) {
                     self.swapError(start_slot, start_item);
                     return;
                 }

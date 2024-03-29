@@ -53,9 +53,11 @@ pub const CharacterData = struct {
 
         var equip_list = try std.ArrayList(u16).initCapacity(allocator, 22);
         defer equip_list.deinit();
-        var equip_iter = std.mem.split(u8, node.getValue("Equipment") orelse "", ", ");
-        while (equip_iter.next()) |s|
-            try equip_list.append(try std.fmt.parseInt(u16, s, 0));
+        if (node.getValue("Equipment")) |equips| {
+            var equip_iter = std.mem.split(u8, equips, ", ");
+            while (equip_iter.next()) |s|
+                try equip_list.append(try std.fmt.parseInt(u16, s, 0));
+        }
 
         return CharacterData{
             .id = id,
@@ -212,7 +214,7 @@ pub const CharacterClass = struct {
     death_sound: []const u8,
     blood_prob: f32,
     slot_types: []ItemType,
-    equipment: []i16,
+    equipment: []u16,
     ability_1: Ability,
     ability_2: Ability,
     ability_3: Ability,
@@ -235,17 +237,21 @@ pub const CharacterClass = struct {
     skins: ?[]CharacterSkin,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !CharacterClass {
-        var slot_list = try std.ArrayList(ItemType).initCapacity(allocator, 20);
+        var slot_list = try std.ArrayList(ItemType).initCapacity(allocator, 22);
         defer slot_list.deinit();
-        var slot_iter = std.mem.split(u8, node.getValue("SlotTypes") orelse "", ", ");
-        while (slot_iter.next()) |s|
-            try slot_list.append(@enumFromInt(try std.fmt.parseInt(i8, s, 0)));
+        if (node.getValue("SlotTypes")) |slot_types| {
+            var slot_iter = std.mem.split(u8, slot_types, ", ");
+            while (slot_iter.next()) |s|
+                try slot_list.append(@enumFromInt(try std.fmt.parseInt(i8, s, 0)));
+        }
 
-        var equip_list = try std.ArrayList(i16).initCapacity(allocator, 20);
+        var equip_list = try std.ArrayList(u16).initCapacity(allocator, 22);
         defer equip_list.deinit();
-        var equip_iter = std.mem.split(u8, node.getValue("Equipment") orelse "", ", ");
-        while (equip_iter.next()) |s|
-            try equip_list.append(try std.fmt.parseInt(i16, s, 0));
+        if (node.getValue("Equipment")) |equips| {
+            var equip_iter = std.mem.split(u8, equips, ", ");
+            while (equip_iter.next()) |s|
+                try equip_list.append(try std.fmt.parseInt(u16, s, 0));
+        }
 
         const name = try node.getAttributeAlloc("id", allocator, "Unknown");
         const rpc_name = try allocator.dupe(u8, name);
@@ -269,7 +275,7 @@ pub const CharacterClass = struct {
             .death_sound = try node.getValueAlloc("DeathSound", allocator, "default_death"),
             .blood_prob = try node.getAttributeFloat("BloodProb", f32, 0.0),
             .slot_types = try allocator.dupe(ItemType, slot_list.items),
-            .equipment = try allocator.dupe(i16, equip_list.items),
+            .equipment = try allocator.dupe(u16, equip_list.items),
             .ability_1 = try Ability.parse(node.findChild("Ability1") orelse
                 std.debug.panic("Could not parse CharacterClass: Ability1 node is missing", .{}), allocator),
             .ability_2 = try Ability.parse(node.findChild("Ability2") orelse
@@ -556,9 +562,18 @@ pub const ObjProps = struct {
     projectiles: []ProjProps,
     hit_sound: []const u8,
     death_sound: []const u8,
+    slot_types: []ItemType,
     anim_props: ?AnimProps,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ObjProps {
+        var slot_list = try std.ArrayList(ItemType).initCapacity(allocator, 9);
+        defer slot_list.deinit();
+        if (node.getValue("SlotTypes")) |slot_types| {
+            var slot_iter = std.mem.split(u8, slot_types, ", ");
+            while (slot_iter.next()) |s|
+                try slot_list.append(@enumFromInt(try std.fmt.parseInt(i8, s, 0)));
+        }
+
         const obj_id = try node.getAttributeAlloc("id", allocator, "");
         var min_size = try node.getValueFloat("MinSize", f32, 100.0) / 100.0;
         var max_size = try node.getValueFloat("MaxSize", f32, 100.0) / 100.0;
@@ -620,6 +635,7 @@ pub const ObjProps = struct {
             .float_height = try std.fmt.parseFloat(f32, if (float_node != null) float_node.?.getAttribute("height") orelse "0.0" else "0.0"),
             .show_effects = try allocator.dupe(ShowEffProps, eff_list.items),
             .projectiles = try allocator.dupe(ProjProps, proj_list.items),
+            .slot_types = try allocator.dupe(ItemType, slot_list.items),
             .hit_sound = try node.getValueAlloc("HitSound", allocator, "Unknown"),
             .death_sound = try node.getValueAlloc("DeathSound", allocator, "Unknown"),
             .protect_from_ground_damage = node.elementExists("ProtectFromGroundDamage"),
@@ -649,6 +665,8 @@ pub const ObjProps = struct {
         if (self.anim_props) |anim_props| {
             anim_props.deinit(allocator);
         }
+
+        allocator.free(self.slot_types);
     }
 
     pub fn getSize(self: *const ObjProps) f32 {
@@ -1276,6 +1294,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
                 };
             } else {
                 std.log.err("Invalid root node for path {s}: {s}", .{ path, root_name });
+            }
+
+            if (@errorReturnTrace()) |trace| {
+                std.debug.dumpStackTrace(trace.*);
             }
         }
     }
