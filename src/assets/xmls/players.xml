@@ -450,7 +450,7 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Name>Rewind</Name>
       <ManaCost>54</ManaCost>
       <Cooldown>6</Cooldown>
-      <Description>Rewind time by &amp;type="bold_it"&amp;col="FFE770"3 (&amp;col="6080FF"+6% &amp;img="misc_big,0x3b", &amp;col="60FFAC"+6% &amp;img="misc_big,0x3a", &amp;col="A15AFF"+6%&amp;space&amp;img="misc_big,0x23"&amp;col="FFE770")&amp;reset seconds, causing you to return to your old position and Health. (if higher than current)</Description>
+      <Description>Rewind time by &amp;type="bold_it"&amp;col="FFE770"3 (&amp;col="6080FF"+6% &amp;img="misc_big,0x3b", &amp;col="1C40FF"+6% &amp;img="misc_big,0x27", &amp;col="A15AFF"+6%&amp;space&amp;img="misc_big,0x23"&amp;col="FFE770")&amp;reset seconds, causing you to return to your old position and Health. (if higher than current)</Description>
     </Ability2>
     <Ability3>
       <Icon>
@@ -603,7 +603,7 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Name>Anomalous Burst</Name>
       <ManaCost>75</ManaCost>
       <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="C45860"6 (+1 per 30 &amp;img="misc_big,0x22") heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="FF6C32"750 (+75% &amp;img="misc_big,0x20") Physical Damage.</Description>
+      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="C45860"6 (+1 per 30 &amp;img="misc_big,0x22") heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="FF6C32"750 (+75%&amp;space&amp;img="misc_big,0x20") Physical Damage.</Description>
     </Ability1>
     <Ability2>
       <Icon>
