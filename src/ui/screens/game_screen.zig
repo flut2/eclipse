@@ -912,17 +912,17 @@ pub const GameScreen = struct {
                     self.inventory_items[end_slot.idx].item;
 
                 const start_props = game_data.item_type_to_props.get(start_item) orelse {
-                    self.swapError();
+                    self.swapError(start_slot, start_item);
                     return;
                 };
 
                 const end_props = game_data.item_type_to_props.get(end_item) orelse {
-                    self.swapError();
+                    self.swapError(start_slot, start_item);
                     return;
                 };
 
                 if (game_data.ItemType.slotsMatch(start_props.slot_type, end_props.slot_type)) {
-                    self.swapError();
+                    self.swapError(start_slot, start_item);
                     return;
                 }
 
