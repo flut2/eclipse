@@ -11,7 +11,7 @@ pub const AbilityTooltip = struct {
     decor: *element.Image = undefined,
     image: *element.Image = undefined,
     title: *element.Text = undefined,
-    cost_text: *element.Text = undefined,
+    subtext: *element.Text = undefined,
     line_break: *element.Image = undefined,
     description: *element.Text = undefined,
 
@@ -45,7 +45,7 @@ pub const AbilityTooltip = struct {
 
         self.title = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
-            .y = 10,
+            .y = 9,
             .text_data = .{
                 .text = "",
                 .size = 16,
@@ -53,9 +53,9 @@ pub const AbilityTooltip = struct {
             },
         });
 
-        self.cost_text = try self.root.createChild(element.Text{
+        self.subtext = try self.root.createChild(element.Text{
             .x = 8 * 4 + 30,
-            .y = self.title.text_data.height + 10,
+            .y = self.title.text_data.height + 9,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -75,7 +75,7 @@ pub const AbilityTooltip = struct {
 
         self.description = try self.root.createChild(element.Text{
             .x = 10,
-            .y = self.line_break.y + self.line_break.height() + 20,
+            .y = self.line_break.y + self.line_break.height() + 10,
             .text_data = .{
                 .text = "",
                 .size = 14,
@@ -102,39 +102,44 @@ pub const AbilityTooltip = struct {
 
             self.title.text_data.setText(params.props.name, self.allocator);
 
+            const cooldown_icon = "&img=\"misc_big,0x45\"";
             const has_mana_cost = params.props.mana_cost > 0;
             const has_health_cost = params.props.health_cost > 0;
             if (!has_mana_cost and !has_health_cost) {
-                self.cost_text.text_data.text = "No Cost";
+                self.subtext.text_data.text = std.fmt.bufPrint(
+                    self.subtext.text_data.backing_buffer,
+                    "No Cost | {d:.1}s " ++ cooldown_icon,
+                    .{ params.props.cooldown },
+                ) catch self.subtext.text_data.text;
             } else {
                 const mana_icon = comptime game_data.StatType.max_mp.toControlCode();
                 const health_icon = comptime game_data.StatType.max_hp.toControlCode();
 
                 if (has_health_cost and has_mana_cost) {
-                    self.cost_text.text_data.text = std.fmt.bufPrint(
-                        self.cost_text.text_data.backing_buffer,
-                        "{d} " ++ mana_icon ++ " {d} " ++ health_icon,
-                        .{ params.props.mana_cost, params.props.health_cost },
-                    ) catch self.cost_text.text_data.text;
+                    self.subtext.text_data.text = std.fmt.bufPrint(
+                        self.subtext.text_data.backing_buffer,
+                        "{d} " ++ mana_icon ++ " {d} " ++ health_icon ++ " | {d:.1}s " ++ cooldown_icon,
+                        .{ params.props.mana_cost, params.props.health_cost, params.props.cooldown },
+                    ) catch self.subtext.text_data.text;
                 } else if (has_health_cost) {
-                    self.cost_text.text_data.text = std.fmt.bufPrint(
-                        self.cost_text.text_data.backing_buffer,
-                        "{d} " ++ health_icon,
-                        .{params.props.health_cost},
-                    ) catch self.cost_text.text_data.text;
+                    self.subtext.text_data.text = std.fmt.bufPrint(
+                        self.subtext.text_data.backing_buffer,
+                        "{d} " ++ health_icon ++ " | {d:.1}s " ++ cooldown_icon,
+                        .{ params.props.health_cost, params.props.cooldown },
+                    ) catch self.subtext.text_data.text;
                 } else {
-                    self.cost_text.text_data.text = std.fmt.bufPrint(
-                        self.cost_text.text_data.backing_buffer,
-                        "{d} " ++ mana_icon,
-                        .{params.props.mana_cost},
-                    ) catch self.cost_text.text_data.text;
+                    self.subtext.text_data.text = std.fmt.bufPrint(
+                        self.subtext.text_data.backing_buffer,
+                        "{d} " ++ mana_icon ++ " | {d:.1}s " ++ cooldown_icon,
+                        .{ params.props.mana_cost, params.props.cooldown },
+                    ) catch self.subtext.text_data.text;
                 }
             }
 
             self.description.text_data.setText(params.props.description, self.allocator);
 
             self.line_break.y = self.image.y + self.image.height() + 10;
-            self.description.y = self.line_break.y + 20;
+            self.description.y = self.line_break.y + 10;
 
             const new_h = self.description.y + self.description.text_data.height + 10;
             switch (self.decor.image_data) {

@@ -219,7 +219,7 @@ pub const Player = struct {
                             break :setRpc;
                         },
                     },
-                    .state = rpc.Packet.ArrayString(128).createFromFormat("In {s}", .{map.name}) catch {
+                    .state = rpc.Packet.ArrayString(128).createFromFormat("Visiting {s}", .{map.name}) catch {
                         std.log.err("Setting Discord RPC failed, state buffer was out of space", .{});
                         break :setRpc;
                     },

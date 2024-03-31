@@ -1199,7 +1199,7 @@ pub inline fn drawText(
             if (char == '&') {
                 const name_start = text_data.text[offset_i + 1 ..];
                 const reset = "reset";
-                if (text_data.text.len > offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
+                if (text_data.text.len >= offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
                     current_type = text_data.text_type;
                     current_color = rgb;
                     current_size = size_scale;
@@ -1210,7 +1210,7 @@ pub inline fn drawText(
                 }
 
                 const space = "space";
-                if (text_data.text.len > offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
+                if (text_data.text.len >= offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
                     char = ' ';
                     index_offset += @intCast(space.len);
                     break :specialChar;
@@ -1288,13 +1288,14 @@ pub inline fn drawText(
                                 line_idx += 1;
                             }
 
+                            const w_larger = data[index].tex_w > data[index].tex_h;
                             const quad_size = current_size * assets.CharacterData.size;
                             idx_new = drawQuad(
                                 idx_new,
                                 x_pointer + camera.screen_width / 2.0,
                                 y_pointer - quad_size + camera.screen_height / 2.0,
-                                quad_size,
-                                quad_size,
+                                if (w_larger) quad_size else data[index].texWRaw() * (quad_size / data[index].texHRaw()),
+                                if (w_larger) data[index].texHRaw() * (quad_size / data[index].texWRaw()) else quad_size,
                                 data[index],
                                 draw_data,
                                 .{ .alpha_mult = text_data.alpha },

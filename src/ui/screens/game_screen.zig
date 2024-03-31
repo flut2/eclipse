@@ -279,8 +279,8 @@ pub const GameScreen = struct {
         });
 
         screen.ability_container = try element.create(allocator, element.Container{
-            .x = screen.bars_decor.x + 71,
-            .y = screen.bars_decor.y + 47,
+            .x = screen.bars_decor.x + 69,
+            .y = screen.bars_decor.y + 45,
         });
 
         const stats_decor_data = assets.getUiData("player_stats", 0);
@@ -337,8 +337,8 @@ pub const GameScreen = struct {
 
         const xp_bar_data = assets.getUiData("player_xp_bar", 0);
         screen.xp_bar = try screen.ability_container.createChild(element.Bar{
-            .x = 0,
-            .y = -25,
+            .x = 1,
+            .y = -23,
             .image_data = .{ .normal = .{ .atlas_data = xp_bar_data } },
             .text_data = .{
                 .text = "",
@@ -381,15 +381,15 @@ pub const GameScreen = struct {
         const chat_scroll_knob_hover = assets.getUiData("chatbox_scroll_wheel_hover", 0);
         const chat_scroll_knob_press = assets.getUiData("chatbox_scroll_wheel_press", 0);
         screen.chat_container = try element.create(allocator, element.ScrollableContainer{
-            .x = screen.chat_decor.x + 26,
-            .y = screen.chat_decor.y + 26,
+            .x = screen.chat_decor.x + 24,
+            .y = screen.chat_decor.y + 24,
             .scissor_w = 380,
             .scissor_h = 240,
-            .scroll_x = screen.chat_decor.x + 386,
-            .scroll_y = screen.chat_decor.y + 26,
-            .scroll_w = 12,
+            .scroll_x = screen.chat_decor.x + 400,
+            .scroll_y = screen.chat_decor.y + 24,
+            .scroll_w = 4,
             .scroll_h = 240,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_background_data, 6, 240, 5, 0, 2, 2, 1.0) },
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_background_data, 4, 240, 0, 0, 2, 2, 1.0) },
             .scroll_knob_image_data = Interactable.fromNineSlices(chat_scroll_knob_base, chat_scroll_knob_hover, chat_scroll_knob_press, 8, 16, 3, 3, 2, 2, 1.0),
             .start_value = 1.0,
         });
@@ -422,79 +422,66 @@ pub const GameScreen = struct {
         return screen;
     }
 
-    fn getTierAtlasData(tier: u8) assets.AtlasData {
-        if (assets.atlas_data.get("misc_big")) |data| {
-            const idx: u16 = switch (tier) {
-                1 => 0x00,
-                2 => 0x01,
-                3 => 0x02,
-                4 => 0x03,
-                5 => 0x04,
-                6 => 0x05,
-                7 => 0x06,
-                8 => 0x07,
-                9 => 0x08,
-                else => {
-                    std.log.err("Invalid tier given ({d}), returning error data", .{tier});
-                    return assets.error_data;
-                },
-            };
-
-            if (data.len <= idx) {
-                std.log.err("The sheet index for tier {d} was out of bounds, returning error data", .{tier});
-                return assets.error_data;
-            }
-
-            return data[idx];
-        } else {
-            std.log.err("Sheet misc16 was not found, returning error data", .{});
-            return assets.error_data;
-        }
-    }
-
     pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_color: u32, text_color: u32) !void {
-        var chat_line = blk: {
+        const container_h = self.chat_container.container.height();
+
+        const line_str = blk: {
             if (name.len > 0) {
-                const line_str = try std.fmt.allocPrint(self.allocator, "&col=\"{x}\"[{s}]: &col=\"{x}\"{s}", .{ name_color, name, text_color, text });
-                break :blk try self.chat_container.createChild(element.Text{
-                    .x = 0,
-                    .y = 0,
-                    .text_data = .{
-                        .text = line_str,
-                        .size = 12,
-                        .text_type = .bold,
-                        .max_width = 370,
-                        .backing_buffer = line_str, // putting it here to dispose automatically. kind of a hack
-                    },
-                });
+                break :blk try std.fmt.allocPrint(self.allocator, "&col=\"{x}\"[{s}]: &col=\"{x}\"{s}", .{ name_color, name, text_color, text });
             } else {
-                const line_str = try std.fmt.allocPrint(self.allocator, "&col=\"{x}\"{s}", .{ text_color, text });
-                break :blk try self.chat_container.createChild(element.Text{
-                    .x = 0,
-                    .y = 0,
-                    .text_data = .{
-                        .text = line_str,
-                        .size = 12,
-                        .text_type = .bold,
-                        .max_width = 370,
-                        .backing_buffer = line_str, // putting it here to dispose automatically. kind of a hack
-                    },
-                });
+                break :blk try std.fmt.allocPrint(self.allocator, "&col=\"{x}\"{s}", .{ text_color, text });
             }
         };
-        const line_h = chat_line.height();
 
-        if (self.chat_container.scissor_h >= self.chat_container.container.height()) {
-            chat_line.y = self.chat_container.scissor_h - line_h;
+        var chat_line = try self.chat_container.createChild(element.Text{
+            .x = 0,
+            .y = 0,
+            .text_data = .{
+                .text = line_str,
+                .size = 12,
+                .text_type = .bold,
+                .max_width = 370,
+                .backing_buffer = line_str, // putting it here to dispose automatically. kind of a hack
+            },
+        });
+
+        const line_h = chat_line.height();
+        const total_h = container_h + line_h;
+        const line_y_old = chat_line.y;
+        std.mem.doNotOptimizeAway(line_y_old);
+
+        if (self.chat_container.scissor_h >= container_h) {
+            const offset = if (total_h > self.chat_container.scissor_h) (total_h - self.chat_container.scissor_h) / 2.0 else line_h;
+            chat_line.y = self.chat_container.scissor_h - offset;
+
             for (self.chat_lines.items) |line| {
-                line.y -= line_h;
+                line.y -= offset;
             }
         } else {
-            chat_line.y = self.chat_container.container.height();
+            chat_line.y = container_h + 15;
+            const first_line_y = if (self.chat_lines.items.len == 0) 0 else self.chat_lines.items[0].y;
+            if (first_line_y > 0) {
+                for (self.chat_lines.items) |line| {
+                    line.y -= first_line_y;
+                }
+                chat_line.y -= first_line_y;
+            }
         }
 
-        self.chat_container.update();
+        const line_y_new = chat_line.y;
+        const new_line_h = chat_line.height();
+        const new_cont_h = self.chat_container.container.height();
+        std.log.err("chat line: ptr={*}, y={d}, h={d}", .{ chat_line, chat_line.y, chat_line.height() });
+        for (self.chat_container.container.elements.items, 0..) |elem, i| {
+            switch (elem) {
+                inline else => |inner_elem| std.log.err("elem idx {d}: ptr={*}, y={d}, h={d}", .{ i, inner_elem, inner_elem.y, inner_elem.height() }),
+            }
+        }
+        std.mem.doNotOptimizeAway(line_y_new);
+        std.mem.doNotOptimizeAway(new_line_h);
+        std.mem.doNotOptimizeAway(new_cont_h);
         try self.chat_lines.append(chat_line);
+        self.chat_container.update();
     }
 
     fn addAbility(container: *element.Container, ability: game_data.Ability, idx: *f32) !void {

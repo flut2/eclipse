@@ -1004,7 +1004,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     zstbrp.initPack(&ui_ctx, ui_nodes);
 
     const imply_size = std.math.maxInt(u32);
-    try addUiImage("ability_icons", "sheets/ability_icons.png", 40, 40, &ctx, allocator);
+    try addUiImage("ability_icons", "sheets/ability_icons.png", 44, 44, &ctx, allocator);
     try addUiImage("menu_decor_frame", "ui/menu_decor_frame.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("faer_logo", "ui/faer_logo.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("hub_button", "ui/hub_button.png", imply_size, imply_size, &ui_ctx, allocator);

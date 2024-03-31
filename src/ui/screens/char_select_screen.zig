@@ -4,7 +4,7 @@ const assets = @import("../../assets.zig");
 const camera = @import("../../camera.zig");
 const main = @import("../../main.zig");
 const rpc = @import("rpc");
-const systems = @import("../systems.zig");
+const ui_systems = @import("../systems.zig");
 
 const Interactable = element.InteractableImageData;
 
@@ -106,6 +106,6 @@ pub const CharSelectScreen = struct {
     }
 
     fn newCharCallback() void {
-        systems.switchScreen(.char_create);
+        ui_systems.switchScreen(.char_create);
     }
 };

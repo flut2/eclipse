@@ -1,5 +1,5 @@
 .{
-    .name = "Faer",
+    .name = "Eclipse",
     .version = "0.5.0",
     .dependencies = .{
         .mach = .{

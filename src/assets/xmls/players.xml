@@ -457,7 +457,7 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>2</Index>
       </Icon>
-      <Name>Causal Distortion</Name>
+      <Name>Null Pulse</Name>
       <ManaCost>150</ManaCost>
       <Cooldown>30</Cooldown>
       <Description>Destroy all enemy projectiles within &amp;type="bold_it"&amp;col="6080FF"3 (+12% &amp;img="misc_big,0x3b")&amp;reset tiles, causing the enemies that created them to take &amp;type="bold_it"&amp;col="A15AFF"5 (+6% &amp;img="misc_big,0x23")&amp;reset times the damage.</Description>
@@ -471,7 +471,8 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <ManaCost>210</ManaCost>
       <Cooldown>180</Cooldown>
       <Description>Become immune to damage, unable to move, shoot and use abilities for &amp;type="bold_it"&amp;col="6080FF"15 (+12% &amp;img="misc_big,0x3b")&amp;reset seconds, storing all damage taken. 
-Deal double the damage taken (capped at &amp;type="bold_it"&amp;col="A15AFF"30000 (+1000% &amp;img="misc_big,0x23")&amp;reset) to enemies within &amp;type="bold_it"&amp;col="6080FF"9 (+6% &amp;img="misc_big,0x3b")&amp;reset tiles after this effect ends.</Description>
+Return double the damage stored as a Magic Damage blast within &amp;type="bold_it"&amp;col="6080FF"9 (+6%&amp;space&amp;img="misc_big,0x3b")&amp;reset tiles after this effect ends.
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Damage is capped at &amp;type="bold_it"&amp;col="A15AFF"30000 (+1000% &amp;img="misc_big,0x23")&amp;reset.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -601,8 +602,8 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Index>0</Index>
       </Icon>
       <Name>Anomalous Burst</Name>
-      <ManaCost>75</ManaCost>
-      <Cooldown>10</Cooldown>
+      <ManaCost>35</ManaCost>
+      <Cooldown>5</Cooldown>
       <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="C45860"6 (+1 per 30 &amp;img="misc_big,0x22") heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="FF6C32"750 (+75%&amp;space&amp;img="misc_big,0x20") Physical Damage.</Description>
     </Ability1>
     <Ability2>
@@ -611,8 +612,8 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Index>1</Index>
       </Icon>
       <Name>Paradoxical Shift</Name>
-      <ManaCost>100</ManaCost>
-      <Cooldown>15</Cooldown>
+      <ManaCost>75</ManaCost>
+      <Cooldown>10</Cooldown>
       <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="C45860"+25% &amp;img="misc_big,0x22".</Description>
     </Ability2>
     <Ability3>
@@ -624,8 +625,8 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <ManaCost>100</ManaCost>
       <Cooldown>25</Cooldown>
       <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
-&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="A15AFF"50 (+120% &amp;img="misc_big,0x23") damage.&amp;reset
-Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,0x28") Maximum Health&amp;reset, and lose 75 health every second.
+&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="A15AFF"250 (+150% &amp;img="misc_big,0x23") damage.&amp;reset
+Voidlings have &amp;type="bold_it"&amp;col="20AC20"600 (+25% &amp;img="misc_big,0x28") Maximum Health&amp;reset, and lose 75 health every second.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
     </Ability3>
     <UltimateAbility>
@@ -633,11 +634,10 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Possession</Name>
+      <Name>Shapeshift</Name>
       <ManaCost>0</ManaCost>
-      <Cooldown>150</Cooldown>
-      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+      <Cooldown>30</Cooldown>
+      <Description>Transform into another chosen class, granting access to their Ultimate.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>

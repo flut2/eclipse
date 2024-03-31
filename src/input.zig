@@ -8,7 +8,7 @@ const element = @import("ui/element.zig");
 const assets = @import("assets.zig");
 const network = @import("network.zig");
 const game_data = @import("game_data.zig");
-const systems = @import("ui/systems.zig");
+const ui_systems = @import("ui/systems.zig");
 const GameScreen = @import("ui/screens/game_screen.zig").GameScreen;
 
 var move_up: f32 = 0.0;
@@ -56,7 +56,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 // todo isolate the ingame and editor logic
 
 fn keyPress(window: glfw.Window, key: glfw.Key) void {
-    if (systems.screen != .game and systems.screen != .editor)
+    if (ui_systems.screen != .game and ui_systems.screen != .editor)
         return;
 
     if (disable_input)
@@ -79,7 +79,7 @@ fn keyPress(window: glfw.Window, key: glfw.Key) void {
     } else if (key == settings.reset_camera.getKey()) {
         camera.angle = 0;
     } else if (key == settings.shoot.getKey()) {
-        if (systems.screen == .game) {
+        if (ui_systems.screen == .game) {
             attacking = true;
         }
     } else if (key == settings.ability_1.getKey()) {
@@ -103,23 +103,23 @@ fn keyPress(window: glfw.Window, key: glfw.Key) void {
             }
         }
     } else if (key == settings.chat.getKey()) {
-        selected_input_field = systems.screen.game.chat_input;
+        selected_input_field = ui_systems.screen.game.chat_input;
         selected_input_field.?.last_input = 0;
     } else if (key == settings.chat_cmd.getKey()) {
         charEvent(window, @intFromEnum(glfw.Key.slash));
-        selected_input_field = systems.screen.game.chat_input;
+        selected_input_field = ui_systems.screen.game.chat_input;
         selected_input_field.?.last_input = 0;
     } else if (key == settings.toggle_perf_stats.getKey()) {
         settings.stats_enabled = !settings.stats_enabled;
     } else if (key == settings.toggle_stats.getKey()) {
-        if (systems.screen == .game) {
+        if (ui_systems.screen == .game) {
             GameScreen.statsCallback();
         }
     }
 }
 
 fn keyRelease(key: glfw.Key) void {
-    if (systems.screen != .game and systems.screen != .editor)
+    if (ui_systems.screen != .game and ui_systems.screen != .editor)
         return;
 
     if (disable_input)
@@ -140,14 +140,14 @@ fn keyRelease(key: glfw.Key) void {
     } else if (key == settings.walk.getKey()) {
         walking_speed_multiplier = 1.0;
     } else if (key == settings.shoot.getKey()) {
-        if (systems.screen == .game) {
+        if (ui_systems.screen == .game) {
             attacking = false;
         }
     }
 }
 
 fn mousePress(window: glfw.Window, button: glfw.MouseButton) void {
-    if (systems.screen != .game and systems.screen != .editor)
+    if (ui_systems.screen != .game and ui_systems.screen != .editor)
         return;
 
     if (disable_input)
@@ -170,7 +170,7 @@ fn mousePress(window: glfw.Window, button: glfw.MouseButton) void {
     } else if (button == settings.reset_camera.getMouse()) {
         camera.angle = 0;
     } else if (button == settings.shoot.getMouse()) {
-        if (systems.screen == .game) {
+        if (ui_systems.screen == .game) {
             attacking = true;
         }
     } else if (button == settings.ability_1.getMouse()) {
@@ -194,27 +194,27 @@ fn mousePress(window: glfw.Window, button: glfw.MouseButton) void {
             }
         }
     } else if (button == settings.chat.getMouse()) {
-        if (systems.screen == .game) {
-            selected_input_field = systems.screen.game.chat_input;
+        if (ui_systems.screen == .game) {
+            selected_input_field = ui_systems.screen.game.chat_input;
             selected_input_field.?.last_input = 0;
         }
     } else if (button == settings.chat_cmd.getMouse()) {
-        if (systems.screen == .game) {
+        if (ui_systems.screen == .game) {
             charEvent(window, @intFromEnum(glfw.Key.slash));
-            selected_input_field = systems.screen.game.chat_input;
+            selected_input_field = ui_systems.screen.game.chat_input;
             selected_input_field.?.last_input = 0;
         }
     } else if (button == settings.toggle_perf_stats.getMouse()) {
         settings.stats_enabled = !settings.stats_enabled;
     } else if (button == settings.toggle_stats.getMouse()) {
-        if (systems.screen == .game) {
+        if (ui_systems.screen == .game) {
             GameScreen.statsCallback();
         }
     }
 }
 
 fn mouseRelease(button: glfw.MouseButton) void {
-    if (systems.screen != .game and systems.screen != .editor)
+    if (ui_systems.screen != .game and ui_systems.screen != .editor)
         return;
 
     if (disable_input)
@@ -235,7 +235,7 @@ fn mouseRelease(button: glfw.MouseButton) void {
     } else if (button == settings.walk.getMouse()) {
         walking_speed_multiplier = 1.0;
     } else if (button == settings.shoot.getMouse()) {
-        if (systems.screen == .game) {
+        if (ui_systems.screen == .game) {
             attacking = false;
         }
     }
@@ -368,13 +368,13 @@ pub fn keyEvent(window: glfw.Window, key: glfw.Key, _: i32, action: glfw.Action,
 
     if (action == .press) {
         keyPress(window, key);
-        if (systems.screen == .editor) {
-            systems.screen.editor.onKeyPress(key);
+        if (ui_systems.screen == .editor) {
+            ui_systems.screen.editor.onKeyPress(key);
         }
     } else if (action == .release) {
         keyRelease(key);
-        if (systems.screen == .editor) {
-            systems.screen.editor.onKeyRelease(key);
+        if (ui_systems.screen == .editor) {
+            ui_systems.screen.editor.onKeyRelease(key);
         }
     }
 
@@ -404,17 +404,17 @@ pub fn mouseEvent(window: glfw.Window, button: glfw.MouseButton, action: glfw.Ac
         });
     }
     if (action == .press) {
-        if (!systems.mousePress(mouse_x, mouse_y, mods, button)) {
+        if (!ui_systems.mousePress(mouse_x, mouse_y, mods, button)) {
             mousePress(window, button);
 
-            if (systems.screen == .editor) {
-                systems.screen.editor.onMousePress(mouse_x, mouse_y, button);
+            if (ui_systems.screen == .editor) {
+                ui_systems.screen.editor.onMousePress(mouse_x, mouse_y, button);
             }
         }
     } else if (action == .release) {
-        if (!systems.mouseRelease(mouse_x, mouse_y)) {
-            if (systems.screen == .editor) {
-                systems.screen.editor.onMouseRelease();
+        if (!ui_systems.mouseRelease(mouse_x, mouse_y)) {
+            if (ui_systems.screen == .editor) {
+                ui_systems.screen.editor.onMouseRelease();
             }
             mouseRelease(button);
         }
@@ -447,17 +447,17 @@ pub fn mouseMoveEvent(_: glfw.Window, x_pos: f64, y_pos: f64) void {
     mouse_x = @floatCast(x_pos);
     mouse_y = @floatCast(y_pos);
 
-    _ = systems.mouseMove(mouse_x, mouse_y);
+    _ = ui_systems.mouseMove(mouse_x, mouse_y);
 
-    if (systems.screen == .editor) {
+    if (ui_systems.screen == .editor) {
         if (main.editing_map) {
-            systems.screen.editor.onMouseMove(mouse_x, mouse_y);
+            ui_systems.screen.editor.onMouseMove(mouse_x, mouse_y);
         }
     }
 }
 
 pub fn scrollEvent(_: glfw.Window, x_offset: f64, y_offset: f64) void {
-    if (!systems.mouseScroll(mouse_x, mouse_y, @floatCast(x_offset), @floatCast(y_offset))) {
+    if (!ui_systems.mouseScroll(mouse_x, mouse_y, @floatCast(x_offset), @floatCast(y_offset))) {
         const size = @max(map.width, map.height);
         const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
         const scroll_speed = @as(f32, @floatFromInt(size)) / 1280;
@@ -468,19 +468,21 @@ pub fn scrollEvent(_: glfw.Window, x_offset: f64, y_offset: f64) void {
 }
 
 pub fn tryEscape() void {
-    if (systems.screen != .game or std.mem.eql(u8, map.name, "Hub"))
+    if (ui_systems.screen != .game or std.mem.eql(u8, map.name, "Hub"))
         return;
 
     main.server.queuePacket(.{ .escape = .{} });
 }
 
 pub fn openOptions() void {
-    if (systems.screen == .game) {
-        systems.screen.game.options.setVisible(true);
+    if (ui_systems.screen == .game) {
+        ui_systems.screen.game.options.setVisible(true);
         disable_input = true;
     }
 
-    if (systems.screen == .editor) {
-        systems.switchScreen(.main_menu);
+    if (ui_systems.screen == .editor) {
+        ui_systems.ui_lock.lock();
+        defer ui_systems.ui_lock.unlock();
+        ui_systems.switchScreen(.main_menu);
     }
 }

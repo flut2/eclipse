@@ -11,7 +11,7 @@ const game_data = @import("../../game_data.zig");
 const settings = @import("../../settings.zig");
 const rpc = @import("rpc");
 
-const systems = @import("../systems.zig");
+const ui_systems = @import("../systems.zig");
 
 const Player = @import("../../game/player.zig").Player;
 const GameObject = @import("../../game/game_object.zig").GameObject;
@@ -811,7 +811,7 @@ pub const MapEditorScreen = struct {
     fn noAction(_: *element.KeyMapper) void {}
 
     fn mapState64Changed(_: *element.Toggle) void {
-        const screen = systems.screen.editor;
+        const screen = ui_systems.screen.editor;
         screen.size_text_visual_64.visible = true;
         screen.size_text_visual_128.visible = false;
         screen.size_text_visual_256.visible = false;
@@ -822,7 +822,7 @@ pub const MapEditorScreen = struct {
     }
 
     fn mapState128Changed(_: *element.Toggle) void {
-        const screen = systems.screen.editor;
+        const screen = ui_systems.screen.editor;
         screen.size_text_visual_64.visible = false;
         screen.size_text_visual_128.visible = true;
         screen.size_text_visual_256.visible = false;
@@ -833,7 +833,7 @@ pub const MapEditorScreen = struct {
     }
 
     fn mapState256Changed(_: *element.Toggle) void {
-        const screen = systems.screen.editor;
+        const screen = ui_systems.screen.editor;
         screen.size_text_visual_64.visible = false;
         screen.size_text_visual_128.visible = false;
         screen.size_text_visual_256.visible = true;
@@ -844,7 +844,7 @@ pub const MapEditorScreen = struct {
     }
 
     fn newCallback() void {
-        const screen = systems.screen.editor;
+        const screen = ui_systems.screen.editor;
         screen.new_container.visible = true;
         screen.buttons_container.visible = false;
 
@@ -852,7 +852,7 @@ pub const MapEditorScreen = struct {
     }
 
     fn newCreateCallback() void {
-        const screen = systems.screen.editor;
+        const screen = ui_systems.screen.editor;
 
         screen.buttons_container.visible = true;
         screen.new_container.visible = false;
@@ -895,11 +895,11 @@ pub const MapEditorScreen = struct {
 
         main.editing_map = true;
 
-        systems.menu_background.visible = false; // hack
+        ui_systems.menu_background.visible = false; // hack
     }
 
     fn newCloseCallback() void {
-        const screen = systems.screen.editor;
+        const screen = ui_systems.screen.editor;
         screen.reset();
     }
 
@@ -929,7 +929,7 @@ pub const MapEditorScreen = struct {
     }
 
     pub fn exitCallback() void {
-        systems.switchScreen(.main_menu);
+        ui_systems.switchScreen(.main_menu);
     }
 
     fn reset(screen: *MapEditorScreen) void {
@@ -950,12 +950,12 @@ pub const MapEditorScreen = struct {
         screen.map_size_128 = true;
         screen.map_size_256 = false;
 
-        systems.menu_background.visible = true; // hack
+        ui_systems.menu_background.visible = true; // hack
     }
 
     pub fn deinit(self: *MapEditorScreen) void {
         self.inited = false;
-        systems.menu_background.visible = true; // hack
+        ui_systems.menu_background.visible = true; // hack
 
         self.reset();
 

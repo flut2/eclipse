@@ -7,7 +7,7 @@ const xml = @import("../../xml.zig");
 const main = @import("../../main.zig");
 const game_data = @import("../../game_data.zig");
 const settings = @import("../../settings.zig");
-const systems = @import("../systems.zig");
+const ui_systems = @import("../systems.zig");
 const input = @import("../../input.zig");
 const rpc = @import("rpc");
 const dialog = @import("../dialogs/dialog.zig");
@@ -196,7 +196,7 @@ pub const AccountLoginScreen = struct {
     }
 
     pub fn enableEditorCallback() void {
-        systems.switchScreen(.editor);
+        ui_systems.switchScreen(.editor);
     }
 
     pub fn deinit(self: *AccountLoginScreen) void {
@@ -237,7 +237,7 @@ pub const AccountLoginScreen = struct {
     pub fn update(_: *AccountLoginScreen, _: i64, _: f32) !void {}
 
     fn loginCallback() void {
-        const current_screen = systems.screen.main_menu;
+        const current_screen = ui_systems.screen.main_menu;
         _ = login(
             current_screen.allocator,
             current_screen.email_input.text_data.text,
@@ -248,7 +248,7 @@ pub const AccountLoginScreen = struct {
     }
 
     fn registerCallback() void {
-        systems.switchScreen(.register);
+        ui_systems.switchScreen(.register);
     }
 };
 
@@ -334,9 +334,9 @@ fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) 
     }
 
     if (main.character_list.len > 0) {
-        systems.switchScreen(.char_select);
+        ui_systems.switchScreen(.char_select);
     } else {
-        systems.switchScreen(.char_create);
+        ui_systems.switchScreen(.char_create);
     }
 
     return true;

@@ -355,6 +355,9 @@ pub const Options = struct {
     }
 
     fn positionElements(container: *element.Container) void {
+        container.lock.lock();
+        defer container.lock.unlock();
+        
         for (container.elements.items, 0..) |elem, i| {
             switch (elem) {
                 .scrollable_container, .container => {},

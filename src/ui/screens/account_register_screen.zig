@@ -9,7 +9,7 @@ const game_data = @import("../../game_data.zig");
 const rpc = @import("rpc");
 const dialog = @import("../dialogs/dialog.zig");
 
-const systems = @import("../systems.zig");
+const ui_systems = @import("../systems.zig");
 
 const Interactable = element.InteractableImageData;
 
@@ -367,16 +367,16 @@ pub const AccountRegisterScreen = struct {
         }
 
         if (main.character_list.len > 0) {
-            systems.switchScreen(.char_select);
+            ui_systems.switchScreen(.char_select);
         } else {
-            systems.switchScreen(.char_create);
+            ui_systems.switchScreen(.char_create);
         }
 
         return true;
     }
 
     fn registerCallback() void {
-        const current_screen = systems.screen.register;
+        const current_screen = ui_systems.screen.register;
         _ = register(
             current_screen.allocator,
             current_screen.email_input.text_data.text,
@@ -398,6 +398,6 @@ pub const AccountRegisterScreen = struct {
     }
 
     fn backCallback() void {
-        systems.switchScreen(.main_menu);
+        ui_systems.switchScreen(.main_menu);
     }
 };

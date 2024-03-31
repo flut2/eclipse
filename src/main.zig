@@ -97,6 +97,7 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
     rpmalloc.deinitThread(true);
 }
 
+// lock ui_systems.ui_lock before calling (UI already does this implicitly)
 pub fn enterGame(selected_server: game_data.ServerData, selected_char_id: u32, char_create_type: u16, char_create_skin_type: u16) void {
     if (network_thread != null)
         return;
@@ -253,7 +254,11 @@ pub fn disconnect() void {
     server.shutdown();
     clear();
     input.reset();
-    ui_systems.switchScreen(.char_select);
+    {
+        ui_systems.ui_lock.lock();
+        defer ui_systems.ui_lock.unlock();
+        ui_systems.switchScreen(.char_select);
+    }
     dialog.showDialog(.none, {});
 }
 
@@ -380,7 +385,7 @@ pub fn main() !void {
     const window = glfw.Window.create(
         1280,
         720,
-        "Faer",
+        "Eclipse",
         null,
         null,
         .{ .client_api = .no_api, .cocoa_retina_framebuffer = true },
@@ -482,7 +487,7 @@ fn runRpc(cli: *rpc) void {
     };
     defer rpmalloc.deinitThread(true);
 
-    cli.run(.{ .client_id = "976795120663945227" }) catch |e| {
+    cli.run(.{ .client_id = "1223822665748320317" }) catch |e| {
         std.log.err("Setting up RPC failed: {}", .{e});
     };
 }

@@ -210,7 +210,7 @@ pub const TextData = struct {
                 if (char == '&') {
                     const name_start = self.text[offset_i + 1 ..];
                     const reset = "reset";
-                    if (self.text.len > offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
+                    if (self.text.len >= offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
                         current_type = self.text_type;
                         current_size = size_scale;
                         line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
@@ -220,7 +220,7 @@ pub const TextData = struct {
                     }
 
                     const space = "space";
-                    if (self.text.len > offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
+                    if (self.text.len >= offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
                         char = ' ';
                         skip_space_check = true;
                         index_offset += @intCast(space.len);
@@ -1316,6 +1316,11 @@ pub const ScrollableContainer = struct {
     scroll_y: f32,
     scroll_w: f32,
     scroll_h: f32,
+    scroll_side_x: f32 = -1.0,
+    scroll_side_y: f32 = -1.0,
+    scroll_side_w: f32 = -1.0,
+    scroll_side_h: f32 = -1.0,
+    scroll_side_decor_image_data: ImageData = undefined,
     scroll_decor_image_data: ImageData,
     scroll_knob_image_data: InteractableImageData,
     layer: Layer = .default,
@@ -1508,6 +1513,7 @@ pub const Container = struct {
     layer: Layer = .default,
 
     elements: std.ArrayList(UiElement) = undefined,
+    lock: std.Thread.Mutex = .{},
     disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
@@ -1524,14 +1530,19 @@ pub const Container = struct {
         if (!self.visible)
             return false;
 
-        var iter = std.mem.reverseIterator(self.elements.items);
-        while (iter.next()) |elem| {
-            switch (elem) {
-                inline else => |inner_elem| {
-                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and
-                        inner_elem.mousePress(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, mods))
-                        return true;
-                },
+        {
+            self.lock.lock();
+            defer self.lock.unlock();
+
+            var iter = std.mem.reverseIterator(self.elements.items);
+            while (iter.next()) |elem| {
+                switch (elem) {
+                    inline else => |inner_elem| {
+                        if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and
+                            inner_elem.mousePress(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, mods))
+                            return true;
+                    },
+                }
             }
         }
 
@@ -1553,14 +1564,19 @@ pub const Container = struct {
         if (self.is_dragging)
             self.is_dragging = false;
 
-        var iter = std.mem.reverseIterator(self.elements.items);
-        while (iter.next()) |elem| {
-            switch (elem) {
-                inline else => |inner_elem| {
-                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease") and
-                        inner_elem.mouseRelease(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
-                        return true;
-                },
+        {
+            self.lock.lock();
+            defer self.lock.unlock();
+
+            var iter = std.mem.reverseIterator(self.elements.items);
+            while (iter.next()) |elem| {
+                switch (elem) {
+                    inline else => |inner_elem| {
+                        if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease") and
+                            inner_elem.mouseRelease(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
+                            return true;
+                    },
+                }
             }
         }
 
@@ -1596,14 +1612,19 @@ pub const Container = struct {
             }
         }
 
-        var iter = std.mem.reverseIterator(self.elements.items);
-        while (iter.next()) |elem| {
-            switch (elem) {
-                inline else => |inner_elem| {
-                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove") and
-                        inner_elem.mouseMove(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
-                        return true;
-                },
+        {
+            self.lock.lock();
+            defer self.lock.unlock();
+
+            var iter = std.mem.reverseIterator(self.elements.items);
+            while (iter.next()) |elem| {
+                switch (elem) {
+                    inline else => |inner_elem| {
+                        if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove") and
+                            inner_elem.mouseMove(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
+                            return true;
+                    },
+                }
             }
         }
 
@@ -1614,14 +1635,19 @@ pub const Container = struct {
         if (!self.visible)
             return false;
 
-        var iter = std.mem.reverseIterator(self.elements.items);
-        while (iter.next()) |elem| {
-            switch (elem) {
-                inline else => |inner_elem| {
-                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseScroll") and
-                        inner_elem.mouseScroll(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, x_scroll, y_scroll))
-                        return true;
-                },
+        {
+            self.lock.lock();
+            defer self.lock.unlock();
+
+            var iter = std.mem.reverseIterator(self.elements.items);
+            while (iter.next()) |elem| {
+                switch (elem) {
+                    inline else => |inner_elem| {
+                        if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseScroll") and
+                            inner_elem.mouseScroll(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, x_scroll, y_scroll))
+                            return true;
+                    },
+                }
             }
         }
 
@@ -1629,10 +1655,16 @@ pub const Container = struct {
     }
 
     pub fn init(self: *Container) void {
+        self.lock.lock();
+        defer self.lock.unlock();
+
         self.elements = std.ArrayList(UiElement).initCapacity(self.allocator, 8) catch std.debug.panic("Container element buffer alloc failed", .{});
     }
 
     pub fn deinit(self: *Container) void {
+        self.lock.lock();
+        defer self.lock.unlock();
+
         for (self.elements.items) |*elem| {
             switch (elem.*) {
                 inline else => |inner_elem| {
@@ -1644,23 +1676,20 @@ pub const Container = struct {
         self.elements.deinit();
     }
 
-    pub fn width(self: Container) f32 {
+    pub fn width(self: *Container) f32 {
+        self.lock.lock();
+        defer self.lock.unlock();
+
         if (self.elements.items.len <= 0)
             return 0.0;
 
-        var min_x: f32 = std.math.floatMax(f32);
-        var max_x: f32 = std.math.floatMin(f32);
+        var min_x = std.math.floatMax(f32);
+        var max_x = std.math.floatMin(f32);
         for (self.elements.items) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
-                    if (min_x > inner_elem.x) {
-                        min_x = inner_elem.x;
-                    }
-
-                    const elem_max_x = inner_elem.x + inner_elem.width();
-                    if (max_x < elem_max_x) {
-                        max_x = elem_max_x;
-                    }
+                    min_x = @min(min_x, inner_elem.x);
+                    max_x = @max(max_x, inner_elem.x + inner_elem.width());
                 },
             }
         }
@@ -1668,23 +1697,20 @@ pub const Container = struct {
         return max_x - min_x;
     }
 
-    pub fn height(self: Container) f32 {
+    pub fn height(self: *Container) f32 {
+        self.lock.lock();
+        defer self.lock.unlock();
+
         if (self.elements.items.len <= 0)
             return 0.0;
 
-        var min_y: f32 = std.math.floatMax(f32);
-        var max_y: f32 = std.math.floatMin(f32);
+        var min_y = std.math.floatMax(f32);
+        var max_y = std.math.floatMin(f32);
         for (self.elements.items) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
-                    if (min_y > inner_elem.y) {
-                        min_y = inner_elem.y;
-                    }
-
-                    const elem_max_y = inner_elem.y + inner_elem.height();
-                    if (max_y < elem_max_y) {
-                        max_y = elem_max_y;
-                    }
+                    min_y = @min(min_y, inner_elem.y);
+                    max_y = @max(max_y, inner_elem.y + inner_elem.height());
                 },
             }
         }
@@ -1730,11 +1756,17 @@ pub const Container = struct {
         if (field_name.len == 0)
             @compileError("Could not find field name");
 
+        self.lock.lock();
+        defer self.lock.unlock();
+
         try self.elements.append(@unionInit(UiElement, field_name, elem));
         return elem;
     }
 
     pub fn updateScissors(self: *Container) void {
+        self.lock.lock();
+        defer self.lock.unlock();
+
         for (self.elements.items) |elem| {
             switch (elem) {
                 .scrollable_container => {},
@@ -2048,9 +2080,9 @@ pub const Slider = struct {
         if (self.vertical) {
             const offset = (self.w - knob_w) / 2.0;
             if (offset < 0) {
-                self.x = -offset;
+                self.x = self.x - offset;
             }
-            self.knob_x = offset;
+            self.knob_x = self.knob_x + offset;
 
             if (self.value_text_data) |*text_data| {
                 text_data.hori_align = .left;
@@ -2063,9 +2095,9 @@ pub const Slider = struct {
         } else {
             const offset = (self.h - knob_h) / 2.0;
             if (offset < 0) {
-                self.y = -offset;
+                self.y = self.y - offset;
             }
-            self.knob_y = offset;
+            self.knob_y = self.knob_y + offset;
 
             if (self.value_text_data) |*text_data| {
                 text_data.hori_align = .middle;
