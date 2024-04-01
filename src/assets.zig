@@ -1007,7 +1007,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addUiImage("ability_icons", "sheets/ability_icons.png", 44, 44, &ctx, allocator);
     try addUiImage("menu_decor_frame", "ui/menu_decor_frame.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("faer_logo", "ui/faer_logo.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("hub_button", "ui/hub_button.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("retrieve_button", "ui/retrieve_button.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("options_button", "ui/options_button.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("rare_slot", "ui/rare_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("epic_slot", "ui/epic_slot.png", imply_size, imply_size, &ui_ctx, allocator);

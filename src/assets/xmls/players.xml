@@ -50,11 +50,11 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Possession</Name>
+      <Name>Shapeshift</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -120,11 +120,11 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Possession</Name>
+      <Name>Shapeshift</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -190,11 +190,11 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Possession</Name>
+      <Name>Shapeshift</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -260,11 +260,11 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Possession</Name>
+      <Name>Shapeshift</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -330,11 +330,11 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Possession</Name>
+      <Name>Shapeshift</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -400,11 +400,11 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Possession</Name>
+      <Name>Shapeshift</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -538,11 +538,11 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Possession</Name>
+      <Name>Shapeshift</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>
@@ -703,11 +703,11 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Possession</Name>
+      <Name>Shapeshift</Name>
       <ManaCost>0</ManaCost>
       <Cooldown>150</Cooldown>
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the possession, your body remains vulnerable to other enemies' attacks.</Description>
+&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
     <Health t2="740" t1="720">695</Health>
     <Mana t2="240" t1="225">200</Mana>

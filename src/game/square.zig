@@ -60,6 +60,9 @@ pub const Square = struct {
                 }
 
                 if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
+                    main.minimap_lock.lock();
+                    defer main.minimap_lock.unlock();
+
                     const color = color_data[tex.index];
                     const base_data_idx: usize = @intCast(floor_y * map.minimap.num_components * map.minimap.width + floor_x * map.minimap.num_components);
                     map.minimap.data[base_data_idx] = color.r;

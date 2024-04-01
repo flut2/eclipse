@@ -128,6 +128,9 @@ pub const GameObject = struct {
 
                     if (self.props.static and self.props.occupy_square) {
                         if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
+                            main.minimap_lock.lock();
+                            defer main.minimap_lock.unlock();
+
                             const floor_y: u32 = @intFromFloat(@floor(self.y));
                             const floor_x: u32 = @intFromFloat(@floor(self.x));
 

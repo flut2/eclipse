@@ -11,6 +11,7 @@ const assets = @import("assets.zig");
 const particles = @import("game/particles.zig");
 const systems = @import("ui/systems.zig");
 const dialog = @import("ui/dialogs/dialog.zig");
+const rpc = @import("rpc");
 
 const Square = @import("game/square.zig").Square;
 const Player = @import("game/player.zig").Player;
@@ -830,7 +831,6 @@ pub const Server = struct {
         const width: u32 = @intCast(@max(0, reader.read(i32)));
         const height: u32 = @intCast(@max(0, reader.read(i32)));
         map.setWH(width, height);
-        map.rpc_set = false;
         if (map.name.len > 0)
             self.allocator.free(map.name);
         map.name = self.allocator.dupe(u8, reader.readArray(u8)) catch "";

@@ -14,8 +14,6 @@ const systems = @import("../ui/systems.zig");
 
 const Projectile = @import("projectile.zig").Projectile;
 
-var rpc_set = false;
-
 pub const Player = struct {
     pub const move_threshold = 0.4;
     pub const min_move_speed = 4.0 / @as(f32, std.time.us_per_s);
@@ -208,7 +206,7 @@ pub const Player = struct {
         }
 
         setRpc: {
-            if (self.obj_id == map.local_player_id and !rpc_set) {
+            if (self.obj_id == map.local_player_id and !map.rpc_set) {
                 const presence = rpc.Packet.Presence{
                     .assets = .{
                         .large_image = rpc.Packet.ArrayString(256).create("logo"),
@@ -230,7 +228,7 @@ pub const Player = struct {
                 main.rpc_client.setPresence(presence) catch |e| {
                     std.log.err("Setting Discord RPC failed: {}", .{e});
                 };
-                rpc_set = true;
+                map.rpc_set = true;
             }
         }
 

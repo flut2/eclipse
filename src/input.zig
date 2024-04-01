@@ -468,7 +468,7 @@ pub fn scrollEvent(_: glfw.Window, x_offset: f64, y_offset: f64) void {
 }
 
 pub fn tryEscape() void {
-    if (ui_systems.screen != .game or std.mem.eql(u8, map.name, "Hub"))
+    if (ui_systems.screen != .game or std.mem.eql(u8, map.name, "the Retrieve"))
         return;
 
     main.server.queuePacket(.{ .escape = .{} });

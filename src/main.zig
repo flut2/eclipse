@@ -53,6 +53,7 @@ pub var tick_frame = false;
 pub var editing_map = false;
 pub var need_minimap_update = false;
 pub var need_force_update = false;
+pub var minimap_lock: std.Thread.Mutex = .{};
 pub var need_swap_chain_update = false;
 pub var minimap_update_min_x: u32 = std.math.maxInt(u32);
 pub var minimap_update_max_x: u32 = std.math.minInt(u32);
@@ -166,9 +167,10 @@ fn renderTick(window: glfw.Window) !void {
         }
 
         minimapUpdate: {
+            minimap_lock.lock();
+            defer minimap_lock.unlock();
+
             if (need_minimap_update) {
-                // we need to make copies of these, other threads can change them mid execution
-                // this is a hack though. should be handled double buffered or else chunks of minimap can be lost
                 const min_x = @min(map.minimap.width, minimap_update_min_x);
                 const max_x = @max(map.minimap.width, minimap_update_max_x + 1);
                 const min_y = @min(map.minimap.height, minimap_update_min_y);

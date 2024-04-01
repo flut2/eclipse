@@ -201,7 +201,7 @@ pub const Options = struct {
         try addKeyMap(screen.general_tab, &settings.move_left, "Move Left", "");
         try addKeyMap(screen.general_tab, &settings.rotate_left, "Rotate Left", "");
         try addKeyMap(screen.general_tab, &settings.rotate_right, "Rotate Right", "");
-        try addKeyMap(screen.general_tab, &settings.escape, "Return to Hub", "");
+        try addKeyMap(screen.general_tab, &settings.escape, "Return to the Retrieve", "");
         try addKeyMap(screen.general_tab, &settings.interact, "Interact", "");
         try addKeyMap(screen.general_tab, &settings.shoot, "Shoot", "");
         try addKeyMap(screen.general_tab, &settings.ability_1, "Use Ability 1", "");

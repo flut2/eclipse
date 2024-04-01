@@ -139,7 +139,7 @@ pub const GameScreen = struct {
     container_items: [9]*element.Item = undefined,
     minimap_decor: *element.Image = undefined,
     minimap_slots: *element.Image = undefined,
-    hub_button: *element.Button = undefined,
+    retrieve_button: *element.Button = undefined,
     options_button: *element.Button = undefined,
     combat_indicator: *element.Image = undefined,
 
@@ -178,17 +178,17 @@ pub const GameScreen = struct {
             .image_data = .{ .normal = .{ .atlas_data = minimap_slots_data } },
         });
 
-        const hub_button_data = assets.getUiData("hub_button", 0);
-        screen.hub_button = try element.create(allocator, element.Button{
-            .x = screen.minimap_slots.x + 6 + (18 - hub_button_data.texWRaw()) / 2.0,
-            .y = screen.minimap_slots.y + 6 + (18 - hub_button_data.texHRaw()) / 2.0,
-            .image_data = .{ .base = .{ .normal = .{ .atlas_data = hub_button_data } } },
+        const retrieve_button_data = assets.getUiData("retrieve_button", 0);
+        screen.retrieve_button = try element.create(allocator, element.Button{
+            .x = screen.minimap_slots.x + 6 + (18 - retrieve_button_data.texWRaw()) / 2.0,
+            .y = screen.minimap_slots.y + 6 + (18 - retrieve_button_data.texHRaw()) / 2.0,
+            .image_data = .{ .base = .{ .normal = .{ .atlas_data = retrieve_button_data } } },
             .tooltip_text = .{
-                .text = "Return to Hub",
+                .text = "Return to the Retrieve",
                 .size = 12,
                 .text_type = .bold_italic,
             },
-            .press_callback = returnToHub,
+            .press_callback = returnToRetrieve,
         });
 
         const options_button_data = assets.getUiData("options_button", 0);
@@ -525,7 +525,7 @@ pub const GameScreen = struct {
         element.destroy(self.chat_input);
         element.destroy(self.fps_text);
         element.destroy(self.options_button);
-        element.destroy(self.hub_button);
+        element.destroy(self.retrieve_button);
 
         for (self.inventory_items) |item| {
             element.destroy(item);
@@ -574,8 +574,8 @@ pub const GameScreen = struct {
         self.chat_container.scroll_bar.x = self.chat_decor.x + 386;
         self.chat_container.scroll_bar.y = self.chat_decor.y + 26;
         self.chat_input.y = self.chat_decor.y + chat_decor_h - 10;
-        self.hub_button.x = self.minimap_slots.x + 6 + (18 - self.hub_button.width()) / 2.0;
-        self.hub_button.y = self.minimap_slots.y + 6 + (18 - self.hub_button.height()) / 2.0;
+        self.retrieve_button.x = self.minimap_slots.x + 6 + (18 - self.retrieve_button.width()) / 2.0;
+        self.retrieve_button.y = self.minimap_slots.y + 6 + (18 - self.retrieve_button.height()) / 2.0;
         self.options_button.x = self.minimap_slots.x + 36 + (18 - self.options_button.width()) / 2.0;
         self.options_button.y = self.minimap_slots.y + 6 + (18 - self.options_button.height()) / 2.0;
 
@@ -616,7 +616,7 @@ pub const GameScreen = struct {
                 if (local_player.in_combat) {
                     const in_combat_data = assets.getUiData("in_combat_icon", 0);
                     self.combat_indicator.image_data.normal.atlas_data = in_combat_data;
-                    self.combat_indicator.tooltip_text.?.text = "In Combat&size=\"12\"&type=\"med\"\n\nYou are unable to return to the Hub, teleport or enter portals until you exit combat.";
+                    self.combat_indicator.tooltip_text.?.text = "In Combat&size=\"12\"&type=\"med\"\n\nYou are unable to return to the Retrieve, teleport or enter portals until you exit combat.";
                     self.combat_indicator.tooltip_text.?.hori_align = .middle;
                     self.combat_indicator.tooltip_text.?.max_width = 250;
                 } else {
@@ -987,7 +987,7 @@ pub const GameScreen = struct {
         }
     }
 
-    fn returnToHub() void {
+    fn returnToRetrieve() void {
         input.tryEscape();
     }
 

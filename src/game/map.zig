@@ -253,6 +253,7 @@ pub fn dispose(allocator: std.mem.Allocator) void {
     object_lock.lock();
     defer object_lock.unlock();
 
+    rpc_set = false;
     local_player_id = -1;
     interactive_id.store(-1, .Release);
     interactive_type.store(.game_object, .Release);
