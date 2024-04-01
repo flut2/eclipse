@@ -1318,8 +1318,6 @@ pub const ScrollableContainer = struct {
     scroll_h: f32,
     scroll_side_x: f32 = -1.0,
     scroll_side_y: f32 = -1.0,
-    scroll_side_w: f32 = -1.0,
-    scroll_side_h: f32 = -1.0,
     scroll_side_decor_image_data: ImageData = undefined,
     scroll_decor_image_data: ImageData,
     scroll_knob_image_data: InteractableImageData,
@@ -1332,6 +1330,7 @@ pub const ScrollableContainer = struct {
     base_y: f32 = 0.0,
     container: *Container = undefined,
     scroll_bar: *Slider = undefined,
+    scroll_bar_decor: *Image = undefined,
     disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
@@ -1383,7 +1382,7 @@ pub const ScrollableContainer = struct {
                     scroll_bar.max_value,
                     @max(
                         scroll_bar.min_value,
-                        scroll_bar.current_value + (scroll_bar.max_value - scroll_bar.min_value) * -y_scroll / 64.0,
+                        scroll_bar.current_value + (scroll_bar.max_value - scroll_bar.min_value) * -y_scroll / (self.container.height() / 10.0),
                     ),
                 ),
             );
@@ -1401,13 +1400,17 @@ pub const ScrollableContainer = struct {
         self.base_y = self.y;
 
         self.container = self.allocator.create(Container) catch std.debug.panic("ScrollableContainer child container alloc failed", .{});
-        self.container.* = .{ .x = self.x, .y = self.y, .scissor = .{
-            .min_x = 0,
-            .min_y = 0,
-            .max_x = self.scissor_w,
-            .max_y = self.scissor_h,
-        } };
-        self.container.allocator = self.allocator;
+        self.container.* = .{
+            .x = self.x,
+            .y = self.y,
+            .scissor = .{
+                .min_x = 0,
+                .min_y = 0,
+                .max_x = self.scissor_w,
+                .max_y = self.scissor_h,
+            },
+            .allocator = self.allocator,
+        };
         self.container.init();
 
         self.scroll_bar = self.allocator.create(Slider) catch std.debug.panic("ScrollableContainer scroll bar alloc failed", .{});
@@ -1426,9 +1429,33 @@ pub const ScrollableContainer = struct {
             .visible = false,
             .parent_container = self,
             .current_value = self.start_value,
+            .allocator = self.allocator,
         };
-        self.scroll_bar.allocator = self.allocator;
         self.scroll_bar.init();
+
+        if (self.hasScrollDecor()) {
+            self.scroll_bar_decor = self.allocator.create(Image) catch std.debug.panic("ScrollableContainer scroll bar decor alloc failed", .{});
+            self.scroll_bar_decor.* = .{
+                .x = self.scroll_side_x,
+                .y = self.scroll_side_y,
+                .scissor = .{
+                    .min_x = 0,
+                    .min_y = 0,
+                    .max_x = self.scissor_w,
+                    .max_y = self.scissor_h,
+                },
+                .allocator = self.allocator,
+                .image_data = self.scroll_side_decor_image_data,
+                .event_policy = .{
+                    .pass_press = true,
+                    .pass_release = true,
+                    .pass_move = true,
+                    .pass_scroll = true,
+                },
+                .visible = false,
+            };
+            self.scroll_bar_decor.init();
+        }
     }
 
     pub fn deinit(self: *ScrollableContainer) void {
@@ -1447,6 +1474,10 @@ pub const ScrollableContainer = struct {
         return @max(self.container.height(), (self.scroll_bar.y - self.container.y) + self.scroll_bar.height());
     }
 
+    pub fn hasScrollDecor(self: ScrollableContainer) bool {
+        return self.scroll_side_x > 0 and self.scroll_side_y > 0;
+    }
+
     pub fn createChild(self: *ScrollableContainer, data: anytype) !*@TypeOf(data) {
         const elem = self.container.createChild(data);
         self.update();
@@ -1456,6 +1487,7 @@ pub const ScrollableContainer = struct {
     pub fn update(self: *ScrollableContainer) void {
         if (self.scissor_h >= self.container.height()) {
             self.scroll_bar.visible = false;
+            if (self.hasScrollDecor()) self.scroll_bar_decor.visible = false;
             return;
         }
 
@@ -1467,6 +1499,7 @@ pub const ScrollableContainer = struct {
         if (self.scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
         self.scroll_bar.setValue(self.scroll_bar.current_value);
         self.scroll_bar.visible = true;
+        if (self.hasScrollDecor()) self.scroll_bar_decor.visible = true;
 
         self.container.y = self.base_y + h_dt;
         self.container.scissor.min_y = -h_dt;
@@ -1485,6 +1518,7 @@ pub const ScrollableContainer = struct {
         var parent = scroll_bar.parent_container.?;
         if (parent.scissor_h >= parent.container.height()) {
             parent.scroll_bar.visible = false;
+            if (parent.hasScrollDecor()) parent.scroll_bar_decor.visible = false;
             return;
         }
 
@@ -1495,6 +1529,7 @@ pub const ScrollableContainer = struct {
         if (parent.scroll_bar.knob_image_data.hover) |*image_data| scaleImageData(image_data, new_h);
         if (parent.scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
         parent.scroll_bar.visible = true;
+        if (parent.hasScrollDecor()) parent.scroll_bar_decor.visible = true;
 
         parent.container.y = parent.base_y + h_dt;
         parent.container.scissor.min_y = -h_dt;

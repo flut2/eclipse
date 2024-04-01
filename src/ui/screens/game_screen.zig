@@ -380,6 +380,7 @@ pub const GameScreen = struct {
         const chat_scroll_knob_base = assets.getUiData("chatbox_scroll_wheel_base", 0);
         const chat_scroll_knob_hover = assets.getUiData("chatbox_scroll_wheel_hover", 0);
         const chat_scroll_knob_press = assets.getUiData("chatbox_scroll_wheel_press", 0);
+        const chat_scroll_decor_data = assets.getUiData("chatbox_scrollbar_decor", 0);
         screen.chat_container = try element.create(allocator, element.ScrollableContainer{
             .x = screen.chat_decor.x + 24,
             .y = screen.chat_decor.y + 24,
@@ -389,8 +390,11 @@ pub const GameScreen = struct {
             .scroll_y = screen.chat_decor.y + 24,
             .scroll_w = 4,
             .scroll_h = 240,
+            .scroll_side_x = screen.chat_decor.x + 393,
+            .scroll_side_y = screen.chat_decor.y + 24,
             .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_background_data, 4, 240, 0, 0, 2, 2, 1.0) },
             .scroll_knob_image_data = Interactable.fromNineSlices(chat_scroll_knob_base, chat_scroll_knob_hover, chat_scroll_knob_press, 8, 16, 3, 3, 2, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_decor_data, 6, 240, 0, 41, 6, 3, 1.0) },
             .start_value = 1.0,
         });
 
@@ -425,13 +429,10 @@ pub const GameScreen = struct {
     pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_color: u32, text_color: u32) !void {
         const container_h = self.chat_container.container.height();
 
-        const line_str = blk: {
-            if (name.len > 0) {
-                break :blk try std.fmt.allocPrint(self.allocator, "&col=\"{x}\"[{s}]: &col=\"{x}\"{s}", .{ name_color, name, text_color, text });
-            } else {
-                break :blk try std.fmt.allocPrint(self.allocator, "&col=\"{x}\"{s}", .{ text_color, text });
-            }
-        };
+        const line_str = try if (name.len > 0)
+            std.fmt.allocPrint(self.allocator, "&col=\"{x}\"[{s}]: &col=\"{x}\"{s}", .{ name_color, name, text_color, text })
+        else
+            std.fmt.allocPrint(self.allocator, "&col=\"{x}\"{s}", .{ text_color, text });
 
         var chat_line = try self.chat_container.createChild(element.Text{
             .x = 0,
@@ -447,39 +448,22 @@ pub const GameScreen = struct {
 
         const line_h = chat_line.height();
         const total_h = container_h + line_h;
-        const line_y_old = chat_line.y;
-        std.mem.doNotOptimizeAway(line_y_old);
-
-        if (self.chat_container.scissor_h >= container_h) {
-            const offset = if (total_h > self.chat_container.scissor_h) (total_h - self.chat_container.scissor_h) / 2.0 else line_h;
-            chat_line.y = self.chat_container.scissor_h - offset;
+        if (self.chat_container.scissor_h >= total_h) {
+            chat_line.y = self.chat_container.scissor_h - line_h;
 
             for (self.chat_lines.items) |line| {
-                line.y -= offset;
+                line.y -= line_h;
             }
         } else {
-            chat_line.y = container_h + 15;
+            chat_line.y = container_h;
             const first_line_y = if (self.chat_lines.items.len == 0) 0 else self.chat_lines.items[0].y;
             if (first_line_y > 0) {
                 for (self.chat_lines.items) |line| {
                     line.y -= first_line_y;
                 }
-                chat_line.y -= first_line_y;
             }
         }
 
-        const line_y_new = chat_line.y;
-        const new_line_h = chat_line.height();
-        const new_cont_h = self.chat_container.container.height();
-        std.log.err("chat line: ptr={*}, y={d}, h={d}", .{ chat_line, chat_line.y, chat_line.height() });
-        for (self.chat_container.container.elements.items, 0..) |elem, i| {
-            switch (elem) {
-                inline else => |inner_elem| std.log.err("elem idx {d}: ptr={*}, y={d}, h={d}", .{ i, inner_elem, inner_elem.y, inner_elem.height() }),
-            }
-        }
-        std.mem.doNotOptimizeAway(line_y_new);
-        std.mem.doNotOptimizeAway(new_line_h);
-        std.mem.doNotOptimizeAway(new_cont_h);
         try self.chat_lines.append(chat_line);
         self.chat_container.update();
     }

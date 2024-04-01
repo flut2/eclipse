@@ -973,13 +973,14 @@ fn drawElement(
             if (scrollable_container.visible) {
                 new_idx = drawElement(new_idx, .{ .container = scrollable_container.container }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
                 new_idx = drawElement(new_idx, .{ .slider = scrollable_container.scroll_bar }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
+                new_idx = drawElement(new_idx, .{ .image = scrollable_container.scroll_bar_decor }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
             }
         },
         .container => |container| {
             if (container.visible) {
                 container.lock.lock();
                 defer container.lock.unlock();
-                
+
                 for (container.elements.items) |cont_elem| {
                     new_idx = drawElement(new_idx, cont_elem, draw_data, cam_x, cam_y, x_offset + container.x, y_offset + container.y, time);
                 }

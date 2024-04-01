@@ -261,7 +261,7 @@ fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) 
     const response = try requests.sendRequest("account/verify", verify_data);
     defer requests.freeResponse(response);
 
-    if (std.mem.eql(u8, response, "<Error />")) {
+    if (std.mem.eql(u8, response, "<RequestError/>")) {
         dialog.showDialog(.text, .{
             .title = "Login Failed",
             .body = "Invalid credentials",
