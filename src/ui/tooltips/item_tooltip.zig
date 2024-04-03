@@ -169,7 +169,7 @@ pub const ItemTooltip = struct {
             self.line_break_two.image_data.nine_slice.color_intensity = 0;
 
             var rarity_text_color: u32 = 0xB3B3B3;
-            if (std.mem.eql(u8, props.tier, "Mythic")) {
+            if (std.mem.eql(u8, props.rarity, "Mythic")) {
                 const tooltip_background_data = assets.getUiData("tooltip_background_mythic", 0);
                 const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_mythic", 0);
                 const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_mythic", 0);
@@ -177,7 +177,7 @@ pub const ItemTooltip = struct {
                 self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 rarity_text_color = 0xB80000;
-            } else if (std.mem.eql(u8, props.tier, "Legendary")) {
+            } else if (std.mem.eql(u8, props.rarity, "Legendary")) {
                 const tooltip_background_data = assets.getUiData("tooltip_background_legendary", 0);
                 const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_legendary", 0);
                 const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_legendary", 0);
@@ -185,7 +185,7 @@ pub const ItemTooltip = struct {
                 self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 rarity_text_color = 0xE6A100;
-            } else if (std.mem.eql(u8, props.tier, "Epic")) {
+            } else if (std.mem.eql(u8, props.rarity, "Epic")) {
                 const tooltip_background_data = assets.getUiData("tooltip_background_epic", 0);
                 const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_epic", 0);
                 const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_epic", 0);
@@ -193,7 +193,7 @@ pub const ItemTooltip = struct {
                 self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
                 rarity_text_color = 0xA825E6;
-            } else if (std.mem.eql(u8, props.tier, "Rare")) {
+            } else if (std.mem.eql(u8, props.rarity, "Rare")) {
                 const tooltip_background_data = assets.getUiData("tooltip_background_rare", 0);
                 const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_rare", 0);
                 const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_rare", 0);
@@ -213,7 +213,7 @@ pub const ItemTooltip = struct {
             self.rarity.text_data.setText(std.fmt.bufPrint(
                 self.rarity.text_data.backing_buffer,
                 "{s} {s}",
-                .{ props.tier, props.slot_type.toString() },
+                .{ props.rarity, props.slot_type.toString() },
             ) catch self.rarity.text_data.text, self.allocator);
             self.rarity.text_data.color = rarity_text_color;
 

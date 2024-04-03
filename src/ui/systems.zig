@@ -287,7 +287,7 @@ inline fn updateElements() !void {
     elements_to_add.clearRetainingCapacity();
 
     const time = std.time.microTimestamp() - main.start_time;
-    const dt: f32 = @floatFromInt(if (last_element_update > 0) time - last_element_update else 0);
+    const dt = if (last_element_update > 0) @as(f32, @floatFromInt(time - last_element_update)) else 0.0;
     last_element_update = time;
 
     std.sort.block(element.UiElement, elements.items, {}, lessThan);

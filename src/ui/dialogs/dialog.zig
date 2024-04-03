@@ -47,7 +47,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
         try map.put(std.meta.stringToEnum(DialogType, field.name) orelse
             std.debug.panic("No enum type with name {s} found on DialogType", .{field.name}), dialog);
     }
-
+    
     current = map.get(.none).?;
 }
 
@@ -100,25 +100,22 @@ pub inline fn ParamsFor(comptime T: type) type {
 }
 
 pub fn showDialog(comptime dialog_type: DialogType, params: std.meta.TagPayload(DialogParams, dialog_type)) void {
-    dialog_bg.visible = dialog_type != .none;
-
-    if (std.meta.activeTag(current.*) == dialog_type)
-        return;
-
     switch (current.*) {
-        inline else => |dialog| {
-            dialog.root.visible = false;
-        },
+        inline else => |dialog| dialog.root.visible = false,
     }
+
+    dialog_bg.visible = dialog_type != .none;
+    if (current.* == dialog_type)
+        return;
 
     current = map.get(dialog_type) orelse blk: {
         std.log.err("Dialog for {} was not found, using .none", .{dialog_type});
         break :blk map.get(.none) orelse std.debug.panic(".none was not a valid dialog", .{});
     };
 
-    const T = std.meta.TagPayload(Dialog, dialog_type);
-    @field(current, fieldName(T)).root.visible = true;
-    @field(current, fieldName(T)).setValues(params);
-    @field(current, fieldName(T)).root.x = (camera.screen_width - @field(current, fieldName(T)).root.width()) / 2.0;
-    @field(current, fieldName(T)).root.y = (camera.screen_height - @field(current, fieldName(T)).root.height()) / 2.0;
+    const field_name = fieldName(std.meta.TagPayload(Dialog, dialog_type));
+    @field(current, field_name).root.visible = true;
+    @field(current, field_name).setValues(params);
+    @field(current, field_name).root.x = (camera.screen_width - @field(current, field_name).root.width()) / 2.0;
+    @field(current, field_name).root.y = (camera.screen_height - @field(current, field_name).root.height()) / 2.0;
 }

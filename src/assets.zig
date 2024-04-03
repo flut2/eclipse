@@ -976,8 +976,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("props", "props.png", 10, 10, false, &ctx, allocator);
     try addImage("props_big", "props_big.png", 18, 18, false, &ctx, allocator);
     try addImage("projectiles", "projectiles.png", 8, 8, false, &ctx, allocator);
-    try addImage("tiered_items", "tiered_items.png", 8, 8, false, &ctx, allocator);
-    try addImage("tiered_projectiles", "tiered_projectiles.png", 8, 8, false, &ctx, allocator);
+    try addImage("basic_items", "basic_items.png", 8, 8, false, &ctx, allocator);
+    try addImage("basic_projectiles", "basic_projectiles.png", 8, 8, false, &ctx, allocator);
     try addImage("wall_backface", "wall_backface.png", 8, 8, false, &ctx, allocator);
     try addImage("particles", "particles.png", 8, 8, false, &ctx, allocator);
     try addImage("editor_tile_base", "editor_tile_base.png", 8, 8, false, &ctx, allocator);

@@ -187,24 +187,6 @@ pub const Ability = struct {
     }
 };
 
-pub const CharacterClassStat = struct {
-    const tier_count = 2;
-
-    default_value: u16,
-    max_values: [tier_count]u16 = undefined,
-
-    pub fn parse(node: xml.Node) !CharacterClassStat {
-        var ret = CharacterClassStat{
-            .default_value = try node.currentValueInt(u16, 0),
-        };
-        var buffer: [4]u8 = undefined;
-        inline for (0..tier_count) |i| {
-            ret.max_values[i] = try node.getAttributeInt(try std.fmt.bufPrintZ(&buffer, "t{d}", .{i + 1}), u16, 0);
-        }
-        return ret;
-    }
-};
-
 pub const CharacterClass = struct {
     obj_type: u16,
     name: []const u8,
@@ -219,19 +201,19 @@ pub const CharacterClass = struct {
     ability_2: Ability,
     ability_3: Ability,
     ultimate_ability: Ability,
-    health: CharacterClassStat,
-    mana: CharacterClassStat,
-    strength: CharacterClassStat,
-    wit: CharacterClassStat,
-    defense: CharacterClassStat,
-    resistance: CharacterClassStat,
-    speed: CharacterClassStat,
-    stamina: CharacterClassStat,
-    intelligence: CharacterClassStat,
-    penetration: CharacterClassStat,
-    piercing: CharacterClassStat,
-    haste: CharacterClassStat,
-    tenacity: CharacterClassStat,
+    health: u16,
+    mana: u16,
+    strength: u16,
+    wit: u16,
+    defense: u16,
+    resistance: u16,
+    speed: u16,
+    stamina: u16,
+    intelligence: u16,
+    penetration: u16,
+    piercing: u16,
+    haste: u16,
+    tenacity: u16,
     texture: TextureData,
     projs: []ProjProps,
     skins: ?[]CharacterSkin,
@@ -284,32 +266,19 @@ pub const CharacterClass = struct {
                 std.debug.panic("Could not parse CharacterClass: Ability3 node is missing", .{}), allocator),
             .ultimate_ability = try Ability.parse(node.findChild("UltimateAbility") orelse
                 std.debug.panic("Could not parse CharacterClass: UltimateAbility node is missing", .{}), allocator),
-            .health = try CharacterClassStat.parse(node.findChild("Health") orelse
-                std.debug.panic("Could not parse CharacterClass: Health node is missing", .{})),
-            .mana = try CharacterClassStat.parse(node.findChild("Mana") orelse
-                std.debug.panic("Could not parse CharacterClass: Mana node is missing", .{})),
-            .strength = try CharacterClassStat.parse(node.findChild("Strength") orelse
-                std.debug.panic("Could not parse CharacterClass: Strength node is missing", .{})),
-            .wit = try CharacterClassStat.parse(node.findChild("Wit") orelse
-                std.debug.panic("Could not parse CharacterClass: Wit node is missing", .{})),
-            .defense = try CharacterClassStat.parse(node.findChild("Defense") orelse
-                std.debug.panic("Could not parse CharacterClass: Defense node is missing", .{})),
-            .resistance = try CharacterClassStat.parse(node.findChild("Resistance") orelse
-                std.debug.panic("Could not parse CharacterClass: Resistance node is missing", .{})),
-            .speed = try CharacterClassStat.parse(node.findChild("Speed") orelse
-                std.debug.panic("Could not parse CharacterClass: Speed node is missing", .{})),
-            .stamina = try CharacterClassStat.parse(node.findChild("Stamina") orelse
-                std.debug.panic("Could not parse CharacterClass: Stamina node is missing", .{})),
-            .intelligence = try CharacterClassStat.parse(node.findChild("Intelligence") orelse
-                std.debug.panic("Could not parse CharacterClass: Intelligence node is missing", .{})),
-            .penetration = try CharacterClassStat.parse(node.findChild("Penetration") orelse
-                std.debug.panic("Could not parse CharacterClass: Penetration node is missing", .{})),
-            .piercing = try CharacterClassStat.parse(node.findChild("Piercing") orelse
-                std.debug.panic("Could not parse CharacterClass: Piercing node is missing", .{})),
-            .haste = try CharacterClassStat.parse(node.findChild("Haste") orelse
-                std.debug.panic("Could not parse CharacterClass: Haste node is missing", .{})),
-            .tenacity = try CharacterClassStat.parse(node.findChild("Tenacity") orelse
-                std.debug.panic("Could not parse CharacterClass: Tenacity node is missing", .{})),
+            .health = try node.getValueInt("Health", u16, 0),
+            .mana = try node.getValueInt("Mana", u16, 0),
+            .strength = try node.getValueInt("Strength", u16, 0),
+            .wit = try node.getValueInt("Wit", u16, 0),
+            .defense = try node.getValueInt("Defense", u16, 0),
+            .resistance = try node.getValueInt("Resistance", u16, 0),
+            .speed = try node.getValueInt("Speed", u16, 0),
+            .stamina = try node.getValueInt("Stamina", u16, 0),
+            .intelligence = try node.getValueInt("Intelligence", u16, 0),
+            .penetration = try node.getValueInt("Penetration", u16, 0),
+            .piercing = try node.getValueInt("Piercing", u16, 0),
+            .haste = try node.getValueInt("Haste", u16, 0),
+            .tenacity = try node.getValueInt("Tenacity", u16, 0),
             .texture = try TextureData.parse(node.findChild("AnimatedTexture") orelse
                 std.debug.panic("Could not parse CharacterClass: Texture is missing", .{}), allocator, false),
             .skins = null,
@@ -879,7 +848,7 @@ pub const StatType = enum(u8) {
     sellable_price = 62,
     portal_usable = 63,
     account_id = 64,
-    tier = 65,
+    aether = 65,
     damage_multiplier = 66,
     hit_multiplier = 67,
     glow = 68,
@@ -953,7 +922,6 @@ pub const StatType = enum(u8) {
 
 pub const ActivationType = enum(u8) {
     open_portal,
-    tier_increase,
     cage,
     clock,
     hit_multiplier,
@@ -980,7 +948,6 @@ pub const ActivationType = enum(u8) {
 
     const map = std.ComptimeStringMap(ActivationType, .{
         .{ "OpenPortal", .open_portal },
-        .{ "TierIncrease", .tier_increase },
         .{ "Cage", .cage },
         .{ "Clock", .clock },
         .{ "HitMultiplier", .hit_multiplier },
@@ -1092,8 +1059,8 @@ pub const ItemProps = struct {
     untradeable: bool,
     usable: bool,
     slot_type: ItemType,
-    tier: []const u8,
-    tier_req: u8,
+    rarity: []const u8,
+    aether_req: u8,
     mp_cost: f32,
     bag_type: u8,
     num_projectiles: u8,
@@ -1136,8 +1103,8 @@ pub const ItemProps = struct {
             .untradeable = node.elementExists("Soulbound"),
             .usable = node.elementExists("Usable"),
             .slot_type = @enumFromInt(try node.getValueInt("SlotType", i8, 0)),
-            .tier = try node.getValueAlloc("Tier", allocator, "Unknown"),
-            .tier_req = try node.getValueInt("TierReq", u8, 0),
+            .rarity = try node.getValueAlloc("Rarity", allocator, "Unknown"),
+            .aether_req = try node.getValueInt("AetherReq", u8, 0),
             .bag_type = try node.getValueInt("BagType", u8, 0),
             .num_projectiles = try node.getValueInt("NumProjectiles", u8, 1),
             .arc_gap = std.math.degreesToRadians(f32, try node.getValueFloat("ArcGap", f32, 0)),
@@ -1176,7 +1143,7 @@ pub const ItemProps = struct {
         }
 
         allocator.free(self.texture_data.sheet);
-        allocator.free(self.tier);
+        allocator.free(self.rarity);
         allocator.free(self.sound);
         allocator.free(self.id);
         allocator.free(self.display_id);

@@ -56,19 +56,19 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="60" t1="55">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
   <Object type="0x0307" id="Blood Mage">
     <Class>Player</Class>
@@ -126,19 +126,19 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="60" t1="55">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
   <Object type="0x030e" id="Warden">
     <Class>Player</Class>
@@ -196,19 +196,19 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="60" t1="55">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
   <Object type="0x0310" id="Warlock">
     <Class>Player</Class>
@@ -266,19 +266,19 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="60" t1="55">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
   <Object type="0x031d" id="Berserker">
     <Class>Player</Class>
@@ -336,19 +336,19 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="60" t1="55">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
   <Object type="0x031e" id="Juggernaut">
     <Class>Player</Class>
@@ -406,19 +406,19 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="60" t1="55">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
   <Object type="0x031f" id="Chronomancer">
     <Class>Player</Class>
@@ -474,19 +474,19 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
 Return double the damage stored as a Magic Damage blast within &amp;type="bold_it"&amp;col="6080FF"9 (+6%&amp;space&amp;img="misc_big,0x3b")&amp;reset tiles after this effect ends.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"Damage is capped at &amp;type="bold_it"&amp;col="A15AFF"30000 (+1000% &amp;img="misc_big,0x23")&amp;reset.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="60" t1="55">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
   <Object type="0x0320" id="Monk">
     <Class>Player</Class>
@@ -544,19 +544,19 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="65" t1="60">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
   <Object type="0x0321" id="Enigma">
     <Class>Player</Class>
@@ -639,19 +639,19 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"600 (+25% &amp;img="misc_big,
       <Cooldown>30</Cooldown>
       <Description>Transform into another chosen class, granting access to their Ultimate.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="60" t1="55">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
   <Object type="0x0322" id="Plaguebearer">
     <Class>Player</Class>
@@ -709,18 +709,18 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
       <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
 &amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
     </UltimateAbility>
-    <Health t2="740" t1="720">695</Health>
-    <Mana t2="240" t1="225">200</Mana>
-    <Strength t2="75" t1="70">65</Strength>
-    <Wit t2="75" t1="70">65</Wit>
-    <Defense t2="25" t1="20">15</Defense>
-    <Resistance t2="25" t1="20">15</Resistance>
-    <Speed t2="55" t1="50">45</Speed>
-    <Stamina t2="60" t1="55">50</Stamina>
-    <Intelligence t2="60" t1="55">50</Intelligence>
-    <Penetration t2="55" t1="50">45</Penetration>
-    <Piercing t2="35" t1="30">25</Piercing>
-    <Haste t2="35" t1="30">25</Haste>
-    <Tenacity t2="55" t1="50">45</Tenacity>
+    <Health>695</Health>
+    <Mana>200</Mana>
+    <Strength>65</Strength>
+    <Wit>65</Wit>
+    <Defense>15</Defense>
+    <Resistance>15</Resistance>
+    <Speed>45</Speed>
+    <Stamina>50</Stamina>
+    <Intelligence>50</Intelligence>
+    <Penetration>45</Penetration>
+    <Piercing>25</Piercing>
+    <Haste>25</Haste>
+    <Tenacity>45</Tenacity>
   </Object>
 </Objects>

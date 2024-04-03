@@ -94,8 +94,8 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
         return;
     };
 
-    network_thread = null;
     rpmalloc.deinitThread(true);
+    network_thread = null;
 }
 
 // lock ui_systems.ui_lock before calling (UI already does this implicitly)
@@ -146,8 +146,10 @@ fn renderTick(window: glfw.Window) !void {
         if (!tick_render)
             return;
 
-        defer std.time.sleep(@intCast(std.time.ns_per_us * settings.fps_us));
-        defer frames += 1;
+        defer {
+            frames += 1;
+            std.time.sleep(settings.fps_ns);
+        }
 
         const time = std.time.microTimestamp();
         render.draw(time);
@@ -204,21 +206,9 @@ fn renderTick(window: glfw.Window) !void {
                 }
 
                 render.queue.writeTexture(
-                    &.{
-                        .texture = render.minimap_texture,
-                        .origin = .{
-                            .x = min_x,
-                            .y = min_y,
-                        },
-                    },
-                    &.{
-                        .bytes_per_row = comp_len * w,
-                        .rows_per_image = h,
-                    },
-                    &.{
-                        .width = w,
-                        .height = h,
-                    },
+                    &.{ .texture = render.minimap_texture, .origin = .{ .x = min_x, .y = min_y } },
+                    &.{ .bytes_per_row = comp_len * w, .rows_per_image = h },
+                    &.{ .width = w, .height = h },
                     copy,
                 );
 
@@ -229,17 +219,9 @@ fn renderTick(window: glfw.Window) !void {
                 minimap_update_max_y = std.math.minInt(u32);
             } else if (need_force_update) {
                 render.queue.writeTexture(
-                    &.{
-                        .texture = render.minimap_texture,
-                    },
-                    &.{
-                        .bytes_per_row = map.minimap.bytes_per_row,
-                        .rows_per_image = map.minimap.height,
-                    },
-                    &.{
-                        .width = map.minimap.width,
-                        .height = map.minimap.height,
-                    },
+                    &.{ .texture = render.minimap_texture },
+                    &.{ .bytes_per_row = map.minimap.bytes_per_row, .rows_per_image = map.minimap.height },
+                    &.{ .width = map.minimap.width, .height = map.minimap.height },
                     map.minimap.data,
                 );
                 need_force_update = false;
@@ -248,17 +230,13 @@ fn renderTick(window: glfw.Window) !void {
     }
 }
 
-pub fn clear() void {
-    map.dispose(allocator);
-}
-
-pub fn disconnect() void {
+pub fn disconnect(has_lock: bool) void {
     server.shutdown();
-    clear();
+    map.dispose(allocator);
     input.reset();
     {
-        ui_systems.ui_lock.lock();
-        defer ui_systems.ui_lock.unlock();
+        if (!has_lock) ui_systems.ui_lock.lock();
+        defer if (!has_lock) ui_systems.ui_lock.unlock();
         ui_systems.switchScreen(.char_select);
     }
     dialog.showDialog(.none, {});
@@ -268,7 +246,7 @@ pub fn disconnect() void {
 fn tracyAlloc(_: *anyopaque, len: usize, _: u8, _: usize) ?[*]u8 {
     const malloc = std.c.malloc(len);
     ztracy.Alloc(malloc, len);
-    return @as(?[*]u8, @ptrCast(malloc));
+    return @ptrCast(malloc);
 }
 
 fn tracyResize(_: *anyopaque, buf: []u8, _: u8, new_len: usize, _: usize) bool {
@@ -288,7 +266,7 @@ pub fn main() !void {
     defer if (settings.enable_tracy) main_zone.End();
 
     start_time = std.time.microTimestamp();
-    utils.rng.seed(@as(u64, @intCast(start_time)));
+    utils.rng.seed(@intCast(start_time));
 
     const is_debug = builtin.mode == .Debug;
     var gpa = if (is_debug) std.heap.GeneralPurposeAllocator(.{}){} else {};
@@ -428,11 +406,7 @@ pub fn main() !void {
     defer thread_pool.deinit();
     defer thread_pool.shutdown();
 
-    var server_loop = try xev.Loop.init(.{
-        .entries = std.math.pow(u13, 2, 12),
-        .thread_pool = &thread_pool,
-    });
-    server = try network.Server.init(allocator, &server_loop);
+    server = try network.Server.init(allocator, &thread_pool);
     defer server.deinit();
 
     var rpc_thread = try std.Thread.spawn(.{}, runRpc, .{rpc_client});
@@ -465,7 +439,7 @@ pub fn main() !void {
             last_ui_update = time;
         }
 
-        std.time.sleep(@intCast(std.time.ns_per_us * settings.fps_us));
+        std.time.sleep(settings.fps_ns);
     }
 }
 

@@ -266,21 +266,22 @@ const S2CPacketId = enum(u8) {
 };
 
 pub const Server = struct {
-    loop: *xev.Loop,
+    loop: ?xev.Loop = null,
     socket: ?xev.TCP = null,
     write_queue: C2SQueue = undefined,
     completion_pool: std.heap.MemoryPool(xev.Completion),
     node_pool: std.heap.MemoryPool(C2SQueue.Node),
     write_buffer_pool: std.heap.MemoryPool([write_buffer_size]u8),
+    thread_pool: *xev.ThreadPool = undefined,
     reader: utils.PacketReader = .{},
     write_lock: std.Thread.Mutex = .{},
     write_comp: ?*xev.Completion = null,
     allocator: std.mem.Allocator = undefined,
     hello_data: C2SPacket = undefined,
 
-    pub fn init(allocator: std.mem.Allocator, loop: *xev.Loop) !Server {
+    pub fn init(allocator: std.mem.Allocator, thread_pool: *xev.ThreadPool) !Server {
         var ret = Server{
-            .loop = loop,
+            .thread_pool = thread_pool,
             .completion_pool = std.heap.MemoryPool(xev.Completion).init(allocator),
             .node_pool = std.heap.MemoryPool(C2SQueue.Node).init(allocator),
             .write_buffer_pool = std.heap.MemoryPool([write_buffer_size]u8).init(allocator),
@@ -307,14 +308,15 @@ pub const Server = struct {
             c.op = .{ .cancel = .{ .c = wc } };
             c.userdata = self;
             c.callback = disposeCallback;
-            self.loop.add(c);
+            self.loop.?.add(c);
         }
     }
 
     pub fn deinit(self: *Server) void {
-        self.loop.stop();
-        while (self.loop.flags.in_run) {}
-        self.loop.deinit();
+        if (self.loop) |*loop| {
+            loop.deinit();
+        }
+
         self.completion_pool.deinit();
         self.write_buffer_pool.deinit();
         self.node_pool.deinit();
@@ -327,22 +329,26 @@ pub const Server = struct {
         const socket = try xev.TCP.init(addr);
 
         self.hello_data = hello_data;
+        self.loop = try xev.Loop.init(.{
+            .entries = std.math.pow(u13, 2, 12),
+            .thread_pool = self.thread_pool,
+        });
 
         const c = try self.completion_pool.create();
-        socket.connect(self.loop, c, addr, Server, self, connectCallback);
-        try self.loop.run(.until_done);
+        socket.connect(&self.loop.?, c, addr, Server, self, connectCallback);
+        try self.loop.?.run(.until_done);
     }
 
     pub fn shutdown(self: *Server) void {
-        if (self.socket == null)
+        if (self.socket == null or self.loop == null)
             return;
 
         const c = self.completion_pool.create() catch unreachable;
-        self.socket.?.shutdown(self.loop, c, Server, self, shutdownCallback);
+        self.socket.?.shutdown(&self.loop.?, c, Server, self, shutdownCallback);
     }
 
     pub fn queuePacket(self: *Server, packet: C2SPacket) void {
-        if (self.socket == null)
+        if (self.socket == null or self.loop == null)
             return;
 
         const needs_cancel = packet == .use_portal or packet == .escape;
@@ -353,7 +359,7 @@ pub const Server = struct {
         defer {
             self.write_lock.unlock();
             if (needs_cancel) {
-                main.clear();
+                map.dispose(self.allocator);
                 main.tick_frame = false;
             }
         }
@@ -403,14 +409,14 @@ pub const Server = struct {
         self.write_queue.push(node);
         if (empty) {
             self.write_comp = self.completion_pool.create() catch unreachable;
-            self.socket.?.write(self.loop, self.write_comp.?, .{ .slice = node.buf }, Server, self, writeCallback);
+            self.socket.?.write(&self.loop.?, self.write_comp.?, .{ .slice = node.buf }, Server, self, writeCallback);
         }
     }
 
     fn connectCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, socket: xev.TCP, _: xev.TCP.ConnectError!void) xev.CallbackAction {
         if (self) |srv| {
             srv.socket = socket;
-            socket.read(srv.loop, c, .{ .slice = srv.reader.buffer }, Server, srv, readCallback);
+            socket.read(&srv.loop.?, c, .{ .slice = srv.reader.buffer }, Server, srv, readCallback);
             srv.queuePacket(srv.hello_data);
         }
 
@@ -419,19 +425,22 @@ pub const Server = struct {
 
     fn writeCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.WriteBuffer, result: xev.TCP.WriteError!usize) xev.CallbackAction {
         if (self) |srv| {
+            if (srv.socket == null or srv.loop == null)
+                return .disarm;
+
             _ = result catch |e| {
-                std.log.err("Write error: {}", .{e});
-                main.disconnect();
+                std.log.err("Socket write error: {}", .{e});
+                main.disconnect(false);
                 dialog.showDialog(.text, .{
                     .title = "Connection Error",
-                    .body = "Writing was interrupted",
+                    .body = "Socket writing was interrupted",
                 });
                 return .disarm;
             };
 
             if (srv.write_queue.pop()) |node| {
                 if (srv.write_queue.getNext(node)) |next| {
-                    srv.socket.?.write(srv.loop, c, .{ .slice = next.buf }, Server, srv, writeCallback);
+                    srv.socket.?.write(&srv.loop.?, c, .{ .slice = next.buf }, Server, srv, writeCallback);
                 } else {
                     srv.completion_pool.destroy(c);
                     srv.write_comp = null;
@@ -451,12 +460,15 @@ pub const Server = struct {
 
     fn readCallback(self: ?*Server, _: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, result: xev.TCP.ReadError!usize) xev.CallbackAction {
         if (self) |srv| {
+            if (srv.socket == null or srv.loop == null)
+                return .disarm;
+
             const size = result catch |e| {
-                std.log.err("Read error: {}", .{e});
-                main.disconnect();
+                std.log.err("Socket read error: {}", .{e});
+                main.disconnect(false);
                 dialog.showDialog(.text, .{
                     .title = "Connection Error",
-                    .body = "Reading was interrupted",
+                    .body = "Socket reading was interrupted",
                 });
                 return .disarm;
             };
@@ -522,7 +534,10 @@ pub const Server = struct {
 
     fn shutdownCallback(self: ?*Server, _: *xev.Loop, c: *xev.Completion, socket: xev.TCP, _: xev.TCP.ShutdownError!void) xev.CallbackAction {
         if (self) |srv| {
-            socket.close(srv.loop, c, Server, srv, closeCallback);
+            if (srv.loop == null)
+                return .disarm;
+
+            socket.close(&srv.loop.?, c, Server, srv, closeCallback);
         }
 
         return .disarm;
@@ -530,9 +545,11 @@ pub const Server = struct {
 
     fn closeCallback(self: ?*Server, _: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.TCP.CloseError!void) xev.CallbackAction {
         if (self) |srv| {
-            srv.loop.stop();
-            while (srv.loop.flags.in_run) {}
+            if (srv.loop) |*loop| {
+                loop.deinit();
+            }
 
+            srv.loop = null;
             srv.socket = null;
             srv.write_comp = null;
             _ = srv.completion_pool.reset(.free_all);
@@ -684,7 +701,7 @@ pub const Server = struct {
         const killed_by = reader.readArray(u8);
 
         assets.playSfx("death_screen");
-        main.disconnect();
+        main.disconnect(false);
 
         if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick)
             std.log.debug("Recv - Death: account_id={d}, char_id={d}, killed_by={s}", .{ account_id, char_id, killed_by });
@@ -762,7 +779,7 @@ pub const Server = struct {
         const error_description = self.allocator.dupe(u8, reader.readArray(u8)) catch &[0]u8{};
 
         if (error_id == .message_with_disconnect or error_id == .force_close_game) {
-            main.disconnect();
+            main.disconnect(false);
             dialog.showDialog(.text, .{
                 .title = "Connection Error",
                 .body = error_description,
@@ -825,7 +842,7 @@ pub const Server = struct {
 
     fn handleMapInfo(self: *Server) void {
         var reader = &self.reader;
-        main.clear();
+        map.dispose(self.allocator);
         camera.quake = false;
 
         const width: u32 = @intCast(@max(0, reader.read(i32)));
@@ -1480,7 +1497,7 @@ pub const Server = struct {
             },
             .guild_rank => plr.guild_rank = stat_reader.read(i8),
             .texture => plr.skin = stat_reader.read(u16),
-            .tier => plr.tier = stat_reader.read(u8),
+            .aether => plr.aether = stat_reader.read(u8),
             .alt_texture_index => _ = stat_reader.read(u16),
             else => {
                 std.log.err("Unknown player stat type: {}", .{stat_type});

@@ -1,27 +1,27 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Cards>
   <Card type="0x00">
-    <Tier>Common</Tier>
+    <Rarity>Common</Rarity>
     <Title>Common Test Card</Title>
     <Description>test</Description>
   </Card>
   <Card type="0x01">
-    <Tier>Rare</Tier>
+    <Rarity>Rare</Rarity>
     <Title>Rare Test Card</Title>
     <Description>test</Description>
   </Card>
   <Card type="0x02">
-    <Tier>Epic</Tier>
+    <Rarity>Epic</Rarity>
     <Title>Epic Test Card</Title>
     <Description>test</Description>
   </Card>
   <Card type="0x03">
-    <Tier>Legendary</Tier>
+    <Rarity>Legendary</Rarity>
     <Title>Legendary Test Card</Title>
     <Description>test</Description>
   </Card>
   <Card type="0x04">
-    <Tier>Mythic</Tier>
+    <Rarity>Mythic</Rarity>
     <Title>Mythic Test Card</Title>
     <Description>test</Description>
   </Card>

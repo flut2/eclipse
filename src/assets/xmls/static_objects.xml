@@ -127,7 +127,7 @@
     <Object type="0x107" id="Beginner Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x90</Index>
         </Texture>
         <Size>160</Size>
@@ -136,7 +136,7 @@
     <Object type="0x108" id="Novice Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x91</Index>
         </Texture>
         <Size>160</Size>
@@ -145,7 +145,7 @@
     <Object type="0x109" id="Apprentice Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x92</Index>
         </Texture>
         <Size>160</Size>
@@ -154,7 +154,7 @@
     <Object type="0x10a" id="Adept Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x93</Index>
         </Texture>
         <Size>160</Size>
@@ -260,7 +260,7 @@
     <Object type="0x113" id="Expert Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x94</Index>
         </Texture>
         <Size>160</Size>
@@ -403,7 +403,7 @@
     <Object type="0x124" id="Grand Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x95</Index>
         </Texture>
         <Size>160</Size>
@@ -412,7 +412,7 @@
     <Object type="0x125" id="Illustrious Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x96</Index>
         </Texture>
         <Size>160</Size>
@@ -421,7 +421,7 @@
     <Object type="0x126" id="Sublime Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x97</Index>
         </Texture>
         <Size>160</Size>
@@ -430,7 +430,7 @@
     <Object type="0x127" id="Master Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x98</Index>
         </Texture>
         <Size>160</Size>
@@ -439,7 +439,7 @@
     <Object type="0x128" id="Prime Totem Object">
         <Class>GameObject</Class>
         <Texture>
-            <Sheet>tiered_items</Sheet>
+            <Sheet>basic_items</Sheet>
             <Index>0x99</Index>
         </Texture>
         <Size>160</Size>

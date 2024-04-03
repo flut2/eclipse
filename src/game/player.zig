@@ -70,9 +70,9 @@ pub const Player = struct {
     damage_multiplier: f32 = 1.0,
     condition: utils.Condition = utils.Condition{},
     inventory: [22]u16 = [_]u16{std.math.maxInt(u16)} ** 22,
-    tier: u8 = 0,
-    tier_xp: i32 = 0,
-    next_tier_xp: i32 = 1000,
+    aether: u8 = 0,
+    spirits_communed: i32 = 0,
+    next_spirits: i32 = 1000,
     tex_1: i32 = 0,
     tex_2: i32 = 0,
     skin: u16 = 0,
@@ -212,7 +212,7 @@ pub const Player = struct {
                         .large_image = rpc.Packet.ArrayString(256).create("logo"),
                         .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
                         .small_image = rpc.Packet.ArrayString(256).create(self.class_data.rpc_name),
-                        .small_text = rpc.Packet.ArrayString(128).createFromFormat("Tier {s} {s}", .{ utils.toRoman(self.tier), self.class_data.name }) catch {
+                        .small_text = rpc.Packet.ArrayString(128).createFromFormat("Aether {s}", .{ utils.toRoman(self.aether) }) catch {
                             std.log.err("Setting Discord RPC failed, small_text buffer was out of space", .{});
                             break :setRpc;
                         },

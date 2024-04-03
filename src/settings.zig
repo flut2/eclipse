@@ -151,7 +151,7 @@ pub var toggle_stats = Button{ .key = .b };
 pub var sfx_volume: f32 = 0.33;
 pub var music_volume: f32 = 0.1;
 pub var fps_cap: f32 = 360.0;
-pub var fps_us: i64 = std.time.us_per_s / 360;
+pub var fps_ns: u64 = @intFromFloat(@as(comptime_float, std.time.ns_per_s) / 360.0 * 1.5);
 pub var enable_lights = true;
 pub var enable_vsync = true;
 pub var stats_enabled = true;
@@ -335,7 +335,7 @@ fn parseSettings(allocator: std.mem.Allocator) !void {
 
                     float_var.* = value;
                     if (std.mem.eql(u8, kv.key, "fps_cap"))
-                        fps_us = @intFromFloat(std.time.us_per_s / value);
+                        fps_ns = @intFromFloat(std.time.ns_per_s / value * 1.5);
                     continue;
                 } else if (int_name_map.get(kv.key)) |int_var| {
                     const value = std.fmt.parseInt(i32, kv.value, 0) catch blk: {
@@ -435,7 +435,7 @@ pub fn resetToDefault() void {
     enable_lights = true;
     enable_vsync = true;
     fps_cap = 360.0;
-    fps_us = std.time.us_per_s / 360;
+    fps_ns = @intFromFloat(@as(comptime_float, std.time.ns_per_s) / 360.0 * 1.5);
     cursor_type = .aztec;
     aa_type = .msaa4x;
     save_email = true;

@@ -56,7 +56,7 @@ pub fn destroy(self: anytype) void {
     std.debug.assert(!systems.ui_lock.tryLock());
     for (systems.elements.items, 0..) |element, i| {
         if (std.meta.activeTag(element) == tag and @field(element, field_name) == self) {
-            _ = systems.elements.swapRemove(i);
+            _ = systems.elements.orderedRemove(i);
             break;
         }
     }
@@ -1152,7 +1152,7 @@ pub const Item = struct {
     visible: bool = true,
     event_policy: EventPolicy = .{},
     draggable: bool = false,
-    // don't set this to anything, it's used for item tier backgrounds
+    // don't set this to anything, it's used for item rarity backgrounds
     background_image_data: ?ImageData = null,
     is_dragging: bool = false,
     drag_start_x: f32 = 0,

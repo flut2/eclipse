@@ -357,7 +357,7 @@ pub const Options = struct {
     fn positionElements(container: *element.Container) void {
         container.lock.lock();
         defer container.lock.unlock();
-        
+
         for (container.elements.items, 0..) |elem, i| {
             switch (elem) {
                 .scrollable_container, .container => {},
@@ -377,7 +377,7 @@ pub const Options = struct {
                 assets.main_music.setVolume(slider.current_value);
 
             if (value_ptr == &settings.fps_cap)
-                settings.fps_us = @intFromFloat(std.time.us_per_s / slider.current_value);
+                settings.fps_ns = @intFromFloat(std.time.ns_per_s / slider.current_value * 1.5);
         }
 
         trySave();
@@ -428,7 +428,7 @@ pub const Options = struct {
 
     fn disconnectCallback() void {
         closeCallback();
-        main.disconnect();
+        main.disconnect(true);
     }
 
     fn trySave() void {

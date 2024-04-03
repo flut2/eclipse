@@ -99,8 +99,8 @@ pub const GameScreen = struct {
     last_max_hp: i32 = -1,
     last_mp: i32 = -1,
     last_max_mp: i32 = -1,
-    last_tier_xp: i32 = -1,
-    last_next_tier_xp: i32 = -1,
+    last_spirits: i32 = -1,
+    last_next_spirits: i32 = -1,
     last_in_combat: bool = false,
     interact_class: game_data.ClassType = game_data.ClassType.game_object,
     container_visible: bool = false,
@@ -637,18 +637,18 @@ pub const GameScreen = struct {
                 self.last_in_combat = local_player.in_combat;
             }
 
-            if (self.last_tier_xp != local_player.tier_xp or self.last_next_tier_xp != local_player.next_tier_xp) {
-                const xp_perc = @as(f32, @floatFromInt(local_player.tier_xp)) / @as(f32, @floatFromInt(local_player.next_tier_xp));
+            if (self.last_spirits != local_player.spirits_communed or self.last_next_spirits != local_player.next_spirits) {
+                const xp_perc = @as(f32, @floatFromInt(local_player.spirits_communed)) / @as(f32, @floatFromInt(local_player.next_spirits));
                 self.xp_bar.scissor.max_x = self.xp_bar.width() * xp_perc;
 
                 var xp_text_data = &self.xp_bar.text_data;
                 xp_text_data.setText(
-                    try std.fmt.bufPrint(xp_text_data.backing_buffer, "{d}/{d}", .{ local_player.tier_xp, local_player.next_tier_xp }),
+                    try std.fmt.bufPrint(xp_text_data.backing_buffer, "{d}/{d}", .{ local_player.spirits_communed, local_player.next_spirits }),
                     self.allocator,
                 );
 
-                self.last_tier_xp = local_player.tier_xp;
-                self.last_next_tier_xp = local_player.next_tier_xp;
+                self.last_spirits = local_player.spirits_communed;
+                self.last_next_spirits = local_player.next_spirits;
             }
 
             if (self.last_hp != local_player.hp or self.last_max_hp != local_player.max_hp) {
@@ -656,10 +656,6 @@ pub const GameScreen = struct {
                 self.health_bar.scissor.max_x = self.health_bar.width() * hp_perc;
 
                 var health_text_data = &self.health_bar.text_data;
-                health_text_data.color = if (local_player.max_hp - local_player.hp_bonus >= local_player.class_data.health.max_values[local_player.tier - 1])
-                    0xFFE770
-                else
-                    0xFFFFFF;
                 health_text_data.setText(
                     try std.fmt.bufPrint(health_text_data.backing_buffer, "{d}/{d}", .{ local_player.hp, local_player.max_hp }),
                     self.allocator,
@@ -674,10 +670,6 @@ pub const GameScreen = struct {
                 self.mana_bar.scissor.max_x = self.mana_bar.width() * mp_perc;
 
                 var mana_text_data = &self.mana_bar.text_data;
-                mana_text_data.color = if (local_player.max_mp - local_player.mp_bonus >= local_player.class_data.mana.max_values[local_player.tier - 1])
-                    0xFFE770
-                else
-                    0xFFFFFF;
                 mana_text_data.setText(
                     try std.fmt.bufPrint(mana_text_data.backing_buffer, "{d}/{d}", .{ local_player.mp, local_player.max_mp }),
                     self.allocator,
@@ -689,8 +681,7 @@ pub const GameScreen = struct {
         }
     }
 
-    fn updateStat(allocator: std.mem.Allocator, text_data: *element.TextData, base_val: i32, bonus_val: i32, max_val: i32) void {
-        text_data.color = if (base_val - bonus_val >= max_val) 0xFFE770 else 0xFFFFFF;
+    fn updateStat(allocator: std.mem.Allocator, text_data: *element.TextData, base_val: i32, bonus_val: i32) void {
         text_data.setText((if (bonus_val > 0)
             std.fmt.bufPrint(
                 text_data.backing_buffer,
@@ -716,78 +707,62 @@ pub const GameScreen = struct {
                 self.allocator,
                 &self.strength_stat_text.text_data,
                 player.strength,
-                player.strength_bonus,
-                player.class_data.strength.max_values[player.tier - 1],
+                player.strength_bonus
             );
             updateStat(
                 self.allocator,
                 &self.resistance_stat_text.text_data,
                 player.resistance,
-                player.resistance_bonus,
-                player.class_data.resistance.max_values[player.tier - 1],
+                player.resistance_bonus
             );
             updateStat(
                 self.allocator,
                 &self.intelligence_stat_text.text_data,
                 player.intelligence,
-                player.intelligence_bonus,
-                player.class_data.intelligence.max_values[player.tier - 1],
+                player.intelligence_bonus
             );
-            updateStat(
-                self.allocator,
-                &self.haste_stat_text.text_data,
-                player.haste,
-                player.haste_bonus,
-                player.class_data.haste.max_values[player.tier - 1],
-            );
+            updateStat(self.allocator, &self.haste_stat_text.text_data, player.haste, player.haste_bonus);
             updateStat(
                 self.allocator,
                 &self.wit_stat_text.text_data,
                 player.wit,
-                player.wit_bonus,
-                player.class_data.wit.max_values[player.tier - 1],
+                player.wit_bonus
             );
             updateStat(
                 self.allocator,
                 &self.speed_stat_text.text_data,
                 player.speed,
-                player.speed_bonus,
-                player.class_data.speed.max_values[player.tier - 1],
+                player.speed_bonus
             );
             updateStat(
                 self.allocator,
                 &self.penetration_stat_text.text_data,
                 player.penetration,
-                player.penetration_bonus,
-                player.class_data.penetration.max_values[player.tier - 1],
+                player.penetration_bonus
             );
             updateStat(
                 self.allocator,
                 &self.tenacity_stat_text.text_data,
                 player.tenacity,
-                player.tenacity_bonus,
-                player.class_data.tenacity.max_values[player.tier - 1],
+                player.tenacity_bonus
             );
             updateStat(
                 self.allocator,
                 &self.defense_stat_text.text_data,
                 player.defense,
-                player.defense_bonus,
-                player.class_data.defense.max_values[player.tier - 1],
+                player.defense_bonus
             );
             updateStat(
                 self.allocator,
                 &self.stamina_stat_text.text_data,
                 player.stamina,
-                player.stamina_bonus,
-                player.class_data.stamina.max_values[player.tier - 1],
+                player.stamina_bonus
             );
             updateStat(
                 self.allocator,
                 &self.piercing_stat_text.text_data,
                 player.piercing,
-                player.piercing_bonus,
-                player.class_data.piercing.max_values[player.tier - 1],
+                player.piercing_bonus
             );
         }
     }
@@ -1102,13 +1077,13 @@ pub const GameScreen = struct {
                 const pos_w = self.container_pos_data[idx].w;
                 const pos_h = self.container_pos_data[idx].h;
 
-                if (std.mem.eql(u8, props.tier, "Mythic")) {
+                if (std.mem.eql(u8, props.rarity, "Mythic")) {
                     self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
-                } else if (std.mem.eql(u8, props.tier, "Legendary")) {
+                } else if (std.mem.eql(u8, props.rarity, "Legendary")) {
                     self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
-                } else if (std.mem.eql(u8, props.tier, "Epic")) {
+                } else if (std.mem.eql(u8, props.rarity, "Epic")) {
                     self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
-                } else if (std.mem.eql(u8, props.tier, "Rare")) {
+                } else if (std.mem.eql(u8, props.rarity, "Rare")) {
                     self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
                 } else {
                     self.container_items[idx].background_image_data = null;
@@ -1155,13 +1130,13 @@ pub const GameScreen = struct {
                     self.inventory_items[idx].image_data.normal.scale_x = 4.0;
                     self.inventory_items[idx].image_data.normal.scale_y = 4.0;
 
-                    if (std.mem.eql(u8, props.tier, "Mythic")) {
+                    if (std.mem.eql(u8, props.rarity, "Mythic")) {
                         self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot_equip", 0) } };
-                    } else if (std.mem.eql(u8, props.tier, "Legendary")) {
+                    } else if (std.mem.eql(u8, props.rarity, "Legendary")) {
                         self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot_equip", 0) } };
-                    } else if (std.mem.eql(u8, props.tier, "Epic")) {
+                    } else if (std.mem.eql(u8, props.rarity, "Epic")) {
                         self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot_equip", 0) } };
-                    } else if (std.mem.eql(u8, props.tier, "Rare")) {
+                    } else if (std.mem.eql(u8, props.rarity, "Rare")) {
                         self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot_equip", 0) } };
                     } else {
                         self.inventory_items[idx].background_image_data = null;
@@ -1170,13 +1145,13 @@ pub const GameScreen = struct {
                     self.inventory_items[idx].image_data.normal.scale_x = 3.0;
                     self.inventory_items[idx].image_data.normal.scale_y = 3.0;
 
-                    if (std.mem.eql(u8, props.tier, "Mythic")) {
+                    if (std.mem.eql(u8, props.rarity, "Mythic")) {
                         self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
-                    } else if (std.mem.eql(u8, props.tier, "Legendary")) {
+                    } else if (std.mem.eql(u8, props.rarity, "Legendary")) {
                         self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
-                    } else if (std.mem.eql(u8, props.tier, "Epic")) {
+                    } else if (std.mem.eql(u8, props.rarity, "Epic")) {
                         self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
-                    } else if (std.mem.eql(u8, props.tier, "Rare")) {
+                    } else if (std.mem.eql(u8, props.rarity, "Rare")) {
                         self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
                     } else {
                         self.inventory_items[idx].background_image_data = null;
