@@ -419,7 +419,7 @@ pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
                     inline else => |*particle| {
                         if (particle.obj_id == obj_id) {
                             disposeEntity(allocator, &entities.items[i]);
-                            _ = entities.swapRemove(i);
+                            _ = entities.orderedRemove(i);
                             return;
                         }
                     },
@@ -430,7 +430,7 @@ pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
                     inline else => |*effect| {
                         if (effect.obj_id == obj_id) {
                             disposeEntity(allocator, &entities.items[i]);
-                            _ = entities.swapRemove(i);
+                            _ = entities.orderedRemove(i);
                             return;
                         }
                     },
@@ -439,7 +439,7 @@ pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
             inline else => |obj| {
                 if (obj.obj_id == obj_id) {
                     disposeEntity(allocator, &entities.items[i]);
-                    _ = entities.swapRemove(i);
+                    _ = entities.orderedRemove(i);
                     return;
                 }
             },
@@ -570,7 +570,7 @@ pub inline fn update(allocator: std.mem.Allocator) void {
 
     for (entity_indices_to_remove.items) |idx| {
         disposeEntity(allocator, &entities.items[idx]);
-        _ = entities.swapRemove(idx);
+        _ = entities.orderedRemove(idx);
     }
 
     if (entity_indices_to_remove.items.len > 0 or time - last_sort > 16 * std.time.us_per_ms) {

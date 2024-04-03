@@ -160,13 +160,13 @@ pub fn removeAttachedUi(obj_id: i32) void {
             .status => |*status| {
                 if (status.obj_id == obj_id) {
                     status.destroy(allocator);
-                    _ = temp_elements.swapRemove(i);
+                    _ = temp_elements.orderedRemove(i);
                 }
             },
             .balloon => |*balloon| {
                 if (balloon.target_id == obj_id) {
                     balloon.destroy(allocator);
-                    _ = temp_elements.swapRemove(i);
+                    _ = temp_elements.orderedRemove(i);
                 }
             },
         }
@@ -328,7 +328,7 @@ inline fn updateTempElements() !void {
                 const elapsed = time - status_text.start_time;
                 if (elapsed > status_text.lifetime * std.time.us_per_ms) {
                     status_text.destroy(allocator);
-                    _ = temp_elements.swapRemove(i);
+                    _ = temp_elements.orderedRemove(i);
                     continue;
                 }
 
@@ -352,7 +352,7 @@ inline fn updateTempElements() !void {
                         inline else => |obj| {
                             if (obj.dead) {
                                 status_text.destroy(allocator);
-                                _ = temp_elements.swapRemove(i);
+                                _ = temp_elements.orderedRemove(i);
                                 continue;
                             }
                             status_text.screen_x = obj.screen_x - status_text.text_data.width / 2;
@@ -366,7 +366,7 @@ inline fn updateTempElements() !void {
                 const lifetime = 5 * std.time.us_per_s;
                 if (elapsed > lifetime) {
                     speech_balloon.destroy(allocator);
-                    _ = temp_elements.swapRemove(i);
+                    _ = temp_elements.orderedRemove(i);
                     continue;
                 }
 
@@ -384,7 +384,7 @@ inline fn updateTempElements() !void {
                         inline else => |obj| {
                             if (obj.dead) {
                                 speech_balloon.destroy(allocator);
-                                _ = temp_elements.swapRemove(i);
+                                _ = temp_elements.orderedRemove(i);
                                 continue;
                             }
                             speech_balloon.screen_x = obj.screen_x - speech_balloon.width() / 2;

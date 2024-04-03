@@ -606,7 +606,7 @@ inline fn drawProjectile(idx: u16, proj: Projectile, draw_data: base.DrawData, f
     const w = proj.atlas_data.texWRaw() * size;
     const h = proj.atlas_data.texHRaw() * size;
     const screen_pos = camera.rotateAroundCamera(proj.x, proj.y);
-    const z_offset = proj.z * -camera.px_per_tile - (h - size * assets.padding);
+    const z_offset = proj.z * -camera.px_per_tile - h - size * assets.padding;
     const rotation = proj.props.rotation;
     const angle = -(proj.visual_angle + proj.props.angle_correction +
         (if (rotation == 0) 0 else float_time_ms / rotation) - camera.angle);
