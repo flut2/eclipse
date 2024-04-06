@@ -2595,6 +2595,7 @@ pub const Dropdown = struct {
 
     pub fn deinit(self: *Dropdown) void {
         self.container.deinit();
+        self.children.deinit();
     }
 
     pub fn width(self: Dropdown) f32 {
