@@ -88,11 +88,11 @@ pub const RGBF32 = extern struct {
     b: f32,
 
     pub fn fromValues(r: f32, g: f32, b: f32) RGBF32 {
-        return RGBF32{ .r = r, .g = g, .b = b };
+        return .{ .r = r, .g = g, .b = b };
     }
 
     pub fn fromInt(int: u32) RGBF32 {
-        return RGBF32{
+        return .{
             .r = @as(f32, @floatFromInt((int & 0xFF0000) >> 16)) / 255.0,
             .g = @as(f32, @floatFromInt((int & 0x00FF00) >> 8)) / 255.0,
             .b = @as(f32, @floatFromInt((int & 0x0000FF) >> 0)) / 255.0,
@@ -395,6 +395,7 @@ pub const NineSliceImageData = struct {
     alpha: f32 = 1.0,
     color: u32 = std.math.maxInt(u32),
     color_intensity: f32 = 0,
+    scissor: ScissorRect = .{},
     atlas_data: [9]AtlasData,
 
     pub fn fromAtlasData(data: AtlasData, w: f32, h: f32, slice_x: f32, slice_y: f32, slice_w: f32, slice_h: f32, alpha: f32) NineSliceImageData {
@@ -463,6 +464,7 @@ pub const NormalImageData = struct {
     alpha: f32 = 1.0,
     color: u32 = std.math.maxInt(u32),
     color_intensity: f32 = 0,
+    scissor: ScissorRect = .{},
     atlas_data: assets.AtlasData,
 
     pub fn width(self: NormalImageData) f32 {
@@ -477,6 +479,41 @@ pub const NormalImageData = struct {
 pub const ImageData = union(enum) {
     nine_slice: NineSliceImageData,
     normal: NormalImageData,
+
+    pub fn setScissor(self: *ImageData, scissor: ScissorRect) void {
+        switch (self.*) {
+            .nine_slice => |*nine_slice| nine_slice.scissor = scissor,
+            .normal => |*normal| normal.scissor = scissor,
+        }
+    }
+
+    pub fn scaleWidth(self: *ImageData, w: f32) void {
+        switch (self.*) {
+            .nine_slice => |*nine_slice| nine_slice.w = w,
+            .normal => |*normal| normal.scale_x = normal.atlas_data.texWRaw() / w,
+        }
+    }
+
+    pub fn scaleHeight(self: *ImageData, h: f32) void {
+        switch (self.*) {
+            .nine_slice => |*nine_slice| nine_slice.h = h,
+            .normal => |*normal| normal.scale_y = normal.atlas_data.texHRaw() / h,
+        }
+    }
+
+    pub fn width(self: ImageData) f32 {
+        return switch (self) {
+            .nine_slice => |nine_slice| nine_slice.w,
+            .normal => |normal| normal.width(),
+        };
+    }
+
+    pub fn height(self: ImageData) f32 {
+        return switch (self) {
+            .nine_slice => |nine_slice| nine_slice.h,
+            .normal => |normal| normal.height(),
+        };
+    }
 };
 
 pub const InteractableState = enum {
@@ -496,6 +533,32 @@ pub const InteractableImageData = struct {
             .pressed => return self.press orelse self.base,
             .hovered => return self.hover orelse self.base,
         }
+    }
+
+    pub fn width(self: InteractableImageData, state: InteractableState) f32 {
+        return self.current(state).width();
+    }
+
+    pub fn height(self: InteractableImageData, state: InteractableState) f32 {
+        return self.current(state).height();
+    }
+
+    pub fn setScissor(self: *InteractableImageData, scissor: ScissorRect) void {
+        self.base.setScissor(scissor);
+        if (self.hover) |*data| data.setScissor(scissor);
+        if (self.press) |*data| data.setScissor(scissor);
+    }
+
+    pub fn scaleWidth(self: *InteractableImageData, w: f32) void {
+        self.base.scaleWidth(w);
+        if (self.hover) |*data| data.scaleWidth(w);
+        if (self.press) |*data| data.scaleWidth(w);
+    }
+
+    pub fn scaleHeight(self: *InteractableImageData, h: f32) void {
+        self.base.scaleHeight(h);
+        if (self.hover) |*data| data.scaleHeight(h);
+        if (self.press) |*data| data.scaleHeight(h);
     }
 
     pub fn fromImageData(base: assets.AtlasData, hover: ?assets.AtlasData, press: ?assets.AtlasData) InteractableImageData {
@@ -572,6 +635,9 @@ pub const UiElement = union(enum) {
     toggle: *Toggle,
     key_mapper: *KeyMapper,
     slider: *Slider,
+    dropdown: *Dropdown,
+    // don't actually use this here. internal use only
+    dropdown_container: *DropdownContainer,
 };
 
 pub const Temporary = union(enum) {
@@ -631,6 +697,7 @@ pub const Input = struct {
             return false;
 
         if (intersects(self, x, y)) {
+            systems.hover_target = .{ .input_field = self };
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -768,6 +835,8 @@ pub const Button = struct {
                 });
                 return true;
             }
+
+            systems.hover_target = .{ .button = self };
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -894,6 +963,7 @@ pub const KeyMapper = struct {
                 return true;
             }
 
+            systems.hover_target = .{ .key_mapper = self };
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -990,6 +1060,7 @@ pub const CharacterBox = struct {
             return false;
 
         if (intersects(self, x, y)) {
+            systems.hover_target = .{ .char_box = self };
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -1339,7 +1410,7 @@ pub const ScrollableContainer = struct {
             return false;
 
         var container = self.container;
-        if (container.mousePress(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset, mods) or
+        if (container.mousePress(x, y, x_offset, y_offset, mods) or
             self.scroll_bar.mousePress(x, y, x_offset, y_offset, mods))
             return true;
 
@@ -1351,7 +1422,7 @@ pub const ScrollableContainer = struct {
             return false;
 
         var container = self.container;
-        if (container.mouseRelease(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset) or
+        if (container.mouseRelease(x, y, x_offset, y_offset) or
             self.scroll_bar.mouseRelease(x, y, x_offset, y_offset))
             return true;
 
@@ -1363,7 +1434,7 @@ pub const ScrollableContainer = struct {
             return false;
 
         var container = self.container;
-        if (container.mouseMove(x - container.x, y - container.y, container.x + x_offset, container.y + y_offset) or
+        if (container.mouseMove(x, y, x_offset, y_offset) or
             self.scroll_bar.mouseMove(x, y, x_offset, y_offset))
             return true;
 
@@ -1409,6 +1480,7 @@ pub const ScrollableContainer = struct {
                 .max_x = self.scissor_w,
                 .max_y = self.scissor_h,
             },
+            .layer = self.layer,
             .allocator = self.allocator,
         };
         self.container.init();
@@ -1430,6 +1502,7 @@ pub const ScrollableContainer = struct {
             .parent_container = self,
             .current_value = self.start_value,
             .allocator = self.allocator,
+            .layer = self.layer,
         };
         self.scroll_bar.init();
 
@@ -1453,6 +1526,7 @@ pub const ScrollableContainer = struct {
                     .pass_scroll = true,
                 },
                 .visible = false,
+                .layer = self.layer,
             };
             self.scroll_bar_decor.init();
         }
@@ -1494,9 +1568,7 @@ pub const ScrollableContainer = struct {
         const h_dt_base = (self.scissor_h - self.container.height());
         const h_dt = self.scroll_bar.current_value * h_dt_base;
         const new_h = self.scroll_bar.h / (2.0 + -h_dt_base / self.scissor_h);
-        scaleImageData(&self.scroll_bar.knob_image_data.base, new_h);
-        if (self.scroll_bar.knob_image_data.hover) |*image_data| scaleImageData(image_data, new_h);
-        if (self.scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
+        self.scroll_bar.knob_image_data.scaleHeight(new_h);
         self.scroll_bar.setValue(self.scroll_bar.current_value);
         self.scroll_bar.visible = true;
         if (self.hasScrollDecor()) self.scroll_bar_decor.visible = true;
@@ -1505,13 +1577,6 @@ pub const ScrollableContainer = struct {
         self.container.scissor.min_y = -h_dt;
         self.container.scissor.max_y = -h_dt + self.scissor_h;
         self.container.updateScissors();
-    }
-
-    fn scaleImageData(image_data: *ImageData, new_h: f32) void {
-        switch (image_data.*) {
-            .nine_slice => |*nine_slice| nine_slice.h = new_h,
-            .normal => |*normal_image_data| normal_image_data.scale_y = normal_image_data.atlas_data.texHRaw() / new_h,
-        }
     }
 
     fn onScrollChanged(scroll_bar: *Slider) void {
@@ -1525,9 +1590,7 @@ pub const ScrollableContainer = struct {
         const h_dt_base = (parent.scissor_h - parent.container.height());
         const h_dt = scroll_bar.current_value * h_dt_base;
         const new_h = parent.scroll_bar.h / (2.0 + -h_dt_base / parent.scissor_h);
-        scaleImageData(&parent.scroll_bar.knob_image_data.base, new_h);
-        if (parent.scroll_bar.knob_image_data.hover) |*image_data| scaleImageData(image_data, new_h);
-        if (parent.scroll_bar.knob_image_data.press) |*image_data| scaleImageData(image_data, new_h);
+        parent.scroll_bar.knob_image_data.scaleHeight(new_h);
         parent.scroll_bar.visible = true;
         if (parent.hasScrollDecor()) parent.scroll_bar_decor.visible = true;
 
@@ -1826,6 +1889,15 @@ pub const Container = struct {
                     };
                 },
             }
+
+            if (elem == .container) {
+                elem.container.updateScissors();
+            } else if (elem == .dropdown_container) {
+                // lol
+                elem.dropdown_container.background_data.setScissor(elem.dropdown_container.scissor);
+                elem.dropdown_container.container.scissor = elem.dropdown_container.scissor;
+                elem.dropdown_container.container.updateScissors();
+            }
         }
     }
 };
@@ -1889,6 +1961,7 @@ pub const Toggle = struct {
                 return true;
             }
 
+            systems.hover_target = .{ .toggle = self };
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -2017,6 +2090,7 @@ pub const Slider = struct {
             };
 
             if (utils.isInBounds(x, y, self.knob_x, self.knob_y, knob_w, knob_h)) {
+                systems.hover_target = .{ .slider = self };
                 self.state = .hovered;
             } else {
                 self.state = .none;
@@ -2054,6 +2128,7 @@ pub const Slider = struct {
         if (self.state == .pressed) {
             self.pressed(x, y, knob_h, knob_w);
         } else if (utils.isInBounds(x, y, self.x + self.knob_x, self.y + self.knob_y, knob_w, knob_h)) {
+            systems.hover_target = .{ .slider = self };
             self.state = .hovered;
         } else if (self.state == .hovered) {
             self.state = .none;
@@ -2268,6 +2343,293 @@ pub const Slider = struct {
             if (self.continous_event_fire)
                 self.state_change(self);
         }
+    }
+};
+
+pub const DropdownContainer = struct {
+    x: f32,
+    y: f32,
+    parent: *Dropdown,
+    container: Container,
+    pressCallback: *const fn (*DropdownContainer) void,
+    background_data: InteractableImageData,
+    state: InteractableState = .none,
+    index: u32 = std.math.maxInt(u32),
+
+    layer: Layer = .default,
+    scissor: ScissorRect = .{},
+    visible: bool = true,
+    event_policy: EventPolicy = .{},
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
+
+    pub fn mousePress(self: *DropdownContainer, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
+        if (!self.visible or self.index == self.parent.selected_index)
+            return false;
+
+        const in_bounds = intersects(self, x, y);
+        if (in_bounds) {
+            self.state = .pressed;
+            if (self.parent.selected_index != std.math.maxInt(u32))
+                self.parent.children.items[self.parent.selected_index].state = .none;
+            self.parent.selected_index = self.index;
+            if (systems.hover_target != null and
+                systems.hover_target.? == .dropdown_container and
+                systems.hover_target.?.dropdown_container == self)
+                systems.hover_target = null;
+            self.pressCallback(self);
+            return true;
+        }
+
+        return !(self.event_policy.pass_press or !in_bounds);
+    }
+
+    pub fn mouseRelease(self: *DropdownContainer, x: f32, y: f32, _: f32, _: f32) bool {
+        if (!self.visible or self.index == self.parent.selected_index)
+            return false;
+
+        const in_bounds = intersects(self, x, y);
+        if (in_bounds) {
+            self.state = .none;
+        }
+
+        return !(self.event_policy.pass_release or !in_bounds);
+    }
+
+    pub fn mouseMove(self: *DropdownContainer, x: f32, y: f32, _: f32, _: f32) bool {
+        if (!self.visible or self.index == self.parent.selected_index)
+            return false;
+
+        const in_bounds = intersects(self, x, y);
+        if (in_bounds) {
+            systems.hover_target = .{ .dropdown_container = self };
+            self.state = .hovered;
+        } else {
+            self.state = .none;
+        }
+
+        return !(self.event_policy.pass_move or !in_bounds);
+    }
+
+    pub fn init(self: *DropdownContainer) void {
+        self.container.init();
+    }
+
+    pub fn deinit(self: *DropdownContainer) void {
+        self.container.deinit();
+    }
+
+    pub fn width(self: *DropdownContainer) f32 {
+        return @max(self.background_data.width(self.state), self.container.width());
+    }
+
+    pub fn height(self: *DropdownContainer) f32 {
+        return @max(self.background_data.height(self.state), self.container.height());
+    }
+};
+
+pub const Dropdown = struct {
+    x: f32,
+    y: f32,
+    w: f32,
+    container_inlay_x: f32,
+    container_inlay_y: f32,
+    // w/h will be overwritten
+    title_data: ImageData,
+    title_text: TextData,
+    // make sure h is appriopriate. w will be overwritten
+    background_data: ImageData,
+    button_data_collapsed: InteractableImageData,
+    button_data_extended: InteractableImageData,
+    // the w on these will be overwritten. h must match
+    main_background_data: InteractableImageData,
+    alt_background_data: InteractableImageData,
+    scroll_w: f32,
+    scroll_h: f32,
+    scroll_side_x_rel: f32 = std.math.floatMax(f32),
+    scroll_side_y_rel: f32 = std.math.floatMax(f32),
+    scroll_side_decor_image_data: ImageData = undefined,
+    scroll_decor_image_data: ImageData,
+    scroll_knob_image_data: InteractableImageData,
+    button_state: InteractableState = .none,
+    container: *ScrollableContainer = undefined,
+    layer: Layer = .default,
+    scissor: ScissorRect = .{},
+    visible: bool = true,
+    toggled: bool = false,
+    event_policy: EventPolicy = .{},
+    disposed: bool = false,
+    allocator: std.mem.Allocator = undefined,
+    next_index: u32 = 0,
+    selected_index: u32 = std.math.maxInt(u32),
+    lock: std.Thread.Mutex = .{},
+    children: std.ArrayList(*DropdownContainer) = undefined,
+
+    pub fn mousePress(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
+        if (!self.visible)
+            return false;
+
+        const button_data = if (self.toggled) self.button_data_collapsed else self.button_data_extended;
+        const current_button = button_data.current(self.button_state);
+        const in_bounds = utils.isInBounds(x, y, self.x + self.title_data.width(), self.y, current_button.width(), current_button.height());
+        if (in_bounds) {
+            self.button_state = .pressed;
+            self.toggled = !self.toggled;
+            assets.playSfx("button_click");
+            return true;
+        }
+
+        const block = !(self.event_policy.pass_press or !in_bounds);
+        if (!block)
+            return self.container.mousePress(x, y, x_offset, y_offset, mods);
+
+        return block;
+    }
+
+    pub fn mouseRelease(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
+        if (!self.visible)
+            return false;
+
+        const button_data = if (self.toggled) self.button_data_collapsed else self.button_data_extended;
+        const current_button = button_data.current(self.button_state);
+        const in_bounds = utils.isInBounds(x, y, self.x + self.title_data.width(), self.y, current_button.width(), current_button.height());
+        if (in_bounds) {
+            self.button_state = .none;
+        }
+
+        const block = !(self.event_policy.pass_release or !in_bounds);
+        if (!block)
+            return self.container.mouseRelease(x, y, x_offset, y_offset);
+
+        return block;
+    }
+
+    pub fn mouseMove(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
+        if (!self.visible)
+            return false;
+
+        const button_data = if (self.toggled) self.button_data_collapsed else self.button_data_extended;
+        const current_button = button_data.current(self.button_state);
+        const in_bounds = utils.isInBounds(x, y, self.x + self.title_data.width(), self.y, current_button.width(), current_button.height());
+        if (in_bounds) {
+            systems.hover_target = .{ .dropdown = self };
+            self.button_state = .hovered;
+        } else {
+            self.button_state = .none;
+        }
+
+        const block = !(self.event_policy.pass_move or !in_bounds);
+        if (!block)
+            return self.container.mouseMove(x, y, x_offset, y_offset);
+
+        return block;
+    }
+
+    pub fn mouseScroll(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32, x_scroll: f32, y_scroll: f32) bool {
+        if (!self.visible)
+            return false;
+
+        if (self.container.mouseScroll(x, y, x_offset, y_offset, x_scroll, y_scroll))
+            return true;
+
+        return !(self.event_policy.pass_scroll or !intersects(self, x, y));
+    }
+
+    pub fn init(self: *Dropdown) void {
+        std.debug.assert(self.button_data_collapsed.width(.none) == self.button_data_extended.width(.none) and
+            self.button_data_collapsed.height(.none) == self.button_data_extended.height(.none) and
+            self.button_data_collapsed.width(.hovered) == self.button_data_extended.width(.hovered) and
+            self.button_data_collapsed.height(.hovered) == self.button_data_extended.height(.hovered) and
+            self.button_data_collapsed.width(.pressed) == self.button_data_extended.width(.pressed) and
+            self.button_data_collapsed.height(.pressed) == self.button_data_extended.height(.pressed));
+
+        std.debug.assert(self.main_background_data.height(.none) == self.alt_background_data.height(.none) and
+            self.main_background_data.height(.hovered) == self.alt_background_data.height(.hovered) and
+            self.main_background_data.height(.pressed) == self.alt_background_data.height(.pressed));
+
+        self.children = std.ArrayList(*DropdownContainer).init(self.allocator);
+
+        self.background_data.scaleWidth(self.w);
+        self.title_data.scaleWidth(self.w - self.button_data_collapsed.width(.none));
+        self.title_data.scaleHeight(self.button_data_collapsed.height(.none));
+
+        self.title_text.max_width = self.title_data.width();
+        self.title_text.max_height = self.title_data.height();
+        self.title_text.vert_align = .middle;
+        self.title_text.hori_align = .middle;
+        {
+            self.title_text.lock.lock();
+            defer self.title_text.lock.unlock();
+            self.title_text.recalculateAttributes(self.allocator);
+        }
+
+        const scroll_max_w = @max(self.scroll_w, self.scroll_knob_image_data.width(.none));
+        const scissor_w = self.w - self.container_inlay_x * 2 - scroll_max_w - 2 +
+            (if (self.scroll_side_x_rel > 0.0) 0.0 else self.scroll_side_x_rel);
+
+        self.main_background_data.scaleWidth(scissor_w);
+        self.alt_background_data.scaleWidth(scissor_w);
+
+        const scroll_x_base = self.x + self.container_inlay_x + scissor_w + 2;
+        const scroll_y_base = self.y + self.container_inlay_y + self.title_data.height();
+        self.container = self.allocator.create(ScrollableContainer) catch std.debug.panic("Dropdown child container alloc failed", .{});
+        self.container.* = .{
+            .x = self.x + self.container_inlay_x,
+            .y = self.y + self.container_inlay_y + self.title_data.height(),
+            .scissor_w = scissor_w,
+            .scissor_h = self.background_data.height() - self.container_inlay_y * 2 - 6,
+            .scroll_x = scroll_x_base + if (self.scroll_side_x_rel == std.math.floatMax(f32)) 0.0 else -self.scroll_side_x_rel,
+            .scroll_y = scroll_y_base + if (self.scroll_side_y_rel == std.math.floatMax(f32)) 0.0 else -self.scroll_side_y_rel,
+            .scroll_w = self.scroll_w,
+            .scroll_h = self.scroll_h,
+            .scroll_side_x = scroll_x_base,
+            .scroll_side_y = scroll_y_base,
+            .scroll_decor_image_data = self.scroll_decor_image_data,
+            .scroll_knob_image_data = self.scroll_knob_image_data,
+            .scroll_side_decor_image_data = self.scroll_side_decor_image_data,
+            .layer = self.layer,
+            .allocator = self.allocator,
+        };
+        self.container.init();
+    }
+
+    pub fn deinit(self: *Dropdown) void {
+        self.container.deinit();
+    }
+
+    pub fn width(self: Dropdown) f32 {
+        return self.background_data.width();
+    }
+
+    pub fn height(self: Dropdown) f32 {
+        return self.title_data.height() + (if (self.toggled) self.background_data.height() else 0.0);
+    }
+
+    // the container field's x/y are relative to parents
+    pub fn createChild(self: *Dropdown, pressCallback: *const fn (*DropdownContainer) void) !*DropdownContainer {
+        self.lock.lock();
+        defer self.lock.unlock();
+
+        const next_idx: f32 = @floatFromInt(self.next_index);
+        const ret = try self.container.createChild(DropdownContainer{
+            .x = 0,
+            .y = self.main_background_data.height(.none) * next_idx,
+            .parent = self,
+            .container = .{
+                .x = 0,
+                .y = 0,
+                .allocator = self.allocator,
+                .visible = self.visible,
+            },
+            .pressCallback = pressCallback,
+            .index = self.next_index,
+            .layer = self.layer,
+            .visible = self.visible,
+            .background_data = if (@mod(self.next_index, 2) == 0) self.main_background_data else self.alt_background_data,
+        });
+        self.next_index += 1;
+        try self.children.append(ret);
+        return ret;
     }
 };
 

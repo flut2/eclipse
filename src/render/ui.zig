@@ -418,10 +418,11 @@ inline fn drawNineSlice(
 ) u16 {
     var new_idx = idx;
 
-    const opts = base.QuadOptions{
+    var opts = base.QuadOptions{
         .alpha_mult = image_data.alpha,
         .base_color = image_data.color,
         .base_color_intensity = image_data.color_intensity,
+        .scissor = image_data.scissor,
     };
 
     const w = image_data.w;
@@ -434,33 +435,127 @@ inline fn drawNineSlice(
 
     const top_right = image_data.topRight();
     const top_right_w = top_right.texWRaw();
+    if (image_data.scissor.min_x != element.ScissorRect.dont_scissor)
+        opts.scissor.min_x = image_data.scissor.min_x - (w - top_right_w);
+    if (image_data.scissor.max_x != element.ScissorRect.dont_scissor)
+        opts.scissor.max_x = image_data.scissor.max_x - (w - top_right_w);
     new_idx = base.drawQuad(new_idx, x + (w - top_right_w), y, top_right_w, top_right.texHRaw(), top_right, draw_data, opts);
 
     const bottom_left = image_data.bottomLeft();
     const bottom_left_w = bottom_left.texWRaw();
     const bottom_left_h = bottom_left.texHRaw();
+    opts.scissor.min_x = image_data.scissor.min_x;
+    opts.scissor.max_x = image_data.scissor.max_x;
+    if (image_data.scissor.min_y != element.ScissorRect.dont_scissor)
+        opts.scissor.min_y = image_data.scissor.min_y - (h - bottom_left_h);
+    if (image_data.scissor.max_y != element.ScissorRect.dont_scissor)
+        opts.scissor.max_y = image_data.scissor.max_y - (h - bottom_left_h);
     new_idx = base.drawQuad(new_idx, x, y + (h - bottom_left_h), bottom_left.texWRaw(), bottom_left_h, bottom_left, draw_data, opts);
 
     const bottom_right = image_data.bottomRight();
     const bottom_right_w = bottom_right.texWRaw();
     const bottom_right_h = bottom_right.texHRaw();
+    opts.scissor.min_x = if (image_data.scissor.min_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_x - (w - top_right_w)
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_x = if (image_data.scissor.max_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_x - (w - top_right_w)
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.min_y = if (image_data.scissor.min_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_y - (h - bottom_left_h)
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_y = if (image_data.scissor.max_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_y - (h - bottom_left_h)
+    else
+        element.ScissorRect.dont_scissor;
     new_idx = base.drawQuad(new_idx, x + (w - bottom_right_w), y + (h - bottom_right_h), bottom_right_w, bottom_right_h, bottom_right, draw_data, opts);
 
     const top_center = image_data.topCenter();
+    opts.scissor.min_x = if (image_data.scissor.min_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_x - top_left_w
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_x = if (image_data.scissor.max_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_x - top_left_w
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.min_y = image_data.scissor.min_y;
+    opts.scissor.max_y = image_data.scissor.max_y;
     new_idx = base.drawQuad(new_idx, x + top_left_w, y, w - top_left_w - top_right_w, top_center.texHRaw(), top_center, draw_data, opts);
 
     const bottom_center = image_data.bottomCenter();
     const bottom_center_h = bottom_center.texHRaw();
+    opts.scissor.min_x = if (image_data.scissor.min_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_x - bottom_left_w
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_x = if (image_data.scissor.max_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_x - bottom_left_w
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.min_y = if (image_data.scissor.min_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_y - (h - bottom_center_h)
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_y = if (image_data.scissor.max_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_y - (h - bottom_center_h)
+    else
+        element.ScissorRect.dont_scissor;
     new_idx = base.drawQuad(new_idx, x + bottom_left_w, y + (h - bottom_center_h), w - bottom_left_w - bottom_right_w, bottom_center_h, bottom_center, draw_data, opts);
 
     const middle_center = image_data.middleCenter();
+    opts.scissor.min_x = if (image_data.scissor.min_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_x - top_left_w
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_x = if (image_data.scissor.max_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_x - top_left_w
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.min_y = if (image_data.scissor.min_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_y - top_left_h
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_y = if (image_data.scissor.max_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_y - top_left_h
+    else
+        element.ScissorRect.dont_scissor;
     new_idx = base.drawQuad(new_idx, x + top_left_w, y + top_left_h, w - top_left_w - top_right_w, h - top_left_h - bottom_left_h, middle_center, draw_data, opts);
 
     const middle_left = image_data.middleLeft();
+    opts.scissor.min_x = image_data.scissor.min_x;
+    opts.scissor.max_x = image_data.scissor.max_x;
+    opts.scissor.min_y = if (image_data.scissor.min_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_y - top_left_h
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_y = if (image_data.scissor.max_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_y - top_left_h
+    else
+        element.ScissorRect.dont_scissor;
     new_idx = base.drawQuad(new_idx, x, y + top_left_h, middle_left.texWRaw(), h - top_left_h - bottom_left_h, middle_left, draw_data, opts);
 
     const middle_right = image_data.middleRight();
     const middle_right_w = middle_right.texWRaw();
+    opts.scissor.min_x = if (image_data.scissor.min_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_x - (w - middle_right_w)
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_x = if (image_data.scissor.max_x != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_x - (w - middle_right_w)
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.min_y = if (image_data.scissor.min_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.min_y - top_left_h
+    else
+        element.ScissorRect.dont_scissor;
+    opts.scissor.max_y = if (image_data.scissor.max_y != element.ScissorRect.dont_scissor)
+        image_data.scissor.max_y - top_left_h
+    else
+        element.ScissorRect.dont_scissor;
     new_idx = base.drawQuad(new_idx, x + (w - middle_right_w), y + top_left_h, middle_right_w, h - top_left_h - bottom_left_h, middle_right, draw_data, opts);
 
     return new_idx;
@@ -897,14 +992,7 @@ inline fn drawSlider(idx: u16, slider: *element.Slider, draw_data: base.DrawData
     var knob_h: f32 = 0.0;
     switch (knob_image_data) {
         .nine_slice => |nine_slice| {
-            new_idx = drawNineSlice(
-                new_idx,
-                knob_x,
-                knob_y,
-                nine_slice,
-                draw_data,
-            );
-
+            new_idx = drawNineSlice(new_idx, knob_x, knob_y, nine_slice, draw_data);
             knob_w = nine_slice.w;
             knob_h = nine_slice.h;
         },
@@ -951,6 +1039,99 @@ inline fn drawSlider(idx: u16, slider: *element.Slider, draw_data: base.DrawData
             draw_data,
             slider.scissor,
         );
+    }
+
+    return new_idx;
+}
+
+inline fn drawDropdown(idx: u16, dropdown: *element.Dropdown, draw_data: base.DrawData, x_offset: f32, y_offset: f32) u16 {
+    var new_idx = idx;
+
+    if (!dropdown.visible)
+        return new_idx;
+
+    const base_x = dropdown.x + x_offset;
+    const base_y = dropdown.y + y_offset;
+
+    var title_w: f32 = 0.0;
+    var title_h: f32 = 0.0;
+    switch (dropdown.title_data) {
+        .nine_slice => |nine_slice| {
+            new_idx = drawNineSlice(new_idx, base_x, base_y, nine_slice, draw_data);
+            title_w = nine_slice.w;
+            title_h = nine_slice.h;
+        },
+        .normal => |image_data| {
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = dropdown.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+            };
+            new_idx = base.drawQuad(
+                new_idx,
+                base_x,
+                base_y,
+                image_data.width(),
+                image_data.height(),
+                image_data.atlas_data,
+                draw_data,
+                opts,
+            );
+
+            title_w = image_data.width();
+            title_h = image_data.height();
+        },
+    }
+
+    new_idx = base.drawText(new_idx, base_x, base_y, &dropdown.title_text, draw_data, dropdown.scissor);
+
+    const toggled = dropdown.toggled;
+    const button_image_data = (if (toggled) dropdown.button_data_extended else dropdown.button_data_collapsed).current(dropdown.button_state);
+    switch (button_image_data) {
+        .nine_slice => |nine_slice| new_idx = drawNineSlice(new_idx, base_x + title_w, base_y, nine_slice, draw_data),
+        .normal => |image_data| {
+            const opts = base.QuadOptions{
+                .alpha_mult = image_data.alpha,
+                .scissor = dropdown.scissor,
+                .base_color = image_data.color,
+                .base_color_intensity = image_data.color_intensity,
+            };
+            new_idx = base.drawQuad(
+                new_idx,
+                base_x + title_w,
+                base_y,
+                image_data.width(),
+                image_data.height(),
+                image_data.atlas_data,
+                draw_data,
+                opts,
+            );
+        },
+    }
+
+    if (toggled) {
+        switch (dropdown.background_data) {
+            .nine_slice => |nine_slice| new_idx = drawNineSlice(new_idx, base_x, base_y + title_h, nine_slice, draw_data),
+            .normal => |image_data| {
+                const opts = base.QuadOptions{
+                    .alpha_mult = image_data.alpha,
+                    .scissor = dropdown.scissor,
+                    .base_color = image_data.color,
+                    .base_color_intensity = image_data.color_intensity,
+                };
+                new_idx = base.drawQuad(
+                    new_idx,
+                    base_x,
+                    base_y + title_h,
+                    image_data.width(),
+                    image_data.height(),
+                    image_data.atlas_data,
+                    draw_data,
+                    opts,
+                );
+            },
+        }
     }
 
     return new_idx;
@@ -1003,6 +1184,55 @@ fn drawElement(
         .toggle => |toggle| new_idx = drawToggle(new_idx, toggle, draw_data, x_offset, y_offset),
         .key_mapper => |key_mapper| new_idx = drawKeyMapper(new_idx, key_mapper, draw_data, x_offset, y_offset),
         .slider => |slider| new_idx = drawSlider(new_idx, slider, draw_data, x_offset, y_offset),
+        .dropdown => |dropdown| {
+            const toggled = dropdown.toggled and dropdown.container.visible;
+            if (toggled) dropdown.lock.lock();
+            defer if (toggled) dropdown.lock.unlock();
+
+            new_idx = drawDropdown(new_idx, dropdown, draw_data, x_offset, y_offset);
+            if (toggled)
+                new_idx = drawElement(new_idx, .{ .scrollable_container = dropdown.container }, draw_data, cam_x, cam_y, x_offset, y_offset, time);
+        },
+        .dropdown_container => |dropdown_container| {
+            switch (dropdown_container.background_data.current(dropdown_container.state)) {
+                .nine_slice => |nine_slice| new_idx = drawNineSlice(
+                    new_idx,
+                    dropdown_container.x + x_offset,
+                    dropdown_container.y + y_offset,
+                    nine_slice,
+                    draw_data,
+                ),
+                .normal => |image_data| {
+                    const opts = base.QuadOptions{
+                        .alpha_mult = image_data.alpha,
+                        .scissor = dropdown_container.scissor,
+                        .base_color = image_data.color,
+                        .base_color_intensity = image_data.color_intensity,
+                    };
+                    new_idx = base.drawQuad(
+                        new_idx,
+                        dropdown_container.x + x_offset,
+                        dropdown_container.y + y_offset,
+                        image_data.width(),
+                        image_data.height(),
+                        image_data.atlas_data,
+                        draw_data,
+                        opts,
+                    );
+                },
+            }
+
+            new_idx = drawElement(
+                new_idx,
+                .{ .container = &dropdown_container.container },
+                draw_data,
+                cam_x,
+                cam_y,
+                dropdown_container.x + x_offset,
+                dropdown_container.y + y_offset,
+                time,
+            );
+        },
     }
 
     return new_idx;

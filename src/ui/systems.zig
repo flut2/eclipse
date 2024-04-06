@@ -46,6 +46,7 @@ pub var temp_elements: std.ArrayList(element.Temporary) = undefined;
 pub var temp_elements_to_add: std.ArrayList(element.Temporary) = undefined;
 pub var screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
+pub var hover_target: ?element.UiElement = null;
 
 var last_element_update: i64 = 0;
 var allocator: std.mem.Allocator = undefined;
@@ -174,10 +175,32 @@ pub fn removeAttachedUi(obj_id: i32) void {
 }
 
 pub fn mouseMove(x: f32, y: f32) bool {
-    tooltip.switchTooltip(.none, {});
-
     ui_lock.lock();
     defer ui_lock.unlock();
+
+    tooltip.switchTooltip(.none, {});
+    if (hover_target) |target| {
+        // this is intentionally not else-d. don't add
+        switch (target) {
+            .image => {},
+            .item => {},
+            .bar => {},
+            .input_field => |input_field| input_field.state = .none,
+            .button => |button| button.state = .none,
+            .text => {},
+            .char_box => |box| box.state = .none,
+            .container => {},
+            .scrollable_container => {},
+            .menu_bg => {},
+            .toggle => |toggle| toggle.state = .none,
+            .key_mapper => |key_mapper| key_mapper.state = .none,
+            .slider => {},
+            .dropdown => |dropdown| dropdown.button_state = .none,
+            .dropdown_container => |dc| dc.state = .none,
+        }
+
+        hover_target = null;
+    }
 
     var elem_iter_1 = std.mem.reverseIterator(elements.items);
     while (elem_iter_1.next()) |elem| {

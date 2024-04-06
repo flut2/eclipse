@@ -13,6 +13,7 @@ const rpc = @import("rpc");
 const dialog = @import("../dialogs/dialog.zig");
 
 const Interactable = element.InteractableImageData;
+const NineSlice = element.NineSliceImageData;
 
 pub const AccountLoginScreen = struct {
     email_text: *element.Text = undefined,
@@ -159,7 +160,7 @@ pub const AccountLoginScreen = struct {
         screen.login_button = try element.create(allocator, element.Button{
             .x = screen.password_input.x + (input_w - 200) / 2 - 12.5,
             .y = screen.password_input.y + 150,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 11, 9, 3, 3, 1.0),
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Login",
                 .size = 16,
@@ -171,7 +172,7 @@ pub const AccountLoginScreen = struct {
         screen.confirm_button = try element.create(allocator, element.Button{
             .x = screen.login_button.x + (input_w - 100) / 2 + 25,
             .y = screen.login_button.y,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 11, 9, 3, 3, 1.0),
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Register",
                 .size = 16,
@@ -183,7 +184,7 @@ pub const AccountLoginScreen = struct {
         screen.editor_button = try element.create(allocator, element.Button{
             .x = screen.password_input.x + (input_w - 200) / 2,
             .y = screen.confirm_button.y + 50,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 11, 9, 3, 3, 1.0),
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Editor",
                 .size = 16,
@@ -191,8 +192,151 @@ pub const AccountLoginScreen = struct {
             },
             .press_callback = enableEditorCallback,
         });
+
+        const collapsed_icon_base = assets.getUiData("dropdown_collapsed_icon_base", 0);
+        const collapsed_icon_hover = assets.getUiData("dropdown_collapsed_icon_hover", 0);
+        const collapsed_icon_press = assets.getUiData("dropdown_collapsed_icon_press", 0);
+        const extended_icon_base = assets.getUiData("dropdown_extended_icon_base", 0);
+        const extended_icon_hover = assets.getUiData("dropdown_extended_icon_hover", 0);
+        const extended_icon_press = assets.getUiData("dropdown_extended_icon_press", 0);
+        const dropdown_main_color_base = assets.getUiData("dropdown_main_color_base", 0);
+        const dropdown_main_color_hover = assets.getUiData("dropdown_main_color_hover", 0);
+        const dropdown_main_color_press = assets.getUiData("dropdown_main_color_press", 0);
+        const dropdown_alt_color_base = assets.getUiData("dropdown_alt_color_base", 0);
+        const dropdown_alt_color_hover = assets.getUiData("dropdown_alt_color_hover", 0);
+        const dropdown_alt_color_press = assets.getUiData("dropdown_alt_color_press", 0);
+        const title_background = assets.getUiData("dropdown_title_background", 0);
+        const background_data = assets.getUiData("dropdown_background", 0);
+        const chat_scroll_background_data = assets.getUiData("chatbox_scroll_background", 0);
+        const chat_scroll_knob_base = assets.getUiData("chatbox_scroll_wheel_base", 0);
+        const chat_scroll_knob_hover = assets.getUiData("chatbox_scroll_wheel_hover", 0);
+        const chat_scroll_knob_press = assets.getUiData("chatbox_scroll_wheel_press", 0);
+        const chat_scroll_decor_data = assets.getUiData("chatbox_scrollbar_decor", 0);
+
+        var dropdown_test = try element.create(allocator, element.Dropdown{
+            .x = screen.email_input.x + screen.email_input.width() + 50,
+            .y = screen.email_input.y,
+            .w = 300,
+            .container_inlay_x = 8,
+            .container_inlay_y = 2,
+            .button_data_collapsed = Interactable.fromImageData(collapsed_icon_base, collapsed_icon_hover, collapsed_icon_press),
+            .button_data_extended = Interactable.fromImageData(extended_icon_base, extended_icon_hover, extended_icon_press),
+            .main_background_data = Interactable.fromNineSlices(dropdown_main_color_base, dropdown_main_color_hover, dropdown_main_color_press, 0, 40, 0, 0, 2, 2, 1.0),
+            .alt_background_data = Interactable.fromNineSlices(dropdown_alt_color_base, dropdown_alt_color_hover, dropdown_alt_color_press, 0, 40, 0, 0, 2, 2, 1.0),
+            .title_data = .{ .nine_slice = NineSlice.fromAtlasData(title_background, 0, 0, 20, 20, 4, 4, 1.0) },
+            .title_text = .{
+                .text = "Select a Server",
+                .size = 20,
+                .text_type = .bold_italic,
+                .max_chars = 256,
+            },
+            .background_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, 0, 200, 20, 8, 4, 4, 1.0) },
+            .scroll_w = 4,
+            .scroll_h = 190,
+            .scroll_side_x_rel = -6,
+            .scroll_side_y_rel = 0,
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_background_data, 4, 190, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = Interactable.fromNineSlices(chat_scroll_knob_base, chat_scroll_knob_hover, chat_scroll_knob_press, 8, 16, 3, 3, 2, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_decor_data, 6, 190, 0, 41, 6, 3, 1.0) },
+        });
+
+        const test_line1 = try dropdown_test.createChild(testCallback);
+        _ = try test_line1.container.createChild(element.Text{
+            .x = 0,
+            .y = 0,
+            .text_data = .{
+                .text = "Attack The Boss",
+                .size = 20,
+                .text_type = .bold,
+                .hori_align = .middle,
+                .vert_align = .middle,
+                .max_width = test_line1.background_data.width(.none),
+                .max_height = test_line1.background_data.height(.none),
+            },
+        });
+
+        const test_line2 = try dropdown_test.createChild(testCallback);
+        _ = try test_line2.container.createChild(element.Text{
+            .x = 0,
+            .y = 0,
+            .text_data = .{
+                .text = "Kingdom",
+                .size = 20,
+                .text_type = .bold,
+                .hori_align = .middle,
+                .vert_align = .middle,
+                .max_width = test_line2.background_data.width(.none),
+                .max_height = test_line2.background_data.height(.none),
+            },
+        });
+
+        const test_line3 = try dropdown_test.createChild(testCallback);
+        _ = try test_line3.container.createChild(element.Text{
+            .x = 0,
+            .y = 0,
+            .text_data = .{
+                .text = "Valormc",
+                .size = 20,
+                .text_type = .bold,
+                .hori_align = .middle,
+                .vert_align = .middle,
+                .max_width = test_line3.background_data.width(.none),
+                .max_height = test_line3.background_data.height(.none),
+            },
+        });
+
+        const test_line4 = try dropdown_test.createChild(testCallback);
+        _ = try test_line4.container.createChild(element.Text{
+            .x = 0,
+            .y = 0,
+            .text_data = .{
+                .text = "Attack The Boss 2",
+                .size = 20,
+                .text_type = .bold,
+                .hori_align = .middle,
+                .vert_align = .middle,
+                .max_width = test_line4.background_data.width(.none),
+                .max_height = test_line4.background_data.height(.none),
+            },
+        });
+
+        const test_line5 = try dropdown_test.createChild(testCallback);
+        _ = try test_line5.container.createChild(element.Text{
+            .x = 0,
+            .y = 0,
+            .text_data = .{
+                .text = "Attack The Boss 3",
+                .size = 20,
+                .text_type = .bold,
+                .hori_align = .middle,
+                .vert_align = .middle,
+                .max_width = test_line5.background_data.width(.none),
+                .max_height = test_line5.background_data.height(.none),
+            },
+        });
+
+        const test_line6 = try dropdown_test.createChild(testCallback);
+        _ = try test_line6.container.createChild(element.Text{
+            .x = 0,
+            .y = 0,
+            .text_data = .{
+                .text = "Attack The Boss 4",
+                .size = 20,
+                .text_type = .bold,
+                .hori_align = .middle,
+                .vert_align = .middle,
+                .max_width = test_line6.background_data.width(.none),
+                .max_height = test_line6.background_data.height(.none),
+            },
+        });
+
         screen.inited = true;
         return screen;
+    }
+
+    pub fn testCallback(dc: *element.DropdownContainer) void {
+        const test_vals = [_][]const u8{ "Attack The Boss", "Kingdom", "Valormc", "Attack The Boss 2", "Attack The Boss 3", "Attack The Boss 4" };
+        std.log.err("clicked {s}", .{test_vals[dc.index]});
     }
 
     pub fn enableEditorCallback() void {
