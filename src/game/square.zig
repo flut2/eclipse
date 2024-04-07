@@ -37,12 +37,6 @@ pub const Square = struct {
         };
 
         texParse: {
-            if (self.tile_type == 0xFFFC) {
-                self.atlas_data = assets.editor_tile;
-                self.updateBlends();
-                break :texParse;
-            }
-
             if (game_data.ground_type_to_tex_data.get(self.tile_type)) |tex_list| {
                 if (tex_list.len == 0) {
                     std.log.err("Square with type 0x{x} has an empty texture list, parsing failed", .{self.tile_type});
@@ -103,7 +97,7 @@ pub const Square = struct {
                 break :blk en == .object and en.object.class == .wall;
             };
 
-            if (other_sq.tile_type != 0xFF and !has_wall) {
+            if (other_sq.tile_type != 0xFF and other_sq.tile_type != 0xFFFE and !has_wall) {
                 const other_blend_prio = other_sq.props.blend_prio;
                 if (other_blend_prio > current_prio) {
                     square.blends[blend_idx] = .{
@@ -126,7 +120,7 @@ pub const Square = struct {
     }
 
     pub fn updateBlends(square: *Square) void {
-        if (square.tile_type == 0xFF)
+        if (square.tile_type == 0xFF or square.tile_type == 0xFFFE)
             return;
 
         map.object_lock.lockShared();

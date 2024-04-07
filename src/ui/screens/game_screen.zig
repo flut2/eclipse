@@ -393,7 +393,7 @@ pub const GameScreen = struct {
             .scroll_side_x = screen.chat_decor.x + 393,
             .scroll_side_y = screen.chat_decor.y + 24,
             .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_background_data, 4, 240, 0, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = Interactable.fromNineSlices(chat_scroll_knob_base, chat_scroll_knob_hover, chat_scroll_knob_press, 8, 16, 3, 3, 2, 2, 1.0),
+            .scroll_knob_image_data = Interactable.fromNineSlices(chat_scroll_knob_base, chat_scroll_knob_hover, chat_scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
             .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_decor_data, 6, 240, 0, 41, 6, 3, 1.0) },
             .start_value = 1.0,
         });

@@ -281,7 +281,6 @@ pub var error_data_player: AnimPlayerData = undefined;
 pub var light_w: f32 = 1.0;
 pub var light_h: f32 = 1.0;
 pub var light_data: AtlasData = undefined;
-pub var editor_tile: AtlasData = undefined;
 
 fn imageBounds(img: zstbi.Image, x: usize, y: usize, cut_w: u32, cut_h: u32) struct {
     w: u32,
@@ -980,7 +979,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("basic_projectiles", "basic_projectiles.png", 8, 8, true, &ctx, allocator);
     try addImage("wall_backface", "wall_backface.png", 8, 8, false, &ctx, allocator);
     try addImage("particles", "particles.png", 8, 8, false, &ctx, allocator);
-    try addImage("editor_tile_base", "editor_tile_base.png", 8, 8, false, &ctx, allocator);
 
     try addAnimEnemy("low_realm", "low_realm.png", 10, 10, 60, 10, &ctx, allocator);
     try addAnimEnemy("low_realm_big", "low_realm_big.png", 18, 18, 108, 18, &ctx, allocator);
@@ -1006,7 +1004,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     const imply_size = std.math.maxInt(u32);
     try addUiImage("ability_icons", "sheets/ability_icons.png", 44, 44, &ctx, allocator);
     try addUiImage("menu_decor_frame", "ui/menu_decor_frame.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("faer_logo", "ui/faer_logo.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("retrieve_button", "ui/retrieve_button.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("options_button", "ui/options_button.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("rare_slot", "ui/rare_slot.png", imply_size, imply_size, &ui_ctx, allocator);
@@ -1129,11 +1126,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     if (atlas_data.get("particles")) |particles| {
         particle_data = particles[0x0];
     } else std.debug.panic("Could not find particle in the atlas", .{});
-
-    if (atlas_data.get("editor_tile_base")) |editor_tile_tex| {
-        editor_tile = editor_tile_tex[0x0];
-        editor_tile.removePadding();
-    } else std.debug.panic("Could not find editor_tile_base in the atlas", .{});
 
     if (atlas_data.get("bars")) |bars| {
         hp_bar_data = bars[0x0];

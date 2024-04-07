@@ -1,5 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <GroundTypes>
+    <Ground type="0xFFFE" id="Editor Grid">
+        <Texture>
+            <Sheet>ground</Sheet>
+            <Index>0x13c</Index>
+        </Texture>
+    </Ground>
     <Ground type="0x00" id="Wood Light">
         <Texture>
             <Sheet>ground</Sheet>
