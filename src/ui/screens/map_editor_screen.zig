@@ -444,6 +444,7 @@ pub const MapEditorScreen = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = newCallback,
         });
 
@@ -610,6 +611,7 @@ pub const MapEditorScreen = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = newCreateCallback,
         });
         _ = try screen.new_container.createChild(element.Button{
@@ -621,6 +623,7 @@ pub const MapEditorScreen = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = newCloseCallback,
         });
 
@@ -748,16 +751,16 @@ pub const MapEditorScreen = struct {
         screen.map_size = 256;
     }
 
-    fn newCallback() void {
-        const screen = ui_systems.screen.editor;
+    fn newCallback(ud: ?*anyopaque) void {
+        const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
         screen.new_container.visible = true;
         screen.buttons_container.visible = false;
 
         screen.active_brush.reset();
     }
 
-    fn newCreateCallback() void {
-        const screen = ui_systems.screen.editor;
+    fn newCreateCallback(ud: ?*anyopaque) void {
+        const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
 
         screen.buttons_container.visible = true;
         screen.new_container.visible = false;
@@ -803,12 +806,12 @@ pub const MapEditorScreen = struct {
         ui_systems.menu_background.visible = false; // hack
     }
 
-    fn newCloseCallback() void {
-        const screen = ui_systems.screen.editor;
+    fn newCloseCallback(ud: ?*anyopaque) void {
+        const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
         screen.reset();
     }
 
-    fn openCallback() void {
+    fn openCallback(_: ?*anyopaque) void {
         // if (main.editing_map) {} // maybe a popup to ask to save?
 
         const file_path = nfd.openFileDialog("em", null) catch return;
@@ -821,7 +824,7 @@ pub const MapEditorScreen = struct {
         }
     }
 
-    fn saveCallback() void {
+    fn saveCallback(_: ?*anyopaque) void {
         if (!main.editing_map) return;
 
         const file_path = nfd.saveFileDialog("em", null) catch return;
@@ -833,7 +836,7 @@ pub const MapEditorScreen = struct {
         }
     }
 
-    pub fn exitCallback() void {
+    pub fn exitCallback(_: ?*anyopaque) void {
         ui_systems.switchScreen(.main_menu);
     }
 
@@ -957,7 +960,6 @@ pub const MapEditorScreen = struct {
     }
 
     pub fn onKeyPress(self: *MapEditorScreen, key: glfw.Key) void {
-
         if (key == .F4) {
             self.active_brush.increaseSize();
         }

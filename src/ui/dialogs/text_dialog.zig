@@ -93,7 +93,7 @@ pub const TextDialog = struct {
         });
     }
 
-    fn closeDialog() void {
+    fn closeDialog(_: ?*anyopaque) void {
         dialog.showDialog(.none, {});
     }
 

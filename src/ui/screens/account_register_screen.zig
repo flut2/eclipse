@@ -212,6 +212,7 @@ pub const AccountRegisterScreen = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = registerCallback,
         });
 
@@ -375,8 +376,8 @@ pub const AccountRegisterScreen = struct {
         return true;
     }
 
-    fn registerCallback() void {
-        const current_screen = ui_systems.screen.register;
+    fn registerCallback(ud: ?*anyopaque) void {
+        const current_screen: *AccountRegisterScreen = @alignCast(@ptrCast(ud.?));
         _ = register(
             current_screen.allocator,
             current_screen.email_input.text_data.text,
@@ -397,7 +398,7 @@ pub const AccountRegisterScreen = struct {
         };
     }
 
-    fn backCallback() void {
+    fn backCallback(_: ?*anyopaque) void {
         ui_systems.switchScreen(.main_menu);
     }
 };

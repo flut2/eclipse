@@ -166,6 +166,7 @@ pub const AccountLoginScreen = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = loginCallback,
         });
 
@@ -339,7 +340,7 @@ pub const AccountLoginScreen = struct {
         std.log.err("clicked {s}", .{test_vals[dc.index]});
     }
 
-    pub fn enableEditorCallback() void {
+    pub fn enableEditorCallback(_: ?*anyopaque) void {
         ui_systems.switchScreen(.editor);
     }
 
@@ -380,8 +381,8 @@ pub const AccountLoginScreen = struct {
 
     pub fn update(_: *AccountLoginScreen, _: i64, _: f32) !void {}
 
-    fn loginCallback() void {
-        const current_screen = ui_systems.screen.main_menu;
+    fn loginCallback(ud: ?*anyopaque) void {
+        const current_screen: *AccountLoginScreen = @alignCast(@ptrCast(ud.?));
         _ = login(
             current_screen.allocator,
             current_screen.email_input.text_data.text,
@@ -391,7 +392,7 @@ pub const AccountLoginScreen = struct {
         };
     }
 
-    fn registerCallback() void {
+    fn registerCallback(_: ?*anyopaque) void {
         ui_systems.switchScreen(.register);
     }
 };

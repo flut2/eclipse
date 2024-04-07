@@ -785,7 +785,8 @@ pub const Input = struct {
 pub const Button = struct {
     x: f32,
     y: f32,
-    press_callback: *const fn () void,
+    userdata: ?*anyopaque = null,
+    press_callback: *const fn (?*anyopaque) void,
     image_data: InteractableImageData,
     state: InteractableState = .none,
     layer: Layer = .default,
@@ -803,7 +804,7 @@ pub const Button = struct {
 
         if (intersects(self, x, y)) {
             self.state = .pressed;
-            self.press_callback();
+            self.press_callback(self.userdata);
             assets.playSfx("button_click");
             return true;
         }

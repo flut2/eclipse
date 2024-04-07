@@ -105,7 +105,7 @@ pub const CharSelectScreen = struct {
         std.log.err("No servers found", .{});
     }
 
-    fn newCharCallback() void {
+    fn newCharCallback(_: ?*anyopaque) void {
         ui_systems.switchScreen(.char_create);
     }
 };

@@ -275,6 +275,7 @@ pub const GameScreen = struct {
             .x = screen.bars_decor.x + 21 + (32 - stats_button_data.texWRaw() + assets.padding * 2) / 2.0,
             .y = screen.bars_decor.y + 117 + (32 - stats_button_data.texHRaw() + assets.padding * 2) / 2.0,
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = stats_button_data } } },
+            .userdata = screen,
             .press_callback = statsCallback,
         });
 
@@ -703,67 +704,17 @@ pub const GameScreen = struct {
             return;
 
         if (map.localPlayerConst()) |player| {
-            updateStat(
-                self.allocator,
-                &self.strength_stat_text.text_data,
-                player.strength,
-                player.strength_bonus
-            );
-            updateStat(
-                self.allocator,
-                &self.resistance_stat_text.text_data,
-                player.resistance,
-                player.resistance_bonus
-            );
-            updateStat(
-                self.allocator,
-                &self.intelligence_stat_text.text_data,
-                player.intelligence,
-                player.intelligence_bonus
-            );
+            updateStat(self.allocator, &self.strength_stat_text.text_data, player.strength, player.strength_bonus);
+            updateStat(self.allocator, &self.resistance_stat_text.text_data, player.resistance, player.resistance_bonus);
+            updateStat(self.allocator, &self.intelligence_stat_text.text_data, player.intelligence, player.intelligence_bonus);
             updateStat(self.allocator, &self.haste_stat_text.text_data, player.haste, player.haste_bonus);
-            updateStat(
-                self.allocator,
-                &self.wit_stat_text.text_data,
-                player.wit,
-                player.wit_bonus
-            );
-            updateStat(
-                self.allocator,
-                &self.speed_stat_text.text_data,
-                player.speed,
-                player.speed_bonus
-            );
-            updateStat(
-                self.allocator,
-                &self.penetration_stat_text.text_data,
-                player.penetration,
-                player.penetration_bonus
-            );
-            updateStat(
-                self.allocator,
-                &self.tenacity_stat_text.text_data,
-                player.tenacity,
-                player.tenacity_bonus
-            );
-            updateStat(
-                self.allocator,
-                &self.defense_stat_text.text_data,
-                player.defense,
-                player.defense_bonus
-            );
-            updateStat(
-                self.allocator,
-                &self.stamina_stat_text.text_data,
-                player.stamina,
-                player.stamina_bonus
-            );
-            updateStat(
-                self.allocator,
-                &self.piercing_stat_text.text_data,
-                player.piercing,
-                player.piercing_bonus
-            );
+            updateStat(self.allocator, &self.wit_stat_text.text_data, player.wit, player.wit_bonus);
+            updateStat(self.allocator, &self.speed_stat_text.text_data, player.speed, player.speed_bonus);
+            updateStat(self.allocator, &self.penetration_stat_text.text_data, player.penetration, player.penetration_bonus);
+            updateStat(self.allocator, &self.tenacity_stat_text.text_data, player.tenacity, player.tenacity_bonus);
+            updateStat(self.allocator, &self.defense_stat_text.text_data, player.defense, player.defense_bonus);
+            updateStat(self.allocator, &self.stamina_stat_text.text_data, player.stamina, player.stamina_bonus);
+            updateStat(self.allocator, &self.piercing_stat_text.text_data, player.piercing, player.piercing_bonus);
         }
     }
 
@@ -962,31 +913,32 @@ pub const GameScreen = struct {
         }
     }
 
-    fn returnToRetrieve() void {
+    fn returnToRetrieve(_: ?*anyopaque) void {
         input.tryEscape();
     }
 
-    fn openOptions() void {
+    fn openOptions(_: ?*anyopaque) void {
         input.openOptions();
     }
 
-    pub fn statsCallback() void {
-        systems.screen.game.stats_container.visible = !systems.screen.game.stats_container.visible;
-        if (systems.screen.game.stats_container.visible) {
+    pub fn statsCallback(ud: ?*anyopaque) void {
+        const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+        screen.stats_container.visible = !screen.stats_container.visible;
+        if (screen.stats_container.visible) {
             const abil_button_data = assets.getUiData("minimap_icons", 1);
-            systems.screen.game.stats_button.image_data.base.normal.atlas_data = abil_button_data;
+            screen.stats_button.image_data.base.normal.atlas_data = abil_button_data;
 
-            systems.screen.game.ability_container.visible = false;
+            screen.ability_container.visible = false;
 
             map.object_lock.lockShared();
             defer map.object_lock.unlockShared();
 
-            systems.screen.game.updateStats();
+            screen.updateStats();
         } else {
             const stats_button_data = assets.getUiData("minimap_icons", 0);
-            systems.screen.game.stats_button.image_data.base.normal.atlas_data = stats_button_data;
+            screen.stats_button.image_data.base.normal.atlas_data = stats_button_data;
 
-            systems.screen.game.ability_container.visible = true;
+            screen.ability_container.visible = true;
         }
     }
 

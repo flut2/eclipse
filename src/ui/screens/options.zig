@@ -111,6 +111,7 @@ pub const Options = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = closeCallback,
         });
 
@@ -123,6 +124,7 @@ pub const Options = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = disconnectCallback,
         });
 
@@ -150,6 +152,7 @@ pub const Options = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = generalTabCallback,
         });
 
@@ -164,6 +167,7 @@ pub const Options = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = hotkeysTabCallback,
         });
 
@@ -178,6 +182,7 @@ pub const Options = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = graphicsTabCallback,
         });
 
@@ -192,6 +197,7 @@ pub const Options = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = miscTabCallback,
         });
 
@@ -399,35 +405,36 @@ pub const Options = struct {
         trySave();
     }
 
-    fn closeCallback() void {
-        systems.screen.game.options.setVisible(false);
+    fn closeCallback(ud: ?*anyopaque) void {
+        const screen: *Options = @alignCast(@ptrCast(ud.?));
+        screen.setVisible(false);
         input.disable_input = false;
 
         trySave();
     }
 
-    fn resetToDefaultsCallback() void {
+    fn resetToDefaultsCallback(_: ?*anyopaque) void {
         settings.resetToDefault();
     }
 
-    fn generalTabCallback() void {
-        switchTab(.general);
+    fn generalTabCallback(ud: ?*anyopaque) void {
+        switchTab(@alignCast(@ptrCast(ud.?)), .general);
     }
 
-    fn hotkeysTabCallback() void {
-        switchTab(.hotkeys);
+    fn hotkeysTabCallback(ud: ?*anyopaque) void {
+        switchTab(@alignCast(@ptrCast(ud.?)), .hotkeys);
     }
 
-    fn graphicsTabCallback() void {
-        switchTab(.graphics);
+    fn graphicsTabCallback(ud: ?*anyopaque) void {
+        switchTab(@alignCast(@ptrCast(ud.?)), .graphics);
     }
 
-    fn miscTabCallback() void {
-        switchTab(.misc);
+    fn miscTabCallback(ud: ?*anyopaque) void {
+        switchTab(@alignCast(@ptrCast(ud.?)), .misc);
     }
 
-    fn disconnectCallback() void {
-        closeCallback();
+    fn disconnectCallback(ud: ?*anyopaque) void {
+        closeCallback(ud);
         main.disconnect(true);
     }
 
@@ -438,9 +445,7 @@ pub const Options = struct {
         };
     }
 
-    pub fn switchTab(tab: TabType) void {
-        var self = systems.screen.game.options;
-
+    pub fn switchTab(self: *Options, tab: TabType) void {
         self.selected_tab = tab;
         self.general_tab.visible = tab == .general;
         self.keys_tab.visible = tab == .hotkeys;
@@ -462,7 +467,7 @@ pub const Options = struct {
         self.tabs.visible = val;
 
         if (val) {
-            switchTab(.general);
+            self.switchTab(.general);
         } else {
             self.general_tab.visible = false;
             self.keys_tab.visible = false;

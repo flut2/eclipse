@@ -113,7 +113,7 @@ fn keyPress(window: glfw.Window, key: glfw.Key) void {
         settings.stats_enabled = !settings.stats_enabled;
     } else if (key == settings.toggle_stats.getKey()) {
         if (ui_systems.screen == .game) {
-            GameScreen.statsCallback();
+            GameScreen.statsCallback(ui_systems.screen.game);
         }
     }
 }
@@ -208,7 +208,7 @@ fn mousePress(window: glfw.Window, button: glfw.MouseButton) void {
         settings.stats_enabled = !settings.stats_enabled;
     } else if (button == settings.toggle_stats.getMouse()) {
         if (ui_systems.screen == .game) {
-            GameScreen.statsCallback();
+            GameScreen.statsCallback(ui_systems.screen.game);
         }
     }
 }
