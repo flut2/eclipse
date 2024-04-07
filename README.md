@@ -1,2 +1,1 @@
-# faer-src
-Faer server source
+Eclipse client
