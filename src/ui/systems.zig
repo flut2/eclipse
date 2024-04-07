@@ -46,6 +46,7 @@ pub var temp_elements: std.ArrayList(element.Temporary) = undefined;
 pub var temp_elements_to_add: std.ArrayList(element.Temporary) = undefined;
 pub var screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
+pub var hover_lock: std.Thread.Mutex = .{};
 pub var hover_target: ?element.UiElement = null;
 
 var last_element_update: i64 = 0;
@@ -113,6 +114,7 @@ pub fn deinit() void {
 pub fn switchScreen(comptime screen_type: ScreenType) void {
     std.debug.assert(!ui_lock.tryLock());
 
+    camera.scale = 1.0;
     menu_background.visible = screen_type != .game and screen_type != .editor;
     input.selected_key_mapper = null;
 
@@ -179,27 +181,31 @@ pub fn mouseMove(x: f32, y: f32) bool {
     defer ui_lock.unlock();
 
     tooltip.switchTooltip(.none, {});
-    if (hover_target) |target| {
-        // this is intentionally not else-d. don't add
-        switch (target) {
-            .image => {},
-            .item => {},
-            .bar => {},
-            .input_field => |input_field| input_field.state = .none,
-            .button => |button| button.state = .none,
-            .text => {},
-            .char_box => |box| box.state = .none,
-            .container => {},
-            .scrollable_container => {},
-            .menu_bg => {},
-            .toggle => |toggle| toggle.state = .none,
-            .key_mapper => |key_mapper| key_mapper.state = .none,
-            .slider => {},
-            .dropdown => |dropdown| dropdown.button_state = .none,
-            .dropdown_container => |dc| dc.state = .none,
-        }
+    {
+        hover_lock.lock();
+        defer hover_lock.unlock();
+        if (hover_target) |target| {
+            // this is intentionally not else-d. don't add
+            switch (target) {
+                .image => {},
+                .item => {},
+                .bar => {},
+                .input_field => |input_field| input_field.state = .none,
+                .button => |button| button.state = .none,
+                .text => {},
+                .char_box => |box| box.state = .none,
+                .container => {},
+                .scrollable_container => {},
+                .menu_bg => {},
+                .toggle => |toggle| toggle.state = .none,
+                .key_mapper => |key_mapper| key_mapper.state = .none,
+                .slider => {},
+                .dropdown => |dropdown| dropdown.button_state = .none,
+                .dropdown_container => |dc| dc.state = .none,
+            }
 
-        hover_target = null;
+            hover_target = null;
+        }
     }
 
     var elem_iter_1 = std.mem.reverseIterator(elements.items);

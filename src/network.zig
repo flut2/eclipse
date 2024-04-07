@@ -1402,7 +1402,7 @@ pub const Server = struct {
                         }
                     }
 
-                    obj.addToMap(self.allocator);
+                    obj.addToMap(self.allocator, false);
                 },
             }
         }

@@ -24,7 +24,7 @@ inline fn drawSquare(
     draw_data: base.DrawData,
 ) u16 {
     var new_idx = idx;
-    if (idx == base.ground_batch_vert_size) {
+    if (new_idx == base.ground_batch_vert_size) {
         draw_data.encoder.writeBuffer(
             base.ground_vb,
             0,
@@ -33,13 +33,13 @@ inline fn drawSquare(
         base.endDraw(
             draw_data,
             base.ground_batch_vert_size * @sizeOf(base.GroundVertexData),
-            @divExact(base.ground_batch_vert_size, 4) / 6,
+            @divExact(base.ground_batch_vert_size, 4) * 6,
             null,
         );
         new_idx = 0;
     }
 
-    base.ground_vert_data[idx] = base.GroundVertexData{
+    base.ground_vert_data[new_idx] = base.GroundVertexData{
         .pos_uv = .{
             .x = x1,
             .y = y1,
@@ -66,7 +66,7 @@ inline fn drawSquare(
         },
     };
 
-    base.ground_vert_data[idx + 1] = base.GroundVertexData{
+    base.ground_vert_data[new_idx + 1] = base.GroundVertexData{
         .pos_uv = .{
             .x = x2,
             .y = y2,
@@ -93,7 +93,7 @@ inline fn drawSquare(
         },
     };
 
-    base.ground_vert_data[idx + 2] = base.GroundVertexData{
+    base.ground_vert_data[new_idx + 2] = base.GroundVertexData{
         .pos_uv = .{
             .x = x3,
             .y = y3,
@@ -120,7 +120,7 @@ inline fn drawSquare(
         },
     };
 
-    base.ground_vert_data[idx + 3] = base.GroundVertexData{
+    base.ground_vert_data[new_idx + 3] = base.GroundVertexData{
         .pos_uv = .{
             .x = x4,
             .y = y4,
@@ -153,7 +153,8 @@ inline fn drawSquare(
 pub inline fn drawSquares(idx: u16, draw_data: base.DrawData, float_time_ms: f32, cam_x: f32, cam_y: f32) u16 {
     var new_idx = idx;
 
-    const radius = @sqrt(@as(f32, camera.px_per_tile * camera.px_per_tile / 2)) + 1;
+    const px_per_tile = camera.px_per_tile * camera.scale;
+    const radius = @sqrt(@as(f32, px_per_tile * px_per_tile / 2)) + 1;
     const pi_div_4 = std.math.pi / 4.0;
     const top_right_angle = pi_div_4;
     const bottom_right_angle = 3.0 * pi_div_4;
@@ -188,23 +189,22 @@ pub inline fn drawSquares(idx: u16, draw_data: base.DrawData, float_time_ms: f32
 
                 var u_offset = square.u_offset;
                 var v_offset = square.v_offset;
-                if (settings.enable_lights and base.light_idx < base.max_lights) {
+                if (settings.enable_lights) {
                     const light_color = square.props.light_color;
                     if (light_color != std.math.maxInt(u32)) {
-                        const size = camera.px_per_tile * (square.props.light_radius + square.props.light_pulse *
+                        const size = px_per_tile * (square.props.light_radius + square.props.light_pulse *
                             @sin(float_time_ms / 1000.0 * square.props.light_pulse_speed));
 
                         const light_w = size * 4;
                         const light_h = size * 4;
-                        base.lights[base.light_idx] = .{
+                        base.lights.append(.{
                             .x = (screen_pos.x + camera.screen_width / 2.0) - light_w / 2.0,
                             .y = (screen_pos.y + camera.screen_height / 2.0) - size * 1.5,
                             .w = light_w,
                             .h = light_h,
                             .color = light_color,
                             .intensity = square.props.light_intensity,
-                        };
-                        base.light_idx += 1;
+                        }) catch unreachable;
                     }
                 }
 

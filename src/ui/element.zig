@@ -175,7 +175,7 @@ pub const TextData = struct {
             self.break_indices = std.ArrayList(usize).init(allocator);
         }
 
-        const size_scale = self.size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
+        const size_scale = self.size / assets.CharacterData.size * assets.CharacterData.padding_mult;
         const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
         var line_height = start_line_height;
 
@@ -241,7 +241,7 @@ pub const TextData = struct {
                                     std.log.err("Invalid size given to control code: {s}", .{value});
                                     break :specialChar;
                                 };
-                                current_size = size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
+                                current_size = size / assets.CharacterData.size * assets.CharacterData.padding_mult;
                                 line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
                                 y_pointer += line_height - start_line_height;
                             } else if (std.mem.eql(u8, name, "type")) {
@@ -697,6 +697,8 @@ pub const Input = struct {
             return false;
 
         if (intersects(self, x, y)) {
+            systems.hover_lock.lock();
+            defer systems.hover_lock.unlock();
             systems.hover_target = .{ .input_field = self };
             self.state = .hovered;
         } else {
@@ -837,6 +839,8 @@ pub const Button = struct {
                 return true;
             }
 
+            systems.hover_lock.lock();
+            defer systems.hover_lock.unlock();
             systems.hover_target = .{ .button = self };
             self.state = .hovered;
         } else {
@@ -964,6 +968,8 @@ pub const KeyMapper = struct {
                 return true;
             }
 
+            systems.hover_lock.lock();
+            defer systems.hover_lock.unlock();
             systems.hover_target = .{ .key_mapper = self };
             self.state = .hovered;
         } else {
@@ -1061,6 +1067,8 @@ pub const CharacterBox = struct {
             return false;
 
         if (intersects(self, x, y)) {
+            systems.hover_lock.lock();
+            defer systems.hover_lock.unlock();
             systems.hover_target = .{ .char_box = self };
             self.state = .hovered;
         } else {
@@ -1962,6 +1970,8 @@ pub const Toggle = struct {
                 return true;
             }
 
+            systems.hover_lock.lock();
+            defer systems.hover_lock.unlock();
             systems.hover_target = .{ .toggle = self };
             self.state = .hovered;
         } else {
@@ -2091,6 +2101,8 @@ pub const Slider = struct {
             };
 
             if (utils.isInBounds(x, y, self.knob_x, self.knob_y, knob_w, knob_h)) {
+                systems.hover_lock.lock();
+                defer systems.hover_lock.unlock();
                 systems.hover_target = .{ .slider = self };
                 self.state = .hovered;
             } else {
@@ -2129,6 +2141,8 @@ pub const Slider = struct {
         if (self.state == .pressed) {
             self.pressed(x, y, knob_h, knob_w);
         } else if (utils.isInBounds(x, y, self.x + self.knob_x, self.y + self.knob_y, knob_w, knob_h)) {
+            systems.hover_lock.lock();
+            defer systems.hover_lock.unlock();
             systems.hover_target = .{ .slider = self };
             self.state = .hovered;
         } else if (self.state == .hovered) {
@@ -2374,6 +2388,8 @@ pub const DropdownContainer = struct {
             if (self.parent.selected_index != std.math.maxInt(u32))
                 self.parent.children.items[self.parent.selected_index].state = .none;
             self.parent.selected_index = self.index;
+            systems.hover_lock.lock();
+            defer systems.hover_lock.unlock();
             if (systems.hover_target != null and
                 systems.hover_target.? == .dropdown_container and
                 systems.hover_target.?.dropdown_container == self)
@@ -2403,6 +2419,8 @@ pub const DropdownContainer = struct {
 
         const in_bounds = intersects(self, x, y);
         if (in_bounds) {
+            systems.hover_lock.lock();
+            defer systems.hover_lock.unlock();
             systems.hover_target = .{ .dropdown_container = self };
             self.state = .hovered;
         } else {
@@ -2513,6 +2531,8 @@ pub const Dropdown = struct {
         const current_button = button_data.current(self.button_state);
         const in_bounds = utils.isInBounds(x, y, self.x + self.title_data.width(), self.y, current_button.width(), current_button.height());
         if (in_bounds) {
+            systems.hover_lock.lock();
+            defer systems.hover_lock.unlock();
             systems.hover_target = .{ .dropdown = self };
             self.button_state = .hovered;
         } else {

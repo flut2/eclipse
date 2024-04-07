@@ -212,7 +212,7 @@ pub const Player = struct {
                         .large_image = rpc.Packet.ArrayString(256).create("logo"),
                         .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
                         .small_image = rpc.Packet.ArrayString(256).create(self.class_data.rpc_name),
-                        .small_text = rpc.Packet.ArrayString(128).createFromFormat("Aether {s}", .{ utils.toRoman(self.aether) }) catch {
+                        .small_text = rpc.Packet.ArrayString(128).createFromFormat("Aether {s}", .{utils.toRoman(self.aether)}) catch {
                             std.log.err("Setting Discord RPC failed, small_text buffer was out of space", .{});
                             break :setRpc;
                         },

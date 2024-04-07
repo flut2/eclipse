@@ -57,7 +57,7 @@ pub const GameObject = struct {
     float_time_offset: i64 = 0,
     disposed: bool = false,
 
-    pub inline fn addToMap(self: *GameObject, allocator: std.mem.Allocator) void {
+    pub inline fn addToMap(self: *GameObject, allocator: std.mem.Allocator, comptime no_wall_offset: bool) void {
         self.class = game_data.obj_type_to_class.get(self.obj_type) orelse blk: {
             std.log.err("Parsing class for object with type 0x{x} failed, using .game_object", .{self.obj_type});
             break :blk .game_object;
@@ -178,8 +178,11 @@ pub const GameObject = struct {
 
         if (self.class == .wall and self.x >= 0 and self.y >= 0) {
             if (map.getSquarePtr(self.x, self.y)) |square| {
-                self.x = @floor(self.x) + 0.5;
-                self.y = @floor(self.y) + 0.5;
+                if (!no_wall_offset) {
+                    self.x = @floor(self.x) + 0.5;
+                    self.y = @floor(self.y) + 0.5;
+                }
+
                 self.move_angle = std.math.nan(f32);
 
                 square.static_obj_id = self.obj_id;

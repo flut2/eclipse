@@ -80,9 +80,10 @@ inline fn drawWall(
     const screen_pos = camera.rotateAroundCameraClip(x, y);
     const screen_x = screen_pos.x;
     const screen_y = -screen_pos.y;
-    const screen_y_top = screen_y + camera.px_per_tile;
+    const px_per_tile = camera.px_per_tile * camera.scale;
+    const screen_y_top = screen_y + px_per_tile;
 
-    const radius = @sqrt(@as(f32, camera.px_per_tile * camera.px_per_tile / 2)) + 1;
+    const radius = @sqrt(@as(f32, px_per_tile * px_per_tile / 2)) + 1;
     const pi_div_4 = std.math.pi / 4.0;
     const top_right_angle = pi_div_4;
     const bottom_right_angle = 3.0 * pi_div_4;
@@ -134,10 +135,10 @@ inline fn drawParticle(idx: u16, pt: Particle, draw_data: base.DrawData) u16 {
             if (!camera.visibleInCamera(particle.x, particle.y))
                 return new_idx;
 
-            const w = particle.atlas_data.texWRaw() * particle.size;
-            const h = particle.atlas_data.texHRaw() * particle.size;
+            const w = particle.atlas_data.texWRaw() * particle.size * camera.scale;
+            const h = particle.atlas_data.texHRaw() * particle.size * camera.scale;
             const screen_pos = camera.rotateAroundCamera(particle.x, particle.y);
-            const z_off = particle.z * -camera.px_per_tile - (h - particle.size * assets.padding);
+            const z_off = particle.z * (-camera.px_per_tile * camera.scale) - (h - particle.size * assets.padding);
 
             new_idx = base.drawQuad(
                 new_idx,
@@ -235,34 +236,31 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
     _ = &color_intensity;
     // flash
 
-    if (settings.enable_lights and
-        base.light_idx < base.max_lights and
-        player.props.light_color != std.math.maxInt(u32))
-    {
+    if (settings.enable_lights and player.props.light_color != std.math.maxInt(u32)) {
         const light_size = player.props.light_radius + player.props.light_pulse *
             @sin(float_time_ms / 1000.0 * player.props.light_pulse_speed);
 
         const light_w = w * light_size * 4;
         const light_h = h * light_size * 4;
-        base.lights[base.light_idx] = .{
+        base.lights.append(.{
             .x = screen_pos.x - light_w / 2.0,
             .y = screen_pos.y - h * light_size * 1.5,
             .w = light_w,
             .h = light_h,
             .color = player.props.light_color,
             .intensity = player.props.light_intensity,
-        };
-        base.light_idx += 1;
+        }) catch unreachable;
     }
 
     if (player.name_text_data) |*data| {
         new_idx = base.drawText(
             new_idx,
-            screen_pos.x - x_offset - data.width / 2,
-            screen_pos.y - data.height - 5,
+            screen_pos.x - x_offset - data.width * camera.scale / 2,
+            screen_pos.y - data.height * camera.scale - 5,
             data,
             draw_data,
             .{},
+            true,
         );
     }
 
@@ -402,18 +400,19 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
             if (obj.name_text_data) |*data| {
                 new_idx = base.drawText(
                     new_idx,
-                    screen_pos.x - data.width / 2,
-                    screen_pos.y - h_half - data.height - 5,
+                    screen_pos.x - data.width * camera.scale / 2,
+                    screen_pos.y - h_half - data.height * camera.scale - 5,
                     data,
                     draw_data,
                     .{},
+                    true,
                 );
             }
 
             if (is_portal and map.interactive_id.load(.Acquire) == obj.obj_id) {
                 const button_w = 100 / 5;
                 const button_h = 100 / 5;
-                const total_w = base.enter_text_data.width + button_w;
+                const total_w = base.enter_text_data.width * camera.scale + button_w;
 
                 new_idx = base.drawQuad(
                     new_idx,
@@ -433,6 +432,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
                     &base.enter_text_data,
                     draw_data,
                     .{},
+                    true,
                 );
             }
         }
@@ -475,22 +475,18 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
     _ = &color_intensity;
     // flash
 
-    if (settings.enable_lights and
-        base.light_idx < base.max_lights and
-        obj.props.light_color != std.math.maxInt(u32))
-    {
+    if (settings.enable_lights and obj.props.light_color != std.math.maxInt(u32)) {
         const light_size = obj.props.light_radius + obj.props.light_pulse * @sin(float_time_ms / 1000.0 * obj.props.light_pulse_speed);
         const light_w = w * light_size * 4;
         const light_h = h * light_size * 4;
-        base.lights[base.light_idx] = .{
+        base.lights.append(.{
             .x = screen_pos.x - light_w / 2.0,
             .y = screen_pos.y - h * light_size * 1.5,
             .w = light_w,
             .h = light_h,
             .color = obj.props.light_color,
             .intensity = obj.props.light_intensity,
-        };
-        base.light_idx += 1;
+        }) catch unreachable;
     }
 
     const is_portal = obj.class == .portal;
@@ -498,18 +494,19 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
         if (obj.name_text_data) |*data| {
             new_idx = base.drawText(
                 new_idx,
-                screen_pos.x - x_offset - data.width / 2,
-                screen_pos.y - data.height - 5,
+                screen_pos.x - x_offset - data.width * camera.scale / 2,
+                screen_pos.y - data.height * camera.scale - 5,
                 data,
                 draw_data,
                 .{},
+                true,
             );
         }
 
         if (is_portal and map.interactive_id.load(.Acquire) == obj.obj_id) {
             const button_w = 100 / 5;
             const button_h = 100 / 5;
-            const total_w = base.enter_text_data.width + button_w;
+            const total_w = base.enter_text_data.width * camera.scale + button_w;
 
             new_idx = base.drawQuad(
                 new_idx,
@@ -529,6 +526,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
                 &base.enter_text_data,
                 draw_data,
                 .{},
+                true,
             );
         }
     }
@@ -611,22 +609,18 @@ inline fn drawProjectile(idx: u16, proj: Projectile, draw_data: base.DrawData, f
     const angle = -(proj.visual_angle + proj.props.angle_correction +
         (if (rotation == 0) 0 else float_time_ms / rotation) - camera.angle);
 
-    if (settings.enable_lights and
-        base.light_idx < base.max_lights and
-        proj.props.light_color != std.math.maxInt(u32))
-    {
+    if (settings.enable_lights and proj.props.light_color != std.math.maxInt(u32)) {
         const light_size = proj.props.light_radius + proj.props.light_pulse * @sin(float_time_ms / 1000.0 * proj.props.light_pulse_speed);
         const light_w = w * light_size * 4;
         const light_h = h * light_size * 4;
-        base.lights[base.light_idx] = .{
+        base.lights.append(.{
             .x = screen_pos.x - light_w / 2.0,
             .y = screen_pos.y + z_offset - h * light_size * 1.5,
             .w = light_w,
             .h = light_h,
             .color = proj.props.light_color,
             .intensity = proj.props.light_intensity,
-        };
-        base.light_idx += 1;
+        }) catch unreachable;
     }
 
     new_idx = base.drawQuad(

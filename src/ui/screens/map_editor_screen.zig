@@ -26,18 +26,21 @@ const button_container_height = 190;
 const new_container_width = 345;
 const new_container_height = 175;
 
+// used for map parse/write
+const Tile = struct { tile_type: u16, obj_type: u16, region_type: u8 };
+
 const MapEditorTile = struct {
-    object_type: u16 = 0xFFFF,
     object_id: i32 = -1,
-    ground_type: u16 = 0xFFFE,
-    region_type: i32 = -1,
+    obj_type: u16 = std.math.maxInt(u16),
+    tile_type: u16 = 0xFFFE,
+    region_type: u8 = std.math.maxInt(u8),
 };
 
 pub const EditorCommand = union(enum) {
-    place_tile: EditorPlaceTileCommand,
-    erase_tile: EditorEraseTileCommand,
-    place_object: EditorPlaceObjectCommand,
-    erase_object: EditorEraseObjectCommand,
+    place_tile: PlaceTile,
+    erase_tile: EraseTile,
+    place_object: PlaceObject,
+    erase_object: EraseObject,
 };
 
 const EditorAction = enum(u8) {
@@ -57,76 +60,61 @@ const EditorLayer = enum(u8) {
     region = 2,
 };
 
-const EditorPlaceTileCommand = struct {
-    screen: *MapEditorScreen,
-    x: u32,
-    y: u32,
+const PlaceTile = packed struct {
+    x: u16,
+    y: u16,
     new_type: u16,
     old_type: u16,
 
-    pub fn execute(self: EditorPlaceTileCommand) void {
-        // todo make EditorPlaceTilesCommand -> supports multiple
-        // for (self.screen.active_brush._visual_objects.items()) |id| {
-        //     if (map.findEntityRef(id)) |en| {
-        //         if (en.* == .object) {
-        //             const o = &en.object;
-        //             const xx = @as(u32, @intFromFloat(@floor(o.x)));
-        //             const yy = @as(u32, @intFromFloat(@floor(o.y)));
-        //             self.screen.setTile(xx, yy, self.new_type);
-        //         }
-        //     }
-        // }
-        self.screen.setTile(self.x, self.y, self.new_type);
+    pub fn execute(self: PlaceTile) void {
+        ui_systems.screen.editor.setTile(self.x, self.y, self.new_type);
     }
 
-    pub fn unexecute(self: EditorPlaceTileCommand) void {
-        self.screen.setTile(self.x, self.y, self.old_type);
+    pub fn unexecute(self: PlaceTile) void {
+        ui_systems.screen.editor.setTile(self.x, self.y, self.old_type);
     }
 };
 
-const EditorEraseTileCommand = struct {
-    screen: *MapEditorScreen,
-    x: u32,
-    y: u32,
+const EraseTile = packed struct {
+    x: u16,
+    y: u16,
     old_type: u16,
 
-    pub fn execute(self: EditorEraseTileCommand) void {
-        self.screen.setTile(self.x, self.y, 0xFFFE);
+    pub fn execute(self: EraseTile) void {
+        ui_systems.screen.editor.setTile(self.x, self.y, 0xFFFE);
     }
 
-    pub fn unexecute(self: EditorEraseTileCommand) void {
-        self.screen.setTile(self.x, self.y, self.old_type);
+    pub fn unexecute(self: EraseTile) void {
+        ui_systems.screen.editor.setTile(self.x, self.y, self.old_type);
     }
 };
 
-const EditorPlaceObjectCommand = struct {
-    screen: *MapEditorScreen,
-    x: u32,
-    y: u32,
+const PlaceObject = packed struct {
+    x: u16,
+    y: u16,
     new_type: u16,
     old_type: u16,
 
-    pub fn execute(self: EditorPlaceObjectCommand) void {
-        self.screen.setObject(self.x, self.y, self.new_type);
+    pub fn execute(self: PlaceObject) void {
+        ui_systems.screen.editor.setObject(self.x, self.y, self.new_type);
     }
 
-    pub fn unexecute(self: EditorPlaceObjectCommand) void {
-        self.screen.setObject(self.x, self.y, self.old_type);
+    pub fn unexecute(self: PlaceObject) void {
+        ui_systems.screen.editor.setObject(self.x, self.y, self.old_type);
     }
 };
 
-const EditorEraseObjectCommand = struct {
-    screen: *MapEditorScreen,
-    x: u32,
-    y: u32,
+const EraseObject = struct {
+    x: u16,
+    y: u16,
     old_type: u16,
 
-    pub fn execute(self: EditorEraseObjectCommand) void {
-        self.screen.setObject(self.x, self.y, 0xFFFF);
+    pub fn execute(self: EraseObject) void {
+        ui_systems.screen.editor.setObject(self.x, self.y, 0xFFFF);
     }
 
-    pub fn unexecute(self: EditorEraseObjectCommand) void {
-        self.screen.setObject(self.x, self.y, self.old_type);
+    pub fn unexecute(self: EraseObject) void {
+        ui_systems.screen.editor.setObject(self.x, self.y, self.old_type);
     }
 };
 
@@ -145,14 +133,6 @@ const CommandQueue = struct {
 
     pub fn deinit(self: *CommandQueue) void {
         self.command_list.deinit();
-    }
-
-    // might be useful for multiple commands at once tool?
-    // otherwise ill just make a command that executes the fill, of more than one object
-    pub fn addCommandMultiple(self: *CommandQueue, commands: []EditorCommand) void {
-        for (commands) |command| {
-            self.addCommand(command);
-        }
     }
 
     pub fn addCommand(self: *CommandQueue, command: EditorCommand) void {
@@ -250,6 +230,9 @@ pub const EditorBrush = struct {
                 const dy_cast = @as(f32, @floatFromInt(dy));
 
                 for (self.visual_objects.items) |obj_id| {
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
+
                     if (map.findEntityRef(obj_id)) |en| {
                         if (en.* == .object) {
                             const o = &en.object;
@@ -291,14 +274,14 @@ pub const EditorBrush = struct {
                 self.screen.next_obj_id += 1;
 
                 var obj = GameObject{
-                    .x = @as(f32, @floatFromInt(offset_x)) + 0.5,
-                    .y = @as(f32, @floatFromInt(offset_y)) + 0.5,
+                    .x = @as(f32, @floatFromInt(offset_x)),
+                    .y = @as(f32, @floatFromInt(offset_y)),
                     .obj_id = self.screen.next_obj_id,
                     .obj_type = place_type,
                     .size = 100,
                     .alpha = 0.6,
                 };
-                obj.addToMap(self.screen.allocator);
+                obj.addToMap(self.screen.allocator, true);
 
                 self.visual_objects.append(obj.obj_id) catch return;
 
@@ -459,6 +442,7 @@ pub const MapEditorScreen = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = openCallback,
         });
 
@@ -473,6 +457,7 @@ pub const MapEditorScreen = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = saveCallback,
         });
 
@@ -765,26 +750,29 @@ pub const MapEditorScreen = struct {
         screen.buttons_container.visible = true;
         screen.new_container.visible = false;
 
+        map.dispose(screen.allocator);
         map.setWH(screen.map_size, screen.map_size);
+        map.bg_light_color = 0;
+        map.bg_light_intensity = 0.15;
 
-        if (screen.map_tile_data.len == 0) {
+        if (screen.map_tile_data.len != 0) {
             screen.map_tile_data = screen.allocator.alloc(MapEditorTile, screen.map_size * screen.map_size) catch return;
         } else {
             screen.map_tile_data = screen.allocator.realloc(screen.map_tile_data, screen.map_size * screen.map_size) catch return;
         }
 
+        @memset(screen.map_tile_data, MapEditorTile{});
+
         map.local_player_id = 0xFFFE;
 
-        const center = @as(f32, @floatFromInt(screen.map_size)) / 2.0 + 0.5;
+        const center = @as(f32, @floatFromInt(screen.map_size)) / 2.0;
 
         for (0..screen.map_size) |y| {
             for (0..screen.map_size) |x| {
-                const index = y * screen.map_size + x;
-                screen.map_tile_data[index] = MapEditorTile{};
                 var square = Square{
                     .x = @as(f32, @floatFromInt(x)),
                     .y = @as(f32, @floatFromInt(y)),
-                    .tile_type = screen.map_tile_data[index].ground_type,
+                    .tile_type = 0xFFFE,
                 };
                 square.addToMap();
             }
@@ -798,7 +786,6 @@ pub const MapEditorScreen = struct {
             .size = 100,
             .speed = 300,
         };
-
         player.addToMap(screen.allocator);
 
         main.editing_map = true;
@@ -811,29 +798,188 @@ pub const MapEditorScreen = struct {
         screen.reset();
     }
 
-    fn openCallback(_: ?*anyopaque) void {
+    // for easier error handling
+    fn openInner(screen: *MapEditorScreen) !void {
         // if (main.editing_map) {} // maybe a popup to ask to save?
 
-        const file_path = nfd.openFileDialog("em", null) catch return;
+        const file_path = try nfd.openFileDialog("em", null);
         if (file_path) |path| {
             defer nfd.freePath(path);
-            std.debug.print("openFileDialog result: {s}\n", .{path});
 
-            // todo: read map
-            //const file = std.fs.openFileAbsolute(file_path) catch return;
+            const file = try std.fs.openFileAbsolute(path, .{});
+            defer file.close();
+
+            var dcp = std.compress.zlib.decompressor(file.reader());
+
+            const version = try dcp.reader().readInt(u8, .little);
+            if (version != 2)
+                std.log.err("Reading map failed, unsupported version: {d}", .{version});
+
+            const x_start = try dcp.reader().readInt(u16, .little);
+            const y_start = try dcp.reader().readInt(u16, .little);
+            const w = try dcp.reader().readInt(u16, .little);
+            const h = try dcp.reader().readInt(u16, .little);
+
+            screen.map_size = 256;
+            screen.map_size_256 = true;
+            screen.map_size_128 = false;
+            screen.map_size_64 = false;
+            newCreateCallback(screen);
+
+            const tiles = try screen.allocator.alloc(Tile, try dcp.reader().readInt(u16, .little));
+            defer screen.allocator.free(tiles);
+            for (tiles) |*tile| {
+                const tile_type = try dcp.reader().readInt(u16, .little);
+                const obj_type = try dcp.reader().readInt(u16, .little);
+                const region_type = try dcp.reader().readInt(u8, .little);
+
+                tile.* = .{
+                    .tile_type = tile_type,
+                    .obj_type = obj_type,
+                    .region_type = region_type,
+                };
+            }
+
+            const byte_len = tiles.len <= 256;
+            for (y_start..y_start + h) |y| {
+                for (x_start..x_start + w) |x| {
+                    const ux: u32 = @intCast(x);
+                    const uy: u32 = @intCast(y);
+                    const idx = if (byte_len) try dcp.reader().readInt(u8, .little) else try dcp.reader().readInt(u16, .little);
+                    const tile = tiles[idx];
+                    if (tile.tile_type != std.math.maxInt(u16)) screen.setTile(ux, uy, tile.tile_type);
+                    if (tile.obj_type != std.math.maxInt(u16)) screen.setObject(ux, uy, tile.obj_type);
+                    if (tile.region_type != std.math.maxInt(u8)) screen.setRegion(ux, uy, tile.region_type);
+                }
+            }
         }
     }
 
-    fn saveCallback(_: ?*anyopaque) void {
+    fn openCallback(ud: ?*anyopaque) void {
+        openInner(@alignCast(@ptrCast(ud.?))) catch |e| {
+            std.log.err("Error while parsing map: {}", .{e});
+            if (@errorReturnTrace()) |trace| {
+                std.debug.dumpStackTrace(trace.*);
+            }
+        };
+    }
+
+    fn tileBounds(tiles: []MapEditorTile) struct { min_x: u16, max_x: u16, min_y: u16, max_y: u16 } {
+        var min_x = map.width;
+        var min_y = map.height;
+        var max_x: u32 = 0;
+        var max_y: u32 = 0;
+
+        for (0..map.height) |y| {
+            for (0..map.width) |x| {
+                const map_tile = tiles[@intCast(y * map.width + x)];
+                if (map_tile.tile_type != 0xFFFE or
+                    map_tile.obj_type != std.math.maxInt(u16) or
+                    map_tile.region_type != std.math.maxInt(u8))
+                {
+                    const ux: u32 = @intCast(x);
+                    const uy: u32 = @intCast(y);
+
+                    min_x = @min(min_x, ux);
+                    min_y = @min(min_y, uy);
+                    max_x = @max(max_x, ux);
+                    max_y = @max(max_y, uy);
+                }
+            }
+        }
+
+        return .{ .min_x = @intCast(min_x), .min_y = @intCast(min_y), .max_x = @intCast(max_x), .max_y = @intCast(max_y) };
+    }
+
+    pub fn indexOfTile(tiles: []const Tile, value: Tile) ?usize {
+        for (tiles, 0..) |tile, i| {
+            if (tile.obj_type == value.obj_type and
+                tile.region_type == value.region_type and
+                tile.tile_type == value.tile_type)
+                return i;
+        }
+
+        return null;
+    }
+
+    fn saveInner(screen: *MapEditorScreen) !void {
         if (!main.editing_map) return;
 
         const file_path = nfd.saveFileDialog("em", null) catch return;
         if (file_path) |path| {
             defer nfd.freePath(path);
-            std.debug.print("saveFileDialog result: {s}\n", .{path});
 
-            // todo: write map
+            var data = std.ArrayList(u8).init(screen.allocator);
+            defer data.deinit();
+
+            const tile_data = screen.map_tile_data;
+            const bounds = tileBounds(tile_data);
+
+            try data.writer().writeInt(u8, 2, .little); // version
+            try data.writer().writeInt(u16, bounds.min_x, .little);
+            try data.writer().writeInt(u16, bounds.min_y, .little);
+            try data.writer().writeInt(u16, bounds.max_x - bounds.min_x, .little);
+            try data.writer().writeInt(u16, bounds.max_y - bounds.min_y, .little);
+
+            var tiles = std.ArrayList(Tile).init(screen.allocator);
+            defer tiles.deinit();
+
+            for (bounds.min_y..bounds.max_y) |y| {
+                for (bounds.min_x..bounds.max_x) |x| {
+                    const map_tile = tile_data[y * map.width + x];
+                    const tile = Tile{
+                        .tile_type = if (map_tile.tile_type == 0xFFFE) 0xFFFF else map_tile.tile_type,
+                        .obj_type = map_tile.obj_type,
+                        .region_type = map_tile.region_type,
+                    };
+
+                    if (indexOfTile(tiles.items, tile) == null)
+                        try tiles.append(tile);
+                }
+            }
+
+            try data.writer().writeInt(u16, @intCast(tiles.items.len), .little);
+            const byte_len = tiles.items.len <= 256;
+
+            for (tiles.items) |tile| {
+                try data.writer().writeInt(u16, tile.tile_type, .little);
+                try data.writer().writeInt(u16, tile.obj_type, .little);
+                try data.writer().writeInt(u8, tile.region_type, .little);
+            }
+
+            for (bounds.min_y..bounds.max_y) |y| {
+                for (bounds.min_x..bounds.max_x) |x| {
+                    const map_tile = tile_data[y * map.width + x];
+                    const tile = Tile{
+                        .tile_type = if (map_tile.tile_type == 0xFFFE) 0xFFFF else map_tile.tile_type,
+                        .obj_type = map_tile.obj_type,
+                        .region_type = map_tile.region_type,
+                    };
+
+                    if (indexOfTile(tiles.items, tile)) |idx| {
+                        if (byte_len)
+                            try data.writer().writeInt(u8, @intCast(idx), .little)
+                        else
+                            try data.writer().writeInt(u16, @intCast(idx), .little);
+                    }
+                }
+            }
+
+            const file = try std.fs.createFileAbsolute(path, .{});
+            defer file.close();
+
+            var fbs = std.io.fixedBufferStream(data.items);
+            try std.compress.zlib.compress(fbs.reader(), file.writer(), .{});
         }
+    }
+
+    fn saveCallback(ud: ?*anyopaque) void {
+        saveInner(@alignCast(@ptrCast(ud.?))) catch |e| {
+            std.log.err("Error while saving map: {}", .{e});
+            if (@errorReturnTrace()) |trace| {
+                std.debug.dumpStackTrace(trace.*);
+            }
+        };
     }
 
     pub fn exitCallback(_: ?*anyopaque) void {
@@ -932,21 +1078,21 @@ pub const MapEditorScreen = struct {
             const layer = @intFromEnum(self.active_layer);
 
             if (self.active_layer == .ground) {
-                if (current_tile.ground_type != 0xFFFE) {
+                if (current_tile.tile_type != 0xFFFE) {
                     for (0..8) |i| {
-                        if (self.tile_list[i] == current_tile.ground_type) {
+                        if (self.tile_list[i] == current_tile.tile_type) {
                             self.tile_list_index = @as(u8, @intCast(i));
-                            self.object_type_to_place[layer] = current_tile.ground_type;
+                            self.object_type_to_place[layer] = current_tile.tile_type;
                             break;
                         }
                     }
                 }
             } else {
-                if (current_tile.object_type != 0xFFFF) {
+                if (current_tile.obj_type != 0xFFFF) {
                     for (0..2) |i| {
-                        if (self.object_list[i] == current_tile.object_type) {
+                        if (self.object_list[i] == current_tile.obj_type) {
                             self.object_list_index = @as(u8, @intCast(i));
-                            self.object_type_to_place[layer] = current_tile.object_type;
+                            self.object_type_to_place[layer] = current_tile.obj_type;
                             break;
                         }
                     }
@@ -985,19 +1131,18 @@ pub const MapEditorScreen = struct {
     }
 
     pub fn onKeyRelease(self: *MapEditorScreen, key: glfw.Key) void {
-        _ = key;
-        if (self.action == .redo or self.action == .undo) {
+        if (key == self.undo_key_setting.getKey() or key == self.redo_key_setting.getKey()) {
             self.action = .none;
         }
     }
 
     fn setTile(self: *MapEditorScreen, x: u32, y: u32, value: u16) void {
         const index = y * self.map_size + x;
-        if (self.map_tile_data[index].ground_type == value) {
+        if (self.map_tile_data[index].tile_type == value) {
             return;
         }
 
-        self.map_tile_data[index].ground_type = value;
+        self.map_tile_data[index].tile_type = value;
         var square = Square{
             .x = @as(f32, @floatFromInt(x)),
             .y = @as(f32, @floatFromInt(y)),
@@ -1015,14 +1160,14 @@ pub const MapEditorScreen = struct {
     fn setObject(self: *MapEditorScreen, x: u32, y: u32, value: u16) void {
         const index = y * self.map_size + x;
 
-        if (self.map_tile_data[index].object_type == value) {
+        if (self.map_tile_data[index].obj_type == value) {
             return;
         }
 
-        if (value == 0xFFFF) {
+        if (value == std.math.maxInt(u16)) {
             map.removeEntity(self.allocator, self.map_tile_data[index].object_id);
 
-            self.map_tile_data[index].object_type = value;
+            self.map_tile_data[index].obj_type = value;
             self.map_tile_data[index].object_id = value;
         } else {
             if (self.map_tile_data[index].object_id != -1) {
@@ -1031,23 +1176,23 @@ pub const MapEditorScreen = struct {
 
             self.next_obj_id += 1;
 
-            self.map_tile_data[index].object_type = value;
+            self.map_tile_data[index].obj_type = value;
             self.map_tile_data[index].object_id = self.next_obj_id;
 
             var obj = GameObject{
-                .x = @as(f32, @floatFromInt(x)) + 0.5,
-                .y = @as(f32, @floatFromInt(y)) + 0.5,
+                .x = @as(f32, @floatFromInt(x)),
+                .y = @as(f32, @floatFromInt(y)),
                 .obj_id = self.next_obj_id,
                 .obj_type = value,
                 .size = 100,
                 .alpha = 1.0,
             };
 
-            obj.addToMap(self.allocator);
+            obj.addToMap(self.allocator, true);
         }
     }
 
-    fn setRegion(self: *MapEditorScreen, x: u32, y: u32, value: i32) void {
+    fn setRegion(self: *MapEditorScreen, x: u32, y: u32, value: u8) void {
         const index = y * self.map_size + x;
         self.map_tile_data[index].region_type = value;
     }
@@ -1056,15 +1201,12 @@ pub const MapEditorScreen = struct {
         if (self.map_tile_data.len <= 0)
             return;
 
-        // const cam_x = camera.x.load(.Acquire);
-        // const cam_y = camera.y.load(.Acquire);
-
         var world_point = camera.screenToWorld(input.mouse_x, input.mouse_y);
         world_point.x = @max(0, @min(world_point.x, @as(f32, @floatFromInt(self.map_size - 1))));
         world_point.y = @max(0, @min(world_point.y, @as(f32, @floatFromInt(self.map_size - 1))));
 
-        const floor_x: u32 = @intFromFloat(@floor(world_point.x));
-        const floor_y: u32 = @intFromFloat(@floor(world_point.y));
+        const floor_x: u16 = @intFromFloat(@floor(world_point.x));
+        const floor_y: u16 = @intFromFloat(@floor(world_point.y));
 
         const current_tile = self.map_tile_data[floor_y * self.map_size + floor_x];
         const type_to_place = self.object_type_to_place[@intFromEnum(self.active_layer)];
@@ -1076,51 +1218,47 @@ pub const MapEditorScreen = struct {
             .place => {
                 switch (self.active_layer) {
                     .ground => {
-                        if (current_tile.ground_type != type_to_place) {
+                        if (current_tile.tile_type != type_to_place) {
                             self.command_queue.addCommand(.{ .place_tile = .{
-                                .screen = self,
                                 .x = floor_x,
                                 .y = floor_y,
                                 .new_type = type_to_place,
-                                .old_type = current_tile.ground_type,
+                                .old_type = current_tile.tile_type,
                             } });
                         }
                     },
                     .object => {
-                        if (current_tile.object_type != type_to_place) {
+                        if (current_tile.obj_type != type_to_place) {
                             self.command_queue.addCommand(.{ .place_object = .{
-                                .screen = self,
                                 .x = floor_x,
                                 .y = floor_y,
                                 .new_type = type_to_place,
-                                .old_type = current_tile.object_type,
+                                .old_type = current_tile.obj_type,
                             } });
                         }
                     },
                     .region => {
-                        self.setRegion(floor_x, floor_y, type_to_place); // todo enum stuff},
+                        self.setRegion(floor_x, floor_y, @intCast(type_to_place)); // todo enum stuff},
                     },
                 }
             },
             .erase => {
                 switch (self.active_layer) {
                     .ground => {
-                        if (current_tile.ground_type != 0xFFFE) {
+                        if (current_tile.tile_type != 0xFFFE) {
                             self.command_queue.addCommand(.{ .erase_tile = .{
-                                .screen = self,
                                 .x = floor_x,
                                 .y = floor_y,
-                                .old_type = current_tile.ground_type,
+                                .old_type = current_tile.tile_type,
                             } });
                         }
                     },
                     .object => {
-                        if (current_tile.object_type != 0xFFFF) {
+                        if (current_tile.obj_type != 0xFFFF) {
                             self.command_queue.addCommand(.{ .erase_object = .{
-                                .screen = self,
                                 .x = floor_x,
                                 .y = floor_y,
-                                .old_type = current_tile.object_type,
+                                .old_type = current_tile.obj_type,
                             } });
                         }
                     },
@@ -1160,12 +1298,12 @@ pub const MapEditorScreen = struct {
         }
 
         var hover_ground_name: []const u8 = "(Empty)";
-        if (game_data.ground_type_to_props.getPtr(data.ground_type)) |props| {
+        if (game_data.ground_type_to_props.getPtr(data.tile_type)) |props| {
             hover_ground_name = props.obj_id;
         }
 
         var hover_obj_name: []const u8 = "(Empty)";
-        if (game_data.obj_type_to_props.getPtr(data.object_type)) |props| {
+        if (game_data.obj_type_to_props.getPtr(data.obj_type)) |props| {
             hover_obj_name = props.obj_id;
         }
     }

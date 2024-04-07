@@ -149,8 +149,7 @@ pub var linear_sampler: *gpu.Sampler = undefined;
 
 pub var condition_rects: [@bitSizeOf(utils.Condition)][]const assets.AtlasData = undefined;
 pub var enter_text_data: element.TextData = undefined;
-pub var light_idx: usize = 0;
-pub var lights: [max_lights]LightData = undefined;
+pub var lights: std.ArrayList(LightData) = undefined;
 
 pub var surface: *gpu.Surface = undefined;
 pub var queue: *gpu.Queue = undefined;
@@ -372,6 +371,7 @@ pub fn deinit() void {
     }
 
     enter_text_data.deinit(allocator);
+    lights.deinit();
 
     base_pipeline.release();
     base_bind_group.release();
@@ -507,6 +507,8 @@ pub fn init(window: glfw.Window, ally: std.mem.Allocator) !void {
         condition_rects[i] = rects;
     }
 
+    lights = std.ArrayList(LightData).init(ally);
+
     enter_text_data = element.TextData{
         .text = "Enter",
         .text_type = .bold,
@@ -575,8 +577,8 @@ pub fn init(window: glfw.Window, ally: std.mem.Allocator) !void {
     assets.ui_atlas.deinit();
     assets.menu_background.deinit();
 
-    sampler = device.createSampler(&.{});
-    linear_sampler = device.createSampler(&.{ .min_filter = .linear, .mag_filter = .linear });
+    sampler = device.createSampler(&.{ .max_anisotropy = 4 });
+    linear_sampler = device.createSampler(&.{ .min_filter = .linear, .mag_filter = .linear, .max_anisotropy = 4 });
 
     const bufferLayoutEntry = gpu.BindGroupLayout.Entry.buffer;
     const samplerLayoutEntry = gpu.BindGroupLayout.Entry.sampler;
@@ -1139,6 +1141,7 @@ pub inline fn drawText(
     text_data: *element.TextData,
     draw_data: DrawData,
     scissor_override: element.ScissorRect,
+    comptime needs_scale: bool,
 ) u16 {
     text_data.lock.lock();
     defer text_data.lock.unlock();
@@ -1153,7 +1156,8 @@ pub inline fn drawText(
     const shadow_rgb = element.RGBF32.fromInt(text_data.shadow_color);
     const outline_rgb = element.RGBF32.fromInt(text_data.outline_color);
 
-    const size_scale = text_data.size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
+    const camera_scale = if (needs_scale) camera.scale else 1.0;
+    const size_scale = text_data.size / assets.CharacterData.size * camera_scale * assets.CharacterData.padding_mult;
     const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
     var line_height = start_line_height;
 
@@ -1236,7 +1240,7 @@ pub inline fn drawText(
                                 std.log.err("Invalid size given to control code: {s}", .{value});
                                 break :specialChar;
                             };
-                            current_size = size / assets.CharacterData.size * camera.scale * assets.CharacterData.padding_mult;
+                            current_size = size / assets.CharacterData.size * camera_scale * assets.CharacterData.padding_mult;
                             line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
                             y_pointer += line_height - start_line_height;
                         } else if (std.mem.eql(u8, name, "type")) {
@@ -1350,7 +1354,7 @@ pub inline fn drawText(
         const scaled_y = -(y_pointer - char_data.y_offset * current_size - h / 2) * camera.clip_scale_y;
         const scaled_w = w * camera.clip_scale_x;
         const scaled_h = h * camera.clip_scale_y;
-        const px_range = assets.CharacterData.px_range / camera.scale;
+        const px_range = assets.CharacterData.px_range / camera_scale;
 
         // text type could be incorporated into render type, would save us another vertex block and reduce branches
         // would be hell to maintain and extend though...
@@ -1724,11 +1728,11 @@ pub fn draw(time: i64) void {
     };
 
     if ((main.tick_frame or main.editing_map) and
-        cam_x > 0 and cam_y > 0 and
+        cam_x >= 0 and cam_y >= 0 and
         map.validPos(@intFromFloat(cam_x), @intFromFloat(cam_y)))
     {
         const float_time_ms = @as(f32, @floatFromInt(time)) / std.time.us_per_ms;
-        light_idx = 0;
+        lights.clearRetainingCapacity();
 
         square_idx = ground_render.drawSquares(square_idx, ground_draw_data, float_time_ms, cam_x, cam_y);
 
@@ -1746,7 +1750,6 @@ pub fn draw(time: i64) void {
             );
         }
 
-        @prefetch(map.entities.items, .{ .locality = 0 });
         idx = game_render.drawEntities(idx, base_draw_data, float_time_ms);
         map.object_lock.unlockShared();
 
@@ -1754,8 +1757,7 @@ pub fn draw(time: i64) void {
             const opts = QuadOptions{ .base_color = map.bg_light_color, .base_color_intensity = 1.0, .alpha_mult = map.getLightIntensity(time) };
             idx = drawQuad(idx, 0, 0, camera.screen_width, camera.screen_height, assets.wall_backface_data, base_draw_data, opts);
 
-            @prefetch(&lights[0..light_idx], .{ .locality = 0 });
-            for (lights[0..light_idx]) |data| {
+            for (lights.items) |data| {
                 idx = drawQuad(
                     idx,
                     data.x,

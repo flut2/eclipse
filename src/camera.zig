@@ -66,7 +66,7 @@ pub fn update(target_x: f32, target_y: f32, dt: f32, rotate: i8) void {
     const w_half = screen_width / (2 * px_per_tile * scale);
     const h_half = screen_height / (2 * px_per_tile * scale);
     max_dist_sq = w_half * w_half + h_half * h_half;
-    const max_dist = @ceil(@sqrt(max_dist_sq));
+    const max_dist = @ceil(@sqrt(max_dist_sq) + 1);
 
     const min_x_dt = tx - max_dist;
     min_x = if (min_x_dt < 0) 0 else @intFromFloat(min_x_dt);
@@ -112,10 +112,10 @@ pub inline fn visibleInCamera(x_in: f32, y_in: f32) bool {
 pub fn screenToWorld(x_in: f32, y_in: f32) struct { x: f32, y: f32 } {
     const cos_angle = @cos(angle);
     const sin_angle = @sin(angle);
-    const x_div = (x_in - screen_width / 2.0) / px_per_tile * scale;
-    const y_div = (y_in - screen_height / 2.0) / px_per_tile * scale;
+    const x_div = (x_in - screen_width / 2.0) / (px_per_tile * scale);
+    const y_div = (y_in - screen_height / 2.0) / (px_per_tile * scale);
     return .{
-        .x = x.load(.Acquire) + x_div * cos_angle - y_div * sin_angle,
-        .y = y.load(.Acquire) + x_div * sin_angle + y_div * cos_angle,
+        .x = x.load(.Acquire) + x_div * cos_angle - y_div * sin_angle + 0.5,
+        .y = y.load(.Acquire) + x_div * sin_angle + y_div * cos_angle + 0.5,
     };
 }

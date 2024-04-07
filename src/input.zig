@@ -458,12 +458,24 @@ pub fn mouseMoveEvent(_: glfw.Window, x_pos: f64, y_pos: f64) void {
 
 pub fn scrollEvent(_: glfw.Window, x_offset: f64, y_offset: f64) void {
     if (!ui_systems.mouseScroll(mouse_x, mouse_y, @floatCast(x_offset), @floatCast(y_offset))) {
-        const size = @max(map.width, map.height);
-        const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
-        const scroll_speed = @as(f32, @floatFromInt(size)) / 1280;
+        switch (ui_systems.screen) {
+            .game => {
+                const size = @max(map.width, map.height);
+                const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
+                const scroll_speed = @as(f32, @floatFromInt(size)) / 1280;
 
-        camera.minimap_zoom += @floatCast(y_offset * scroll_speed);
-        camera.minimap_zoom = @max(1, @min(max_zoom, camera.minimap_zoom));
+                camera.minimap_zoom += @floatCast(y_offset * scroll_speed);
+                camera.minimap_zoom = @max(1, @min(max_zoom, camera.minimap_zoom));
+            },
+            .editor => {
+                const min_zoom = 0.05;
+                const scroll_speed = 0.01;
+
+                camera.scale += @floatCast(y_offset * scroll_speed);
+                camera.scale = @min(1, @max(min_zoom, camera.scale));
+            },
+            else => {},
+        }
     }
 }
 

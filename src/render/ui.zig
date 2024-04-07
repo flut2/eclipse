@@ -701,6 +701,7 @@ inline fn drawBar(idx: u16, bar: *element.Bar, draw_data: base.DrawData, x_offse
         &bar.text_data,
         draw_data,
         .{},
+        false,
     );
 
     return new_idx;
@@ -742,6 +743,7 @@ inline fn drawButton(idx: u16, button: *element.Button, draw_data: base.DrawData
             text_data,
             draw_data,
             button.scissor,
+            false,
         );
     }
 
@@ -793,6 +795,7 @@ inline fn drawCharacterBox(idx: u16, char_box: *element.CharacterBox, draw_data:
             text_data,
             draw_data,
             char_box.scissor,
+            false,
         );
     }
 
@@ -829,7 +832,15 @@ inline fn drawInputField(idx: u16, input_field: *element.Input, draw_data: base.
 
     const text_x = input_field.x + input_field.text_inlay_x + x_offset + input_field.x_offset;
     const text_y = input_field.y + input_field.text_inlay_y + y_offset;
-    new_idx = base.drawText(new_idx, text_x, text_y, &input_field.text_data, draw_data, input_field.scissor);
+    new_idx = base.drawText(
+        new_idx,
+        text_x,
+        text_y,
+        &input_field.text_data,
+        draw_data,
+        input_field.scissor,
+        false,
+    );
 
     const flash_delay = 500 * std.time.us_per_ms;
     if (input_field.last_input != -1 and (time - input_field.last_input < flash_delay or @mod(@divFloor(time, flash_delay), 2) == 0)) {
@@ -891,6 +902,7 @@ inline fn drawToggle(idx: u16, toggle: *element.Toggle, draw_data: base.DrawData
             text_data,
             draw_data,
             toggle.scissor,
+            false,
         );
     }
 
@@ -945,6 +957,7 @@ inline fn drawKeyMapper(idx: u16, key_mapper: *element.KeyMapper, draw_data: bas
             text_data,
             draw_data,
             key_mapper.scissor,
+            false,
         );
     }
 
@@ -1027,6 +1040,7 @@ inline fn drawSlider(idx: u16, slider: *element.Slider, draw_data: base.DrawData
             text_data,
             draw_data,
             slider.scissor,
+            false,
         );
     }
 
@@ -1038,6 +1052,7 @@ inline fn drawSlider(idx: u16, slider: *element.Slider, draw_data: base.DrawData
             text_data,
             draw_data,
             slider.scissor,
+            false,
         );
     }
 
@@ -1084,7 +1099,7 @@ inline fn drawDropdown(idx: u16, dropdown: *element.Dropdown, draw_data: base.Dr
         },
     }
 
-    new_idx = base.drawText(new_idx, base_x, base_y, &dropdown.title_text, draw_data, dropdown.scissor);
+    new_idx = base.drawText(new_idx, base_x, base_y, &dropdown.title_text, draw_data, dropdown.scissor, false);
 
     const toggled = dropdown.toggled;
     const button_image_data = (if (toggled) dropdown.button_data_extended else dropdown.button_data_collapsed).current(dropdown.button_state);
@@ -1178,7 +1193,7 @@ fn drawElement(
         .char_box => |char_box| new_idx = drawCharacterBox(new_idx, char_box, draw_data, x_offset, y_offset),
         .text => |text| {
             if (text.visible)
-                new_idx = base.drawText(new_idx, text.x + x_offset, text.y + y_offset, &text.text_data, draw_data, text.scissor);
+                new_idx = base.drawText(new_idx, text.x + x_offset, text.y + y_offset, &text.text_data, draw_data, text.scissor, false);
         },
         .input_field => |input_field| new_idx = drawInputField(new_idx, input_field, draw_data, x_offset, y_offset, time),
         .toggle => |toggle| new_idx = drawToggle(new_idx, toggle, draw_data, x_offset, y_offset),
@@ -1248,7 +1263,7 @@ pub inline fn drawTempElements(idx: u16, draw_data: base.DrawData) u16 {
         switch (elem.*) {
             .status => |*text| {
                 if (text.visible) {
-                    new_idx = base.drawText(new_idx, text.screen_x, text.screen_y, &text.text_data, draw_data, .{});
+                    new_idx = base.drawText(new_idx, text.screen_x, text.screen_y, &text.text_data, draw_data, .{}, false);
                 }
             },
             .balloon => |*balloon| {
@@ -1272,6 +1287,7 @@ pub inline fn drawTempElements(idx: u16, draw_data: base.DrawData) u16 {
                         &balloon.text_data,
                         draw_data,
                         .{},
+                        false,
                     );
                 }
             },
