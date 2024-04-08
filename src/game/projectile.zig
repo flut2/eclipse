@@ -235,7 +235,7 @@ pub const Projectile = struct {
 
         self.last_hit_check = time;
 
-        if (map.getSquare(self.x, self.y)) |square| {
+        if (map.getSquare(self.x, self.y, true)) |square| {
             const en = map.findEntityConst(square.static_obj_id);
             if (square.tile_type == 0xFF) {
                 if (self.damage_players) {

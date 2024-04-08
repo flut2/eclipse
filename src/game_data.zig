@@ -100,6 +100,7 @@ pub const ClassType = enum(u8) {
     portal,
     projectile,
     wall,
+    skin,
 
     const map = std.ComptimeStringMap(ClassType, .{
         .{ "Character", .character },
@@ -112,6 +113,7 @@ pub const ClassType = enum(u8) {
         .{ "Portal", .portal },
         .{ "Projectile", .projectile },
         .{ "Wall", .wall },
+        .{ "Skin", .skin },
     });
 
     pub fn fromString(str: []const u8) ClassType {
@@ -1223,8 +1225,8 @@ pub var ground_name_to_type: std.StringHashMap(u16) = undefined;
 pub var ground_type_to_props: std.AutoHashMap(u16, GroundProps) = undefined;
 pub var ground_type_to_name: std.AutoHashMap(u16, []const u8) = undefined;
 pub var ground_type_to_tex_data: std.AutoHashMap(u16, []const TextureData) = undefined;
-pub var region_type_to_name: std.AutoHashMap(u16, []const u8) = undefined;
-pub var region_type_to_color: std.AutoHashMap(u16, u32) = undefined;
+pub var region_type_to_name: std.AutoHashMap(u8, []const u8) = undefined;
+pub var region_type_to_color: std.AutoHashMap(u8, u32) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     classes = std.AutoHashMap(u16, CharacterClass).init(allocator);
@@ -1243,8 +1245,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
     ground_type_to_props = std.AutoHashMap(u16, GroundProps).init(allocator);
     ground_type_to_name = std.AutoHashMap(u16, []const u8).init(allocator);
     ground_type_to_tex_data = std.AutoHashMap(u16, []const TextureData).init(allocator);
-    region_type_to_name = std.AutoHashMap(u16, []const u8).init(allocator);
-    region_type_to_color = std.AutoHashMap(u16, u32).init(allocator);
+    region_type_to_name = std.AutoHashMap(u8, []const u8).init(allocator);
+    region_type_to_color = std.AutoHashMap(u8, u32).init(allocator);
 
     const xmls_dir = try std.fs.cwd().openDir(asset_dir ++ "xmls", .{ .iterate = true });
     var walker = try xmls_dir.walk(allocator);
@@ -1495,7 +1497,7 @@ pub fn parseRegions(doc: xml.Doc, allocator: std.mem.Allocator) !void {
     const root = try doc.getRootElement();
     var iter = root.iterate(&.{}, "Region");
     while (iter.next()) |node| {
-        const obj_type = try node.getAttributeInt("type", u16, 0);
+        const obj_type = try node.getAttributeInt("type", u8, 0);
         const id = try node.getAttributeAlloc("id", allocator, "Unknown");
         try region_type_to_name.put(obj_type, id);
         try region_type_to_color.put(obj_type, try node.getValueInt("Color", u32, 0));

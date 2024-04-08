@@ -83,15 +83,12 @@ pub const Square = struct {
         self.u_offset += self.props.x_offset * 10.0 * assets.base_texel_w;
         self.v_offset += self.props.y_offset * 10.0 * assets.base_texel_h;
 
-        map.squares.put(floor_x + floor_y * map.width, self.*) catch |e| {
-            std.log.err("Setting square at x={d}, y={d} failed: {}", .{ self.x, self.y, e });
-            return;
-        };
+        map.squares[floor_x + floor_y * map.width] = self.*;
     }
 
     inline fn parseDir(x: f32, y: f32, square: *Square, current_prio: i32, comptime blend_idx: comptime_int) void {
         const opposite_idx = (blend_idx + 2) % 4;
-        if (map.getSquarePtr(x, y)) |other_sq| {
+        if (map.getSquarePtr(x, y, true)) |other_sq| {
             const has_wall = blk: {
                 const en = map.findEntityConst(other_sq.static_obj_id) orelse break :blk false;
                 break :blk en == .object and en.object.class == .wall;

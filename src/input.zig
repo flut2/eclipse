@@ -408,13 +408,13 @@ pub fn mouseEvent(window: glfw.Window, button: glfw.MouseButton, action: glfw.Ac
             mousePress(window, button);
 
             if (ui_systems.screen == .editor) {
-                ui_systems.screen.editor.onMousePress(mouse_x, mouse_y, button);
+                ui_systems.screen.editor.onMousePress(button);
             }
         }
     } else if (action == .release) {
         if (!ui_systems.mouseRelease(mouse_x, mouse_y)) {
             if (ui_systems.screen == .editor) {
-                ui_systems.screen.editor.onMouseRelease();
+                ui_systems.screen.editor.onMouseRelease(button);
             }
             mouseRelease(button);
         }
@@ -448,12 +448,6 @@ pub fn mouseMoveEvent(_: glfw.Window, x_pos: f64, y_pos: f64) void {
     mouse_y = @floatCast(y_pos);
 
     _ = ui_systems.mouseMove(mouse_x, mouse_y);
-
-    if (ui_systems.screen == .editor) {
-        if (main.editing_map) {
-            ui_systems.screen.editor.onMouseMove(mouse_x, mouse_y);
-        }
-    }
 }
 
 pub fn scrollEvent(_: glfw.Window, x_offset: f64, y_offset: f64) void {

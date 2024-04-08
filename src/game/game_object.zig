@@ -87,7 +87,7 @@ pub const GameObject = struct {
         }
 
         if (self.props.static) {
-            if (map.getSquarePtr(self.x, self.y)) |square| {
+            if (map.getSquarePtr(self.x, self.y, true)) |square| {
                 square.static_obj_id = self.obj_id;
             }
         }
@@ -177,7 +177,7 @@ pub const GameObject = struct {
         }
 
         if (self.class == .wall and self.x >= 0 and self.y >= 0) {
-            if (map.getSquarePtr(self.x, self.y)) |square| {
+            if (map.getSquarePtr(self.x, self.y, true)) |square| {
                 if (!no_wall_offset) {
                     self.x = @floor(self.x) + 0.5;
                     self.y = @floor(self.y) + 0.5;

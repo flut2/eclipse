@@ -174,7 +174,7 @@ pub var name: []const u8 = "";
 pub var seed: u32 = 0;
 pub var width: u32 = 0;
 pub var height: u32 = 0;
-pub var squares: std.AutoHashMap(u32, Square) = undefined;
+pub var squares: []Square = &[0]Square{};
 pub var bg_light_color: u32 = 0;
 pub var bg_light_intensity: f32 = 0.0;
 pub var day_light_intensity: f32 = 0.0;
@@ -192,7 +192,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     entities_to_add = try std.ArrayList(Entity).initCapacity(allocator, 128);
     entity_indices_to_remove = try std.ArrayList(usize).initCapacity(allocator, 128);
     move_records = try std.ArrayList(network.TimedPosition).initCapacity(allocator, 10);
-    squares = std.AutoHashMap(u32, Square).init(allocator);
 
     minimap = try zstbi.Image.createEmpty(4096, 4096, 4, .{});
 }
@@ -206,7 +205,7 @@ pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
             obj.disposed = true;
 
             if (obj.props.static) {
-                if (getSquarePtr(obj.x, obj.y)) |square| {
+                if (getSquarePtr(obj.x, obj.y, true)) |square| {
                     if (square.static_obj_id == obj.obj_id) square.static_obj_id = -1;
                 }
             }
@@ -268,10 +267,10 @@ pub fn dispose(allocator: std.mem.Allocator) void {
         disposeEntity(allocator, en);
     }
 
-    squares.clearRetainingCapacity();
     entities.clearRetainingCapacity();
     entities_to_add.clearRetainingCapacity();
     entity_indices_to_remove.clearRetainingCapacity();
+    @memset(squares, Square{});
     @memset(minimap.data, 0);
 }
 
@@ -287,7 +286,6 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         disposeEntity(allocator, en);
     }
 
-    squares.deinit();
     entities.deinit();
     entities_to_add.deinit();
     entity_indices_to_remove.deinit();
@@ -296,6 +294,9 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 
     if (name.len > 0)
         allocator.free(name);
+
+    if (squares.len > 0)
+        allocator.free(squares);
 }
 
 pub fn getLightIntensity(time: i64) f32 {
@@ -313,7 +314,7 @@ pub fn getLightIntensity(time: i64) f32 {
     }
 }
 
-pub fn setWH(w: u32, h: u32) void {
+pub fn setWH(w: u32, h: u32, allocator: std.mem.Allocator) void {
     width = w;
     height = h;
 
@@ -323,6 +324,13 @@ pub fn setWH(w: u32, h: u32) void {
         return;
     };
     main.need_force_update = true;
+
+    if (squares.len == 0) {
+        squares = allocator.alloc(Square, w * h) catch return;
+    } else {
+        squares = allocator.realloc(squares, w * h) catch return;
+    }
+    @memset(squares, Square{});
 
     const size = @max(w, h);
     const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
@@ -584,28 +592,30 @@ pub inline fn validPos(x: u32, y: u32) bool {
     return !(x >= width or y >= height);
 }
 
-pub inline fn getSquare(x: f32, y: f32) ?Square {
-    if (x < 0 or y < 0)
+// check_validity should always be on, unless you profiled that it causes clear slowdowns in your code.
+// even then, you should be very sure that the input can't ever go wrong or that it going wrong is inconsequential
+pub inline fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
+    if (check_validity and (x < 0 or y < 0))
         return null;
 
     const floor_x: u32 = @intFromFloat(x);
     const floor_y: u32 = @intFromFloat(y);
-    if (!validPos(floor_x, floor_y))
+    if (check_validity and !validPos(floor_x, floor_y))
         return null;
 
-    return squares.get(floor_y * width + floor_x);
+    return squares[floor_y * width + floor_x];
 }
 
-pub inline fn getSquarePtr(x: f32, y: f32) ?*Square {
-    if (x < 0 or y < 0)
+pub inline fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Square {
+    if (check_validity and (x < 0 or y < 0))
         return null;
 
     const floor_x: u32 = @intFromFloat(x);
     const floor_y: u32 = @intFromFloat(y);
-    if (!validPos(floor_x, floor_y))
+    if (check_validity and !validPos(floor_x, floor_y))
         return null;
 
-    return squares.getPtr(floor_y * width + floor_x);
+    return &squares[floor_y * width + floor_x];
 }
 
 pub fn addMoveRecord(time: i64, x: f32, y: f32) void {

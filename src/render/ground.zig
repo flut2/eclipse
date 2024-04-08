@@ -150,38 +150,16 @@ inline fn drawSquare(
     return new_idx + 4;
 }
 
-pub inline fn drawSquares(idx: u16, draw_data: base.DrawData, float_time_ms: f32, cam_x: f32, cam_y: f32) u16 {
+pub inline fn drawSquares(idx: u16, draw_data: base.DrawData, float_time_ms: f32, render_data: camera.SquareRenderData) u16 {
     var new_idx = idx;
-
-    const px_per_tile = camera.px_per_tile * camera.scale;
-    const radius = @sqrt(@as(f32, px_per_tile * px_per_tile / 2)) + 1;
-    const pi_div_4 = std.math.pi / 4.0;
-    const top_right_angle = pi_div_4;
-    const bottom_right_angle = 3.0 * pi_div_4;
-    const bottom_left_angle = 5.0 * pi_div_4;
-    const top_left_angle = 7.0 * pi_div_4;
-    const x1_offset = radius * @cos(top_left_angle + camera.angle) * camera.clip_scale_x;
-    const y1_offset = radius * @sin(top_left_angle + camera.angle) * camera.clip_scale_y;
-    const x2_offset = radius * @cos(bottom_left_angle + camera.angle) * camera.clip_scale_x;
-    const y2_offset = radius * @sin(bottom_left_angle + camera.angle) * camera.clip_scale_y;
-    const x3_offset = radius * @cos(bottom_right_angle + camera.angle) * camera.clip_scale_x;
-    const y3_offset = radius * @sin(bottom_right_angle + camera.angle) * camera.clip_scale_y;
-    const x4_offset = radius * @cos(top_right_angle + camera.angle) * camera.clip_scale_x;
-    const y4_offset = radius * @sin(top_right_angle + camera.angle) * camera.clip_scale_y;
 
     for (camera.min_y..camera.max_y) |y| {
         for (camera.min_x..camera.max_x) |x| {
             const float_x: f32 = @floatFromInt(x);
             const float_y: f32 = @floatFromInt(y);
-
-            const dx = cam_x - float_x - 0.5;
-            const dy = cam_y - float_y - 0.5;
-            if (dx * dx + dy * dy > camera.max_dist_sq)
-                continue;
-
-            if (map.getSquare(float_x, float_y)) |square| {
-                if (square.tile_type == 0xFF)
-                    continue;
+            if (map.getSquare(float_x, float_y, false)) |square| {
+                // if (square.tile_type == 0xFF)
+                //     continue;
 
                 const screen_pos = camera.rotateAroundCameraClip(square.x, square.y);
                 const screen_x = screen_pos.x;
@@ -192,7 +170,7 @@ pub inline fn drawSquares(idx: u16, draw_data: base.DrawData, float_time_ms: f32
                 if (settings.enable_lights) {
                     const light_color = square.props.light_color;
                     if (light_color != std.math.maxInt(u32)) {
-                        const size = px_per_tile * (square.props.light_radius + square.props.light_pulse *
+                        const size = render_data.px_per_tile * (square.props.light_radius + square.props.light_pulse *
                             @sin(float_time_ms / 1000.0 * square.props.light_pulse_speed));
 
                         const light_w = size * 4;
@@ -225,14 +203,14 @@ pub inline fn drawSquares(idx: u16, draw_data: base.DrawData, float_time_ms: f32
 
                 new_idx = drawSquare(
                     new_idx,
-                    scaled_x + x1_offset,
-                    scaled_y + y1_offset,
-                    scaled_x + x2_offset,
-                    scaled_y + y2_offset,
-                    scaled_x + x3_offset,
-                    scaled_y + y3_offset,
-                    scaled_x + x4_offset,
-                    scaled_y + y4_offset,
+                    scaled_x + render_data.x1,
+                    scaled_y + render_data.y1,
+                    scaled_x + render_data.x2,
+                    scaled_y + render_data.y2,
+                    scaled_x + render_data.x3,
+                    scaled_y + render_data.y3,
+                    scaled_x + render_data.x4,
+                    scaled_y + render_data.y4,
                     square.atlas_data,
                     u_offset,
                     v_offset,

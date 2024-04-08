@@ -9,6 +9,7 @@ const map = @import("../../game/map.zig");
 const element = @import("../element.zig");
 const game_data = @import("../../game_data.zig");
 const settings = @import("../../settings.zig");
+const utils = @import("../../utils.zig");
 const rpc = @import("rpc");
 
 const ui_systems = @import("../systems.zig");
@@ -20,11 +21,17 @@ const Square = @import("../../game/square.zig").Square;
 const Interactable = element.InteractableImageData;
 const NineSlice = element.NineSliceImageData;
 
-const button_container_width = 420;
-const button_container_height = 190;
+const controls_container_width = 220;
+const controls_container_height = 400;
 
 const new_container_width = 345;
 const new_container_height = 175;
+
+const palette_decor_w = 200;
+const palette_decor_h = 400;
+
+const dropdown_w = 200;
+const dropdown_h = 130;
 
 // used for map parse/write
 const Tile = struct { tile_type: u16, obj_type: u16, region_type: u8 };
@@ -37,109 +44,95 @@ const MapEditorTile = struct {
 };
 
 pub const EditorCommand = union(enum) {
-    place_tile: PlaceTile,
-    erase_tile: EraseTile,
-    place_object: PlaceObject,
-    erase_object: EraseObject,
+    place: Place,
+    multi_place: MultiPlace,
 };
 
-const EditorAction = enum(u8) {
-    none = 0,
-    place = 1,
-    erase = 2,
-    place_random = 3,
-    erase_random = 4,
-    undo = 5,
-    redo = 6,
-    sample = 7,
+const EditorAction = enum {
+    none,
+    place,
+    erase,
+    random,
+    undo,
+    redo,
+    sample,
+    fill,
 };
 
-const EditorLayer = enum(u8) {
+const Layer = enum(u8) {
     ground = 0,
     object = 1,
     region = 2,
 };
 
-const PlaceTile = packed struct {
+const Place = packed struct {
     x: u16,
     y: u16,
     new_type: u16,
     old_type: u16,
+    layer: Layer,
 
-    pub fn execute(self: PlaceTile) void {
-        ui_systems.screen.editor.setTile(self.x, self.y, self.new_type);
+    pub fn execute(self: Place) void {
+        switch (self.layer) {
+            .ground => ui_systems.screen.editor.setTile(self.x, self.y, self.new_type),
+            .object => ui_systems.screen.editor.setObject(self.x, self.y, self.new_type),
+            .region => ui_systems.screen.editor.setRegion(self.x, self.y, @intCast(self.new_type)),
+        }
     }
 
-    pub fn unexecute(self: PlaceTile) void {
-        ui_systems.screen.editor.setTile(self.x, self.y, self.old_type);
-    }
-};
-
-const EraseTile = packed struct {
-    x: u16,
-    y: u16,
-    old_type: u16,
-
-    pub fn execute(self: EraseTile) void {
-        ui_systems.screen.editor.setTile(self.x, self.y, 0xFFFE);
-    }
-
-    pub fn unexecute(self: EraseTile) void {
-        ui_systems.screen.editor.setTile(self.x, self.y, self.old_type);
+    pub fn unexecute(self: Place) void {
+        switch (self.layer) {
+            .ground => ui_systems.screen.editor.setTile(self.x, self.y, self.old_type),
+            .object => ui_systems.screen.editor.setObject(self.x, self.y, self.old_type),
+            .region => ui_systems.screen.editor.setRegion(self.x, self.y, @intCast(self.old_type)),
+        }
     }
 };
 
-const PlaceObject = packed struct {
-    x: u16,
-    y: u16,
-    new_type: u16,
-    old_type: u16,
+const MultiPlace = struct {
+    places: []Place,
 
-    pub fn execute(self: PlaceObject) void {
-        ui_systems.screen.editor.setObject(self.x, self.y, self.new_type);
+    pub fn execute(self: MultiPlace) void {
+        for (self.places) |place| place.execute();
     }
 
-    pub fn unexecute(self: PlaceObject) void {
-        ui_systems.screen.editor.setObject(self.x, self.y, self.old_type);
-    }
-};
-
-const EraseObject = struct {
-    x: u16,
-    y: u16,
-    old_type: u16,
-
-    pub fn execute(self: EraseObject) void {
-        ui_systems.screen.editor.setObject(self.x, self.y, 0xFFFF);
-    }
-
-    pub fn unexecute(self: EraseObject) void {
-        ui_systems.screen.editor.setObject(self.x, self.y, self.old_type);
+    pub fn unexecute(self: MultiPlace) void {
+        for (self.places) |place| place.unexecute();
     }
 };
 
 const CommandQueue = struct {
     command_list: std.ArrayList(EditorCommand) = undefined,
     current_position: u32 = 0,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *CommandQueue, allocator: std.mem.Allocator) void {
+        self.allocator = allocator;
         self.command_list = std.ArrayList(EditorCommand).init(allocator);
     }
 
     pub fn reset(self: *CommandQueue) void {
-        if (self.command_list.items.len > 0)
+        if (self.command_list.items.len > 0) {
+            for (self.command_list.items) |cmd| {
+                if (cmd == .multi_place)
+                    self.allocator.free(cmd.multi_place.places);
+            }
             self.command_list.clearAndFree();
+        }
     }
 
     pub fn deinit(self: *CommandQueue) void {
+        for (self.command_list.items) |cmd| {
+            if (cmd == .multi_place)
+                self.allocator.free(cmd.multi_place.places);
+        }
         self.command_list.deinit();
     }
 
     pub fn addCommand(self: *CommandQueue, command: EditorCommand) void {
-        var i = self.command_list.items.len; // might be a better method for this
-        while (i > self.current_position) {
+        var i = self.command_list.items.len;
+        while (i > self.current_position) : (i -= 1) {
             _ = self.command_list.pop();
-            i -= 1;
         }
 
         switch (command) {
@@ -151,9 +144,8 @@ const CommandQueue = struct {
     }
 
     pub fn undo(self: *CommandQueue) void {
-        if (self.current_position == 0) {
+        if (self.current_position == 0)
             return;
-        }
 
         self.current_position -= 1;
 
@@ -164,9 +156,8 @@ const CommandQueue = struct {
     }
 
     pub fn redo(self: *CommandQueue) void {
-        if (self.current_position == self.command_list.items.len) {
+        if (self.current_position == self.command_list.items.len)
             return;
-        }
 
         const command = self.command_list.items[self.current_position];
         switch (command) {
@@ -177,126 +168,10 @@ const CommandQueue = struct {
     }
 };
 
-pub const EditorBrush = struct {
-    size: i8 = 1,
-    brush_type: enum { rectangle, circle, line } = .rectangle,
-    visual_objects: std.ArrayList(i32) = undefined,
-    screen: *MapEditorScreen = undefined,
-    last_x: i32 = 0,
-    last_y: i32 = 0,
-    need_update: bool = false,
-
-    pub fn init(self: *EditorBrush, allocator: std.mem.Allocator, screen: *MapEditorScreen) void {
-        self.visual_objects = std.ArrayList(i32).initCapacity(allocator, 5 * 5) catch return; // max brush size if 5 * 5
-        self.screen = screen;
-    }
-
-    pub fn reset(self: *EditorBrush) void {
-        self.size = 1;
-        self.brush_type = .rectangle;
-        self.visual_objects.clearAndFree();
-        self.need_update = false;
-        self.last_x = 0;
-        self.last_y = 0;
-    }
-
-    pub fn update(self: *EditorBrush) void {
-        self.need_update = true;
-    }
-
-    pub fn deinit(self: *EditorBrush) void {
-        self.visual_objects.deinit();
-    }
-
-    pub fn increaseSize(self: *EditorBrush) void {
-        self.size = if (self.size + 1 > 5) 1 else self.size + 1;
-        self.need_update = true;
-    }
-
-    pub fn decreaseSize(self: *EditorBrush) void {
-        self.size = if (self.size - 1 <= 0) 5 else self.size - 1;
-        self.need_update = true;
-    }
-
-    fn updateVisual(self: *EditorBrush, center_x: u32, center_y: u32, place_type: u16) void {
-        const casted_x = @as(i32, @intCast(center_x));
-        const casted_y = @as(i32, @intCast(center_y));
-
-        if (!self.need_update) {
-            const dx = (casted_x - self.last_x);
-            const dy = (casted_y - self.last_y);
-            if (dx != 0 or dy != 0) {
-                const dx_cast = @as(f32, @floatFromInt(dx));
-                const dy_cast = @as(f32, @floatFromInt(dy));
-
-                for (self.visual_objects.items) |obj_id| {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
-
-                    if (map.findEntityRef(obj_id)) |en| {
-                        if (en.* == .object) {
-                            const o = &en.object;
-                            o.x += dx_cast;
-                            o.y += dy_cast;
-                        }
-                    }
-                }
-                self.last_x = casted_x;
-                self.last_y = casted_y;
-            }
-            return;
-        }
-
-        self.need_update = false;
-
-        for (self.visual_objects.items) |obj_id| {
-            map.removeEntity(self.screen.allocator, obj_id);
-        }
-        self.visual_objects.clearRetainingCapacity();
-
-        var x: i32 = -self.size;
-        while (x <= self.size) {
-            var y: i32 = -self.size;
-            while (y <= self.size) {
-                const offset_x = casted_x + x;
-                const offset_y = casted_y + y;
-
-                if (self.brush_type == .circle and x * x + y * y > self.size * self.size) {
-                    y += 1;
-                    continue;
-                }
-
-                if (offset_x < 0 or offset_y < 0 or offset_x >= self.screen.map_size or offset_y >= self.screen.map_size) {
-                    y += 1;
-                    continue;
-                }
-
-                self.screen.next_obj_id += 1;
-
-                var obj = GameObject{
-                    .x = @as(f32, @floatFromInt(offset_x)),
-                    .y = @as(f32, @floatFromInt(offset_y)),
-                    .obj_id = self.screen.next_obj_id,
-                    .obj_type = place_type,
-                    .size = 100,
-                    .alpha = 0.6,
-                };
-                obj.addToMap(self.screen.allocator, true);
-
-                self.visual_objects.append(obj.obj_id) catch return;
-
-                y += 1;
-            }
-
-            x += 1;
-        }
-
-        self.last_x = casted_x;
-        self.last_y = casted_y;
-    }
-};
-
 pub const MapEditorScreen = struct {
+    const layers = [_][]const u8{ "Tiles", "Objects", "Regions" };
+    const layer_enums = [_]Layer{ .ground, .object, .region };
+
     allocator: std.mem.Allocator,
     inited: bool = false,
 
@@ -312,35 +187,37 @@ pub const MapEditorScreen = struct {
     command_queue: CommandQueue = undefined,
 
     action: EditorAction = .none,
-    active_layer: EditorLayer = .ground,
+    active_layer: Layer = .ground,
+    selected_tile: u16 = 0xFFFE,
+    selected_object: u16 = 0xFFFF,
+    selected_region: u8 = 0xFF,
 
-    active_brush: EditorBrush = undefined,
-
-    object_type_to_place: [3]u16 = .{ 0x48, 0x600, 0 }, //0x600, 0 },
-
-    tile_list_index: u8 = 0,
-    tile_list: [8]u16 = .{ 0x48, 0x36, 0x35, 0x74, 0x70, 0x72, 0x1c, 0x0c },
-
-    object_list: [2]u16 = .{ 0x600, 0x01c5 },
-    object_list_index: u8 = 0,
+    brush_size: f32 = 0.5,
+    random_chance: f32 = 0.05,
 
     size_text_visual_64: *element.Text = undefined,
     size_text_visual_128: *element.Text = undefined,
     size_text_visual_256: *element.Text = undefined,
 
     fps_text: *element.Text = undefined,
-
+    controls_container: *element.Container = undefined,
+    palette_decor: *element.Image = undefined,
+    palette_container_tile: *element.ScrollableContainer = undefined,
+    palette_container_object: *element.ScrollableContainer = undefined,
+    palette_container_region: *element.ScrollableContainer = undefined,
+    layer_dropdown: *element.Dropdown = undefined,
     new_container: *element.Container = undefined,
 
-    buttons_container: *element.Container = undefined,
+    place_key: settings.Button = .{ .mouse = .left },
+    sample_key: settings.Button = .{ .mouse = .middle },
+    erase_key: settings.Button = .{ .mouse = .right },
+    random_key: settings.Button = .{ .key = .t },
+    undo_key: settings.Button = .{ .key = .u },
+    redo_key: settings.Button = .{ .key = .r },
+    fill_key: settings.Button = .{ .key = .f },
 
-    place_key_settings: settings.Button = .{ .mouse = .left },
-    sample_key_settings: settings.Button = .{ .mouse = .middle },
-    erase_key_settings: settings.Button = .{ .mouse = .right },
-    random_key_setting: settings.Button = .{ .key = .t },
-
-    undo_key_setting: settings.Button = .{ .key = .u },
-    redo_key_setting: settings.Button = .{ .key = .r },
+    start_x_override: u16 = 0xFFFF,
+    start_y_override: u16 = 0xFFFF,
 
     pub fn init(allocator: std.mem.Allocator) !*MapEditorScreen {
         var screen = try allocator.create(MapEditorScreen);
@@ -361,14 +238,9 @@ pub const MapEditorScreen = struct {
         screen.command_queue = .{};
         screen.command_queue.init(allocator);
 
-        screen.active_brush = .{};
-        screen.active_brush.init(allocator, screen);
-
         const button_data_base = assets.getUiData("button_base", 0);
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
-
-        const background_data_base = assets.getUiData("dialog_title_background", 0);
 
         const check_box_base_on = assets.getUiData("checked_box_base", 0);
         const check_box_hover_on = assets.getUiData("checked_box_hover", 0);
@@ -400,27 +272,26 @@ pub const MapEditorScreen = struct {
         }
 
         screen.fps_text = try element.create(allocator, element.Text{
-            .x = camera.screen_width - fps_text_data.width - 10,
-            .y = 16,
+            .x = 10,
+            .y = 10,
             .text_data = fps_text_data,
         });
 
-        screen.buttons_container = try element.create(allocator, element.Container{
-            .x = 0,
-            .y = camera.screen_height - button_container_height,
-        });
-
-        _ = try screen.buttons_container.createChild(element.Image{
+        screen.controls_container = try element.create(allocator, element.Container{
             .x = 0,
             .y = 0,
-            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data_base, button_container_width, button_container_height, 6, 11, 2, 2, 1.0) },
         });
 
-        var button_offset: f32 = button_padding;
+        const background_decor = assets.getUiData("tooltip_background", 0);
+        _ = try screen.controls_container.createChild(element.Image{
+            .x = 0,
+            .y = 0,
+            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_decor, controls_container_width, controls_container_height, 34, 34, 1, 1, 1.0) },
+        });
 
-        const new_button = try screen.buttons_container.createChild(element.Button{
+        _ = try screen.controls_container.createChild(element.Button{
             .x = button_padding,
-            .y = button_offset,
+            .y = button_padding,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "New",
@@ -431,11 +302,9 @@ pub const MapEditorScreen = struct {
             .press_callback = newCallback,
         });
 
-        button_offset += button_height + button_padding;
-
-        _ = try screen.buttons_container.createChild(element.Button{
-            .x = button_padding,
-            .y = button_offset,
+        _ = try screen.controls_container.createChild(element.Button{
+            .x = button_padding + button_width,
+            .y = button_padding,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Open",
@@ -446,11 +315,9 @@ pub const MapEditorScreen = struct {
             .press_callback = openCallback,
         });
 
-        button_offset += button_height + button_padding;
-
-        _ = try screen.buttons_container.createChild(element.Button{
+        _ = try screen.controls_container.createChild(element.Button{
             .x = button_padding,
-            .y = button_offset,
+            .y = button_padding + button_height,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Save",
@@ -461,11 +328,9 @@ pub const MapEditorScreen = struct {
             .press_callback = saveCallback,
         });
 
-        button_offset += button_height + button_padding;
-
-        _ = try screen.buttons_container.createChild(element.Button{
-            .x = button_padding,
-            .y = button_offset,
+        _ = try screen.controls_container.createChild(element.Button{
+            .x = button_padding + button_width,
+            .y = button_padding + button_height,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Exit",
@@ -484,7 +349,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.new_container.createChild(element.Image{
             .x = 0,
             .y = 0,
-            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data_base, new_container_width, new_container_height, 6, 11, 2, 2, 1.0) },
+            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_decor, new_container_width, new_container_height, 34, 34, 1, 1, 1.0) },
         });
 
         var text_size_64 = element.Text{
@@ -612,93 +477,466 @@ pub const MapEditorScreen = struct {
             .press_callback = newCloseCallback,
         });
 
-        const place_key = try screen.buttons_container.createChild(element.KeyMapper{
-            .x = new_button.x + new_button.width() + button_padding,
-            .y = new_button.y,
+        _ = try screen.controls_container.createChild(element.KeyMapper{
+            .x = button_padding,
+            .y = button_padding + button_height * 2,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Place",
                 .size = 12,
                 .text_type = .bold,
             },
-            .key = screen.place_key_settings.getKey(),
-            .mouse = screen.place_key_settings.getMouse(),
-            .settings_button = &screen.place_key_settings,
+            .key = screen.place_key.getKey(),
+            .mouse = screen.place_key.getMouse(),
+            .settings_button = &screen.place_key,
             .set_key_callback = noAction,
         });
-        const sample_key = try screen.buttons_container.createChild(element.KeyMapper{
-            .x = place_key.x,
-            .y = place_key.y + new_button.height() + button_padding,
+        _ = try screen.controls_container.createChild(element.KeyMapper{
+            .x = button_padding + button_width,
+            .y = button_padding + button_height * 2,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Sample",
                 .size = 12,
                 .text_type = .bold,
             },
-            .key = screen.sample_key_settings.getKey(),
-            .mouse = screen.sample_key_settings.getMouse(),
-            .settings_button = &screen.sample_key_settings,
+            .key = screen.sample_key.getKey(),
+            .mouse = screen.sample_key.getMouse(),
+            .settings_button = &screen.sample_key,
             .set_key_callback = noAction,
         });
-        const erase_key = try screen.buttons_container.createChild(element.KeyMapper{
-            .x = sample_key.x,
-            .y = sample_key.y + sample_key.height() + button_padding,
+        _ = try screen.controls_container.createChild(element.KeyMapper{
+            .x = button_padding,
+            .y = button_padding + button_height * 3,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Erase",
                 .size = 12,
                 .text_type = .bold,
             },
-            .key = screen.erase_key_settings.getKey(),
-            .mouse = screen.erase_key_settings.getMouse(),
-            .settings_button = &screen.erase_key_settings,
+            .key = screen.erase_key.getKey(),
+            .mouse = screen.erase_key.getMouse(),
+            .settings_button = &screen.erase_key,
             .set_key_callback = noAction,
         });
-        const random_key = try screen.buttons_container.createChild(element.KeyMapper{
-            .x = erase_key.x,
-            .y = erase_key.y + erase_key.height() + button_padding,
+        _ = try screen.controls_container.createChild(element.KeyMapper{
+            .x = button_padding + button_width,
+            .y = button_padding + button_height * 3,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Random",
                 .size = 12,
                 .text_type = .bold,
             },
-            .key = screen.random_key_setting.getKey(),
-            .mouse = screen.random_key_setting.getMouse(),
-            .settings_button = &screen.random_key_setting,
+            .key = screen.random_key.getKey(),
+            .mouse = screen.random_key.getMouse(),
+            .settings_button = &screen.random_key,
             .set_key_callback = noAction,
         });
-        const undo_key = try screen.buttons_container.createChild(element.KeyMapper{
-            .x = place_key.x + random_key.width() + button_padding,
-            .y = place_key.y,
+        _ = try screen.controls_container.createChild(element.KeyMapper{
+            .x = button_padding,
+            .y = button_padding + button_height * 4,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Undo",
                 .size = 12,
                 .text_type = .bold,
             },
-            .key = screen.undo_key_setting.getKey(),
-            .mouse = screen.undo_key_setting.getMouse(),
-            .settings_button = &screen.undo_key_setting,
+            .key = screen.undo_key.getKey(),
+            .mouse = screen.undo_key.getMouse(),
+            .settings_button = &screen.undo_key,
             .set_key_callback = noAction,
         });
-        _ = try screen.buttons_container.createChild(element.KeyMapper{
-            .x = undo_key.x,
-            .y = undo_key.y + undo_key.height() + button_padding,
+        _ = try screen.controls_container.createChild(element.KeyMapper{
+            .x = button_padding + button_width,
+            .y = button_padding + button_height * 4,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Redo",
                 .size = 12,
                 .text_type = .bold,
             },
-            .key = screen.redo_key_setting.getKey(),
-            .mouse = screen.redo_key_setting.getMouse(),
-            .settings_button = &screen.redo_key_setting,
+            .key = screen.redo_key.getKey(),
+            .mouse = screen.redo_key.getMouse(),
+            .settings_button = &screen.redo_key,
             .set_key_callback = noAction,
         });
 
+        _ = try screen.controls_container.createChild(element.KeyMapper{
+            .x = button_padding,
+            .y = button_padding + button_height * 5,
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+            .title_text_data = .{
+                .text = "Fill",
+                .size = 12,
+                .text_type = .bold,
+            },
+            .key = screen.fill_key.getKey(),
+            .mouse = screen.fill_key.getMouse(),
+            .settings_button = &screen.fill_key,
+            .set_key_callback = noAction,
+        });
+
+        const slider_background_data = assets.getUiData("slider_background", 0);
+        const knob_data_base = assets.getUiData("slider_knob_base", 0);
+        const knob_data_hover = assets.getUiData("slider_knob_hover", 0);
+        const knob_data_press = assets.getUiData("slider_knob_press", 0);
+
+        const slider_w = controls_container_width - button_padding * 2 - 5;
+        const slider_h = button_height - 5 - 10;
+        const knob_size = button_height - 5;
+
+        _ = try screen.controls_container.createChild(element.Slider{
+            .x = button_padding * 1.5,
+            .y = button_height * 8,
+            .w = slider_w,
+            .h = slider_h,
+            .min_value = 0.5,
+            .max_value = 10.0,
+            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(slider_background_data, slider_w, slider_h, 1, 1, 2, 2, 1.0) },
+            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 4, 4, 4, 4, 1.0),
+            .stored_value = &screen.brush_size,
+            .state_change = sliderChanged,
+            .title_text_data = .{
+                .text = "Brush Size",
+                .size = 12,
+                .text_type = .bold,
+            },
+            .value_text_data = .{
+                .text = "",
+                .size = 10,
+                .text_type = .bold,
+                .max_chars = 64,
+            },
+        });
+
+        _ = try screen.controls_container.createChild(element.Slider{
+            .x = button_padding * 1.5,
+            .y = button_height * 10,
+            .w = slider_w,
+            .h = slider_h,
+            .min_value = 0.005,
+            .max_value = 1.0,
+            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(slider_background_data, slider_w, slider_h, 1, 1, 2, 2, 1.0) },
+            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 4, 4, 4, 4, 1.0),
+            .stored_value = &screen.random_chance,
+            .state_change = sliderChanged,
+            .title_text_data = .{
+                .text = "Random Chance",
+                .size = 12,
+                .text_type = .bold,
+            },
+            .value_text_data = .{
+                .text = "",
+                .size = 10,
+                .text_type = .bold,
+                .max_chars = 64,
+            },
+        });
+
+        screen.palette_decor = try element.create(allocator, element.Image{
+            .x = camera.screen_width - palette_decor_w - 5,
+            .y = 5,
+            .image_data = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(background_decor, palette_decor_w, palette_decor_h, 34, 34, 1, 1, 1.0) },
+        });
+
+        const scroll_background_data = assets.getUiData("scroll_background", 0);
+        const scroll_knob_base = assets.getUiData("scroll_wheel_base", 0);
+        const scroll_knob_hover = assets.getUiData("scroll_wheel_hover", 0);
+        const scroll_knob_press = assets.getUiData("scroll_wheel_press", 0);
+        const scroll_decor_data = assets.getUiData("scrollbar_decor", 0);
+        screen.palette_container_tile = try element.create(allocator, element.ScrollableContainer{
+            .x = screen.palette_decor.x + 8,
+            .y = screen.palette_decor.y + 9,
+            .scissor_w = palette_decor_w - 20 - 6,
+            .scissor_h = palette_decor_h - 17,
+            .scroll_x = screen.palette_decor.x + palette_decor_w - 20 + 2,
+            .scroll_y = screen.palette_decor.y + 9,
+            .scroll_w = 4,
+            .scroll_h = palette_decor_h - 17,
+            .scroll_side_x = screen.palette_decor.x + palette_decor_w - 20 + 2 - 6,
+            .scroll_side_y = screen.palette_decor.y + 9,
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
+        });
+
+        var tile_iter = game_data.ground_type_to_tex_data.iterator();
+        var i: usize = 0;
+        while (tile_iter.next()) |entry| : (i += 1) {
+            if (entry.key_ptr.* == 0xFF or entry.key_ptr.* == 0xFFFE) {
+                i -= 1;
+                continue;
+            }
+
+            var atlas_data = blk: {
+                if (entry.value_ptr.len <= 0) {
+                    std.log.err("Tile with type 0x{x} has an empty texture list. Using error texture", .{entry.key_ptr.*});
+                    break :blk assets.error_data;
+                }
+
+                const tex = if (entry.value_ptr.len == 1) entry.value_ptr.*[0] else entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+
+                if (assets.atlas_data.get(tex.sheet)) |data| {
+                    if (tex.index >= data.len) {
+                        std.log.err("Could not find index 0x{x} for tile with type 0x{x}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
+                        break :blk assets.error_data;
+                    }
+
+                    break :blk data[tex.index];
+                } else {
+                    std.log.err("Could not find sheet {s} for tile with type 0x{x}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
+                    break :blk assets.error_data;
+                }
+            };
+
+            if (atlas_data.tex_w <= 0 or atlas_data.tex_h <= 0) {
+                std.log.err("Tile with type 0x{x} has an empty texture. Using error texture", .{entry.key_ptr.*});
+                atlas_data = assets.error_data;
+            }
+
+            _ = try screen.palette_container_tile.createChild(element.Button{
+                .x = @floatFromInt(@mod(i, 5) * 34),
+                .y = @floatFromInt(@divFloor(i, 5) * 34),
+                .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = 4.0, .scale_y = 4.0 } } },
+                .userdata = entry.key_ptr,
+                .press_callback = groundClicked,
+                .tooltip_text = .{
+                    .text = game_data.ground_type_to_name.get(entry.key_ptr.*) orelse {
+                        std.log.err("Could find name for tile with type 0x{x}. Not adding to tile list", .{entry.key_ptr.*});
+                        i -= 1;
+                        continue;
+                    },
+                    .size = 12,
+                    .text_type = .bold_italic,
+                },
+            });
+        }
+
+        screen.palette_container_object = try element.create(allocator, element.ScrollableContainer{
+            .x = screen.palette_decor.x + 8,
+            .y = screen.palette_decor.y + 9,
+            .scissor_w = palette_decor_w - 20 - 6,
+            .scissor_h = palette_decor_h - 17,
+            .scroll_x = screen.palette_decor.x + palette_decor_w - 20 + 2,
+            .scroll_y = screen.palette_decor.y + 9,
+            .scroll_w = 4,
+            .scroll_h = palette_decor_h - 17,
+            .scroll_side_x = screen.palette_decor.x + palette_decor_w - 20 + 2 - 6,
+            .scroll_side_y = screen.palette_decor.y + 9,
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
+            .visible = false,
+        });
+
+        var obj_iter = game_data.obj_type_to_tex_data.iterator();
+        i = 0;
+        while (obj_iter.next()) |entry| : (i += 1) {
+            if (game_data.obj_type_to_class.get(entry.key_ptr.*)) |class| {
+                if (class == .projectile or class == .character or class == .player or class == .skin) {
+                    i -= 1;
+                    continue;
+                }
+            } else {
+                i -= 1;
+                std.log.err("Could not find class for object with type 0x{x}, skipping", .{entry.key_ptr.*});
+                continue;
+            }
+
+            var atlas_data = blk: {
+                if (entry.value_ptr.len <= 0) {
+                    std.log.err("Object with type 0x{x} has an empty texture list. Using error texture", .{entry.key_ptr.*});
+                    break :blk assets.error_data;
+                }
+
+                const tex = if (entry.value_ptr.len == 1) entry.value_ptr.*[0] else entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+
+                if (assets.atlas_data.get(tex.sheet)) |data| {
+                    if (tex.index >= data.len) {
+                        std.log.err("Could not find index 0x{x} for object with type 0x{x}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
+                        break :blk assets.error_data;
+                    }
+
+                    break :blk data[tex.index];
+                } else {
+                    std.log.err("Could not find sheet {s} for object with type 0x{x}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
+                    break :blk assets.error_data;
+                }
+            };
+
+            if (atlas_data.tex_w <= 0 or atlas_data.tex_h <= 0) {
+                std.log.err("Object with type 0x{x} has an empty texture. Using error texture", .{entry.key_ptr.*});
+                atlas_data = assets.error_data;
+            }
+
+            const scale = 10.0 / @max(atlas_data.texWRaw(), atlas_data.texHRaw()) * 3.0;
+
+            _ = try screen.palette_container_object.createChild(element.Button{
+                .x = @as(f32, @floatFromInt(@mod(i, 5) * 32)) + (32 - atlas_data.texWRaw() * scale) / 2.0,
+                .y = @as(f32, @floatFromInt(@divFloor(i, 5) * 32)) + (32 - atlas_data.texHRaw() * scale) / 2.0,
+                .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = scale, .scale_y = scale } } },
+                .userdata = entry.key_ptr,
+                .press_callback = objectClicked,
+                .tooltip_text = .{
+                    .text = game_data.obj_type_to_name.get(entry.key_ptr.*) orelse {
+                        std.log.err("Could find name for object with type 0x{x}. Not adding to object list", .{entry.key_ptr.*});
+                        i -= 1;
+                        continue;
+                    },
+                    .size = 12,
+                    .text_type = .bold_italic,
+                },
+            });
+        }
+
+        screen.palette_container_region = try element.create(allocator, element.ScrollableContainer{
+            .x = screen.palette_decor.x + 8,
+            .y = screen.palette_decor.y + 9,
+            .scissor_w = palette_decor_w - 20 - 6,
+            .scissor_h = palette_decor_h - 17,
+            .scroll_x = screen.palette_decor.x + palette_decor_w - 20 + 2,
+            .scroll_y = screen.palette_decor.y + 9,
+            .scroll_w = 4,
+            .scroll_h = palette_decor_h - 17,
+            .scroll_side_x = screen.palette_decor.x + palette_decor_w - 20 + 2 - 6,
+            .scroll_side_y = screen.palette_decor.y + 9,
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
+            .visible = false,
+        });
+
+        var region_iter = game_data.region_type_to_color.iterator();
+        i = 0;
+        while (region_iter.next()) |entry| : (i += 1) {
+            _ = try screen.palette_container_region.createChild(element.Button{
+                .x = @floatFromInt(@mod(i, 5) * 34),
+                .y = @floatFromInt(@divFloor(i, 5) * 34),
+                .image_data = .{ .base = .{ .normal = .{
+                    .atlas_data = assets.wall_backface_data,
+                    .scale_x = 4.0,
+                    .scale_y = 4.0,
+                    .alpha = 0.6,
+                    .color = entry.value_ptr.*,
+                    .color_intensity = 1.0,
+                } } },
+                .userdata = entry.key_ptr,
+                .press_callback = regionClicked,
+                .tooltip_text = .{
+                    .text = game_data.region_type_to_name.get(entry.key_ptr.*) orelse {
+                        std.log.err("Could find name for region with type 0x{x}. Not adding to region list", .{entry.key_ptr.*});
+                        i -= 1;
+                        continue;
+                    },
+                    .size = 12,
+                    .text_type = .bold_italic,
+                },
+            });
+        }
+
+        const collapsed_icon_base = assets.getUiData("dropdown_collapsed_icon_base", 0);
+        const collapsed_icon_hover = assets.getUiData("dropdown_collapsed_icon_hover", 0);
+        const collapsed_icon_press = assets.getUiData("dropdown_collapsed_icon_press", 0);
+        const extended_icon_base = assets.getUiData("dropdown_extended_icon_base", 0);
+        const extended_icon_hover = assets.getUiData("dropdown_extended_icon_hover", 0);
+        const extended_icon_press = assets.getUiData("dropdown_extended_icon_press", 0);
+        const dropdown_main_color_base = assets.getUiData("dropdown_main_color_base", 0);
+        const dropdown_main_color_hover = assets.getUiData("dropdown_main_color_hover", 0);
+        const dropdown_main_color_press = assets.getUiData("dropdown_main_color_press", 0);
+        const dropdown_alt_color_base = assets.getUiData("dropdown_alt_color_base", 0);
+        const dropdown_alt_color_hover = assets.getUiData("dropdown_alt_color_hover", 0);
+        const dropdown_alt_color_press = assets.getUiData("dropdown_alt_color_press", 0);
+        const title_background = assets.getUiData("dropdown_title_background", 0);
+        const background_data = assets.getUiData("dropdown_background", 0);
+
+        screen.layer_dropdown = try element.create(allocator, element.Dropdown{
+            .x = screen.palette_decor.x,
+            .y = screen.palette_decor.y + screen.palette_decor.height() + 5,
+            .w = dropdown_w,
+            .container_inlay_x = 8,
+            .container_inlay_y = 2,
+            .button_data_collapsed = Interactable.fromImageData(collapsed_icon_base, collapsed_icon_hover, collapsed_icon_press),
+            .button_data_extended = Interactable.fromImageData(extended_icon_base, extended_icon_hover, extended_icon_press),
+            .main_background_data = Interactable.fromNineSlices(dropdown_main_color_base, dropdown_main_color_hover, dropdown_main_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
+            .alt_background_data = Interactable.fromNineSlices(dropdown_alt_color_base, dropdown_alt_color_hover, dropdown_alt_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
+            .title_data = .{ .nine_slice = NineSlice.fromAtlasData(title_background, dropdown_w, dropdown_h, 20, 20, 4, 4, 1.0) },
+            .title_text = .{
+                .text = "Layer",
+                .size = 20,
+                .text_type = .bold_italic,
+            },
+            .background_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, dropdown_w, dropdown_h, 20, 8, 4, 4, 1.0) },
+            .scroll_w = 4,
+            .scroll_h = dropdown_h - 10,
+            .scroll_side_x_rel = -6,
+            .scroll_side_y_rel = 0,
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, dropdown_h - 10, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, dropdown_h - 10, 0, 41, 6, 3, 1.0) },
+            .selected_index = 0,
+        });
+
+        for (layers) |layer| {
+            const layer_line = try screen.layer_dropdown.createChild(layerCallback);
+            _ = try layer_line.container.createChild(element.Text{
+                .x = 0,
+                .y = 0,
+                .text_data = .{
+                    .text = layer,
+                    .size = 20,
+                    .text_type = .bold,
+                    .hori_align = .middle,
+                    .vert_align = .middle,
+                    .max_width = layer_line.background_data.width(.none),
+                    .max_height = layer_line.background_data.height(.none),
+                },
+            });
+        }
+
         screen.inited = true;
         return screen;
+    }
+
+    fn groundClicked(ud: ?*anyopaque) void {
+        ui_systems.screen.editor.selected_tile = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    }
+
+    fn objectClicked(ud: ?*anyopaque) void {
+        ui_systems.screen.editor.selected_object = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    }
+
+    fn regionClicked(ud: ?*anyopaque) void {
+        ui_systems.screen.editor.selected_region = @as(*u8, @alignCast(@ptrCast(ud))).*;
+    }
+
+    fn layerCallback(dc: *element.DropdownContainer) void {
+        const next_layer = layer_enums[dc.index];
+        const screen = ui_systems.screen.editor;
+        screen.active_layer = next_layer;
+        switch (next_layer) {
+            .ground => {
+                screen.palette_container_tile.visible = true;
+                screen.palette_container_object.visible = false;
+                screen.palette_container_region.visible = false;
+            },
+            .object => {
+                screen.palette_container_tile.visible = false;
+                screen.palette_container_object.visible = true;
+                screen.palette_container_region.visible = false;
+            },
+            .region => {
+                screen.palette_container_tile.visible = false;
+                screen.palette_container_object.visible = false;
+                screen.palette_container_region.visible = true;
+            },
+        }
+    }
+
+    fn sliderChanged(slider: *element.Slider) void {
+        if (slider.stored_value) |value_ptr| {
+            value_ptr.* = slider.current_value;
+        }
     }
 
     fn noAction(_: *element.KeyMapper) void {}
@@ -739,23 +977,21 @@ pub const MapEditorScreen = struct {
     fn newCallback(ud: ?*anyopaque) void {
         const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
         screen.new_container.visible = true;
-        screen.buttons_container.visible = false;
-
-        screen.active_brush.reset();
+        screen.controls_container.visible = false;
     }
 
     fn newCreateCallback(ud: ?*anyopaque) void {
         const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
 
-        screen.buttons_container.visible = true;
+        screen.controls_container.visible = true;
         screen.new_container.visible = false;
 
         map.dispose(screen.allocator);
-        map.setWH(screen.map_size, screen.map_size);
+        map.setWH(screen.map_size, screen.map_size, screen.allocator);
         map.bg_light_color = 0;
         map.bg_light_intensity = 0.15;
 
-        if (screen.map_tile_data.len != 0) {
+        if (screen.map_tile_data.len == 0) {
             screen.map_tile_data = screen.allocator.alloc(MapEditorTile, screen.map_size * screen.map_size) catch return;
         } else {
             screen.map_tile_data = screen.allocator.realloc(screen.map_tile_data, screen.map_size * screen.map_size) catch return;
@@ -779,8 +1015,8 @@ pub const MapEditorScreen = struct {
         }
 
         var player = Player{
-            .x = center,
-            .y = center,
+            .x = if (screen.start_x_override == 0xFFFF) center else @floatFromInt(screen.start_x_override),
+            .y = if (screen.start_y_override == 0xFFFF) center else @floatFromInt(screen.start_y_override),
             .obj_id = map.local_player_id,
             .obj_type = 0x0300,
             .size = 100,
@@ -789,8 +1025,9 @@ pub const MapEditorScreen = struct {
         player.addToMap(screen.allocator);
 
         main.editing_map = true;
-
-        ui_systems.menu_background.visible = false; // hack
+        ui_systems.menu_background.visible = false;
+        screen.start_x_override = 0xFFFF;
+        screen.start_y_override = 0xFFFF;
     }
 
     fn newCloseCallback(ud: ?*anyopaque) void {
@@ -800,7 +1037,7 @@ pub const MapEditorScreen = struct {
 
     // for easier error handling
     fn openInner(screen: *MapEditorScreen) !void {
-        // if (main.editing_map) {} // maybe a popup to ask to save?
+        // todo popup for save
 
         const file_path = try nfd.openFileDialog("em", null);
         if (file_path) |path| {
@@ -820,6 +1057,8 @@ pub const MapEditorScreen = struct {
             const w = try dcp.reader().readInt(u16, .little);
             const h = try dcp.reader().readInt(u16, .little);
 
+            screen.start_x_override = x_start + @divFloor(w, 2);
+            screen.start_y_override = y_start + @divFloor(h, 2);
             screen.map_size = 256;
             screen.map_size_256 = true;
             screen.map_size_128 = false;
@@ -988,9 +1227,8 @@ pub const MapEditorScreen = struct {
 
     fn reset(screen: *MapEditorScreen) void {
         screen.command_queue.reset();
-        screen.active_brush.reset();
 
-        screen.buttons_container.visible = true;
+        screen.controls_container.visible = true;
         screen.new_container.visible = false;
 
         screen.size_text_visual_64.visible = false;
@@ -1001,23 +1239,23 @@ pub const MapEditorScreen = struct {
         screen.map_size_64 = false;
         screen.map_size_128 = true;
         screen.map_size_256 = false;
-
-        ui_systems.menu_background.visible = true;
     }
 
     pub fn deinit(self: *MapEditorScreen) void {
         self.inited = false;
-        ui_systems.menu_background.visible = true;
-
         self.reset();
 
         element.destroy(self.fps_text);
+        element.destroy(self.palette_decor);
+        element.destroy(self.palette_container_tile);
+        element.destroy(self.palette_container_object);
+        element.destroy(self.palette_container_region);
+        element.destroy(self.layer_dropdown);
         element.destroy(self.new_container);
-        element.destroy(self.buttons_container);
+        element.destroy(self.controls_container);
 
-        if (self.map_tile_data.len > 0) {
+        if (self.map_tile_data.len > 0)
             self.allocator.free(self.map_tile_data);
-        }
 
         if (main.editing_map) {
             main.editing_map = false;
@@ -1025,124 +1263,79 @@ pub const MapEditorScreen = struct {
         }
 
         self.allocator.destroy(self);
+
+        ui_systems.menu_background.visible = true;
     }
 
     pub fn resize(self: *MapEditorScreen, width: f32, height: f32) void {
         self.new_container.x = (width - self.new_container.height()) / 2;
         self.new_container.y = (height - self.new_container.height()) / 2;
-        self.buttons_container.x = 0;
-        self.buttons_container.y = height - self.buttons_container.height();
+        self.controls_container.y = height - self.controls_container.height();
+        self.layer_dropdown.x = width - dropdown_w - 5;
     }
 
-    // flickering is happening
-    // todo figure out why and fix
-    // cba to find out why now
-    // more noticable on larger brush sizes
-    // might need different approach for doing brush visualization ngl
-
-    pub fn onMouseMove(self: *MapEditorScreen, x: f32, y: f32) void {
-        _ = y;
-        _ = x;
-        _ = self;
-        // const _x: f32 = @floatCast(x);
-        // const _y: f32 = @floatCast(y);
-
-        // var world_point = camera.screenToWorld(_x, _y);
-        // world_point.x = @max(0, @min(world_point.x, @as(f32, @floatFromInt(self.map_size - 1))));
-        // world_point.y = @max(0, @min(world_point.y, @as(f32, @floatFromInt(self.map_size - 1))));
-
-        // const floor_x: u32 = @intFromFloat(@floor(world_point.x));
-        // const floor_y: u32 = @intFromFloat(@floor(world_point.y));
-
-        // self.active_brush.update(floor_x, floor_y);
+    pub fn onMousePress(self: *MapEditorScreen, button: glfw.MouseButton) void {
+        if (button == self.undo_key.getMouse())
+            self.action = .undo
+        else if (button == self.redo_key.getMouse())
+            self.action = .redo
+        else if (button == self.place_key.getMouse())
+            self.action = .place
+        else if (button == self.erase_key.getMouse())
+            self.action = .erase
+        else if (button == self.sample_key.getMouse())
+            self.action = .sample
+        else if (button == self.random_key.getMouse())
+            self.action = .random
+        else if (button == self.fill_key.getMouse())
+            self.action = .fill;
     }
 
-    pub fn onMousePress(self: *MapEditorScreen, x: f64, y: f64, button: glfw.MouseButton) void {
-        self.action = if (button == self.place_key_settings.getMouse()) .place else if (button == self.erase_key_settings.getMouse()) .erase else .none;
-
-        if (button == self.sample_key_settings.getMouse()) {
-            // only used for visual naming on the statistics
-            self.action = .sample;
-
-            const _x: f32 = @floatCast(x);
-            const _y: f32 = @floatCast(y);
-
-            var world_point = camera.screenToWorld(_x, _y);
-            world_point.x = @max(0, @min(world_point.x, @as(f32, @floatFromInt(self.map_size - 1))));
-            world_point.y = @max(0, @min(world_point.y, @as(f32, @floatFromInt(self.map_size - 1))));
-
-            const floor_x: u32 = @intFromFloat(@floor(world_point.x));
-            const floor_y: u32 = @intFromFloat(@floor(world_point.y));
-
-            const current_tile = self.map_tile_data[floor_y * self.map_size + floor_x];
-            const layer = @intFromEnum(self.active_layer);
-
-            if (self.active_layer == .ground) {
-                if (current_tile.tile_type != 0xFFFE) {
-                    for (0..8) |i| {
-                        if (self.tile_list[i] == current_tile.tile_type) {
-                            self.tile_list_index = @as(u8, @intCast(i));
-                            self.object_type_to_place[layer] = current_tile.tile_type;
-                            break;
-                        }
-                    }
-                }
-            } else {
-                if (current_tile.obj_type != 0xFFFF) {
-                    for (0..2) |i| {
-                        if (self.object_list[i] == current_tile.obj_type) {
-                            self.object_list_index = @as(u8, @intCast(i));
-                            self.object_type_to_place[layer] = current_tile.obj_type;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn onMouseRelease(self: *MapEditorScreen) void {
-        self.action = .none;
+    pub fn onMouseRelease(self: *MapEditorScreen, button: glfw.MouseButton) void {
+        if (button == self.undo_key.getMouse() or
+            button == self.redo_key.getMouse() or
+            button == self.place_key.getMouse() or
+            button == self.erase_key.getMouse() or
+            button == self.sample_key.getMouse() or
+            button == self.random_key.getMouse() or
+            button == self.fill_key.getMouse())
+            self.action = .none;
     }
 
     pub fn onKeyPress(self: *MapEditorScreen, key: glfw.Key) void {
-        if (key == .F4) {
-            self.active_brush.increaseSize();
-        }
-        if (key == .F5) {
-            self.active_brush.decreaseSize();
-        }
-        if (key == .F6) {
-            // todo add line
-            if (self.active_brush.brush_type == .circle) {
-                self.active_brush.brush_type = .rectangle;
-            } else {
-                self.active_brush.brush_type = .circle;
-            }
-        }
-
-        if (key == self.undo_key_setting.getKey()) {
-            self.action = .undo;
-        }
-
-        if (key == self.redo_key_setting.getKey()) {
-            self.action = .redo;
-        }
+        if (key == self.undo_key.getKey())
+            self.action = .undo
+        else if (key == self.redo_key.getKey())
+            self.action = .redo
+        else if (key == self.place_key.getKey())
+            self.action = .place
+        else if (key == self.erase_key.getKey())
+            self.action = .erase
+        else if (key == self.sample_key.getKey())
+            self.action = .sample
+        else if (key == self.random_key.getKey())
+            self.action = .random
+        else if (key == self.fill_key.getKey())
+            self.action = .fill;
     }
 
     pub fn onKeyRelease(self: *MapEditorScreen, key: glfw.Key) void {
-        if (key == self.undo_key_setting.getKey() or key == self.redo_key_setting.getKey()) {
+        if (key == self.undo_key.getKey() or
+            key == self.redo_key.getKey() or
+            key == self.place_key.getKey() or
+            key == self.erase_key.getKey() or
+            key == self.sample_key.getKey() or
+            key == self.random_key.getKey() or
+            key == self.fill_key.getKey())
             self.action = .none;
-        }
     }
 
     fn setTile(self: *MapEditorScreen, x: u32, y: u32, value: u16) void {
-        const index = y * self.map_size + x;
-        if (self.map_tile_data[index].tile_type == value) {
+        const tile = &self.map_tile_data[y * self.map_size + x];
+        if (tile.tile_type == value)
             return;
-        }
 
-        self.map_tile_data[index].tile_type = value;
+        tile.tile_type = value;
         var square = Square{
             .x = @as(f32, @floatFromInt(x)),
             .y = @as(f32, @floatFromInt(y)),
@@ -1158,26 +1351,24 @@ pub const MapEditorScreen = struct {
     }
 
     fn setObject(self: *MapEditorScreen, x: u32, y: u32, value: u16) void {
-        const index = y * self.map_size + x;
+        const tile = &self.map_tile_data[y * self.map_size + x];
 
-        if (self.map_tile_data[index].obj_type == value) {
+        if (tile.obj_type == value)
             return;
-        }
 
         if (value == std.math.maxInt(u16)) {
-            map.removeEntity(self.allocator, self.map_tile_data[index].object_id);
+            map.removeEntity(self.allocator, tile.object_id);
 
-            self.map_tile_data[index].obj_type = value;
-            self.map_tile_data[index].object_id = value;
+            tile.obj_type = value;
+            tile.object_id = value;
         } else {
-            if (self.map_tile_data[index].object_id != -1) {
-                map.removeEntity(self.allocator, self.map_tile_data[index].object_id);
-            }
+            if (tile.object_id != -1)
+                map.removeEntity(self.allocator, tile.object_id);
 
             self.next_obj_id += 1;
 
-            self.map_tile_data[index].obj_type = value;
-            self.map_tile_data[index].object_id = self.next_obj_id;
+            tile.obj_type = value;
+            tile.object_id = self.next_obj_id;
 
             var obj = GameObject{
                 .x = @as(f32, @floatFromInt(x)),
@@ -1193,118 +1384,196 @@ pub const MapEditorScreen = struct {
     }
 
     fn setRegion(self: *MapEditorScreen, x: u32, y: u32, value: u8) void {
-        const index = y * self.map_size + x;
-        self.map_tile_data[index].region_type = value;
+        self.map_tile_data[y * self.map_size + x].region_type = value;
+    }
+
+    fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_type: enum { place, erase, random }) !void {
+        var places = std.ArrayList(Place).init(self.allocator);
+        const size_sqr = self.brush_size * self.brush_size;
+        for (@intFromFloat(@floor(center_y - self.brush_size))..@intFromFloat(@ceil(center_y + self.brush_size))) |y| {
+            for (@intFromFloat(@floor(center_x - self.brush_size))..@intFromFloat(@ceil(center_x + self.brush_size))) |x| {
+                const fx: f32 = @floatFromInt(x);
+                const fy: f32 = @floatFromInt(y);
+                const dx = center_x - fx;
+                const dy = center_y - fy;
+                if (dx * dx + dy * dy <= size_sqr) {
+                    if (place_type == .random and utils.rng.random().float(f32) > self.random_chance)
+                        continue;
+
+                    try places.append(.{
+                        .x = @intCast(x),
+                        .y = @intCast(y),
+                        .new_type = switch (self.active_layer) {
+                            .ground => if (place_type == .erase) 0xFFFE else self.selected_tile,
+                            .object => if (place_type == .erase) 0xFFFF else self.selected_object,
+                            .region => @intCast(if (place_type == .erase) 0xFF else self.selected_region),
+                        },
+                        .old_type = blk: {
+                            const tile = self.map_tile_data[y * self.map_size + x];
+                            switch (self.active_layer) {
+                                .ground => break :blk tile.tile_type,
+                                .object => break :blk tile.obj_type,
+                                .region => break :blk @intCast(tile.region_type),
+                            }
+
+                            break :blk switch (self.active_layer) {
+                                .ground => 0xFFFE,
+                                .object => 0xFFFF,
+                                .region => 0xFF,
+                            };
+                        },
+                        .layer = self.active_layer,
+                    });
+                }
+            }
+        }
+
+        if (places.items.len <= 1) {
+            if (places.items.len == 1) self.command_queue.addCommand(.{ .place = places.items[0] });
+            places.deinit();
+        } else {
+            self.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice() } });
+        }
+    }
+
+    fn placesContain(places: []Place, x: i32, y: i32) bool {
+        if (x < 0 or y < 0)
+            return false;
+
+        for (places) |p| {
+            if (p.x == x and p.y == y)
+                return true;
+        }
+
+        return false;
+    }
+
+    fn defaultType(layer: Layer) u16 {
+        return switch (layer) {
+            .ground => 0xFFFE,
+            .object => 0xFFFF,
+            .region => 0xFF,
+        };
+    }
+
+    fn typeAt(layer: Layer, screen: *MapEditorScreen, x: i32, y: i32) u16 {
+        if (x < 0 or y < 0)
+            return defaultType(layer);
+
+        const size: i32 = @intCast(screen.map_size);
+        const tile = screen.map_tile_data[@intCast(y * size + x)];
+        return switch (layer) {
+            .ground => tile.tile_type,
+            .object => tile.obj_type,
+            .region => @as(u16, tile.region_type),
+        };
+    }
+
+    fn inside(screen: *MapEditorScreen, places: []Place, x: i32, y: i32, layer: Layer, current_type: u16) bool {
+        return !placesContain(places, x, y) and typeAt(layer, screen, x, y) == current_type;
+    }
+
+    fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
+        const FillData = struct { x1: i32, x2: i32, y: i32, dy: i32 };
+
+        var places = std.ArrayList(Place).init(screen.allocator);
+
+        const layer = screen.active_layer;
+        const target_type = switch (screen.active_layer) {
+            .ground => screen.selected_tile,
+            .object => screen.selected_object,
+            .region => screen.selected_region,
+        };
+
+        const current_type = typeAt(layer, screen, x, y);
+        if (current_type == target_type or target_type == defaultType(layer))
+            return;
+
+        var stack = std.ArrayList(FillData).init(screen.allocator);
+        defer stack.deinit();
+
+        try stack.append(.{ .x1 = x, .x2 = x, .y = y, .dy = 1 });
+        try stack.append(.{ .x1 = x, .x2 = x, .y = y - 1, .dy = -1 });
+
+        while (stack.items.len > 0) {
+            const pop = stack.pop();
+            var px = pop.x1;
+            const py = pop.y;
+
+            if (inside(screen, places.items, px, py, layer, current_type)) {
+                while (inside(screen, places.items, px - 1, py, layer, current_type)) {
+                    try places.append(.{
+                        .x = @intCast(px - 1),
+                        .y = @intCast(py),
+                        .new_type = target_type,
+                        .old_type = current_type,
+                        .layer = layer,
+                    });
+                    px -= 1;
+                }
+
+                if (px < pop.x1)
+                    try stack.append(.{ .x1 = px, .x2 = pop.x1 - 1, .y = py - pop.dy, .dy = -pop.dy });
+            }
+
+            var x1 = pop.x1;
+            const x2 = pop.x2;
+            while (x1 <= x2) {
+                while (inside(screen, places.items, x1, py, layer, current_type)) {
+                    try places.append(.{
+                        .x = @intCast(x1),
+                        .y = @intCast(py),
+                        .old_type = current_type,
+                        .new_type = target_type,
+                        .layer = layer,
+                    });
+                    x1 += 1;
+                }
+
+                if (x1 > px)
+                    try stack.append(.{ .x1 = px, .x2 = x1 - 1, .y = py + pop.dy, .dy = pop.dy });
+                if (x1 - 1 > x2)
+                    try stack.append(.{ .x1 = x2 + 1, .x2 = x1 - 1, .y = py - pop.dy, .dy = -pop.dy });
+
+                x1 += 1;
+                while (x1 < x2 and inside(screen, places.items, x1, py, layer, current_type))
+                    x1 += 1;
+                px = x1;
+            }
+        }
+
+        if (places.items.len <= 1) {
+            if (places.items.len == 1) screen.command_queue.addCommand(.{ .place = places.items[0] });
+            places.deinit();
+        } else {
+            screen.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice() } });
+        }
     }
 
     pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
         if (self.map_tile_data.len <= 0)
             return;
 
-        var world_point = camera.screenToWorld(input.mouse_x, input.mouse_y);
-        world_point.x = @max(0, @min(world_point.x, @as(f32, @floatFromInt(self.map_size - 1))));
-        world_point.y = @max(0, @min(world_point.y, @as(f32, @floatFromInt(self.map_size - 1))));
-
-        const floor_x: u16 = @intFromFloat(@floor(world_point.x));
-        const floor_y: u16 = @intFromFloat(@floor(world_point.y));
-
-        const current_tile = self.map_tile_data[floor_y * self.map_size + floor_x];
-        const type_to_place = self.object_type_to_place[@intFromEnum(self.active_layer)];
-
-        self.active_brush.updateVisual(floor_x, floor_y, type_to_place);
+        const world_point = camera.screenToWorld(input.mouse_x, input.mouse_y);
+        const size: f32 = @floatFromInt(self.map_size - 1);
+        const x = @floor(@max(0, @min(world_point.x, size)));
+        const y = @floor(@max(0, @min(world_point.y, size)));
+        const int_x: u16 = @intFromFloat(x);
+        const int_y: u16 = @intFromFloat(y);
 
         switch (self.action) {
+            .place => try place(self, x, y, .place),
+            .erase => try place(self, x, y, .erase),
+            .random => try place(self, x, y, .random),
+            .undo => self.command_queue.undo(),
+            .redo => self.command_queue.redo(),
+            .sample => switch (self.active_layer) {
+                .ground => self.selected_tile = self.map_tile_data[int_y * self.map_size + int_x].tile_type,
+                .object => self.selected_object = self.map_tile_data[int_y * self.map_size + int_x].obj_type,
+                .region => self.selected_region = self.map_tile_data[int_y * self.map_size + int_x].region_type,
+            },
+            .fill => try fill(self, int_x, int_y),
             .none => {},
-            .place => {
-                switch (self.active_layer) {
-                    .ground => {
-                        if (current_tile.tile_type != type_to_place) {
-                            self.command_queue.addCommand(.{ .place_tile = .{
-                                .x = floor_x,
-                                .y = floor_y,
-                                .new_type = type_to_place,
-                                .old_type = current_tile.tile_type,
-                            } });
-                        }
-                    },
-                    .object => {
-                        if (current_tile.obj_type != type_to_place) {
-                            self.command_queue.addCommand(.{ .place_object = .{
-                                .x = floor_x,
-                                .y = floor_y,
-                                .new_type = type_to_place,
-                                .old_type = current_tile.obj_type,
-                            } });
-                        }
-                    },
-                    .region => {
-                        self.setRegion(floor_x, floor_y, @intCast(type_to_place)); // todo enum stuff},
-                    },
-                }
-            },
-            .erase => {
-                switch (self.active_layer) {
-                    .ground => {
-                        if (current_tile.tile_type != 0xFFFE) {
-                            self.command_queue.addCommand(.{ .erase_tile = .{
-                                .x = floor_x,
-                                .y = floor_y,
-                                .old_type = current_tile.tile_type,
-                            } });
-                        }
-                    },
-                    .object => {
-                        if (current_tile.obj_type != 0xFFFF) {
-                            self.command_queue.addCommand(.{ .erase_object = .{
-                                .x = floor_x,
-                                .y = floor_y,
-                                .old_type = current_tile.obj_type,
-                            } });
-                        }
-                    },
-                    .region => {
-                        self.setRegion(floor_x, floor_y, 0); // .none);
-                    },
-                }
-            },
-            .undo => {
-                self.command_queue.undo();
-            },
-            .redo => {
-                self.command_queue.redo();
-            },
-            // todo rest
-            else => {},
-        }
-
-        const index = floor_y * self.map_size + floor_x;
-        const data = self.map_tile_data[index];
-
-        var place_name: []const u8 = "Unknown";
-        switch (self.active_layer) {
-            .ground => {
-                if (game_data.ground_type_to_props.getPtr(type_to_place)) |props| {
-                    place_name = props.obj_id;
-                }
-            },
-            .object => {
-                if (game_data.obj_type_to_props.getPtr(type_to_place)) |props| {
-                    place_name = props.obj_id;
-                }
-            },
-            .region => {
-                // todo
-            },
-        }
-
-        var hover_ground_name: []const u8 = "(Empty)";
-        if (game_data.ground_type_to_props.getPtr(data.tile_type)) |props| {
-            hover_ground_name = props.obj_id;
-        }
-
-        var hover_obj_name: []const u8 = "(Empty)";
-        if (game_data.obj_type_to_props.getPtr(data.obj_type)) |props| {
-            hover_obj_name = props.obj_id;
         }
     }
 
@@ -1316,6 +1585,5 @@ pub const MapEditorScreen = struct {
             try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, "FPS: {d}\nMemory: {d:.1} MB", .{ fps, mem }),
             self.allocator,
         );
-        self.fps_text.x = camera.screen_width - self.fps_text.text_data.width - 10;
     }
 };

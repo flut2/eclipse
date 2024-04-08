@@ -2388,6 +2388,8 @@ pub const DropdownContainer = struct {
             if (self.parent.selected_index != std.math.maxInt(u32))
                 self.parent.children.items[self.parent.selected_index].state = .none;
             self.parent.selected_index = self.index;
+            if (self.parent.auto_close)
+                self.parent.toggled = false;
             systems.hover_lock.lock();
             defer systems.hover_lock.unlock();
             if (systems.hover_target != null and
@@ -2474,6 +2476,7 @@ pub const Dropdown = struct {
     container: *ScrollableContainer = undefined,
     layer: Layer = .default,
     scissor: ScissorRect = .{},
+    auto_close: bool = true,
     visible: bool = true,
     toggled: bool = false,
     event_policy: EventPolicy = .{},

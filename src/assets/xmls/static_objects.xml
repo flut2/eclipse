@@ -436,15 +436,6 @@
         <Size>160</Size>
         <ShowEffect color="0x38136D" radius="5" cooldown="1000">Ring</ShowEffect>
     </Object>
-    <Object type="0x128" id="Prime Totem Object">
-        <Class>GameObject</Class>
-        <Texture>
-            <Sheet>basic_items</Sheet>
-            <Index>0x99</Index>
-        </Texture>
-        <Size>160</Size>
-        <ShowEffect color="0xB82522" radius="5" cooldown="1000">Ring</ShowEffect>
-    </Object>
     <Object type="0x129" id="Space Brick Wall">
         <Class>Wall</Class>
         <Texture>

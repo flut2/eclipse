@@ -111,7 +111,7 @@ pub const Player = struct {
     disposed: bool = false,
 
     pub fn onMove(self: *Player) void {
-        if (map.getSquare(self.x, self.y)) |square| {
+        if (map.getSquare(self.x, self.y, true)) |square| {
             if (square.props.sinking) {
                 self.sink_level = @min(self.sink_level + 1, max_sink_level);
                 self.move_multiplier = 0.1 + (1 - self.sink_level / max_sink_level) * (square.props.speed - 0.1);
@@ -560,7 +560,7 @@ pub const Player = struct {
                     self.y = @max(0, @min(new_y, @as(f32, @floatFromInt(map.height - 1))));
                 }
             } else {
-                if (map.getSquare(self.x, self.y)) |square| {
+                if (map.getSquare(self.x, self.y, true)) |square| {
                     const slide_amount = square.props.slide_amount;
                     if (!std.math.isNan(self.move_angle)) {
                         const move_angle = camera.angle + self.move_angle;
@@ -606,7 +606,7 @@ pub const Player = struct {
                 modifyMove(self, next_x, next_y, &self.x, &self.y);
 
                 if (!self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
-                    if (map.getSquare(self.x, self.y)) |square| {
+                    if (map.getSquare(self.x, self.y, true)) |square| {
                         const total_damage = square.props.physical_damage + square.props.magic_damage + square.props.true_damage;
                         const protect = blk: {
                             const en = map.findEntityConst(square.static_obj_id) orelse break :blk false;
@@ -699,7 +699,7 @@ pub const Player = struct {
     }
 
     fn isWalkable(x: f32, y: f32) bool {
-        if (map.getSquare(x, y)) |square| {
+        if (map.getSquare(x, y, true)) |square| {
             const walkable = !square.props.no_walk;
             const not_occupied = blk: {
                 const en = map.findEntityConst(square.static_obj_id) orelse break :blk true;
@@ -710,7 +710,7 @@ pub const Player = struct {
     }
 
     fn isFullOccupy(x: f32, y: f32) bool {
-        if (map.getSquare(x, y)) |square| {
+        if (map.getSquare(x, y, true)) |square| {
             const en = map.findEntityConst(square.static_obj_id) orelse return false;
             return en == .object and en.object.props.full_occupy;
         } else return true;

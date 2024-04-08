@@ -1734,7 +1734,8 @@ pub fn draw(time: i64) void {
         const float_time_ms = @as(f32, @floatFromInt(time)) / std.time.us_per_ms;
         lights.clearRetainingCapacity();
 
-        square_idx = ground_render.drawSquares(square_idx, ground_draw_data, float_time_ms, cam_x, cam_y);
+        const render_data = camera.square_render_data;
+        square_idx = ground_render.drawSquares(square_idx, ground_draw_data, float_time_ms, render_data);
 
         if (square_idx > 0) {
             encoder.writeBuffer(

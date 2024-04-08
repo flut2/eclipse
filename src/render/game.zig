@@ -32,21 +32,24 @@ inline fn drawSide(
 ) u16 {
     var new_idx = idx;
 
-    var atlas_data_new = atlas_data;
-    if (x > 0 and y > 0) {
-        if (map.getSquare(x, y)) |square| {
-            const en = map.findEntityConst(square.static_obj_id);
-            if (en != null and en.? == .object and en.?.object.class == .wall) return new_idx;
+    const atlas_data_new = atlas_data;
+    _ = x;
+    _ = y;
+    // var atlas_data_new = atlas_data;
+    // if (x > 0 and y > 0) {
+    //     if (map.getSquare(x, y)) |square| {
+    //         const en = map.findEntityConst(square.static_obj_id);
+    //         if (en != null and en.? == .object and en.?.object.class == .wall) return new_idx;
 
-            if (square.tile_type == 0xFF) {
-                atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
-                atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
-            }
-        } else {
-            atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
-            atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
-        }
-    }
+    //         if (square.tile_type == 0xFF) {
+    //             atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
+    //             atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
+    //         }
+    //     } else {
+    //         atlas_data_new.tex_u = assets.wall_backface_data.tex_u;
+    //         atlas_data_new.tex_v = assets.wall_backface_data.tex_v;
+    //     }
+    // }
 
     new_idx = base.drawQuadVerts(
         new_idx,
@@ -209,7 +212,7 @@ inline fn drawPlayer(idx: u16, player: *Player, draw_data: base.DrawData, float_
     const x_offset = player.renderx_offset;
 
     var sink: f32 = 1.0;
-    if (map.getSquare(player.x, player.y)) |square| {
+    if (map.getSquare(player.x, player.y, true)) |square| {
         const protect = blk: {
             const entity = map.findEntityConst(square.static_obj_id) orelse break :blk false;
             break :blk entity == .object and entity.object.props.protect_from_sink;
@@ -449,7 +452,7 @@ inline fn drawGameObject(idx: u16, obj: *GameObject, draw_data: base.DrawData, f
     const x_offset = obj.renderx_offset;
 
     var sink: f32 = 1.0;
-    if (map.getSquare(obj.x, obj.y)) |square| {
+    if (map.getSquare(obj.x, obj.y, true)) |square| {
         const protect = blk: {
             const entity = map.findEntityConst(square.static_obj_id) orelse break :blk false;
             break :blk entity == .object and entity.object.props.protect_from_sink;

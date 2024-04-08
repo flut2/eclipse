@@ -411,8 +411,10 @@ fn addImage(
 
         for (0..len) |i| {
             const rect = current_rects[i];
-            if (rect.w <= 0 or rect.h <= 0)
+            if (rect.w <= 0 or rect.h <= 0) {
+                data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
                 continue;
+            }
 
             const cur_atlas_x = rect.x + padding;
             const cur_atlas_y = rect.y + padding;
@@ -504,8 +506,10 @@ fn addUiImage(
     if (zstbrp.packRects(ctx, current_rects)) {
         for (0..len) |i| {
             const rect = current_rects[i];
-            if (rect.w <= 0 or rect.h <= 0)
+            if (rect.w <= 0 or rect.h <= 0) {
+                data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .ui);
                 continue;
+            }
 
             const cur_atlas_x = rect.x + padding;
             const cur_atlas_y = rect.y + padding;
@@ -570,8 +574,6 @@ fn addAnimEnemy(
         for (0..2) |i| {
             for (0..len) |j| {
                 const rect = current_rects[i * len + j];
-                if (rect.w <= 0 or rect.h <= 0)
-                    continue;
 
                 color_counts.clearRetainingCapacity();
 
@@ -585,6 +587,9 @@ fn addAnimEnemy(
                     const dir_idx = i * AnimEnemyData.walk_actions;
                     enemy_data[set_idx].walk_anims[dir_idx + frame_idx] = data;
                 }
+
+                if (rect.w <= 0 or rect.h <= 0)
+                    continue;
 
                 const cur_atlas_x = rect.x + padding;
                 const cur_atlas_y = rect.y + padding;
@@ -695,8 +700,6 @@ fn addAnimPlayer(
 
         for (0..len) |j| {
             const rect = current_rects[j];
-            if (rect.w <= 0 or rect.h <= 0)
-                continue;
 
             color_counts.clearRetainingCapacity();
 
@@ -715,6 +718,10 @@ fn addAnimPlayer(
                 const dir_idx = (set_idx % 4) * AnimPlayerData.walk_actions;
                 player_data[data_idx].walk_anims[dir_idx + frame_idx] = data;
             }
+
+            if (rect.w <= 0 or rect.h <= 0)
+                continue;
+
             const cur_atlas_x = rect.x + padding;
             const cur_atlas_y = rect.y + padding;
             const w = rect.w - padding * 2;
@@ -1020,15 +1027,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addUiImage("out_of_health_slot", "ui/out_of_health_slot.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("dialog_base_background", "ui/screens/dialog_base_background.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("dialog_title_background", "ui/screens/dialog_title_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_background", "ui/chat/chatbox_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_input", "ui/chat/chatbox_input.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_cursor", "ui/chat/chatbox_cursor.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_scroll_background", "ui/chat/chatbox_scroll_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_scroll_wheel_base", "ui/chat/chatbox_scroll_wheel_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_scroll_wheel_hover", "ui/chat/chatbox_scroll_wheel_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_scroll_wheel_press", "ui/chat/chatbox_scroll_wheel_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_scrollbar_decor", "ui/chat/chatbox_scrollbar_decor.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("speech_balloons", "ui/chat/speech_balloons.png", 65, 45, &ui_ctx, allocator);
     try addUiImage("button_base", "ui/screens/button_base.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("button_hover", "ui/screens/button_hover.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("button_press", "ui/screens/button_press.png", imply_size, imply_size, &ui_ctx, allocator);
@@ -1092,6 +1090,15 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addUiImage("player_xp_decor", "ui/player_xp_decor.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("options_background", "ui/options_background.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("player_stats", "ui/player_stats.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_background", "ui/chatbox_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_input", "ui/chatbox_input.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_cursor", "ui/chatbox_cursor.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scroll_background", "ui/scroll_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scroll_wheel_base", "ui/scroll_wheel_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scroll_wheel_hover", "ui/scroll_wheel_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scroll_wheel_press", "ui/scroll_wheel_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scrollbar_decor", "ui/scrollbar_decor.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("speech_balloons", "ui/speech_balloons.png", 65, 45, &ui_ctx, allocator);
 
     if (settings.print_ui_atlas)
         try zstbi.Image.writeToFile(ui_atlas, "ui_atlas.png", .png);

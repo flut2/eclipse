@@ -285,6 +285,8 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 }
 
 fn parseSettings(allocator: std.mem.Allocator) !void {
+    if (std.fs.cwd().access("settings.ini", .{})) |_| {} else |_| return;
+    
     const file = try std.fs.cwd().openFile("settings.ini", .{});
     defer file.close();
 

@@ -4,6 +4,18 @@ const std = @import("std");
 const map = @import("game/map.zig");
 const utils = @import("utils.zig");
 
+pub const SquareRenderData = struct {
+    px_per_tile: f32 = @as(f32, px_per_tile),
+    x1: f32 = 0.0,
+    y1: f32 = 0.0,
+    x2: f32 = 0.0,
+    y2: f32 = 0.0,
+    x3: f32 = 0.0,
+    y3: f32 = 0.0,
+    x4: f32 = 0.0,
+    y4: f32 = 0.0,
+};
+
 pub const px_per_tile = 64;
 pub const size_mult = 6.0;
 
@@ -33,6 +45,7 @@ pub var clip_scale_x: f32 = 2.0 / 1280.0;
 pub var clip_scale_y: f32 = 2.0 / 720.0;
 
 pub var scale: f32 = 1.0;
+pub var square_render_data: SquareRenderData = .{};
 
 pub fn update(target_x: f32, target_y: f32, dt: f32, rotate: i8) void {
     var tx: f32 = target_x;
@@ -79,6 +92,25 @@ pub fn update(target_x: f32, target_y: f32, dt: f32, rotate: i8) void {
     min_y = @max(0, min_y);
     max_y = @intFromFloat(ty + max_dist);
     max_y = @min(map.height - 1, max_y);
+
+    const px_per_tile_scaled = px_per_tile * scale;
+    const radius = @sqrt(@as(f32, px_per_tile_scaled * px_per_tile_scaled / 2)) + 1;
+    const pi_div_4 = std.math.pi / 4.0;
+    const top_right_angle = pi_div_4;
+    const bottom_right_angle = 3.0 * pi_div_4;
+    const bottom_left_angle = 5.0 * pi_div_4;
+    const top_left_angle = 7.0 * pi_div_4;
+    square_render_data = .{
+        .px_per_tile = px_per_tile_scaled,
+        .x1 = radius * @cos(top_left_angle + angle) * clip_scale_x,
+        .y1 = radius * @sin(top_left_angle + angle) * clip_scale_y,
+        .x2 = radius * @cos(bottom_left_angle + angle) * clip_scale_x,
+        .y2 = radius * @sin(bottom_left_angle + angle) * clip_scale_y,
+        .x3 = radius * @cos(bottom_right_angle + angle) * clip_scale_x,
+        .y3 = radius * @sin(bottom_right_angle + angle) * clip_scale_y,
+        .x4 = radius * @cos(top_right_angle + angle) * clip_scale_x,
+        .y4 = radius * @sin(top_right_angle + angle) * clip_scale_y,
+    };
 }
 
 pub inline fn rotateAroundCameraClip(x_in: f32, y_in: f32) struct { x: f32, y: f32 } {
