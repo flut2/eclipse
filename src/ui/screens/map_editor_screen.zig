@@ -677,7 +677,7 @@ pub const MapEditorScreen = struct {
         });
 
         var tile_iter = game_data.ground_type_to_tex_data.iterator();
-        var i: usize = 0;
+        var i: isize = 0;
         while (tile_iter.next()) |entry| : (i += 1) {
             if (entry.key_ptr.* == 0xFF or entry.key_ptr.* == 0xFFFE) {
                 i -= 1;
