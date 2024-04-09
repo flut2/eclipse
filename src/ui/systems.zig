@@ -44,6 +44,7 @@ pub var elements: std.ArrayList(element.UiElement) = undefined;
 pub var elements_to_add: std.ArrayList(element.UiElement) = undefined;
 pub var temp_elements: std.ArrayList(element.Temporary) = undefined;
 pub var temp_elements_to_add: std.ArrayList(element.Temporary) = undefined;
+pub var containers_to_remove: std.ArrayList(*element.Container) = undefined;
 pub var screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
 pub var hover_lock: std.Thread.Mutex = .{};
@@ -60,6 +61,7 @@ pub fn init(ally: std.mem.Allocator) !void {
     elements_to_add = try std.ArrayList(element.UiElement).initCapacity(ally, 16);
     temp_elements = try std.ArrayList(element.Temporary).initCapacity(ally, 32);
     temp_elements_to_add = try std.ArrayList(element.Temporary).initCapacity(ally, 16);
+    containers_to_remove = try std.ArrayList(*element.Container).initCapacity(ally, 16);
 
     menu_background = try element.create(ally, element.MenuBackground{
         .x = 0,
@@ -87,6 +89,12 @@ pub fn deinit() void {
         inline else => |inner_screen| inner_screen.deinit(),
     }
 
+    for (containers_to_remove.items) |container| {
+        container.lock.lock(); // no need to unlock, we're disposing. can cause problems but what's the alternative?
+        container.deinitInner();
+        allocator.destroy(container);
+    }
+
     temp_elem_lock.lock();
     defer temp_elem_lock.unlock();
 
@@ -110,6 +118,7 @@ pub fn deinit() void {
     temp_elements_to_add.deinit();
     elements.deinit();
     temp_elements.deinit();
+    containers_to_remove.deinit();
 }
 
 pub fn switchScreen(comptime screen_type: ScreenType) void {
@@ -315,6 +324,13 @@ inline fn updateElements() !void {
         return;
     };
     elements_to_add.clearRetainingCapacity();
+
+    for (containers_to_remove.items) |container| {
+        container.lock.lock(); // no need to unlock, we're disposing. can cause problems but what's the alternative?
+        container.deinitInner();
+        allocator.destroy(container);
+    }
+    containers_to_remove.clearRetainingCapacity();
 
     const time = std.time.microTimestamp() - main.start_time;
     const dt = if (last_element_update > 0) @as(f32, @floatFromInt(time - last_element_update)) else 0.0;

@@ -211,12 +211,11 @@ pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
             }
 
             systems.removeAttachedUi(obj.obj_id);
+            if (obj.name_text_data) |*data|
+                data.deinit(allocator);
+
             if (obj.name) |obj_name|
                 allocator.free(obj_name);
-
-            if (obj.name_text_data) |*data| {
-                data.deinit(allocator);
-            }
         },
         .projectile => |*projectile| {
             if (projectile.disposed)
@@ -233,16 +232,14 @@ pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
             systems.removeAttachedUi(player.obj_id);
             player.ability_data.deinit();
 
-            if (player.name_text_data) |*data| {
+            if (player.name_text_data) |*data|
                 data.deinit(allocator);
-            }
 
-            if (player.name) |player_name| {
+            if (player.name) |player_name|
                 allocator.free(player_name);
-            }
-            if (player.guild) |player_guild| {
+
+            if (player.guild) |player_guild|
                 allocator.free(player_guild);
-            }
         },
         else => {},
     }

@@ -361,8 +361,9 @@ pub const Options = struct {
     }
 
     fn positionElements(container: *element.Container) void {
-        container.lock.lock();
-        defer container.lock.unlock();
+        const no_lock_hack = !container.lock_hack;
+        if (no_lock_hack) container.lock.lock();
+        defer if (no_lock_hack) container.lock.unlock();
 
         for (container.elements.items, 0..) |elem, i| {
             switch (elem) {

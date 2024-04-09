@@ -53,6 +53,14 @@ pub fn destroy(self: anytype) void {
         @compileError("Could not find field name");
 
     const tag = std.meta.stringToEnum(std.meta.Tag(UiElement), field_name);
+
+    systems.hover_lock.lock();
+    defer systems.hover_lock.unlock();
+    if (systems.hover_target != null and
+        std.meta.activeTag(systems.hover_target.?) == tag and
+        self == @field(systems.hover_target.?, field_name))
+        systems.hover_target = null;
+
     std.debug.assert(!systems.ui_lock.tryLock());
     for (systems.elements.items, 0..) |element, i| {
         if (std.meta.activeTag(element) == tag and @field(element, field_name) == self) {
@@ -61,8 +69,9 @@ pub fn destroy(self: anytype) void {
         }
     }
 
-    if (std.meta.hasFn(@typeInfo(@TypeOf(self)).Pointer.child, "deinit")) self.deinit();
-    self.allocator.destroy(self);
+    const ChildType = @typeInfo(@TypeOf(self)).Pointer.child;
+    if (std.meta.hasFn(ChildType, "deinit")) self.deinit();
+    if (ChildType != Container) self.allocator.destroy(self);
 }
 
 inline fn intersects(self: anytype, x: f32, y: f32) bool {
@@ -1543,7 +1552,6 @@ pub const ScrollableContainer = struct {
 
     pub fn deinit(self: *ScrollableContainer) void {
         self.container.deinit();
-        self.allocator.destroy(self.container);
 
         self.scroll_bar.deinit();
         self.allocator.destroy(self.scroll_bar);
@@ -1638,22 +1646,21 @@ pub const Container = struct {
         if (!self.visible)
             return false;
 
-        {
-            self.lock.lock();
-            self.lock_hack = true;
-            defer self.lock_hack = false;
-            defer if (self.lock_hack) self.lock.unlock();
+        self.lock.lock();
+        self.lock_hack = true;
+        defer {
+            self.lock.unlock();
+            self.lock_hack = false;
+        }
 
-            var iter = std.mem.reverseIterator(self.elements.items);
-            while (iter.next()) |elem| {
-                switch (elem) {
-                    inline else => |inner_elem| {
-                        if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and
-                            inner_elem.mousePress(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, mods) or
-                            !self.lock_hack)
-                            return true;
-                    },
-                }
+        var iter = std.mem.reverseIterator(self.elements.items);
+        while (iter.next()) |elem| {
+            switch (elem) {
+                inline else => |inner_elem| {
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and
+                        inner_elem.mousePress(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, mods))
+                        return true;
+                },
             }
         }
 
@@ -1677,7 +1684,11 @@ pub const Container = struct {
 
         {
             self.lock.lock();
-            defer self.lock.unlock();
+            self.lock_hack = true;
+            defer {
+                self.lock.unlock();
+                self.lock_hack = false;
+            }
 
             var iter = std.mem.reverseIterator(self.elements.items);
             while (iter.next()) |elem| {
@@ -1725,7 +1736,11 @@ pub const Container = struct {
 
         {
             self.lock.lock();
-            defer self.lock.unlock();
+            self.lock_hack = true;
+            defer {
+                self.lock.unlock();
+                self.lock_hack = false;
+            }
 
             var iter = std.mem.reverseIterator(self.elements.items);
             while (iter.next()) |elem| {
@@ -1748,7 +1763,11 @@ pub const Container = struct {
 
         {
             self.lock.lock();
-            defer self.lock.unlock();
+            self.lock_hack = true;
+            defer {
+                self.lock.unlock();
+                self.lock_hack = false;
+            }
 
             var iter = std.mem.reverseIterator(self.elements.items);
             while (iter.next()) |elem| {
@@ -1766,24 +1785,39 @@ pub const Container = struct {
     }
 
     pub fn init(self: *Container) void {
-        self.lock.lock();
-        defer self.lock.unlock();
+        const no_lock_hack = !self.lock_hack;
+        if (no_lock_hack) self.lock.lock();
+        defer if (no_lock_hack) self.lock.unlock();
 
         self.elements = std.ArrayList(UiElement).initCapacity(self.allocator, 8) catch std.debug.panic("Container element buffer alloc failed", .{});
     }
 
-    pub fn deinit(self: *Container) void {
-        if (self.lock_hack) {
-            self.lock_hack = false;
-        } else {
-            self.lock.lock();
-        }
-
-        defer self.lock.unlock();
+    pub fn deinitInner(self: *Container) void {
+        systems.hover_lock.lock();
+        defer systems.hover_lock.unlock();
 
         for (self.elements.items) |*elem| {
             switch (elem.*) {
                 inline else => |inner_elem| {
+                    comptime var field_name: []const u8 = "";
+                    comptime {
+                        for (std.meta.fields(UiElement)) |field| {
+                            if (field.type == @TypeOf(inner_elem)) {
+                                field_name = field.name;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (field_name.len == 0)
+                        @compileError("Could not find field name");
+
+                    const tag = std.meta.stringToEnum(std.meta.Tag(UiElement), field_name);
+                    if (systems.hover_target != null and
+                        std.meta.activeTag(systems.hover_target.?) == tag and
+                        inner_elem == @field(systems.hover_target.?, field_name))
+                        systems.hover_target = null;
+
                     if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "deinit")) inner_elem.deinit();
                     self.allocator.destroy(inner_elem);
                 },
@@ -1792,9 +1826,14 @@ pub const Container = struct {
         self.elements.deinit();
     }
 
+    pub fn deinit(self: *Container) void {
+        systems.containers_to_remove.append(self) catch std.debug.panic("Deiniting container failed", .{});
+    }
+
     pub fn width(self: *Container) f32 {
-        self.lock.lock();
-        defer self.lock.unlock();
+        const no_lock_hack = !self.lock_hack;
+        if (no_lock_hack) self.lock.lock();
+        defer if (no_lock_hack) self.lock.unlock();
 
         if (self.elements.items.len <= 0)
             return 0.0;
@@ -1814,8 +1853,9 @@ pub const Container = struct {
     }
 
     pub fn height(self: *Container) f32 {
-        self.lock.lock();
-        defer self.lock.unlock();
+        const no_lock_hack = !self.lock_hack;
+        if (no_lock_hack) self.lock.lock();
+        defer if (no_lock_hack) self.lock.unlock();
 
         if (self.elements.items.len <= 0)
             return 0.0;
@@ -1872,16 +1912,18 @@ pub const Container = struct {
         if (field_name.len == 0)
             @compileError("Could not find field name");
 
-        self.lock.lock();
-        defer self.lock.unlock();
+        const no_lock_hack = !self.lock_hack;
+        if (no_lock_hack) self.lock.lock();
+        defer if (no_lock_hack) self.lock.unlock();
 
         try self.elements.append(@unionInit(UiElement, field_name, elem));
         return elem;
     }
 
     pub fn updateScissors(self: *Container) void {
-        self.lock.lock();
-        defer self.lock.unlock();
+        const no_lock_hack = !self.lock_hack;
+        if (no_lock_hack) self.lock.lock();
+        defer if (no_lock_hack) self.lock.unlock();
 
         for (self.elements.items) |elem| {
             switch (elem) {
