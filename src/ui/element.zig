@@ -1632,6 +1632,7 @@ pub const Container = struct {
     clamp_x: bool = false,
     clamp_y: bool = false,
     clamp_to_screen: bool = false,
+    lock_hack: bool = false,
 
     pub fn mousePress(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
         if (!self.visible)
@@ -1639,14 +1640,17 @@ pub const Container = struct {
 
         {
             self.lock.lock();
-            defer self.lock.unlock();
+            self.lock_hack = true;
+            defer self.lock_hack = false;
+            defer if (self.lock_hack) self.lock.unlock();
 
             var iter = std.mem.reverseIterator(self.elements.items);
             while (iter.next()) |elem| {
                 switch (elem) {
                     inline else => |inner_elem| {
                         if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and
-                            inner_elem.mousePress(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, mods))
+                            inner_elem.mousePress(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, mods) or
+                            !self.lock_hack)
                             return true;
                     },
                 }
@@ -1769,7 +1773,12 @@ pub const Container = struct {
     }
 
     pub fn deinit(self: *Container) void {
-        self.lock.lock();
+        if (self.lock_hack) {
+            self.lock_hack = false;
+        } else {
+            self.lock.lock();
+        }
+
         defer self.lock.unlock();
 
         for (self.elements.items) |*elem| {

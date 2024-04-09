@@ -230,7 +230,13 @@ pub const C2SPacket = union(C2SPacketId) {
     join_guild: struct { name: []const u8 },
     change_guild_rank: struct { name: []const u8, rank: i32 },
     reskin: packed struct { skin_id: i32 },
-    map_hello: struct { name: []const u8 },
+    map_hello: struct {
+        build_ver: []const u8,
+        email: []const u8,
+        password: []const u8,
+        char_id: i16,
+        eclipse_map: []u8,
+    },
     use_ability: struct { time: i64, ability_type: u8, data: []u8 },
 };
 
@@ -277,7 +283,7 @@ pub const Server = struct {
     write_lock: std.Thread.Mutex = .{},
     write_comp: ?*xev.Completion = null,
     allocator: std.mem.Allocator = undefined,
-    hello_data: C2SPacket = undefined,
+    hello_data: C2SPacket = .{ .unknown = .{} },
 
     pub fn init(allocator: std.mem.Allocator, thread_pool: *xev.ThreadPool) !Server {
         var ret = Server{
@@ -316,6 +322,9 @@ pub const Server = struct {
         if (self.loop) |*loop| {
             loop.deinit();
         }
+
+        if (self.hello_data == .map_hello)
+            self.allocator.free(self.hello_data.map_hello.eclipse_map);
 
         self.completion_pool.deinit();
         self.write_buffer_pool.deinit();
@@ -452,6 +461,11 @@ pub const Server = struct {
                     ),
                 );
                 srv.node_pool.destroy(node);
+            }
+
+            if (srv.hello_data == .map_hello) {
+                srv.allocator.free(srv.hello_data.map_hello.eclipse_map);
+                srv.hello_data = .{ .unknown = .{} };
             }
         }
 

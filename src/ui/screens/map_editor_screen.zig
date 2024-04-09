@@ -260,8 +260,10 @@ pub const MapEditorScreen = struct {
             .text = "",
             .size = 12,
             .text_type = .bold,
+            .hori_align = .middle,
+            .max_width = controls_container_width,
             .max_chars = 64,
-            .color = 0xFFFF00,
+            .color = 0xAA0000,
         };
 
         {
@@ -272,8 +274,8 @@ pub const MapEditorScreen = struct {
         }
 
         screen.fps_text = try element.create(allocator, element.Text{
-            .x = 10,
-            .y = 10,
+            .x = 0,
+            .y = controls_container_height,
             .text_data = fps_text_data,
         });
 
@@ -331,6 +333,19 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.Button{
             .x = button_padding + button_width,
             .y = button_padding + button_height,
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .text_data = .{
+                .text = "Test",
+                .size = 16,
+                .text_type = .bold,
+            },
+            .userdata = screen,
+            .press_callback = testCallback,
+        });
+
+        _ = try screen.controls_container.createChild(element.Button{
+            .x = button_padding,
+            .y = button_padding + button_height * 2,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Exit",
@@ -478,7 +493,7 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding,
+            .x = button_padding + button_width,
             .y = button_padding + button_height * 2,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
@@ -492,8 +507,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding + button_width,
-            .y = button_padding + button_height * 2,
+            .x = button_padding,
+            .y = button_padding + button_height * 3,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Sample",
@@ -506,7 +521,7 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding,
+            .x = button_padding + button_width,
             .y = button_padding + button_height * 3,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
@@ -520,8 +535,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding + button_width,
-            .y = button_padding + button_height * 3,
+            .x = button_padding,
+            .y = button_padding + button_height * 4,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Random",
@@ -534,7 +549,7 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding,
+            .x = button_padding + button_width,
             .y = button_padding + button_height * 4,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
@@ -548,8 +563,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding + button_width,
-            .y = button_padding + button_height * 4,
+            .x = button_padding,
+            .y = button_padding + button_height * 5,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Redo",
@@ -563,7 +578,7 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding,
+            .x = button_padding + button_width,
             .y = button_padding + button_height * 5,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
@@ -1141,6 +1156,65 @@ pub const MapEditorScreen = struct {
         return null;
     }
 
+    fn mapData(screen: *MapEditorScreen) ![]u8 {
+        var data = std.ArrayList(u8).init(screen.allocator);
+
+        const tile_data = screen.map_tile_data;
+        const bounds = tileBounds(tile_data);
+
+        try data.writer().writeInt(u8, 2, .little); // version
+        try data.writer().writeInt(u16, bounds.min_x, .little);
+        try data.writer().writeInt(u16, bounds.min_y, .little);
+        try data.writer().writeInt(u16, bounds.max_x - bounds.min_x, .little);
+        try data.writer().writeInt(u16, bounds.max_y - bounds.min_y, .little);
+
+        var tiles = std.ArrayList(Tile).init(screen.allocator);
+        defer tiles.deinit();
+
+        for (bounds.min_y..bounds.max_y) |y| {
+            for (bounds.min_x..bounds.max_x) |x| {
+                const map_tile = tile_data[y * map.width + x];
+                const tile = Tile{
+                    .tile_type = if (map_tile.tile_type == 0xFFFE) 0xFFFF else map_tile.tile_type,
+                    .obj_type = map_tile.obj_type,
+                    .region_type = map_tile.region_type,
+                };
+
+                if (indexOfTile(tiles.items, tile) == null)
+                    try tiles.append(tile);
+            }
+        }
+
+        try data.writer().writeInt(u16, @intCast(tiles.items.len), .little);
+        const byte_len = tiles.items.len <= 256;
+
+        for (tiles.items) |tile| {
+            try data.writer().writeInt(u16, tile.tile_type, .little);
+            try data.writer().writeInt(u16, tile.obj_type, .little);
+            try data.writer().writeInt(u8, tile.region_type, .little);
+        }
+
+        for (bounds.min_y..bounds.max_y) |y| {
+            for (bounds.min_x..bounds.max_x) |x| {
+                const map_tile = tile_data[y * map.width + x];
+                const tile = Tile{
+                    .tile_type = if (map_tile.tile_type == 0xFFFE) 0xFFFF else map_tile.tile_type,
+                    .obj_type = map_tile.obj_type,
+                    .region_type = map_tile.region_type,
+                };
+
+                if (indexOfTile(tiles.items, tile)) |idx| {
+                    if (byte_len)
+                        try data.writer().writeInt(u8, @intCast(idx), .little)
+                    else
+                        try data.writer().writeInt(u16, @intCast(idx), .little);
+                }
+            }
+        }
+
+        return try data.toOwnedSlice();
+    }
+
     fn saveInner(screen: *MapEditorScreen) !void {
         if (!main.editing_map) return;
 
@@ -1148,66 +1222,13 @@ pub const MapEditorScreen = struct {
         if (file_path) |path| {
             defer nfd.freePath(path);
 
-            var data = std.ArrayList(u8).init(screen.allocator);
-            defer data.deinit();
-
-            const tile_data = screen.map_tile_data;
-            const bounds = tileBounds(tile_data);
-
-            try data.writer().writeInt(u8, 2, .little); // version
-            try data.writer().writeInt(u16, bounds.min_x, .little);
-            try data.writer().writeInt(u16, bounds.min_y, .little);
-            try data.writer().writeInt(u16, bounds.max_x - bounds.min_x, .little);
-            try data.writer().writeInt(u16, bounds.max_y - bounds.min_y, .little);
-
-            var tiles = std.ArrayList(Tile).init(screen.allocator);
-            defer tiles.deinit();
-
-            for (bounds.min_y..bounds.max_y) |y| {
-                for (bounds.min_x..bounds.max_x) |x| {
-                    const map_tile = tile_data[y * map.width + x];
-                    const tile = Tile{
-                        .tile_type = if (map_tile.tile_type == 0xFFFE) 0xFFFF else map_tile.tile_type,
-                        .obj_type = map_tile.obj_type,
-                        .region_type = map_tile.region_type,
-                    };
-
-                    if (indexOfTile(tiles.items, tile) == null)
-                        try tiles.append(tile);
-                }
-            }
-
-            try data.writer().writeInt(u16, @intCast(tiles.items.len), .little);
-            const byte_len = tiles.items.len <= 256;
-
-            for (tiles.items) |tile| {
-                try data.writer().writeInt(u16, tile.tile_type, .little);
-                try data.writer().writeInt(u16, tile.obj_type, .little);
-                try data.writer().writeInt(u8, tile.region_type, .little);
-            }
-
-            for (bounds.min_y..bounds.max_y) |y| {
-                for (bounds.min_x..bounds.max_x) |x| {
-                    const map_tile = tile_data[y * map.width + x];
-                    const tile = Tile{
-                        .tile_type = if (map_tile.tile_type == 0xFFFE) 0xFFFF else map_tile.tile_type,
-                        .obj_type = map_tile.obj_type,
-                        .region_type = map_tile.region_type,
-                    };
-
-                    if (indexOfTile(tiles.items, tile)) |idx| {
-                        if (byte_len)
-                            try data.writer().writeInt(u8, @intCast(idx), .little)
-                        else
-                            try data.writer().writeInt(u16, @intCast(idx), .little);
-                    }
-                }
-            }
-
             const file = try std.fs.createFileAbsolute(path, .{});
             defer file.close();
 
-            var fbs = std.io.fixedBufferStream(data.items);
+            const data = try mapData(screen);
+            defer screen.allocator.free(data);
+
+            var fbs = std.io.fixedBufferStream(data);
             try std.compress.zlib.compress(fbs.reader(), file.writer(), .{});
         }
     }
@@ -1221,8 +1242,43 @@ pub const MapEditorScreen = struct {
         };
     }
 
-    pub fn exitCallback(_: ?*anyopaque) void {
+    fn exitCallback(_: ?*anyopaque) void {
         ui_systems.switchScreen(.main_menu);
+    }
+
+    fn testCallback(ud: ?*anyopaque) void {
+        if (main.character_list.len == 0)
+            return;
+
+        if (main.server_list) |server_list| {
+            if (server_list.len > 0) {
+                const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
+                if (ui_systems.editor_backup == null)
+                    ui_systems.editor_backup = screen.allocator.create(MapEditorScreen) catch return;
+                // @memcpy(ui_systems.editor_backup.?, screen);
+
+                const data = mapData(screen) catch |e| {
+                    std.log.err("Error while testing map: {}", .{e});
+                    if (@errorReturnTrace()) |trace| {
+                        std.debug.dumpStackTrace(trace.*);
+                    }
+                    return;
+                };
+                defer screen.allocator.free(data);
+
+                var eclipse_map = std.ArrayList(u8).init(screen.allocator);
+                var fbs = std.io.fixedBufferStream(data);
+                std.compress.zlib.compress(fbs.reader(), eclipse_map.writer(), .{}) catch |e| {
+                    std.log.err("Error while testing map: {}", .{e});
+                    if (@errorReturnTrace()) |trace| {
+                        std.debug.dumpStackTrace(trace.*);
+                    }
+                    return;
+                };
+                main.enterTest(server_list[0], main.character_list[0].id, eclipse_map.toOwnedSlice() catch return);
+                return;
+            }
+        }
     }
 
     fn reset(screen: *MapEditorScreen) void {

@@ -577,8 +577,8 @@ pub fn init(window: glfw.Window, ally: std.mem.Allocator) !void {
     assets.ui_atlas.deinit();
     assets.menu_background.deinit();
 
-    sampler = device.createSampler(&.{ .max_anisotropy = 4 });
-    linear_sampler = device.createSampler(&.{ .min_filter = .linear, .mag_filter = .linear, .max_anisotropy = 4 });
+    sampler = device.createSampler(&.{ });
+    linear_sampler = device.createSampler(&.{ .min_filter = .linear, .mag_filter = .linear });
 
     const bufferLayoutEntry = gpu.BindGroupLayout.Entry.buffer;
     const samplerLayoutEntry = gpu.BindGroupLayout.Entry.sampler;

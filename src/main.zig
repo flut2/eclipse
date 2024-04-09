@@ -118,6 +118,23 @@ pub fn enterGame(selected_server: game_data.ServerData, selected_char_id: u32, c
     };
 }
 
+pub fn enterTest(selected_server: game_data.ServerData, selected_char_id: u32, eclipse_map: []u8) void {
+    if (network_thread != null)
+        return;
+
+    ui_systems.switchScreen(.game);
+    network_thread = std.Thread.spawn(.{}, networkCallback, .{ selected_server.dns, selected_server.port, network.C2SPacket{ .map_hello = .{
+        .build_ver = settings.build_version,
+        .email = current_account.email,
+        .password = current_account.password,
+        .char_id = @intCast(selected_char_id),
+        .eclipse_map = eclipse_map,
+    } } }) catch |e| {
+        std.log.err("Connection failed: {}", .{e});
+        return;
+    };
+}
+
 fn renderTick(window: glfw.Window) !void {
     rpmalloc.initThread() catch |e| {
         std.log.err("Render thread initialization failed: {}", .{e});
@@ -237,7 +254,13 @@ pub fn disconnect(has_lock: bool) void {
     {
         if (!has_lock) ui_systems.ui_lock.lock();
         defer if (!has_lock) ui_systems.ui_lock.unlock();
-        ui_systems.switchScreen(.char_select);
+
+        if (ui_systems.editor_backup) |editor| {
+            ui_systems.switchScreen(.editor);
+            _ = editor;
+            // @memcpy(ui_systems.screen.editor, editor);
+            ui_systems.editor_backup = null;
+        } else ui_systems.switchScreen(.char_select);
     }
     dialog.showDialog(.none, {});
 }
@@ -434,7 +457,7 @@ pub fn main() !void {
             last_update = time;
         }
 
-        if (time - last_ui_update > 16 * std.time.us_per_ms) {
+        if (ui_systems.screen == .editor or time - last_ui_update > 16 * std.time.us_per_ms) {
             try ui_systems.update();
             last_ui_update = time;
         }

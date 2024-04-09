@@ -48,6 +48,7 @@ pub var screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
 pub var hover_lock: std.Thread.Mutex = .{};
 pub var hover_target: ?element.UiElement = null;
+pub var editor_backup: ?*MapEditorScreen = null;
 
 var last_element_update: i64 = 0;
 var allocator: std.mem.Allocator = undefined;
