@@ -94,7 +94,7 @@ pub const Square = struct {
                 break :blk en == .object and en.object.class == .wall;
             };
 
-            if (other_sq.tile_type != 0xFF and other_sq.tile_type != 0xFFFE and !has_wall) {
+            if (other_sq.tile_type != 0xFF and other_sq.tile_type != 0xFFFE and other_sq.tile_type != 0xFFFF and !has_wall) {
                 const other_blend_prio = other_sq.props.blend_prio;
                 if (other_blend_prio > current_prio) {
                     square.blends[blend_idx] = .{
@@ -117,7 +117,7 @@ pub const Square = struct {
     }
 
     pub fn updateBlends(square: *Square) void {
-        if (square.tile_type == 0xFF or square.tile_type == 0xFFFE)
+        if (square.tile_type == 0xFF or square.tile_type == 0xFFFE or square.tile_type == 0xFFFF)
             return;
 
         map.object_lock.lockShared();

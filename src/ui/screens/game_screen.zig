@@ -377,11 +377,11 @@ pub const GameScreen = struct {
             .is_chat = true,
         });
 
-        const chat_scroll_background_data = assets.getUiData("chatbox_scroll_background", 0);
-        const chat_scroll_knob_base = assets.getUiData("chatbox_scroll_wheel_base", 0);
-        const chat_scroll_knob_hover = assets.getUiData("chatbox_scroll_wheel_hover", 0);
-        const chat_scroll_knob_press = assets.getUiData("chatbox_scroll_wheel_press", 0);
-        const chat_scroll_decor_data = assets.getUiData("chatbox_scrollbar_decor", 0);
+        const scroll_background_data = assets.getUiData("scroll_background", 0);
+        const scroll_knob_base = assets.getUiData("scroll_wheel_base", 0);
+        const scroll_knob_hover = assets.getUiData("scroll_wheel_hover", 0);
+        const scroll_knob_press = assets.getUiData("scroll_wheel_press", 0);
+        const scroll_decor_data = assets.getUiData("scrollbar_decor", 0);
         screen.chat_container = try element.create(allocator, element.ScrollableContainer{
             .x = screen.chat_decor.x + 24,
             .y = screen.chat_decor.y + 24,
@@ -393,9 +393,9 @@ pub const GameScreen = struct {
             .scroll_h = 240,
             .scroll_side_x = screen.chat_decor.x + 393,
             .scroll_side_y = screen.chat_decor.y + 24,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_background_data, 4, 240, 0, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = Interactable.fromNineSlices(chat_scroll_knob_base, chat_scroll_knob_hover, chat_scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(chat_scroll_decor_data, 6, 240, 0, 41, 6, 3, 1.0) },
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, 240, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, 240, 0, 41, 6, 3, 1.0) },
             .start_value = 1.0,
         });
 

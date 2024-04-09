@@ -600,7 +600,11 @@ pub inline fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
     if (check_validity and !validPos(floor_x, floor_y))
         return null;
 
-    return squares[floor_y * width + floor_x];
+    const square = squares[floor_y * width + floor_x];
+    if (square.tile_type == 0xFFFF)
+        return null;
+
+    return square;
 }
 
 pub inline fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Square {
@@ -612,7 +616,11 @@ pub inline fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Squa
     if (check_validity and !validPos(floor_x, floor_y))
         return null;
 
-    return &squares[floor_y * width + floor_x];
+    var square = squares[floor_y * width + floor_x];
+    if (square.tile_type == 0xFFFF)
+        return null;
+
+    return &square;
 }
 
 pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
