@@ -146,6 +146,7 @@ fn renderTick(window: glfw.Window) !void {
     var last_vsync = settings.enable_vsync;
     var fps_time_start: i64 = 0;
     var frames: usize = 0;
+    var last_update: i64 = 0;
     while (tick_render) {
         if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
             render.swap_chain.release();
@@ -159,90 +160,92 @@ fn renderTick(window: glfw.Window) !void {
             need_swap_chain_update = false;
         }
 
-        // ticking can get turned off while in sleep
         if (!tick_render)
             return;
 
-        defer {
-            frames += 1;
-            std.time.sleep(settings.fps_ns);
-        }
-
         const time = std.time.microTimestamp();
-        render.draw(time);
+        if (time - last_update >= settings.fps_us) {
+            defer {
+                frames += 1;
+                std.time.sleep(settings.fps_us / 2 * std.time.ns_per_us);
+            }
+            render.draw(time);
 
-        if (last_aa_type != settings.aa_type) {
-            render.createColorTexture();
-            last_aa_type = settings.aa_type;
-        }
+            if (last_aa_type != settings.aa_type) {
+                render.createColorTexture();
+                last_aa_type = settings.aa_type;
+            }
 
-        if (time - fps_time_start > 1 * std.time.us_per_s) {
-            try if (settings.stats_enabled) switch (ui_systems.screen) {
-                inline .game, .editor => |screen| if (screen.inited) screen.updateFpsText(frames, try utils.currentMemoryUse()),
-                else => {},
-            };
-            frames = 0;
-            fps_time_start = time;
-        }
+            if (time - fps_time_start > 1 * std.time.us_per_s) {
+                try if (settings.stats_enabled) switch (ui_systems.screen) {
+                    inline .game, .editor => |screen| if (screen.inited) screen.updateFpsText(frames, try utils.currentMemoryUse()),
+                    else => {},
+                };
+                frames = 0;
+                fps_time_start = time;
+            }
 
-        minimapUpdate: {
-            minimap_lock.lock();
-            defer minimap_lock.unlock();
+            minimapUpdate: {
+                minimap_lock.lock();
+                defer minimap_lock.unlock();
 
-            if (need_minimap_update) {
-                const min_x = @min(map.minimap.width, minimap_update_min_x);
-                const max_x = @max(map.minimap.width, minimap_update_max_x + 1);
-                const min_y = @min(map.minimap.height, minimap_update_min_y);
-                const max_y = @max(map.minimap.height, minimap_update_max_y + 1);
+                if (need_minimap_update) {
+                    const min_x = @min(map.minimap.width, minimap_update_min_x);
+                    const max_x = @max(map.minimap.width, minimap_update_max_x + 1);
+                    const min_y = @min(map.minimap.height, minimap_update_min_y);
+                    const max_y = @max(map.minimap.height, minimap_update_max_y + 1);
 
-                const w = max_x - min_x;
-                const h = max_y - min_y;
-                if (w <= 0 or h <= 0)
-                    break :minimapUpdate;
+                    const w = max_x - min_x;
+                    const h = max_y - min_y;
+                    if (w <= 0 or h <= 0)
+                        break :minimapUpdate;
 
-                const comp_len = map.minimap.num_components * map.minimap.bytes_per_component;
-                const copy = allocator.alloc(u8, w * h * comp_len) catch |e| {
-                    std.log.err("Minimap alloc failed: {}", .{e});
+                    const comp_len = map.minimap.num_components * map.minimap.bytes_per_component;
+                    const copy = allocator.alloc(u8, w * h * comp_len) catch |e| {
+                        std.log.err("Minimap alloc failed: {}", .{e});
+                        need_minimap_update = false;
+                        minimap_update_min_x = std.math.maxInt(u32);
+                        minimap_update_max_x = std.math.minInt(u32);
+                        minimap_update_min_y = std.math.maxInt(u32);
+                        minimap_update_max_y = std.math.minInt(u32);
+                        break :minimapUpdate;
+                    };
+                    defer allocator.free(copy);
+
+                    var idx: u32 = 0;
+                    for (min_y..max_y) |y| {
+                        const base_map_idx = y * map.minimap.width * comp_len + min_x * comp_len;
+                        @memcpy(
+                            copy[idx * w * comp_len .. (idx + 1) * w * comp_len],
+                            map.minimap.data[base_map_idx .. base_map_idx + w * comp_len],
+                        );
+                        idx += 1;
+                    }
+
+                    render.queue.writeTexture(
+                        &.{ .texture = render.minimap_texture, .origin = .{ .x = min_x, .y = min_y } },
+                        &.{ .bytes_per_row = comp_len * w, .rows_per_image = h },
+                        &.{ .width = w, .height = h },
+                        copy,
+                    );
+
                     need_minimap_update = false;
                     minimap_update_min_x = std.math.maxInt(u32);
                     minimap_update_max_x = std.math.minInt(u32);
                     minimap_update_min_y = std.math.maxInt(u32);
                     minimap_update_max_y = std.math.minInt(u32);
-                    break :minimapUpdate;
-                };
-                defer allocator.free(copy);
-
-                var idx: u32 = 0;
-                for (min_y..max_y) |y| {
-                    const base_map_idx = y * map.minimap.width * comp_len + min_x * comp_len;
-                    @memcpy(
-                        copy[idx * w * comp_len .. (idx + 1) * w * comp_len],
-                        map.minimap.data[base_map_idx .. base_map_idx + w * comp_len],
+                } else if (need_force_update) {
+                    render.queue.writeTexture(
+                        &.{ .texture = render.minimap_texture },
+                        &.{ .bytes_per_row = map.minimap.bytes_per_row, .rows_per_image = map.minimap.height },
+                        &.{ .width = map.minimap.width, .height = map.minimap.height },
+                        map.minimap.data,
                     );
-                    idx += 1;
+                    need_force_update = false;
                 }
-
-                render.queue.writeTexture(
-                    &.{ .texture = render.minimap_texture, .origin = .{ .x = min_x, .y = min_y } },
-                    &.{ .bytes_per_row = comp_len * w, .rows_per_image = h },
-                    &.{ .width = w, .height = h },
-                    copy,
-                );
-
-                need_minimap_update = false;
-                minimap_update_min_x = std.math.maxInt(u32);
-                minimap_update_max_x = std.math.minInt(u32);
-                minimap_update_min_y = std.math.maxInt(u32);
-                minimap_update_max_y = std.math.minInt(u32);
-            } else if (need_force_update) {
-                render.queue.writeTexture(
-                    &.{ .texture = render.minimap_texture },
-                    &.{ .bytes_per_row = map.minimap.bytes_per_row, .rows_per_image = map.minimap.height },
-                    &.{ .width = map.minimap.width, .height = map.minimap.height },
-                    map.minimap.data,
-                );
-                need_force_update = false;
             }
+
+            last_update = time;
         }
     }
 }
@@ -415,12 +418,12 @@ pub fn main() !void {
         .target_ally => assets.target_ally_cursor,
     });
 
-    _ = window.setKeyCallback(input.keyEvent);
-    _ = window.setCharCallback(input.charEvent);
-    _ = window.setCursorPosCallback(input.mouseMoveEvent);
-    _ = window.setMouseButtonCallback(input.mouseEvent);
-    _ = window.setScrollCallback(input.scrollEvent);
-    _ = window.setFramebufferSizeCallback(onResize);
+    window.setKeyCallback(input.keyEvent);
+    window.setCharCallback(input.charEvent);
+    window.setCursorPosCallback(input.mouseMoveEvent);
+    window.setMouseButtonCallback(input.mouseEvent);
+    window.setScrollCallback(input.scrollEvent);
+    window.setFramebufferSizeCallback(onResize);
 
     try render.init(window, allocator);
     defer render.deinit();
@@ -452,17 +455,18 @@ pub fn main() !void {
 
         glfw.pollEvents();
 
-        if (tick_frame or editing_map) {
-            map.update(allocator);
+        if (time - last_update >= settings.fps_us) {
+            if (tick_frame or editing_map)
+                map.update(allocator);
+
+            if (ui_systems.screen == .editor or time - last_ui_update > 16 * std.time.us_per_ms) {
+                try ui_systems.update();
+                last_ui_update = time;
+            }
+
             last_update = time;
+            std.time.sleep(settings.fps_us / 2 * std.time.ns_per_us);
         }
-
-        if (ui_systems.screen == .editor or time - last_ui_update > 16 * std.time.us_per_ms) {
-            try ui_systems.update();
-            last_ui_update = time;
-        }
-
-        std.time.sleep(settings.fps_ns);
     }
 }
 

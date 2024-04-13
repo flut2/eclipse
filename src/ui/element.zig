@@ -1517,7 +1517,7 @@ pub const ScrollableContainer = struct {
             .state_change = onScrollChanged,
             .vertical = true,
             .visible = false,
-            .parent_container = self,
+            .userdata = self,
             .current_value = self.start_value,
             .allocator = self.allocator,
             .layer = self.layer,
@@ -1597,7 +1597,7 @@ pub const ScrollableContainer = struct {
     }
 
     fn onScrollChanged(scroll_bar: *Slider) void {
-        var parent = scroll_bar.parent_container.?;
+        var parent: *ScrollableContainer = @alignCast(@ptrCast(scroll_bar.userdata));
         if (parent.scissor_h >= parent.container.height()) {
             parent.scroll_bar.visible = false;
             if (parent.hasScrollDecor()) parent.scroll_bar_decor.visible = false;
@@ -2088,7 +2088,7 @@ pub const Slider = struct {
     max_value: f32,
     decor_image_data: ImageData,
     knob_image_data: InteractableImageData,
-    state_change: *const fn (*Slider) void,
+    state_change: ?*const fn (*Slider) void = null,
     step: f32 = 0.0,
     scissor: ScissorRect = .{},
     vertical: bool = false,
@@ -2100,8 +2100,8 @@ pub const Slider = struct {
     title_text_data: ?TextData = null,
     tooltip_text: ?TextData = null,
     title_offset: f32 = 30.0,
-    stored_value: ?*f32 = null, // options hack. remove when callbacks will be able to take in arbitrary params...
-    parent_container: ?*ScrollableContainer = null, // another hack...
+    target: ?*f32 = null,
+    userdata: ?*anyopaque = null,
     visible: bool = true,
     // will be overwritten
     event_policy: EventPolicy = .{},
@@ -2159,7 +2159,9 @@ pub const Slider = struct {
             } else {
                 self.state = .none;
             }
-            self.state_change(self);
+
+            if (self.target) |target| target.* = self.current_value;
+            if (self.state_change) |sc| sc(self);
         }
 
         return !(self.event_policy.pass_release or !intersects(self, x, y));
@@ -2228,7 +2230,7 @@ pub const Slider = struct {
             .pass_release = true,
         };
 
-        if (self.stored_value) |value_ptr| {
+        if (self.target) |value_ptr| {
             value_ptr.* = @min(self.max_value, @max(self.min_value, value_ptr.*));
             self.current_value = value_ptr.*;
         }
@@ -2255,9 +2257,8 @@ pub const Slider = struct {
 
         if (self.vertical) {
             const offset = (self.w - knob_w) / 2.0;
-            if (offset < 0) {
+            if (offset < 0)
                 self.x = self.x - offset;
-            }
             self.knob_x = self.knob_x + offset;
 
             if (self.value_text_data) |*text_data| {
@@ -2265,14 +2266,10 @@ pub const Slider = struct {
                 text_data.vert_align = .middle;
                 text_data.max_height = knob_h;
             }
-
-            if (self.current_value != 0.0)
-                self.knob_y = (self.current_value - self.min_value) / (self.max_value - self.min_value) * self.h - knob_h / 2.0;
         } else {
             const offset = (self.h - knob_h) / 2.0;
-            if (offset < 0) {
+            if (offset < 0)
                 self.y = self.y - offset;
-            }
             self.knob_y = self.knob_y + offset;
 
             if (self.value_text_data) |*text_data| {
@@ -2280,9 +2277,6 @@ pub const Slider = struct {
                 text_data.vert_align = .top;
                 text_data.max_width = knob_w;
             }
-
-            if (self.current_value != 0.0)
-                self.knob_x = (self.current_value - self.min_value) / (self.max_value - self.min_value) * self.w - knob_w / 2.0;
         }
 
         if (self.value_text_data) |*text_data| {
@@ -2314,6 +2308,8 @@ pub const Slider = struct {
 
             text_data.recalculateAttributes(self.allocator);
         }
+
+        self.setValue(self.current_value);
     }
 
     pub fn deinit(self: *Slider) void {
@@ -2374,8 +2370,10 @@ pub const Slider = struct {
                 text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00", self.allocator);
             }
 
-            if (self.continous_event_fire)
-                self.state_change(self);
+            if (self.continous_event_fire) {
+                if (self.target) |target| target.* = self.current_value;
+                if (self.state_change) |sc| sc(self);
+            }
         }
 
         self.state = .pressed;
@@ -2406,8 +2404,10 @@ pub const Slider = struct {
                 text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00", self.allocator);
             }
 
-            if (self.continous_event_fire)
-                self.state_change(self);
+            if (self.continous_event_fire) {
+                if (self.target) |target| target.* = self.current_value;
+                if (self.state_change) |sc| sc(self);
+            }
         }
     }
 };

@@ -705,7 +705,7 @@ pub const Player = struct {
                 const en = map.findEntityConst(square.static_obj_id) orelse break :blk true;
                 break :blk en != .object or !en.object.props.occupy_square;
             };
-            return square.tile_type != 0xFFFF and square.tile_type != 0xFF and walkable and not_occupied;
+            return square.tile_type < 0xFFFE and walkable and not_occupied;
         } else return false;
     }
 

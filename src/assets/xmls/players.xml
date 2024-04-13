@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Objects>
-  <Object type="0x0300" id="Pathfinder">
+  <Object type="0x0300" id="Demon">
     <Class>Player</Class>
     <Description>
-      The Pathfinder is a balanced bowman who aims to cover all bases.
+      Demon
     </Description>
     <AnimatedTexture>
       <Sheet>players</Sheet>
@@ -17,44 +17,40 @@
         <Sheet>ability_icons</Sheet>
         <Index>0</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
-      <ManaCost>75</ManaCost>
-      <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="C45860"6 (+1 per 30 &amp;img="misc_big,0x22") heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="FF6C32"750 (+75% &amp;img="misc_big,0x20") Physical Damage.</Description>
+      <Name>Panacea</Name>
+      <HealthCost>75</HealthCost>
+      <Cooldown>12</Cooldown>
+      <Description>All forms of healing are 100% (+10% STA, +10% STR) more effective for 9 seconds.</Description>
     </Ability1>
     <Ability2>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>1</Index>
       </Icon>
-      <Name>Paradoxical Shift</Name>
-      <ManaCost>100</ManaCost>
-      <Cooldown>15</Cooldown>
-      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="C45860"+25% &amp;img="misc_big,0x22".</Description>
+      <Name>Shedding Skin</Name>
+      <HealthCost>300</HealthCost>
+      <Cooldown>24</Cooldown>
+      <Description>Gain +1% (+1% STA) STR per 1% of Health restored after 9 seconds.</Description>
     </Ability2>
     <Ability3>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>2</Index>
       </Icon>
-      <Name>Swarm</Name>
-      <ManaCost>100</ManaCost>
-      <Cooldown>25</Cooldown>
-      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
-&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="A15AFF"50 (+120% &amp;img="misc_big,0x23") damage.&amp;reset
-Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,0x28") Maximum Health&amp;reset, and lose 75 health every second.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Name>Consumption</Name>
+      <HealthCost>150</HealthCost>
+      <Cooldown>18</Cooldown>
+      <Description>Killing enemies grants you 1% (+1% STA) of their Health (up to 50 (+5% STA)) for 9 seconds.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>3</Index>
       </Icon>
-      <Name>Shapeshift</Name>
-      <ManaCost>0</ManaCost>
-      <Cooldown>150</Cooldown>
-      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
+      <Name>The Deal</Name>
+      <HealthCost>0</HealthCost>
+      <Cooldown>100</Cooldown>
+      <Description>Become immune to Health restoration and gain +5% (+10% STR) Physical Damage per 1% of Health missing for 15 seconds.</Description>
     </UltimateAbility>
     <Health>695</Health>
     <Mana>200</Mana>
@@ -70,10 +66,10 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
     <Haste>25</Haste>
     <Tenacity>45</Tenacity>
   </Object>
-  <Object type="0x0307" id="Blood Mage">
+  <Object type="0x0307" id="Dryad">
     <Class>Player</Class>
     <Description>
-      The Blood Mage is a ranged damage dealer who uses his health to cast spells.
+      Dryad
     </Description>
     <AnimatedTexture>
       <Sheet>players</Sheet>
@@ -87,10 +83,11 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
         <Sheet>ability_icons</Sheet>
         <Index>0</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
-      <ManaCost>75</ManaCost>
-      <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="C45860"6 (+1 per 30 &amp;img="misc_big,0x22") heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="FF6C32"750 (+75% &amp;img="misc_big,0x20") Physical Damage.</Description>
+      <Name>Bursting Saplings</Name>
+      <ManaCost>125</ManaCost>
+      <Cooldown>24</Cooldown>
+      <Description>Spawn 4 (+1 per 40 INT) Saplings for 12 seconds. Saplings orbit around you and heal you or your Party members for 2% (+1% HP) of their Maximum Health.
+Saplings can only target one person at a time.</Description>
     </Ability1>
     <Ability2>
       <Icon>
@@ -423,7 +420,7 @@ Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,
   <Object type="0x031f" id="Chronomancer">
     <Class>Player</Class>
     <Description>
-      The Chronomancer is a staff class who is able to turn back time.
+      Chronomancer
     </Description>
     <AnimatedTexture>
       <Sheet>players</Sheet>
@@ -488,10 +485,10 @@ Return double the damage stored as a Magic Damage blast within &amp;type="bold_i
     <Haste>25</Haste>
     <Tenacity>45</Tenacity>
   </Object>
-  <Object type="0x0320" id="Monk">
+  <Object type="0x0320" id="Genie">
     <Class>Player</Class>
     <Description>
-      The Monk is a support class who provides protection for the group.
+      Genie
     </Description>
     <AnimatedTexture>
       <Sheet>players</Sheet>
@@ -505,44 +502,50 @@ Return double the damage stored as a Magic Damage blast within &amp;type="bold_i
         <Sheet>ability_icons</Sheet>
         <Index>0</Index>
       </Icon>
-      <Name>Anomalous Burst</Name>
-      <ManaCost>75</ManaCost>
-      <Cooldown>10</Cooldown>
-      <Description>Shoot a flurry of &amp;type="bold_it"&amp;col="C45860"6 (+1 per 30 &amp;img="misc_big,0x22") heat seeking void blasts&amp;reset, dealing &amp;type="bold_it"&amp;col="FF6C32"750 (+75% &amp;img="misc_big,0x20") Physical Damage.</Description>
+      <Name>Equivalent Exchange</Name>
+      <GoldCost>0</GoldCost>
+      <Cooldown>17</Cooldown>
+      <Description>Make your other abilities cost 8% (+8% HST) less for every 1700 damage dealt after 8 seconds. This includes the hit cost of Premium Protection.</Description>
     </Ability1>
     <Ability2>
       <Icon>
         <Sheet>ability_icons</Sheet>
         <Index>1</Index>
       </Icon>
-      <Name>Paradoxical Shift</Name>
-      <ManaCost>100</ManaCost>
-      <Cooldown>15</Cooldown>
-      <Description>Become a &amp;type="med_it"Phantom&amp;reset for the next 3 seconds, becoming Invisible to enemies and gaining &amp;type="bold_it"&amp;col="C45860"+25% &amp;img="misc_big,0x22".</Description>
+      <Name>Asset Bubble</Name>
+      <GoldCost>449</GoldCost>
+      <Cooldown>35</Cooldown>
+      <Description>Deal 4.4% more damage per 10000 Gold you own for 8 seconds.
+After this effect ends, deal 8.8% less damage per 10000 Gold you own for 17 seconds.
+The damage buff is capped at 44%, while the debuff is capped at 88%.</Description>
     </Ability2>
     <Ability3>
       <Icon>
         <Sheet>ability_icons</Sheet>
-        <Index>2</Index>
+        <Index>1</Index>
       </Icon>
-      <Name>Swarm</Name>
-      <ManaCost>100</ManaCost>
-      <Cooldown>25</Cooldown>
-      <Description>&amp;type="bold"&amp;col="7A6D6A"PASSIVE:&amp;reset Enemies killed near the Enigma leave behind a &amp;type="med_it"Soul Fragment&amp;reset for 5 seconds.
-&amp;type="bold"&amp;col="7A6D6A"ACTIVE:&amp;reset Convert all &amp;type="med_it"Soul Fragments&amp;reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &amp;type="bold_it"&amp;col="A15AFF"50 (+120% &amp;img="misc_big,0x23") damage.&amp;reset
-Voidlings have &amp;type="bold_it"&amp;col="20AC20"350 (+25% &amp;img="misc_big,0x28") Maximum Health&amp;reset, and lose 75 health every second.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"Soul Fragments are shared between all Enigmas in the same instance.</Description>
+      <Name>Premium Protection</Name>
+      <GoldCost>0</GoldCost>
+      <Cooldown>28</Cooldown>
+      <Description>Become immune to damage for &amp;type="bold_it"&amp;col="C45860"8 (+8%&amp;space&amp;img="misc_big,0x3a")&amp;reset seconds, but pay &amp;type="bold_it"&amp;col="FFE770"2 Gold&amp;reset for every damage point you would've taken. 
+&amp;type="med_it"&amp;size="10"&amp;col="736562"This effect only applies to bullets that you can pay for.</Description>
     </Ability3>
     <UltimateAbility>
       <Icon>
         <Sheet>ability_icons</Sheet>
-        <Index>3</Index>
+        <Index>1</Index>
       </Icon>
-      <Name>Shapeshift</Name>
-      <ManaCost>0</ManaCost>
-      <Cooldown>150</Cooldown>
-      <Description>Possess the targeted Enemy for the next &amp;type="bold_it"&amp;col="6080FF"5 (+7% &amp;img="misc_big,0x3b") seconds&amp;reset, making you control its movements and making it unable to shoot.
-&amp;type="med_it"&amp;size="10"&amp;col="736562"During the Shapeshift, your body remains vulnerable to other enemies' attacks.</Description>
+      <Name>Compound Interest</Name>
+      <GoldCost>3599</GoldCost>
+      <Cooldown>125</Cooldown>
+      <Description>Gain the following until this ability is recast:
+  - &amp;type="bold_it"&amp;col="FFE770"+280% (&amp;col="D65BFF"-8% &amp;img="misc_big,0x39", &amp;col="FF9670"-8% &amp;img="misc_big,0x21"&amp;col="FFE770") Damage Taken&amp;reset
+  - &amp;type="bold_it"&amp;col="C45860"-17% &amp;img="misc_big,0x22"&amp;reset
+  - &amp;type="bold_it"All damage dealt now accumulates Drop Chance, at a rate of &amp;col="C45860"0.8% (+0.8% &amp;img="misc_big,0x3a")&amp;reset&amp;type="bold_it" per 8000 damage dealt.&amp;reset
+Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for &amp;type="bold_it"&amp;col="FFE770"35&amp;reset seconds.
+Currently accumulated Drop Chance: &amp;type="bold_it"&amp;col="FFE770"0%
+&amp;type="med_it"&amp;size="10"&amp;col="736562"Switching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
+The Drop Chance increase is capped at &amp;type="bold_it"&amp;col="FFE770"125%.</Description>
     </UltimateAbility>
     <Health>695</Health>
     <Mana>200</Mana>

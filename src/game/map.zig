@@ -601,7 +601,7 @@ pub inline fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
         return null;
 
     const square = squares[floor_y * width + floor_x];
-    if (square.tile_type == 0xFFFF)
+    if (check_validity and square.tile_type == 0xFFFF)
         return null;
 
     return square;
@@ -617,7 +617,7 @@ pub inline fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Squa
         return null;
 
     var square = squares[floor_y * width + floor_x];
-    if (square.tile_type == 0xFFFF)
+    if (check_validity and square.tile_type == 0xFFFF)
         return null;
 
     return &square;

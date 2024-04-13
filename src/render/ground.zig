@@ -158,9 +158,9 @@ pub inline fn drawSquares(idx: u16, draw_data: base.DrawData, float_time_ms: f32
             const float_x: f32 = @floatFromInt(x);
             const float_y: f32 = @floatFromInt(y);
             if (map.getSquare(float_x, float_y, false)) |square| {
-                // if (square.tile_type == 0xFF)
-                //     continue;
-
+                if (square.tile_type == 0xFFFF)
+                    continue;
+                    
                 const screen_pos = camera.rotateAroundCameraClip(square.x, square.y);
                 const screen_x = screen_pos.x;
                 const screen_y = -screen_pos.y;

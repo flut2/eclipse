@@ -89,12 +89,15 @@ pub const Square = struct {
     inline fn parseDir(x: f32, y: f32, square: *Square, current_prio: i32, comptime blend_idx: comptime_int) void {
         const opposite_idx = (blend_idx + 2) % 4;
         if (map.getSquarePtr(x, y, true)) |other_sq| {
+            if (other_sq.tile_type >= 0xFFFE)
+                return;
+
             const has_wall = blk: {
                 const en = map.findEntityConst(other_sq.static_obj_id) orelse break :blk false;
                 break :blk en == .object and en.object.class == .wall;
             };
 
-            if (other_sq.tile_type != 0xFF and other_sq.tile_type != 0xFFFE and other_sq.tile_type != 0xFFFF and !has_wall) {
+            if (!has_wall) {
                 const other_blend_prio = other_sq.props.blend_prio;
                 if (other_blend_prio > current_prio) {
                     square.blends[blend_idx] = .{
@@ -108,25 +111,26 @@ pub const Square = struct {
                         .v = square.atlas_data.tex_v,
                     };
                     square.blends[blend_idx] = .{ .u = -1.0, .v = -1.0 };
-                } else {
-                    square.blends[blend_idx] = .{ .u = -1.0, .v = -1.0 };
-                    other_sq.blends[opposite_idx] = .{ .u = -1.0, .v = -1.0 };
                 }
+
+                return;
             }
+
+            square.blends[blend_idx] = .{ .u = -1.0, .v = -1.0 };
+            other_sq.blends[opposite_idx] = .{ .u = -1.0, .v = -1.0 };
         }
     }
 
     pub fn updateBlends(square: *Square) void {
-        if (square.tile_type == 0xFF or square.tile_type == 0xFFFE or square.tile_type == 0xFFFF)
+        if (square.tile_type >= 0xFFFE)
             return;
 
         map.object_lock.lockShared();
         defer map.object_lock.unlockShared();
 
         const current_prio = square.props.blend_prio;
-
-        if (square.x > 0) parseDir(square.x - 1, square.y, square, current_prio, left_blend_idx);
-        if (square.y > 0) parseDir(square.x, square.y - 1, square, current_prio, top_blend_idx);
+        parseDir(square.x - 1, square.y, square, current_prio, left_blend_idx);
+        parseDir(square.x, square.y - 1, square, current_prio, top_blend_idx);
         if (square.x < std.math.maxInt(u32)) parseDir(square.x + 1, square.y, square, current_prio, right_blend_idx);
         if (square.y < std.math.maxInt(u32)) parseDir(square.x, square.y + 1, square, current_prio, bottom_blend_idx);
     }

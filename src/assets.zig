@@ -12,15 +12,15 @@ const glfw = @import("mach-glfw");
 
 pub const padding = 0;
 
-pub const atlas_width: u32 = 2048;
-pub const atlas_height: u32 = 1024;
-pub const base_texel_w: f32 = 1.0 / 2048.0;
-pub const base_texel_h: f32 = 1.0 / 1024.0;
+pub const atlas_width = 2048;
+pub const atlas_height = 1024;
+pub const base_texel_w = 1.0 / @as(f32, atlas_width);
+pub const base_texel_h = 1.0 / @as(f32, atlas_height);
 
-pub const ui_atlas_width: u32 = 2048;
-pub const ui_atlas_height: u32 = 1024;
-pub const ui_texel_w: f32 = 1.0 / 2048.0;
-pub const ui_texel_h: f32 = 1.0 / 1024.0;
+pub const ui_atlas_width = 2048;
+pub const ui_atlas_height = 1024;
+pub const ui_texel_w = 1.0 / @as(f32, ui_atlas_width);
+pub const ui_texel_h = 1.0 / @as(f32, ui_atlas_height);
 
 pub const Action = enum {
     stand,

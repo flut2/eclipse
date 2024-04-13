@@ -14,6 +14,8 @@ pub const CharSelectScreen = struct {
 
     allocator: std.mem.Allocator = undefined,
     new_char_button: *element.Button = undefined,
+    editor_button: *element.Button = undefined,
+
     pub fn init(allocator: std.mem.Allocator) !*CharSelectScreen {
         var screen = try allocator.create(CharSelectScreen);
         screen.* = .{ .allocator = allocator };
@@ -75,6 +77,18 @@ pub const CharSelectScreen = struct {
         if (counter < main.max_chars)
             screen.new_char_button.visible = true;
 
+        screen.editor_button = try element.create(allocator, element.Button{
+            .x = 100,
+            .y = 100,
+            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 21, 3, 3, 1.0),
+            .text_data = .{
+                .text = "Editor",
+                .size = 16,
+                .text_type = .bold,
+            },
+            .press_callback = editorCallback,
+        });
+
         screen.inited = true;
         return screen;
     }
@@ -86,6 +100,7 @@ pub const CharSelectScreen = struct {
         self.boxes.clearAndFree();
 
         element.destroy(self.new_char_button);
+        element.destroy(self.editor_button);
 
         self.allocator.destroy(self);
     }
@@ -107,5 +122,9 @@ pub const CharSelectScreen = struct {
 
     fn newCharCallback(_: ?*anyopaque) void {
         ui_systems.switchScreen(.char_create);
+    }
+
+    pub fn editorCallback(_: ?*anyopaque) void {
+        ui_systems.switchScreen(.editor);
     }
 };

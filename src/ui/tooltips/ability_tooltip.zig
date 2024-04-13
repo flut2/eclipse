@@ -105,15 +105,17 @@ pub const AbilityTooltip = struct {
             const cooldown_icon = "&img=\"misc_big,0x45\"";
             const has_mana_cost = params.props.mana_cost > 0;
             const has_health_cost = params.props.health_cost > 0;
-            if (!has_mana_cost and !has_health_cost) {
+            const has_gold_cost = params.props.gold_cost > 0;
+            if (!has_mana_cost and !has_health_cost and !has_gold_cost) {
                 self.subtext.text_data.text = std.fmt.bufPrint(
                     self.subtext.text_data.backing_buffer,
                     "No Cost | {d:.1}s " ++ cooldown_icon,
-                    .{ params.props.cooldown },
+                    .{params.props.cooldown},
                 ) catch self.subtext.text_data.text;
             } else {
                 const mana_icon = comptime game_data.StatType.max_mp.toControlCode();
                 const health_icon = comptime game_data.StatType.max_hp.toControlCode();
+                const gold_icon = "&img=\"misc,0x14\"";
 
                 if (has_health_cost and has_mana_cost) {
                     self.subtext.text_data.text = std.fmt.bufPrint(
@@ -127,11 +129,17 @@ pub const AbilityTooltip = struct {
                         "{d} " ++ health_icon ++ " | {d:.1}s " ++ cooldown_icon,
                         .{ params.props.health_cost, params.props.cooldown },
                     ) catch self.subtext.text_data.text;
-                } else {
+                } else if (has_mana_cost) {
                     self.subtext.text_data.text = std.fmt.bufPrint(
                         self.subtext.text_data.backing_buffer,
                         "{d} " ++ mana_icon ++ " | {d:.1}s " ++ cooldown_icon,
                         .{ params.props.mana_cost, params.props.cooldown },
+                    ) catch self.subtext.text_data.text;
+                } else {
+                    self.subtext.text_data.text = std.fmt.bufPrint(
+                        self.subtext.text_data.backing_buffer,
+                        "{d} " ++ gold_icon ++ " | {d:.1}s " ++ cooldown_icon,
+                        .{ params.props.gold_cost, params.props.cooldown },
                     ) catch self.subtext.text_data.text;
                 }
             }

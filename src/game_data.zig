@@ -165,8 +165,9 @@ pub const CharacterSkin = struct {
 pub const Ability = struct {
     icon: TextureData,
     name: []const u8,
-    mana_cost: i16,
+    mana_cost: i32,
     health_cost: i32,
+    gold_cost: i32,
     cooldown: f32,
     description: []const u8,
 
@@ -175,8 +176,9 @@ pub const Ability = struct {
             .icon = try TextureData.parse(node.findChild("Icon") orelse
                 std.debug.panic("Could not parse Ability: Icon node is missing", .{}), allocator, false),
             .name = try node.getValueAlloc("Name", allocator, "Unknown"),
-            .mana_cost = try node.getValueInt("ManaCost", i16, 0),
+            .mana_cost = try node.getValueInt("ManaCost", i32, 0),
             .health_cost = try node.getValueInt("HealthCost", i32, 0),
+            .gold_cost = try node.getValueInt("GoldCost", i32, 0),
             .cooldown = try node.getValueFloat("Cooldown", f32, 0.0),
             .description = try node.getValueAlloc("Description", allocator, "Unknown"),
         };

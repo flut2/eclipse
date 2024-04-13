@@ -184,7 +184,7 @@ pub const MapEditorScreen = struct {
     map_size_256: bool = false,
     map_tile_data: []MapEditorTile = &[0]MapEditorTile{},
 
-    command_queue: CommandQueue = undefined,
+    command_queue: CommandQueue = .{},
 
     action: EditorAction = .none,
     active_layer: Layer = .ground,
@@ -193,7 +193,7 @@ pub const MapEditorScreen = struct {
     selected_region: u8 = 0xFF,
 
     brush_size: f32 = 0.5,
-    random_chance: f32 = 0.05,
+    random_chance: f32 = 0.01,
 
     size_text_visual_64: *element.Text = undefined,
     size_text_visual_128: *element.Text = undefined,
@@ -235,7 +235,6 @@ pub const MapEditorScreen = struct {
         };
         try main.rpc_client.setPresence(presence);
 
-        screen.command_queue = .{};
         screen.command_queue.init(allocator);
 
         const button_data_base = assets.getUiData("button_base", 0);
@@ -249,9 +248,11 @@ pub const MapEditorScreen = struct {
         const check_box_hover_off = assets.getUiData("unchecked_box_hover", 0);
         const check_box_press_off = assets.getUiData("unchecked_box_press", 0);
 
-        const button_width = 100.0;
+        const button_width = 90.0;
         const button_height = 35.0;
-        const button_padding = 10.0;
+        const button_inset = 15.0;
+        const button_pad_w = 10.0;
+        const button_pad_h = 5.0;
 
         const key_mapper_width = 35.0;
         const key_mapper_height = 35.0;
@@ -275,13 +276,13 @@ pub const MapEditorScreen = struct {
 
         screen.fps_text = try element.create(allocator, element.Text{
             .x = 0,
-            .y = controls_container_height,
+            .y = 5 + controls_container_height,
             .text_data = fps_text_data,
         });
 
         screen.controls_container = try element.create(allocator, element.Container{
-            .x = 0,
-            .y = 0,
+            .x = 5,
+            .y = 5,
         });
 
         const background_decor = assets.getUiData("tooltip_background", 0);
@@ -292,8 +293,8 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.Button{
-            .x = button_padding,
-            .y = button_padding,
+            .x = button_inset,
+            .y = button_inset,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "New",
@@ -305,8 +306,8 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.Button{
-            .x = button_padding + button_width,
-            .y = button_padding,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Open",
@@ -318,8 +319,8 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.Button{
-            .x = button_padding,
-            .y = button_padding + button_height,
+            .x = button_inset,
+            .y = button_inset + button_pad_h + button_height,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Save",
@@ -331,8 +332,8 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.Button{
-            .x = button_padding + button_width,
-            .y = button_padding + button_height,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset + button_pad_h + button_height,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Test",
@@ -344,8 +345,8 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.Button{
-            .x = button_padding,
-            .y = button_padding + button_height * 2,
+            .x = button_inset,
+            .y = button_inset + (button_pad_h + button_height) * 2,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Exit",
@@ -468,8 +469,8 @@ pub const MapEditorScreen = struct {
         });
 
         const login_button = try screen.new_container.createChild(element.Button{
-            .x = (screen.new_container.width() - (button_width * 2)) / 2 - (button_padding / 2),
-            .y = (new_container_height - button_height - (button_padding * 2)),
+            .x = (screen.new_container.width() - (button_width * 2)) / 2 - (button_inset / 2.0),
+            .y = (new_container_height - button_height - (button_inset * 2)),
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Create",
@@ -480,7 +481,7 @@ pub const MapEditorScreen = struct {
             .press_callback = newCreateCallback,
         });
         _ = try screen.new_container.createChild(element.Button{
-            .x = login_button.x + login_button.width() + (button_padding / 2),
+            .x = login_button.x + login_button.width() + (button_inset / 2.0),
             .y = login_button.y,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
@@ -493,8 +494,8 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding + button_width,
-            .y = button_padding + button_height * 2,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset + (button_pad_h + button_height) * 2,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Place",
@@ -507,8 +508,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding,
-            .y = button_padding + button_height * 3,
+            .x = button_inset,
+            .y = button_inset + (button_pad_h + button_height) * 3,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Sample",
@@ -521,8 +522,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding + button_width,
-            .y = button_padding + button_height * 3,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset + (button_pad_h + button_height) * 3,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Erase",
@@ -535,8 +536,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding,
-            .y = button_padding + button_height * 4,
+            .x = button_inset,
+            .y = button_inset + (button_pad_h + button_height) * 4,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Random",
@@ -549,8 +550,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding + button_width,
-            .y = button_padding + button_height * 4,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset + (button_pad_h + button_height) * 4,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Undo",
@@ -563,8 +564,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding,
-            .y = button_padding + button_height * 5,
+            .x = button_inset,
+            .y = button_inset + (button_pad_h + button_height) * 5,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Redo",
@@ -578,8 +579,8 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_padding + button_width,
-            .y = button_padding + button_height * 5,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset + (button_pad_h + button_height) * 5,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Fill",
@@ -597,21 +598,20 @@ pub const MapEditorScreen = struct {
         const knob_data_hover = assets.getUiData("slider_knob_hover", 0);
         const knob_data_press = assets.getUiData("slider_knob_press", 0);
 
-        const slider_w = controls_container_width - button_padding * 2 - 5;
+        const slider_w = controls_container_width - button_inset * 2 - 5;
         const slider_h = button_height - 5 - 10;
         const knob_size = button_height - 5;
 
         _ = try screen.controls_container.createChild(element.Slider{
-            .x = button_padding * 1.5,
-            .y = button_height * 8,
+            .x = button_inset + 2,
+            .y = (button_pad_h + button_height) * 7,
             .w = slider_w,
             .h = slider_h,
             .min_value = 0.5,
             .max_value = 10.0,
-            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(slider_background_data, slider_w, slider_h, 1, 1, 2, 2, 1.0) },
-            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 4, 4, 4, 4, 1.0),
-            .stored_value = &screen.brush_size,
-            .state_change = sliderChanged,
+            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(slider_background_data, slider_w, slider_h, 6, 6, 1, 1, 1.0) },
+            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
+            .target = &screen.brush_size,
             .title_text_data = .{
                 .text = "Brush Size",
                 .size = 12,
@@ -626,16 +626,15 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.Slider{
-            .x = button_padding * 1.5,
-            .y = button_height * 10,
+            .x = button_inset + 2,
+            .y = (button_pad_h + button_height) * 8 + 20,
             .w = slider_w,
             .h = slider_h,
-            .min_value = 0.005,
+            .min_value = 0.01,
             .max_value = 1.0,
-            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(slider_background_data, slider_w, slider_h, 1, 1, 2, 2, 1.0) },
-            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 4, 4, 4, 4, 1.0),
-            .stored_value = &screen.random_chance,
-            .state_change = sliderChanged,
+            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(slider_background_data, slider_w, slider_h, 6, 6, 1, 1, 1.0) },
+            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
+            .target = &screen.random_chance,
             .title_text_data = .{
                 .text = "Random Chance",
                 .size = 12,
@@ -945,12 +944,6 @@ pub const MapEditorScreen = struct {
                 screen.palette_container_object.visible = false;
                 screen.palette_container_region.visible = true;
             },
-        }
-    }
-
-    fn sliderChanged(slider: *element.Slider) void {
-        if (slider.stored_value) |value_ptr| {
-            value_ptr.* = slider.current_value;
         }
     }
 
@@ -1446,8 +1439,21 @@ pub const MapEditorScreen = struct {
     fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_type: enum { place, erase, random }) !void {
         var places = std.ArrayList(Place).init(self.allocator);
         const size_sqr = self.brush_size * self.brush_size;
-        for (@intFromFloat(@floor(center_y - self.brush_size))..@intFromFloat(@ceil(center_y + self.brush_size))) |y| {
-            for (@intFromFloat(@floor(center_x - self.brush_size))..@intFromFloat(@ceil(center_x + self.brush_size))) |x| {
+        const sel_type: u16 = if (place_type == .erase) defaultType(self.active_layer) else switch (self.active_layer) {
+            .ground => self.selected_tile,
+            .object => self.selected_object,
+            .region => @intCast(self.selected_region),
+        };
+        if (place_type != .erase and sel_type == defaultType(self.active_layer))
+            return;
+
+        const size: f32 = @floatFromInt(self.map_size - 1);
+        const y_left: usize = @intFromFloat(@max(0, @floor(center_y - self.brush_size)));
+        const y_right: usize = @intFromFloat(@min(size, @ceil(center_y + self.brush_size)));
+        const x_left: usize = @intFromFloat(@max(0, @floor(center_x - self.brush_size)));
+        const x_right: usize = @intFromFloat(@min(size, @ceil(center_x + self.brush_size)));
+        for (y_left..y_right) |y| {
+            for (x_left..x_right) |x| {
                 const fx: f32 = @floatFromInt(x);
                 const fy: f32 = @floatFromInt(y);
                 const dx = center_x - fx;
@@ -1459,11 +1465,7 @@ pub const MapEditorScreen = struct {
                     try places.append(.{
                         .x = @intCast(x),
                         .y = @intCast(y),
-                        .new_type = switch (self.active_layer) {
-                            .ground => if (place_type == .erase) 0xFFFE else self.selected_tile,
-                            .object => if (place_type == .erase) 0xFFFF else self.selected_object,
-                            .region => @intCast(if (place_type == .erase) 0xFF else self.selected_region),
-                        },
+                        .new_type = sel_type,
                         .old_type = blk: {
                             const tile = self.map_tile_data[y * self.map_size + x];
                             switch (self.active_layer) {
@@ -1472,11 +1474,7 @@ pub const MapEditorScreen = struct {
                                 .region => break :blk @intCast(tile.region_type),
                             }
 
-                            break :blk switch (self.active_layer) {
-                                .ground => 0xFFFE,
-                                .object => 0xFFFF,
-                                .region => 0xFF,
-                            };
+                            break :blk defaultType(self.active_layer);
                         },
                         .layer = self.active_layer,
                     });
@@ -1554,13 +1552,12 @@ pub const MapEditorScreen = struct {
         while (stack.items.len > 0) {
             const pop = stack.pop();
             var px = pop.x1;
-            const py = pop.y;
 
-            if (inside(screen, places.items, px, py, layer, current_type)) {
-                while (inside(screen, places.items, px - 1, py, layer, current_type)) {
+            if (inside(screen, places.items, px, pop.y, layer, current_type)) {
+                while (inside(screen, places.items, px - 1, pop.y, layer, current_type)) {
                     try places.append(.{
                         .x = @intCast(px - 1),
-                        .y = @intCast(py),
+                        .y = @intCast(pop.y),
                         .new_type = target_type,
                         .old_type = current_type,
                         .layer = layer,
@@ -1569,16 +1566,15 @@ pub const MapEditorScreen = struct {
                 }
 
                 if (px < pop.x1)
-                    try stack.append(.{ .x1 = px, .x2 = pop.x1 - 1, .y = py - pop.dy, .dy = -pop.dy });
+                    try stack.append(.{ .x1 = px, .x2 = pop.x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
             }
 
             var x1 = pop.x1;
-            const x2 = pop.x2;
-            while (x1 <= x2) {
-                while (inside(screen, places.items, x1, py, layer, current_type)) {
+            while (x1 <= pop.x2) {
+                while (inside(screen, places.items, x1, pop.y, layer, current_type)) {
                     try places.append(.{
                         .x = @intCast(x1),
-                        .y = @intCast(py),
+                        .y = @intCast(pop.y),
                         .old_type = current_type,
                         .new_type = target_type,
                         .layer = layer,
@@ -1587,12 +1583,13 @@ pub const MapEditorScreen = struct {
                 }
 
                 if (x1 > px)
-                    try stack.append(.{ .x1 = px, .x2 = x1 - 1, .y = py + pop.dy, .dy = pop.dy });
-                if (x1 - 1 > x2)
-                    try stack.append(.{ .x1 = x2 + 1, .x2 = x1 - 1, .y = py - pop.dy, .dy = -pop.dy });
+                    try stack.append(.{ .x1 = px, .x2 = x1 - 1, .y = pop.y + pop.dy, .dy = pop.dy });
+
+                if (x1 - 1 > pop.x2)
+                    try stack.append(.{ .x1 = pop.x2 + 1, .x2 = x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
 
                 x1 += 1;
-                while (x1 < x2 and inside(screen, places.items, x1, py, layer, current_type))
+                while (x1 < pop.x2 and !inside(screen, places.items, x1, pop.y, layer, current_type))
                     x1 += 1;
                 px = x1;
             }

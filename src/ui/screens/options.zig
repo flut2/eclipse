@@ -337,8 +337,8 @@ pub const Options = struct {
             .h = h,
             .min_value = min_value,
             .max_value = max_value,
-            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, w, h, 1, 1, 2, 2, 1.0) },
-            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 4, 4, 4, 4, 1.0),
+            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, w, h, 6, 6, 1, 1, 1.0) },
+            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
             .title_text_data = .{
                 .text = title,
                 .size = 16,
@@ -355,7 +355,7 @@ pub const Options = struct {
                 .size = 16,
                 .text_type = .bold_italic,
             } else null,
-            .stored_value = value,
+            .target = value,
             .state_change = sliderCallback,
         });
     }
@@ -377,28 +377,22 @@ pub const Options = struct {
     }
 
     fn sliderCallback(slider: *element.Slider) void {
-        if (slider.stored_value) |value_ptr| {
-            value_ptr.* = slider.current_value;
-            // another hack, but i don't see a better way of handling this without rearchitecting everything
-            if (value_ptr == &settings.music_volume)
-                assets.main_music.setVolume(slider.current_value);
-
-            if (value_ptr == &settings.fps_cap)
-                settings.fps_ns = @intFromFloat(std.time.ns_per_s / slider.current_value * 1.5);
-        }
+        if (slider.target) |target| {
+            if (target == &settings.music_volume)
+                assets.main_music.setVolume(slider.current_value)
+            else if (target == &settings.fps_cap)
+                settings.fps_us = @intFromFloat(std.time.us_per_s / slider.current_value);
+        } else std.debug.panic("Options slider has no target pointer. This is a bug, please add", .{});
 
         trySave();
     }
 
     fn keyCallback(key_mapper: *element.KeyMapper) void {
-        // Should rethink whether we want to keep this from flash. Binding things to ESC is legitimate
-        if (key_mapper.key == .escape) {
-            key_mapper.settings_button.* = .{ .key = .unknown };
-        } else if (key_mapper.key != .unknown) {
-            key_mapper.settings_button.* = .{ .key = key_mapper.key };
-        } else {
-            key_mapper.settings_button.* = .{ .mouse = key_mapper.mouse };
-        }
+        key_mapper.settings_button.* = switch (key_mapper.key) {
+            .escape => .{ .key = .unknown },
+            .unknown => .{ .mouse = key_mapper.mouse },
+            else => .{ .key = key_mapper.key },
+        };
 
         if (key_mapper.settings_button == &settings.interact)
             settings.interact_key_tex = settings.getKeyTexture(settings.interact);

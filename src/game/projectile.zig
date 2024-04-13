@@ -237,7 +237,7 @@ pub const Projectile = struct {
 
         if (map.getSquare(self.x, self.y, true)) |square| {
             const en = map.findEntityConst(square.static_obj_id);
-            if (square.tile_type == 0xFF or square.tile_type == 0xFFFE or square.tile_type == 0xFFFF) {
+            if (square.tile_type == 0xFFFE or square.tile_type == 0xFFFF) {
                 if (self.damage_players) {
                     main.server.queuePacket(.{ .square_hit = .{
                         .time = time,
