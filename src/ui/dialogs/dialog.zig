@@ -47,7 +47,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
         try map.put(std.meta.stringToEnum(DialogType, field.name) orelse
             std.debug.panic("No enum type with name {s} found on DialogType", .{field.name}), dialog);
     }
-    
+
     current = map.get(.none).?;
 }
 
@@ -105,13 +105,12 @@ pub fn showDialog(comptime dialog_type: DialogType, params: std.meta.TagPayload(
     }
 
     dialog_bg.visible = dialog_type != .none;
-    if (current.* == dialog_type)
-        return;
-
-    current = map.get(dialog_type) orelse blk: {
-        std.log.err("Dialog for {} was not found, using .none", .{dialog_type});
-        break :blk map.get(.none) orelse std.debug.panic(".none was not a valid dialog", .{});
-    };
+    if (current.* != dialog_type) {
+        current = map.get(dialog_type) orelse blk: {
+            std.log.err("Dialog for {} was not found, using .none", .{dialog_type});
+            break :blk map.get(.none) orelse std.debug.panic(".none was not a valid dialog", .{});
+        };
+    }
 
     const field_name = fieldName(std.meta.TagPayload(Dialog, dialog_type));
     @field(current, field_name).root.visible = true;
