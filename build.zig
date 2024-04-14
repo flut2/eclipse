@@ -18,9 +18,12 @@ pub fn build(b: *std.Build) !void {
     });
 
     exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
-    exe.root_module.addAnonymousImport("turbopack", .{ .root_source_file = .{ .path = "libs/turbopack/pack.zig" } });
     exe.root_module.addImport("rpc", @import("libs/zig-discord/build.zig").getModule(b));
     exe.root_module.addImport("nfd", nfd.getModule(b));
+
+    exe.root_module.addImport("turbopack", b.dependency("turbopack", .{
+        .target = target,
+    }).module("turbopack"));
 
     exe.root_module.addImport("mach-glfw", b.dependency("mach_glfw", .{
         .target = target,
