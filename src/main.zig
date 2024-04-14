@@ -312,7 +312,7 @@ pub fn main() !void {
     defer rpmalloc.deinit();
 
     allocator = if (settings.enable_tracy) tracy_allocator else switch (builtin.mode) {
-        .Debug => std.heap.c_allocator,//gpa.allocator(),
+        .Debug => gpa.allocator(),
         else => rpmalloc.allocator(),
     };
 
