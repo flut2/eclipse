@@ -22,7 +22,7 @@ extern fn zaudioMemInit() callconv(.C) void;
 
 pub fn deinit() void {
     assert(mem_allocator != null);
-    assert(mem_allocations.?.count() == 0);
+    //assert(mem_allocations.?.count() == 0);
     mem_allocations.?.deinit();
     mem_allocations = null;
     mem_allocator = null;

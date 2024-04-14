@@ -595,8 +595,8 @@ pub inline fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
     if (check_validity and (x < 0 or y < 0))
         return null;
 
-    const floor_x: u32 = @intFromFloat(x);
-    const floor_y: u32 = @intFromFloat(y);
+    const floor_x: u32 = @intFromFloat(@floor(x));
+    const floor_y: u32 = @intFromFloat(@floor(y));
     if (check_validity and !validPos(floor_x, floor_y))
         return null;
 
@@ -611,8 +611,8 @@ pub inline fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Squa
     if (check_validity and (x < 0 or y < 0))
         return null;
 
-    const floor_x: u32 = @intFromFloat(x);
-    const floor_y: u32 = @intFromFloat(y);
+    const floor_x: u32 = @intFromFloat(@floor(x));
+    const floor_y: u32 = @intFromFloat(@floor(y));
     if (check_validity and !validPos(floor_x, floor_y))
         return null;
 

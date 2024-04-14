@@ -1316,11 +1316,23 @@ pub const MapEditorScreen = struct {
         ui_systems.menu_background.visible = true;
     }
 
-    pub fn resize(self: *MapEditorScreen, width: f32, height: f32) void {
-        self.new_container.x = (width - self.new_container.height()) / 2;
-        self.new_container.y = (height - self.new_container.height()) / 2;
-        self.controls_container.y = height - self.controls_container.height();
-        self.layer_dropdown.x = width - dropdown_w - 5;
+    pub fn resize(self: *MapEditorScreen, w: f32, h: f32) void {
+        const palette_x = w - palette_decor_w - 5;
+        const cont_x = palette_x + 8;
+
+        self.new_container.x = (w - self.new_container.height()) / 2;
+        self.new_container.y = (h - self.new_container.height()) / 2;
+        self.palette_decor.x = palette_x;
+        self.palette_container_tile.x = cont_x;
+        self.palette_container_tile.container.x = cont_x;
+        self.palette_container_object.x = cont_x;
+        self.palette_container_object.container.x = cont_x;
+        self.palette_container_region.x = cont_x;
+        self.palette_container_region.container.x = cont_x;
+        self.layer_dropdown.x = palette_x;
+        self.layer_dropdown.container.x = palette_x + self.layer_dropdown.container_inlay_x;
+        self.layer_dropdown.container.container.x = palette_x + self.layer_dropdown.container_inlay_x;
+        self.layer_dropdown.y = self.palette_decor.y + self.palette_decor.height() + 5;
     }
 
     pub fn onMousePress(self: *MapEditorScreen, button: glfw.MouseButton) void {

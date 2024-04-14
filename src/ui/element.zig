@@ -75,7 +75,15 @@ pub fn destroy(self: anytype) void {
 }
 
 inline fn intersects(self: anytype, x: f32, y: f32) bool {
-    return utils.isInBounds(x, y, self.x, self.y, self.width(), self.height());
+    const has_scissor = @hasField(@typeInfo(@TypeOf(self)).Pointer.child, "scissor");
+    if (has_scissor and
+        (self.scissor.min_x != ScissorRect.dont_scissor and x - self.x < self.scissor.min_x or
+        self.scissor.min_y != ScissorRect.dont_scissor and y - self.y < self.scissor.min_y))
+        return false;
+
+    const w = if (has_scissor and self.scissor.max_x != ScissorRect.dont_scissor) @min(self.width(), self.scissor.max_x) else self.width();
+    const h = if (has_scissor and self.scissor.max_y != ScissorRect.dont_scissor) @min(self.height(), self.scissor.max_y) else self.height();
+    return utils.isInBounds(x, y, self.x, self.y, w, h);
 }
 
 pub const Layer = enum(u8) {
@@ -1574,7 +1582,7 @@ pub const ScrollableContainer = struct {
         self.update();
         return elem;
     }
-
+    
     pub fn update(self: *ScrollableContainer) void {
         if (self.scissor_h >= self.container.height()) {
             self.scroll_bar.visible = false;
@@ -1664,7 +1672,8 @@ pub const Container = struct {
             }
         }
 
-        if (self.draggable and intersects(self, x, y)) {
+        const in_bounds = intersects(self, x, y);
+        if (self.draggable and in_bounds) {
             self.is_dragging = true;
             self.drag_start_x = self.x;
             self.drag_start_y = self.y;
@@ -1672,7 +1681,7 @@ pub const Container = struct {
             self.drag_offset_y = self.y - y;
         }
 
-        return !(self.event_policy.pass_press or !intersects(self, x, y));
+        return !(self.event_policy.pass_press or !in_bounds);
     }
 
     pub fn mouseRelease(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
@@ -2638,12 +2647,13 @@ pub const Dropdown = struct {
             self.title_text.recalculateAttributes(self.allocator);
         }
 
+        const w_base = self.w - self.container_inlay_x * 2;
         const scroll_max_w = @max(self.scroll_w, self.scroll_knob_image_data.width(.none));
-        const scissor_w = self.w - self.container_inlay_x * 2 - scroll_max_w - 2 +
+        const scissor_w = w_base - scroll_max_w - 2 +
             (if (self.scroll_side_x_rel > 0.0) 0.0 else self.scroll_side_x_rel);
 
-        self.main_background_data.scaleWidth(scissor_w);
-        self.alt_background_data.scaleWidth(scissor_w);
+        self.main_background_data.scaleWidth(w_base);
+        self.alt_background_data.scaleWidth(w_base);
 
         const scroll_x_base = self.x + self.container_inlay_x + scissor_w + 2;
         const scroll_y_base = self.y + self.container_inlay_y + self.title_data.height();
@@ -2686,6 +2696,8 @@ pub const Dropdown = struct {
         self.lock.lock();
         defer self.lock.unlock();
 
+        const scroll_vis_pre = self.container.scroll_bar.visible;
+
         const next_idx: f32 = @floatFromInt(self.next_index);
         const ret = try self.container.createChild(DropdownContainer{
             .x = 0,
@@ -2705,6 +2717,16 @@ pub const Dropdown = struct {
         });
         self.next_index += 1;
         try self.children.append(ret);
+
+        if (self.container.scroll_bar.visible and !scroll_vis_pre) {
+            self.main_background_data.scaleWidth(self.container.scissor_w);
+            self.alt_background_data.scaleWidth(self.container.scissor_w);
+
+            // for (self.children.items) |child| {
+
+            // }
+        }
+
         return ret;
     }
 };

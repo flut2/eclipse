@@ -1,6 +1,5 @@
 const xml = @import("xml.zig");
 const zstbi = @import("zstbi");
-const zstbrp = @import("zstbrp");
 const asset_dir = @import("build_options").asset_dir;
 const std = @import("std");
 const game_data = @import("game_data.zig");
@@ -9,6 +8,7 @@ const builtin = @import("builtin");
 const zaudio = @import("zaudio");
 const main = @import("main.zig");
 const glfw = @import("mach-glfw");
+const pack = @import("turbopack");
 
 pub const padding = 0;
 
@@ -21,6 +21,9 @@ pub const ui_atlas_width = 2048;
 pub const ui_atlas_height = 1024;
 pub const ui_texel_w = 1.0 / @as(f32, ui_atlas_width);
 pub const ui_texel_h = 1.0 / @as(f32, ui_atlas_height);
+
+// for packing
+const Position = struct { x: u16, y: u16 };
 
 pub const Action = enum {
     stand,
@@ -134,7 +137,7 @@ pub const AtlasData = extern struct {
         self.tex_h -= float_pad * 2 / h;
     }
 
-    pub inline fn fromRaw(u: u32, v: u32, w: u32, h: u32, ui: AtlasType) AtlasData {
+    pub inline fn fromRaw(u: c_int, v: c_int, w: c_int, h: c_int, ui: AtlasType) AtlasData {
         return fromRawF32(@floatFromInt(u), @floatFromInt(v), @floatFromInt(w), @floatFromInt(h), ui);
     }
 
@@ -368,23 +371,26 @@ fn addImage(
     comptime cut_width: u32,
     comptime cut_height: u32,
     comptime dont_trim: bool,
-    ctx: *zstbrp.PackContext,
+    ctx: *pack.Context,
     allocator: std.mem.Allocator,
 ) !void {
     var img = try zstbi.Image.loadFromFile(asset_dir ++ "sheets/" ++ image_name, 4);
     defer img.deinit();
 
     const len = @divFloor(img.width * img.height, cut_width * cut_height);
-    var current_rects = try allocator.alloc(zstbrp.PackRect, len);
+    var current_rects = try allocator.alloc(pack.Rect, len);
     defer allocator.free(current_rects);
+
+    var current_positions = try allocator.alloc(Position, len);
+    defer allocator.free(current_positions);
 
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
         const cur_src_y = @divFloor(i * cut_width, img.width) * cut_height;
         const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width, cut_height);
         if (dont_trim) {
-            current_rects[i].src_x = @intCast(cur_src_x);
-            current_rects[i].src_y = @intCast(cur_src_y);
+            current_positions[i].x = @intCast(cur_src_x);
+            current_positions[i].y = @intCast(cur_src_y);
             if (bounds.w == 0 or bounds.h == 0) {
                 current_rects[i].w = 0;
                 current_rects[i].h = 0;
@@ -393,84 +399,83 @@ fn addImage(
                 current_rects[i].h = cut_height + padding * 2;
             }
         } else {
-            current_rects[i].src_x = @intCast(cur_src_x + bounds.x_offset);
-            current_rects[i].src_y = @intCast(cur_src_y + bounds.y_offset);
-            current_rects[i].w = bounds.w + padding * 2;
-            current_rects[i].h = bounds.h + padding * 2;
+            current_positions[i].x = @intCast(cur_src_x + bounds.x_offset);
+            current_positions[i].y = @intCast(cur_src_y + bounds.y_offset);
+            current_rects[i].w = @intCast(bounds.w + padding * 2);
+            current_rects[i].h = @intCast(bounds.h + padding * 2);
         }
     }
 
-    if (zstbrp.packRects(ctx, current_rects)) {
-        var data = try allocator.alloc(AtlasData, len);
+    try pack.pack(true, ctx, current_rects);
 
-        var dominant_colors = try allocator.alloc(RGBA, len);
-        @memset(dominant_colors, RGBA{});
+    var data = try allocator.alloc(AtlasData, len);
 
-        var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
-        defer color_counts.deinit();
+    var dominant_colors = try allocator.alloc(RGBA, len);
+    @memset(dominant_colors, RGBA{});
 
-        for (0..len) |i| {
-            const rect = current_rects[i];
-            if (rect.w <= 0 or rect.h <= 0) {
-                data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
-                continue;
-            }
+    var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
+    defer color_counts.deinit();
 
-            const cur_atlas_x = rect.x + padding;
-            const cur_atlas_y = rect.y + padding;
+    for (0..len) |i| {
+        const rect = current_rects[i];
+        const pos = current_positions[i];
+        if (rect.w <= 0 or rect.h <= 0) {
+            data[i] = AtlasData.fromRaw(0, 0, rect.w, rect.h, .base);
+            continue;
+        }
 
-            color_counts.clearRetainingCapacity();
+        const cur_atlas_x: u32 = @intCast(rect.x + padding);
+        const cur_atlas_y: u32 = @intCast(rect.y + padding);
 
-            const w = rect.w - padding * 2;
-            const h = rect.h - padding * 2;
-            for (0..h) |j| {
-                const atlas_idx = ((cur_atlas_y + j) * atlas_width + cur_atlas_x) * 4;
-                const src_idx = ((rect.src_y + j) * img.width + rect.src_x) * 4;
-                @memcpy(atlas.data[atlas_idx .. atlas_idx + w * 4], img.data[src_idx .. src_idx + w * 4]);
+        color_counts.clearRetainingCapacity();
 
-                for (0..w) |k| {
-                    const x_offset = k * 4;
-                    if (img.data[src_idx + 3 + x_offset] > 0) {
-                        const rgba = RGBA{
-                            .r = img.data[src_idx + x_offset],
-                            .g = img.data[src_idx + 1 + x_offset],
-                            .b = img.data[src_idx + 2 + x_offset],
-                            .a = 255,
-                        };
-                        if (color_counts.get(rgba)) |count| {
-                            try color_counts.put(rgba, count + 1);
-                        } else {
-                            try color_counts.put(rgba, 1);
-                        }
+        const w: u32 = @intCast(rect.w - padding * 2);
+        const h: u32 = @intCast(rect.h - padding * 2);
+        for (0..h) |j| {
+            const atlas_idx = ((cur_atlas_y + j) * atlas_width + cur_atlas_x) * 4;
+            const src_idx = ((pos.y + j) * img.width + pos.x) * 4;
+            @memcpy(atlas.data[atlas_idx .. atlas_idx + w * 4], img.data[src_idx .. src_idx + w * 4]);
+
+            for (0..w) |k| {
+                const x_offset = k * 4;
+                if (img.data[src_idx + 3 + x_offset] > 0) {
+                    const rgba = RGBA{
+                        .r = img.data[src_idx + x_offset],
+                        .g = img.data[src_idx + 1 + x_offset],
+                        .b = img.data[src_idx + 2 + x_offset],
+                        .a = 255,
+                    };
+                    if (color_counts.get(rgba)) |count| {
+                        try color_counts.put(rgba, count + 1);
+                    } else {
+                        try color_counts.put(rgba, 1);
                     }
                 }
             }
-
-            var colors = std.ArrayList(u32).init(allocator);
-            defer colors.deinit();
-
-            var max: u32 = 0;
-            var count_iter = color_counts.iterator();
-            while (count_iter.next()) |entry| {
-                try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
-                    @as(u32, @intCast(entry.key_ptr.g)) << 8 |
-                    @as(u32, @intCast(entry.key_ptr.b)));
-
-                if (entry.value_ptr.* > max) {
-                    dominant_colors[i] = entry.key_ptr.*;
-                    max = entry.value_ptr.*;
-                }
-            }
-
-            data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
-            try atlas_to_color_data.put(@bitCast(data[i]), try allocator.dupe(u32, colors.items));
         }
 
-        try atlas_data.put(sheet_name, data);
-        try dominant_color_data.put(sheet_name, dominant_colors);
-    } else {
-        std.log.err("Could not pack " ++ image_name ++ " into the atlas", .{});
+        var colors = std.ArrayList(u32).init(allocator);
+        defer colors.deinit();
+
+        var max: u32 = 0;
+        var count_iter = color_counts.iterator();
+        while (count_iter.next()) |entry| {
+            try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
+                @as(u32, @intCast(entry.key_ptr.g)) << 8 |
+                @as(u32, @intCast(entry.key_ptr.b)));
+
+            if (entry.value_ptr.* > max) {
+                dominant_colors[i] = entry.key_ptr.*;
+                max = entry.value_ptr.*;
+            }
+        }
+
+        data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
+        try atlas_to_color_data.put(@bitCast(data[i]), try allocator.dupe(u32, colors.items));
     }
+
+    try atlas_data.put(sheet_name, data);
+    try dominant_color_data.put(sheet_name, dominant_colors);
 }
 
 fn addUiImage(
@@ -478,7 +483,7 @@ fn addUiImage(
     comptime image_name: [:0]const u8,
     comptime cut_width_base: u32,
     comptime cut_height_base: u32,
-    ctx: *zstbrp.PackContext,
+    ctx: *pack.Context,
     allocator: std.mem.Allocator,
 ) !void {
     var img = try zstbi.Image.loadFromFile(asset_dir ++ image_name, 4);
@@ -489,46 +494,45 @@ fn addUiImage(
     const cut_height = if (cut_height_base == imply_size) img.height else cut_height_base;
 
     const len = @divFloor(img.width * img.height, cut_width * cut_height);
-    var current_rects = try allocator.alloc(zstbrp.PackRect, len);
+    var current_rects = try allocator.alloc(pack.Rect, len);
     defer allocator.free(current_rects);
+    var current_positions = try allocator.alloc(Position, len);
+    defer allocator.free(current_positions);
     var data = try allocator.alloc(AtlasData, len);
 
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
         const cur_src_y = @divFloor(i * cut_width, img.width) * cut_height;
         const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width, cut_height);
-        current_rects[i].src_x = @intCast(cur_src_x + bounds.x_offset);
-        current_rects[i].src_y = @intCast(cur_src_y + bounds.y_offset);
-        current_rects[i].w = bounds.w + padding * 2;
-        current_rects[i].h = bounds.h + padding * 2;
+        current_positions[i].x = @intCast(cur_src_x + bounds.x_offset);
+        current_positions[i].y = @intCast(cur_src_y + bounds.y_offset);
+        current_rects[i].w = @intCast(bounds.w + padding * 2);
+        current_rects[i].h = @intCast(bounds.h + padding * 2);
     }
 
-    if (zstbrp.packRects(ctx, current_rects)) {
-        for (0..len) |i| {
-            const rect = current_rects[i];
-            if (rect.w <= 0 or rect.h <= 0) {
-                data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .ui);
-                continue;
-            }
+    try pack.pack(true, ctx, current_rects);
 
-            const cur_atlas_x = rect.x + padding;
-            const cur_atlas_y = rect.y + padding;
-
-            const w = rect.w - padding * 2;
-            const h = rect.h - padding * 2;
-            for (0..h) |j| {
-                const atlas_idx = ((cur_atlas_y + j) * atlas_width + cur_atlas_x) * 4;
-                const src_idx = ((rect.src_y + j) * img.width + rect.src_x) * 4;
-                @memcpy(ui_atlas.data[atlas_idx .. atlas_idx + w * 4], img.data[src_idx .. src_idx + w * 4]);
-            }
-
+    for (0..len) |i| {
+        const rect = current_rects[i];
+        if (rect.w <= 0 or rect.h <= 0) {
             data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .ui);
+            continue;
         }
 
-        try ui_atlas_data.put(sheet_name, data);
-    } else {
-        std.log.err("Could not pack " ++ image_name ++ " into the ui atlas", .{});
+        const cur_atlas_x: u32 = @intCast(rect.x + padding);
+        const cur_atlas_y: u32 = @intCast(rect.y + padding);
+        const w: u32 = @intCast(rect.w - padding * 2);
+        const h: u32 = @intCast(rect.h - padding * 2);
+        for (0..h) |j| {
+            const atlas_idx = ((cur_atlas_y + j) * atlas_width + cur_atlas_x) * 4;
+            const src_idx = ((current_positions[i].y + j) * img.width + current_positions[i].x) * 4;
+            @memcpy(ui_atlas.data[atlas_idx .. atlas_idx + w * 4], img.data[src_idx .. src_idx + w * 4]);
+        }
+
+        data[i] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .ui);
     }
+
+    try ui_atlas_data.put(sheet_name, data);
 }
 
 fn addAnimEnemy(
@@ -538,7 +542,7 @@ fn addAnimEnemy(
     comptime cut_height: u32,
     comptime full_cut_width: u32,
     comptime full_cut_height: u32,
-    ctx: *zstbrp.PackContext,
+    ctx: *pack.Context,
     allocator: std.mem.Allocator,
 ) !void {
     var img = try zstbi.Image.loadFromFile(asset_dir ++ "sheets/" ++ image_name, 4);
@@ -546,8 +550,11 @@ fn addAnimEnemy(
 
     const len = @divFloor(img.width, full_cut_width) * @divFloor(img.height, full_cut_height) * 5;
 
-    var current_rects = try allocator.alloc(zstbrp.PackRect, len * 2);
+    var current_rects = try allocator.alloc(pack.Rect, len * 2);
     defer allocator.free(current_rects);
+
+    var current_positions = try allocator.alloc(Position, len * 2);
+    defer allocator.free(current_positions);
 
     for (0..2) |i| {
         for (0..len) |j| {
@@ -555,187 +562,58 @@ fn addAnimEnemy(
             const cur_src_y = @divFloor(j, 5) * cut_height;
             const attack_scale = @as(u32, @intFromBool(j % 5 == 4)) + 1;
             const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width * attack_scale, cut_height);
-            current_rects[i * len + j].src_x = @intCast(cur_src_x + bounds.x_offset);
-            current_rects[i * len + j].src_y = @intCast(cur_src_y + bounds.y_offset);
-            current_rects[i * len + j].w = bounds.w + padding * 2;
-            current_rects[i * len + j].h = bounds.h + padding * 2;
+            current_positions[i * len + j].x = @intCast(cur_src_x + bounds.x_offset);
+            current_positions[i * len + j].y = @intCast(cur_src_y + bounds.y_offset);
+            current_rects[i * len + j].w = @intCast(bounds.w + padding * 2);
+            current_rects[i * len + j].h = @intCast(bounds.h + padding * 2);
         }
     }
 
-    if (zstbrp.packRects(ctx, current_rects)) {
-        const enemy_data = try allocator.alloc(AnimEnemyData, @divFloor(len, 5));
+    try pack.pack(true, ctx, current_rects);
 
-        var dominant_colors = try allocator.alloc(RGBA, len);
-        @memset(dominant_colors, RGBA{});
+    const enemy_data = try allocator.alloc(AnimEnemyData, @divFloor(len, 5));
 
-        var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
-        defer color_counts.deinit();
+    var dominant_colors = try allocator.alloc(RGBA, len);
+    @memset(dominant_colors, RGBA{});
 
-        for (0..2) |i| {
-            for (0..len) |j| {
-                const rect = current_rects[i * len + j];
+    var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
+    defer color_counts.deinit();
 
-                color_counts.clearRetainingCapacity();
-
-                const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
-                const frame_idx = j % 5;
-                const set_idx = @divFloor(j, 5);
-                if (frame_idx >= 3) {
-                    const dir_idx = i * AnimEnemyData.attack_actions;
-                    enemy_data[set_idx].attack_anims[dir_idx + frame_idx - 3] = data;
-                } else {
-                    const dir_idx = i * AnimEnemyData.walk_actions;
-                    enemy_data[set_idx].walk_anims[dir_idx + frame_idx] = data;
-                }
-
-                if (rect.w <= 0 or rect.h <= 0)
-                    continue;
-
-                const cur_atlas_x = rect.x + padding;
-                const cur_atlas_y = rect.y + padding;
-                const w = rect.w - padding * 2;
-                const h = rect.h - padding * 2;
-
-                for (0..w * h) |k| {
-                    const row_count = @divFloor(k, w);
-                    const row_idx = k % w;
-                    const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
-
-                    const src_idx = if (i == @intFromEnum(Direction.left))
-                        ((rect.src_y + row_count) * img.width + rect.src_x + w - row_idx - 1) * 4
-                    else
-                        ((rect.src_y + row_count) * img.width + rect.src_x + row_idx) * 4;
-
-                    @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
-
-                    if (img.data[src_idx + 3] > 0) {
-                        const rgba = RGBA{
-                            .r = img.data[src_idx],
-                            .g = img.data[src_idx + 1],
-                            .b = img.data[src_idx + 2],
-                            .a = 255,
-                        };
-                        if (color_counts.get(rgba)) |count| {
-                            try color_counts.put(rgba, count + 1);
-                        } else {
-                            try color_counts.put(rgba, 1);
-                        }
-                    }
-                }
-
-                var colors = std.ArrayList(u32).init(allocator);
-                defer colors.deinit();
-
-                var max: u32 = 0;
-                var count_iter = color_counts.iterator();
-                while (count_iter.next()) |entry| {
-                    try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
-                        @as(u32, @intCast(entry.key_ptr.g)) << 8 |
-                        @as(u32, @intCast(entry.key_ptr.b)));
-
-                    if (entry.value_ptr.* > max) {
-                        dominant_colors[set_idx] = entry.key_ptr.*;
-                        max = entry.value_ptr.*;
-                    }
-                }
-
-                try atlas_to_color_data.put(@bitCast(data), try allocator.dupe(u32, colors.items));
-            }
-        }
-
-        try anim_enemies.put(sheet_name, enemy_data);
-        try dominant_color_data.put(sheet_name, dominant_colors);
-    } else {
-        std.log.err("Could not pack " ++ image_name ++ " into the atlas", .{});
-    }
-}
-
-fn addAnimPlayer(
-    comptime sheet_name: [:0]const u8,
-    comptime image_name: [:0]const u8,
-    comptime cut_width: u32,
-    comptime cut_height: u32,
-    comptime full_cut_width: u32,
-    comptime full_cut_height: u32,
-    ctx: *zstbrp.PackContext,
-    allocator: std.mem.Allocator,
-) !void {
-    var img = try zstbi.Image.loadFromFile(asset_dir ++ "sheets/" ++ image_name, 4);
-    defer img.deinit();
-
-    var len = @divFloor(img.width, full_cut_width) * @divFloor(img.height, full_cut_height) * 5;
-    len += @divFloor(len, 3);
-
-    var current_rects = try allocator.alloc(zstbrp.PackRect, len);
-    defer allocator.free(current_rects);
-
-    var left_sub: u32 = 0;
-    for (0..len) |i| {
-        const frame_idx = i % 5;
-        const set_idx = @divFloor(i, 5);
-        const cur_src_x = frame_idx * cut_width;
-        if (set_idx % 4 == 1 and frame_idx == 0) {
-            left_sub += 1;
-        }
-
-        const cur_src_y = (set_idx - left_sub) * cut_height;
-        const attack_scale = @as(u32, @intFromBool(frame_idx == 4)) + 1;
-        const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width * attack_scale, cut_height);
-        current_rects[i].src_x = @intCast(cur_src_x + bounds.x_offset);
-        current_rects[i].src_y = @intCast(cur_src_y + bounds.y_offset);
-        current_rects[i].w = bounds.w + padding * 2;
-        current_rects[i].h = bounds.h + padding * 2;
-    }
-
-    if (zstbrp.packRects(ctx, current_rects)) {
-        left_sub = 0;
-
-        const player_data = try allocator.alloc(AnimPlayerData, @divFloor(len, 5 * 4));
-
-        var dominant_colors = try allocator.alloc(RGBA, len);
-        @memset(dominant_colors, RGBA{});
-
-        var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
-        defer color_counts.deinit();
-
+    for (0..2) |i| {
         for (0..len) |j| {
-            const rect = current_rects[j];
+            const rect = current_rects[i * len + j];
+            const pos = current_positions[i * len + j];
 
             color_counts.clearRetainingCapacity();
 
             const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
             const frame_idx = j % 5;
             const set_idx = @divFloor(j, 5);
-            if (set_idx % 4 == 1 and frame_idx == 0) {
-                left_sub += 1;
-            }
-
-            const data_idx = @divFloor(set_idx, 4);
             if (frame_idx >= 3) {
-                const dir_idx = (set_idx % 4) * AnimPlayerData.attack_actions;
-                player_data[data_idx].attack_anims[dir_idx + frame_idx - 3] = data;
+                const dir_idx = i * AnimEnemyData.attack_actions;
+                enemy_data[set_idx].attack_anims[dir_idx + frame_idx - 3] = data;
             } else {
-                const dir_idx = (set_idx % 4) * AnimPlayerData.walk_actions;
-                player_data[data_idx].walk_anims[dir_idx + frame_idx] = data;
+                const dir_idx = i * AnimEnemyData.walk_actions;
+                enemy_data[set_idx].walk_anims[dir_idx + frame_idx] = data;
             }
 
             if (rect.w <= 0 or rect.h <= 0)
                 continue;
 
-            const cur_atlas_x = rect.x + padding;
-            const cur_atlas_y = rect.y + padding;
-            const w = rect.w - padding * 2;
-            const h = rect.h - padding * 2;
+            const cur_atlas_x: u32 = @intCast(rect.x + padding);
+            const cur_atlas_y: u32 = @intCast(rect.y + padding);
+            const w: u32 = @intCast(rect.w - padding * 2);
+            const h: u32 = @intCast(rect.h - padding * 2);
 
             for (0..w * h) |k| {
                 const row_count = @divFloor(k, w);
                 const row_idx = k % w;
                 const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
 
-                const src_idx = if (set_idx % 4 == @intFromEnum(Direction.left))
-                    ((rect.src_y + row_count) * img.width + rect.src_x + w - row_idx - 1) * 4
+                const src_idx = if (i == @intFromEnum(Direction.left))
+                    ((pos.y + row_count) * img.width + pos.x + w - row_idx - 1) * 4
                 else
-                    ((rect.src_y + row_count) * img.width + rect.src_x + row_idx) * 4;
+                    ((pos.y + row_count) * img.width + pos.x + row_idx) * 4;
 
                 @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
 
@@ -772,12 +650,142 @@ fn addAnimPlayer(
 
             try atlas_to_color_data.put(@bitCast(data), try allocator.dupe(u32, colors.items));
         }
-
-        try anim_players.put(sheet_name, player_data);
-        try dominant_color_data.put(sheet_name, dominant_colors);
-    } else {
-        std.log.err("Could not pack " ++ image_name ++ " into the atlas", .{});
     }
+
+    try anim_enemies.put(sheet_name, enemy_data);
+    try dominant_color_data.put(sheet_name, dominant_colors);
+}
+
+fn addAnimPlayer(
+    comptime sheet_name: [:0]const u8,
+    comptime image_name: [:0]const u8,
+    comptime cut_width: u32,
+    comptime cut_height: u32,
+    comptime full_cut_width: u32,
+    comptime full_cut_height: u32,
+    ctx: *pack.Context,
+    allocator: std.mem.Allocator,
+) !void {
+    var img = try zstbi.Image.loadFromFile(asset_dir ++ "sheets/" ++ image_name, 4);
+    defer img.deinit();
+
+    var len = @divFloor(img.width, full_cut_width) * @divFloor(img.height, full_cut_height) * 5;
+    len += @divFloor(len, 3);
+
+    var current_rects = try allocator.alloc(pack.Rect, len);
+    defer allocator.free(current_rects);
+
+    var current_positions = try allocator.alloc(Position, len);
+    defer allocator.free(current_positions);
+
+    var left_sub: u32 = 0;
+    for (0..len) |i| {
+        const frame_idx = i % 5;
+        const set_idx = @divFloor(i, 5);
+        const cur_src_x = frame_idx * cut_width;
+        if (set_idx % 4 == 1 and frame_idx == 0) {
+            left_sub += 1;
+        }
+
+        const cur_src_y = (set_idx - left_sub) * cut_height;
+        const attack_scale = @as(u32, @intFromBool(frame_idx == 4)) + 1;
+        const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width * attack_scale, cut_height);
+        current_positions[i].x = @intCast(cur_src_x + bounds.x_offset);
+        current_positions[i].y = @intCast(cur_src_y + bounds.y_offset);
+        current_rects[i].w = @intCast(bounds.w + padding * 2);
+        current_rects[i].h = @intCast(bounds.h + padding * 2);
+    }
+
+    try pack.pack(true, ctx, current_rects);
+
+    left_sub = 0;
+
+    const player_data = try allocator.alloc(AnimPlayerData, @divFloor(len, 5 * 4));
+
+    var dominant_colors = try allocator.alloc(RGBA, len);
+    @memset(dominant_colors, RGBA{});
+
+    var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
+    defer color_counts.deinit();
+
+    for (0..len) |j| {
+        const rect = current_rects[j];
+        const pos = current_positions[j];
+
+        color_counts.clearRetainingCapacity();
+
+        const data = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
+        const frame_idx = j % 5;
+        const set_idx = @divFloor(j, 5);
+        if (set_idx % 4 == 1 and frame_idx == 0) {
+            left_sub += 1;
+        }
+
+        const data_idx = @divFloor(set_idx, 4);
+        if (frame_idx >= 3) {
+            const dir_idx = (set_idx % 4) * AnimPlayerData.attack_actions;
+            player_data[data_idx].attack_anims[dir_idx + frame_idx - 3] = data;
+        } else {
+            const dir_idx = (set_idx % 4) * AnimPlayerData.walk_actions;
+            player_data[data_idx].walk_anims[dir_idx + frame_idx] = data;
+        }
+
+        if (rect.w <= 0 or rect.h <= 0)
+            continue;
+
+        const cur_atlas_x: u32 = @intCast(rect.x + padding);
+        const cur_atlas_y: u32 = @intCast(rect.y + padding);
+        const w: u32 = @intCast(rect.w - padding * 2);
+        const h: u32 = @intCast(rect.h - padding * 2);
+
+        for (0..w * h) |k| {
+            const row_count = @divFloor(k, w);
+            const row_idx = k % w;
+            const atlas_idx = ((cur_atlas_y + row_count) * atlas_width + cur_atlas_x + row_idx) * 4;
+
+            const src_idx = if (set_idx % 4 == @intFromEnum(Direction.left))
+                ((pos.y + row_count) * img.width + pos.x + w - row_idx - 1) * 4
+            else
+                ((pos.y + row_count) * img.width + pos.x + row_idx) * 4;
+
+            @memcpy(atlas.data[atlas_idx .. atlas_idx + 4], img.data[src_idx .. src_idx + 4]);
+
+            if (img.data[src_idx + 3] > 0) {
+                const rgba = RGBA{
+                    .r = img.data[src_idx],
+                    .g = img.data[src_idx + 1],
+                    .b = img.data[src_idx + 2],
+                    .a = 255,
+                };
+                if (color_counts.get(rgba)) |count| {
+                    try color_counts.put(rgba, count + 1);
+                } else {
+                    try color_counts.put(rgba, 1);
+                }
+            }
+        }
+
+        var colors = std.ArrayList(u32).init(allocator);
+        defer colors.deinit();
+
+        var max: u32 = 0;
+        var count_iter = color_counts.iterator();
+        while (count_iter.next()) |entry| {
+            try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
+                @as(u32, @intCast(entry.key_ptr.g)) << 8 |
+                @as(u32, @intCast(entry.key_ptr.b)));
+
+            if (entry.value_ptr.* > max) {
+                dominant_colors[set_idx] = entry.key_ptr.*;
+                max = entry.value_ptr.*;
+            }
+        }
+
+        try atlas_to_color_data.put(@bitCast(data), try allocator.dupe(u32, colors.items));
+    }
+
+    try anim_players.put(sheet_name, player_data);
+    try dominant_color_data.put(sheet_name, dominant_colors);
 }
 
 fn parseFontData(allocator: std.mem.Allocator, comptime atlas_w: f32, comptime atlas_h: f32, comptime path: []const u8, chars: *[256]CharacterData) !void {
@@ -956,24 +964,17 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addCursors("cursors.png", 32, 32, allocator);
 
     atlas = try zstbi.Image.createEmpty(atlas_width, atlas_height, 4, .{});
-    var ctx = zstbrp.PackContext{
-        .width = atlas_width,
-        .height = atlas_height,
-        .num_nodes = 100,
-    };
-
-    const nodes = try allocator.alloc(zstbrp.PackNode, 4096);
-    defer allocator.free(nodes);
-    zstbrp.initPack(&ctx, nodes);
+    var ctx = try pack.Context.create(allocator, atlas_width, atlas_height, .{ .spaces_to_prealloc = 4096 });
+    defer ctx.deinit();
 
     try addImage("light", "light.png", 128, 128, false, &ctx, allocator);
     try addImage("bars", "bars.png", 24, 8, false, &ctx, allocator);
     try addImage("conditions", "conditions.png", 16, 16, false, &ctx, allocator);
     try addImage("error_texture", "error_texture.png", 8, 8, false, &ctx, allocator);
-    try addImage("invisible", "invisible.png", 8, 8, false, &ctx, allocator);
-    try addImage("ground", "ground.png", 8, 8, false, &ctx, allocator);
+    try addImage("invisible", "invisible.png", 8, 8, true, &ctx, allocator);
+    try addImage("ground", "ground.png", 8, 8, true, &ctx, allocator);
     try addImage("ground_masks", "ground_masks.png", 8, 8, true, &ctx, allocator);
-    try addImage("key_indicators", "key_indicators.png", 100, 100, false, &ctx, allocator);
+    try addImage("key_indicators", "key_indicators.png", 100, 100, true, &ctx, allocator);
     try addImage("items", "items.png", 10, 10, false, &ctx, allocator);
     try addImage("misc", "misc.png", 10, 10, false, &ctx, allocator);
     try addImage("misc_big", "misc_big.png", 18, 18, false, &ctx, allocator);
@@ -984,7 +985,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("projectiles", "projectiles.png", 8, 8, true, &ctx, allocator);
     try addImage("basic_items", "basic_items.png", 8, 8, false, &ctx, allocator);
     try addImage("basic_projectiles", "basic_projectiles.png", 8, 8, true, &ctx, allocator);
-    try addImage("wall_backface", "wall_backface.png", 8, 8, false, &ctx, allocator);
+    try addImage("wall_backface", "wall_backface.png", 8, 8, true, &ctx, allocator);
     try addImage("particles", "particles.png", 8, 8, false, &ctx, allocator);
 
     try addAnimEnemy("low_realm", "low_realm.png", 10, 10, 60, 10, &ctx, allocator);
@@ -998,18 +999,11 @@ pub fn init(allocator: std.mem.Allocator) !void {
         try zstbi.Image.writeToFile(atlas, "atlas.png", .png);
 
     ui_atlas = try zstbi.Image.createEmpty(ui_atlas_width, ui_atlas_height, 4, .{});
-    var ui_ctx = zstbrp.PackContext{
-        .width = ui_atlas_width,
-        .height = ui_atlas_height,
-        .num_nodes = 100,
-    };
-
-    const ui_nodes = try allocator.alloc(zstbrp.PackNode, 4096);
-    defer allocator.free(ui_nodes);
-    zstbrp.initPack(&ui_ctx, ui_nodes);
+    var ui_ctx = try pack.Context.create(allocator, ui_atlas_width, ui_atlas_height, .{ .spaces_to_prealloc = 4096 });
+    defer ui_ctx.deinit();
 
     const imply_size = std.math.maxInt(u32);
-    try addUiImage("ability_icons", "sheets/ability_icons.png", 44, 44, &ctx, allocator);
+    try addUiImage("ability_icons", "sheets/ability_icons.png", 44, 44, &ui_ctx, allocator);
     try addUiImage("menu_decor_frame", "ui/menu_decor_frame.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("retrieve_button", "ui/retrieve_button.png", imply_size, imply_size, &ui_ctx, allocator);
     try addUiImage("options_button", "ui/options_button.png", imply_size, imply_size, &ui_ctx, allocator);

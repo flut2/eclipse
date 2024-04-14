@@ -1,7 +1,6 @@
 const std = @import("std");
 const libxml2 = @import("libs/libxml/libxml2.zig");
 const zstbi = @import("libs/zstbi/build.zig");
-const zstbrp = @import("libs/zstbrp/build.zig");
 const ztracy = @import("libs/ztracy/build.zig");
 const zaudio = @import("libs/zaudio/build.zig");
 const ini = @import("libs/ini/build.zig");
@@ -19,6 +18,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
+    exe.root_module.addAnonymousImport("turbopack", .{ .root_source_file = .{ .path = "libs/turbopack/pack.zig" } });
     exe.root_module.addImport("rpc", @import("libs/zig-discord/build.zig").getModule(b));
     exe.root_module.addImport("nfd", nfd.getModule(b));
 
@@ -55,7 +55,6 @@ pub fn build(b: *std.Build) !void {
     })).link(exe);
 
     zstbi.package(b, target, optimize, .{}).link(exe);
-    zstbrp.package(b, target, optimize, .{}).link(exe);
     ztracy.package(b, target, optimize, .{ .options = .{ .enable_ztracy = true } }).link(exe);
     zaudio.package(b, target, optimize, .{}).link(exe);
 

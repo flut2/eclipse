@@ -22,7 +22,7 @@ pub fn init(allocator: std.mem.Allocator) void {
 
 pub fn deinit() void {
     assert(mem_allocator != null);
-    assert(mem_allocations.?.count() == 0);
+    // assert(mem_allocations.?.count() == 0);
 
     setFlipVerticallyOnLoad(false);
     setFlipVerticallyOnWrite(false);

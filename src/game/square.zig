@@ -69,8 +69,6 @@ pub const Square = struct {
                     main.minimap_update_min_y = @min(main.minimap_update_min_y, floor_y);
                     main.minimap_update_max_y = @max(main.minimap_update_max_y, floor_y);
                 }
-
-                self.updateBlends();
             }
         }
 
@@ -83,6 +81,7 @@ pub const Square = struct {
         self.u_offset += self.props.x_offset * 10.0 * assets.base_texel_w;
         self.v_offset += self.props.y_offset * 10.0 * assets.base_texel_h;
 
+        self.updateBlends();
         map.squares[floor_x + floor_y * map.width] = self.*;
     }
 
