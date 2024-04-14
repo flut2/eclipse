@@ -28,6 +28,9 @@ const wgpu = @import("mach-gpu");
 const use_dawn = @import("build_options").use_dawn;
 const gpu = if (use_dawn) wgpu else sysgpu.sysgpu;
 
+pub export var NvOptimusEnablement: c_int = 1;
+pub export var AmdPowerXpressRequestHighPerformance: c_int = 1;
+
 pub const GPUInterface = wgpu.dawn.Interface;
 pub const SYSGPUInterface = sysgpu.Impl;
 
