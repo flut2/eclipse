@@ -86,17 +86,15 @@ pub const Square = struct {
     }
 
     inline fn parseDir(x: f32, y: f32, square: *Square, current_prio: i32, comptime blend_idx: comptime_int) void {
-        const opposite_idx = (blend_idx + 2) % 4;
         if (map.getSquarePtr(x, y, true)) |other_sq| {
-            if (other_sq.tile_type >= 0xFFFE)
-                return;
+            const opposite_idx = (blend_idx + 2) % 4;
 
             const has_wall = blk: {
                 const en = map.findEntityConst(other_sq.static_obj_id) orelse break :blk false;
                 break :blk en == .object and en.object.class == .wall;
             };
 
-            if (!has_wall) {
+            if (!has_wall and other_sq.tile_type < 0xFFFE) {
                 const other_blend_prio = other_sq.props.blend_prio;
                 if (other_blend_prio > current_prio) {
                     square.blends[blend_idx] = .{
@@ -110,14 +108,18 @@ pub const Square = struct {
                         .v = square.atlas_data.tex_v,
                     };
                     square.blends[blend_idx] = .{ .u = -1.0, .v = -1.0 };
+                } else {
+                    square.blends[blend_idx] = .{ .u = -1.0, .v = -1.0 };
+                    other_sq.blends[opposite_idx] = .{ .u = -1.0, .v = -1.0 };
                 }
 
                 return;
             }
 
-            square.blends[blend_idx] = .{ .u = -1.0, .v = -1.0 };
             other_sq.blends[opposite_idx] = .{ .u = -1.0, .v = -1.0 };
         }
+
+        square.blends[blend_idx] = .{ .u = -1.0, .v = -1.0 };
     }
 
     pub fn updateBlends(square: *Square) void {

@@ -423,7 +423,7 @@ fn deviceLostCallback(reason: gpu.Device.LostReason, msg: [*:0]const u8, _: ?*an
 
 pub fn init(window: glfw.Window, ally: std.mem.Allocator) !void {
     allocator = ally;
-
+    
     if (use_dawn) {
         try main.GPUInterface.init(ally, .{});
     } else {
@@ -577,7 +577,7 @@ pub fn init(window: glfw.Window, ally: std.mem.Allocator) !void {
     assets.ui_atlas.deinit();
     assets.menu_background.deinit();
 
-    sampler = device.createSampler(&.{ });
+    sampler = device.createSampler(&.{});
     linear_sampler = device.createSampler(&.{ .min_filter = .linear, .mag_filter = .linear });
 
     const bufferLayoutEntry = gpu.BindGroupLayout.Entry.buffer;
