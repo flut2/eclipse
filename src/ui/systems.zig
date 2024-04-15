@@ -222,7 +222,7 @@ pub fn mouseMove(x: f32, y: f32) bool {
     while (elem_iter_1.next()) |elem| {
         switch (elem) {
             else => {},
-            inline .slider => |inner_elem| {
+            .slider => |inner_elem| {
                 if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove") and inner_elem.mouseMove(x, y, 0, 0))
                     return true;
             },

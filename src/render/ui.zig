@@ -922,18 +922,18 @@ inline fn drawKeyMapper(idx: u16, key_mapper: *element.KeyMapper, draw_data: bas
         .nine_slice => |nine_slice| {
             w = nine_slice.w;
             h = nine_slice.h;
-            new_idx = drawNineSlice(new_idx, key_mapper.x + x_offset, key_mapper.y + y_offset, nine_slice, draw_data);
+            // new_idx = drawNineSlice(new_idx, key_mapper.x + x_offset, key_mapper.y + y_offset, nine_slice, draw_data);
         },
         .normal => |image_data| {
             w = image_data.width();
             h = image_data.height();
-            const opts = base.QuadOptions{
-                .alpha_mult = image_data.alpha,
-                .scissor = key_mapper.scissor,
-                .base_color = image_data.color,
-                .base_color_intensity = image_data.color_intensity,
-            };
-            new_idx = base.drawQuad(new_idx, key_mapper.x + x_offset, key_mapper.y + y_offset, w, h, image_data.atlas_data, draw_data, opts);
+            // const opts = base.QuadOptions{
+            //     .alpha_mult = image_data.alpha,
+            //     .scissor = key_mapper.scissor,
+            //     .base_color = image_data.color,
+            //     .base_color_intensity = image_data.color_intensity,
+            // };
+            // new_idx = base.drawQuad(new_idx, key_mapper.x + x_offset, key_mapper.y + y_offset, w, h, image_data.atlas_data, draw_data, opts);
         },
     }
 

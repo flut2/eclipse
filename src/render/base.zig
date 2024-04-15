@@ -424,11 +424,10 @@ fn deviceLostCallback(reason: gpu.Device.LostReason, msg: [*:0]const u8, _: ?*an
 pub fn init(window: glfw.Window, ally: std.mem.Allocator) !void {
     allocator = ally;
     
-    if (use_dawn) {
-        try main.GPUInterface.init(ally, .{});
-    } else {
+    if (use_dawn)
+        try main.GPUInterface.init(ally, .{})
+    else
         try main.SYSGPUInterface.init(ally, .{});
-    }
 
     instance = gpu.createInstance(null) orelse {
         std.debug.panic("Failed to create GPU instance", .{});
@@ -441,17 +440,15 @@ pub fn init(window: glfw.Window, ally: std.mem.Allocator) !void {
         .power_preference = .high_performance,
         .force_fallback_adapter = .false,
     }, &response, gpu_util.requestAdapterCallback);
-    if (response.status != .success) {
+    if (response.status != .success)
         std.debug.panic("Failed to create GPU adapter: {?s}", .{response.message});
-    }
 
     adapter = response.adapter.?;
 
     var props = std.mem.zeroes(gpu.Adapter.Properties);
     response.adapter.?.getProperties(&props);
-    if (props.backend_type == .null) {
+    if (props.backend_type == .null)
         std.debug.panic("No backend found for {s} adapter", .{props.adapter_type.name()});
-    }
 
     device = response.adapter.?.createDevice(&.{
         .required_features_count = 0,
@@ -459,9 +456,7 @@ pub fn init(window: glfw.Window, ally: std.mem.Allocator) !void {
         .required_limits = null,
         .device_lost_callback = &deviceLostCallback,
         .device_lost_userdata = null,
-    }) orelse {
-        std.debug.panic("Failed to create GPU device\n", .{});
-    };
+    }) orelse std.debug.panic("Failed to create GPU device\n", .{});
     device.setUncapturedErrorCallback({}, gpu_util.printUnhandledErrorCallback);
     queue = device.getQueue();
 

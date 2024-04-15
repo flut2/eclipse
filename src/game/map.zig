@@ -417,6 +417,7 @@ pub fn findEntityRef(obj_id: i32) ?*Entity {
 }
 
 pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
+    std.debug.assert(!object_lock.tryLock());
     for (entities.items, 0..) |*en, i| {
         switch (en.*) {
             .particle => |*pt| {

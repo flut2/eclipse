@@ -21,11 +21,8 @@ const Square = @import("../../game/square.zig").Square;
 const Interactable = element.InteractableImageData;
 const NineSlice = element.NineSliceImageData;
 
-const controls_container_width = 220;
-const controls_container_height = 400;
-
-const new_container_width = 345;
-const new_container_height = 175;
+const control_decor_w = 220;
+const control_decor_h = 400;
 
 const palette_decor_w = 200;
 const palette_decor_h = 400;
@@ -111,16 +108,6 @@ const CommandQueue = struct {
         self.command_list = std.ArrayList(EditorCommand).init(allocator);
     }
 
-    pub fn reset(self: *CommandQueue) void {
-        if (self.command_list.items.len > 0) {
-            for (self.command_list.items) |cmd| {
-                if (cmd == .multi_place)
-                    self.allocator.free(cmd.multi_place.places);
-            }
-            self.command_list.clearAndFree();
-        }
-    }
-
     pub fn deinit(self: *CommandQueue) void {
         for (self.command_list.items) |cmd| {
             if (cmd == .multi_place)
@@ -169,8 +156,11 @@ const CommandQueue = struct {
 };
 
 pub const MapEditorScreen = struct {
-    const layers = [_][]const u8{ "Tiles", "Objects", "Regions" };
-    const layer_enums = [_]Layer{ .ground, .object, .region };
+    const layers_text = [_][]const u8{ "Tiles", "Objects", "Regions" };
+    const layers = [_]Layer{ .ground, .object, .region };
+
+    const sizes_text = [_][]const u8{ "64x64", "128x128", "256x256", "512x512", "1024x1024", "2048x2048" };
+    const sizes = [_]u32{ 64, 128, 256, 512, 1024, 2048 };
 
     allocator: std.mem.Allocator,
     inited: bool = false,
@@ -178,35 +168,28 @@ pub const MapEditorScreen = struct {
     next_obj_id: i32 = -1,
     editor_ready: bool = false,
 
-    map_size: u32 = 128,
-    map_size_64: bool = false,
-    map_size_128: bool = true,
-    map_size_256: bool = false,
+    map_size: u32 = 0,
     map_tile_data: []MapEditorTile = &[0]MapEditorTile{},
 
     command_queue: CommandQueue = .{},
 
     action: EditorAction = .none,
     active_layer: Layer = .ground,
-    selected_tile: u16 = 0xFFFE,
-    selected_object: u16 = 0xFFFF,
-    selected_region: u8 = 0xFF,
+    selected_tile: u16 = defaultType(.ground),
+    selected_object: u16 = defaultType(.object),
+    selected_region: u8 = defaultType(.region),
 
     brush_size: f32 = 0.5,
     random_chance: f32 = 0.01,
 
-    size_text_visual_64: *element.Text = undefined,
-    size_text_visual_128: *element.Text = undefined,
-    size_text_visual_256: *element.Text = undefined,
-
     fps_text: *element.Text = undefined,
     controls_container: *element.Container = undefined,
+    map_size_dropdown: *element.Dropdown = undefined,
     palette_decor: *element.Image = undefined,
     palette_container_tile: *element.ScrollableContainer = undefined,
     palette_container_object: *element.ScrollableContainer = undefined,
     palette_container_region: *element.ScrollableContainer = undefined,
     layer_dropdown: *element.Dropdown = undefined,
-    new_container: *element.Container = undefined,
 
     place_key: settings.Button = .{ .mouse = .left },
     sample_key: settings.Button = .{ .mouse = .middle },
@@ -241,13 +224,6 @@ pub const MapEditorScreen = struct {
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
 
-        const check_box_base_on = assets.getUiData("checked_box_base", 0);
-        const check_box_hover_on = assets.getUiData("checked_box_hover", 0);
-        const check_box_press_on = assets.getUiData("checked_box_press", 0);
-        const check_box_base_off = assets.getUiData("unchecked_box_base", 0);
-        const check_box_hover_off = assets.getUiData("unchecked_box_hover", 0);
-        const check_box_press_off = assets.getUiData("unchecked_box_press", 0);
-
         const button_width = 90.0;
         const button_height = 35.0;
         const button_inset = 15.0;
@@ -261,10 +237,10 @@ pub const MapEditorScreen = struct {
             .text = "",
             .size = 12,
             .text_type = .bold,
-            .hori_align = .middle,
-            .max_width = controls_container_width,
+            .hori_align = .left,
+            .max_width = control_decor_w,
             .max_chars = 64,
-            .color = 0xAA0000,
+            .color = 0x6F573F,
         };
 
         {
@@ -275,8 +251,8 @@ pub const MapEditorScreen = struct {
         }
 
         screen.fps_text = try element.create(allocator, element.Text{
-            .x = 0,
-            .y = 5 + controls_container_height,
+            .x = 5 + control_decor_w + 5,
+            .y = 5,
             .text_data = fps_text_data,
         });
 
@@ -285,28 +261,80 @@ pub const MapEditorScreen = struct {
             .y = 5,
         });
 
+        const collapsed_icon_base = assets.getUiData("dropdown_collapsed_icon_base", 0);
+        const collapsed_icon_hover = assets.getUiData("dropdown_collapsed_icon_hover", 0);
+        const collapsed_icon_press = assets.getUiData("dropdown_collapsed_icon_press", 0);
+        const extended_icon_base = assets.getUiData("dropdown_extended_icon_base", 0);
+        const extended_icon_hover = assets.getUiData("dropdown_extended_icon_hover", 0);
+        const extended_icon_press = assets.getUiData("dropdown_extended_icon_press", 0);
+        const dropdown_main_color_base = assets.getUiData("dropdown_main_color_base", 0);
+        const dropdown_main_color_hover = assets.getUiData("dropdown_main_color_hover", 0);
+        const dropdown_main_color_press = assets.getUiData("dropdown_main_color_press", 0);
+        const dropdown_alt_color_base = assets.getUiData("dropdown_alt_color_base", 0);
+        const dropdown_alt_color_hover = assets.getUiData("dropdown_alt_color_hover", 0);
+        const dropdown_alt_color_press = assets.getUiData("dropdown_alt_color_press", 0);
+        const title_background = assets.getUiData("dropdown_title_background", 0);
+        const background_data = assets.getUiData("dropdown_background", 0);
+
+        const scroll_background_data = assets.getUiData("scroll_background", 0);
+        const scroll_knob_base = assets.getUiData("scroll_wheel_base", 0);
+        const scroll_knob_hover = assets.getUiData("scroll_wheel_hover", 0);
+        const scroll_knob_press = assets.getUiData("scroll_wheel_press", 0);
+        const scroll_decor_data = assets.getUiData("scrollbar_decor", 0);
+
+        screen.map_size_dropdown = try element.create(allocator, element.Dropdown{
+            .x = 5,
+            .y = 5 + control_decor_h + 5,
+            .w = control_decor_w,
+            .container_inlay_x = 8,
+            .container_inlay_y = 2,
+            .button_data_collapsed = Interactable.fromImageData(collapsed_icon_base, collapsed_icon_hover, collapsed_icon_press),
+            .button_data_extended = Interactable.fromImageData(extended_icon_base, extended_icon_hover, extended_icon_press),
+            .main_background_data = Interactable.fromNineSlices(dropdown_main_color_base, dropdown_main_color_hover, dropdown_main_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
+            .alt_background_data = Interactable.fromNineSlices(dropdown_alt_color_base, dropdown_alt_color_hover, dropdown_alt_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
+            .title_data = .{ .nine_slice = NineSlice.fromAtlasData(title_background, dropdown_w, dropdown_h, 20, 20, 4, 4, 1.0) },
+            .title_text = .{
+                .text = "Map Size",
+                .size = 20,
+                .text_type = .bold_italic,
+            },
+            .background_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, dropdown_w, dropdown_h, 20, 8, 4, 4, 1.0) },
+            .scroll_w = 4,
+            .scroll_h = dropdown_h - 10,
+            .scroll_side_x_rel = -6,
+            .scroll_side_y_rel = 0,
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, dropdown_h - 10, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, dropdown_h - 10, 0, 41, 6, 3, 1.0) },
+            .selected_index = 0,
+        });
+
+        for (sizes_text) |size| {
+            const line = try screen.map_size_dropdown.createChild(sizeCallback);
+            _ = try line.container.createChild(element.Text{
+                .x = 0,
+                .y = 0,
+                .text_data = .{
+                    .text = size,
+                    .size = 20,
+                    .text_type = .bold,
+                    .hori_align = .middle,
+                    .vert_align = .middle,
+                    .max_width = line.background_data.width(.none),
+                    .max_height = line.background_data.height(.none),
+                },
+            });
+        }
+
         const background_decor = assets.getUiData("tooltip_background", 0);
         _ = try screen.controls_container.createChild(element.Image{
             .x = 0,
             .y = 0,
-            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_decor, controls_container_width, controls_container_height, 34, 34, 1, 1, 1.0) },
+            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_decor, control_decor_w, control_decor_h, 34, 34, 1, 1, 1.0) },
         });
 
         _ = try screen.controls_container.createChild(element.Button{
             .x = button_inset,
-            .y = button_inset,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
-            .text_data = .{
-                .text = "New",
-                .size = 16,
-                .text_type = .bold,
-            },
-            .userdata = screen,
-            .press_callback = newCallback,
-        });
-
-        _ = try screen.controls_container.createChild(element.Button{
-            .x = button_inset + button_pad_w + button_width,
             .y = button_inset,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
@@ -319,8 +347,8 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.Button{
-            .x = button_inset,
-            .y = button_inset + button_pad_h + button_height,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Save",
@@ -332,7 +360,7 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.Button{
-            .x = button_inset + button_pad_w + button_width,
+            .x = button_inset,
             .y = button_inset + button_pad_h + button_height,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
@@ -345,8 +373,8 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.Button{
-            .x = button_inset,
-            .y = button_inset + (button_pad_h + button_height) * 2,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset + button_pad_h + button_height,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Exit",
@@ -356,145 +384,8 @@ pub const MapEditorScreen = struct {
             .press_callback = exitCallback,
         });
 
-        screen.new_container = try element.create(allocator, element.Container{
-            .x = (camera.screen_width - new_container_width) / 2,
-            .y = (camera.screen_height - new_container_height) / 2,
-            .visible = false,
-        });
-
-        _ = try screen.new_container.createChild(element.Image{
-            .x = 0,
-            .y = 0,
-            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_decor, new_container_width, new_container_height, 34, 34, 1, 1, 1.0) },
-        });
-
-        var text_size_64 = element.Text{
-            .x = new_container_width / 2,
-            .y = 32,
-            .text_data = .{
-                .text = "64x64",
-                .size = 20,
-                .text_type = .bold,
-                .hori_align = .middle,
-                .vert_align = .middle,
-            },
-            .visible = false,
-        };
-
-        {
-            text_size_64.text_data.lock.lock();
-            defer text_size_64.text_data.lock.unlock();
-
-            text_size_64.text_data.recalculateAttributes(allocator);
-        }
-
-        text_size_64.x -= text_size_64.text_data.width / 2;
-        text_size_64.y -= text_size_64.text_data.height / 2;
-
-        var text_size_128 = element.Text{
-            .x = new_container_width / 2,
-            .y = 32,
-            .text_data = .{
-                .text = "128x128",
-                .size = 20,
-                .text_type = .bold,
-                .hori_align = .middle,
-                .vert_align = .middle,
-            },
-            .visible = true,
-        };
-
-        {
-            text_size_128.text_data.lock.lock();
-            defer text_size_128.text_data.lock.unlock();
-
-            text_size_128.text_data.recalculateAttributes(allocator);
-        }
-
-        text_size_128.x -= text_size_128.text_data.width / 2;
-        text_size_128.y -= text_size_128.text_data.height / 2;
-
-        var text_size_256 = element.Text{
-            .x = new_container_width / 2,
-            .y = 32,
-            .text_data = .{
-                .text = "256x256",
-                .size = 20,
-                .text_type = .bold,
-                .hori_align = .middle,
-                .vert_align = .middle,
-            },
-            .visible = false,
-        };
-
-        {
-            text_size_256.text_data.lock.lock();
-            defer text_size_256.text_data.lock.unlock();
-
-            text_size_256.text_data.recalculateAttributes(allocator);
-        }
-
-        text_size_256.x -= text_size_256.text_data.width / 2;
-        text_size_256.y -= text_size_256.text_data.height / 2;
-
-        const check_padding = 5.0;
-
-        screen.size_text_visual_64 = try screen.new_container.createChild(text_size_64);
-        screen.size_text_visual_128 = try screen.new_container.createChild(text_size_128);
-        screen.size_text_visual_256 = try screen.new_container.createChild(text_size_256);
-
-        const size_64 = try screen.new_container.createChild(element.Toggle{
-            .x = (new_container_width / 2) - ((check_padding + check_box_base_on.texHRaw()) / 2) * 3,
-            .y = (new_container_height - check_box_base_on.texHRaw()) / 2 - check_padding,
-            .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
-            .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
-            .toggled = &screen.map_size_64,
-            .state_change = mapState64Changed,
-        });
-        const size_128 = try screen.new_container.createChild(element.Toggle{
-            .x = size_64.x + size_64.width() + 5,
-            .y = size_64.y,
-            .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
-            .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
-            .toggled = &screen.map_size_128,
-            .state_change = mapState128Changed,
-        });
-        _ = try screen.new_container.createChild(element.Toggle{
-            .x = size_128.x + size_128.width() + 5,
-            .y = size_128.y,
-            .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
-            .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
-            .toggled = &screen.map_size_256,
-            .state_change = mapState256Changed,
-        });
-
-        const login_button = try screen.new_container.createChild(element.Button{
-            .x = (screen.new_container.width() - (button_width * 2)) / 2 - (button_inset / 2.0),
-            .y = (new_container_height - button_height - (button_inset * 2)),
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
-            .text_data = .{
-                .text = "Create",
-                .size = 16,
-                .text_type = .bold,
-            },
-            .userdata = screen,
-            .press_callback = newCreateCallback,
-        });
-        _ = try screen.new_container.createChild(element.Button{
-            .x = login_button.x + login_button.width() + (button_inset / 2.0),
-            .y = login_button.y,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
-            .text_data = .{
-                .text = "Cancel",
-                .size = 16,
-                .text_type = .bold,
-            },
-            .userdata = screen,
-            .press_callback = newCloseCallback,
-        });
-
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_inset + button_pad_w + button_width,
+            .x = button_inset,
             .y = button_inset + (button_pad_h + button_height) * 2,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
@@ -508,8 +399,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_inset,
-            .y = button_inset + (button_pad_h + button_height) * 3,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset + (button_pad_h + button_height) * 2,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Sample",
@@ -522,7 +413,7 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_inset + button_pad_w + button_width,
+            .x = button_inset,
             .y = button_inset + (button_pad_h + button_height) * 3,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
@@ -536,8 +427,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_inset,
-            .y = button_inset + (button_pad_h + button_height) * 4,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset + (button_pad_h + button_height) * 3,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Random",
@@ -550,7 +441,7 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_inset + button_pad_w + button_width,
+            .x = button_inset,
             .y = button_inset + (button_pad_h + button_height) * 4,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
@@ -564,8 +455,8 @@ pub const MapEditorScreen = struct {
             .set_key_callback = noAction,
         });
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_inset,
-            .y = button_inset + (button_pad_h + button_height) * 5,
+            .x = button_inset + button_pad_w + button_width,
+            .y = button_inset + (button_pad_h + button_height) * 4,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Redo",
@@ -579,7 +470,7 @@ pub const MapEditorScreen = struct {
         });
 
         _ = try screen.controls_container.createChild(element.KeyMapper{
-            .x = button_inset + button_pad_w + button_width,
+            .x = button_inset,
             .y = button_inset + (button_pad_h + button_height) * 5,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
@@ -598,7 +489,7 @@ pub const MapEditorScreen = struct {
         const knob_data_hover = assets.getUiData("slider_knob_hover", 0);
         const knob_data_press = assets.getUiData("slider_knob_press", 0);
 
-        const slider_w = controls_container_width - button_inset * 2 - 5;
+        const slider_w = control_decor_w - button_inset * 2 - 5;
         const slider_h = button_height - 5 - 10;
         const knob_size = button_height - 5;
 
@@ -608,7 +499,7 @@ pub const MapEditorScreen = struct {
             .w = slider_w,
             .h = slider_h,
             .min_value = 0.5,
-            .max_value = 10.0,
+            .max_value = 9.9,
             .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(slider_background_data, slider_w, slider_h, 6, 6, 1, 1, 1.0) },
             .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
             .target = &screen.brush_size,
@@ -654,11 +545,6 @@ pub const MapEditorScreen = struct {
             .image_data = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(background_decor, palette_decor_w, palette_decor_h, 34, 34, 1, 1, 1.0) },
         });
 
-        const scroll_background_data = assets.getUiData("scroll_background", 0);
-        const scroll_knob_base = assets.getUiData("scroll_wheel_base", 0);
-        const scroll_knob_hover = assets.getUiData("scroll_wheel_hover", 0);
-        const scroll_knob_press = assets.getUiData("scroll_wheel_press", 0);
-        const scroll_decor_data = assets.getUiData("scrollbar_decor", 0);
         screen.palette_container_tile = try element.create(allocator, element.ScrollableContainer{
             .x = screen.palette_decor.x + 8,
             .y = screen.palette_decor.y + 9,
@@ -849,21 +735,6 @@ pub const MapEditorScreen = struct {
             });
         }
 
-        const collapsed_icon_base = assets.getUiData("dropdown_collapsed_icon_base", 0);
-        const collapsed_icon_hover = assets.getUiData("dropdown_collapsed_icon_hover", 0);
-        const collapsed_icon_press = assets.getUiData("dropdown_collapsed_icon_press", 0);
-        const extended_icon_base = assets.getUiData("dropdown_extended_icon_base", 0);
-        const extended_icon_hover = assets.getUiData("dropdown_extended_icon_hover", 0);
-        const extended_icon_press = assets.getUiData("dropdown_extended_icon_press", 0);
-        const dropdown_main_color_base = assets.getUiData("dropdown_main_color_base", 0);
-        const dropdown_main_color_hover = assets.getUiData("dropdown_main_color_hover", 0);
-        const dropdown_main_color_press = assets.getUiData("dropdown_main_color_press", 0);
-        const dropdown_alt_color_base = assets.getUiData("dropdown_alt_color_base", 0);
-        const dropdown_alt_color_hover = assets.getUiData("dropdown_alt_color_hover", 0);
-        const dropdown_alt_color_press = assets.getUiData("dropdown_alt_color_press", 0);
-        const title_background = assets.getUiData("dropdown_title_background", 0);
-        const background_data = assets.getUiData("dropdown_background", 0);
-
         screen.layer_dropdown = try element.create(allocator, element.Dropdown{
             .x = screen.palette_decor.x,
             .y = screen.palette_decor.y + screen.palette_decor.height() + 5,
@@ -891,7 +762,7 @@ pub const MapEditorScreen = struct {
             .selected_index = 0,
         });
 
-        for (layers) |layer| {
+        for (layers_text) |layer| {
             const layer_line = try screen.layer_dropdown.createChild(layerCallback);
             _ = try layer_line.container.createChild(element.Text{
                 .x = 0,
@@ -924,8 +795,13 @@ pub const MapEditorScreen = struct {
         ui_systems.screen.editor.selected_region = @as(*u8, @alignCast(@ptrCast(ud))).*;
     }
 
+    fn sizeCallback(dc: *element.DropdownContainer) void {
+        const screen = ui_systems.screen.editor;
+        screen.map_size = sizes[dc.index];
+    }
+
     fn layerCallback(dc: *element.DropdownContainer) void {
-        const next_layer = layer_enums[dc.index];
+        const next_layer = layers[dc.index];
         const screen = ui_systems.screen.editor;
         screen.active_layer = next_layer;
         switch (next_layer) {
@@ -949,50 +825,8 @@ pub const MapEditorScreen = struct {
 
     fn noAction(_: *element.KeyMapper) void {}
 
-    fn mapState64Changed(_: *element.Toggle) void {
-        const screen = ui_systems.screen.editor;
-        screen.size_text_visual_64.visible = true;
-        screen.size_text_visual_128.visible = false;
-        screen.size_text_visual_256.visible = false;
-        screen.map_size_64 = true;
-        screen.map_size_128 = false;
-        screen.map_size_256 = false;
-        screen.map_size = 64;
-    }
-
-    fn mapState128Changed(_: *element.Toggle) void {
-        const screen = ui_systems.screen.editor;
-        screen.size_text_visual_64.visible = false;
-        screen.size_text_visual_128.visible = true;
-        screen.size_text_visual_256.visible = false;
-        screen.map_size_64 = false;
-        screen.map_size_128 = true;
-        screen.map_size_256 = false;
-        screen.map_size = 128;
-    }
-
-    fn mapState256Changed(_: *element.Toggle) void {
-        const screen = ui_systems.screen.editor;
-        screen.size_text_visual_64.visible = false;
-        screen.size_text_visual_128.visible = false;
-        screen.size_text_visual_256.visible = true;
-        screen.map_size_64 = false;
-        screen.map_size_128 = false;
-        screen.map_size_256 = true;
-        screen.map_size = 256;
-    }
-
-    fn newCallback(ud: ?*anyopaque) void {
-        const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
-        screen.new_container.visible = true;
-        screen.controls_container.visible = false;
-    }
-
     fn newCreateCallback(ud: ?*anyopaque) void {
         const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
-
-        screen.controls_container.visible = true;
-        screen.new_container.visible = false;
 
         map.dispose(screen.allocator);
         map.setWH(screen.map_size, screen.map_size, screen.allocator);
@@ -1007,8 +841,6 @@ pub const MapEditorScreen = struct {
 
         @memset(screen.map_tile_data, MapEditorTile{});
 
-        map.local_player_id = 0xFFFE;
-
         const center = @as(f32, @floatFromInt(screen.map_size)) / 2.0;
 
         for (0..screen.map_size) |y| {
@@ -1022,6 +854,7 @@ pub const MapEditorScreen = struct {
             }
         }
 
+        map.local_player_id = 0x7D000000 - 1; // particle effect base id = 0x7D000000
         var player = Player{
             .x = if (screen.start_x_override == 0xFFFF) center else @floatFromInt(screen.start_x_override),
             .y = if (screen.start_y_override == 0xFFFF) center else @floatFromInt(screen.start_y_override),
@@ -1036,11 +869,6 @@ pub const MapEditorScreen = struct {
         ui_systems.menu_background.visible = false;
         screen.start_x_override = 0xFFFF;
         screen.start_y_override = 0xFFFF;
-    }
-
-    fn newCloseCallback(ud: ?*anyopaque) void {
-        const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
-        screen.reset();
     }
 
     // for easier error handling
@@ -1067,10 +895,7 @@ pub const MapEditorScreen = struct {
 
             screen.start_x_override = x_start + @divFloor(w, 2);
             screen.start_y_override = y_start + @divFloor(h, 2);
-            screen.map_size = 256;
-            screen.map_size_256 = true;
-            screen.map_size_128 = false;
-            screen.map_size_64 = false;
+            screen.map_size = utils.nextPowerOfTwo(@max(x_start + w, y_start + h));
             newCreateCallback(screen);
 
             const tiles = try screen.allocator.alloc(Tile, try dcp.reader().readInt(u16, .little));
@@ -1274,25 +1099,9 @@ pub const MapEditorScreen = struct {
         }
     }
 
-    fn reset(screen: *MapEditorScreen) void {
-        screen.command_queue.reset();
-
-        screen.controls_container.visible = true;
-        screen.new_container.visible = false;
-
-        screen.size_text_visual_64.visible = false;
-        screen.size_text_visual_128.visible = true;
-        screen.size_text_visual_256.visible = false;
-
-        screen.map_size = 128;
-        screen.map_size_64 = false;
-        screen.map_size_128 = true;
-        screen.map_size_256 = false;
-    }
-
     pub fn deinit(self: *MapEditorScreen) void {
         self.inited = false;
-        self.reset();
+        self.command_queue.deinit();
 
         element.destroy(self.fps_text);
         element.destroy(self.palette_decor);
@@ -1300,7 +1109,6 @@ pub const MapEditorScreen = struct {
         element.destroy(self.palette_container_object);
         element.destroy(self.palette_container_region);
         element.destroy(self.layer_dropdown);
-        element.destroy(self.new_container);
         element.destroy(self.controls_container);
 
         if (self.map_tile_data.len > 0)
@@ -1316,12 +1124,10 @@ pub const MapEditorScreen = struct {
         ui_systems.menu_background.visible = true;
     }
 
-    pub fn resize(self: *MapEditorScreen, w: f32, h: f32) void {
+    pub fn resize(self: *MapEditorScreen, w: f32, _: f32) void {
         const palette_x = w - palette_decor_w - 5;
         const cont_x = palette_x + 8;
 
-        self.new_container.x = (w - self.new_container.height()) / 2;
-        self.new_container.y = (h - self.new_container.height()) / 2;
         self.palette_decor.x = palette_x;
         self.palette_container_tile.x = cont_x;
         self.palette_container_tile.container.x = cont_x;
@@ -1418,13 +1224,18 @@ pub const MapEditorScreen = struct {
             return;
 
         if (value == std.math.maxInt(u16)) {
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             map.removeEntity(self.allocator, tile.object_id);
 
             tile.obj_type = value;
             tile.object_id = value;
         } else {
-            if (tile.object_id != -1)
+            if (tile.object_id != -1) {
+                map.object_lock.lock();
+                defer map.object_lock.unlock();
                 map.removeEntity(self.allocator, tile.object_id);
+            }
 
             self.next_obj_id += 1;
 
@@ -1514,7 +1325,7 @@ pub const MapEditorScreen = struct {
         return false;
     }
 
-    fn defaultType(layer: Layer) u16 {
+    inline fn defaultType(layer: Layer) u16 {
         return switch (layer) {
             .ground => 0xFFFE,
             .object => 0xFFFF,
@@ -1522,7 +1333,7 @@ pub const MapEditorScreen = struct {
         };
     }
 
-    fn typeAt(layer: Layer, screen: *MapEditorScreen, x: i32, y: i32) u16 {
+    inline fn typeAt(layer: Layer, screen: *MapEditorScreen, x: i32, y: i32) u16 {
         if (x < 0 or y < 0)
             return defaultType(layer);
 
@@ -1535,7 +1346,7 @@ pub const MapEditorScreen = struct {
         };
     }
 
-    fn inside(screen: *MapEditorScreen, places: []Place, x: i32, y: i32, layer: Layer, current_type: u16) bool {
+    inline fn inside(screen: *MapEditorScreen, places: []Place, x: i32, y: i32, layer: Layer, current_type: u16) bool {
         return !placesContain(places, x, y) and typeAt(layer, screen, x, y) == current_type;
     }
 

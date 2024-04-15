@@ -317,6 +317,16 @@ pub inline fn toRoman(int: u12) []const u8 {
     return buf[0..stream.pos];
 }
 
+pub inline fn nextPowerOfTwo(value: u32) u32 {
+    var mod_value = value - 1;
+    mod_value |= mod_value >> 1;
+    mod_value |= mod_value >> 2;
+    mod_value |= mod_value >> 4;
+    mod_value |= mod_value >> 8;
+    mod_value |= mod_value >> 16;
+    return mod_value + 1;
+}
+
 pub fn plusMinus(range: f32) f32 {
     return rng.random().float(f32) * range * 2 - range;
 }
