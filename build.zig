@@ -23,6 +23,7 @@ pub fn build(b: *std.Build) !void {
 
     exe.root_module.addImport("turbopack", b.dependency("turbopack", .{
         .target = target,
+        .optimize = optimize,
     }).module("turbopack"));
 
     exe.root_module.addImport("mach-glfw", b.dependency("mach_glfw", .{

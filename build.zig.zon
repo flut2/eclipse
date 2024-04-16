@@ -19,8 +19,8 @@
             .hash = "12203f87e00caa6c07c02a748f234a5c0ee2ca5c334ec464e88810d93e7b5495a56f",
         },
         .turbopack = .{
-            .url = "https://github.com/flut2/turbopack/archive/e40b592bb1a48fcc1152e6adbd8d035b0343fe0c.tar.gz",
-            .hash = "12204cd184e4a9ae7020e5f8263fb3316acfa61b334f1a38a5b4639ed98ca252c598",
+            .url = "https://github.com/flut2/turbopack/archive/1a0107a51c42051b9bf7ffdc9f8f80a26ddb5570.tar.gz",
+            .hash = "12200132a6647b5879f3d142cbae4f11f8535e8953e0ac43ffa0c15528f6bd4de99b",
         },
     },
     .paths = .{""},

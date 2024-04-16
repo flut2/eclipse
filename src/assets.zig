@@ -406,7 +406,7 @@ fn addImage(
         }
     }
 
-    try pack.pack(true, ctx, current_rects);
+    try pack.pack(pack.Rect, ctx, current_rects, .{ .assume_capacity = true });
 
     var data = try allocator.alloc(AtlasData, len);
 
@@ -510,7 +510,7 @@ fn addUiImage(
         current_rects[i].h = @intCast(bounds.h + padding * 2);
     }
 
-    try pack.pack(true, ctx, current_rects);
+    try pack.pack(pack.Rect, ctx, current_rects, .{ .assume_capacity = true });
 
     for (0..len) |i| {
         const rect = current_rects[i];
@@ -569,7 +569,7 @@ fn addAnimEnemy(
         }
     }
 
-    try pack.pack(true, ctx, current_rects);
+    try pack.pack(pack.Rect, ctx, current_rects, .{ .assume_capacity = true });
 
     const enemy_data = try allocator.alloc(AnimEnemyData, @divFloor(len, 5));
 
@@ -696,7 +696,7 @@ fn addAnimPlayer(
         current_rects[i].h = @intCast(bounds.h + padding * 2);
     }
 
-    try pack.pack(true, ctx, current_rects);
+    try pack.pack(pack.Rect, ctx, current_rects, .{ .assume_capacity = true });
 
     left_sub = 0;
 
@@ -965,7 +965,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     atlas = try zstbi.Image.createEmpty(atlas_width, atlas_height, 4, .{});
     var ctx = try pack.Context.create(allocator, atlas_width, atlas_height, .{ .spaces_to_prealloc = 4096 });
-    defer ctx.deinit();   
+    defer ctx.deinit();
 
     try addImage("light", "light.png", 128, 128, false, &ctx, allocator);
     try addImage("bars", "bars.png", 24, 8, false, &ctx, allocator);
