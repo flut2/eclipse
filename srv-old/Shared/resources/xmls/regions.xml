@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Regions>
+  <Region type="0x01" id="Spawn">
+    <Color>0x00FF00</Color>
+  </Region>
+  <Region type="0x02" id="Store 1">
+    <Color>0xFFDCF3</Color>
+  </Region>
+  <Region type="0x03" id="Store 2">
+    <Color>0xD9FFF3</Color>
+  </Region>
+  <Region type="0x04" id="Store 3">
+    <Color>0xC6B1FF</Color>
+  </Region>
+  <Region type="0x05" id="Stash">
+    <Color>0x828492</Color>
+  </Region>
+  <Region type="0x29" id="Biome Desert Encounter Spawn">
+    <Color>0x9B00FF</Color>
+  </Region>
+  <Region type="0x2A" id="Biome Volcanic Encounter Spawn">
+    <Color>0x9B00FF</Color>
+  </Region>
+  <Region type="0x2B" id="Biome Forest Encounter Spawn">
+    <Color>0x9B00FF</Color>
+  </Region>
+  <Region type="0x2C" id="Biome Desert Setpiece Spawn">
+    <Color>0x00FFAD</Color>
+  </Region>
+  <Region type="0x2D" id="Biome Volcanic Setpiece Spawn">
+    <Color>0x00FFAD</Color>
+  </Region>
+  <Region type="0x2E" id="Biome Forest Setpiece Spawn">
+    <Color>0x00FFAD</Color>
+  </Region>
+</Regions>

@@ -1,0 +1,25 @@
+.{
+    .name = "Eclipse Server",
+    .version = "0.5.0",
+    .minimum_zig_version = "0.12.0-dev.3180+83e578a18",
+    .dependencies = .{
+        .shared = .{ .path = "../shared" },
+        .hiredis = .{
+            .url = "https://github.com/redis/hiredis/archive/19cfd60d92da1fdb958568cdd7d36264ab14e666.tar.gz",
+            .hash = "12203b80f6f575ab235fcddab1ff3b95beb09f7ea4db09ac4f239dc0084858a99b9f",
+        },
+        .rpmalloc = .{
+            .url = "https://github.com/InKryption/rpmalloc-zig-port/archive/56966ca426ef13efa0ab5223fc27aade4866b6a4.tar.gz",
+            .hash = "12204e2334e652e8188f2298d4b29d03d78e6d101b6b231f0b35c7e7ad137f3be3b9",
+        },
+        .httpz = .{
+            .url = "https://github.com/karlseguin/http.zig/archive/e68082f2ba2c4e078a21502159b4bf2cf33f0dad.tar.gz",
+            .hash = "1220381d2bf65020575149b590000291b7a99aa0896847db56c174b7c2f6cb2ff1fb",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src/",
+    },
+}

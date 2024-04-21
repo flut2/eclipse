@@ -2,76 +2,148 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
+            "name": "Debug Client",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/zig-out/bin",
-            "preLaunchTask": "Debug"
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "Debug Client"
         },
         {
-            "name": "ReleaseSafe",
+            "name": "ReleaseSafe Client",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/zig-out/bin",
-            "preLaunchTask": "ReleaseSafe"
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "ReleaseSafe Client"
         },
         {
-            "name": "ReleaseFast",
+            "name": "ReleaseFast Client",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/zig-out/bin",
-            "preLaunchTask": "ReleaseFast"
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "ReleaseFast Client"
         },
         {
-            "name": "ReleaseSmall",
+            "name": "ReleaseSmall Client",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/zig-out/bin",
-            "preLaunchTask": "ReleaseSmall"
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "ReleaseSmall Client"
         },
         {
-            "name": "Debug (cppvsdbg)",
+            "name": "Debug Client (cppvsdbg)",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/zig-out/bin",
-            "preLaunchTask": "Debug"
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "Debug Client"
         },
         {
-            "name": "ReleaseSafe (cppvsdbg)",
+            "name": "ReleaseSafe Client (cppvsdbg)",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/zig-out/bin",
-            "preLaunchTask": "ReleaseSafe"
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "ReleaseSafe Client"
         },
         {
-            "name": "ReleaseFast (cppvsdbg)",
+            "name": "ReleaseFast Client (cppvsdbg)",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/zig-out/bin",
-            "preLaunchTask": "ReleaseFast"
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "ReleaseFast Client"
         },
         {
-            "name": "ReleaseSmall (cppvsdbg)",
+            "name": "ReleaseSmall Client (cppvsdbg)",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/zig-out/bin",
-            "preLaunchTask": "ReleaseSmall"
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "ReleaseSmall Client"
+        },
+        {
+            "name": "Debug Server",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "Debug Server"
+        },
+        {
+            "name": "ReleaseSafe Server",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "ReleaseSafe Server"
+        },
+        {
+            "name": "ReleaseFast Server",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "ReleaseFast Server"
+        },
+        {
+            "name": "ReleaseSmall Server",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "ReleaseSmall Server"
+        },
+        {
+            "name": "Debug Server (cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "Debug Server"
+        },
+        {
+            "name": "ReleaseSafe Server (cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "ReleaseSafe Server"
+        },
+        {
+            "name": "ReleaseFast Server (cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "ReleaseFast Server"
+        },
+        {
+            "name": "ReleaseSmall Server (cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "ReleaseSmall Server"
         },
     ]
 }

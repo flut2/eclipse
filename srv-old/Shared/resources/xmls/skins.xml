@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Objects>
+  <Object type="0x0342" id="Shadow Scout">
+    <Skin />
+    <Class>Skin</Class>
+    <AnimatedTexture>
+      <Sheet>playerskins</Sheet>
+      <Index>0</Index>
+    </AnimatedTexture>
+    <PlayerClassType>0x0300</PlayerClassType>
+  </Object>
+  <Object type="0x0343" id="Lich">
+    <Skin />
+    <Class>Skin</Class>
+    <AnimatedTexture>
+      <Sheet>playerskins</Sheet>
+      <Index>1</Index>
+    </AnimatedTexture>
+    <PlayerClassType>0x0307</PlayerClassType>
+  </Object>
+  <Object type="0x0344" id="Molten">
+    <Skin />
+    <Class>Skin</Class>
+    <AnimatedTexture>
+      <Sheet>playerskins</Sheet>
+      <Index>2</Index>
+    </AnimatedTexture>
+    <PlayerClassType>0x030e</PlayerClassType>
+  </Object>
+  <Object type="0x0345" id="Druid">
+    <Skin />
+    <Class>Skin</Class>
+    <AnimatedTexture>
+      <Sheet>playerskins</Sheet>
+      <Index>3</Index>
+    </AnimatedTexture>
+    <PlayerClassType>0x0310</PlayerClassType>
+  </Object>
+  <Object type="0x0346" id="Demonic">
+    <Skin />
+    <Class>Skin</Class>
+    <AnimatedTexture>
+      <Sheet>playerskins</Sheet>
+      <Index>4</Index>
+    </AnimatedTexture>
+    <PlayerClassType>0x031d</PlayerClassType>
+  </Object>
+  <Object type="0x0347" id="Knightly">
+    <Skin />
+    <Class>Skin</Class>
+    <AnimatedTexture>
+      <Sheet>playerskins</Sheet>
+      <Index>5</Index>
+    </AnimatedTexture>
+    <PlayerClassType>0x031e</PlayerClassType>
+  </Object>
+  <Object type="0x0348" id="Nanotech">
+    <Skin />
+    <Class>Skin</Class>
+    <AnimatedTexture>
+      <Sheet>playerskins</Sheet>
+      <Index>6</Index>
+    </AnimatedTexture>
+    <PlayerClassType>0x031f</PlayerClassType>
+  </Object>
+  <Object type="0x0349" id="Arcadia">
+    <Skin />
+    <Class>Skin</Class>
+    <AnimatedTexture>
+      <Sheet>playerskins</Sheet>
+      <Index>7</Index>
+    </AnimatedTexture>
+    <PlayerClassType>0x0320</PlayerClassType>
+  </Object>
+  <Object type="0x034a" id="Forest Wisp">
+    <Skin />
+    <Class>Skin</Class>
+    <AnimatedTexture>
+      <Sheet>playerskins</Sheet>
+      <Index>8</Index>
+    </AnimatedTexture>
+    <PlayerClassType>0x0321</PlayerClassType>
+  </Object>
+</Objects>

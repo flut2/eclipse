@@ -1,0 +1,20 @@
+<Merchants>
+    
+    <!-- Offensive Equipment -->
+    <List region="Store 1" currency="Gold" starsRequired="0">
+        <!-- Weapons -->
+        <Item price="1000">Carbon Plasmifier</Item>
+    </List>
+    
+    <!-- Keys -->
+    <List region="Store 3" currency="Gold" starsRequired="0">
+        <Item price="500">Magic Vial</Item>
+    </List>
+
+
+    <!-- Other Consumables -->
+    <List region="Store 4" currency="Gold" starsRequired="0">
+        <Item price="500">Health Vial</Item>
+    </List>
+    
+</Merchants>

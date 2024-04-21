@@ -1,0 +1,2069 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Items>
+    <Item type="0xa00" id="Beginner Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x00</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Starter</Tier>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x00</Index>
+            </Texture>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>330</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa01" id="Novice Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x01</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Tier I-</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x01</Index>
+            </Texture>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>360</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa02" id="Apprentice Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x02</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Tier I</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x02</Index>
+            </Texture>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>400</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa03" id="Adept Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x03</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Tier I+</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x03</Index>
+            </Texture>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>450</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa04" id="Expert Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x04</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Tier II-</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x04</Index>
+            </Texture>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>500</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa0b" id="Novice Hide">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x11</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Tier I-</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="7"/>
+        <IncrementStat stat="Speed" amount="3"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa0c" id="Apprentice Hide">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x12</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Tier I</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="9"/>
+        <IncrementStat stat="Speed" amount="4"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa0d" id="Adept Hide">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x13</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Tier I+</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="11"/>
+        <IncrementStat stat="Speed" amount="5"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa0e" id="Expert Hide">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x14</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Tier II-</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="Speed" amount="6"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa15" id="Novice Vest">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x21</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Tier I-</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="9"/>
+        <IncrementStat stat="Stamina" amount="5"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa16" id="Apprentice Vest">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x22</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Tier I</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="12"/>
+        <IncrementStat stat="Stamina" amount="7"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa17" id="Adept Vest">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x23</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Tier I+</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="15"/>
+        <IncrementStat stat="Stamina" amount="9"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa18" id="Expert Vest">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x24</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Tier II-</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="18"/>
+        <IncrementStat stat="Stamina" amount="11"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa2a" id="Beginner Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x40</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Starter</Tier>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x10</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>150</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa2b" id="Novice Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x41</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Tier I-</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x11</Index>
+            </Texture>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>180</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa2c" id="Apprentice Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x42</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Tier I</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x12</Index>
+            </Texture>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>220</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa2d" id="Adept Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x43</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Tier I+</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x13</Index>
+            </Texture>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>260</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa2e" id="Expert Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x44</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Tier II-</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x14</Index>
+            </Texture>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>300</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa35" id="Beginner Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x50</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Starter</Tier>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x20</Index>
+            </Texture>
+            <Speed>150</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>70</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa36" id="Novice Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x51</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Tier I-</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x21</Index>
+            </Texture>
+            <Speed>150</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>85</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa37" id="Apprentice Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x52</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Tier I</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x22</Index>
+            </Texture>
+            <Speed>150</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>95</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa38" id="Adept Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x53</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Tier I+</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x23</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>105</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa39" id="Expert Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x54</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Tier II-</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x24</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>115</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa40" id="Novice Robe">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x61</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Tier I-</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="5"/>
+        <IncrementStat stat="MaxMP" amount="50"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa41" id="Apprentice Robe">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x62</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Tier I</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="6"/>
+        <IncrementStat stat="MaxMP" amount="70"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa42" id="Adept Robe">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x63</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Tier I+</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="8"/>
+        <IncrementStat stat="MaxMP" amount="100"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xa43" id="Expert Robe">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x64</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Tier II-</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="10"/>
+        <IncrementStat stat="MaxMP" amount="130"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaa1" id="Health Vial">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x00</Index>
+        </Texture>
+        <Tier>Starter</Tier>
+        <SlotType>10</SlotType>
+        <Activate amount="100">Heal</Activate>
+        <Consumable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaa2" id="Magic Vial">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x01</Index>
+        </Texture>
+        <Tier>Starter</Tier>
+        <SlotType>10</SlotType>
+        <Activate amount="100">Magic</Activate>
+        <Consumable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaa4" id="Strength Fragment">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x02</Index>
+        </Texture>
+        <SlotType>10</SlotType>
+        <Activate stat="Strength" amount="1">IncrementStat</Activate>
+        <Consumable />
+        <BagType>2</BagType>
+    </Item>
+    <Item type="0xaa5" id="Defense Fragment">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x03</Index>
+        </Texture>
+        <SlotType>10</SlotType>
+        <Activate stat="Defense" amount="1">IncrementStat</Activate>
+        <Consumable />
+        <BagType>2</BagType>
+    </Item>
+    <Item type="0xaa6" id="Speed Fragment">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x04</Index>
+        </Texture>
+        <SlotType>10</SlotType>
+        <Activate stat="Speed" amount="1">IncrementStat</Activate>
+        <Consumable />
+        <BagType>2</BagType>
+    </Item>
+    <Item type="0xaa7" id="Sight Fragment">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x05</Index>
+        </Texture>
+        <SlotType>10</SlotType>
+        <Activate stat="Stamina" amount="1">IncrementStat</Activate>
+        <Consumable />
+        <BagType>2</BagType>
+    </Item>
+    <Item type="0xaa8" id="Stamina Fragment">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x06</Index>
+        </Texture>
+        <SlotType>10</SlotType>
+        <Activate stat="Stamina" amount="1">IncrementStat</Activate>
+        <Consumable />
+        <BagType>2</BagType>
+    </Item>
+    <Item type="0xaa9" id="Luck Fragment">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x07</Index>
+        </Texture>
+        <SlotType>10</SlotType>
+        <Activate stat="Tenacity" amount="1">IncrementStat</Activate>
+        <Consumable />
+        <BagType>2</BagType>
+    </Item>
+    <Item type="0xaaa" id="Penetration Fragment">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x08</Index>
+        </Texture>
+        <SlotType>10</SlotType>
+        <Activate stat="Penetration" amount="1">IncrementStat</Activate>
+        <Consumable />
+        <BagType>2</BagType>
+    </Item>
+    <Item type="0xaab" id="Life Fragment">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x09</Index>
+        </Texture>
+        <SlotType>10</SlotType>
+        <Activate stat="MaxHP" amount="5">IncrementStat</Activate>
+        <Consumable />
+        <BagType>2</BagType>
+    </Item>
+    <Item type="0xaac" id="Mana Fragment">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x0a</Index>
+        </Texture>
+        <SlotType>10</SlotType>
+        <Activate stat="MaxMP" amount="5">IncrementStat</Activate>
+        <Consumable />
+        <BagType>2</BagType>
+    </Item>
+    <Item type="0xab2" id="Vine Bow">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x40</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Rare</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <NumProjectiles>2</NumProjectiles>
+        <ArcGap>6</ArcGap>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>24</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>110</Speed>
+            <Lifetime>800</Lifetime>
+            <Damage>140</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xab4" id="Bone Sceptre">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x50</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Rare</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1.2</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>16</Index>
+            </Texture>
+            <Rotation>200</Rotation>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>170</Speed>
+            <Lifetime>570</Lifetime>
+            <Damage>105</Damage>
+            <Amplitude>0.6</Amplitude>
+        </Projectile>
+        <NumProjectiles>2</NumProjectiles>
+        <ArcGap>7</ArcGap>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xab6" id="Ruptured Ribcage">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x60</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Rare</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxHP" amount="50"/>
+        <IncrementStat stat="Strength" amount="-2"/>
+        <IncrementStat stat="Speed" amount="-2"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xab8" id="Hydra Hide">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x10</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Rare</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="10"/>
+        <IncrementStat stat="Penetration" amount="12"/>
+        <IncrementStat stat="Strength" amount="3"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xab9" id="Chainmail Cuirass">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x20</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Rare</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Defense" amount="11"/>
+        <IncrementStat stat="Strength" amount="4"/>
+        <IncrementStat stat="Speed" amount="3"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xaba" id="Rapier of Rage">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x00</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1.5</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>20</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>200</Speed>
+            <Lifetime>270</Lifetime>
+            <Damage>310</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xabd" id="Vita Vest">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x21</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxHP" amount="90"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xac0" id="Champion's Chopper">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x01</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Rare</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>1.3</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>26</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>110</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>370</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xac1" id="Shamanic Staff">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x51</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Rare</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>0.69</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>27</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>750</Lifetime>
+            <Damage>250</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xac6" id="Torrid Thrownaxe">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x41</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Rare</Tier>
+        <TierReq>1</TierReq>
+        <RateOfFire>0.65</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>items</Sheet>
+                <Index>0x41</Index>
+            </Texture>
+            <Rotation>200</Rotation>
+            <Speed>220</Speed>
+            <Lifetime>300</Lifetime>
+            <MultiHit />
+            <Damage>660</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xac7" id="Sand Shooter">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x42</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1.1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>29</Index>
+            </Texture>
+            <Speed>200</Speed>
+            <Lifetime>360</Lifetime>
+            <Damage>145</Damage>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>7</ArcGap>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xac8" id="Dusty Disguise">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x11</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="11"/>
+        <IncrementStat stat="Strength" amount="11"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xaca" id="Scrounger's Spear">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x02</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>0.81</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>28</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>180</Speed>
+            <Lifetime>240</Lifetime>
+            <Damage>720</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xad2" id="Staff of Solstice">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x52</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>0.8</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>32</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>1020</Lifetime>
+            <Damage>420</Damage>
+            <Amplitude>0.1</Amplitude>
+            <Boomerang/>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xad3" id="Slimesilk Mantle">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x61</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Rare</Tier>
+        <TierReq>1</TierReq>
+        <IncrementStat stat="Strength" amount="9"/>
+        <IncrementStat stat="Defense" amount="3"/>
+        <IncrementStat stat="Speed" amount="3"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xad9" id="Reptile Repeater">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x43</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1.1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>41</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>180</Speed>
+            <Lifetime>360</Lifetime>
+            <Damage>450</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xadb" id="Volcanic Veil">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x62</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Penetration" amount="22"/>
+        <IncrementStat stat="Strength" amount="10"/>
+        <IncrementStat stat="Defense" amount="6"/>
+        <IncrementStat stat="Speed" amount="6"/>
+        <Thorns>250</Thorns>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xade" id="Midnight Mail">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x22</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="MaxHP" amount="100"/>
+        <IncrementStat stat="Stamina" amount="10"/>
+        <IncrementStat stat="Strength" amount="5"/>
+        <IncrementStat stat="Speed" amount="5"/>
+        <Thorns>500</Thorns>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xae0" id="Burning Blade">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x03</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1.2</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>42</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>140</Speed>
+            <Lifetime>260</Lifetime>
+            <Damage>400</Damage>
+            <ArmorPiercing/>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xae3" id="Shadow Scout Unlocker">
+        <Texture>
+            <Sheet>skinItems</Sheet>
+            <Index>0</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0342">UnlockSkin</Activate>
+        <Consumable />
+    </Item>
+    <Item type="0xae4" id="Lich Unlocker">
+        <Texture>
+            <Sheet>skinItems</Sheet>
+            <Index>18</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0343">UnlockSkin</Activate>
+        <Consumable />
+    </Item>
+    <Item type="0xae5" id="Molten Unlocker">
+        <Texture>
+            <Sheet>skinItems</Sheet>
+            <Index>36</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0344">UnlockSkin</Activate>
+        <Consumable />
+    </Item>
+    <Item type="0xae6" id="Druid Unlocker">
+        <Texture>
+            <Sheet>skinItems</Sheet>
+            <Index>54</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0345">UnlockSkin</Activate>
+        <Consumable />
+    </Item>
+    <Item type="0xae7" id="Demonic Unlocker">
+        <Texture>
+            <Sheet>skinItems</Sheet>
+            <Index>72</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0346">UnlockSkin</Activate>
+        <Consumable />
+    </Item>
+    <Item type="0xae8" id="Knightly Unlocker">
+        <Texture>
+            <Sheet>skinItems</Sheet>
+            <Index>90</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0347">UnlockSkin</Activate>
+        <Consumable />
+    </Item>
+    <Item type="0xae9" id="Nanotech Unlocker">
+        <Texture>
+            <Sheet>skinItems</Sheet>
+            <Index>108</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0348">UnlockSkin</Activate>
+        <Consumable />
+    </Item>
+    <Item type="0xaea" id="Arcadia Unlocker">
+        <Texture>
+            <Sheet>skinItems</Sheet>
+            <Index>126</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0349">UnlockSkin</Activate>
+        <Consumable />
+    </Item>
+    <Item type="0xaeb" id="Forest Wisp Unlocker">
+        <Texture>
+            <Sheet>skinItems</Sheet>
+            <Index>144</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x034a">UnlockSkin</Activate>
+        <Consumable />
+    </Item>
+    <Item type="0xaec" id="Grand Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x05</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Tier II</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x05</Index>
+            </Texture>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>530</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaed" id="Illustrious Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x06</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Tier II+</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x06</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>560</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaee" id="Sublime Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x07</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Tier III-</Tier>
+        <TierReq>3</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x07</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>590</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaef" id="Master Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x08</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Tier III</Tier>
+        <TierReq>3</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x08</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>610</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf0" id="Prime Sword">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x09</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Tier III+</Tier>
+        <TierReq>3</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x09</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>130</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>630</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf1" id="Grand Hide">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x15</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Tier II</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="14"/>
+        <IncrementStat stat="Speed" amount="7"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf2" id="Illustrious Hide">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x16</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Tier II+</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="15"/>
+        <IncrementStat stat="Speed" amount="8"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf3" id="Sublime Hide">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x17</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Tier III-</Tier>
+        <TierReq>3</TierReq>
+        <IncrementStat stat="Defense" amount="16"/>
+        <IncrementStat stat="Speed" amount="9"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf4" id="Master Hide">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x18</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Tier III</Tier>
+        <TierReq>3</TierReq>
+        <IncrementStat stat="Defense" amount="17"/>
+        <IncrementStat stat="Speed" amount="9"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf5" id="Prime Hide">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x19</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Tier III+</Tier>
+        <TierReq>3</TierReq>
+        <IncrementStat stat="Defense" amount="18"/>
+        <IncrementStat stat="Speed" amount="9"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf6" id="Grand Vest">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x25</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Tier II</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="20"/>
+        <IncrementStat stat="Stamina" amount="12"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf7" id="Illustrious Vest">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x26</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Tier II+</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="22"/>
+        <IncrementStat stat="Stamina" amount="13"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf8" id="Sublime Vest">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x27</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Tier III-</Tier>
+        <TierReq>3</TierReq>
+        <IncrementStat stat="Defense" amount="24"/>
+        <IncrementStat stat="Stamina" amount="14"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaf9" id="Master Vest">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x28</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Tier III</Tier>
+        <TierReq>3</TierReq>
+        <IncrementStat stat="Defense" amount="25"/>
+        <IncrementStat stat="Stamina" amount="14"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xafa" id="Prime Vest">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x29</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Tier III+</Tier>
+        <TierReq>3</TierReq>
+        <IncrementStat stat="Defense" amount="26"/>
+        <IncrementStat stat="Stamina" amount="14"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xafb" id="Grand Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x45</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Tier II</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x15</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>330</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xafc" id="Illustrious Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x46</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Tier II+</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x16</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>360</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xafd" id="Sublime Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x47</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Tier III-</Tier>
+        <TierReq>3</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x17</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>390</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xafe" id="Master Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x48</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Tier III</Tier>
+        <TierReq>3</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x18</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>410</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xaff" id="Prime Bow">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x49</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Tier III+</Tier>
+        <TierReq>3</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x19</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>180</Speed>
+            <Lifetime>440</Lifetime>
+            <MultiHit />
+            <Damage>430</Damage>
+        </Projectile>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb00" id="Grand Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x55</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Tier II</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x25</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>130</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb01" id="Illustrious Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x56</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Tier II+</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x26</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>150</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb02" id="Sublime Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x57</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Tier III-</Tier>
+        <TierReq>3</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x27</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>170</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb03" id="Master Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x58</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Tier III</Tier>
+        <TierReq>3</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x28</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>190</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>170</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb04" id="Prime Staff">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x59</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Tier III+</Tier>
+        <TierReq>3</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>tiered_projectiles</Sheet>
+                <Index>0x29</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>700</Lifetime>
+            <MagicDamage>220</MagicDamage>
+            <Amplitude>0.33</Amplitude>
+            <Frequency>4</Frequency>
+            <Acceleration>-90</Acceleration>
+            <AccelerationDelay>200</AccelerationDelay>
+            <SpeedClamp>70</SpeedClamp>
+        </Projectile>
+        <NumProjectiles>4</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb05" id="Grand Robe">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x65</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Tier II</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="11"/>
+        <IncrementStat stat="MaxMP" amount="145"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb06" id="Illustrious Robe">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x66</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Tier II+</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="12"/>
+        <IncrementStat stat="MaxMP" amount="160"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb07" id="Sublime Robe">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x67</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Tier III-</Tier>
+        <TierReq>3</TierReq>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxMP" amount="175"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb08" id="Master Robe">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x68</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Tier III</Tier>
+        <TierReq>3</TierReq>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxMP" amount="185"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb09" id="Prime Robe">
+        <Texture>
+            <Sheet>tiered_items</Sheet>
+            <Index>0x69</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Tier III+</Tier>
+        <TierReq>3</TierReq>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="MaxMP" amount="200"/>
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb32" id="Greater Health Vial">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x25</Index>
+        </Texture>
+        <Tier>Starter</Tier>
+        <SlotType>10</SlotType>
+        <Activate amount="200">Heal</Activate>
+        <Consumable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb33" id="Greater Magic Vial">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x26</Index>
+        </Texture>
+        <Tier>Starter</Tier>
+        <SlotType>10</SlotType>
+        <Activate amount="200">Magic</Activate>
+        <Consumable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb34" id="Crown Cove Key">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x27</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0706">OpenPortal</Activate>
+        <Consumable />
+        <Untradable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb35" id="Slimy Ruins Key">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x28</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x070b">OpenPortal</Activate>
+        <Consumable />
+        <Untradable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb36" id="Crimson Chasm Key">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x29</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0708">OpenPortal</Activate>
+        <Consumable />
+        <Untradable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb37" id="Dusty Dune Key">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x2a</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x0709">OpenPortal</Activate>
+        <Consumable />
+        <Untradable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb38" id="Elemental Sanctum Key">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x2b</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x070e">OpenPortal</Activate>
+        <Consumable />
+        <Untradable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb39" id="Lost Laboratory Key">
+        <Texture>
+            <Sheet>misc</Sheet>
+            <Index>0x2f</Index>
+        </Texture>
+        <Tier>Epic</Tier>
+        <SlotType>10</SlotType>
+        <Activate objType="0x070d">OpenPortal</Activate>
+        <Consumable />
+        <Untradable />
+        <BagType>1</BagType>
+    </Item>
+    <Item type="0xb3a" id="Galactic Leather">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x12</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Stamina" amount="15"/>
+        <IncrementStat stat="Strength" amount="13"/>
+        <IncrementStat stat="Speed" amount="5"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb3b" id="Neon Nullifier">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x14</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Stamina" amount="18"/>
+        <IncrementStat stat="Defense" amount="15"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb3c" id="Fiery Coat">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x13</Index>
+        </Texture>
+        <SlotType>6</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="6"/>
+        <IncrementStat stat="Speed" amount="10"/>
+        <IncrementStat stat="Strength" amount="10"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb46" id="Terran Waraxe">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x04</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>0.7</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>71</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>80</Speed>
+            <Lifetime>620</Lifetime>
+            <Damage>750</Damage>
+        </Projectile>
+        <IncrementStat stat="Defense" amount="8"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb47" id="Thousand Slash">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x05</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1.2</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>69</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>120</Speed>
+            <Lifetime>400</Lifetime>
+            <Damage>330</Damage>
+        </Projectile>
+        <NumProjectiles>2</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <IncrementStat stat="Speed" amount="4"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb48" id="Phasesaber">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x06</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>90</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>100</Speed>
+            <Lifetime>300</Lifetime>
+            <Damage>720</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb49" id="Alien Cleaver">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x07</Index>
+        </Texture>
+        <SlotType>1</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>0.9</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>112</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>90</Speed>
+            <Lifetime>400</Lifetime>
+            <Damage>450</Damage>
+            <ArmorPiercing/>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb4a" id="Galactic Plate">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x23</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Stamina" amount="12"/>
+        <IncrementStat stat="Defense" amount="12"/>
+        <IncrementStat stat="Strength" amount="12"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb65" id="Stoneplate Ward">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x24</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="30"/>
+        <IncrementStat stat="Stamina" amount="12"/>
+        <IncrementStat stat="Speed" amount="-10"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb66" id="Neon Amplifier">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x25</Index>
+        </Texture>
+        <SlotType>7</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Defense" amount="9"/>
+        <IncrementStat stat="Strength" amount="13"/>
+        <IncrementStat stat="Speed" amount="13"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb67" id="Infernal Spear">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x44</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1.4</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>items</Sheet>
+                <Index>0x44</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>160</Speed>
+            <Lifetime>600</Lifetime>
+            <Damage>500</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb4c" id="Pressure Blaster">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x45</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1.2</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>68</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>160</Speed>
+            <Lifetime>450</Lifetime>
+            <Damage>250</Damage>
+        </Projectile>
+        <NumProjectiles>3</NumProjectiles>
+        <ArcGap>4</ArcGap>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb4d" id="Hexcore Ballista">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x46</Index>
+        </Texture>
+        <SlotType>3</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>0.6</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>85</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>80</Speed>
+            <Lifetime>700</Lifetime>
+            <Damage>1050</Damage>
+        </Projectile>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb4e" id="Plague Cane">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x53</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1.1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>111</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>120</Speed>
+            <Lifetime>700</Lifetime>
+            <Damage>280</Damage>
+            <Amplitude>0.3</Amplitude>
+            <Frequency>1.2</Frequency>
+        </Projectile>
+        <NumProjectiles>2</NumProjectiles>
+        <ArcGap>6</ArcGap>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb4f" id="Crystal Caster">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x54</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>70</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>190</Speed>
+            <Lifetime>350</Lifetime>
+            <Damage>550</Damage>
+        </Projectile>
+        <IncrementStat stat="Stamina" amount="11"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb50" id="Tornado Wand">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x55</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1.4</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>67</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>130</Speed>
+            <Lifetime>550</Lifetime>
+            <Damage>400</Damage>
+            <MultiHit/>
+        </Projectile>
+        <IncrementStat stat="Speed" amount="3"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb51" id="Carbon Plasmifier">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x56</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>0.7</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>84</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>420</Lifetime>
+            <Damage>1300</Damage>
+        </Projectile>
+        <IncrementStat stat="Stamina" amount="15"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb52" id="Galactic Garbs">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x63</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Tenacity" amount="22"/>
+        <IncrementStat stat="Defense" amount="10"/>
+        <IncrementStat stat="Strength" amount="6"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb53" id="Coat of Clarity">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x64</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="Stamina" amount="15"/>
+        <IncrementStat stat="Stamina" amount="15"/>
+        <IncrementStat stat="MaxMP" amount="150"/>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb54" id="Nanotech Cloth">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x65</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Legendary</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="MaxHP" amount="100"/>
+        <IncrementStat stat="MaxMP" amount="100"/>
+        <IncrementStat stat="Defense" amount="10"/>
+        <IncrementStat stat="Strength" amount="6"/>
+        <ManaShield>15</ManaShield>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb69" id="Broken Branch">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x57</Index>
+        </Texture>
+        <SlotType>17</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <RateOfFire>1</RateOfFire>
+        <Projectile>
+            <Texture>
+                <Sheet>projectiles</Sheet>
+                <Index>113</Index>
+            </Texture>
+            <AngleCorrection>1</AngleCorrection>
+            <Speed>150</Speed>
+            <Lifetime>420</Lifetime>
+            <Damage>1200</Damage>
+            <Amplitude>0.9</Amplitude>
+            <Frequency>0.9</Frequency>
+        </Projectile>
+        <NumProjectiles>2</NumProjectiles>
+        <ArcGap>170</ArcGap>
+        <BagType>3</BagType>
+    </Item>
+    <Item type="0xb6a" id="Bonesilk Mantle">
+        <Texture>
+            <Sheet>items</Sheet>
+            <Index>0x66</Index>
+        </Texture>
+        <SlotType>14</SlotType>
+        <Tier>Epic</Tier>
+        <TierReq>2</TierReq>
+        <IncrementStat stat="MaxMP" amount="250"/>
+        <IncrementStat stat="Defense" amount="13"/>
+        <IncrementStat stat="Tenacity" amount="9"/>
+        <ManaShield>15</ManaShield>
+        <BagType>3</BagType>
+    </Item>
+</Items>

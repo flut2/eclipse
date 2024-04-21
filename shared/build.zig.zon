@@ -1,0 +1,16 @@
+.{
+    .name = "Eclipse Shared",
+    .version = "0.5.0",
+    .minimum_zig_version = "0.12.0-dev.3180+83e578a18",
+    .dependencies = .{
+        .libxml2 = .{
+            .url = "https://github.com/ianprime0509/zig-libxml2/archive/4c370e70136fb96f227b95b30a4c1f5ec4dc013c.tar.gz",
+            .hash = "1220869e0007bf4a7fe10d86ccb24a6bf09d32714d6432d2cc6e5b2a7be0ad55e3b7",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src/",
+    },
+}

@@ -1,91 +1,64 @@
 const std = @import("std");
-const libxml2 = @import("libs/libxml/libxml2.zig");
-const zstbi = @import("libs/zstbi/build.zig");
-const ztracy = @import("libs/ztracy/build.zig");
-const zaudio = @import("libs/zaudio/build.zig");
-const ini = @import("libs/ini/build.zig");
-const nfd = @import("libs/nfd-zig/build.zig");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
-        .name = "Eclipse",
-        .root_source_file = .{ .path = "src/main.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
+    if (b.option(bool, "client", "Build/run client") orelse false) {
+        const client_dep = b.dependency("client", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        const client_exe = client_dep.artifact("Eclipse");
+        b.getInstallStep().dependOn(&b.addInstallArtifact(client_exe, .{
+            .dest_dir = .{ .override = .{ .custom = "bin/client" } },
+        }).step);
+        const run_cmd_cli = b.addRunArtifact(client_exe);
+        run_cmd_cli.step.dependOn(b.getInstallStep());
+        if (b.args) |args| {
+            run_cmd_cli.addArgs(args);
+        }
 
-    exe.root_module.addAnonymousImport("rpmalloc", .{ .root_source_file = .{ .path = "libs/rpmalloc/rpmalloc.zig" } });
-    exe.root_module.addImport("rpc", @import("libs/zig-discord/build.zig").getModule(b));
-    exe.root_module.addImport("nfd", nfd.getModule(b));
+        client_exe.step.dependOn(&b.addInstallDirectory(.{
+            .source_dir = .{ .path = "assets/shared" },
+            .install_dir = .{ .bin = {} },
+            .install_subdir = "client/assets",
+        }).step);
 
-    exe.root_module.addImport("turbopack", b.dependency("turbopack", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("turbopack"));
+        client_exe.step.dependOn(&b.addInstallDirectory(.{
+            .source_dir = .{ .path = "assets/client" },
+            .install_dir = .{ .bin = {} },
+            .install_subdir = "client/assets",
+        }).step);
 
-    exe.root_module.addImport("mach-glfw", b.dependency("mach_glfw", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("mach-glfw"));
+        b.step("run", "Run the Eclipse client").dependOn(&run_cmd_cli.step);
+    } else if (b.option(bool, "server", "Build/run server") orelse false) {
+        const server_dep = b.dependency("server", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        const server_exe = server_dep.artifact("Eclipse");
+        b.getInstallStep().dependOn(&b.addInstallArtifact(server_exe, .{
+            .dest_dir = .{ .override = .{ .custom = "bin/server" } },
+        }).step);
+        const run_cmd_srv = b.addRunArtifact(server_exe);
+        run_cmd_srv.step.dependOn(b.getInstallStep());
+        if (b.args) |args| {
+            run_cmd_srv.addArgs(args);
+        }
 
-    exe.root_module.addImport("mach", b.dependency("mach", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("mach"));
+        server_exe.step.dependOn(&b.addInstallDirectory(.{
+            .source_dir = .{ .path = "assets/shared" },
+            .install_dir = .{ .bin = {} },
+            .install_subdir = "server/assets",
+        }).step);
 
-    exe.root_module.addImport("mach-gpu", b.dependency("mach_gpu", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("mach-gpu"));
+        server_exe.step.dependOn(&b.addInstallDirectory(.{
+            .source_dir = .{ .path = "assets/server" },
+            .install_dir = .{ .bin = {} },
+            .install_subdir = "server/assets",
+        }).step);
 
-    exe.root_module.addImport("xev", b.dependency("libxev", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("xev"));
-
-    const nfd_lib = nfd.makeLib(b, target, optimize);
-    if (target.result.os.tag == .macos) {
-        nfd_lib.defineCMacro("__kernel_ptr_semantics", "");
-    }
-    exe.linkLibrary(nfd_lib);
-
-    (try libxml2.create(b, target, optimize, .{
-        .iconv = false,
-        .lzma = false,
-        .zlib = false,
-    })).link(exe);
-
-    zstbi.package(b, target, optimize, .{}).link(exe);
-    ztracy.package(b, target, optimize, .{ .options = .{ .enable_ztracy = true } }).link(exe);
-    zaudio.package(b, target, optimize, .{}).link(exe);
-
-    ini.link(ini.getModule(b), exe);
-
-    @import("mach_gpu").link(b.dependency("mach_gpu", .{
-        .target = target,
-        .optimize = optimize,
-    }).builder, exe, &exe.root_module, .{}) catch unreachable;
-
-    b.installArtifact(exe);
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
-    const exe_options = b.addOptions();
-    exe.root_module.addOptions("build_options", exe_options);
-    exe_options.addOption(bool, "use_dawn", target.result.os.tag == .windows);
-    exe_options.addOption([]const u8, "asset_dir", "./assets/");
-
-    exe.step.dependOn(&b.addInstallDirectory(.{
-        .source_dir = .{ .path = "src/assets" },
-        .install_dir = .{ .bin = {} },
-        .install_subdir = "assets",
-    }).step);
-
-    b.step("run", "Run the app").dependOn(&run_cmd.step);
+        b.step("run", "Run the Eclipse server").dependOn(&run_cmd_srv.step);
+    } else std.debug.panic("Invalid build, please specify -Dclient or -Dserver", .{});
 }

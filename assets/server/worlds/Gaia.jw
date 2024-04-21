@@ -1,0 +1,17 @@
+{
+	"id": 0,
+	"isLimbo": false,
+	"persist": true,
+	"name": "Gaia",
+	"sbName": "Gaia",
+	"difficulty": -1,
+	"background": 0,
+	"map": "Gaia.em",
+	"portals": [ 0x0703 ],
+	"realm": "forest",
+	"music": [""],
+	"bgLightColor": 0x0,
+	"bgLightIntensity": 0.1,
+	"dayLightIntensity": 0.1,
+	"nightLightIntensity": 0.4,
+}

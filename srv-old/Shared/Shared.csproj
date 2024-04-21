@@ -1,0 +1,210 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+      <OutputPath>../bin/Debug</OutputPath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+      <OutputPath>../bin/Release</OutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Dynamitey" Version="2.0.10.189" />
+      <PackageReference Include="Ionic.Zlib" Version="1.9.1.5" />
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.3-beta1" />
+      <PackageReference Include="NLog" Version="5.1.2" />
+      <PackageReference Include="StackExchange.Redis" Version="2.6.96" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="resources\data\changePassword\request.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\changePassword\reset.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\changePassword\reset.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\changePassword\resetError.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\filterList.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\init.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\languages\en.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\languages\pt.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\Merchants.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\roles.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\data\updates.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\logic\CrimsonChasm.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\logic\CrownCove.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\logic\Misc.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\logic\RealmT1.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\web\schema.xsd">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\CrimsonChasm.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\CrimsonChasm.jw">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\Gaia.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\Gaia.jw">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\healthshrinedesert.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\healthshrineforest.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\healthshrinevolcano.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\Retrieve.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\Retrieve.jw">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\manashrinedesert.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\manashrineforest.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\manashrinevolcano.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\SlimyRuinsUNFINISHED.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\SPGiantSlime.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\Stash.em">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\worlds\Stash.jw">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Containers.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\EnemiesLowRealm.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\EnemiesMidRealm.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Equip.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Ground.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Objects.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Players.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Portals.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Projectiles.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Regions.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Skins.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\StaticObjects.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\Test.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\enemies_low_realm.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\containers.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\enemies_mid_realm.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\ground.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\items.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\objects.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\players.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\portals.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\regions.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\skins.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="resources\xmls\static_objects.xml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+      <None Update="NLog.config">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="resources\logic\crimson_chasm.xml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="resources\logic\crown_cove.xml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="resources\logic\realm_t1.xml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+</Project>

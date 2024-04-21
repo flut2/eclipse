@@ -4,29 +4,44 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Debug",
+            "label": "Debug Client",
             "type": "shell",
-            "command": "zig build -Doptimize=Debug -freference-trace",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
+            "command": "zig build -Dclient -Doptimize=Debug -freference-trace",
         },
         {
-            "label": "ReleaseSafe",
+            "label": "ReleaseSafe Client",
             "type": "shell",
-            "command": "zig build -Doptimize=ReleaseSafe"
+            "command": "zig build -Dclient -Doptimize=ReleaseSafe"
         },
         {
-            "label": "ReleaseFast",
+            "label": "ReleaseFast Client",
             "type": "shell",
-            "command": "zig build -Doptimize=ReleaseFast"
+            "command": "zig build -Dclient -Doptimize=ReleaseFast"
         },
         {
-            "label": "ReleaseSmall",
+            "label": "ReleaseSmall Client",
             "type": "shell",
-            "command": "zig build -Doptimize=ReleaseSmall"
+            "command": "zig build -Dclient -Doptimize=ReleaseSmall"
+        },
+        {
+            "label": "Debug Server",
+            "type": "shell",
+            "command": "zig build -Dserver -Doptimize=Debug -freference-trace",
+        },
+        {
+            "label": "ReleaseSafe Server",
+            "type": "shell",
+            "command": "zig build -Dserver -Doptimize=ReleaseSafe"
+        },
+        {
+            "label": "ReleaseFast Server",
+            "type": "shell",
+            "command": "zig build -Dserver -Doptimize=ReleaseFast"
+        },
+        {
+            "label": "ReleaseSmall Server",
+            "type": "shell",
+            "command": "zig build -Dserver -Doptimize=ReleaseSmall"
         }
     ]
 }

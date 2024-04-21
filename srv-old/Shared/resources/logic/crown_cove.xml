@@ -1,0 +1,6 @@
+<BehaviorEntries>  
+	<BehaviorEntry id="Tribal Totem">
+	  <Taunt text="Hello" />
+	  <Shoot radius="16" count="3" shootAngle="12" projectileIndex="0" cooldown="600"/>
+	</BehaviorEntry>
+</BehaviorEntries>

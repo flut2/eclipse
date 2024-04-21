@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Objects>
+  <Object type="0x0703" id="Gaia">
+    <Class>Portal</Class>
+    <IntergamePortal />
+    <Persist />
+    <ShowName />
+    <Texture>
+      <Sheet>portals_big</Sheet>
+      <Index>0</Index>
+    </Texture>
+  </Object>
+  <Object type="0x0706" id="Crown Cove">
+    <Class>Portal</Class>
+    <IntergamePortal />
+    <ShowName />
+    <Texture>
+      <Sheet>portals</Sheet>
+      <Index>0</Index>
+    </Texture>
+  </Object>
+  <Object type="0x0707" id="Stash">
+    <Class>Portal</Class>
+    <IntergamePortal />
+    <Persist />
+    <ShowName />
+    <Texture>
+      <Sheet>portals</Sheet>
+      <Index>1</Index>
+    </Texture>
+  </Object>
+  <Object type="0x0708" id="Crimson Chasm">
+    <Class>Portal</Class>
+    <IntergamePortal />
+    <ShowName />
+    <Texture>
+      <Sheet>portals</Sheet>
+      <Index>2</Index>
+    </Texture>
+    <DrawOnGround/>
+  </Object>
+  <Object type="0x0709" id="Dusty Dune">
+    <Class>Portal</Class>
+    <IntergamePortal />
+    <ShowName />
+    <Texture>
+      <Sheet>portals</Sheet>
+      <Index>3</Index>
+    </Texture>
+  </Object>
+  <Object type="0x070a" id="Guild Hall">
+    <Class>GuildHallPortal</Class>
+    <IntergamePortal />
+    <ShowName />
+    <Texture>
+      <Sheet>portals</Sheet>
+      <Index>4</Index>
+    </Texture>
+  </Object>
+  <Object type="0x070b" id="Slimy Ruins">
+    <Class>Portal</Class>
+    <IntergamePortal />
+    <ShowName />
+    <Texture>
+      <Sheet>portals</Sheet>
+      <Index>5</Index>
+    </Texture>
+  </Object>
+  <Object type="0x070c" id="Lunar Landing">
+    <Class>Portal</Class>
+    <IntergamePortal />
+    <Persist />
+    <ShowName />
+    <Texture>
+      <Sheet>portals_big</Sheet>
+      <Index>1</Index>
+    </Texture>
+  </Object>
+  <Object type="0x070d" id="Lost Laboratory">
+    <Class>Portal</Class>
+    <IntergamePortal />
+    <ShowName />
+    <Texture>
+      <Sheet>portals</Sheet>
+      <Index>6</Index>
+    </Texture>
+  </Object>
+  <Object type="0x070e" id="Elemental Sanctum">
+    <Class>Portal</Class>
+    <IntergamePortal />
+    <ShowName />
+    <Texture>
+      <Sheet>portals</Sheet>
+      <Index>7</Index>
+    </Texture>
+    <Animation prob="1" period="0.8">
+      <Frame time="0.2">
+        <Texture>
+          <Sheet>portals</Sheet>
+          <Index>7</Index>
+        </Texture>
+      </Frame>
+      <Frame time="0.2">
+        <Texture>
+          <Sheet>portals</Sheet>
+          <Index>8</Index>
+        </Texture>
+      </Frame>
+      <Frame time="0.2">
+        <Texture>
+          <Sheet>portals</Sheet>
+          <Index>9</Index>
+        </Texture>
+      </Frame>
+      <Frame time="0.2">
+        <Texture>
+          <Sheet>portals</Sheet>
+          <Index>10</Index>
+        </Texture>
+      </Frame>
+    </Animation>
+  </Object>
+</Objects>

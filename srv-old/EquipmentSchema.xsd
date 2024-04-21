@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:element name="Objects">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Object">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:choice maxOccurs="unbounded">
+								<xs:element name="Class" type="xs:string" />
+								<xs:element name="Item" />
+								<xs:element name="DisplayId" type="xs:string" />
+								<xs:element name="Texture">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="File" type="xs:string" />
+											<xs:element name="Index" type="xs:string" />
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="SlotType" type="xs:unsignedByte" />
+								<xs:element name="Description" type="xs:string" />
+								<xs:element name="ExtraTooltipData" minOccurs="0">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="EffectInfo">
+												<xs:complexType>
+													<xs:attribute name="name" type="xs:string" use="required" />
+													<xs:attribute name="description" type="xs:string" use="required" />
+												</xs:complexType>
+											</xs:element>
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="Projectile">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="ObjectId" type="xs:string" />
+											<xs:element name="Speed" type="xs:unsignedByte" />
+											<xs:element name="LifetimeMS" type="xs:unsignedShort" />
+											<xs:element name="Size" type="xs:unsignedByte" />
+											<xs:element name="MinDamage" type="xs:unsignedShort" />
+											<xs:element name="MaxDamage" type="xs:unsignedShort" />
+											<xs:element name="DamageType" type="xs:string" />
+											<xs:element name="ConditionEffect">
+												<xs:complexType>
+													<xs:simpleContent>
+														<xs:extension base="xs:string">
+															<xs:attribute name="duration" type="xs:decimal" use="required" />
+														</xs:extension>
+													</xs:simpleContent>
+												</xs:complexType>
+											</xs:element>
+											<xs:element name="MultiHit" />
+											<xs:element name="PassesCover" />
+											<xs:element name="Parametric" />
+											<xs:element name="Wavy" />
+											<xs:element name="Boomerang" />
+											<xs:element name="Amplitude" type="xs:decimal" />
+											<xs:element name="Frequency" type="xs:decimal" />
+											<xs:element name="Magnitude" type="xs:decimal" />
+											<xs:element name="ParticleTrail">
+												<xs:complexType>
+													<xs:simpleContent>
+														<xs:extension base="xs:string">
+															<xs:attribute name="lifetimeMS" type="xs:unsignedByte" use="required" />
+														</xs:extension>
+													</xs:simpleContent>
+												</xs:complexType>
+											</xs:element>
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="NumProjectiles" type="xs:unsignedByte" />
+								<xs:element name="NumProjectiles1" type="xs:unsignedByte" />
+								<xs:element name="NumProjectiles2" type="xs:unsignedByte" />
+								<xs:element name="ArcGap" type="xs:unsignedByte" />
+								<xs:element name="ArcGap1" type="xs:unsignedByte" />
+								<xs:element name="ArcGap2" type="xs:unsignedByte" />
+								<xs:element name="RateOfFire" type="xs:decimal" />
+								<xs:element name="DualShooting" />
+								<xs:element maxOccurs="unbounded" name="ActivateOnEquip">
+									<xs:complexType>
+										<xs:simpleContent>
+											<xs:extension base="xs:string">
+												<xs:attribute name="stat" type="xs:string" use="optional" />
+												<xs:attribute name="amount" type="xs:unsignedByte" use="required" />
+												<xs:attribute name="statId" type="xs:unsignedByte" use="optional" />
+											</xs:extension>
+										</xs:simpleContent>
+									</xs:complexType>
+								</xs:element>
+								<xs:element maxOccurs="unbounded" name="ActivateOnEquipPerc">
+									<xs:complexType>
+										<xs:simpleContent>
+											<xs:extension base="xs:string">
+												<xs:attribute name="stat" type="xs:string" use="optional" />
+												<xs:attribute name="amount" type="xs:unsignedByte" use="required" />
+												<xs:attribute name="statId" type="xs:unsignedByte" use="optional" />
+											</xs:extension>
+										</xs:simpleContent>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="Activate">
+									<xs:complexType>
+										<xs:simpleContent>
+											<xs:extension base="xs:string">
+												<xs:attribute name="effect" type="xs:string" use="optional" />
+												<xs:attribute name="duration" type="xs:decimal" use="optional" />
+												<xs:attribute name="range" type="xs:decimal" use="optional" />
+												<xs:attribute name="useWisMod" type="xs:boolean" use="optional" />
+												<xs:attribute name="stat" type="xs:string" use="optional" />
+												<xs:attribute name="amount" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="noStack" type="xs:boolean" use="optional" />
+												<xs:attribute name="color" type="xs:string" use="optional" />
+												<xs:attribute name="target" type="xs:string" use="optional" />
+												<xs:attribute name="center" type="xs:string" use="optional" />
+												<xs:attribute name="visualEffect" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="totalDamage" type="xs:unsignedShort" use="optional" />
+												<xs:attribute name="decreaseDmg" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="wisDmgBase" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="maxTargets" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="objType" type="xs:string" use="optional" />
+												<xs:attribute name="maxAmount" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="radius" type="xs:decimal" use="optional" />
+												<xs:attribute name="impactDamage" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="condEffs" type="xs:string" use="optional" />
+												<xs:attribute name="chances" type="xs:string" use="optional" />
+												<xs:attribute name="maxRoll" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="boostStats" type="xs:string" use="optional" />
+												<xs:attribute name="boostAmounts" type="xs:string" use="optional" />
+												<xs:attribute name="transformSkin" type="xs:string" use="optional" />
+												<xs:attribute name="maxDistance" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="speed" type="xs:decimal" use="optional" />
+												<xs:attribute name="condDuration" type="xs:decimal" use="optional" />
+												<xs:attribute name="statid" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="id" type="xs:string" use="optional" />
+												<xs:attribute name="dungeonName" type="xs:string" use="optional" />
+												<xs:attribute name="lockedName" type="xs:string" use="optional" />
+												<xs:attribute name="skinType" type="xs:string" use="optional" />
+											</xs:extension>
+										</xs:simpleContent>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="Activate2">
+									<xs:complexType>
+										<xs:simpleContent>
+											<xs:extension base="xs:string">
+												<xs:attribute name="effect" type="xs:string" use="optional" />
+												<xs:attribute name="duration" type="xs:decimal" use="optional" />
+												<xs:attribute name="range" type="xs:decimal" use="optional" />
+												<xs:attribute name="useWisMod" type="xs:boolean" use="optional" />
+												<xs:attribute name="stat" type="xs:string" use="optional" />
+												<xs:attribute name="amount" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="noStack" type="xs:boolean" use="optional" />
+												<xs:attribute name="color" type="xs:string" use="optional" />
+												<xs:attribute name="target" type="xs:string" use="optional" />
+												<xs:attribute name="center" type="xs:string" use="optional" />
+												<xs:attribute name="visualEffect" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="totalDamage" type="xs:unsignedShort" use="optional" />
+												<xs:attribute name="decreaseDmg" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="wisDmgBase" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="maxTargets" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="objType" type="xs:string" use="optional" />
+												<xs:attribute name="maxAmount" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="radius" type="xs:decimal" use="optional" />
+												<xs:attribute name="impactDamage" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="condEffs" type="xs:string" use="optional" />
+												<xs:attribute name="chances" type="xs:string" use="optional" />
+												<xs:attribute name="maxRoll" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="boostStats" type="xs:string" use="optional" />
+												<xs:attribute name="boostAmounts" type="xs:string" use="optional" />
+												<xs:attribute name="transformSkin" type="xs:string" use="optional" />
+												<xs:attribute name="maxDistance" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="speed" type="xs:decimal" use="optional" />
+												<xs:attribute name="condDuration" type="xs:decimal" use="optional" />
+												<xs:attribute name="statid" type="xs:unsignedByte" use="optional" />
+												<xs:attribute name="id" type="xs:string" use="optional" />
+												<xs:attribute name="dungeonName" type="xs:string" use="optional" />
+												<xs:attribute name="lockedName" type="xs:string" use="optional" />
+											</xs:extension>
+										</xs:simpleContent>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="MpCost" type="xs:unsignedByte" />
+								<xs:element name="MpCost2" type="xs:unsignedByte" />
+								<xs:element name="MpEndCost" type="xs:unsignedByte" />
+								<xs:element name="MpEndCost2" type="xs:unsignedByte" />
+								<xs:element name="HpCost" type="xs:unsignedByte" />
+								<xs:element name="HpCost2" type="xs:unsignedByte" />
+								<xs:element name="LightCost" type="xs:unsignedByte" />
+								<xs:element name="LightEndCost" type="xs:unsignedByte" />
+								<xs:element name="Cooldown" type="xs:decimal" />
+								<xs:element name="Cooldown2" type="xs:decimal" />
+								<xs:element name="BagType" type="xs:unsignedByte" />
+								<xs:element name="XpBonus" type="xs:unsignedByte" />
+								<xs:element name="LevelReq" type="xs:unsignedByte" />
+								<xs:element name="Power" type="xs:string" />
+								<xs:element name="Quantity" type="xs:unsignedByte" />
+								<xs:element name="MaxQuantity" type="xs:unsignedByte" />
+								<xs:element name="MinQuality" type="xs:decimal" />
+								<xs:element name="MaxQuality" type="xs:decimal" />
+								<xs:element name="Rune" />
+								<xs:element name="RuneBoosts">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="PhysicalDmg" type="xs:unsignedByte" />
+											<xs:element name="MagicalDmg" type="xs:unsignedByte" />
+											<xs:element name="EarthDmg" type="xs:unsignedByte" />
+											<xs:element name="AirDmg" type="xs:unsignedByte" />
+											<xs:element name="ProfaneDmg" type="xs:unsignedByte" />
+											<xs:element name="FireDmg" type="xs:unsignedByte" />
+											<xs:element name="WaterDmg" type="xs:unsignedByte" />
+											<xs:element name="HolyDmg" type="xs:unsignedByte" />
+											<xs:element maxOccurs="unbounded" name="StatOnEquip">
+												<xs:complexType>
+													<xs:attribute name="stat" type="xs:string" use="optional" />
+													<xs:attribute name="amount" type="xs:unsignedByte" use="required" />
+													<xs:attribute name="statId" type="xs:unsignedByte" use="optional" />
+												</xs:complexType>
+											</xs:element>
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="Usable" />
+								<xs:element name="Potion" />
+								<xs:element name="Consumable" />
+								<xs:element name="MultiPhase" />
+								<xs:element name="Soulbound" />
+								<xs:element name="Secret" />
+								<xs:element name="Resurrects" />
+								<xs:element name="Undead" />
+								<xs:element name="PUndead" />
+								<xs:element name="SUndead" />
+								<xs:element name="FeedPower" type="xs:unsignedShort" />
+								<xs:element name="Tier" type="xs:unsignedByte" />
+								<xs:element name="Untiered" />
+								<xs:element name="Legendary" />
+								<xs:element name="Mythic" />
+								<xs:element name="Unholy" />
+								<xs:element name="Divine" />
+							</xs:choice>
+						</xs:sequence>
+						<xs:attribute name="type" type="xs:string" use="required" />
+						<xs:attribute name="id" type="xs:string" use="required" />
+						<xs:attribute name="setType" type="xs:string" use="optional" />
+						<xs:attribute name="setName" type="xs:string" use="optional" />
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

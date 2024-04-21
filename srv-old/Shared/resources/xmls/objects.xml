@@ -1,0 +1,157 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Objects>
+  <Object type="0x0711" id="Invisible Placeholder">
+    <Class>Character</Class>
+    <Texture>
+      <Sheet>invisible</Sheet>
+      <Index>0</Index>
+    </Texture>
+    <Size>0</Size>
+    <NoMiniMap />
+  </Object>
+  <Object type="0x1000" id="Bird">
+    <Class>GameObject</Class>
+    <AnimatedTexture>
+      <Sheet>miscChars</Sheet>
+      <Index>0x00</Index>
+    </AnimatedTexture>
+    <Size>80</Size>
+    <NoMiniMap/>
+  </Object>
+  <Object type="0x1001" id="Merchant">
+    <Class>Merchant</Class>
+    <Texture>
+      <Sheet>invisible</Sheet>
+      <Index>0</Index>
+    </Texture>
+    <DisplayId>Merchant</DisplayId>
+   </Object>
+  <Object type="0x1002" id="Founding Table">
+    <Class>FoundingTable</Class>
+    <Texture>
+      <Sheet>misc_big</Sheet>
+      <Index>0x0c</Index>
+    </Texture>
+    <Size>123</Size>
+    <OccupySquare/>
+    <Static/>
+  </Object>
+  <Object type="0x1003" id="Guild Manager">
+    <Class>GuildManager</Class>
+    <Texture>
+      <Sheet>misc_big</Sheet>
+      <Index>0x0d</Index>
+    </Texture>
+    <Size>123</Size>
+    <OccupySquare/>
+    <Static/>
+  </Object>
+  <Object type="0x1004" id="Phantom">
+    <Class>GameObject</Class>
+    <AnimatedTexture>
+      <Sheet>miscChars</Sheet>
+      <Index>0x01</Index>
+    </AnimatedTexture>
+    <Size>80</Size>
+    <NoMiniMap/>
+  </Object>
+  <Object type="0x1005" id="Sobek Bird">
+    <Class>GameObject</Class>
+    <DisplayId>Bird</DisplayId>
+    <AnimatedTexture>
+      <Sheet>miscChars</Sheet>
+      <Index>0x02</Index>
+    </AnimatedTexture>
+    <Size>80</Size>
+    <NoMiniMap/>
+  </Object>
+  <Object type="0x1006" id="Wardrobe">
+    <Class>SkinChanger</Class>
+    <Texture>
+      <Sheet>misc_big</Sheet>
+      <Index>0x0e</Index>
+    </Texture>
+    <Size>80</Size>
+    <OccupySquare/>
+    <Static/>
+  </Object>
+  <Object type="0x1007" id="Mini Overseer">
+    <Class>GameObject</Class>
+    <AnimatedTexture>
+      <Sheet>miscChars</Sheet>
+      <Index>0x03</Index>
+    </AnimatedTexture>
+    <Size>80</Size>
+    <NoMiniMap/>
+  </Object>
+  <Object type="0x1008" id="Star">
+    <Class>GameObject</Class>
+    <AnimatedTexture>
+      <Sheet>miscChars</Sheet>
+      <Index>0x04</Index>
+    </AnimatedTexture>
+    <NoMiniMap/>
+  </Object>
+  <Object type="0x1009" id="Tornado">
+    <Class>GameObject</Class>
+    <AnimatedTexture>
+      <Sheet>miscChars</Sheet>
+      <Index>0x05</Index>
+    </AnimatedTexture>
+    <Size>90</Size>
+    <NoMiniMap/>
+  </Object>
+  <Object type="0x100a" id="Soul Fragment">
+    <Class>GameObject</Class>
+    <Animation prob="1" period="1.0">
+        <Frame time="0.2">
+            <Texture>
+                <Sheet>misc</Sheet>
+                <Index>0x30</Index>
+            </Texture>
+        </Frame>
+        <Frame time="0.2">
+            <Texture>
+                <Sheet>misc</Sheet>
+                <Index>0x31</Index>
+            </Texture>
+        </Frame>
+        <Frame time="0.2">
+            <Texture>
+                <Sheet>misc</Sheet>
+                <Index>0x32</Index>
+            </Texture>
+        </Frame>
+        <Frame time="0.2">
+            <Texture>
+                <Sheet>misc</Sheet>
+                <Index>0x33</Index>
+            </Texture>
+        </Frame>
+        <Frame time="0.2">
+            <Texture>
+                <Sheet>misc</Sheet>
+                <Index>0x34</Index>
+            </Texture>
+        </Frame>
+    </Animation>
+    <Float sine="true" height="0.3" time="700"/>
+    <AlphaMult>0.4</AlphaMult>
+    <LightColor>0xFA35FF</LightColor>
+    <LightIntensity>0.25</LightIntensity>
+    <LightRadius>0.75</LightRadius>
+    <Health>1000</Health>
+    <Size>70</Size>
+    <NoMiniMap/>
+  </Object>
+  <Object type="0x100b" id="Voidling">
+    <Class>GameObject</Class>
+    <AnimatedTexture>
+      <Sheet>miscChars</Sheet>
+      <Index>0x06</Index>
+    </AnimatedTexture>
+    <Health>1000</Health>
+    <Size>70</Size>
+    <NoMiniMap/>
+  </Object>
+</Objects>
