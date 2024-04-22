@@ -70,11 +70,9 @@ public class Program
         					
 			resp.StatusCode = 200;
 			resp.ContentType = "text/plain";
-			NameValueCollection query;
-			using (var reader = new StreamReader(req.InputStream, req.ContentEncoding))
-				query = HttpUtility.ParseQueryString(reader.ReadToEnd());
+			NameValueCollection query = HttpUtility.ParseQueryString(req.Url!.Query);
 
-			var result = req.RawUrl switch {
+			var result = req.Url.AbsolutePath switch {
 				"/account/changePassword" => HandleAccountChangePassword(query["email"], query["password"], query["newPassword"]), 
 				"/account/purchaseCharSlot" => HandleAccountPurchaseCharSlot(query["email"], query["password"]), 
 				"/account/purchaseSkin" => HandleAccountPurchaseSkin(query["email"], query["password"], query["skinType"]), 
