@@ -35,6 +35,12 @@ pub fn tick() !void {
 }
 
 fn handleAccountVerify(req: *httpz.Request, res: *httpz.Response) !void {
+    rpmalloc.initThread() catch |e| {
+        std.log.err("Login thread initialization failed: {}", .{e});
+        return;
+    };
+    defer rpmalloc.deinitThread(true);
+
     const query = try req.query();
     const email = query.get("email") orelse {
         std.log.err("Could not parse e-mail for /account/verify", .{});
@@ -72,6 +78,12 @@ fn handleAppInit(_: *httpz.Request, res: *httpz.Response) !void {
 }
 
 fn handleCharList(req: *httpz.Request, res: *httpz.Response) !void {
+    rpmalloc.initThread() catch |e| {
+        std.log.err("Login thread initialization failed: {}", .{e});
+        return;
+    };
+    defer rpmalloc.deinitThread(true);
+    
     const query = try req.query();
     const email = query.get("email") orelse {
         std.log.err("Could not parse e-mail for /account/verify", .{});
