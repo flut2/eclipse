@@ -61,7 +61,6 @@ fn timerCallback(tick_timer: ?*xev.Timer, timer_loop: *xev.Loop, timer_comp: *xe
     const time = std.time.microTimestamp();
     defer current_time = time;
     const dt = if (current_time == -1) 0 else time - current_time;
-    std.log.err("dt {d}", .{dt});
     var iter = maps.worlds.iterator();
     while (iter.next()) |entry| {
         entry.value_ptr.tick(time, dt) catch unreachable;
