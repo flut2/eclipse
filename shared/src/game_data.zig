@@ -536,6 +536,9 @@ pub const ObjProps = struct {
     death_sound: []const u8,
     slot_types: []ItemType,
     anim_props: ?AnimProps,
+    health: i32,
+    resistance: i32,
+    defense: i32,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ObjProps {
         var slot_list = try std.ArrayList(ItemType).initCapacity(allocator, 9);
@@ -613,6 +616,9 @@ pub const ObjProps = struct {
             .protect_from_ground_damage = node.elementExists("ProtectFromGroundDamage"),
             .protect_from_sink = node.elementExists("ProtectFromSink"),
             .anim_props = if (node.elementExists("Animation")) try AnimProps.parse(node.findChild("Animation").?, allocator) else null,
+            .health = try node.getValueInt("Health", i32, 0),
+            .defense = try node.getValueInt("Defense", i32, 0),
+            .resistance = try node.getValueInt("Resistance", i32, 0),
         };
     }
 
@@ -721,6 +727,7 @@ pub const ProjProps = struct {
     heat_seek_speed: f32,
     heat_seek_radius: f32,
     heat_seek_delay: i64,
+    bouncing: bool,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ProjProps {
         var effect_it = node.iterate(&.{}, "ConditionEffect");
@@ -769,6 +776,7 @@ pub const ProjProps = struct {
             .heat_seek_speed = try node.getValueFloat("HeatSeekSpeed", f32, 0.0) / 10000.0,
             .heat_seek_radius = try node.getValueFloat("HeatSeekRadius", f32, 0.0),
             .heat_seek_delay = try node.getValueInt("HeatSeekDelay", i64, 0) * std.time.us_per_ms,
+            .bouncing = node.elementExists("Bouncing"),
         };
     }
 
@@ -859,6 +867,8 @@ pub const StatType = enum(u8) {
     guild = 70,
     guild_rank = 71,
     texture = 72,
+    x = 73,
+    y = 74,
 
     none = 255,
 
@@ -1210,44 +1220,93 @@ pub const ItemType = enum(i8) {
 
 pub const Currency = enum(u8) { gold = 0, gems = 1, crowns = 2 };
 
+pub const RegionType = enum(u8) {
+    spawn,
+    store_1,
+    store_2,
+    store_3,
+    desert_encounter,
+    volcano_encounter,
+    forest_encounter,
+    desert_setpiece,
+    volcano_setpiece,
+    forest_setpiece,
+
+    const map = std.ComptimeStringMap(RegionType, .{
+        .{ "Spawn", .spawn },
+        .{ "Store 1", .store_1 },
+        .{ "Store 2", .store_2 },
+        .{ "Store 3", .store_3 },
+        .{ "Biome Desert Encounter Spawn", .desert_encounter },
+        .{ "Biome Volcano Encounter Spawn", .volcano_encounter },
+        .{ "Biome Forest Encounter Spawn", .forest_encounter },
+        .{ "Biome Desert Setpiece Spawn", .desert_encounter },
+        .{ "Biome Volcano Setpiece Spawn", .volcano_encounter },
+        .{ "Biome Forest Setpiece Spawn", .forest_encounter },
+    });
+
+    pub fn fromString(str: []const u8) RegionType {
+        return map.get(str) orelse .store_1;
+    }
+};
+
+pub const StringContext = struct {
+    pub fn hash(_: @This(), s: []const u8) u64 {
+        var buf: [1024]u8 = undefined; // bad
+        return std.hash.Wyhash.hash(0, std.ascii.lowerString(&buf, s));
+    }
+
+    pub fn eql(_: @This(), a: []const u8, b: []const u8) bool {
+        if (a.len != b.len) return false;
+        if (a.len == 0 or a.ptr == b.ptr) return true;
+
+        for (a, b) |a_elem, b_elem| {
+            if (a_elem != b_elem and a_elem != std.ascii.toLower(b_elem)) return false;
+        }
+        return true;
+    }
+};
+
 pub var classes: std.AutoHashMap(u16, CharacterClass) = undefined;
 pub var card_type_to_props: std.AutoHashMap(u16, CardProps) = undefined;
-pub var item_name_to_type: std.StringHashMap(u16) = undefined;
+pub var item_name_to_type: std.HashMap([]const u8, u16, StringContext, 80) = undefined;
 pub var item_type_to_props: std.AutoHashMap(u16, ItemProps) = undefined;
 pub var item_type_to_name: std.AutoHashMap(u16, []const u8) = undefined;
-pub var obj_name_to_type: std.StringHashMap(u16) = undefined;
+pub var obj_name_to_type: std.HashMap([]const u8, u16, StringContext, 80) = undefined;
 pub var obj_type_to_props: std.AutoHashMap(u16, ObjProps) = undefined;
 pub var obj_type_to_name: std.AutoHashMap(u16, []const u8) = undefined;
 pub var obj_type_to_tex_data: std.AutoHashMap(u16, []const TextureData) = undefined;
 pub var obj_type_to_top_tex_data: std.AutoHashMap(u16, []const TextureData) = undefined;
 pub var obj_type_to_anim_data: std.AutoHashMap(u16, AnimProps) = undefined;
 pub var obj_type_to_class: std.AutoHashMap(u16, ClassType) = undefined;
-pub var ground_name_to_type: std.StringHashMap(u16) = undefined;
+pub var ground_name_to_type: std.HashMap([]const u8, u16, StringContext, 80) = undefined;
 pub var ground_type_to_props: std.AutoHashMap(u16, GroundProps) = undefined;
 pub var ground_type_to_name: std.AutoHashMap(u16, []const u8) = undefined;
 pub var ground_type_to_tex_data: std.AutoHashMap(u16, []const TextureData) = undefined;
 pub var region_type_to_name: std.AutoHashMap(u8, []const u8) = undefined;
 pub var region_type_to_color: std.AutoHashMap(u8, u32) = undefined;
+pub var region_type_to_enum: std.AutoHashMap(u8, RegionType) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     classes = std.AutoHashMap(u16, CharacterClass).init(allocator);
     card_type_to_props = std.AutoHashMap(u16, CardProps).init(allocator);
-    item_name_to_type = std.StringHashMap(u16).init(allocator);
+    item_name_to_type = std.HashMap([]const u8, u16, StringContext, 80).init(allocator);
     item_type_to_props = std.AutoHashMap(u16, ItemProps).init(allocator);
     item_type_to_name = std.AutoHashMap(u16, []const u8).init(allocator);
-    obj_name_to_type = std.StringHashMap(u16).init(allocator);
+    obj_name_to_type = std.HashMap([]const u8, u16, StringContext, 80).init(allocator);
     obj_type_to_props = std.AutoHashMap(u16, ObjProps).init(allocator);
     obj_type_to_name = std.AutoHashMap(u16, []const u8).init(allocator);
     obj_type_to_tex_data = std.AutoHashMap(u16, []const TextureData).init(allocator);
     obj_type_to_top_tex_data = std.AutoHashMap(u16, []const TextureData).init(allocator);
     obj_type_to_anim_data = std.AutoHashMap(u16, AnimProps).init(allocator);
     obj_type_to_class = std.AutoHashMap(u16, ClassType).init(allocator);
-    ground_name_to_type = std.StringHashMap(u16).init(allocator);
+    ground_name_to_type = std.HashMap([]const u8, u16, StringContext, 80).init(allocator);
     ground_type_to_props = std.AutoHashMap(u16, GroundProps).init(allocator);
     ground_type_to_name = std.AutoHashMap(u16, []const u8).init(allocator);
     ground_type_to_tex_data = std.AutoHashMap(u16, []const TextureData).init(allocator);
     region_type_to_name = std.AutoHashMap(u8, []const u8).init(allocator);
     region_type_to_color = std.AutoHashMap(u8, u32).init(allocator);
+    region_type_to_enum = std.AutoHashMap(u8, RegionType).init(allocator);
 
     const xmls_dir = try std.fs.cwd().openDir("./assets/xmls", .{ .iterate = true });
     var walker = try xmls_dir.walk(allocator);
@@ -1262,7 +1321,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
             defer doc.deinit();
 
             const root_node = doc.getRootElement() catch {
-                std.log.err("Invalid XML for path {s}", .{path});
+                std.log.err("Invalid XML in path {s}", .{path});
                 continue;
             };
 
@@ -1502,6 +1561,7 @@ pub fn parseRegions(doc: xml.Doc, allocator: std.mem.Allocator) !void {
         const id = try node.getAttributeAlloc("id", allocator, "Unknown");
         try region_type_to_name.put(obj_type, id);
         try region_type_to_color.put(obj_type, try node.getValueInt("Color", u32, 0));
+        try region_type_to_enum.put(obj_type, RegionType.fromString(id));
     }
 }
 

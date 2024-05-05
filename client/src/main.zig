@@ -87,6 +87,7 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
         std.log.err("Network thread initialization failed: {}", .{e});
         return;
     };
+    defer rpmalloc.deinitThread(true);
 
     if (server.socket != null)
         return;
@@ -96,7 +97,6 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
         return;
     };
 
-    rpmalloc.deinitThread(true);
     network_thread = null;
 }
 
@@ -108,7 +108,6 @@ pub fn enterGame(selected_server: game_data.ServerData, selected_char_id: u32, c
     ui_systems.switchScreen(.game);
     network_thread = std.Thread.spawn(.{}, networkCallback, .{ selected_server.dns, selected_server.port, network.C2SPacket{ .hello = .{
         .build_ver = settings.build_version,
-        .game_id = -2,
         .email = current_account.email,
         .password = current_account.password,
         .char_id = @intCast(selected_char_id),

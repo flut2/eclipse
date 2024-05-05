@@ -3,6 +3,7 @@ const settings = @import("settings.zig");
 const db = @import("db.zig");
 const httpz = @import("httpz");
 const xml = @import("shared").xml;
+const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 
 var allocator: std.mem.Allocator = undefined;
 var server: httpz.ServerCtx(void, void) = undefined;
@@ -24,41 +25,13 @@ pub fn deinit() void {
 }
 
 pub fn tick() !void {
-    try server.listen();
-}
-
-fn login(email: []const u8, password: []const u8, res: *httpz.Response) !u32 {
-    const login_data = db.loginData(email) catch |e| {
-        switch (e) {
-            error.NoData => {
-                res.body = "<Error>Account does not exist</Error>";
-                return std.math.maxInt(u32);
-            },
-            else => {
-                res.body = "<Error>Data parsing failure</Error>";
-                return std.math.maxInt(u32);
-            },
-        }
+    rpmalloc.initThread() catch |e| {
+        std.log.err("Login thread initialization failed: {}", .{e});
+        return;
     };
-    defer login_data.deinit();
+    defer rpmalloc.deinitThread(true);
 
-    const salted_pw = try std.mem.concat(allocator, u8, &.{ password, login_data.value.Salt });
-    defer allocator.free(salted_pw);
-
-    var hashed_pass: [std.crypto.hash.Sha1.digest_length]u8 = undefined;
-    var h = std.crypto.hash.Sha1.init(.{});
-    h.update(salted_pw);
-    h.final(hashed_pass[0..]);
-
-    const base64_pass = try allocator.alloc(u8, std.base64.standard.Encoder.calcSize(hashed_pass.len));
-    defer allocator.free(base64_pass);
-
-    if (std.mem.eql(u8, login_data.value.HashedPassword, std.base64.standard.Encoder.encode(base64_pass, &hashed_pass))) {
-        res.body = "<Error>Invalid credentials</Error>";
-        return std.math.maxInt(u32);
-    }
-
-    return login_data.value.AccountId;
+    try server.listen();
 }
 
 fn handleAccountVerify(req: *httpz.Request, res: *httpz.Response) !void {
@@ -72,9 +45,14 @@ fn handleAccountVerify(req: *httpz.Request, res: *httpz.Response) !void {
         return;
     };
 
-    const acc_id = try login(email, password, res);
-    if (acc_id == std.math.maxInt(u32))
+    const acc_id = db.login(email, password) catch |e| {
+        res.body = switch (e) {
+            error.NoData => "<Error>Invalid Email</Error>",
+            error.InvalidCredentials => "<Error>Invalid Credentials</Error>",
+            else => "<Error>Unknown Error</Error>",
+        };
         return;
+    };
 
     var acc_data = db.AccountData.init(allocator, acc_id);
     defer acc_data.deinit();
@@ -87,7 +65,6 @@ fn handleAccountVerify(req: *httpz.Request, res: *httpz.Response) !void {
     try writer.endDocument();
 
     res.body = try writer.childDoc().toMemory(res.arena);
-    std.log.err("body {s}", .{res.body.?});
 }
 
 fn handleAppInit(_: *httpz.Request, res: *httpz.Response) !void {
@@ -105,9 +82,14 @@ fn handleCharList(req: *httpz.Request, res: *httpz.Response) !void {
         return;
     };
 
-    const acc_id = try login(email, password, res);
-    if (acc_id == std.math.maxInt(u32))
+    const acc_id = db.login(email, password) catch |e| {
+        res.body = switch (e) {
+            error.NoData => "<Error>Invalid Email</Error>",
+            error.InvalidCredentials => "<Error>Invalid Credentials</Error>",
+            else => "<Error>Unknown Error</Error>",
+        };
         return;
+    };
 
     var acc_data = db.AccountData.init(allocator, acc_id);
     defer acc_data.deinit();
@@ -126,6 +108,7 @@ fn handleCharList(req: *httpz.Request, res: *httpz.Response) !void {
 
     // temp
     try writer.startElement("Servers");
+    try writer.startElement("Server");
     try writer.writeElement("Name", settings.server_name);
     try writer.writeElement("DNS", settings.public_ip);
     try writer.writeElement("Port", try std.fmt.allocPrintZ(res.arena, "{d}", .{settings.game_port}));
@@ -135,6 +118,7 @@ fn handleCharList(req: *httpz.Request, res: *httpz.Response) !void {
     try writer.writeElement("MaxPlayers", "500");
     try writer.writeElement("AdminOnly", "false");
     try writer.endElement();
+    try writer.endElement();
 
     try alive_data.writeXml(writer, res.arena);
     try acc_data.writeXml(writer, res.arena);
@@ -143,7 +127,6 @@ fn handleCharList(req: *httpz.Request, res: *httpz.Response) !void {
     try writer.endDocument();
 
     res.body = try writer.childDoc().toMemory(res.arena);
-    std.log.err("body2 {s}", .{res.body.?});
 }
 
 fn notFound(_: *httpz.Request, res: *httpz.Response) !void {

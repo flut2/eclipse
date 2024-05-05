@@ -30,6 +30,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     }).module("httpz"));
 
+    exe.root_module.addImport("xev", b.dependency("libxev", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("xev"));
+
     ztracy.package(b, target, optimize, .{ .options = .{ .enable_ztracy = true } }).link(exe);
 
     const hiredis = b.dependency("hiredis", .{});

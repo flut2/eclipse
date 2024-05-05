@@ -193,7 +193,7 @@ pub const Projectile = struct {
             self.y += dist * @sin(self.angle);
             if (self.props.amplitude != 0) {
                 const phase: f32 = if (self.bullet_id % 2 == 0) 0.0 else std.math.pi;
-                const time_ratio: f32 = @as(f32, @floatFromInt(elapsed)) / @as(f32, @floatFromInt(self.props.lifetime));
+                const time_ratio = @as(f32, @floatFromInt(elapsed)) / @as(f32, @floatFromInt(self.props.lifetime));
                 const deflection_target = self.props.amplitude * @sin(phase + time_ratio * self.props.frequency * std.math.tau);
                 self.x += (deflection_target - self.last_deflect) * @cos(self.angle + std.math.pi / 2.0);
                 self.y += (deflection_target - self.last_deflect) * @sin(self.angle + std.math.pi / 2.0);
@@ -211,7 +211,7 @@ pub const Projectile = struct {
         const last_y = self.y;
 
         self.updatePosition(elapsed, dt);
-        if (self.x < 0 or self.y < 0) {
+        if (self.x < 0 or self.y < 0 or self.x > @as(f32, @floatFromInt(map.width)) or self.y > @as(f32, @floatFromInt(map.height))) {
             if (self.damage_players)
                 main.server.queuePacket(.{ .square_hit = .{
                     .time = time,
@@ -235,37 +235,15 @@ pub const Projectile = struct {
 
         self.last_hit_check = time;
 
-        if (map.getSquare(self.x, self.y, true)) |square| {
-            const en = map.findEntityConst(square.static_obj_id);
-            if (square.tile_type == 0xFFFE or square.tile_type == 0xFFFF) {
-                if (self.damage_players) {
-                    main.server.queuePacket(.{ .square_hit = .{
-                        .time = time,
-                        .bullet_id = self.bullet_id,
-                        .obj_id = self.owner_id,
-                    } });
+        const square = map.getSquare(self.x, self.y, false).?;
+        if (map.findEntityConst(square.static_obj_id)) |entity| {
+            if (entity == .object and
+                (entity.object.props.enemy_occupy_square or (!self.props.passes_cover and entity.object.props.occupy_square)))
+            {
+                if (self.props.bouncing) {
+                    const angle = std.math.atan2(entity.object.y - last_y, entity.object.x - last_x);
+                    self.angle = std.math.pi / 2.0 - angle;
                 } else {
-                    if (en) |_| {
-                        var effect = particles.HitEffect{
-                            .x = self.x,
-                            .y = self.y,
-                            .colors = self.colors,
-                            .angle = self.angle,
-                            .speed = self.props.speed,
-                            .size = 1.0,
-                            .amount = 3,
-                        };
-                        effect.addToMap();
-                    }
-                }
-                return false;
-            }
-
-            if (en) |entity| {
-                if (entity == .object and
-                    (entity.object.props.is_enemy or self.damage_players) and
-                    (entity.object.props.enemy_occupy_square or (!self.props.passes_cover and entity.object.props.occupy_square)))
-                {
                     if (self.damage_players) {
                         main.server.queuePacket(.{ .other_hit = .{
                             .time = time,
@@ -288,7 +266,7 @@ pub const Projectile = struct {
                     return false;
                 }
             }
-        } else {
+        } else if (square.tile_type == 0xFFFE or square.tile_type == 0xFFFF) {
             if (self.damage_players) {
                 main.server.queuePacket(.{ .square_hit = .{
                     .time = time,
@@ -296,6 +274,7 @@ pub const Projectile = struct {
                     .obj_id = self.owner_id,
                 } });
             }
+            return false;
         }
 
         if (self.damage_players) {
@@ -344,20 +323,18 @@ pub const Projectile = struct {
                         .object_id = self.owner_id,
                         .target_id = player.obj_id,
                     } });
-                } else {
-                    std.log.err("Unknown logic for player side of hit logic unexpected branch, todo figure out how to fix this mabye implement send_message check: {s}", .{player.name orelse "Unknown"});
                 }
 
                 if (self.props.multi_hit) {
                     self.hit_list.put(player.obj_id, {}) catch |e| {
-                        std.log.err("failed to add player to hit_list: {}", .{e});
+                        std.log.err("Failed to add player with type 0x{x} to the hit list: {}", .{ player.obj_type, e });
                     };
                 } else {
                     return false;
                 }
             }
         } else {
-            if (findTargetObject(self.x, self.y, 0.57, false)) |object| {
+            if (findTargetObject(self.x, self.y, 0.57, true)) |object| {
                 if (self.hit_list.contains(object.obj_id))
                     return true;
 
@@ -390,29 +367,11 @@ pub const Projectile = struct {
                         .target_id = object.obj_id,
                         .killed = dead,
                     } });
-                } else if (!self.props.multi_hit) {
-                    var effect = particles.HitEffect{
-                        .x = self.x,
-                        .y = self.y,
-                        .colors = self.colors,
-                        .angle = self.angle,
-                        .speed = self.props.speed,
-                        .size = 1.0,
-                        .amount = 3,
-                    };
-                    effect.addToMap();
-
-                    main.server.queuePacket(.{ .other_hit = .{
-                        .time = time,
-                        .bullet_id = self.bullet_id,
-                        .object_id = self.owner_id,
-                        .target_id = object.obj_id,
-                    } });
                 }
 
                 if (self.props.multi_hit) {
                     self.hit_list.put(object.obj_id, {}) catch |e| {
-                        std.log.err("failed to add object to hit_list: {}", .{e});
+                        std.log.err("Failed to add object with type 0x{x} to the hit list: {}", .{ object.obj_type, e });
                     };
                 } else {
                     return false;

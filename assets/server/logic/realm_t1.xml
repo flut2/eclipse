@@ -1,89 +1,102 @@
-<BehaviorEntries>
-  <BehaviorEntry id="Crocodile">
-    <Follow speed="0.6" acquireRange="9" range="2"/>
-	  <Wander speed="0.5"/>
-	  <Shoot radius="16" count="3" shootAngle="12" projectileIndex="0" cooldown="600"/>
-   	<!--<AoeAttack radius="3" damage="80" cooldown="600" effect="Slowed" effectDuration="500" color="0x01361f"/>-->
-   	<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Spike Ball">
-	  <Wander speed="0.5"/>
-   	<Shoot radius="16" count="5" shootAngle="72" projectileIndex="0" cooldown="400"/>
-   	<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Goblin Grunt">
-	  <Charge speed="1.33" range="9" cooldown="1000"/>
-    <Wander speed="0.33"/>
-   	<Shoot radius="16" count="3" shootAngle="4" projectileIndex="0" cooldown="900"/>
-   	<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Goblin Guard">
-	  <Orbit speed="0.6" radius="2" acquireRange="6" target="Crocodile"/>
-	  <Orbit speed="0.5" radius="2" acquireRange="6" target="Spike Ball"/>
-	  <Wander speed="0.28"/>
-   	<Shoot radius="16" count="2" shootAngle="5" projectileIndex="0" cooldown="800"/>
-   	<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Imp">
-	  <Charge speed="1.5" range="13" cooldown="400"/>
-    <Wander speed="0.42"/>
-   	<Shoot radius="13" count="5" shootAngle="8" projectileIndex="0" cooldown="800"/>
-   	<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Living Flame">
-    <Wander speed="0.44"/>
-    <Shoot radius="16" count="7" shootAngle="51" projectileIndex="0" cooldown="200"/>
-   	<Shoot radius="16" count="5" shootAngle="72" projectileIndex="0" cooldown="800"/>
-   	<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Demon Mage">
-	  <Orbit speed="0.77" radius="1" acquireRange="9" target="Imp"/>
-	  <Wander speed="0.43"/>
-   	<Shoot radius="16" count="5" shootAngle="3" projectileIndex="0" cooldown="600"/>
-	  <DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Demon Archer">
-	  <Orbit speed="0.77" radius="1" acquireRange="9" target="Living Flame"/>
-	  <Wander speed="0.43"/>
-   	<Shoot radius="16" count="5" shootAngle="3" projectileIndex="0" cooldown="600"/>
-	  <DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Jackal Warrior">
-	  <Charge speed="1.5" range="13" cooldown="400"/>
-    <Wander speed="0.45"/>
-   	<Shoot radius="16" count="7" shootAngle="15" projectileIndex="0" cooldown="600"/>
-   	<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Jackal Priest">
-	  <Orbit speed="0.77" radius="1" acquireRange="9" target="Jackal Archer"/>
-    <Wander speed="0.45"/>
-   	<Shoot radius="16" count="8" shootAngle="45" projectileIndex="0" cooldown="1000"/>
-   	<HealEntity range="10" name="Jackal Warrior" amount="2500" cooldown="1000"/>
-   	<HealEntity range="10" name="Jackal Priest" amount="2500" cooldown="1000"/>
-   	<HealEntity range="10" name="Regal Mummy" amount="2500" cooldown="1000"/>
-   	<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Jackal Archer">
-    <Follow speed="0.6" duration="600" cooldown="1000"/>
-    <Wander speed="0.45"/>
-   	<Shoot radius="16" count="4" shootAngle="5" projectileIndex="0" cooldown="300"/>
-   	<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Regal Mummy">
-    <Follow speed="0.6" duration="600" cooldown="1000"/>
-    <Wander speed="0.45"/>
-    <!--<AoeAttack radius="3" damage="150" cooldown="300" effect="Slowed" effectDuration="1000" color="0x01361f"/>-->
-   	<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
-	</BehaviorEntry>
-	<BehaviorEntry id="Sobek">
-	  <Taunt text="Stevia" />
-	</BehaviorEntry>
-	
+<?xml version="1.0" encoding="utf-8"?>
+<Behaviors>
+	<Behavior id="Crocodile">
+		<Follow speed="0.6" acquireRange="9" range="2"/>
+		<Wander speed="0.5"/>
+		<Shoot radius="16" count="3" shootAngle="12" projectileIndex="0" cooldown="600"/>
+		<!--<AoeAttack radius="3" damage="80" cooldown="600" effect="Slowed" effectDuration="500" color="0x01361f"/>-->
+		<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Spike Ball">
+		<Wander speed="0.5"/>
+		<Shoot radius="16" count="5" shootAngle="72" projectileIndex="0" cooldown="400"/>
+		<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Goblin Grunt">
+		<Charge speed="1.33" range="9" cooldown="1000"/>
+		<Wander speed="0.33"/>
+		<Shoot radius="16" count="3" shootAngle="4" projectileIndex="0" cooldown="900"/>
+		<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Goblin Guard">
+		<Orbit speed="0.6" radius="2" acquireRange="6" target="Crocodile"/>
+		<Orbit speed="0.5" radius="2" acquireRange="6" target="Spike Ball"/>
+		<Wander speed="0.28"/>
+		<Shoot radius="16" count="2" shootAngle="5" projectileIndex="0" cooldown="800"/>
+		<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Imp">
+		<Charge speed="1.5" range="13" cooldown="400"/>
+		<Wander speed="0.42"/>
+		<Shoot radius="13" count="5" shootAngle="8" projectileIndex="0" cooldown="800"/>
+		<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Living Flame">
+		<Wander speed="0.44"/>
+		<Shoot radius="16" count="7" shootAngle="51" projectileIndex="0" cooldown="200"/>
+		<Shoot radius="16" count="5" shootAngle="72" projectileIndex="0" cooldown="800"/>
+		<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Demon Mage">
+		<Orbit speed="0.77" radius="1" acquireRange="9" target="Imp"/>
+		<Wander speed="0.43"/>
+		<Shoot radius="16" count="5" shootAngle="3" projectileIndex="0" cooldown="600"/>
+		<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Demon Archer">
+		<Orbit speed="0.77" radius="1" acquireRange="9" target="Living Flame"/>
+		<Wander speed="0.43"/>
+		<Shoot radius="16" count="5" shootAngle="3" projectileIndex="0" cooldown="600"/>
+		<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Jackal Warrior">
+		<Charge speed="1.5" range="13" cooldown="400"/>
+		<Wander speed="0.45"/>
+		<Shoot radius="16" count="7" shootAngle="15" projectileIndex="0" cooldown="600"/>
+		<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Jackal Priest">
+		<Orbit speed="0.77" radius="1" acquireRange="9" target="Jackal Archer"/>
+		<Wander speed="0.45"/>
+		<Shoot radius="16" count="8" shootAngle="45" projectileIndex="0" cooldown="1000"/>
+		<HealEntity range="10" name="Jackal Warrior" amount="2500" cooldown="1000"/>
+		<HealEntity range="10" name="Jackal Priest" amount="2500" cooldown="1000"/>
+		<HealEntity range="10" name="Regal Mummy" amount="2500" cooldown="1000"/>
+		<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Jackal Archer">
+		<Follow speed="0.6" duration="600" cooldown="1000"/>
+		<Wander speed="0.45"/>
+		<Shoot radius="16" count="4" shootAngle="5" projectileIndex="0" cooldown="300"/>
+		<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Regal Mummy">
+		<Follow speed="0.6" duration="600" cooldown="1000"/>
+		<Wander speed="0.45"/>
+		<!--<AoeAttack radius="3" damage="150" cooldown="300" effect="Slowed" effectDuration="1000" color="0x01361f"/>-->
+		<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
+	</Behavior>
+
+	<Behavior id="Sobek">
+		<Taunt text="Stevia" />
+	</Behavior>
+
 	<!-- 
 	proj 0: slower high damage slowing
 	proj 1: faster medium damage
 	-->
-	<BehaviorEntry id="Giant Slime">
+	<Behavior id="Giant Slime">
 		<!-- Slow Immunity... -->
 		<DropPortalOnDeath target="Slimy Ruins" probability="1" timeout="60"/>
 		<ScaleHP amountPerPlayer="2500" amountPerc="0.05" dist="20"/>
@@ -108,18 +121,18 @@
 				<Shoot radius="15" projectileIndex="1" fixedAngle="5" count="3" rotateAngle="10" cooldown="200" cooldownOffset="1000"/>
 				<TimedTransition targetState="sjfa. 1" time="2800"/>
 			</State>
-		</State>
 
-		<!-- spawn a ton of enemies and explode-->
-		<State id="mass assault">
-			<HpLessTransition threshold="0.5" targetState="Duplication"/>
-			<ConditionalEffect effect="Armored" duration="6500"/>
-			<Wander speed="0.3"/>
-			<Spawn children="Slime Piece" maxChildren="5" initialSpawn="0" cooldown="800"/>
-			<State id="Charge up">
-				<StayCloseToSpawn speed="1" range="1"/>
-				<Flash color="0x4000ff" flashPeriod="0.8" flashRepeats="1"/>
-				<TimedTransition time="800" targetState="Blow up"/>
+			<!-- spawn a ton of enemies and explode-->
+			<State id="mass assault">
+				<HpLessTransition threshold="0.5" targetState="Duplication"/>
+				<ConditionalEffect effect="Armored" duration="6500"/>
+				<Wander speed="0.3"/>
+				<Spawn children="Slime Piece" maxChildren="5" initialSpawn="0" cooldown="800"/>
+				<State id="Charge up">
+					<StayCloseToSpawn speed="1" range="1"/>
+					<Flash color="0x4000ff" flashPeriod="0.8" flashRepeats="1"/>
+					<TimedTransition time="800" targetState="Blow up"/>
+				</State>
 			</State>
 			<State id="Blow up">
 				<Spawn children="Slime Piece" maxChildren="1" initialSpawn="1"/>
@@ -145,10 +158,10 @@
 				<ChangeSize rate="8" target="210"/> <!-- 1600 ms -->
 				<TimedTransition time="2000" targetState="jimmy carter"/>
 			</State>
-			<State id="jimmy carter">
-				<OrderOnce children="Giant Slime Clone" range="15" targetState="jimmy carter"/>
-				<EntityNotExistsTransition target="Slime Piece" dist="15" targetState="biannual kurdistani extremist meeting"/>
-			</State>
+		</State>
+		<State id="jimmy carter">
+			<OrderOnce children="Giant Slime Clone" range="15" targetState="jimmy carter"/>
+			<EntityNotExistsTransition target="Slime Piece" dist="15" targetState="biannual kurdistani extremist meeting"/>
 		</State>
 		<State id="biannual kurdistani extremist meeting">
 			<ConditionalEffect effect="Invulnerable" duration="0"/>
@@ -156,9 +169,9 @@
 			<Shoot radius="10" projectileIndex="0" shootAngle="10" count="7" cooldown="1100"/>
 		</State>
 		<!-- drops -->
-	</BehaviorEntry>
+	</Behavior>
 
-	<BehaviorEntry id="Giant Slime Clone">
+	<Behavior id="Giant Slime Clone">
 		<!-- Slow Immunity... -->
 		<Protect protectee="Giant Slime" speed="0.7" acquireRange="15" protectionRange="10" reprotectRange="10"/>
 		<ScaleHP amountPerPlayer="2500" amountPerc="0.05" dist="20" inheritHpScaleState="true" saveHpScaleState="false"/>
@@ -178,18 +191,18 @@
 				<ChangeSize rate="8" target="210"/> <!-- 1600 ms -->
 				<TimedTransition time="2000" targetState="jimmy carter"/>
 			</State>
-			<State id="jimmy carter">
-				<EntityNotExistsTransition target="Slime Piece" dist="15" targetState="biannual kurdistani extremist meeting"/>
-			</State>
+		</State>
+		<State id="jimmy carter">
+			<EntityNotExistsTransition target="Slime Piece" dist="15" targetState="biannual kurdistani extremist meeting"/>
 		</State>
 		<State id="biannual kurdistani extremist meeting">
 			<ConditionalEffect effect="Invulnerable" duration="0"/>
 			<Wander speed="0.45"/>
 			<Shoot radius="15" projectileIndex="1" fixedAngle="5" count="3" rotateAngle="10" cooldown="200" cooldownOffset="1000"/>
 		</State>
-	</BehaviorEntry>
-	
-	<BehaviorEntry id="Slime Piece">
+	</Behavior>
+
+	<Behavior id="Slime Piece">
 		<HealEntity name="Giant Slime" amount="200" range="2" cooldown="2000"/>
 		<ScaleHP amountPerPlayer="400" dist="15"/>
 		<Shoot radius="8" count="1" shootAngle="0" projectileIndex="0" cooldown="800"/>
@@ -217,9 +230,9 @@
 		<State id="for real now">
 			<Suicide/>
 		</State>
-	</BehaviorEntry>
+	</Behavior>
 
-	<BehaviorEntry id="Forest Firefly">
+	<Behavior id="Forest Firefly">
 		<Wander speed="0.5"/>
-	</BehaviorEntry>
-</BehaviorEntries>
+	</Behavior>
+</Behaviors>

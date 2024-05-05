@@ -12,9 +12,6 @@
   <Region type="0x04" id="Store 3">
     <Color>0xC6B1FF</Color>
   </Region>
-  <Region type="0x05" id="Stash">
-    <Color>0x828492</Color>
-  </Region>
   <Region type="0x29" id="Biome Desert Encounter Spawn">
     <Color>0x9B00FF</Color>
   </Region>

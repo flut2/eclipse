@@ -17,12 +17,10 @@ pub fn create(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data) {
     if (std.meta.hasFn(@TypeOf(data), "init")) elem.init();
 
     comptime var field_name: []const u8 = "";
-    comptime {
-        for (std.meta.fields(UiElement)) |field| {
-            if (@typeInfo(field.type).Pointer.child == @TypeOf(data)) {
-                field_name = field.name;
-                break;
-            }
+    inline for (std.meta.fields(UiElement)) |field| {
+        if (@typeInfo(field.type).Pointer.child == @TypeOf(data)) {
+            field_name = field.name;
+            break;
         }
     }
 
@@ -40,12 +38,10 @@ pub fn destroy(self: anytype) void {
     self.disposed = true;
 
     comptime var field_name: []const u8 = "";
-    comptime {
-        for (std.meta.fields(UiElement)) |field| {
-            if (field.type == @TypeOf(self)) {
-                field_name = field.name;
-                break;
-            }
+    inline for (std.meta.fields(UiElement)) |field| {
+        if (field.type == @TypeOf(self)) {
+            field_name = field.name;
+            break;
         }
     }
 
@@ -1809,12 +1805,10 @@ pub const Container = struct {
             switch (elem.*) {
                 inline else => |inner_elem| {
                     comptime var field_name: []const u8 = "";
-                    comptime {
-                        for (std.meta.fields(UiElement)) |field| {
-                            if (field.type == @TypeOf(inner_elem)) {
-                                field_name = field.name;
-                                break;
-                            }
+                    inline for (std.meta.fields(UiElement)) |field| {
+                        if (field.type == @TypeOf(inner_elem)) {
+                            field_name = field.name;
+                            break;
                         }
                     }
 
@@ -1909,12 +1903,10 @@ pub const Container = struct {
         };
 
         comptime var field_name: []const u8 = "";
-        comptime {
-            for (std.meta.fields(UiElement)) |field| {
-                if (@typeInfo(field.type).Pointer.child == T) {
-                    field_name = field.name;
-                    break;
-                }
+        inline for (std.meta.fields(UiElement)) |field| {
+            if (@typeInfo(field.type).Pointer.child == T) {
+                field_name = field.name;
+                break;
             }
         }
 

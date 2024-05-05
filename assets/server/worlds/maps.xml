@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Data>
+    <Map persist="true" id="-1">
+        <Name>the Retrieve</Name>
+        <File>retrieve.em</File>
+        <Light dayIntensity="0.1" nightIntensity="0.4">0x000000</Light>
+    </Map>
+    <Map persist="true">
+        <Name>Gaia</Name>
+        <PortalName>Gaia</PortalName>
+        <File>gaia.em</File>
+        <Light dayIntensity="0.1" nightIntensity="0.4">0x000000</Light>
+    </Map>
+    <Map>
+        <Name>Crimson Chasm</Name>
+        <PortalName>Crimson Chasm</PortalName>
+        <File>crimson_chasm.em</File>
+        <Light intensity="0.5">0x3D1D16</Light>
+    </Map>
+    <Map>
+        <Name>Slimy Ruins</Name>
+        <PortalName>Slimy Ruins</PortalName>
+        <File>slimy_ruins.em</File>
+        <Light dayIntensity="0.1" nightIntensity="0.4">0x000000</Light>
+    </Map>
+    <Setpiece name="hp_shrine_desert">hp_shrine_desert.em</Setpiece>
+    <Setpiece name="hp_shrine_forest">hp_shrine_forest.em</Setpiece>
+    <Setpiece name="hp_shrine_volcano">hp_shrine_volcano.em</Setpiece>
+    <Setpiece name="mp_shrine_desert">mp_shrine_desert.em</Setpiece>
+    <Setpiece name="mp_shrine_forest">mp_shrine_forest.em</Setpiece>
+    <Setpiece name="mp_shrine_volcano">mp_shrine_volcano.em</Setpiece>
+    <Setpiece name="giant_slime">giant_slime.em</Setpiece>
+</Data>

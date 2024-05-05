@@ -30,10 +30,24 @@ pub const AccountData = struct {
         self.reply_list.deinit();
     }
 
+    pub fn getInt(self: *AccountData, comptime T: type, comptime field: []const u8) !T {
+        return try std.fmt.parseInt(T, try self.get(field), 0);
+    }
+
     pub fn get(self: *AccountData, comptime field: []const u8) ![:0]const u8 {
         if (redisCommand(context, "HGET account.%d " ++ field, .{self.acc_id})) |reply| {
             try self.reply_list.append(reply);
+            if (reply.len == 0) return error.NoData;
             return reply.str[0..reply.len :0];
+        } else return error.NoData;
+    }
+
+    pub fn setInt(self: *AccountData, comptime T: type, comptime field: []const u8, value: T) !void {
+        const value_fmt = try std.fmt.allocPrintZ(allocator, "{d}", .{value});
+        defer allocator.free(value_fmt);
+
+        if (redisCommand(context, "HSET account.%d " ++ field ++ " %s", .{ self.acc_id, value_fmt.ptr })) |reply| {
+            try self.reply_list.append(reply);
         } else return error.NoData;
     }
 
@@ -83,10 +97,24 @@ pub const CharacterData = struct {
         self.reply_list.deinit();
     }
 
+    pub fn getInt(self: *CharacterData, comptime T: type, comptime field: []const u8) !T {
+        return try std.fmt.parseInt(T, try self.get(field), 0);
+    }
+
     pub fn get(self: *CharacterData, comptime field: []const u8) ![:0]const u8 {
         if (redisCommand(context, "HGET char.%d.%d " ++ field, .{ self.acc_id, self.char_id })) |reply| {
             try self.reply_list.append(reply);
+            if (reply.len == 0) return error.NoData;
             return reply.str[0..reply.len :0];
+        } else return error.NoData;
+    }
+
+    pub fn setInt(self: *CharacterData, comptime T: type, comptime field: []const u8, value: T) !void {
+        const value_fmt = try std.fmt.allocPrintZ(allocator, "{d}", .{value});
+        defer allocator.free(value_fmt);
+
+        if (redisCommand(context, "HSET char.%d.%d " ++ field ++ " %s", .{ self.acc_id, self.char_id, value_fmt.ptr })) |reply| {
+            try self.reply_list.append(reply);
         } else return error.NoData;
     }
 
@@ -218,6 +246,28 @@ pub fn loginData(email: []const u8) !std.json.Parsed(LoginData) {
         defer c.freeReplyObject(login_json);
         return try std.json.parseFromSlice(LoginData, allocator, login_json.str[0..login_json.len], .{});
     } else return error.NoData;
+}
+
+pub fn login(email: []const u8, password: []const u8) !u32 {
+    const login_data = try loginData(email);
+    defer login_data.deinit();
+
+    const salted_pw = try std.mem.concat(allocator, u8, &.{ password, login_data.value.Salt });
+    defer allocator.free(salted_pw);
+
+    var hashed_pass: [std.crypto.hash.Sha1.digest_length]u8 = undefined;
+    var h = std.crypto.hash.Sha1.init(.{});
+    h.update(salted_pw);
+    h.final(hashed_pass[0..]);
+
+    const base64_pass = try allocator.alloc(u8, std.base64.standard.Encoder.calcSize(hashed_pass.len));
+    defer allocator.free(base64_pass);
+
+    if (std.mem.eql(u8, login_data.value.HashedPassword, std.base64.standard.Encoder.encode(base64_pass, &hashed_pass))) {
+        return error.InvalidCredentials;
+    }
+
+    return login_data.value.AccountId;
 }
 
 pub fn deinit() void {

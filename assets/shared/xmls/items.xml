@@ -1981,7 +1981,8 @@
             <AngleCorrection>1</AngleCorrection>
             <Speed>150</Speed>
             <Lifetime>420</Lifetime>
-            <Damage>1300</Damage>
+            <MagicDamage>1300</MagicDamage>
+            <Bouncing />
         </Projectile>
         <IncrementStat stat="Stamina" amount="15"/>
         <BagType>3</BagType>

@@ -337,6 +337,8 @@ pub const ItemTooltip = struct {
                     text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Bullets are parametric", .{text}) catch text;
                 if (proj.boomerang)
                     text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Bullets boomerang", .{text}) catch text;
+                if (proj.bouncing)
+                    text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Bullets bounce", .{text}) catch text;
             }
 
             if (props.stat_increments) |stat_increments| {

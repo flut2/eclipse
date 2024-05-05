@@ -16,6 +16,10 @@
             .url = "https://github.com/karlseguin/http.zig/archive/e68082f2ba2c4e078a21502159b4bf2cf33f0dad.tar.gz",
             .hash = "1220381d2bf65020575149b590000291b7a99aa0896847db56c174b7c2f6cb2ff1fb",
         },
+        .libxev = .{
+            .url = "https://github.com/mitchellh/libxev/archive/4e6781895e4e6c477597c8c2713d36cd82b57d07.tar.gz",
+            .hash = "12203f87e00caa6c07c02a748f234a5c0ee2ca5c334ec464e88810d93e7b5495a56f",
+        },
     },
     .paths = .{
         "build.zig",

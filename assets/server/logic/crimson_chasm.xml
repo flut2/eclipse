@@ -1,5 +1,6 @@
-<BehaviorEntries>  
-	<BehaviorEntry id="Avatar of Anger">
-	  <Taunt text="Hello" />
-	</BehaviorEntry>
-</BehaviorEntries>
+<?xml version="1.0" encoding="utf-8"?>
+<Behaviors>  
+	<Behavior id="Avatar of Anger">
+		<Taunt text="Hello" />
+	</Behavior>
+</Behaviors>

@@ -801,9 +801,9 @@ fn addAnimPlayer(
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
-                @as(u32, @intCast(entry.key_ptr.g)) << 8 |
-                @as(u32, @intCast(entry.key_ptr.b)));
+            try colors.append(@as(u32, entry.key_ptr.r) << 16 |
+                @as(u32, entry.key_ptr.g) << 8 |
+                @as(u32, entry.key_ptr.b));
 
             if (entry.value_ptr.* > max) {
                 dominant_colors[set_idx] = entry.key_ptr.*;

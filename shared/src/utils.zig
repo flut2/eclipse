@@ -2,6 +2,100 @@ const std = @import("std");
 const builtin = @import("builtin");
 const game_data = @import("game_data.zig");
 
+pub const MPSCQueue = struct {
+    pub const PollResult = enum { Empty, Retry, Item };
+    pub const Node = struct { buf: []u8, next_opt: ?*Node };
+
+    head: *Node,
+    tail: *Node,
+    stub: *Node,
+
+    pub fn init(self: *MPSCQueue, stub: *Node) void {
+        @atomicStore(*Node, &self.stub, stub, .Monotonic);
+        @atomicStore(?*Node, &self.stub.next_opt, null, .Monotonic);
+        @atomicStore(*Node, &self.head, self.stub, .Monotonic);
+        @atomicStore(*Node, &self.tail, self.stub, .Monotonic);
+    }
+
+    pub fn push(self: *MPSCQueue, node: *Node) void {
+        @atomicStore(?*Node, &node.next_opt, null, .Monotonic);
+        const prev = @atomicRmw(*Node, &self.head, .Xchg, node, .AcqRel);
+        @atomicStore(?*Node, &prev.next_opt, node, .Release);
+    }
+
+    pub fn isEmpty(self: *MPSCQueue) bool {
+        var tail = @atomicLoad(*Node, &self.tail, .Monotonic);
+        const next_opt = @atomicLoad(?*Node, &tail.next_opt, .Acquire);
+        const head = @atomicLoad(*Node, &self.head, .Acquire);
+        return tail == self.stub and next_opt == null and tail == head;
+    }
+
+    pub fn poll(self: *MPSCQueue, node: **Node) PollResult {
+        var head: *Node = undefined;
+        var tail = @atomicLoad(*Node, &self.tail, .Monotonic);
+        var next_opt = @atomicLoad(?*Node, &tail.next_opt, .Acquire);
+
+        if (tail == self.stub) {
+            if (next_opt) |next| {
+                @atomicStore(*Node, &self.tail, next, .Monotonic);
+                tail = next;
+                next_opt = @atomicLoad(?*Node, &tail.next_opt, .Acquire);
+            } else {
+                head = @atomicLoad(*Node, &self.head, .Acquire);
+                return if (tail != head) .Retry else .Empty;
+            }
+        }
+
+        if (next_opt) |next| {
+            @atomicStore(*Node, &self.tail, next, .Monotonic);
+            node.* = tail;
+            return .Item;
+        }
+
+        head = @atomicLoad(*Node, &self.head, .Acquire);
+        if (tail != head) {
+            return .Retry;
+        }
+
+        self.push(self.stub);
+
+        next_opt = @atomicLoad(?*Node, &tail.next_opt, .Acquire);
+        if (next_opt) |next| {
+            @atomicStore(*Node, &self.tail, next, .Monotonic);
+            node.* = tail;
+            return .Item;
+        }
+
+        return .Retry;
+    }
+
+    pub fn pop(self: *MPSCQueue) ?*Node {
+        var result = PollResult.Retry;
+        var node: *Node = undefined;
+
+        while (result == .Retry) {
+            result = self.poll(&node);
+            if (result == .Empty) {
+                return null;
+            }
+        }
+
+        return node;
+    }
+
+    pub fn getNext(self: *MPSCQueue, prev: *Node) ?*Node {
+        var next_opt = @atomicLoad(?*Node, &prev.next_opt, .Acquire);
+
+        if (next_opt) |next| {
+            if (next == self.stub) {
+                next_opt = @atomicLoad(?*Node, &next.next_opt, .Acquire);
+            }
+        }
+
+        return next_opt;
+    }
+};
+
 // Big endian isn't supported on this
 pub const PacketWriter = struct {
     index: u16 = 0,
@@ -15,7 +109,7 @@ pub const PacketWriter = struct {
 
     pub fn updateLength(self: *PacketWriter) void {
         const buf = self.buffer[self.length_index .. self.length_index + 2];
-        const len = self.index - self.length_index;
+        const len = self.index - self.length_index - 2;
         @memcpy(buf, std.mem.asBytes(&len));
     }
 
@@ -47,18 +141,15 @@ pub const PacketWriter = struct {
             switch (type_info.Struct.layout) {
                 .Auto, .Extern => {
                     inline for (type_info.Struct.fields) |field| {
-                        const byte_size = (@bitSizeOf(field.type) + 7) / 8;
-                        const buf = self.buffer[self.index .. self.index + byte_size];
-                        self.index += byte_size;
-                        @memcpy(buf, @field(value, field.name));
+                        self.write(@field(value, field.name));
                     }
-                    return value;
+                    return;
                 },
                 .Packed => {}, // will be handled below, packed structs are just ints
             }
         }
 
-        const byte_size = (@bitSizeOf(T) + 7) / 8;
+        const byte_size = @sizeOf(T);
         const buf = self.buffer[self.index .. self.index + byte_size];
         self.index += byte_size;
         @memcpy(buf, std.mem.asBytes(&value));
@@ -69,12 +160,25 @@ pub const PacketWriter = struct {
 pub const PacketReader = struct {
     index: u16 = 0,
     buffer: []u8 = undefined,
+    fba: std.heap.FixedBufferAllocator = undefined,
     size: usize = 0,
+
+    pub fn reset(self: *PacketReader) void {
+        self.index = 0;
+        self.fba.reset();
+    }
 
     pub fn read(self: *PacketReader, comptime T: type) T {
         const type_info = @typeInfo(T);
         if (type_info == .Pointer or type_info == .Array) {
-            @compileError("PacketReader.read() does not support slices or arrays. Use PacketReader.readArray() instead");
+            const ChildType = if (type_info == .Array) type_info.Array.child else type_info.Pointer.child;
+            const len = self.read(u16);
+            var ret = self.fba.allocator().alloc(ChildType, len) catch unreachable;
+            for (0..len) |i| {
+                ret[i] = self.read(ChildType);
+            }
+
+            return ret;
         }
 
         if (type_info == .Struct) {
@@ -82,48 +186,21 @@ pub const PacketReader = struct {
                 .Auto, .Extern => {
                     var value: T = undefined;
                     inline for (type_info.Struct.fields) |field| {
-                        const byte_size = (@bitSizeOf(field.type) + 7) / 8;
-                        const next_idx = self.index + byte_size;
-                        if (next_idx > self.size)
-                            std.debug.panic("Buffer attempted to read out of bounds", .{});
-                        const buf = self.buffer[self.index..next_idx];
-                        self.index += byte_size;
-                        @field(value, field.name) = std.mem.bytesToValue(field.type, buf[0..byte_size]);
+                        @field(value, field.name) = self.read(field.type);
                     }
                     return value;
                 },
-                .Packed => {}, // will be handled below, packed structs are just ints
+                .Packed => {},
             }
         }
 
-        const byte_size = (@bitSizeOf(T) + 7) / 8;
-
+        const byte_size = @sizeOf(T);
         const next_idx = self.index + byte_size;
         if (next_idx > self.size)
             std.debug.panic("Buffer attempted to read out of bounds", .{});
         var buf = self.buffer[self.index..next_idx];
         self.index += byte_size;
         return std.mem.bytesToValue(T, buf[0..byte_size]);
-    }
-
-    pub fn readArray(self: *PacketReader, comptime T: type) []align(1) T {
-        const byte_size = (@bitSizeOf(T) + 7) / 8 * self.read(u16);
-        const next_idx = self.index + byte_size;
-        if (next_idx > self.size)
-            std.debug.panic("Buffer attempted to read out of bounds", .{});
-        const buf = self.buffer[self.index..next_idx];
-        self.index += byte_size;
-        return std.mem.bytesAsSlice(T, buf);
-    }
-
-    // don't use this, it's only for the stat reader.
-    // you can't rely on the array preserving its integrity since the buffer gets overwrriten each accept
-    pub fn readArrayMut(self: *PacketReader, comptime T: type) []align(1) T {
-        const byte_size = (@bitSizeOf(T) + 7) / 8 * self.read(u16);
-        var buf = self.buffer[self.index .. self.index + byte_size];
-        _ = &buf;
-        self.index += byte_size;
-        return std.mem.bytesAsSlice(T, buf);
     }
 };
 
