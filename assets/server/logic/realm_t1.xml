@@ -1,72 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Behaviors>
 	<Behavior id="Crocodile">
-		<Follow speed="0.6" acquireRange="9" range="2"/>
-		<Wander speed="0.5"/>
+		<Follow speed="3.0" acquireRange="9" range="2"/>
+		<Wander speed="2.5"/>
 		<Shoot radius="16" count="3" shootAngle="12" projectileIndex="0" cooldown="600"/>
 		<!--<AoeAttack radius="3" damage="80" cooldown="600" effect="Slowed" effectDuration="500" color="0x01361f"/>-->
 		<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Spike Ball">
-		<Wander speed="0.5"/>
+		<Wander speed="2.5"/>
 		<Shoot radius="16" count="5" shootAngle="72" projectileIndex="0" cooldown="400"/>
 		<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Goblin Grunt">
-		<Charge speed="1.33" range="9" cooldown="1000"/>
-		<Wander speed="0.33"/>
+		<Charge speed="6.0" range="9" cooldown="1000"/>
+		<Wander speed="1.65"/>
 		<Shoot radius="16" count="3" shootAngle="4" projectileIndex="0" cooldown="900"/>
 		<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Goblin Guard">
-		<Orbit speed="0.6" radius="2" acquireRange="6" target="Crocodile"/>
-		<Orbit speed="0.5" radius="2" acquireRange="6" target="Spike Ball"/>
-		<Wander speed="0.28"/>
+		<Orbit speed="3.0" radius="2" acquireRange="6" target="Crocodile"/>
+		<Orbit speed="2.5" radius="2" acquireRange="6" target="Spike Ball"/>
+		<Wander speed="1.4"/>
 		<Shoot radius="16" count="2" shootAngle="5" projectileIndex="0" cooldown="800"/>
 		<DropPortalOnDeath target="Crown Cove" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Imp">
-		<Charge speed="1.5" range="13" cooldown="400"/>
-		<Wander speed="0.42"/>
+		<Charge speed="6.0" range="13" cooldown="400"/>
+		<Wander speed="2.1"/>
 		<Shoot radius="13" count="5" shootAngle="8" projectileIndex="0" cooldown="800"/>
 		<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Living Flame">
-		<Wander speed="0.44"/>
+		<Wander speed="2.2"/>
 		<Shoot radius="16" count="7" shootAngle="51" projectileIndex="0" cooldown="200"/>
 		<Shoot radius="16" count="5" shootAngle="72" projectileIndex="0" cooldown="800"/>
 		<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Demon Mage">
-		<Orbit speed="0.77" radius="1" acquireRange="9" target="Imp"/>
-		<Wander speed="0.43"/>
+		<Orbit speed="3.85" radius="1" acquireRange="9" target="Imp"/>
+		<Wander speed="2.15"/>
 		<Shoot radius="16" count="5" shootAngle="3" projectileIndex="0" cooldown="600"/>
 		<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Demon Archer">
-		<Orbit speed="0.77" radius="1" acquireRange="9" target="Living Flame"/>
-		<Wander speed="0.43"/>
+		<Orbit speed="3.85" radius="1" acquireRange="9" target="Living Flame"/>
+		<Wander speed="2.15"/>
 		<Shoot radius="16" count="5" shootAngle="3" projectileIndex="0" cooldown="600"/>
 		<DropPortalOnDeath target="Crimson Chasm" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Jackal Warrior">
-		<Charge speed="1.5" range="13" cooldown="400"/>
-		<Wander speed="0.45"/>
+		<Charge speed="6.0" range="13" cooldown="400"/>
+		<Wander speed="2.25"/>
 		<Shoot radius="16" count="7" shootAngle="15" projectileIndex="0" cooldown="600"/>
 		<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Jackal Priest">
-		<Orbit speed="0.77" radius="1" acquireRange="9" target="Jackal Archer"/>
-		<Wander speed="0.45"/>
+		<Orbit speed="3.85" radius="1" acquireRange="9" target="Jackal Archer"/>
+		<Wander speed="2.25"/>
 		<Shoot radius="16" count="8" shootAngle="45" projectileIndex="0" cooldown="1000"/>
 		<HealEntity range="10" name="Jackal Warrior" amount="2500" cooldown="1000"/>
 		<HealEntity range="10" name="Jackal Priest" amount="2500" cooldown="1000"/>
@@ -75,15 +75,15 @@
 	</Behavior>
 
 	<Behavior id="Jackal Archer">
-		<Follow speed="0.6" duration="600" cooldown="1000"/>
-		<Wander speed="0.45"/>
+		<Follow speed="3.0" duration="600" cooldown="1000"/>
+		<Wander speed="2.5"/>
 		<Shoot radius="16" count="4" shootAngle="5" projectileIndex="0" cooldown="300"/>
 		<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
 	</Behavior>
 
 	<Behavior id="Regal Mummy">
-		<Follow speed="0.6" duration="600" cooldown="1000"/>
-		<Wander speed="0.45"/>
+		<Follow speed="3.0" duration="600" cooldown="1000"/>
+		<Wander speed="2.5"/>
 		<!--<AoeAttack radius="3" damage="150" cooldown="300" effect="Slowed" effectDuration="1000" color="0x01361f"/>-->
 		<DropPortalOnDeath target="Dusty Dune" probability="0.01"/>
 	</Behavior>
@@ -109,7 +109,7 @@
 		<!-- SJFA: spawn a few slime pieces, switch between attacking and savage attacking -->
 		<State id="schijfactiviteit">
 			<HpLessTransition threshold="0.7" targetState="mass assault"/>
-			<Wander speed="0.7"/>
+			<Wander speed="3.5"/>
 			<Spawn children="Slime Piece" maxChildren="3" initialSpawn="0" cooldown="1500"/>
 			<State id="sjfa. 1">
 				<Shoot radius="10" projectileIndex="0" shootAngle="8" count="5" cooldown="900"/>
@@ -126,7 +126,7 @@
 			<State id="mass assault">
 				<HpLessTransition threshold="0.5" targetState="Duplication"/>
 				<ConditionalEffect effect="Armored" duration="6500"/>
-				<Wander speed="0.3"/>
+				<Wander speed="1.5"/>
 				<Spawn children="Slime Piece" maxChildren="5" initialSpawn="0" cooldown="800"/>
 				<State id="Charge up">
 					<StayCloseToSpawn speed="1" range="1"/>
@@ -142,7 +142,7 @@
 
 		<!-- <50% HP. Divide self -->
 		<State id="Duplication">
-			<Wander speed="0.2"/>
+			<Wander speed="1.0"/>
 			<ConditionalEffect effect="Invulnerable" perm="true"/>
 			<Flash color="0x00ff00" flashPeriod="1" flashRepeats="3"/>
 			<Taunt text="...|... ...|... ... ..."/>
@@ -151,7 +151,7 @@
 		</State>
 		<!-- Rage: main enemy (absorb all slimes nearby) and grow mad -->
 		<State id="eat">
-			<Wander speed="0.2"/>
+			<Wander speed="1.0"/>
 			<State id="growth">
 				<Flash color="0xff0000" flashPeriod="1" flashRepeats="2"/>
 				<OrderOnce children="Slime Piece" range="20" targetState="feed"/>
@@ -165,7 +165,7 @@
 		</State>
 		<State id="biannual kurdistani extremist meeting">
 			<ConditionalEffect effect="Invulnerable" duration="0"/>
-			<Wander speed="0.45"/>
+			<Wander speed="2.5"/>
 			<Shoot radius="10" projectileIndex="0" shootAngle="10" count="7" cooldown="1100"/>
 		</State>
 		<!-- drops -->
@@ -177,7 +177,7 @@
 		<ScaleHP amountPerPlayer="2500" amountPerc="0.05" dist="20" inheritHpScaleState="true" saveHpScaleState="false"/>
 		<!-- starts at <50% HP -->
 		<State id="Duplication">
-			<Wander speed="0.2"/>
+			<Wander speed="1.0"/>
 			<ConditionalEffect effect="Invulnerable" perm="true"/>
 			<Flash color="0x00ff00" flashPeriod="1" flashRepeats="3"/>
 			<Taunt text="...|... ...|... ... ..."/>
@@ -185,7 +185,7 @@
 		</State>
 		<!-- Rage: clone enemy (absorb all slimes nearby) and grow mad -->
 		<State id="eat">
-			<Wander speed="0.2"/>
+			<Wander speed="1.0"/>
 			<State id="growth">
 				<Flash color="0x00ff00" flashPeriod="1" flashRepeats="2"/>
 				<ChangeSize rate="8" target="210"/> <!-- 1600 ms -->
@@ -197,7 +197,7 @@
 		</State>
 		<State id="biannual kurdistani extremist meeting">
 			<ConditionalEffect effect="Invulnerable" duration="0"/>
-			<Wander speed="0.45"/>
+			<Wander speed="2.5"/>
 			<Shoot radius="15" projectileIndex="1" fixedAngle="5" count="3" rotateAngle="10" cooldown="200" cooldownOffset="1000"/>
 		</State>
 	</Behavior>
@@ -207,23 +207,23 @@
 		<ScaleHP amountPerPlayer="400" dist="15"/>
 		<Shoot radius="8" count="1" shootAngle="0" projectileIndex="0" cooldown="800"/>
 		<State id="default">
-			<Protect protectee="Giant Slime" speed="0.7" acquireRange="15" protectionRange="12" reprotectRange="12"/>
-			<Wander speed="0.6"/>
+			<Protect protectee="Giant Slime" speed="3.5" acquireRange="15" protectionRange="12" reprotectRange="12"/>
+			<Wander speed="3.0"/>
 			<TimedTransition targetState="experience" time="4500"/>
 		</State>
 		<State id="experience">
-			<Protect protectee="Giant Slime" speed="0.7" acquireRange="15" protectionRange="1.5" reprotectRange="1.5"/>
-			<Wander speed="0.6"/>
+			<Protect protectee="Giant Slime" speed="3.5" acquireRange="15" protectionRange="1.5" reprotectRange="1.5"/>
+			<Wander speed="3.0"/>
 			<Shoot radius="8" count="2" shootAngle="14" projectileIndex="0" cooldown="1200"/>
 			<TimedTransition targetState="default" time="6000"/>
 		</State>
 		<State id="feed">
-			<Protect protectee="Giant Slime" speed="0.7" acquireRange="15" protectionRange="0.5" reprotectRange="0.5"/>
+			<Protect protectee="Giant Slime" speed="3.5" acquireRange="15" protectionRange="0.5" reprotectRange="0.5"/>
 			<EntityWithinTransition dist="1.5" entity="Giant Slime" targetState="perish"/>
 		</State>
 		<State id="perish">
 			<Flash color="0xffff00" flashRepeats="2" flashPeriod="1"/>
-			<Protect protectee="Giant Slime" speed="0.7" acquireRange="15" protectionRange="1.5" reprotectRange="1.5"/>
+			<Protect protectee="Giant Slime" speed="3.5" acquireRange="15" protectionRange="1.5" reprotectRange="1.5"/>
 			<Wander speed="0.2"/>
 			<TimedTransition time="2000" targetState="for real now"/>
 		</State>
@@ -233,6 +233,6 @@
 	</Behavior>
 
 	<Behavior id="Forest Firefly">
-		<Wander speed="0.5"/>
+		<Wander speed="2.5"/>
 	</Behavior>
 </Behaviors>
