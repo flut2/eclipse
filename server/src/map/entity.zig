@@ -24,9 +24,21 @@ pub const Entity = struct {
             std.log.err("Could not find props for entity with type 0x{x}", .{self.en_type});
             return;
         };
+
+        if (self.props.occupy_square) {
+            const ux: u32 = @intFromFloat(self.x);
+            const uy: u32 = @intFromFloat(self.y);
+            self.world.tiles[uy * self.world.w + ux].occupied = true;
+        }
     }
 
     pub fn deinit(self: *Entity) !void {
+        if (self.props.occupy_square) {
+            const ux: u32 = @intFromFloat(self.x);
+            const uy: u32 = @intFromFloat(self.y);
+            self.world.tiles[uy * self.world.w + ux].occupied = false;
+        }
+
         self.allocator.free(self.stats_writer.buffer);
     }
 
@@ -42,7 +54,7 @@ pub const Entity = struct {
 
         stat_util.write(writer, stat_cache, self.allocator, .x, self.x);
         stat_util.write(writer, stat_cache, self.allocator, .y, self.y);
-        
+
         return writer.buffer[0..writer.index];
     }
 };

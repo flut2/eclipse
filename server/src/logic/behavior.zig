@@ -101,8 +101,7 @@ pub const Wander = struct {
 
         const fdt: f32 = @floatFromInt(dt);
         const dist = self.speed * (fdt / std.time.us_per_s);
-        host.x += dist * @cos(storage.move_angle);
-        host.y += dist * @sin(storage.move_angle);
+        host.move(host.x + dist * @cos(storage.move_angle), host.y + dist * @sin(storage.move_angle));
         storage.rem_dist -= dist;
     }
 

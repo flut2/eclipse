@@ -56,6 +56,15 @@ pub const Enemy = struct {
         self.allocator.free(self.stats_writer.buffer);
     }
 
+    pub fn move(self: *Enemy, x: f32, y: f32) void {
+        const ux: u32 = @intFromFloat(x - 0.5);
+        const uy: u32 = @intFromFloat(y - 0.5);
+        if (!self.world.tiles[uy * self.world.w + ux].occupied) {
+            self.x = x;
+            self.y = y;
+        }
+    }
+
     pub fn delete(self: *Enemy, time: i64) !void {
         if (self.active_state) |s| try s.exit(self, time);
         try self.world.remove(Enemy, self);
