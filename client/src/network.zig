@@ -73,6 +73,27 @@ const C2SPacketId = enum(u8) {
     use_ability = 33,
 };
 
+const S2CPacketId = enum(u8) {
+    unknown = 0,
+    create_success = 1,
+    text = 2,
+    server_player_shoot = 3,
+    damage = 4,
+    update = 5,
+    notification = 6,
+    new_tick = 7,
+    show_effect = 8,
+    goto = 9,
+    inv_result = 10,
+    ping = 11,
+    map_info = 12,
+    death = 13,
+    aoe = 15,
+    ally_shoot = 19,
+    enemy_shoot = 20,
+    failure = 28,
+};
+
 // All packets without variable length fields (like slices) should be packed.
 // This allows us to directly copy the struct into the buffer
 pub const C2SPacket = union(C2SPacketId) {
@@ -120,27 +141,6 @@ pub const C2SPacket = union(C2SPacketId) {
         eclipse_map: []const u8,
     },
     use_ability: struct { time: i64, ability_type: u8, data: []u8 },
-};
-
-const S2CPacketId = enum(u8) {
-    unknown = 0,
-    create_success = 1,
-    text = 2,
-    server_player_shoot = 3,
-    damage = 4,
-    update = 5,
-    notification = 6,
-    new_tick = 7,
-    show_effect = 8,
-    goto = 9,
-    inv_result = 10,
-    ping = 11,
-    map_info = 12,
-    death = 13,
-    aoe = 15,
-    ally_shoot = 19,
-    enemy_shoot = 20,
-    failure = 28,
 };
 
 pub const Server = struct {
@@ -369,7 +369,7 @@ pub const Server = struct {
             srv.reader.reset();
             srv.reader.size = size;
 
-            while (srv.reader.index < size - 3) {
+            while (srv.reader.index <= size - 3) {
                 const len = srv.reader.read(u16);
                 if (len > size - srv.reader.index)
                     return .rearm;

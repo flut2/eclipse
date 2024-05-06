@@ -312,7 +312,7 @@ pub const Client = struct {
             cli.reader.reset();
             cli.reader.size = size;
 
-            while (cli.reader.index < size - 3) {
+            while (cli.reader.index <= size - 3) {
                 const len = cli.reader.read(u16);
                 if (len > size - cli.reader.index)
                     return .rearm;
