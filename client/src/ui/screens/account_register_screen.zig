@@ -273,15 +273,18 @@ pub const AccountRegisterScreen = struct {
 
     pub fn update(_: *AccountRegisterScreen, _: i64, _: f32) !void {}
 
-    fn register(allocator: std.mem.Allocator, email: []const u8, password: []const u8, username: []const u8) !bool {
+    fn register(allocator: std.mem.Allocator, email: []const u8, password: []const u8, name: []const u8) !bool {
         var data = std.StringHashMap([]const u8).init(allocator);
+        try data.put("name", name);
+        try data.put("hwid", "hello");
         try data.put("email", email);
         try data.put("password", password);
-        try data.put("username", username);
         defer data.deinit();
 
         const response = try requests.sendRequest(settings.app_engine_uri ++ "account/register", data);
         defer requests.freeResponse(response);
+
+        std.log.err("register {s}", .{response});
 
         if (std.mem.eql(u8, response, "<RequestError/>")) {
             dialog.showDialog(.text, .{
@@ -328,11 +331,7 @@ pub const AccountRegisterScreen = struct {
         main.current_account.email = try allocator.dupe(u8, email);
         main.current_account.password = try allocator.dupe(u8, password);
         main.current_account.admin = verify_root.elementExists("Admin");
-
-        const guild_node = verify_root.findChild("Guild");
-        main.current_account.guild_name = try guild_node.?.getValueAlloc("Name", allocator, "");
-        main.current_account.guild_rank = try guild_node.?.getValueInt("Rank", u8, 0);
-
+        
         var list_data = std.StringHashMap([]const u8).init(allocator);
         try list_data.put("email", email);
         try list_data.put("password", password);

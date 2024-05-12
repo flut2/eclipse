@@ -92,7 +92,7 @@ const S2CPacketId = enum(u8) {
 // This allows us to directly copy the struct into the buffer
 pub const S2CPacket = union(S2CPacketId) {
     unknown: packed struct {},
-    create_success: packed struct { player_id: i32, char_id: i32 },
+    create_success: packed struct { player_id: i32, char_id: u32 },
     text: struct {
         name: []const u8,
         obj_id: i32,
@@ -178,7 +178,7 @@ pub const Client = struct {
     needs_shutdown: bool = false,
     world: *World = undefined,
     acc_id: u32 = std.math.maxInt(u32),
-    char_id: i16 = -1,
+    char_id: u32 = std.math.maxInt(u32),
     plr_id: i32 = -1,
 
     pub fn init(
@@ -478,8 +478,8 @@ pub const Client = struct {
                     .bubble_time = 0,
                     .recipient = "",
                     .text = text,
-                    .name_color = if (player.admin) 0xF2CA46 else 0xEBEBEB,
-                    .text_color = if (player.admin) 0xD4AF37 else 0xB0B0B0,
+                    .name_color = if (player.rank >= 80) 0xF2CA46 else 0xEBEBEB,
+                    .text_color = if (player.rank >= 80) 0xD4AF37 else 0xB0B0B0,
                 } });
             }
         }
@@ -525,6 +525,46 @@ pub const Client = struct {
         // const use_type = reader.read(game_data.UseType);
     }
 
+    inline fn createChar(player: *Player, char_type: u16, skin_type: u16, timestamp: u64) !void {
+        if (game_data.classes.get(char_type)) |class| {
+            const max_slots = try player.acc_data.get(.max_char_slots, u32);
+            const alive_ids = player.acc_data.get(.alive_char_ids, []const u32) catch &[0]u32{};
+            if (alive_ids.len >= max_slots)
+                return error.SlotsFull;
+
+            const next_char_id = try player.acc_data.get(.next_char_id, u32);
+            player.char_data.char_id = next_char_id;
+            try player.acc_data.set(.next_char_id, u32, next_char_id + 1);
+
+            const new_alive_ids = try std.mem.concat(player.client.allocator, u32, &.{ alive_ids, &[_]u32{next_char_id} });
+            try player.acc_data.set(.alive_char_ids, []u32, new_alive_ids);
+
+            try player.char_data.set(.char_type, u16, char_type);
+            try player.char_data.set(.skin_type, u16, skin_type);
+            try player.char_data.set(.create_timestamp, u64, timestamp);
+            try player.char_data.set(.aether, u8, 1);
+
+            var stats: [13]i32 = undefined;
+            stats[Player.health_stat] = class.health;
+            stats[Player.mana_stat] = class.mana;
+            stats[Player.strength_stat] = class.strength;
+            stats[Player.wit_stat] = class.wit;
+            stats[Player.defense_stat] = class.defense;
+            stats[Player.resistance_stat] = class.resistance;
+            stats[Player.speed_stat] = class.speed;
+            stats[Player.stamina_stat] = class.stamina;
+            stats[Player.intelligence_stat] = class.intelligence;
+            stats[Player.penetration_stat] = class.penetration;
+            stats[Player.piercing_stat] = class.piercing;
+            stats[Player.haste_stat] = class.haste;
+            stats[Player.tenacity_stat] = class.tenacity;
+            try player.char_data.set(.hp, i32, class.health);
+            try player.char_data.set(.mp, i32, class.mana);
+            try player.char_data.set(.stats, [13]i32, stats);
+            try player.char_data.set(.items, [22]u16, class.equipment[0..22].*);
+        } else return error.InvalidCharType;
+    }
+
     fn handleHello(self: *Client) void {
         var reader = &self.reader;
         const build_ver = reader.read([]u8);
@@ -535,31 +575,42 @@ pub const Client = struct {
 
         const email = reader.read([]u8);
         const password = reader.read([]u8);
+
+        const HasherError = std.crypto.pwhash.HasherError;
         const acc_id = db.login(email, password) catch |e| {
             switch (e) {
                 error.NoData => self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Invalid email" } }),
-                error.InvalidCredentials => self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Invalid credentials" } }),
+                HasherError.PasswordVerificationFailed => self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Invalid credentials" } }),
                 else => self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Unknown error" } }),
             }
             return;
         };
         self.acc_id = acc_id;
 
-        const char_id = reader.read(i16);
-        self.char_id = char_id;
-        const class_type = reader.read(u16);
+        const char_id: u32 = @intCast(reader.read(i16));
+        const char_type = reader.read(u16);
         const skin_type = reader.read(u16);
-        _ = class_type;
-        _ = skin_type;
+
+        var player: Player = .{
+            .acc_data = db.AccountData.init(self.allocator, acc_id),
+            .char_data = db.CharacterData.init(self.allocator, acc_id, char_id),
+            .client = self,
+        };
+
+        const timestamp: u64 = @intCast(std.time.milliTimestamp());
+        if (char_type != 0) {
+            createChar(&player, char_type, skin_type, timestamp) catch {
+                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Character creation failed" } });
+                return;
+            };
+        }
+
+        self.char_id = player.char_data.char_id;
+        player.char_data.set(.create_timestamp, u64, timestamp) catch {}; // doesn't matter really
 
         self.world = maps.worlds.getPtr(maps.retrieve_id) orelse {
             self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Retrieve does not exist" } });
             return;
-        };
-        var player: Player = .{
-            .acc_data = db.AccountData.init(self.allocator, acc_id),
-            .char_data = db.CharacterData.init(self.allocator, acc_id, @intCast(char_id)),
-            .client = self,
         };
 
         {
@@ -634,6 +685,10 @@ pub const Client = struct {
                 self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player does not exist" } });
                 return;
             };
+            player.save() catch {
+                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player save failed" } });
+                return;
+            };
 
             self.world.remove(Player, player) catch {
                 self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Removing player from map failed" } });
@@ -651,7 +706,7 @@ pub const Client = struct {
 
         var new_player: Player = .{
             .acc_data = db.AccountData.init(self.allocator, self.acc_id),
-            .char_data = db.CharacterData.init(self.allocator, self.acc_id, @intCast(self.char_id)),
+            .char_data = db.CharacterData.init(self.allocator, self.acc_id, self.char_id),
             .client = self,
         };
 
@@ -792,6 +847,10 @@ pub const Client = struct {
                 self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player does not exist" } });
                 return;
             };
+            player.save() catch {
+                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player save failed" } });
+                return;
+            };
 
             self.world.remove(Player, player) catch {
                 self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Removing player from map failed" } });
@@ -806,7 +865,7 @@ pub const Client = struct {
 
         var new_player: Player = .{
             .acc_data = db.AccountData.init(self.allocator, self.acc_id),
-            .char_data = db.CharacterData.init(self.allocator, self.acc_id, @intCast(self.char_id)),
+            .char_data = db.CharacterData.init(self.allocator, self.acc_id, self.char_id),
             .client = self,
         };
 

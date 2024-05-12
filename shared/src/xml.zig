@@ -305,12 +305,6 @@ pub const DocWriter = struct {
             return error.InvalidElement;
     }
 
-    pub fn writeIntElement(self: DocWriter, allocator: std.mem.Allocator, elem_name: [:0]const u8, elem_content: anytype) !void {
-        const string_content = try std.fmt.allocPrintZ(allocator, "{d}", .{elem_content});
-        if (c.xmlTextWriterWriteElement(self.impl, elem_name, string_content) == -1)
-            return error.InvalidElement;
-    }
-
     pub fn endElement(self: DocWriter) !void {
         if (c.xmlTextWriterEndElement(self.impl) == -1)
             return error.InvalidElement;

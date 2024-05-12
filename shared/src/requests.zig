@@ -29,17 +29,19 @@ pub fn sendRequest(uri: []const u8, values: std.StringHashMap([]const u8)) ![]u8
 
     var mod_uri_writer = mod_uri.writer();
     var iter = values.iterator();
+    var idx: usize = 0;
     _ = try mod_uri_writer.writeAll(uri);
     _ = try mod_uri_writer.write("?");
-    while (iter.next()) |entry| {
+    while (iter.next()) |entry| : (idx += 1) {
         try mod_uri_writer.writeAll(entry.key_ptr.*);
         try mod_uri_writer.writeAll("=");
         try mod_uri_writer.writeAll(entry.value_ptr.*);
-        if (iter.index < values.count()) {
+        if (idx < values.count() - 1) {
             try mod_uri_writer.writeAll("&");
         }
     }
 
+    std.log.err("sending {s}", .{mod_uri.items});
     var req = client.open(.POST, try std.Uri.parse(mod_uri.items), .{ .server_header_buffer = header_buffer }) catch |e| {
         std.log.err("Could not send {s}: {}", .{ uri, e });
         return @constCast("<RequestError/>"); // inelegant is an understatement

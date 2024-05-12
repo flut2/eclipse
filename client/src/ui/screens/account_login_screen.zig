@@ -275,10 +275,6 @@ fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) 
     main.current_account.password = try allocator.dupe(u8, password);
     main.current_account.admin = verify_root.elementExists("Admin");
 
-    const guild_node = verify_root.findChild("Guild");
-    main.current_account.guild_name = try guild_node.?.getValueAlloc("Name", allocator, "");
-    main.current_account.guild_rank = try guild_node.?.getValueInt("Rank", u8, 0);
-
     var list_data = std.StringHashMap([]const u8).init(allocator);
     try list_data.put("email", email);
     try list_data.put("password", password);

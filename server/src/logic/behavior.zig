@@ -9,16 +9,19 @@ const Enemy = @import("../map/enemy.zig").Enemy;
 pub const BehaviorTag = enum {
     wander,
     shoot,
+    stay_close_to_spawn,
 };
 
 pub const BehaviorStorage = union(BehaviorTag) {
     wander: WanderStorage,
     shoot: ShootStorage,
+    stay_close_to_spawn: StayCloseToSpawnStorage
 };
 
 pub const Behavior = union(BehaviorTag) {
     wander: Wander,
     shoot: Shoot,
+    stay_close_to_spawn: StayCloseToSpawn,
 
     pub fn tick(self: *Behavior, host: *Enemy, time: i64, dt: i64) !void {
         switch (self.*) {
@@ -83,6 +86,45 @@ pub const Behavior = union(BehaviorTag) {
     pub fn deinit(self: Behavior, allocator: std.mem.Allocator) void {
         _ = self;
         _ = allocator;
+    }
+};
+
+const StayCloseToSpawnStorage = struct { x: f32 = 0.0, y: f32 = 0.0 };
+pub const StayCloseToSpawn = struct {
+    speed: f32,
+    range: f32, // note: was an int in C#
+
+    pub fn entry(_: StayCloseToSpawn, host: *Enemy, _: i64, storage: *StayCloseToSpawnStorage) !void {
+        storage.x = host.x;
+        storage.y = host.y;
+    }
+    pub fn exit(_: StayCloseToSpawn, _: *Enemy, _: i64, _: *StayCloseToSpawnStorage) !void {}
+
+    pub fn tick(self: StayCloseToSpawn, host: *Enemy, _: i64, dt: i64, storage: *StayCloseToSpawnStorage) !void {
+        const dx = storage.x - host.x;
+        const dy = storage.y - host.y;
+        const mag2 = dx * dx + dy * dy;
+
+        if (mag2 <= self.range * self.range) return;
+        // if (mag2 == 0) return; // TODO epsilon check instead
+
+        const mag = @sqrt(mag2);
+        const fdt: f32 = @floatFromInt(dt);
+        const dist = self.speed * (fdt / std.time.us_per_s);
+
+        if (mag >= dist) {
+            host.move(storage.x, storage.y);
+        } else {
+            const c = dist / mag;
+            host.move(host.x + dx * c, host.y + dy * c);
+        }
+    }
+
+    pub fn parse(node: xml.Node, _: std.mem.Allocator) !Behavior {
+        return .{ .stay_close_to_spawn = .{
+            .speed = try node.getAttributeFloat("speed", f32, 0.0),
+            .range = try node.getAttributeFloat("range", f32, 0.0),
+        } };
     }
 };
 

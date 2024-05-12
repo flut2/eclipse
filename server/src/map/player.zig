@@ -11,19 +11,19 @@ const World = @import("../world.zig").World;
 const Client = client.Client;
 
 pub const Player = struct {
-    const health_stat = 0;
-    const mana_stat = 1;
-    const strength_stat = 2;
-    const wit_stat = 3;
-    const defense_stat = 4;
-    const resistance_stat = 5;
-    const speed_stat = 6;
-    const stamina_stat = 7;
-    const intelligence_stat = 8;
-    const penetration_stat = 9;
-    const piercing_stat = 10;
-    const haste_stat = 11;
-    const tenacity_stat = 12;
+    pub const health_stat = 0;
+    pub const mana_stat = 1;
+    pub const strength_stat = 2;
+    pub const wit_stat = 3;
+    pub const defense_stat = 4;
+    pub const resistance_stat = 5;
+    pub const speed_stat = 6;
+    pub const stamina_stat = 7;
+    pub const intelligence_stat = 8;
+    pub const penetration_stat = 9;
+    pub const piercing_stat = 10;
+    pub const haste_stat = 11;
+    pub const tenacity_stat = 12;
 
     obj_id: i32 = -1,
     acc_data: db.AccountData = undefined,
@@ -33,11 +33,10 @@ pub const Player = struct {
     y: f32 = -1.0,
     player_type: u16 = 0xFFFF,
     name: []const u8 = &[0]u8{},
-    admin: bool = false,
-    rank: u16 = 0,
+    rank: u8 = 0,
     aether: u8 = 1,
     hp: i32 = 100,
-    mp: i16 = 0,
+    mp: i32 = 0,
     stats: [13]i32 = [_]i32{0} ** 13,
     stat_boosts: [13]i32 = [_]i32{0} ** 13,
     equips: [22]u16 = [_]u16{0xFFFF} ** 22,
@@ -65,8 +64,8 @@ pub const Player = struct {
         self.drops = std.ArrayList(i32).init(allocator);
         self.stats_writer.buffer = try allocator.alloc(u8, 256);
 
-        self.name = try allocator.dupe(u8, try self.acc_data.get("name"));
-        self.player_type = try self.char_data.getInt(u16, "charType");
+        self.name = try allocator.dupe(u8, try self.acc_data.get(.name, []const u8));
+        self.player_type = try self.char_data.get(.char_type, u16);
         self.props = game_data.obj_type_to_props.getPtr(self.player_type) orelse {
             std.log.err("Could not find props for player with type 0x{x}", .{self.player_type});
             return;
@@ -82,25 +81,13 @@ pub const Player = struct {
         self.x = @as(f32, @floatFromInt(rand_point.x)) + 0.5;
         self.y = @as(f32, @floatFromInt(rand_point.y)) + 0.5;
 
-        self.admin = try self.acc_data.getInt(u8, "admin") == 1;
-        self.rank = self.acc_data.getInt(u16, "rank") catch 0;
-        self.aether = self.char_data.getInt(u8, "aether") catch 1;
-        self.hp = try self.char_data.getInt(i16, "hp");
-        self.mp = try self.char_data.getInt(i16, "mp");
+        self.rank = try self.acc_data.get(.rank, u8);
+        self.aether = try self.char_data.get(.aether, u8);
+        self.hp = try self.char_data.get(.hp, i32);
+        self.mp = try self.char_data.get(.mp, i32);
 
-        const stats_data = try self.char_data.get("stats");
-        const StatsType = @typeInfo(@TypeOf(self.stats)).Array.child;
-        const stat_size = @sizeOf(StatsType);
-        for (0..self.stats.len) |i| {
-            self.stats[i] = std.mem.bytesToValue(StatsType, stats_data[i * stat_size .. i * stat_size + stat_size]);
-        }
-
-        const equips_data = try self.char_data.get("items");
-        const EquipType = @typeInfo(@TypeOf(self.equips)).Array.child;
-        const equip_size = @sizeOf(EquipType);
-        for (0..self.equips.len) |i| {
-            self.equips[i] = std.mem.bytesToValue(EquipType, equips_data[i * equip_size .. i * equip_size + equip_size]);
-        }
+        self.stats = try self.char_data.get(.stats, [13]i32);
+        self.equips = try self.char_data.get(.items, [22]u16);
 
         self.recalculateItems();
     }
@@ -117,9 +104,17 @@ pub const Player = struct {
         self.allocator.free(self.stats_writer.buffer);
     }
 
+    pub fn save(self: *Player) !void {
+        try self.char_data.set(.hp, i32, self.hp);
+        try self.char_data.set(.mp, i32, self.mp);
+        try self.char_data.set(.aether, u8, self.aether);
+        try self.char_data.set(.items, [22]u16, self.equips);
+        try self.char_data.set(.stats, [13]i32, self.stats);
+    }
+
     pub fn death(self: *Player, killer: []const u8) !void {
         // todo reconnect to Retrieve
-        if (self.admin)
+        if (self.rank >= 80)
             return;
 
         self.client.queuePacket(.{ .death = .{

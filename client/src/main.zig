@@ -38,8 +38,6 @@ pub const AccountData = struct {
     email: []const u8 = "",
     password: []const u8 = "",
     admin: bool = false,
-    guild_name: []const u8 = "",
-    guild_rank: u8 = 0,
 };
 
 pub var current_account = AccountData{};

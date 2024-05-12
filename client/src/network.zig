@@ -503,7 +503,7 @@ pub const Server = struct {
     fn handleCreateSuccess(self: *Server) void {
         var reader = &self.reader;
         map.local_player_id = reader.read(i32);
-        const char_id = reader.read(i32);
+        const char_id = reader.read(u32);
 
         if (settings.log_packets == .all or settings.log_packets == .s2c or settings.log_packets == .s2c_non_tick or settings.log_packets == .all_non_tick)
             std.log.debug("Recv - CreateSuccess: player_id={d}, char_id={d}", .{ map.local_player_id, char_id });
