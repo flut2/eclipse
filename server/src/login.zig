@@ -62,7 +62,7 @@ fn handleAccountRegister(req: *httpz.Request, res: *httpz.Response) !void {
     defer login_data.deinit();
 
     email_exists: {
-        _ = login_data.get(.account_id, u32) catch |e| {
+        _ = login_data.get(.account_id) catch |e| {
             if (e == error.NoData) break :email_exists;
         };
 
@@ -82,7 +82,7 @@ fn handleAccountRegister(req: *httpz.Request, res: *httpz.Response) !void {
         res.body = "<Error>Database failure</Error>";
         return;
     };
-    try login_data.set(.account_id, u32, acc_id);
+    try login_data.set(.{ .account_id = acc_id });
     try names.set(name, acc_id);
 
     var out: [256]u8 = undefined;
@@ -92,30 +92,29 @@ fn handleAccountRegister(req: *httpz.Request, res: *httpz.Response) !void {
         .params = scrypt.Params.interactive,
         .encoding = .crypt,
     }, &out);
-    try login_data.set(.hashed_password, []const u8, hashed_pass);
+    try login_data.set(.{ .hashed_password = hashed_pass });
 
     var acc_data = db.AccountData.init(res.arena, acc_id);
     defer acc_data.deinit();
 
     const timestamp: u64 = @intCast(std.time.milliTimestamp());
-    const empty_char_ids: []u32 = &[0]u32{};
     var ip_buf: [39]u8 = undefined;
     var stream = std.io.fixedBufferStream(&ip_buf);
     try req.address.format("", .{}, stream.writer());
 
-    try acc_data.set(.email, []const u8, email);
-    try acc_data.set(.name, []const u8, name);
-    try acc_data.set(.hwid, []const u8, hwid);
-    try acc_data.set(.ip, []const u8, stream.getWritten());
-    try acc_data.set(.register_timestamp, u64, timestamp);
-    try acc_data.set(.last_login_timestamp, u64, timestamp);
-    try acc_data.set(.gold, u32, 0);
-    try acc_data.set(.gems, u32, 0);
-    try acc_data.set(.crowns, u32, 0);
-    try acc_data.set(.rank, u8, if (acc_id == 0) 100 else 0);
-    try acc_data.set(.next_char_id, u32, 0);
-    try acc_data.set(.alive_char_ids, []u32, empty_char_ids);
-    try acc_data.set(.max_char_slots, u32, 9);
+    try acc_data.set(.{ .email = email });
+    try acc_data.set(.{ .name = name });
+    try acc_data.set(.{ .hwid = hwid });
+    try acc_data.set(.{ .ip = stream.getWritten() });
+    try acc_data.set(.{ .register_timestamp = timestamp });
+    try acc_data.set(.{ .last_login_timestamp = timestamp });
+    try acc_data.set(.{ .gold = 0 });
+    try acc_data.set(.{ .gems = 0 });
+    try acc_data.set(.{ .crowns = 0 });
+    try acc_data.set(.{ .rank = if (acc_id == 0) 100 else 0 });
+    try acc_data.set(.{ .next_char_id = 0 });
+    try acc_data.set(.{ .alive_char_ids = &[0]u32{} });
+    try acc_data.set(.{ .max_char_slots = 9 });
 
     var writer = xml.DocWriter.create();
     defer writer.deinit();
@@ -207,8 +206,8 @@ fn handleCharList(req: *httpz.Request, res: *httpz.Response) !void {
     try writer.startDocument(.{});
     try writer.startElement("Chars");
 
-    try writer.writeAttribute("nextCharId", try std.fmt.allocPrintZ(res.arena, "{d}", .{try acc_data.get(.next_char_id, u32)}));
-    try writer.writeAttribute("maxNumChars", try std.fmt.allocPrintZ(res.arena, "{d}", .{try acc_data.get(.max_char_slots, u32)}));
+    try writer.writeAttribute("nextCharId", try std.fmt.allocPrintZ(res.arena, "{d}", .{try acc_data.get(.next_char_id)}));
+    try writer.writeAttribute("maxNumChars", try std.fmt.allocPrintZ(res.arena, "{d}", .{try acc_data.get(.max_char_slots)}));
 
     // temp
     try writer.startElement("Servers");
@@ -224,7 +223,7 @@ fn handleCharList(req: *httpz.Request, res: *httpz.Response) !void {
     try writer.endElement();
     try writer.endElement();
 
-    const char_ids = acc_data.get(.alive_char_ids, []const u32) catch &[0]u32{};
+    const char_ids = acc_data.get(.alive_char_ids) catch &[0]u32{};
     for (char_ids) |char_id| {
         var char_data = db.CharacterData.init(res.arena, acc_id, char_id);
         defer char_data.deinit();

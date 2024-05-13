@@ -78,9 +78,13 @@ pub const Names = struct {
 };
 
 pub const LoginData = struct {
-    pub const Ids = enum(u8) {
+    const DataIds = enum(u8) {
         hashed_password = 0,
         account_id = 1,
+    };
+    const DataTypes = union(DataIds) {
+        hashed_password: []const u8,
+        account_id: u32,
     };
 
     email: []const u8,
@@ -100,7 +104,8 @@ pub const LoginData = struct {
         self.reply_list.deinit();
     }
 
-    pub fn get(self: *LoginData, comptime id: Ids, comptime T: type) !T {
+    pub fn get(self: *LoginData, comptime id: DataIds) !(std.meta.fields(DataTypes)[@intFromEnum(id)].type) {
+        const T = std.meta.fields(DataTypes)[@intFromEnum(id)].type;
         const id_bytes = anyToBytes(@intFromEnum(id));
 
         if (redisCommand(context, "HGET l%b %b", .{
@@ -117,9 +122,11 @@ pub const LoginData = struct {
         } else return error.NoData;
     }
 
-    pub fn set(self: *LoginData, comptime id: Ids, comptime T: type, value: T) !void {
-        const id_bytes = anyToBytes(@intFromEnum(id));
-        const value_bytes = anyToBytes(value);
+    pub fn set(self: *LoginData, value: DataTypes) !void {
+        const id_bytes = anyToBytes(@intFromEnum(value));
+        const value_bytes = switch (value) {
+            inline else => |v| anyToBytes(v),
+        };
 
         if (redisCommand(context, "HSET l%b %b %b", .{
             self.email.ptr,
@@ -135,7 +142,7 @@ pub const LoginData = struct {
 };
 
 pub const AccountData = struct {
-    pub const Ids = enum(u8) {
+    const DataIds = enum(u8) {
         email = 0,
         name = 1,
         hwid = 2,
@@ -149,6 +156,21 @@ pub const AccountData = struct {
         next_char_id = 10,
         alive_char_ids = 11,
         max_char_slots = 12,
+    };
+    const DataTypes = union(DataIds) {
+        email: []const u8,
+        name: []const u8,
+        hwid: []const u8,
+        ip: []const u8,
+        register_timestamp: u64,
+        last_login_timestamp: u64,
+        gold: u32,
+        gems: u32,
+        crowns: u32,
+        rank: u8,
+        next_char_id: u32,
+        alive_char_ids: []const u32,
+        max_char_slots: u32,
     };
 
     acc_id: u32,
@@ -168,7 +190,8 @@ pub const AccountData = struct {
         self.reply_list.deinit();
     }
 
-    pub fn get(self: *AccountData, comptime id: Ids, comptime T: type) !T {
+    pub fn get(self: *AccountData, comptime id: DataIds) !(std.meta.fields(DataTypes)[@intFromEnum(id)].type) {
+        const T = std.meta.fields(DataTypes)[@intFromEnum(id)].type;
         const acc_id_bytes = anyToBytes(self.acc_id);
         const id_bytes = anyToBytes(@intFromEnum(id));
 
@@ -186,10 +209,12 @@ pub const AccountData = struct {
         } else return error.NoData;
     }
 
-    pub fn set(self: *AccountData, comptime id: Ids, comptime T: type, value: T) !void {
+    pub fn set(self: *AccountData, value: DataTypes) !void {
         const acc_id_bytes = anyToBytes(self.acc_id);
-        const id_bytes = anyToBytes(@intFromEnum(id));
-        const value_bytes = anyToBytes(value);
+        const id_bytes = anyToBytes(@intFromEnum(value));
+        const value_bytes = switch (value) {
+            inline else => |v| anyToBytes(v),
+        };
 
         if (redisCommand(context, "HSET a%b %b %b", .{
             acc_id_bytes.ptr,
@@ -206,19 +231,19 @@ pub const AccountData = struct {
     pub fn writeXml(self: *AccountData, writer: xml.DocWriter) !void {
         try writer.startElement("Account");
         try writer.writeElement("AccountId", try printNum(self.acc_id));
-        try writer.writeElement("Name", try appendZ(try self.get(.name, []const u8)));
-        if (try self.get(.rank, u8) > 80)
+        try writer.writeElement("Name", try appendZ(try self.get(.name)));
+        if (try self.get(.rank) > 80)
             try writer.writeElement("Admin", "true");
-        try writer.writeElement("Rank", try printNum(try self.get(.rank, u8)));
-        try writer.writeElement("Gold", try printNum(try self.get(.gold, u32)));
-        try writer.writeElement("Gems", try printNum(try self.get(.gems, u32)));
-        try writer.writeElement("Crowns", try printNum(try self.get(.crowns, u32)));
+        try writer.writeElement("Rank", try printNum(try self.get(.rank)));
+        try writer.writeElement("Gold", try printNum(try self.get(.gold)));
+        try writer.writeElement("Gems", try printNum(try self.get(.gems)));
+        try writer.writeElement("Crowns", try printNum(try self.get(.crowns)));
         try writer.endElement();
     }
 };
 
 pub const CharacterData = struct {
-    pub const Ids = enum(u8) {
+    const DataIds = enum(u8) {
         char_type = 0,
         create_timestamp = 1,
         last_login_timestamp = 2,
@@ -228,6 +253,17 @@ pub const CharacterData = struct {
         hp = 6,
         mp = 7,
         skin_type = 8,
+    };
+    const DataTypes = union(DataIds) {
+        char_type: u16,
+        create_timestamp: u64,
+        last_login_timestamp: u64,
+        aether: u8,
+        stats: [13]i32,
+        items: [22]u16,
+        hp: i32,
+        mp: i32,
+        skin_type: u16,
     };
 
     acc_id: u32,
@@ -249,7 +285,8 @@ pub const CharacterData = struct {
         self.reply_list.deinit();
     }
 
-    pub fn get(self: *CharacterData, comptime id: Ids, comptime T: type) !T {
+    pub fn get(self: *CharacterData, comptime id: DataIds) !(std.meta.fields(DataTypes)[@intFromEnum(id)].type) {
+        const T = std.meta.fields(DataTypes)[@intFromEnum(id)].type;
         const char_id_bytes = anyToBytes(self.char_id);
         const acc_id_bytes = anyToBytes(self.acc_id);
         const id_bytes = anyToBytes(@intFromEnum(id));
@@ -270,11 +307,13 @@ pub const CharacterData = struct {
         } else return error.NoData;
     }
 
-    pub fn set(self: *CharacterData, comptime id: Ids, comptime T: type, value: T) !void {
+    pub fn set(self: *CharacterData, value: DataTypes) !void {
         const acc_id_bytes = anyToBytes(self.acc_id);
         const char_id_bytes = anyToBytes(self.char_id);
-        const id_bytes = anyToBytes(@intFromEnum(id));
-        const value_bytes = anyToBytes(value);
+        const id_bytes = anyToBytes(@intFromEnum(value));
+        const value_bytes = switch (value) {
+            inline else => |v| anyToBytes(v),
+        };
 
         if (redisCommand(context, "HSET c%b:%b %b %b", .{ acc_id_bytes.ptr, acc_id_bytes.len, char_id_bytes.ptr, char_id_bytes.len, id_bytes.ptr, id_bytes.len, value_bytes.ptr, value_bytes.len })) |reply| {
             try self.reply_list.append(reply);
@@ -282,13 +321,13 @@ pub const CharacterData = struct {
     }
 
     pub fn writeXml(self: *CharacterData, writer: xml.DocWriter) !void {
-        const stats = try self.get(.stats, [13]i32);
-        const items = try self.get(.items, [22]u16);
+        const stats = try self.get(.stats);
+        const items = try self.get(.items);
         _ = items;
 
         try writer.startElement("Char");
         try writer.writeAttribute("id", try printNum(self.char_id));
-        try writer.writeElement("ObjectType", try printNum(try self.get(.char_type, u16)));
+        try writer.writeElement("ObjectType", try printNum(try self.get(.char_type)));
         try writer.writeElement("Health", try printNum(stats[0]));
         try writer.writeElement("Mana", try printNum(stats[1]));
         try writer.writeElement("Strength", try printNum(stats[2]));
@@ -358,6 +397,6 @@ pub fn nextAccId() !u32 {
 pub fn login(email: []const u8, password: []const u8) !u32 {
     var login_data = LoginData.init(allocator, email);
     defer login_data.deinit();
-    try std.crypto.pwhash.scrypt.strVerify(try login_data.get(.hashed_password, []const u8), password, .{ .allocator = allocator });
-    return try login_data.get(.account_id, u32);
+    try std.crypto.pwhash.scrypt.strVerify(try login_data.get(.hashed_password), password, .{ .allocator = allocator });
+    return try login_data.get(.account_id);
 }

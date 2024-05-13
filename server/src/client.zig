@@ -527,22 +527,22 @@ pub const Client = struct {
 
     inline fn createChar(player: *Player, char_type: u16, skin_type: u16, timestamp: u64) !void {
         if (game_data.classes.get(char_type)) |class| {
-            const max_slots = try player.acc_data.get(.max_char_slots, u32);
-            const alive_ids = player.acc_data.get(.alive_char_ids, []const u32) catch &[0]u32{};
+            const max_slots = try player.acc_data.get(.max_char_slots);
+            const alive_ids = player.acc_data.get(.alive_char_ids) catch &[0]u32{};
             if (alive_ids.len >= max_slots)
                 return error.SlotsFull;
 
-            const next_char_id = try player.acc_data.get(.next_char_id, u32);
+            const next_char_id = try player.acc_data.get(.next_char_id);
             player.char_data.char_id = next_char_id;
-            try player.acc_data.set(.next_char_id, u32, next_char_id + 1);
+            try player.acc_data.set(.{ .next_char_id = next_char_id + 1 });
 
             const new_alive_ids = try std.mem.concat(player.client.allocator, u32, &.{ alive_ids, &[_]u32{next_char_id} });
-            try player.acc_data.set(.alive_char_ids, []u32, new_alive_ids);
+            try player.acc_data.set(.{ .alive_char_ids = new_alive_ids });
 
-            try player.char_data.set(.char_type, u16, char_type);
-            try player.char_data.set(.skin_type, u16, skin_type);
-            try player.char_data.set(.create_timestamp, u64, timestamp);
-            try player.char_data.set(.aether, u8, 1);
+            try player.char_data.set(.{ .char_type = char_type });
+            try player.char_data.set(.{ .skin_type = skin_type });
+            try player.char_data.set(.{ .create_timestamp = timestamp });
+            try player.char_data.set(.{ .aether = 1 });
 
             var stats: [13]i32 = undefined;
             stats[Player.health_stat] = class.health;
@@ -558,10 +558,10 @@ pub const Client = struct {
             stats[Player.piercing_stat] = class.piercing;
             stats[Player.haste_stat] = class.haste;
             stats[Player.tenacity_stat] = class.tenacity;
-            try player.char_data.set(.hp, i32, class.health);
-            try player.char_data.set(.mp, i32, class.mana);
-            try player.char_data.set(.stats, [13]i32, stats);
-            try player.char_data.set(.items, [22]u16, class.equipment[0..22].*);
+            try player.char_data.set(.{ .hp = class.health });
+            try player.char_data.set(.{ .mp = class.mana });
+            try player.char_data.set(.{ .stats = stats });
+            try player.char_data.set(.{ .items = class.equipment[0..22].* });
         } else return error.InvalidCharType;
     }
 
@@ -606,7 +606,7 @@ pub const Client = struct {
         }
 
         self.char_id = player.char_data.char_id;
-        player.char_data.set(.create_timestamp, u64, timestamp) catch {}; // doesn't matter really
+        player.char_data.set(.{ .create_timestamp = timestamp }) catch {}; // doesn't matter really
 
         self.world = maps.worlds.getPtr(maps.retrieve_id) orelse {
             self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Retrieve does not exist" } });

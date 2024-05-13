@@ -64,8 +64,8 @@ pub const Player = struct {
         self.drops = std.ArrayList(i32).init(allocator);
         self.stats_writer.buffer = try allocator.alloc(u8, 256);
 
-        self.name = try allocator.dupe(u8, try self.acc_data.get(.name, []const u8));
-        self.player_type = try self.char_data.get(.char_type, u16);
+        self.name = try allocator.dupe(u8, try self.acc_data.get(.name));
+        self.player_type = try self.char_data.get(.char_type);
         self.props = game_data.obj_type_to_props.getPtr(self.player_type) orelse {
             std.log.err("Could not find props for player with type 0x{x}", .{self.player_type});
             return;
@@ -81,13 +81,13 @@ pub const Player = struct {
         self.x = @as(f32, @floatFromInt(rand_point.x)) + 0.5;
         self.y = @as(f32, @floatFromInt(rand_point.y)) + 0.5;
 
-        self.rank = try self.acc_data.get(.rank, u8);
-        self.aether = try self.char_data.get(.aether, u8);
-        self.hp = try self.char_data.get(.hp, i32);
-        self.mp = try self.char_data.get(.mp, i32);
+        self.rank = try self.acc_data.get(.rank);
+        self.aether = try self.char_data.get(.aether);
+        self.hp = try self.char_data.get(.hp);
+        self.mp = try self.char_data.get(.mp);
 
-        self.stats = try self.char_data.get(.stats, [13]i32);
-        self.equips = try self.char_data.get(.items, [22]u16);
+        self.stats = try self.char_data.get(.stats);
+        self.equips = try self.char_data.get(.items);
 
         self.recalculateItems();
     }
@@ -105,11 +105,11 @@ pub const Player = struct {
     }
 
     pub fn save(self: *Player) !void {
-        try self.char_data.set(.hp, i32, self.hp);
-        try self.char_data.set(.mp, i32, self.mp);
-        try self.char_data.set(.aether, u8, self.aether);
-        try self.char_data.set(.items, [22]u16, self.equips);
-        try self.char_data.set(.stats, [13]i32, self.stats);
+        try self.char_data.set(.{ .hp = self.hp });
+        try self.char_data.set(.{ .mp = self.mp });
+        try self.char_data.set(.{ .aether = self.aether });
+        try self.char_data.set(.{ .items = self.equips });
+        try self.char_data.set(.{ .stats = self.stats });
     }
 
     pub fn death(self: *Player, killer: []const u8) !void {
