@@ -1110,6 +1110,7 @@ pub const MapEditorScreen = struct {
         element.destroy(self.palette_container_region);
         element.destroy(self.layer_dropdown);
         element.destroy(self.controls_container);
+        element.destroy(self.map_size_dropdown);
 
         if (self.map_tile_data.len > 0)
             self.allocator.free(self.map_tile_data);
@@ -1202,6 +1203,11 @@ pub const MapEditorScreen = struct {
         if (tile.tile_type == value)
             return;
 
+        if (game_data.ground_type_to_props.get(value) == null) {
+            std.log.err("Props not found for tile with type 0x{x}, setting at x={d}, y={d} cancelled", .{ value, x, y });
+            return;
+        }
+
         tile.tile_type = value;
         var square = Square{
             .x = @as(f32, @floatFromInt(x)),
@@ -1222,6 +1228,11 @@ pub const MapEditorScreen = struct {
 
         if (tile.obj_type == value)
             return;
+
+        if (game_data.obj_type_to_props.get(value) == null) {
+            std.log.err("Props not found for object with type 0x{x}, setting at x={d}, y={d} cancelled", .{ value, x, y });
+            return;
+        }
 
         if (value == std.math.maxInt(u16)) {
             map.object_lock.lock();
@@ -1256,7 +1267,16 @@ pub const MapEditorScreen = struct {
     }
 
     fn setRegion(self: *MapEditorScreen, x: u32, y: u32, value: u8) void {
-        self.map_tile_data[y * self.map_size + x].region_type = value;
+        var tile = &self.map_tile_data[y * self.map_size + x];
+        if (tile.region_type == value)
+            return;
+
+        if (game_data.region_type_to_enum.get(value) == null) {
+            std.log.err("Enum not found for region with type 0x{x}, setting at x={d}, y={d} cancelled", .{ value, x, y });
+            return;
+        }
+
+        tile.region_type = value;
     }
 
     fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_type: enum { place, erase, random }) !void {
