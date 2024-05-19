@@ -25,10 +25,8 @@ pub const Enemy = struct {
     world: *World = undefined,
     spawned: bool = false,
     storages: behavior_logic.Storages = .{},
-    allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *Enemy, allocator: std.mem.Allocator) !void {
-        self.allocator = allocator;
         if (behavior.behavior_map.get(self.en_type)) |behav| {
             self.behavior = try allocator.create(Behavior);
             self.behavior.?.* = behav;
@@ -52,6 +50,8 @@ pub const Enemy = struct {
     }
 
     pub fn deinit(self: *Enemy) !void {
+        const allocator = self.world.allocator;
+
         if (self.behavior) |behav| {
             switch (behav.*) {
                 inline else => |*b| {
@@ -61,11 +61,11 @@ pub const Enemy = struct {
                 },
             }
 
-            self.allocator.destroy(behav);
+            allocator.destroy(behav);
         }
 
         self.storages.deinit();
-        self.allocator.free(self.stats_writer.buffer);
+        allocator.free(self.stats_writer.buffer);
     }
 
     pub fn switchBehavior(self: *Enemy, comptime TargetBehavior: type) !void {
@@ -75,7 +75,7 @@ pub const Enemy = struct {
                 inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "exit")) try b.exit(self),
             }
             self.storages.clear();
-        } else self.behavior = try self.allocator.create(Behavior);
+        } else self.behavior = try self.world.allocator.create(Behavior);
 
         self.behavior.?.* = behav;
         switch (self.behavior.?.*) {
@@ -122,11 +122,12 @@ pub const Enemy = struct {
         var writer = &self.stats_writer;
         writer.index = 0;
 
-        stat_util.write(writer, stat_cache, self.allocator, .x, self.x);
-        stat_util.write(writer, stat_cache, self.allocator, .y, self.y);
-        stat_util.write(writer, stat_cache, self.allocator, .max_hp, self.max_hp);
-        stat_util.write(writer, stat_cache, self.allocator, .hp, self.hp);
-        stat_util.write(writer, stat_cache, self.allocator, .condition, self.condition);
+        const allocator = self.world.allocator;
+        stat_util.write(writer, stat_cache, allocator, .x, self.x);
+        stat_util.write(writer, stat_cache, allocator, .y, self.y);
+        stat_util.write(writer, stat_cache, allocator, .max_hp, self.max_hp);
+        stat_util.write(writer, stat_cache, allocator, .hp, self.hp);
+        stat_util.write(writer, stat_cache, allocator, .condition, self.condition);
 
         return writer.buffer[0..writer.index];
     }

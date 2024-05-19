@@ -46,31 +46,21 @@ pub const Player = struct {
     equips: [22]u16 = [_]u16{0xFFFF} ** 22,
     last_damage: i64 = -1,
     condition: utils.Condition = .{},
-    stat_caches: std.AutoHashMap(i32, std.EnumArray(game_data.StatType, ?stat_util.StatValue)) = undefined,
-    conditions_active: std.AutoArrayHashMap(utils.ConditionEnum, i64) = undefined,
-    conditions_to_remove: std.ArrayList(utils.ConditionEnum) = undefined,
-    tiles: std.ArrayList(client.TileData) = undefined,
-    tiles_seen: std.AutoHashMap(u32, u16) = undefined,
-    new_objs: std.ArrayList(client.ObjectData) = undefined,
-    tick_objs: std.ArrayList(client.ObjectData) = undefined,
-    drops: std.ArrayList(i32) = undefined,
+    stat_caches: std.AutoHashMapUnmanaged(i32, std.EnumArray(game_data.StatType, ?stat_util.StatValue)) = .{},
+    conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .{},
+    conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .{},
+    tiles: std.ArrayListUnmanaged(client.TileData) = .{},
+    tiles_seen: std.AutoHashMapUnmanaged(u32, u16) = .{},
+    new_objs: std.ArrayListUnmanaged(client.ObjectData) = .{},
+    tick_objs: std.ArrayListUnmanaged(client.ObjectData) = .{},
+    drops: std.ArrayListUnmanaged(i32) = .{},
     bullets: [256]?i32 = [_]?i32{null} ** 256,
     stats_writer: utils.PacketWriter = .{},
     props: *const game_data.ObjProps = undefined,
     client: *Client = undefined,
     world: *World = undefined,
-    allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *Player, allocator: std.mem.Allocator) !void {
-        self.allocator = allocator;
-        self.tiles = std.ArrayList(client.TileData).init(allocator);
-        self.tiles_seen = std.AutoHashMap(u32, u16).init(allocator);
-        self.new_objs = std.ArrayList(client.ObjectData).init(allocator);
-        self.tick_objs = std.ArrayList(client.ObjectData).init(allocator);
-        self.stat_caches = std.AutoHashMap(i32, std.EnumArray(game_data.StatType, ?stat_util.StatValue)).init(allocator);
-        self.conditions_active = std.AutoArrayHashMap(utils.ConditionEnum, i64).init(allocator);
-        self.conditions_to_remove = std.ArrayList(utils.ConditionEnum).init(allocator);
-        self.drops = std.ArrayList(i32).init(allocator);
         self.stats_writer.buffer = try allocator.alloc(u8, 256);
 
         self.name = try allocator.dupe(u8, try self.acc_data.get(.name));
@@ -104,13 +94,15 @@ pub const Player = struct {
     pub fn deinit(self: *Player) !void {
         self.char_data.deinit();
         self.acc_data.deinit();
-        self.tiles.deinit();
-        self.tiles_seen.deinit();
-        self.new_objs.deinit();
-        self.stat_caches.deinit();
-        self.tick_objs.deinit();
-        self.allocator.free(self.name);
-        self.allocator.free(self.stats_writer.buffer);
+
+        const allocator = self.world.allocator;
+        self.tiles.deinit(allocator);
+        self.tiles_seen.deinit(allocator);
+        self.new_objs.deinit(allocator);
+        self.stat_caches.deinit(allocator);
+        self.tick_objs.deinit(allocator);
+        allocator.free(self.name);
+        allocator.free(self.stats_writer.buffer);
     }
 
     pub fn applyCondition(self: *Player, condition: utils.ConditionEnum, duration: i64) !void {
@@ -119,7 +111,7 @@ pub const Player = struct {
         if (self.conditions_active.getPtr(condition)) |current_duration| {
             if (duration > current_duration.*)
                 current_duration.* = duration;
-        } else try self.conditions_active.put(condition, duration);
+        } else try self.conditions_active.put(self.world.allocator, condition, duration);
         self.condition.set(condition, true);
     }
 
@@ -186,10 +178,12 @@ pub const Player = struct {
 
         if (self.hp <= 0) try self.death("Unknown");
 
+        const allocator = self.world.allocator;
+
         self.conditions_to_remove.clearRetainingCapacity();
         for (self.conditions_active.values(), self.conditions_active.keys()) |*d, k| {
             if (d.* <= dt) {
-                try self.conditions_to_remove.append(k);
+                try self.conditions_to_remove.append(allocator, k);
                 continue;
             }
 
@@ -217,8 +211,8 @@ pub const Player = struct {
                         continue;
                 }
 
-                try self.tiles_seen.put(hash, tile.update_count);
-                try self.tiles.append(.{
+                try self.tiles_seen.put(allocator, hash, tile.update_count);
+                try self.tiles.append(allocator, .{
                     .tile_type = tile.tile_type,
                     .x = tile.x,
                     .y = tile.y,
@@ -230,7 +224,7 @@ pub const Player = struct {
         for (self.world.drops.items) |id| {
             if (self.stat_caches.contains(id)) {
                 _ = self.stat_caches.remove(id);
-                try self.drops.append(id);
+                try self.drops.append(allocator, id);
             }
         }
 
@@ -247,19 +241,19 @@ pub const Player = struct {
                     if (self.stat_caches.getPtr(entity.obj_id)) |cache| {
                         const stats = try entity.exportStats(cache);
                         if (stats.len > 0)
-                            try self.tick_objs.append(.{
+                            try self.tick_objs.append(allocator, .{
                                 .obj_type = entity.en_type,
                                 .obj_id = entity.obj_id,
                                 .stats = stats,
                             });
                     } else {
                         var cache = std.EnumArray(game_data.StatType, ?stat_util.StatValue).initFill(null);
-                        try self.new_objs.append(.{
+                        try self.new_objs.append(allocator, .{
                             .obj_type = entity.en_type,
                             .obj_id = entity.obj_id,
                             .stats = try entity.exportStats(&cache),
                         });
-                        try self.stat_caches.put(entity.obj_id, cache);
+                        try self.stat_caches.put(allocator, entity.obj_id, cache);
                     }
                 }
             }
@@ -275,19 +269,19 @@ pub const Player = struct {
                     if (self.stat_caches.getPtr(enemy.obj_id)) |cache| {
                         const stats = try enemy.exportStats(cache);
                         if (stats.len > 0)
-                            try self.tick_objs.append(.{
+                            try self.tick_objs.append(allocator, .{
                                 .obj_type = enemy.en_type,
                                 .obj_id = enemy.obj_id,
                                 .stats = stats,
                             });
                     } else {
                         var cache = std.EnumArray(game_data.StatType, ?stat_util.StatValue).initFill(null);
-                        try self.new_objs.append(.{
+                        try self.new_objs.append(allocator, .{
                             .obj_type = enemy.en_type,
                             .obj_id = enemy.obj_id,
                             .stats = try enemy.exportStats(&cache),
                         });
-                        try self.stat_caches.put(enemy.obj_id, cache);
+                        try self.stat_caches.put(allocator, enemy.obj_id, cache);
                     }
                 }
             }
@@ -300,19 +294,19 @@ pub const Player = struct {
                 if (self.stat_caches.getPtr(player.obj_id)) |cache| {
                     const stats = try player.exportStats(cache, player.obj_id == self.obj_id, false, time);
                     if (stats.len > 0)
-                        try self.tick_objs.append(.{
+                        try self.tick_objs.append(allocator, .{
                             .obj_type = player.player_type,
                             .obj_id = player.obj_id,
                             .stats = stats,
                         });
                 } else {
                     var cache = std.EnumArray(game_data.StatType, ?stat_util.StatValue).initFill(null);
-                    try self.new_objs.append(.{
+                    try self.new_objs.append(allocator, .{
                         .obj_type = player.player_type,
                         .obj_id = player.obj_id,
                         .stats = try player.exportStats(&cache, player.obj_id == self.obj_id, true, time),
                     });
-                    try self.stat_caches.put(player.obj_id, cache);
+                    try self.stat_caches.put(allocator, player.obj_id, cache);
                 }
             }
         }
@@ -371,49 +365,51 @@ pub const Player = struct {
         var writer = &self.stats_writer;
         writer.index = 0;
 
+        const allocator = self.world.allocator;
+
         if (force_export_pos or !is_self) {
-            stat_util.write(writer, stat_cache, self.allocator, .x, self.x);
-            stat_util.write(writer, stat_cache, self.allocator, .y, self.y);
+            stat_util.write(writer, stat_cache, allocator, .x, self.x);
+            stat_util.write(writer, stat_cache, allocator, .y, self.y);
         }
 
-        stat_util.write(writer, stat_cache, self.allocator, .name, self.name);
-        stat_util.write(writer, stat_cache, self.allocator, .account_id, @as(i32, @intCast(self.acc_data.acc_id)));
-        stat_util.write(writer, stat_cache, self.allocator, .max_hp, self.stats[health_stat]);
-        stat_util.write(writer, stat_cache, self.allocator, .hp, self.hp);
-        stat_util.write(writer, stat_cache, self.allocator, .max_mp, @as(i16, @intCast(self.stats[mana_stat])));
-        stat_util.write(writer, stat_cache, self.allocator, .mp, self.mp);
-        stat_util.write(writer, stat_cache, self.allocator, .condition, self.condition);
-        stat_util.write(writer, stat_cache, self.allocator, .in_combat, self.inCombat(time));
+        stat_util.write(writer, stat_cache, allocator, .name, self.name);
+        stat_util.write(writer, stat_cache, allocator, .account_id, @as(i32, @intCast(self.acc_data.acc_id)));
+        stat_util.write(writer, stat_cache, allocator, .max_hp, self.stats[health_stat]);
+        stat_util.write(writer, stat_cache, allocator, .hp, self.hp);
+        stat_util.write(writer, stat_cache, allocator, .max_mp, @as(i16, @intCast(self.stats[mana_stat])));
+        stat_util.write(writer, stat_cache, allocator, .mp, self.mp);
+        stat_util.write(writer, stat_cache, allocator, .condition, self.condition);
+        stat_util.write(writer, stat_cache, allocator, .in_combat, self.inCombat(time));
 
         if (is_self) {
-            stat_util.write(writer, stat_cache, self.allocator, .strength, @as(i16, @intCast(self.stats[strength_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .wit, @as(i16, @intCast(self.stats[wit_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .defense, @as(i16, @intCast(self.stats[defense_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .resistance, @as(i16, @intCast(self.stats[resistance_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .speed, @as(i16, @intCast(self.stats[speed_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .stamina, @as(i16, @intCast(self.stats[stamina_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .intelligence, @as(i16, @intCast(self.stats[intelligence_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .penetration, @as(i16, @intCast(self.stats[penetration_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .piercing, @as(i16, @intCast(self.stats[piercing_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .haste, @as(i16, @intCast(self.stats[haste_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .tenacity, @as(i16, @intCast(self.stats[tenacity_stat])));
+            stat_util.write(writer, stat_cache, allocator, .strength, @as(i16, @intCast(self.stats[strength_stat])));
+            stat_util.write(writer, stat_cache, allocator, .wit, @as(i16, @intCast(self.stats[wit_stat])));
+            stat_util.write(writer, stat_cache, allocator, .defense, @as(i16, @intCast(self.stats[defense_stat])));
+            stat_util.write(writer, stat_cache, allocator, .resistance, @as(i16, @intCast(self.stats[resistance_stat])));
+            stat_util.write(writer, stat_cache, allocator, .speed, @as(i16, @intCast(self.stats[speed_stat])));
+            stat_util.write(writer, stat_cache, allocator, .stamina, @as(i16, @intCast(self.stats[stamina_stat])));
+            stat_util.write(writer, stat_cache, allocator, .intelligence, @as(i16, @intCast(self.stats[intelligence_stat])));
+            stat_util.write(writer, stat_cache, allocator, .penetration, @as(i16, @intCast(self.stats[penetration_stat])));
+            stat_util.write(writer, stat_cache, allocator, .piercing, @as(i16, @intCast(self.stats[piercing_stat])));
+            stat_util.write(writer, stat_cache, allocator, .haste, @as(i16, @intCast(self.stats[haste_stat])));
+            stat_util.write(writer, stat_cache, allocator, .tenacity, @as(i16, @intCast(self.stats[tenacity_stat])));
 
-            stat_util.write(writer, stat_cache, self.allocator, .strength_bonus, @as(i16, @intCast(self.stat_boosts[strength_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .wit_bonus, @as(i16, @intCast(self.stat_boosts[wit_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .defense_bonus, @as(i16, @intCast(self.stat_boosts[defense_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .resistance_bonus, @as(i16, @intCast(self.stat_boosts[resistance_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .speed_bonus, @as(i16, @intCast(self.stat_boosts[speed_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .stamina_bonus, @as(i16, @intCast(self.stat_boosts[stamina_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .intelligence_bonus, @as(i16, @intCast(self.stat_boosts[intelligence_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .penetration_bonus, @as(i16, @intCast(self.stat_boosts[penetration_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .piercing_bonus, @as(i16, @intCast(self.stat_boosts[piercing_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .haste_bonus, @as(i16, @intCast(self.stat_boosts[haste_stat])));
-            stat_util.write(writer, stat_cache, self.allocator, .tenacity_bonus, @as(i16, @intCast(self.stat_boosts[tenacity_stat])));
+            stat_util.write(writer, stat_cache, allocator, .strength_bonus, @as(i16, @intCast(self.stat_boosts[strength_stat])));
+            stat_util.write(writer, stat_cache, allocator, .wit_bonus, @as(i16, @intCast(self.stat_boosts[wit_stat])));
+            stat_util.write(writer, stat_cache, allocator, .defense_bonus, @as(i16, @intCast(self.stat_boosts[defense_stat])));
+            stat_util.write(writer, stat_cache, allocator, .resistance_bonus, @as(i16, @intCast(self.stat_boosts[resistance_stat])));
+            stat_util.write(writer, stat_cache, allocator, .speed_bonus, @as(i16, @intCast(self.stat_boosts[speed_stat])));
+            stat_util.write(writer, stat_cache, allocator, .stamina_bonus, @as(i16, @intCast(self.stat_boosts[stamina_stat])));
+            stat_util.write(writer, stat_cache, allocator, .intelligence_bonus, @as(i16, @intCast(self.stat_boosts[intelligence_stat])));
+            stat_util.write(writer, stat_cache, allocator, .penetration_bonus, @as(i16, @intCast(self.stat_boosts[penetration_stat])));
+            stat_util.write(writer, stat_cache, allocator, .piercing_bonus, @as(i16, @intCast(self.stat_boosts[piercing_stat])));
+            stat_util.write(writer, stat_cache, allocator, .haste_bonus, @as(i16, @intCast(self.stat_boosts[haste_stat])));
+            stat_util.write(writer, stat_cache, allocator, .tenacity_bonus, @as(i16, @intCast(self.stat_boosts[tenacity_stat])));
         }
 
         inline for (0..self.equips.len) |i| {
             const inv_stat: game_data.StatType = @enumFromInt(@intFromEnum(game_data.StatType.inv_0) + @as(u8, i));
-            stat_util.write(writer, stat_cache, self.allocator, inv_stat, self.equips[i]);
+            stat_util.write(writer, stat_cache, allocator, inv_stat, self.equips[i]);
         }
 
         return writer.buffer[0..writer.index];

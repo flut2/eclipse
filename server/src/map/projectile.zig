@@ -15,16 +15,12 @@ pub const Projectile = struct {
     owner_id: i32 = -1,
     bullet_id: u8 = 0,
     start_time: i64 = 0,
-    obj_ids_hit: std.AutoHashMap(i32, void) = undefined,
+    obj_ids_hit: std.AutoHashMapUnmanaged(i32, void) = .{},
     props: *const game_data.ProjProps = undefined,
     world: *World = undefined,
 
-    pub fn init(self: *Projectile, allocator: std.mem.Allocator) !void {
-        self.obj_ids_hit = std.AutoHashMap(i32, void).init(allocator);
-    }
-
     pub fn deinit(self: *Projectile) !void {
-        self.obj_ids_hit.deinit();
+        self.obj_ids_hit.deinit(self.world.allocator);
     }
 
     pub fn delete(self: *Projectile) !void {

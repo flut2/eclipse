@@ -13,11 +13,9 @@ pub const Entity = struct {
     stats_writer: utils.PacketWriter = .{},
     props: *const game_data.ObjProps = undefined,
     world: *World = undefined,
-    allocator: std.mem.Allocator = undefined,
     spawned: bool = false,
 
     pub fn init(self: *Entity, allocator: std.mem.Allocator) !void {
-        self.allocator = allocator;
         self.stats_writer.buffer = try allocator.alloc(u8, 32);
 
         self.props = game_data.obj_type_to_props.getPtr(self.en_type) orelse {
@@ -39,7 +37,7 @@ pub const Entity = struct {
             self.world.tiles[uy * self.world.w + ux].occupied = false;
         }
 
-        self.allocator.free(self.stats_writer.buffer);
+        self.world.allocator.free(self.stats_writer.buffer);
     }
 
     pub fn tick(self: *Entity, time: i64, dt: i64) !void {
@@ -52,8 +50,9 @@ pub const Entity = struct {
         var writer = &self.stats_writer;
         writer.index = 0;
 
-        stat_util.write(writer, stat_cache, self.allocator, .x, self.x);
-        stat_util.write(writer, stat_cache, self.allocator, .y, self.y);
+        const allocator = self.world.allocator;
+        stat_util.write(writer, stat_cache, allocator, .x, self.x);
+        stat_util.write(writer, stat_cache, allocator, .y, self.y);
 
         return writer.buffer[0..writer.index];
     }

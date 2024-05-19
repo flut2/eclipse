@@ -10,19 +10,23 @@ inline fn h(str: []const u8) u64 {
     return std.hash.Wyhash.hash(0, str);
 }
 
-inline fn checkRank(player: *Player, comptime rank: u16) bool {
-    if (player.rank >= rank)
-        return true;
-
-    player.client.queuePacket(.{ .text = .{
+inline fn sendMessage(client: *Client, msg: []const u8) void {
+    client.queuePacket(.{ .text = .{
         .name = "Server",
         .obj_id = -1,
         .bubble_time = 0,
         .recipient = "",
-        .text = "You don't meet the rank requirements",
+        .text = msg,
         .name_color = 0xCC00CC,
         .text_color = 0xFF99FF,
     } });
+}
+
+inline fn checkRank(player: *Player, comptime rank: u16) bool {
+    if (player.rank >= rank)
+        return true;
+
+    sendMessage(player.client, "You don't meet the rank requirements");
     return false;
 }
 
@@ -32,17 +36,7 @@ pub fn handle(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         h("/spawn") => if (checkRank(player, 100)) handleSpawn(iter, player),
         h("/clearspawn") => if (checkRank(player, 100)) handleClearSpawn(player),
         h("/give") => if (checkRank(player, 100)) handleGive(iter, player),
-        else => {
-            player.client.queuePacket(.{ .text = .{
-                .name = "Server",
-                .obj_id = -1,
-                .bubble_time = 0,
-                .recipient = "",
-                .text = "Unknown command",
-                .name_color = 0xCC00CC,
-                .text_color = 0xFF99FF,
-            } });
-        },
+        else => sendMessage(player.client, "Unknown command"),
     }
 }
 
@@ -93,15 +87,7 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
         }
     }
 
-    player.client.queuePacket(.{ .text = .{
-        .name = "Server",
-        .obj_id = -1,
-        .bubble_time = 0,
-        .recipient = "",
-        .text = std.fmt.bufPrint(&buf, "Spawned {d}x {s}", .{ count, game_data.obj_type_to_name.get(obj_type) orelse "Unknown" }) catch return,
-        .name_color = 0xCC00CC,
-        .text_color = 0xFF99FF,
-    } });
+    sendMessage(player.client, std.fmt.bufPrint(&buf, "Spawned {d}x {s}", .{ count, game_data.obj_type_to_name.get(obj_type) orelse "Unknown" }) catch return);
 }
 
 fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
@@ -112,28 +98,12 @@ fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         var buf: [256]u8 = undefined;
         if (equip.* == std.math.maxInt(u16) and slot_type.slotsMatch(props.slot_type)) {
             equip.* = item_type;
-            player.client.queuePacket(.{ .text = .{
-                .name = "Server",
-                .obj_id = -1,
-                .bubble_time = 0,
-                .recipient = "",
-                .text = std.fmt.bufPrint(&buf, "You've been given the \"{s}\"", .{props.display_id}) catch return,
-                .name_color = 0xCC00CC,
-                .text_color = 0xFF99FF,
-            } });
+            sendMessage(player.client, std.fmt.bufPrint(&buf, "You've been given the \"{s}\"", .{props.display_id}) catch return);
             return;
         }
     }
 
-    player.client.queuePacket(.{ .text = .{
-        .name = "Server",
-        .obj_id = -1,
-        .bubble_time = 0,
-        .recipient = "",
-        .text = "You don't have enough space",
-        .name_color = 0xCC00CC,
-        .text_color = 0xFF99FF,
-    } });
+    sendMessage(player.client, "You don't have enough space");
 }
 
 fn handleClearSpawn(player: *Player) void {
@@ -161,25 +131,9 @@ fn handleClearSpawn(player: *Player) void {
     }
 
     if (count == 0) {
-        player.client.queuePacket(.{ .text = .{
-            .name = "Server",
-            .obj_id = -1,
-            .bubble_time = 0,
-            .recipient = "",
-            .text = "No entities found",
-            .name_color = 0xCC00CC,
-            .text_color = 0xFF99FF,
-        } });
+        sendMessage(player.client, "No entities found");
     } else {
         var buf: [256]u8 = undefined;
-        player.client.queuePacket(.{ .text = .{
-            .name = "Server",
-            .obj_id = -1,
-            .bubble_time = 0,
-            .recipient = "",
-            .text = std.fmt.bufPrint(&buf, "Cleared {d} entities", .{count}) catch return,
-            .name_color = 0xCC00CC,
-            .text_color = 0xFF99FF,
-        } });
+        sendMessage(player.client, std.fmt.bufPrint(&buf, "Cleared {d} entities", .{count}) catch return);
     }
 }

@@ -50,17 +50,14 @@ const MapData = struct {
     }
 };
 
-pub var setpieces: std.StringHashMap(MapData) = undefined;
-pub var maps: std.AutoHashMap(u16, MapData) = undefined;
-pub var worlds: std.AutoArrayHashMap(i32, World) = undefined;
+pub var setpieces: std.StringHashMapUnmanaged(MapData) = .{};
+pub var maps: std.AutoHashMapUnmanaged(u16, MapData) = .{};
+pub var worlds: std.AutoArrayHashMapUnmanaged(i32, World) = .{};
 pub var next_world_id: i32 = 0;
 pub var allocator: std.mem.Allocator = undefined;
 
 pub fn init(ally: std.mem.Allocator) !void {
     allocator = ally;
-    worlds = std.AutoArrayHashMap(i32, World).init(allocator);
-    setpieces = std.StringHashMap(MapData).init(allocator);
-    maps = std.AutoHashMap(u16, MapData).init(allocator);
 
     const doc = try xml.Doc.fromFile("./assets/worlds/maps.xml");
     defer doc.deinit();
@@ -208,7 +205,7 @@ pub fn init(ally: std.mem.Allocator) !void {
         }
 
         if (map_data.id < 0) {
-            try worlds.put(map_data.id, try World.create(allocator, map_data.w, map_data.h, map_data.name, map_data.light));
+            try worlds.put(allocator, map_data.id, try World.create(allocator, map_data.w, map_data.h, map_data.name, map_data.light));
             var new_world = worlds.getPtr(map_data.id).?;
             @memcpy(new_world.tiles, map_data.tiles);
             var new_region_iter = map_data.regions.iterator();
@@ -246,7 +243,7 @@ pub fn init(ally: std.mem.Allocator) !void {
         }
 
         if (portal_type != 0xFFFF)
-            try maps.put(portal_type.?, map_data);
+            try maps.put(allocator, portal_type.?, map_data);
 
         std.log.info("Parsed world '{s}'", .{map_data.name});
     }
@@ -257,19 +254,19 @@ pub fn deinit() void {
     while (world_iter.next()) |w| {
         w.value_ptr.deinit();
     }
-    worlds.deinit();
+    worlds.deinit(allocator);
 
     var setpiece_iter = setpieces.valueIterator();
     while (setpiece_iter.next()) |setpiece| {
         setpiece.deinit(allocator);
     }
-    setpieces.deinit();
+    setpieces.deinit(allocator);
 
     var map_iter = maps.valueIterator();
     while (map_iter.next()) |map| {
         map.deinit(allocator);
     }
-    maps.deinit();
+    maps.deinit(allocator);
 }
 
 pub fn portalWorld(portal_type: u16, portal_obj_id: i32) !?*World {
@@ -283,7 +280,7 @@ pub fn portalWorld(portal_type: u16, portal_obj_id: i32) !?*World {
         if (map_data.id < 0)
             return worlds.getPtr(map_data.id);
 
-        try worlds.put(next_world_id, try World.create(allocator, map_data.w, map_data.h, map_data.name, map_data.light));
+        try worlds.put(allocator, next_world_id, try World.create(allocator, map_data.w, map_data.h, map_data.name, map_data.light));
         std.log.info("Added world '{s}' (id {d})", .{ map_data.name, next_world_id });
         next_world_id += 1;
         if (worlds.getPtr(next_world_id - 1)) |new_world| {

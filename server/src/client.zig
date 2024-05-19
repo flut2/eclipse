@@ -785,7 +785,7 @@ pub const Client = struct {
                 defer self.world.player_lock.unlock();
                 if (self.world.findRef(Player, self.plr_id)) |player| {
                     player.damage(enemy.props.display_id, main.current_time, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
-                    proj.obj_ids_hit.put(self.plr_id, {}) catch return;
+                    proj.obj_ids_hit.put(self.world.allocator, self.plr_id, {}) catch return;
                 }
             }
         }
