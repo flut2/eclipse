@@ -74,6 +74,7 @@ pub const Enemy = struct {
             switch (old_behav.*) {
                 inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "exit")) try b.exit(self),
             }
+            self.storages.clear();
         } else self.behavior = try self.allocator.create(Behavior);
 
         self.behavior.?.* = behav;
