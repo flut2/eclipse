@@ -237,9 +237,6 @@ pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
 
             if (player.name) |player_name|
                 allocator.free(player_name);
-
-            if (player.guild) |player_guild|
-                allocator.free(player_guild);
         },
         else => {},
     }

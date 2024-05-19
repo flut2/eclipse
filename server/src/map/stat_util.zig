@@ -4,6 +4,7 @@ const game_data = @import("shared").game_data;
 
 pub const StatValue = union(enum) {
     str: []const u8,
+    b: bool,
     sbyte: i8,
     byte: u8,
     short: i16,

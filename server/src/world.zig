@@ -1,4 +1,5 @@
 const std = @import("std");
+const utils = @import("shared").utils;
 const game_data = @import("shared").game_data;
 
 const Tile = @import("map/tile.zig").Tile;
@@ -216,6 +217,101 @@ pub const World = struct {
             for (self.projectiles.items) |*proj| {
                 try proj.tick(time, dt);
             }
+        }
+    }
+
+    pub fn getNearestPlayerWithin(self: *World, x: f32, y: f32, radius_sqr: f32) ?*Player {
+        std.debug.assert(!self.player_lock.tryLock());
+
+        var min_dist_sqr = radius_sqr;
+        var target: ?*Player = null;
+        for (self.players.items) |*p| {
+            const dx = p.x - x;
+            const dy = p.y - y;
+            const dist_sqr = dx * dx + dy * dy;
+            if (dist_sqr <= min_dist_sqr and !p.condition.invisible) {
+                min_dist_sqr = dist_sqr;
+                target = p;
+            }
+        }
+
+        return target;
+    }
+
+    // If there is a target within radius_min_sqr, returns nothing
+    // so that the caller can do nothing. Only one line differs.
+    pub fn getNearestPlayerWithinRing(self: *World, x: f32, y: f32, radius_sqr: f32, radius_min_sqr: f32) ?*Player {
+        std.debug.assert(!self.player_lock.tryLock());
+
+        var min_dist_sqr = radius_sqr;
+        var target: ?*Player = null;
+        for (self.players.items) |*p| {
+            const dx = p.x - x;
+            const dy = p.y - y;
+            const dist_sqr = dx * dx + dy * dy;
+            if (dist_sqr <= radius_min_sqr)
+                return null;
+
+            if (dist_sqr <= min_dist_sqr and !p.condition.invisible) {
+                min_dist_sqr = dist_sqr;
+                target = p;
+            }
+        }
+
+        return target;
+    }
+
+    pub fn getNearestEnemyWithin(self: *World, x: f32, y: f32, radius_sqr: f32, en_type: u16) ?*Enemy {
+        std.debug.assert(!self.enemy_lock.tryLock());
+
+        var min_dist_sqr = radius_sqr;
+        var target: ?*Enemy = null;
+        for (self.enemies.items) |*e| {
+            const dx = e.x - x;
+            const dy = e.y - y;
+            const dist_sqr = dx * dx + dy * dy;
+            if (e.en_type == en_type and dist_sqr <= min_dist_sqr) {
+                min_dist_sqr = dist_sqr;
+                target = e;
+            }
+        }
+
+        return target;
+    }
+
+    pub fn aoePlayer(self: *World, time: i64, x: f32, y: f32, owner_name: []const u8, radius: f32, opts: struct {
+        phys_dmg: i32 = 0,
+        magic_dmg: i32 = 0,
+        true_dmg: i32 = 0,
+        effect: utils.ConditionEnum = .unknown,
+        effect_duration: i64 = 1 * std.time.us_per_s,
+        aoe_color: u32 = 0xFFFFFF,
+    }) void {
+        std.debug.assert(!self.player_lock.tryLock());
+
+        const radius_sqr = radius * radius;
+        for (self.players.items) |*p| {
+            const dx = p.x - x;
+            const dy = p.y - y;
+            const dist_sqr = dx * dx + dy * dy;
+            if (dist_sqr > 16 * 16)
+                continue;
+
+            p.client.queuePacket(.{ .show_effect = .{
+                .eff_type = .area_blast,
+                .obj_id = -1,
+                .x1 = x,
+                .y1 = y,
+                .x2 = radius,
+                .y2 = 0,
+                .color = opts.aoe_color,
+            } });
+
+            if (dist_sqr > radius_sqr)
+                continue;
+
+            p.damage(owner_name, time, opts.phys_dmg, opts.magic_dmg, opts.true_dmg);
+            p.applyCondition(opts.effect, opts.effect_duration) catch continue;
         }
     }
 };

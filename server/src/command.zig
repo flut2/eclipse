@@ -105,8 +105,35 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
 }
 
 fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
-    _ = iter;
-    _ = player;
+    const item_type = game_data.item_name_to_type.get(iter.buffer[iter.index orelse 0 ..]) orelse return;
+    const props = game_data.item_type_to_props.getPtr(item_type) orelse return;
+    const class_data = game_data.classes.get(player.player_type) orelse return;
+    for (&player.equips, class_data.slot_types) |*equip, slot_type| {
+        var buf: [256]u8 = undefined;
+        if (equip.* == std.math.maxInt(u16) and slot_type.slotsMatch(props.slot_type)) {
+            equip.* = item_type;
+            player.client.queuePacket(.{ .text = .{
+                .name = "Server",
+                .obj_id = -1,
+                .bubble_time = 0,
+                .recipient = "",
+                .text = std.fmt.bufPrint(&buf, "You've been given the \"{s}\"", .{props.display_id}) catch return,
+                .name_color = 0xCC00CC,
+                .text_color = 0xFF99FF,
+            } });
+            return;
+        }
+    }
+
+    player.client.queuePacket(.{ .text = .{
+        .name = "Server",
+        .obj_id = -1,
+        .bubble_time = 0,
+        .recipient = "",
+        .text = "You don't have enough space",
+        .name_color = 0xCC00CC,
+        .text_color = 0xFF99FF,
+    } });
 }
 
 fn handleClearSpawn(player: *Player) void {

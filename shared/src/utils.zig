@@ -343,6 +343,10 @@ pub var rng = std.rand.DefaultPrng.init(0);
 var last_memory_access: i64 = -1;
 var last_memory_value: f32 = -1.0;
 
+pub inline fn typeId(comptime T: type) u32 {
+    return @intFromError(@field(anyerror, @typeName(T)));
+}
+
 pub fn currentMemoryUse(time: i64) !f32 {
     if (time - last_memory_access < 5 * std.time.us_per_s)
         return last_memory_value;

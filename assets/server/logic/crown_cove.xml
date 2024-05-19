@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Behaviors>
-	<Behavior id="Tribal Totem">
-		<Taunt text="Hello" />
-		<Shoot radius="16" count="3" shootAngle="12" projectileIndex="0" cooldown="600"/>
-	</Behavior>
-</Behaviors>

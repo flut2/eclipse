@@ -566,6 +566,11 @@ pub const Client = struct {
     }
 
     fn handleHello(self: *Client) void {
+        if (self.plr_id != -1) {
+            self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Already connected" } });
+            return;
+        }
+
         var reader = &self.reader;
         const build_ver = reader.read([]u8);
         if (!std.mem.eql(u8, build_ver, settings.build_version)) {
@@ -685,6 +690,10 @@ pub const Client = struct {
                 self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player does not exist" } });
                 return;
             };
+            if (player.inCombat(main.current_time)) {
+                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Can't use portals in combat" } });
+                return;
+            }
             player.save() catch {
                 self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player save failed" } });
                 return;
@@ -745,7 +754,6 @@ pub const Client = struct {
     fn handleGroundDamage(self: *Client) void {
         var reader = &self.reader;
         const time = reader.read(i64);
-        _ = time;
         const x = reader.read(f32);
         const y = reader.read(f32);
 
@@ -756,7 +764,7 @@ pub const Client = struct {
         self.world.player_lock.lock();
         defer self.world.player_lock.unlock();
         if (self.world.findRef(Player, self.plr_id)) |player| {
-            player.damage(props.obj_id, props.physical_damage, props.magic_damage, props.true_damage);
+            player.damage(props.obj_id, time, props.physical_damage, props.magic_damage, props.true_damage);
         }
     }
 
@@ -776,7 +784,7 @@ pub const Client = struct {
                 self.world.player_lock.lock();
                 defer self.world.player_lock.unlock();
                 if (self.world.findRef(Player, self.plr_id)) |player| {
-                    player.damage(enemy.props.display_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
+                    player.damage(enemy.props.display_id, main.current_time, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
                     proj.obj_ids_hit.put(self.plr_id, {}) catch return;
                 }
             }
@@ -823,20 +831,25 @@ pub const Client = struct {
     }
 
     fn handleOtherHit(self: *Client) void {
-        _ = self;
-        // var reader = &self.reader;
-        // const time = reader.read(i64);
-        // const bullet_id = reader.read(u8);
-        // const obj_id = reader.read(i32);
-        // const target_id = reader.read(i32);
+        var reader = &self.reader;
+        const time = reader.read(i64);
+        _ = time;
+        const bullet_id = reader.read(u8);
+        _ = bullet_id;
+        const obj_id = reader.read(i32);
+        _ = obj_id;
+        const target_id = reader.read(i32);
+        _ = target_id;
     }
 
     fn handleSquareHit(self: *Client) void {
-        _ = self;
-        // var reader = &self.reader;
-        // const time = reader.read(i64);
-        // const bullet_id = reader.read(u8);
-        // const obj_id = reader.read(i32);
+        var reader = &self.reader;
+        const time = reader.read(i64);
+        _ = time;
+        const bullet_id = reader.read(u8);
+        _ = bullet_id;
+        const obj_id = reader.read(i32);
+        _ = obj_id;
     }
 
     fn handleEscape(self: *Client) void {
@@ -847,6 +860,10 @@ pub const Client = struct {
                 self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player does not exist" } });
                 return;
             };
+            if (player.inCombat(main.current_time)) {
+                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Can't return to the Retrieve in combat" } });
+                return;
+            }
             player.save() catch {
                 self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player save failed" } });
                 return;

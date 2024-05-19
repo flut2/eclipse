@@ -632,8 +632,8 @@ pub const GameScreen = struct {
                 defer self.combat_indicator.tooltip_text.?.lock.unlock();
 
                 self.combat_indicator.tooltip_text.?.recalculateAttributes(self.allocator);
-                self.combat_indicator.x = self.bars_decor.x + (self.bars_decor.width() - self.combat_indicator.width()) / 2;
-                self.combat_indicator.y = self.bars_decor.y - self.combat_indicator.height() - 10;
+                self.combat_indicator.x = self.bars_decor.x + 15 + (44 - self.combat_indicator.width()) / 2;
+                self.combat_indicator.y = self.bars_decor.y + 66 - self.combat_indicator.height() - 10;
 
                 self.last_in_combat = local_player.in_combat;
             }

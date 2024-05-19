@@ -970,6 +970,15 @@ pub const Server = struct {
         const color = reader.read(u32);
 
         switch (effect_type) {
+            .area_blast => {
+                var effect = particles.AoeEffect{
+                    .x = x1,
+                    .y = y1,
+                    .radius = x2,
+                    .color = color,
+                };
+                effect.addToMap();
+            },
             .throw => {
                 var start_x = x2;
                 var start_y = y2;
@@ -1208,7 +1217,7 @@ pub const Server = struct {
             },
             .size => plr.size = @as(f32, @floatFromInt(stat_reader.read(u16))) / 100.0,
             .max_mp => plr.max_mp = stat_reader.read(i16),
-            .mp => plr.mp = stat_reader.read(i16),
+            .mp => plr.mp = stat_reader.read(i32),
             .strength => plr.strength = stat_reader.read(i16),
             .defense => plr.defense = stat_reader.read(i16),
             .speed => plr.speed = stat_reader.read(i16),
@@ -1269,23 +1278,13 @@ pub const Server = struct {
                     }
                 }
             },
-            .tex_1 => plr.tex_1 = stat_reader.read(i32),
-            .tex_2 => plr.tex_2 = stat_reader.read(i32),
             .gold => plr.gold = stat_reader.read(i32),
             .gems => plr.gems = stat_reader.read(i32),
             .crowns => plr.crowns = stat_reader.read(i32),
             .account_id => plr.account_id = stat_reader.read(i32),
-            .guild => {
-                if (plr.guild) |guild_name| {
-                    allocator.free(guild_name);
-                }
-
-                plr.guild = allocator.dupe(u8, stat_reader.read([]u8)) catch &[0]u8{};
-            },
-            .guild_rank => plr.guild_rank = stat_reader.read(i8),
             .texture => plr.skin = stat_reader.read(u16),
             .aether => plr.aether = stat_reader.read(u8),
-            .alt_texture_index => _ = stat_reader.read(u16),
+            .in_combat => plr.in_combat = stat_reader.read(bool),
             else => {
                 std.log.err("Unknown player stat type: {}", .{stat_type});
                 return false;
@@ -1345,8 +1344,6 @@ pub const Server = struct {
                     }
                 }
             },
-            .tex_1 => _ = stat_reader.read(i32),
-            .tex_2 => _ = stat_reader.read(i32),
             .merch_price => _ = stat_reader.read(u8),
             .merch_type => obj.merchant_obj_type = stat_reader.read(u16),
             .merch_count => obj.merchant_rem_count = stat_reader.read(i8),
@@ -1354,7 +1351,6 @@ pub const Server = struct {
             //.sellable_currency => obj.sellable_currency = @enumFromInt(stat_reader.read(u8)),
             .portal_usable => obj.portal_active = stat_reader.read(bool),
             .owner_account_id => obj.owner_acc_id = stat_reader.read(i32),
-            .alt_texture_index => obj.alt_texture_index = stat_reader.read(u16),
             else => {
                 std.log.err("Unknown entity stat type: {}", .{stat_type});
                 return false;

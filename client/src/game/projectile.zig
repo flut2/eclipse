@@ -97,7 +97,7 @@ pub const Projectile = struct {
 
         for (map.entities.items) |*en| {
             if (en.* == .object) {
-                if (en.object.props.is_enemy or !enemy_only and (en.object.props.occupy_square or en.object.props.enemy_occupy_square)) {
+                if ((en.object.props.is_enemy and !en.object.props.damage_immune) or !enemy_only and (en.object.props.occupy_square or en.object.props.enemy_occupy_square)) {
                     const dist_sqr = utils.distSqr(en.object.x, en.object.y, x, y);
                     if (dist_sqr < min_dist) {
                         min_dist = dist_sqr;
@@ -343,7 +343,7 @@ pub const Projectile = struct {
                     return false;
                 }
 
-                if (object.props.is_enemy) {
+                if (object.props.is_enemy and !object.props.damage_immune) {
                     const phys_dmg = map.physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(object.defense - self.penetration), object.condition);
                     const magic_dmg = map.magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(object.resistance - self.piercing), object.condition);
                     const true_dmg: f32 = @floatFromInt(self.true_damage);

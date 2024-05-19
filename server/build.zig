@@ -76,5 +76,21 @@ pub fn build(b: *std.Build) !void {
         },
     });
 
+    var gen_file = try std.fs.cwd().createFile("./server/src/_generated_dont_use.zig", .{});
+
+    const dir = try std.fs.cwd().openDir("./server/src/logic/behaviors/", .{ .iterate = true });
+    var walker = try dir.walk(b.allocator);
+    defer walker.deinit();
+    var i: usize = 0;
+    while (try walker.next()) |entry| : (i += 1) {
+        if (std.mem.endsWith(u8, entry.path, ".zig")) {
+            try gen_file.writeAll(try std.fmt.allocPrint(b.allocator, "pub const b{d} = @import(\"logic/behaviors/{s}\");\n", .{ i, entry.path }));
+        }
+    }
+
+    var options = b.addOptions();
+    options.addOption(usize, "len", i);
+    exe.root_module.addOptions("behaviors", options);
+
     b.installArtifact(exe);
 }

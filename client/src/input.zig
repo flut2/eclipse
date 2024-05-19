@@ -53,8 +53,6 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     input_history.deinit();
 }
 
-// todo isolate the ingame and editor logic
-
 fn keyPress(window: glfw.Window, key: glfw.Key) void {
     if (ui_systems.screen != .game and ui_systems.screen != .editor)
         return;
@@ -95,6 +93,17 @@ fn keyPress(window: glfw.Window, key: glfw.Key) void {
     } else if (key == settings.escape.getKey()) {
         tryEscape();
     } else if (key == settings.interact.getKey()) {
+        {
+            map.object_lock.lockShared();
+            defer map.object_lock.unlockShared();
+            if (map.findEntityConst(map.local_player_id)) |p| {
+                if (p.player.in_combat and ui_systems.screen == .game) {
+                    ui_systems.screen.game.addChatLine("", "Can't use portals in combat", 0xFF0000, 0xFF0000) catch {};
+                    return;
+                }
+            }
+        }
+
         const int_id = map.interactive_id.load(.Acquire);
         if (int_id != -1) {
             switch (map.interactive_type.load(.Acquire)) {
@@ -186,6 +195,17 @@ fn mousePress(window: glfw.Window, button: glfw.MouseButton) void {
     } else if (button == settings.escape.getMouse()) {
         tryEscape();
     } else if (button == settings.interact.getMouse()) {
+        {
+            map.object_lock.lockShared();
+            defer map.object_lock.unlockShared();
+            if (map.findEntityConst(map.local_player_id)) |p| {
+                if (p.player.in_combat and ui_systems.screen == .game) {
+                    ui_systems.screen.game.addChatLine("", "Can't use portals in combat", 0xFF0000, 0xFF0000) catch {};
+                    return;
+                }
+            }
+        }
+
         const int_id = map.interactive_id.load(.Acquire);
         if (int_id != -1) {
             switch (map.interactive_type.load(.Acquire)) {
@@ -476,6 +496,17 @@ pub fn scrollEvent(_: glfw.Window, x_offset: f64, y_offset: f64) void {
 pub fn tryEscape() void {
     if (ui_systems.screen != .game or std.mem.eql(u8, map.name, "the Retrieve"))
         return;
+
+    {
+        map.object_lock.lockShared();
+        defer map.object_lock.unlockShared();
+        if (map.findEntityConst(map.local_player_id)) |p| {
+            if (p.player.in_combat) {
+                ui_systems.screen.game.addChatLine("", "Can't return to the Retrieve in combat", 0xFF0000, 0xFF0000) catch {};
+                return;
+            }
+        }
+    }
 
     main.server.queuePacket(.{ .escape = .{} });
 }

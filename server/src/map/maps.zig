@@ -208,7 +208,8 @@ pub fn init(ally: std.mem.Allocator) !void {
         }
 
         if (map_data.id < 0) {
-            var new_world = try World.create(allocator, map_data.w, map_data.h, map_data.name, map_data.light);
+            try worlds.put(map_data.id, try World.create(allocator, map_data.w, map_data.h, map_data.name, map_data.light));
+            var new_world = worlds.getPtr(map_data.id).?;
             @memcpy(new_world.tiles, map_data.tiles);
             var new_region_iter = map_data.regions.iterator();
             while (new_region_iter.next()) |entry| {
@@ -219,8 +220,12 @@ pub fn init(ally: std.mem.Allocator) !void {
                 new_world.enemy_lock.lock();
                 defer new_world.enemy_lock.unlock();
                 for (map_data.enemies) |e| {
-                    var copy = e;
-                    _ = try new_world.add(Enemy, &copy);
+                    var enemy = Enemy{
+                        .x = e.x,
+                        .y = e.y,
+                        .en_type = e.en_type,
+                    };
+                    _ = try new_world.add(Enemy, &enemy);
                 }
             }
 
@@ -228,13 +233,16 @@ pub fn init(ally: std.mem.Allocator) !void {
                 new_world.entity_lock.lock();
                 defer new_world.entity_lock.unlock();
                 for (map_data.entities) |e| {
-                    var copy = e;
-                    _ = try new_world.add(Entity, &copy);
+                    var entity = Entity{
+                        .x = e.x,
+                        .y = e.y,
+                        .en_type = e.en_type,
+                    };
+                    _ = try new_world.add(Entity, &entity);
                 }
             }
 
             std.log.info("Added persistent world '{s}' (id {d})", .{ map_data.name, map_data.id });
-            try worlds.put(map_data.id, new_world);
         }
 
         if (portal_type != 0xFFFF)
@@ -291,8 +299,12 @@ pub fn portalWorld(portal_type: u16, portal_obj_id: i32) !?*World {
                 new_world.enemy_lock.lock();
                 defer new_world.enemy_lock.unlock();
                 for (map_data.enemies) |e| {
-                    var copy = e;
-                    _ = try new_world.add(Enemy, &copy);
+                    var enemy = Enemy{
+                        .x = e.x,
+                        .y = e.y,
+                        .en_type = e.en_type,
+                    };
+                    _ = try new_world.add(Enemy, &enemy);
                 }
             }
 
@@ -300,11 +312,15 @@ pub fn portalWorld(portal_type: u16, portal_obj_id: i32) !?*World {
                 new_world.entity_lock.lock();
                 defer new_world.entity_lock.unlock();
                 for (map_data.entities) |e| {
-                    var copy = e;
-                    _ = try new_world.add(Entity, &copy);
+                    var entity = Entity{
+                        .x = e.x,
+                        .y = e.y,
+                        .en_type = e.en_type,
+                    };
+                    _ = try new_world.add(Entity, &entity);
                 }
             }
-            
+
             return new_world;
         } else return null;
     } else return null;

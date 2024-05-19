@@ -84,6 +84,8 @@
         <LightColor>0xE54242</LightColor>
         <LightIntensity>0.25</LightIntensity>
         <OccupySquare />
+        <Enemy />
+        <DamageImmune />
     </Object>
     <Object type="0x0106" id="Magic Shrine">
         <Class>GameObject</Class>
@@ -123,6 +125,8 @@
         <LightColor>0x4C8AED</LightColor>
         <LightIntensity>0.25</LightIntensity>
         <OccupySquare />
+        <Enemy />
+        <DamageImmune />
     </Object>
     <Object type="0x107" id="Beginner Totem Object">
         <Class>GameObject</Class>

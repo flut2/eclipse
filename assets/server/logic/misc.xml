@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Behaviors>
-    <Behavior id="Health Shrine">
-        <HealPlayer range="3" amount="75"/>
-    </Behavior>
-    <Behavior id="Magic Shrine">
-        <HealPlayerMP range="3" amount="50"/>
-    </Behavior>
-</Behaviors>

@@ -539,6 +539,7 @@ pub const ObjProps = struct {
     health: i32,
     resistance: i32,
     defense: i32,
+    damage_immune: bool,
 
     pub fn parse(node: xml.Node, allocator: std.mem.Allocator) !ObjProps {
         var slot_list = try std.ArrayList(ItemType).initCapacity(allocator, 9);
@@ -619,6 +620,7 @@ pub const ObjProps = struct {
             .health = try node.getValueInt("Health", i32, 0),
             .defense = try node.getValueInt("Defense", i32, 0),
             .resistance = try node.getValueInt("Resistance", i32, 0),
+            .damage_immune = node.elementExists("DamageImmune"),
         };
     }
 
@@ -854,21 +856,16 @@ pub const StatType = enum(u8) {
     tenacity_bonus = 58,
 
     condition = 59,
-    tex_1 = 60,
-    tex_2 = 61,
     sellable_price = 62,
     portal_usable = 63,
     account_id = 64,
     aether = 65,
     damage_multiplier = 66,
     hit_multiplier = 67,
-    glow = 68,
-    alt_texture_index = 69,
-    guild = 70,
-    guild_rank = 71,
     texture = 72,
     x = 73,
     y = 74,
+    in_combat = 75,
 
     none = 255,
 

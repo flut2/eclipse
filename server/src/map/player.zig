@@ -25,6 +25,8 @@ pub const Player = struct {
     pub const haste_stat = 11;
     pub const tenacity_stat = 12;
 
+    const in_combat_us = 5 * std.time.us_per_s;
+
     obj_id: i32 = -1,
     acc_data: db.AccountData = undefined,
     char_data: db.CharacterData = undefined,
@@ -37,11 +39,16 @@ pub const Player = struct {
     aether: u8 = 1,
     hp: i32 = 100,
     mp: i32 = 0,
+    hp_regen: f32 = 0.0,
+    mp_regen: f32 = 0.0,
     stats: [13]i32 = [_]i32{0} ** 13,
     stat_boosts: [13]i32 = [_]i32{0} ** 13,
     equips: [22]u16 = [_]u16{0xFFFF} ** 22,
+    last_damage: i64 = -1,
     condition: utils.Condition = .{},
     stat_caches: std.AutoHashMap(i32, std.EnumArray(game_data.StatType, ?stat_util.StatValue)) = undefined,
+    conditions_active: std.AutoArrayHashMap(utils.ConditionEnum, i64) = undefined,
+    conditions_to_remove: std.ArrayList(utils.ConditionEnum) = undefined,
     tiles: std.ArrayList(client.TileData) = undefined,
     tiles_seen: std.AutoHashMap(u32, u16) = undefined,
     new_objs: std.ArrayList(client.ObjectData) = undefined,
@@ -61,6 +68,8 @@ pub const Player = struct {
         self.new_objs = std.ArrayList(client.ObjectData).init(allocator);
         self.tick_objs = std.ArrayList(client.ObjectData).init(allocator);
         self.stat_caches = std.AutoHashMap(i32, std.EnumArray(game_data.StatType, ?stat_util.StatValue)).init(allocator);
+        self.conditions_active = std.AutoArrayHashMap(utils.ConditionEnum, i64).init(allocator);
+        self.conditions_to_remove = std.ArrayList(utils.ConditionEnum).init(allocator);
         self.drops = std.ArrayList(i32).init(allocator);
         self.stats_writer.buffer = try allocator.alloc(u8, 256);
 
@@ -104,7 +113,30 @@ pub const Player = struct {
         self.allocator.free(self.stats_writer.buffer);
     }
 
+    pub fn applyCondition(self: *Player, condition: utils.ConditionEnum, duration: i64) !void {
+        std.debug.assert(!self.world.player_lock.tryLock());
+
+        if (self.conditions_active.getPtr(condition)) |current_duration| {
+            if (duration > current_duration.*)
+                current_duration.* = duration;
+        } else try self.conditions_active.put(condition, duration);
+        self.condition.set(condition, true);
+    }
+
+    pub fn clearCondition(self: *Player, condition: utils.ConditionEnum) void {
+        std.debug.assert(!self.world.player_lock.tryLock());
+
+        _ = self.conditions_active.swapRemove(condition);
+        self.condition.set(condition, false);
+    }
+
+    pub inline fn inCombat(self: Player, time: i64) bool {
+        return time - self.last_damage <= in_combat_us;
+    }
+
     pub fn save(self: *Player) !void {
+        std.debug.assert(!self.world.player_lock.tryLock());
+
         try self.char_data.set(.{ .hp = self.hp });
         try self.char_data.set(.{ .mp = self.mp });
         try self.char_data.set(.{ .aether = self.aether });
@@ -113,6 +145,8 @@ pub const Player = struct {
     }
 
     pub fn death(self: *Player, killer: []const u8) !void {
+        std.debug.assert(!self.world.player_lock.tryLock());
+
         // todo reconnect to Retrieve
         if (self.rank >= 80)
             return;
@@ -125,15 +159,47 @@ pub const Player = struct {
         try self.world.remove(Player, self);
     }
 
-    pub fn damage(self: *Player, damage_owner_name: []const u8, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
+    pub fn damage(self: *Player, damage_owner_name: []const u8, time: i64, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
+        std.debug.assert(!self.world.player_lock.tryLock());
+
+        self.last_damage = time;
         self.hp -= phys_dmg - self.props.defense;
         self.hp -= magic_dmg - self.props.resistance;
         self.hp -= true_dmg;
         if (self.hp <= 0) self.death(damage_owner_name) catch return;
     }
 
-    pub fn tick(self: *Player, _: i64, _: i64) !void {
+    pub fn tick(self: *Player, time: i64, dt: i64) !void {
+        const scaled_dt = @as(f32, @floatFromInt(dt)) / std.time.us_per_s;
+
+        const float_stam: f32 = @floatFromInt(self.stats[stamina_stat]);
+        self.hp_regen += (1.0 + float_stam * 0.12) * scaled_dt;
+        const hp_regen_whole: i32 = @intFromFloat(self.hp_regen);
+        self.hp = @min(self.stats[health_stat], self.hp + hp_regen_whole);
+        self.hp_regen -= @floatFromInt(hp_regen_whole);
+
+        const float_int: f32 = @floatFromInt(self.stats[intelligence_stat]);
+        self.mp_regen += (0.5 + float_int * 0.06) * scaled_dt;
+        const mp_regen_whole: i32 = @intFromFloat(self.mp_regen);
+        self.mp = @min(self.stats[mana_stat], self.mp + mp_regen_whole);
+        self.mp_regen -= @floatFromInt(mp_regen_whole);
+
         if (self.hp <= 0) try self.death("Unknown");
+
+        self.conditions_to_remove.clearRetainingCapacity();
+        for (self.conditions_active.values(), self.conditions_active.keys()) |*d, k| {
+            if (d.* <= dt) {
+                try self.conditions_to_remove.append(k);
+                continue;
+            }
+
+            d.* -= dt;
+        }
+
+        for (self.conditions_to_remove.items) |c| {
+            self.condition.set(c, false);
+            _ = self.conditions_active.swapRemove(c);
+        }
 
         const ux: u16 = @intFromFloat(self.x);
         const uy: u16 = @intFromFloat(self.y);
@@ -232,7 +298,7 @@ pub const Player = struct {
             const y_dt = player.y - self.y;
             if (x_dt * x_dt + y_dt * y_dt <= 16 * 16) {
                 if (self.stat_caches.getPtr(player.obj_id)) |cache| {
-                    const stats = try player.exportStats(cache, player.obj_id == self.obj_id, false);
+                    const stats = try player.exportStats(cache, player.obj_id == self.obj_id, false, time);
                     if (stats.len > 0)
                         try self.tick_objs.append(.{
                             .obj_type = player.player_type,
@@ -244,7 +310,7 @@ pub const Player = struct {
                     try self.new_objs.append(.{
                         .obj_type = player.player_type,
                         .obj_id = player.obj_id,
-                        .stats = try player.exportStats(&cache, player.obj_id == self.obj_id, true),
+                        .stats = try player.exportStats(&cache, player.obj_id == self.obj_id, true, time),
                     });
                     try self.stat_caches.put(player.obj_id, cache);
                 }
@@ -295,7 +361,13 @@ pub const Player = struct {
         }
     }
 
-    pub fn exportStats(self: *Player, stat_cache: *std.EnumArray(game_data.StatType, ?stat_util.StatValue), is_self: bool, comptime force_export_pos: bool) ![]u8 {
+    pub fn exportStats(
+        self: *Player,
+        stat_cache: *std.EnumArray(game_data.StatType, ?stat_util.StatValue),
+        is_self: bool,
+        comptime force_export_pos: bool,
+        time: i64,
+    ) ![]u8 {
         var writer = &self.stats_writer;
         writer.index = 0;
 
@@ -307,10 +379,11 @@ pub const Player = struct {
         stat_util.write(writer, stat_cache, self.allocator, .name, self.name);
         stat_util.write(writer, stat_cache, self.allocator, .account_id, @as(i32, @intCast(self.acc_data.acc_id)));
         stat_util.write(writer, stat_cache, self.allocator, .max_hp, self.stats[health_stat]);
-        stat_util.write(writer, stat_cache, self.allocator, .hp, @as(i32, @intCast(self.hp)));
+        stat_util.write(writer, stat_cache, self.allocator, .hp, self.hp);
         stat_util.write(writer, stat_cache, self.allocator, .max_mp, @as(i16, @intCast(self.stats[mana_stat])));
         stat_util.write(writer, stat_cache, self.allocator, .mp, self.mp);
         stat_util.write(writer, stat_cache, self.allocator, .condition, self.condition);
+        stat_util.write(writer, stat_cache, self.allocator, .in_combat, self.inCombat(time));
 
         if (is_self) {
             stat_util.write(writer, stat_cache, self.allocator, .strength, @as(i16, @intCast(self.stats[strength_stat])));

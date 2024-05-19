@@ -9,7 +9,8 @@ const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 const xev = @import("xev");
 const game_data = @import("shared").game_data;
 const maps = @import("map/maps.zig");
-const state = @import("logic/state.zig");
+const behavior = @import("logic/behavior.zig");
+const behavior_logic = @import("logic/logic.zig");
 
 const Client = @import("client.zig").Client;
 
@@ -155,8 +156,11 @@ pub fn main() !void {
     try game_data.init(allocator);
     defer game_data.deinit(allocator);
 
-    try state.init(allocator);
-    defer state.deinit(allocator);
+    behavior_logic.init(allocator);
+    defer behavior_logic.deinit();
+
+    try behavior.init(allocator);
+    defer behavior.deinit();
 
     try maps.init(allocator);
     defer maps.deinit();
