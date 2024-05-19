@@ -53,13 +53,22 @@ pub fn init(allocator: std.mem.Allocator) !void {
         const import = @field(@import("../_generated_dont_use.zig"), std.fmt.comptimePrint("b{d}", .{i}));
         inline for (@typeInfo(import).Struct.decls) |d| {
             const behav = @field(import, d.name);
-            const name = @field(behav, "object_name");
-            const obj_type = game_data.obj_name_to_type.get(name) orelse {
-                std.log.err("Adding behavior for {s} failed: obj type not found", .{name});
-                return;
-            };
 
-            try behavior_map.put(obj_type, @unionInit(Behavior, std.fmt.comptimePrint("{d}", .{utils.typeId(behav)}), .{}));
+            // can be just for switching
+            if (@hasDecl(behav, "object_name")) {
+                const name = @field(behav, "object_name");
+                const obj_type = game_data.obj_name_to_type.get(name) orelse {
+                    std.log.err("Adding behavior for {s} failed: object type not found", .{name});
+                    return;
+                };
+
+                const res = try behavior_map.getOrPut(obj_type);
+                if (res.found_existing) {
+                    std.log.err("The struct \"{s}\" overwrote the behavior for the object \"{s}\"", .{ @typeName(behav), name });
+                }
+
+                res.value_ptr.* = @unionInit(Behavior, std.fmt.comptimePrint("{d}", .{utils.typeId(behav)}), .{});
+            }
         }
     }
 }
