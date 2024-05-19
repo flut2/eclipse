@@ -274,12 +274,12 @@ pub const AccountRegisterScreen = struct {
     pub fn update(_: *AccountRegisterScreen, _: i64, _: f32) !void {}
 
     fn register(allocator: std.mem.Allocator, email: []const u8, password: []const u8, name: []const u8) !bool {
-        var data = std.StringHashMap([]const u8).init(allocator);
-        try data.put("name", name);
-        try data.put("hwid", "hello");
-        try data.put("email", email);
-        try data.put("password", password);
-        defer data.deinit();
+        var data: std.StringHashMapUnmanaged([]const u8) = .{};
+        try data.put(allocator, "name", name);
+        try data.put(allocator, "hwid", "hello");
+        try data.put(allocator, "email", email);
+        try data.put(allocator, "password", password);
+        defer data.deinit(allocator);
 
         const response = try requests.sendRequest(settings.app_engine_uri ++ "account/register", data);
         defer requests.freeResponse(response);
@@ -298,10 +298,18 @@ pub const AccountRegisterScreen = struct {
     }
 
     fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) !bool {
-        var verify_data = std.StringHashMap([]const u8).init(allocator);
-        try verify_data.put("email", email);
-        try verify_data.put("password", password);
-        defer verify_data.deinit();
+        defer {
+            if (main.character_list.len > 0) {
+                ui_systems.switchScreen(.char_select);
+            } else {
+                ui_systems.switchScreen(.char_create);
+            }
+        }
+        
+        var verify_data: std.StringHashMapUnmanaged([]const u8) = .{};
+        try verify_data.put(allocator, "email", email);
+        try verify_data.put(allocator, "password", password);
+        defer verify_data.deinit(allocator);
 
         const response = try requests.sendRequest(settings.app_engine_uri ++ "account/verify", verify_data);
         defer requests.freeResponse(response);
@@ -331,11 +339,11 @@ pub const AccountRegisterScreen = struct {
         main.current_account.email = try allocator.dupe(u8, email);
         main.current_account.password = try allocator.dupe(u8, password);
         main.current_account.admin = verify_root.elementExists("Admin");
-        
-        var list_data = std.StringHashMap([]const u8).init(allocator);
-        try list_data.put("email", email);
-        try list_data.put("password", password);
-        defer list_data.deinit();
+
+        var list_data: std.StringHashMapUnmanaged([]const u8) = .{};
+        try list_data.put(allocator, "email", email);
+        try list_data.put(allocator, "password", password);
+        defer list_data.deinit(allocator);
 
         const list_response = try requests.sendRequest(settings.app_engine_uri ++ "char/list", list_data);
         defer requests.freeResponse(list_response);
@@ -346,31 +354,25 @@ pub const AccountRegisterScreen = struct {
         main.next_char_id = try list_root.getAttributeInt("nextCharId", u8, 0);
         main.max_chars = try list_root.getAttributeInt("maxNumChars", u8, 0);
 
-        var char_list = try std.ArrayList(game_data.CharacterData).initCapacity(allocator, 4);
-        defer char_list.deinit();
+        var char_list = try std.ArrayListUnmanaged(game_data.CharacterData).initCapacity(allocator, 4);
+        defer char_list.deinit(allocator);
 
         var char_iter = list_root.iterate(&.{}, "Char");
         while (char_iter.next()) |node|
-            try char_list.append(try game_data.CharacterData.parse(allocator, node, try node.getAttributeInt("id", u32, 0)));
+            try char_list.append(allocator, try game_data.CharacterData.parse(node, try node.getAttributeInt("id", u32, 0)));
 
         main.character_list = try allocator.dupe(game_data.CharacterData, char_list.items);
 
         const server_root = list_root.findChild("Servers");
         if (server_root) |srv_root| {
-            var server_data_list = try std.ArrayList(game_data.ServerData).initCapacity(allocator, 4);
-            defer server_data_list.deinit();
+            var server_data_list = try std.ArrayListUnmanaged(game_data.ServerData).initCapacity(allocator, 4);
+            defer server_data_list.deinit(allocator);
 
             var server_iter = srv_root.iterate(&.{}, "Server");
             while (server_iter.next()) |server_node|
-                try server_data_list.append(try game_data.ServerData.parse(server_node, allocator));
+                try server_data_list.append(allocator, try game_data.ServerData.parse(server_node));
 
             main.server_list = try allocator.dupe(game_data.ServerData, server_data_list.items);
-        }
-
-        if (main.character_list.len > 0) {
-            ui_systems.switchScreen(.char_select);
-        } else {
-            ui_systems.switchScreen(.char_create);
         }
 
         return true;

@@ -1,4 +1,3 @@
-pub const enable_tracy = false;
 pub const game_port = 3328;
 pub const login_port = 2833;
 pub const redis_ip = "127.0.0.1";

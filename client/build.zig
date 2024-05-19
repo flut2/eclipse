@@ -1,6 +1,5 @@
 const std = @import("std");
 const zstbi = @import("libs/zstbi/build.zig");
-const ztracy = @import("libs/ztracy/build.zig");
 const zaudio = @import("libs/zaudio/build.zig");
 const ini = @import("libs/ini/build.zig");
 const nfd = @import("libs/nfd-zig/build.zig");
@@ -18,6 +17,17 @@ pub fn build(b: *std.Build) !void {
         // .use_lld = optimize != .Debug,
         // .use_llvm = optimize != .Debug,
     });
+
+    const enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false;
+    const shared_dep = b.dependency("shared", .{
+        .target = target,
+        .optimize = optimize,
+        .enable_tracy = enable_tracy,
+    });
+    exe.root_module.addImport("shared", shared_dep.module("shared"));
+    exe.root_module.addImport("xev", shared_dep.module("xev"));
+    exe.root_module.addImport("rpmalloc", shared_dep.module("rpmalloc"));
+    exe.root_module.addImport("tracy", shared_dep.module("tracy"));
 
     exe.root_module.addImport("rpc", @import("libs/zig-discord/build.zig").getModule(b));
     exe.root_module.addImport("nfd", nfd.getModule(b));
@@ -46,29 +56,17 @@ pub fn build(b: *std.Build) !void {
         try @import("mach_gpu").link(mach_gpu_dep.builder, exe, &exe.root_module, .{});
     }
 
-    exe.root_module.addImport("xev", b.dependency("libxev", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("xev"));
-
-    exe.root_module.addImport("rpmalloc", b.dependency("rpmalloc", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("rpmalloc"));
-
-    exe.root_module.addImport("shared", b.dependency("shared", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("shared"));
-
     const nfd_lib = nfd.makeLib(b, target, optimize);
     if (target.result.os.tag == .macos) {
         nfd_lib.defineCMacro("__kernel_ptr_semantics", "");
     }
     exe.linkLibrary(nfd_lib);
 
+    var options = b.addOptions();
+    options.addOption(bool, "enable_tracy", enable_tracy);
+    exe.root_module.addOptions("options", options);
+
     zstbi.package(b, target, optimize, .{}).link(exe);
-    ztracy.package(b, target, optimize, .{ .options = .{ .enable_ztracy = true } }).link(exe);
     zaudio.package(b, target, optimize, .{}).link(exe);
 
     ini.link(ini.getModule(b), exe);

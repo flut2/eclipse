@@ -20,7 +20,7 @@ pub fn deinit() void {
     body_pool.deinit();
 }
 
-pub fn sendRequest(uri: []const u8, values: std.StringHashMap([]const u8)) ![]u8 {
+pub fn sendRequest(uri: []const u8, values: std.StringHashMapUnmanaged([]const u8)) ![]u8 {
     const header_buffer = try header_pool.create();
     defer header_pool.destroy(header_buffer);
 

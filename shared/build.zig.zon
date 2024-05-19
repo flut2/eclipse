@@ -7,6 +7,18 @@
             .url = "https://github.com/ianprime0509/zig-libxml2/archive/4c370e70136fb96f227b95b30a4c1f5ec4dc013c.tar.gz",
             .hash = "1220869e0007bf4a7fe10d86ccb24a6bf09d32714d6432d2cc6e5b2a7be0ad55e3b7",
         },
+        .libxev = .{
+            .url = "https://github.com/mitchellh/libxev/archive/4e6781895e4e6c477597c8c2713d36cd82b57d07.tar.gz",
+            .hash = "12203f87e00caa6c07c02a748f234a5c0ee2ca5c334ec464e88810d93e7b5495a56f",
+        },
+        .rpmalloc = .{
+            .url = "https://github.com/InKryption/rpmalloc-zig-port/archive/56966ca426ef13efa0ab5223fc27aade4866b6a4.tar.gz",
+            .hash = "12204e2334e652e8188f2298d4b29d03d78e6d101b6b231f0b35c7e7ad137f3be3b9",
+        },
+        .tracy = .{
+            .url = "https://github.com/cipharius/zig-tracy/archive/0ee73409d49d96bce1b7b873743eb60a1f07290d.tar.gz",
+            .hash = "1220182b1277a3508bc10f677ecca9f38f5dd92c9d93eb7b2f1ec9be31d121a236f4",
+        },
     },
     .paths = .{
         "build.zig",

@@ -8,6 +8,7 @@ pub fn build(b: *std.Build) !void {
         const client_dep = b.dependency("client", .{
             .target = target,
             .optimize = optimize,
+            .enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false,
         });
         const client_exe = client_dep.artifact("Eclipse");
         b.getInstallStep().dependOn(&b.addInstallArtifact(client_exe, .{
@@ -36,6 +37,7 @@ pub fn build(b: *std.Build) !void {
         const server_dep = b.dependency("server", .{
             .target = target,
             .optimize = optimize,
+            .enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false,
         });
         const server_exe = server_dep.artifact("Eclipse");
         b.getInstallStep().dependOn(&b.addInstallArtifact(server_exe, .{

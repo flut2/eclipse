@@ -14,7 +14,7 @@ const camera = @import("camera.zig");
 const map = @import("game/map.zig");
 const element = @import("ui/element.zig");
 const render = @import("render/base.zig");
-const ztracy = @import("ztracy");
+const tracy = @import("tracy");
 const zaudio = @import("zaudio");
 const ui_systems = @import("ui/systems.zig");
 const rpc = @import("rpc");
@@ -81,6 +81,8 @@ fn onResize(_: glfw.Window, w: u32, h: u32) void {
 }
 
 fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) void {
+    tracy.setThreadName("Network");
+
     rpmalloc.initThread() catch |e| {
         std.log.err("Network thread initialization failed: {}", .{e});
         return;
@@ -135,6 +137,8 @@ pub fn enterTest(selected_server: game_data.ServerData, selected_char_id: u32, e
 }
 
 fn renderTick(window: glfw.Window) !void {
+    tracy.setThreadName("Render");
+
     rpmalloc.initThread() catch |e| {
         std.log.err("Render thread initialization failed: {}", .{e});
         return;
@@ -267,29 +271,9 @@ pub fn disconnect(has_lock: bool) void {
     dialog.showDialog(.none, {});
 }
 
-// This is effectively just raw_c_allocator wrapped in the Tracy stuff
-fn tracyAlloc(_: *anyopaque, len: usize, _: u8, _: usize) ?[*]u8 {
-    const malloc = std.c.malloc(len);
-    ztracy.Alloc(malloc, len);
-    return @ptrCast(malloc);
-}
-
-fn tracyResize(_: *anyopaque, buf: []u8, _: u8, new_len: usize, _: usize) bool {
-    return new_len <= buf.len;
-}
-
-fn tracyFree(_: *anyopaque, buf: []u8, _: u8, _: usize) void {
-    ztracy.Free(buf.ptr);
-    std.c.free(buf.ptr);
-}
-
 pub fn main() !void {
-    // needed for tracy to register
-    var main_zone: ztracy.ZoneCtx = undefined;
-    if (settings.enable_tracy)
-        main_zone = ztracy.ZoneNC(@src(), "Main Zone", 0x00FF0000);
-    defer if (settings.enable_tracy) main_zone.End();
-
+    tracy.setThreadName("Main");
+    
     start_time = std.time.microTimestamp();
     utils.rng.seed(@intCast(start_time));
 
@@ -297,20 +281,16 @@ pub fn main() !void {
     var gpa = if (is_debug) std.heap.GeneralPurposeAllocator(.{}){} else {};
     defer _ = if (is_debug) gpa.deinit();
 
-    const tracy_allocator_vtable = std.mem.Allocator.VTable{
-        .alloc = tracyAlloc,
-        .resize = tracyResize,
-        .free = tracyFree,
-    };
-    const tracy_allocator = std.mem.Allocator{
-        .ptr = undefined,
-        .vtable = &tracy_allocator_vtable,
-    };
-
     try rpmalloc.init(null, .{});
     defer rpmalloc.deinit();
 
-    allocator = if (settings.enable_tracy) tracy_allocator else switch (builtin.mode) {
+    allocator = if (@import("options").enable_tracy) blk: {
+        var tracing_allocator = tracy.TracingAllocator.init(switch (builtin.mode) {
+            .Debug => gpa.allocator(),
+            else => rpmalloc.allocator(),
+        });
+        break :blk tracing_allocator.allocator();
+    } else switch (builtin.mode) {
         .Debug => gpa.allocator(),
         else => rpmalloc.allocator(),
     };
@@ -327,14 +307,14 @@ pub fn main() !void {
 
         if (character_list.len > 0) {
             for (character_list) |char| {
-                char.deinit(allocator);
+                char.deinit();
             }
             allocator.free(character_list);
         }
 
         if (server_list) |srv_list| {
             for (srv_list) |srv| {
-                srv.deinit(allocator);
+                srv.deinit();
             }
             allocator.free(srv_list);
         }
@@ -367,7 +347,7 @@ pub fn main() !void {
     defer assets.deinit(allocator);
 
     try game_data.init(allocator);
-    defer game_data.deinit(allocator);
+    defer game_data.deinit();
 
     requests.init(allocator);
     defer requests.deinit();
@@ -483,6 +463,8 @@ fn ready(cli: *rpc) !void {
 }
 
 fn runRpc(cli: *rpc) void {
+    tracy.setThreadName("RPC");
+
     rpmalloc.initThread() catch |e| {
         std.log.err("RPC thread initialization failed: {}", .{e});
         return;

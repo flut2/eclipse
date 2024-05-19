@@ -4,7 +4,7 @@ const login = @import("login.zig");
 const settings = @import("settings.zig");
 const builtin = @import("builtin");
 const utils = @import("shared").utils;
-const ztracy = @import("ztracy");
+const tracy = @import("tracy");
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 const xev = @import("xev");
 const game_data = @import("shared").game_data;
@@ -39,22 +39,6 @@ pub var game_thread: std.Thread = undefined;
 pub var tick_game: bool = true;
 pub var tick_id: u8 = 0;
 pub var current_time: i64 = -1;
-
-// This is effectively just raw_c_allocator wrapped in the Tracy stuff
-fn tracyAlloc(_: *anyopaque, len: usize, _: u8, _: usize) ?[*]u8 {
-    const malloc = std.c.malloc(len);
-    ztracy.Alloc(malloc, len);
-    return @ptrCast(malloc);
-}
-
-fn tracyResize(_: *anyopaque, buf: []u8, _: u8, new_len: usize, _: usize) bool {
-    return new_len <= buf.len;
-}
-
-fn tracyFree(_: *anyopaque, buf: []u8, _: u8, _: usize) void {
-    ztracy.Free(buf.ptr);
-    std.c.free(buf.ptr);
-}
 
 fn timerCallback(tick_timer: ?*xev.Timer, timer_loop: *xev.Loop, timer_comp: *xev.Completion, _: xev.Timer.RunError!void) xev.CallbackAction {
     tick_timer.?.run(timer_loop, timer_comp, tps_ms, xev.Timer, tick_timer.?, timerCallback);
@@ -117,20 +101,16 @@ pub fn main() !void {
     var gpa = if (is_debug) std.heap.GeneralPurposeAllocator(.{}){} else {};
     defer _ = if (is_debug) gpa.deinit();
 
-    const tracy_allocator_vtable = std.mem.Allocator.VTable{
-        .alloc = tracyAlloc,
-        .resize = tracyResize,
-        .free = tracyFree,
-    };
-    const tracy_allocator = std.mem.Allocator{
-        .ptr = undefined,
-        .vtable = &tracy_allocator_vtable,
-    };
-
     try rpmalloc.init(null, .{});
     defer rpmalloc.deinit();
 
-    allocator = if (settings.enable_tracy) tracy_allocator else switch (builtin.mode) {
+    allocator = if (@import("options").enable_tracy) blk: {
+        var tracing_allocator = tracy.TracingAllocator.init(switch (builtin.mode) {
+            .Debug => gpa.allocator(),
+            else => rpmalloc.allocator(),
+        });
+        break :blk tracing_allocator.allocator();
+    } else switch (builtin.mode) {
         .Debug => gpa.allocator(),
         else => rpmalloc.allocator(),
     };

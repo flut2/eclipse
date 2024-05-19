@@ -10,7 +10,7 @@ pub const Behavior = blk: {
     var enum_fields: []const EnumField = &[_]EnumField{};
 
     var enum_index: u32 = 0;
-    for (0..@import("behaviors").len) |i| {
+    for (0..@import("options").behavs_len) |i| {
         const import = @field(@import("../_generated_dont_use.zig"), std.fmt.comptimePrint("b{d}", .{i}));
         for (@typeInfo(import).Struct.decls) |d| {
             const behav = @field(import, d.name);
@@ -49,7 +49,7 @@ pub var behavior_map: std.AutoHashMap(u16, Behavior) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     behavior_map = std.AutoHashMap(u16, Behavior).init(allocator);
-    inline for (0..@import("behaviors").len) |i| {
+    inline for (0..@import("options").behavs_len) |i| {
         const import = @field(@import("../_generated_dont_use.zig"), std.fmt.comptimePrint("b{d}", .{i}));
         inline for (@typeInfo(import).Struct.decls) |d| {
             const behav = @field(import, d.name);

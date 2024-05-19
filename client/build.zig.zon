@@ -16,17 +16,9 @@
             .url = "https://github.com/hexops/mach-glfw/archive/1a9a03399058fd83f7fbb597f3f8304007ff6a3c.tar.gz",
             .hash = "1220b4d58ec6cf53abfd8d7547d39afb9bffa41822d4d58f52625230466e51cc93bb",
         },
-        .libxev = .{
-            .url = "https://github.com/mitchellh/libxev/archive/4e6781895e4e6c477597c8c2713d36cd82b57d07.tar.gz",
-            .hash = "12203f87e00caa6c07c02a748f234a5c0ee2ca5c334ec464e88810d93e7b5495a56f",
-        },
         .turbopack = .{
             .url = "https://github.com/flut2/turbopack/archive/1a0107a51c42051b9bf7ffdc9f8f80a26ddb5570.tar.gz",
             .hash = "12200132a6647b5879f3d142cbae4f11f8535e8953e0ac43ffa0c15528f6bd4de99b",
-        },
-        .rpmalloc = .{
-            .url = "https://github.com/InKryption/rpmalloc-zig-port/archive/56966ca426ef13efa0ab5223fc27aade4866b6a4.tar.gz",
-            .hash = "12204e2334e652e8188f2298d4b29d03d78e6d101b6b231f0b35c7e7ad137f3be3b9",
         },
     },
     .paths = .{

@@ -9,6 +9,11 @@
             "command": "zig build -Dclient -Doptimize=Debug -freference-trace",
         },
         {
+            "label": "Debug Client (Tracy)",
+            "type": "shell",
+            "command": "zig build -Denable_tracy -Dclient -Doptimize=Debug -freference-trace",
+        },
+        {
             "label": "ReleaseSafe Client",
             "type": "shell",
             "command": "zig build -Dclient -Doptimize=ReleaseSafe"
@@ -27,6 +32,11 @@
             "label": "Debug Server",
             "type": "shell",
             "command": "zig build -Dserver -Doptimize=Debug -freference-trace",
+        },
+        {
+            "label": "Debug Server (Tracy)",
+            "type": "shell",
+            "command": "zig build -Denable_tracy -Dserver -Doptimize=Debug -freference-trace",
         },
         {
             "label": "ReleaseSafe Server",

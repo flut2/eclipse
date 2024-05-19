@@ -11,6 +11,15 @@
             "preLaunchTask": "Debug Client"
         },
         {
+            "name": "Debug Client (Tracy)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "Debug Client (Tracy)"
+        },
+        {
             "name": "ReleaseSafe Client",
             "type": "lldb",
             "request": "launch",
@@ -45,6 +54,15 @@
             "args": [],
             "cwd": "${workspaceFolder}/zig-out/bin/client",
             "preLaunchTask": "Debug Client"
+        },
+        {
+            "name": "Debug Client (Tracy, cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/client/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/client",
+            "preLaunchTask": "Debug Client (Tracy)"
         },
         {
             "name": "ReleaseSafe Client (cppvsdbg)",
@@ -83,6 +101,15 @@
             "preLaunchTask": "Debug Server"
         },
         {
+            "name": "Debug Server (Tracy)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "Debug Server (Tracy)"
+        },
+        {
             "name": "ReleaseSafe Server",
             "type": "lldb",
             "request": "launch",
@@ -117,6 +144,15 @@
             "args": [],
             "cwd": "${workspaceFolder}/zig-out/bin/server",
             "preLaunchTask": "Debug Server"
+        },
+        {
+            "name": "Debug Server (Tracy, cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/server/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/zig-out/bin/server",
+            "preLaunchTask": "Debug Server (Tracy)"
         },
         {
             "name": "ReleaseSafe Server (cppvsdbg)",

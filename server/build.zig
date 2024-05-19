@@ -1,5 +1,4 @@
 const std = @import("std");
-const ztracy = @import("libs/ztracy/build.zig");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -15,27 +14,21 @@ pub fn build(b: *std.Build) !void {
         // .use_llvm = optimize != .Debug,
     });
 
-    exe.root_module.addImport("rpmalloc", b.dependency("rpmalloc", .{
+    const enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false;
+    const shared_dep = b.dependency("shared", .{
         .target = target,
         .optimize = optimize,
-    }).module("rpmalloc"));
-
-    exe.root_module.addImport("shared", b.dependency("shared", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("shared"));
+        .enable_tracy = enable_tracy,
+    });
+    exe.root_module.addImport("shared", shared_dep.module("shared"));
+    exe.root_module.addImport("xev", shared_dep.module("xev"));
+    exe.root_module.addImport("rpmalloc", shared_dep.module("rpmalloc"));
+    exe.root_module.addImport("tracy", shared_dep.module("tracy"));
 
     exe.root_module.addImport("httpz", b.dependency("httpz", .{
         .target = target,
         .optimize = optimize,
     }).module("httpz"));
-
-    exe.root_module.addImport("xev", b.dependency("libxev", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("xev"));
-
-    ztracy.package(b, target, optimize, .{ .options = .{ .enable_ztracy = true } }).link(exe);
 
     const hiredis = b.dependency("hiredis", .{});
     const hiredis_path = hiredis.path(".");
@@ -89,8 +82,9 @@ pub fn build(b: *std.Build) !void {
     }
 
     var options = b.addOptions();
-    options.addOption(usize, "len", i);
-    exe.root_module.addOptions("behaviors", options);
+    options.addOption(usize, "behavs_len", i);
+    options.addOption(bool, "enable_tracy", enable_tracy);
+    exe.root_module.addOptions("options", options);
 
     b.installArtifact(exe);
 }
