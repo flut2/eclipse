@@ -1,8 +1,0 @@
-<BehaviorEntries>
-    <BehaviorEntry id="Health Shrine">
-        <HealPlayer range="3" amount="75"/>
-    </BehaviorEntry>
-    <BehaviorEntry id="Magic Shrine">
-        <HealPlayerMP range="3" amount="50"/>
-    </BehaviorEntry>
-</BehaviorEntries>
