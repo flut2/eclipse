@@ -5,55 +5,47 @@ const utils = @import("shared").utils;
 const Projectile = @import("../map/projectile.zig").Projectile;
 const Enemy = @import("../map/enemy.zig").Enemy;
 
-var heal_storage: std.AutoHashMap(u64, HealStorage) = undefined;
-var charge_storage: std.AutoHashMap(u64, ChargeStorage) = undefined;
-var aoe_storage: std.AutoHashMap(u64, AoeStorage) = undefined;
-var follow_storage: std.AutoHashMap(u64, FollowStorage) = undefined;
-var wander_storage: std.AutoHashMap(u64, WanderStorage) = undefined;
-var shoot_storage: std.AutoHashMap(u64, ShootStorage) = undefined;
+pub const Storages = struct {
+    heal: std.AutoHashMapUnmanaged(u64, HealStorage) = .{},
+    charge: std.AutoHashMapUnmanaged(u64, ChargeStorage) = .{},
+    aoe: std.AutoHashMapUnmanaged(u64, AoeStorage) = .{},
+    follow: std.AutoHashMapUnmanaged(u64, FollowStorage) = .{},
+    wander: std.AutoHashMapUnmanaged(u64, WanderStorage) = .{},
+    shoot: std.AutoHashMapUnmanaged(u64, ShootStorage) = .{},
 
-pub fn init(allocator: std.mem.Allocator) void {
-    heal_storage = std.AutoHashMap(u64, HealStorage).init(allocator);
-    charge_storage = std.AutoHashMap(u64, ChargeStorage).init(allocator);
-    aoe_storage = std.AutoHashMap(u64, AoeStorage).init(allocator);
-    follow_storage = std.AutoHashMap(u64, FollowStorage).init(allocator);
-    wander_storage = std.AutoHashMap(u64, WanderStorage).init(allocator);
-    shoot_storage = std.AutoHashMap(u64, ShootStorage).init(allocator);
+    pub fn clear(self: *Storages) void {
+        inline for (@typeInfo(@TypeOf(self.*)).Struct.fields) |field| {
+            @field(self.*, field.name).clearRetainingCapacity();
+        }
+    }
+
+    pub fn deinit(self: *Storages) void {
+        inline for (@typeInfo(@TypeOf(self.*)).Struct.fields) |field| {
+            @field(self.*, field.name).deinit(allocator);
+        }
+    }
+};
+
+var allocator: std.mem.Allocator = undefined;
+pub fn init(ally: std.mem.Allocator) void {
+    allocator = ally;
 }
 
-pub fn deinit() void {
-    heal_storage.deinit();
-    charge_storage.deinit();
-    aoe_storage.deinit();
-    follow_storage.deinit();
-    wander_storage.deinit();
-    shoot_storage.deinit();
-}
-
-pub inline fn clearStorage(storage_id: u64) void {
-    _ = heal_storage.remove(storage_id);
-    _ = charge_storage.remove(storage_id);
-    _ = aoe_storage.remove(storage_id);
-    _ = follow_storage.remove(storage_id);
-    _ = wander_storage.remove(storage_id);
-    _ = shoot_storage.remove(storage_id);
-}
-
-pub inline fn getStorageId(comptime type_id: u32, obj_id: i32) u64 {
-    return @as(u64, type_id) << 32 | @as(u64, @intCast(obj_id));
+pub inline fn getStorageId(comptime type_id: u32, call_id: u32) u64 {
+    return @as(u64, type_id) << 32 | @as(u64, @intCast(call_id));
 }
 
 const HealStorage = struct { time: i64 = 0 };
-pub inline fn heal(host: *Enemy, dt: i64, opts: struct {
+pub inline fn heal(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct {
     range: f32,
     amount: i32,
     target_name: []const u8,
     cooldown: i64,
 }) bool {
-    const storage_id = getStorageId(utils.typeId(@This()), host.obj_id);
-    var storage = heal_storage.getPtr(storage_id) orelse blk: {
-        heal_storage.put(storage_id, .{}) catch return false;
-        break :blk heal_storage.getPtr(storage_id).?;
+    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    var storage = host.storages.heal.getPtr(storage_id) orelse blk: {
+        host.storages.heal.put(allocator, storage_id, .{}) catch return false;
+        break :blk host.storages.heal.getPtr(storage_id).?;
     };
     storage.time -= dt;
     if (storage.time > 0)
@@ -101,15 +93,15 @@ pub inline fn heal(host: *Enemy, dt: i64, opts: struct {
 }
 
 const ChargeStorage = struct { target_x: f32 = std.math.nan(f32), target_y: f32 = std.math.nan(f32), time: i64 = 0 };
-pub inline fn charge(host: *Enemy, dt: i64, opts: struct {
+pub inline fn charge(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct {
     speed: f32,
     range: f32,
     cooldown: i64,
 }) bool {
-    const storage_id = getStorageId(utils.typeId(@This()), host.obj_id);
-    var storage = charge_storage.getPtr(storage_id) orelse blk: {
-        charge_storage.put(storage_id, .{}) catch return false;
-        break :blk charge_storage.getPtr(storage_id).?;
+    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    var storage = host.storages.charge.getPtr(storage_id) orelse blk: {
+        host.storages.charge.put(allocator, storage_id, .{}) catch return false;
+        break :blk host.storages.charge.getPtr(storage_id).?;
     };
 
     if (!std.math.isNan(storage.target_x) and !std.math.isNan(storage.target_y)) {
@@ -167,7 +159,7 @@ pub inline fn orbit(host: *Enemy, dt: i64, opts: struct {
 }
 
 const AoeStorage = struct { time: i64 = 0 };
-pub inline fn aoe(host: *Enemy, time: i64, dt: i64, opts: struct {
+pub inline fn aoe(comptime call_id: u32, host: *Enemy, time: i64, dt: i64, opts: struct {
     radius: f32,
     phys_dmg: i32 = 0,
     magic_dmg: i32 = 0,
@@ -177,10 +169,10 @@ pub inline fn aoe(host: *Enemy, time: i64, dt: i64, opts: struct {
     cooldown: i64 = 1 * std.time.us_per_s,
     color: u32 = 0xFFFFFF,
 }) void {
-    const storage_id = getStorageId(utils.typeId(@This()), host.obj_id);
-    var storage = aoe_storage.getPtr(storage_id) orelse blk: {
-        aoe_storage.put(storage_id, .{}) catch return;
-        break :blk aoe_storage.getPtr(storage_id).?;
+    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    var storage = host.storages.aoe.getPtr(storage_id) orelse blk: {
+        host.storages.aoe.put(allocator, storage_id, .{}) catch return;
+        break :blk host.storages.aoe.getPtr(storage_id).?;
     };
 
     storage.time -= dt;
@@ -202,16 +194,16 @@ pub inline fn aoe(host: *Enemy, time: i64, dt: i64, opts: struct {
 }
 
 const FollowStorage = struct { time: i64 = 0 };
-pub inline fn follow(host: *Enemy, dt: i64, opts: struct {
+pub inline fn follow(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct {
     speed: f32,
     acquire_range: f32,
     range: f32,
     cooldown: i64,
 }) bool {
-    const storage_id = getStorageId(utils.typeId(@This()), host.obj_id);
-    var storage = follow_storage.getPtr(storage_id) orelse blk: {
-        follow_storage.put(storage_id, .{}) catch return false;
-        break :blk follow_storage.getPtr(storage_id).?;
+    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    var storage = host.storages.follow.getPtr(storage_id) orelse blk: {
+        host.storages.follow.put(allocator, storage_id, .{}) catch return false;
+        break :blk host.storages.follow.getPtr(storage_id).?;
     };
 
     storage.time -= dt;
@@ -231,11 +223,11 @@ pub inline fn follow(host: *Enemy, dt: i64, opts: struct {
 }
 
 const WanderStorage = struct { move_cos: f32 = 0.0, move_sin: f32 = 0.0, rem_dist: f32 = 0.0 };
-pub inline fn wander(host: *Enemy, dt: i64, speed: f32) void {
-    const storage_id = getStorageId(utils.typeId(@This()), host.obj_id);
-    var storage = wander_storage.getPtr(storage_id) orelse blk: {
-        wander_storage.put(storage_id, .{}) catch return;
-        break :blk wander_storage.getPtr(storage_id).?;
+pub inline fn wander(comptime call_id: u32, host: *Enemy, dt: i64, speed: f32) void {
+    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    var storage = host.storages.wander.getPtr(storage_id) orelse blk: {
+        host.storages.wander.put(allocator, storage_id, .{}) catch return;
+        break :blk host.storages.wander.getPtr(storage_id).?;
     };
 
     if (storage.rem_dist <= 0.0) {
@@ -252,7 +244,7 @@ pub inline fn wander(host: *Enemy, dt: i64, speed: f32) void {
 }
 
 const ShootStorage = struct { cooldown: i64 = -1, rotate_count: f32 = 0.0 };
-pub inline fn shoot(host: *Enemy, time: i64, dt: i64, opts: struct {
+pub inline fn shoot(comptime call_id: u32, host: *Enemy, time: i64, dt: i64, opts: struct {
     proj_index: u8,
     shoot_angle: f32,
     angle_offset: f32 = 0.0,
@@ -264,10 +256,10 @@ pub inline fn shoot(host: *Enemy, time: i64, dt: i64, opts: struct {
     fixed_angle: f32 = std.math.nan(f32),
     rotate_angle: f32 = std.math.nan(f32),
 }) void {
-    const storage_id = getStorageId(utils.typeId(@This()), host.obj_id);
-    var storage = shoot_storage.getPtr(storage_id) orelse blk: {
-        shoot_storage.put(storage_id, .{}) catch return;
-        break :blk shoot_storage.getPtr(storage_id).?;
+    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    var storage = host.storages.shoot.getPtr(storage_id) orelse blk: {
+        host.storages.shoot.put(allocator, storage_id, .{}) catch return;
+        break :blk host.storages.shoot.getPtr(storage_id).?;
     };
 
     storage.cooldown -= dt;

@@ -12,14 +12,14 @@ pub const Crocodile = struct {
     }
 
     pub fn tick(_: *Crocodile, host: *Enemy, time: i64, dt: i64) !void {
-        if (!logic.follow(host, dt, .{
+        if (!logic.follow(0, host, dt, .{
             .speed = 3.0,
             .acquire_range = 9.0,
             .range = 2.0,
             .cooldown = 2.0 * std.time.us_per_s,
-        })) logic.wander(host, dt, 2.5);
+        })) logic.wander(0, host, dt, 2.5);
 
-        logic.aoe(host, time, dt, .{
+        logic.aoe(0, host, time, dt, .{
             .radius = 3.0,
             .magic_dmg = 80,
             .effect = .slowed,
@@ -27,7 +27,7 @@ pub const Crocodile = struct {
             .cooldown = 0.6 * std.time.us_per_s,
             .color = 0x01361F,
         });
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 12.0,
             .proj_index = 0,
             .count = 3,
@@ -45,9 +45,9 @@ pub const SpikeBall = struct {
     }
 
     pub fn tick(_: *SpikeBall, host: *Enemy, time: i64, dt: i64) !void {
-        logic.wander(host, dt, 2.5);
+        logic.wander(0, host, dt, 2.5);
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 72.0,
             .proj_index = 0,
             .count = 5,
@@ -65,13 +65,13 @@ pub const GoblinGrunt = struct {
     }
 
     pub fn tick(_: *GoblinGrunt, host: *Enemy, time: i64, dt: i64) !void {
-        if (!logic.charge(host, dt, .{
+        if (!logic.charge(0, host, dt, .{
             .speed = 6.0,
             .range = 9.0,
             .cooldown = 1.0 * std.time.us_per_s,
-        })) logic.wander(host, dt, 1.65);
+        })) logic.wander(0, host, dt, 1.65);
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 4.0,
             .proj_index = 0,
             .count = 3,
@@ -99,9 +99,9 @@ pub const GoblinGuard = struct {
             .radius = 2.0,
             .acquire_range = 6.0,
             .target_name = "Spike Ball",
-        }))) logic.wander(host, dt, 1.4);
+        }))) logic.wander(0, host, dt, 1.4);
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 5.0,
             .proj_index = 0,
             .count = 2,
@@ -115,7 +115,7 @@ pub const ForestFirefly = struct {
     pub const object_name = "Forest Firefly";
 
     pub fn tick(_: *ForestFirefly, host: *Enemy, _: i64, dt: i64) !void {
-        logic.wander(host, dt, 2.5);
+        logic.wander(0, host, dt, 2.5);
     }
 };
 
@@ -127,13 +127,13 @@ pub const Imp = struct {
     }
 
     pub fn tick(_: *Imp, host: *Enemy, time: i64, dt: i64) !void {
-        if (!logic.charge(host, dt, .{
+        if (!logic.charge(0, host, dt, .{
             .speed = 6.0,
             .range = 13.0,
             .cooldown = 0.4 * std.time.us_per_s,
-        })) logic.wander(host, dt, 2.1);
+        })) logic.wander(0, host, dt, 2.1);
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 8.0,
             .proj_index = 0,
             .count = 5,
@@ -151,9 +151,9 @@ pub const LivingFlame = struct {
     }
 
     pub fn tick(_: *LivingFlame, host: *Enemy, time: i64, dt: i64) !void {
-        logic.wander(host, dt, 2.2);
+        logic.wander(0, host, dt, 2.2);
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 51.0,
             .proj_index = 0,
             .count = 8,
@@ -161,7 +161,7 @@ pub const LivingFlame = struct {
             .cooldown = 0.2 * std.time.us_per_s,
         });
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 72.0,
             .proj_index = 0,
             .count = 5,
@@ -184,9 +184,9 @@ pub const DemonMage = struct {
             .radius = 1.0,
             .acquire_range = 9.0,
             .target_name = "Imp",
-        })) logic.wander(host, dt, 2.15);
+        })) logic.wander(0, host, dt, 2.15);
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 3.0,
             .proj_index = 0,
             .count = 5,
@@ -209,9 +209,9 @@ pub const DemonArcher = struct {
             .radius = 1.0,
             .acquire_range = 9.0,
             .target_name = "Living Flame",
-        })) logic.wander(host, dt, 2.15);
+        })) logic.wander(0, host, dt, 2.15);
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 3.0,
             .proj_index = 0,
             .count = 5,
@@ -229,13 +229,13 @@ pub const JackalWarrior = struct {
     }
 
     pub fn tick(_: *JackalWarrior, host: *Enemy, time: i64, dt: i64) !void {
-        if (!logic.charge(host, dt, .{
+        if (!logic.charge(0, host, dt, .{
             .speed = 6.0,
             .range = 13.0,
             .cooldown = 0.4 * std.time.us_per_s,
-        })) logic.wander(host, dt, 2.25);
+        })) logic.wander(0, host, dt, 2.25);
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 15.0,
             .proj_index = 0,
             .count = 7,
@@ -258,26 +258,26 @@ pub const JackalPriest = struct {
             .radius = 1.0,
             .acquire_range = 9.0,
             .target_name = "Jackal Archer",
-        })) logic.wander(host, dt, 2.25);
+        })) logic.wander(0, host, dt, 2.25);
 
-        _ = logic.heal(host, dt, .{
+        _ = logic.heal(0, host, dt, .{
             .range = 10.0,
             .amount = 250,
             .target_name = "Jackal Warrior",
             .cooldown = 1.0 * std.time.us_per_s,
-        }) or logic.heal(host, dt, .{
+        }) or logic.heal(1, host, dt, .{
             .range = 10.0,
             .amount = 250,
             .target_name = "Jackal Archer",
             .cooldown = 1.0 * std.time.us_per_s,
-        }) or logic.heal(host, dt, .{
+        }) or logic.heal(2, host, dt, .{
             .range = 10.0,
             .amount = 250,
             .target_name = "Regal Mummy",
             .cooldown = 1.0 * std.time.us_per_s,
         });
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 45.0,
             .proj_index = 0,
             .count = 8,
@@ -295,14 +295,14 @@ pub const JackalArcher = struct {
     }
 
     pub fn tick(_: *JackalArcher, host: *Enemy, time: i64, dt: i64) !void {
-        if (!logic.follow(host, dt, .{
+        if (!logic.follow(0, host, dt, .{
             .speed = 3.0,
             .acquire_range = 9.0,
             .range = 2.0,
             .cooldown = 1.0 * std.time.us_per_s,
-        })) logic.wander(host, dt, 2.5);
+        })) logic.wander(0, host, dt, 2.5);
 
-        logic.shoot(host, time, dt, .{
+        logic.shoot(0, host, time, dt, .{
             .shoot_angle = 5.0,
             .proj_index = 0,
             .count = 4,
@@ -320,14 +320,14 @@ pub const RegalMummy = struct {
     }
 
     pub fn tick(_: *RegalMummy, host: *Enemy, time: i64, dt: i64) !void {
-        if (!logic.follow(host, dt, .{
+        if (!logic.follow(0, host, dt, .{
             .speed = 3.0,
             .acquire_range = 9.0,
             .range = 2.0,
             .cooldown = 1.0 * std.time.us_per_s,
-        })) logic.wander(host, dt, 2.5);
+        })) logic.wander(0, host, dt, 2.5);
 
-        logic.aoe(host, time, dt, .{
+        logic.aoe(0, host, time, dt, .{
             .radius = 3.0,
             .magic_dmg = 150,
             .cooldown = 0.3 * std.time.us_per_s,

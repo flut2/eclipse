@@ -24,6 +24,7 @@ pub const Enemy = struct {
     behavior: ?*Behavior = null,
     world: *World = undefined,
     spawned: bool = false,
+    storages: behavior_logic.Storages = .{},
     allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *Enemy, allocator: std.mem.Allocator) !void {
@@ -57,14 +58,28 @@ pub const Enemy = struct {
                     const T = @TypeOf(b.*);
                     if (std.meta.hasFn(T, "death")) try b.death(self);
                     if (std.meta.hasFn(T, "exit")) try b.exit(self);
-                    behavior_logic.clearStorage(behavior_logic.getStorageId(utils.typeId(T), self.obj_id));
                 },
             }
 
             self.allocator.destroy(behav);
         }
 
+        self.storages.deinit();
         self.allocator.free(self.stats_writer.buffer);
+    }
+
+    pub fn switchBehavior(self: *Enemy, comptime TargetBehavior: type) !void {
+        const behav = behavior.fromType(TargetBehavior);
+        if (self.behavior) |old_behav| {
+            switch (old_behav.*) {
+                inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "exit")) try b.exit(self),
+            }
+        } else self.behavior = try self.allocator.create(Behavior);
+
+        self.behavior.?.* = behav;
+        switch (self.behavior.?.*) {
+            inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "entry")) try b.entry(self),
+        }
     }
 
     pub fn move(self: *Enemy, x: f32, y: f32) void {

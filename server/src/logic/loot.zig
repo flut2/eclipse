@@ -6,7 +6,7 @@ const Entity = @import("../map/entity.zig").Entity;
 const Enemy = @import("../map/enemy.zig").Enemy;
 
 pub inline fn dropPortal(host: *Enemy, portal_name: []const u8, chance: f32) void {
-    if (utils.rng.random().float(f32) >= chance) {
+    if (utils.rng.random().float(f32) <= chance) {
         const portal_type = game_data.obj_name_to_type.get(portal_name) orelse {
             std.log.err("Portal not found for name {s}", .{portal_name});
             return;

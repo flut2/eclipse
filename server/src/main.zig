@@ -157,7 +157,6 @@ pub fn main() !void {
     defer game_data.deinit(allocator);
 
     behavior_logic.init(allocator);
-    defer behavior_logic.deinit();
 
     try behavior.init(allocator);
     defer behavior.deinit();

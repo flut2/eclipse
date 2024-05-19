@@ -34,7 +34,7 @@ pub const Behavior = blk: {
         .tag_type = u32,
         .fields = enum_fields,
         .decls = &.{},
-        .is_exhaustive = false,
+        .is_exhaustive = true,
     } });
 
     break :blk @Type(.{ .Union = .{
@@ -66,4 +66,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
 pub fn deinit() void {
     behavior_map.deinit();
+}
+
+pub inline fn fromType(comptime T: type) Behavior {
+    return @unionInit(Behavior, std.fmt.comptimePrint("{d}", .{utils.typeId(T)}), .{});
 }
