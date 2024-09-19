@@ -1,627 +1,575 @@
 const std = @import("std");
 const network = @import("../network.zig");
-const game_data = @import("shared").game_data;
-const camera = @import("../camera.zig");
+const shared = @import("shared");
+const game_data = shared.game_data;
+const utils = shared.utils;
+const network_data = shared.network_data;
 const input = @import("../input.zig");
 const main = @import("../main.zig");
-const utils = @import("shared").utils;
 const element = @import("../ui/element.zig");
 const zstbi = @import("zstbi");
 const particles = @import("particles.zig");
 const systems = @import("../ui/systems.zig");
+const assets = @import("../assets.zig");
 
 const Square = @import("square.zig").Square;
 const Player = @import("player.zig").Player;
 const Projectile = @import("projectile.zig").Projectile;
-const GameObject = @import("game_object.zig").GameObject;
-
-pub fn physicalDamage(dmg: f32, defense: f32, condition: utils.Condition) f32 {
-    if (dmg == 0)
-        return 0;
-
-    var def = defense;
-    if (condition.armor_broken) {
-        def = 0.0;
-    } else if (condition.armored) {
-        def *= 2.0;
-    }
-
-    if (condition.invulnerable)
-        return 0;
-
-    const min = dmg * 0.25;
-    return @max(min, dmg - def);
-}
-
-pub fn magicDamage(dmg: f32, resistance: f32, condition: utils.Condition) f32 {
-    if (dmg == 0)
-        return 0;
-
-    var def = resistance;
-    if (condition.armor_broken) {
-        def = 0.0;
-    } else if (condition.armored) {
-        def *= 2.0;
-    }
-
-    if (condition.invulnerable)
-        return 0;
-
-    const min = dmg * 0.25;
-    return @max(min, dmg - def);
-}
-
-pub fn showDamageText(phys_dmg: i32, magic_dmg: i32, true_dmg: i32, object_id: i32, allocator: std.mem.Allocator) void {
-    var delay: i64 = 0;
-    if (phys_dmg > 0) {
-        element.StatusText.add(.{
-            .obj_id = object_id,
-            .delay = delay,
-            .text_data = .{
-                .text = std.fmt.allocPrint(allocator, "-{d}", .{phys_dmg}) catch unreachable,
-                .text_type = .bold,
-                .size = 16,
-                .color = 0xB02020,
-            },
-            .initial_size = 16,
-        }) catch |e| {
-            std.log.err("Allocation for physical damage text \"-{d}\" failed: {}", .{ phys_dmg, e });
-        };
-        delay += 100;
-    }
-
-    if (magic_dmg > 0) {
-        element.StatusText.add(.{
-            .obj_id = object_id,
-            .delay = delay,
-            .text_data = .{
-                .text = std.fmt.allocPrint(allocator, "-{d}", .{magic_dmg}) catch unreachable,
-                .text_type = .bold,
-                .size = 16,
-                .color = 0x6E15AD,
-            },
-            .initial_size = 16,
-        }) catch |e| {
-            std.log.err("Allocation for magic damage text \"-{d}\" failed: {}", .{ magic_dmg, e });
-        };
-        delay += 100;
-    }
-
-    if (true_dmg > 0) {
-        element.StatusText.add(.{
-            .obj_id = object_id,
-            .delay = delay,
-            .text_data = .{
-                .text = std.fmt.allocPrint(allocator, "-{d}", .{true_dmg}) catch unreachable,
-                .text_type = .bold,
-                .size = 16,
-                .color = 0xC2C2C2,
-            },
-            .initial_size = 16,
-        }) catch |e| {
-            std.log.err("Allocation for true damage text \"-{d}\" failed: {}", .{ true_dmg, e });
-        };
-        delay += 100;
-    }
-}
-
-fn lessThan(_: void, lhs: Entity, rhs: Entity) bool {
-    var lhs_sort_val: f32 = 0;
-    var rhs_sort_val: f32 = 0;
-
-    switch (lhs) {
-        .object => |object| {
-            if (object.props.draw_on_ground) {
-                lhs_sort_val = -1;
-            } else {
-                lhs_sort_val = camera.rotateAroundCamera(object.x, object.y).y + object.z * -camera.px_per_tile;
-            }
-        },
-        .particle_effect => lhs_sort_val = 0,
-        .particle => |pt| {
-            switch (pt) {
-                inline else => |particle| lhs_sort_val = camera.rotateAroundCamera(particle.x, particle.y).y + particle.z * -camera.px_per_tile,
-            }
-        },
-        inline else => |en| {
-            lhs_sort_val = camera.rotateAroundCamera(en.x, en.y).y + en.z * -camera.px_per_tile;
-        },
-    }
-
-    switch (rhs) {
-        .object => |object| {
-            if (object.props.draw_on_ground) {
-                rhs_sort_val = -1;
-            } else {
-                rhs_sort_val = camera.rotateAroundCamera(object.x, object.y).y + object.z * -camera.px_per_tile;
-            }
-        },
-        .particle_effect => rhs_sort_val = 0,
-        .particle => |pt| {
-            switch (pt) {
-                inline else => |particle| rhs_sort_val = camera.rotateAroundCamera(particle.x, particle.y).y + particle.z * -camera.px_per_tile,
-            }
-        },
-        inline else => |en| {
-            rhs_sort_val = camera.rotateAroundCamera(en.x, en.y).y + en.z * -camera.px_per_tile;
-        },
-    }
-
-    return lhs_sort_val < rhs_sort_val;
-}
-
-pub const Entity = union(enum) {
-    player: Player,
-    object: GameObject,
-    projectile: Projectile,
-    particle: particles.Particle,
-    particle_effect: particles.ParticleEffect,
-};
+const Entity = @import("entity.zig").Entity;
+const Enemy = @import("enemy.zig").Enemy;
+const Container = @import("container.zig").Container;
+const Portal = @import("portal.zig").Portal;
+const Purchasable = @import("purchasable.zig").Purchasable;
 
 const day_cycle: i32 = 10 * std.time.us_per_min;
 const day_cycle_half: f32 = @as(f32, day_cycle) / 2;
 
-pub var add_lock: std.Thread.RwLock = .{};
-pub var object_lock: std.Thread.RwLock = .{};
-pub var entities: std.ArrayList(Entity) = undefined;
-pub var entities_to_add: std.ArrayList(Entity) = undefined;
-pub var entity_indices_to_remove: std.ArrayList(usize) = undefined;
-pub var move_records: std.ArrayList(network.TimedPosition) = undefined;
-pub var local_player_id: i32 = -1;
-pub var interactive_id = std.atomic.Value(i32).init(-1);
-pub var interactive_type = std.atomic.Value(game_data.ClassType).init(.game_object);
-pub var name: []const u8 = "";
-pub var seed: u32 = 0;
-pub var width: u32 = 0;
-pub var height: u32 = 0;
-pub var squares: []Square = &[0]Square{};
-pub var bg_light_color: u32 = 0;
-pub var bg_light_intensity: f32 = 0.0;
-pub var day_light_intensity: f32 = 0.0;
-pub var night_light_intensity: f32 = 0.0;
-pub var server_time_offset: i64 = 0;
+pub var square_lock: std.Thread.Mutex = .{};
+pub var use_lock: struct {
+    player: std.Thread.Mutex = .{},
+    entity: std.Thread.Mutex = .{},
+    enemy: std.Thread.Mutex = .{},
+    container: std.Thread.Mutex = .{},
+    portal: std.Thread.Mutex = .{},
+    projectile: std.Thread.Mutex = .{},
+    particle: std.Thread.Mutex = .{},
+    particle_effect: std.Thread.Mutex = .{},
+    purchasable: std.Thread.Mutex = .{},
+} = .{};
+pub var add_lock: struct {
+    player: std.Thread.Mutex = .{},
+    entity: std.Thread.Mutex = .{},
+    enemy: std.Thread.Mutex = .{},
+    container: std.Thread.Mutex = .{},
+    portal: std.Thread.Mutex = .{},
+    projectile: std.Thread.Mutex = .{},
+    particle: std.Thread.Mutex = .{},
+    particle_effect: std.Thread.Mutex = .{},
+    purchasable: std.Thread.Mutex = .{},
+} = .{};
+pub var list: struct {
+    player: std.ArrayListUnmanaged(Player) = .empty,
+    entity: std.ArrayListUnmanaged(Entity) = .empty,
+    enemy: std.ArrayListUnmanaged(Enemy) = .empty,
+    container: std.ArrayListUnmanaged(Container) = .empty,
+    portal: std.ArrayListUnmanaged(Portal) = .empty,
+    projectile: std.ArrayListUnmanaged(Projectile) = .empty,
+    particle: std.ArrayListUnmanaged(particles.Particle) = .empty,
+    particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
+    purchasable: std.ArrayListUnmanaged(Purchasable) = .empty,
+} = .{};
+pub var add_list: struct {
+    player: std.ArrayListUnmanaged(Player) = .empty,
+    entity: std.ArrayListUnmanaged(Entity) = .empty,
+    enemy: std.ArrayListUnmanaged(Enemy) = .empty,
+    container: std.ArrayListUnmanaged(Container) = .empty,
+    portal: std.ArrayListUnmanaged(Portal) = .empty,
+    projectile: std.ArrayListUnmanaged(Projectile) = .empty,
+    particle: std.ArrayListUnmanaged(particles.Particle) = .empty,
+    particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
+    purchasable: std.ArrayListUnmanaged(Purchasable) = .empty,
+} = .{};
+pub var remove_list: struct {
+    player: std.ArrayListUnmanaged(usize) = .empty,
+    entity: std.ArrayListUnmanaged(usize) = .empty,
+    enemy: std.ArrayListUnmanaged(usize) = .empty,
+    container: std.ArrayListUnmanaged(usize) = .empty,
+    portal: std.ArrayListUnmanaged(usize) = .empty,
+    projectile: std.ArrayListUnmanaged(usize) = .empty,
+    particle: std.ArrayListUnmanaged(usize) = .empty,
+    particle_effect: std.ArrayListUnmanaged(usize) = .empty,
+    purchasable: std.ArrayListUnmanaged(usize) = .empty,
+} = .{};
+
+pub var interactive: struct {
+    const InteractiveType = enum(u8) { unset, portal, container, purchasable };
+    map_id: std.atomic.Value(u32) = .init(std.math.maxInt(u32)),
+    type: std.atomic.Value(InteractiveType) = .init(.unset),
+} = .{};
+pub var squares: []Square = &.{};
+pub var move_records: std.ArrayListUnmanaged(network_data.TimedPosition) = .empty;
+pub var info: network_data.MapInfo = .{};
 pub var last_records_clear_time: i64 = 0;
+pub var local_player_id: u32 = std.math.maxInt(u32);
 pub var minimap: zstbi.Image = undefined;
-pub var rpc_set = false;
+pub var minimap_copy: []u8 = undefined;
 
 var last_update: i64 = 0;
-var last_sort: i64 = 0;
+
+pub fn useLockForType(comptime T: type) *std.Thread.Mutex {
+    return switch (T) {
+        Entity => &use_lock.entity,
+        Enemy => &use_lock.enemy,
+        Player => &use_lock.player,
+        Portal => &use_lock.portal,
+        Container => &use_lock.container,
+        Projectile => &use_lock.projectile,
+        particles.Particle => &use_lock.particle,
+        particles.ParticleEffect => &use_lock.particle_effect,
+        Purchasable => &use_lock.purchasable,
+        else => @compileError("Invalid type"),
+    };
+}
+
+pub fn addLockForType(comptime T: type) *std.Thread.Mutex {
+    return switch (T) {
+        Entity => &add_lock.entity,
+        Enemy => &add_lock.enemy,
+        Player => &add_lock.player,
+        Portal => &add_lock.portal,
+        Container => &add_lock.container,
+        Projectile => &add_lock.projectile,
+        particles.Particle => &add_lock.particle,
+        particles.ParticleEffect => &add_lock.particle_effect,
+        Purchasable => &add_lock.purchasable,
+        else => @compileError("Invalid type"),
+    };
+}
+
+pub fn listForType(comptime T: type) *std.ArrayListUnmanaged(T) {
+    return switch (T) {
+        Entity => &list.entity,
+        Enemy => &list.enemy,
+        Player => &list.player,
+        Portal => &list.portal,
+        Container => &list.container,
+        Projectile => &list.projectile,
+        particles.Particle => &list.particle,
+        particles.ParticleEffect => &list.particle_effect,
+        Purchasable => &list.purchasable,
+        else => @compileError("Invalid type"),
+    };
+}
+
+pub fn addListForType(comptime T: type) *std.ArrayListUnmanaged(T) {
+    return switch (T) {
+        Entity => &add_list.entity,
+        Enemy => &add_list.enemy,
+        Player => &add_list.player,
+        Portal => &add_list.portal,
+        Container => &add_list.container,
+        Projectile => &add_list.projectile,
+        particles.Particle => &add_list.particle,
+        particles.ParticleEffect => &add_list.particle_effect,
+        Purchasable => &add_list.purchasable,
+        else => @compileError("Invalid type"),
+    };
+}
+
+pub fn removeListForType(comptime T: type) *std.ArrayListUnmanaged(usize) {
+    return switch (T) {
+        Entity => &remove_list.entity,
+        Enemy => &remove_list.enemy,
+        Player => &remove_list.player,
+        Portal => &remove_list.portal,
+        Container => &remove_list.container,
+        Projectile => &remove_list.projectile,
+        particles.Particle => &remove_list.particle,
+        particles.ParticleEffect => &remove_list.particle_effect,
+        Purchasable => &remove_list.purchasable,
+        else => @compileError("Invalid type"),
+    };
+}
 
 pub fn init(allocator: std.mem.Allocator) !void {
-    entities = try std.ArrayList(Entity).initCapacity(allocator, 256);
-    entities_to_add = try std.ArrayList(Entity).initCapacity(allocator, 128);
-    entity_indices_to_remove = try std.ArrayList(usize).initCapacity(allocator, 128);
-    move_records = try std.ArrayList(network.TimedPosition).initCapacity(allocator, 10);
-
-    minimap = try zstbi.Image.createEmpty(4096, 4096, 4, .{});
-}
-
-pub fn disposeEntity(allocator: std.mem.Allocator, en: *Entity) void {
-    switch (en.*) {
-        .object => |*obj| {
-            if (obj.disposed)
-                return;
-
-            obj.disposed = true;
-
-            if (obj.props.static) {
-                if (getSquarePtr(obj.x, obj.y, true)) |square| {
-                    if (square.static_obj_id == obj.obj_id) square.static_obj_id = -1;
-                }
-            }
-
-            systems.removeAttachedUi(obj.obj_id);
-            if (obj.name_text_data) |*data|
-                data.deinit(allocator);
-
-            if (obj.name) |obj_name|
-                allocator.free(obj_name);
-        },
-        .projectile => |*projectile| {
-            if (projectile.disposed)
-                return;
-
-            projectile.disposed = true;
-            projectile.hit_list.deinit();
-        },
-        .player => |*player| {
-            if (player.disposed)
-                return;
-
-            player.disposed = true;
-            systems.removeAttachedUi(player.obj_id);
-            player.ability_data.deinit();
-
-            if (player.name_text_data) |*data|
-                data.deinit(allocator);
-
-            if (player.name) |player_name|
-                allocator.free(player_name);
-        },
-        else => {},
-    }
-}
-
-pub fn dispose(allocator: std.mem.Allocator) void {
-    object_lock.lock();
-    defer object_lock.unlock();
-
-    rpc_set = false;
-    local_player_id = -1;
-    interactive_id.store(-1, .Release);
-    interactive_type.store(.game_object, .Release);
-    width = 0;
-    height = 0;
-
-    for (entities.items) |*en| {
-        disposeEntity(allocator, en);
-    }
-
-    for (entities_to_add.items) |*en| {
-        disposeEntity(allocator, en);
-    }
-
-    entities.clearRetainingCapacity();
-    entities_to_add.clearRetainingCapacity();
-    entity_indices_to_remove.clearRetainingCapacity();
-    @memset(squares, Square{});
-    @memset(minimap.data, 0);
+    particles.allocator = allocator;
+    minimap = try zstbi.Image.createEmpty(1024, 1024, 4, .{});
+    minimap_copy = try allocator.alloc(u8, 1024 * 1024 * 4);
 }
 
 pub fn deinit(allocator: std.mem.Allocator) void {
-    object_lock.lock();
-    defer object_lock.unlock();
+    inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
+        var lock = &@field(use_lock, field.name);
+        lock.lock();
+        defer lock.unlock();
 
-    for (entities.items) |*en| {
-        disposeEntity(allocator, en);
+        @field(remove_list, field.name).deinit(allocator);
+
+        var child_list = &@field(list, field.name);
+        defer child_list.deinit(allocator);
+        if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
+            for (child_list.items) |*obj| obj.deinit(allocator);
     }
 
-    for (entities_to_add.items) |*en| {
-        disposeEntity(allocator, en);
+    inline for (@typeInfo(@TypeOf(add_list)).@"struct".fields) |field| {
+        var lock = &@field(add_lock, field.name);
+        lock.lock();
+        defer lock.unlock();
+        var child_list = &@field(add_list, field.name);
+        defer child_list.deinit(allocator);
+        if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
+            for (child_list.items) |*obj| obj.deinit(allocator);
     }
 
-    entities.deinit();
-    entities_to_add.deinit();
-    entity_indices_to_remove.deinit();
-    move_records.deinit();
-    minimap.deinit();
-
-    if (name.len > 0)
-        allocator.free(name);
-
-    if (squares.len > 0)
+    move_records.deinit(allocator);
+    allocator.free(info.name);
+    {
+        square_lock.lock();
+        defer square_lock.unlock();
         allocator.free(squares);
+    }
+
+    main.minimap_lock.lock();
+    defer main.minimap_lock.unlock();
+    minimap.deinit();
+    allocator.free(minimap_copy);
+}
+
+pub fn dispose(allocator: std.mem.Allocator) void {
+    interactive.map_id.store(std.math.maxInt(u32), .release);
+    interactive.type.store(.unset, .release);
+
+    local_player_id = std.math.maxInt(u32);
+    info = .{};
+
+    inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
+        var lock = &@field(use_lock, field.name);
+        lock.lock();
+        defer lock.unlock();
+
+        @field(remove_list, field.name).clearRetainingCapacity();
+
+        var child_list = &@field(list, field.name);
+        defer child_list.clearRetainingCapacity();
+        if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
+            for (child_list.items) |*obj| obj.deinit(allocator);
+    }
+
+    inline for (@typeInfo(@TypeOf(add_list)).@"struct".fields) |field| {
+        var lock = &@field(add_lock, field.name);
+        lock.lock();
+        defer lock.unlock();
+        var child_list = &@field(add_list, field.name);
+        defer child_list.clearRetainingCapacity();
+        if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
+            for (child_list.items) |*obj| obj.deinit(allocator);
+    }
+
+    move_records.clearRetainingCapacity();
+    allocator.free(info.name);
+    info.name = "";
+    {
+        square_lock.lock();
+        defer square_lock.unlock();
+        @memset(squares, Square{});
+    }
+
+    main.minimap_lock.lock();
+    defer main.minimap_lock.unlock();
+    @memset(minimap.data, 0);
+    main.need_force_update = true;
+
+    // main.minimap_update = .{};
+    // minimap.deinit();
+    // minimap = try zstbi.Image.createEmpty(1, 1, 4, .{});
+    // main.need_force_update = true;
 }
 
 pub fn getLightIntensity(time: i64) f32 {
-    if (server_time_offset == 0)
-        return bg_light_intensity;
+    if (info.day_intensity == 0 and info.night_intensity == 0) return info.bg_intensity;
 
-    const server_time_clamped: f32 = @floatFromInt(@mod(time + server_time_offset, day_cycle));
-    const intensity_delta = day_light_intensity - night_light_intensity;
-    if (server_time_clamped <= day_cycle_half) {
-        const scale = server_time_clamped / day_cycle_half;
-        return night_light_intensity + intensity_delta * scale;
-    } else {
-        const scale = (server_time_clamped - day_cycle_half) / day_cycle_half;
-        return day_light_intensity - intensity_delta * scale;
-    }
+    const server_time_clamped: f32 = @floatFromInt(@mod(time + info.server_time, day_cycle));
+    const intensity_delta = info.day_intensity - info.night_intensity;
+    if (server_time_clamped <= day_cycle_half)
+        return info.night_intensity + intensity_delta * (server_time_clamped / day_cycle_half)
+    else
+        return info.day_intensity - intensity_delta * ((server_time_clamped - day_cycle_half) / day_cycle_half);
 }
 
-pub fn setWH(w: u32, h: u32, allocator: std.mem.Allocator) void {
-    width = w;
-    height = h;
+pub fn setMapInfo(data: network_data.MapInfo, allocator: std.mem.Allocator) void {
+    info = data;
 
-    minimap.deinit();
-    minimap = zstbi.Image.createEmpty(w, h, 4, .{}) catch |e| {
-        std.debug.panic("Minimap allocation failed: {}", .{e});
-        return;
-    };
+    {
+        square_lock.lock();
+        defer square_lock.unlock();
+        squares = if (squares.len == 0)
+            allocator.alloc(Square, @as(u32, data.width) * @as(u32, data.height)) catch return
+        else
+            allocator.realloc(squares, @as(u32, data.width) * @as(u32, data.height)) catch return;
+
+        @memset(squares, Square{});
+    }
+
+    const size = @max(data.width, data.height);
+    const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
+    main.camera.lock.lock();
+    defer main.camera.lock.unlock();
+    main.camera.minimap_zoom = @max(1, @min(max_zoom, main.camera.minimap_zoom));
+
+    main.minimap_lock.lock();
+    defer main.minimap_lock.unlock();
+    @memset(minimap.data, 0);
     main.need_force_update = true;
 
-    if (squares.len == 0) {
-        squares = allocator.alloc(Square, w * h) catch return;
-    } else {
-        squares = allocator.realloc(squares, w * h) catch return;
-    }
-    @memset(squares, Square{});
-
-    const size = @max(w, h);
-    const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
-    camera.minimap_zoom = @max(1, @min(max_zoom, camera.minimap_zoom));
+    // main.minimap_lock.lock();
+    // defer main.minimap_lock.unlock();
+    // main.minimap_update = .{};
+    // minimap.deinit();
+    // minimap = zstbi.Image.createEmpty(data.width, data.height, 4, .{}) catch |e| {
+    //     std.debug.panic("Minimap allocation failed: {}", .{e});
+    //     return;
+    // };
+    // main.need_force_update = true;
 }
 
 pub fn localPlayerConst() ?Player {
-    if (local_player_id == -1)
-        return null;
-
-    if (findEntityConst(local_player_id)) |en| {
-        return en.player;
-    }
-
+    std.debug.assert(!useLockForType(Player).tryLock());
+    if (local_player_id == -1) return null;
+    if (findObjectConst(Player, local_player_id)) |player| return player;
     return null;
 }
 
 pub fn localPlayerRef() ?*Player {
-    if (local_player_id == -1)
-        return null;
-
-    if (findEntityRef(local_player_id)) |en| {
-        return &en.player;
-    }
-
+    std.debug.assert(!useLockForType(Player).tryLock());
+    if (local_player_id == -1) return null;
+    if (findObjectRef(Player, local_player_id)) |player| return player;
     return null;
 }
 
-pub fn findEntityConst(obj_id: i32) ?Entity {
-    std.debug.assert(!object_lock.tryLock());
-    for (entities.items) |en| {
-        switch (en) {
-            .particle => |pt| {
-                switch (pt) {
-                    inline else => |particle| {
-                        if (particle.obj_id == obj_id)
-                            return en;
-                    },
-                }
-            },
-            .particle_effect => |pt_eff| {
-                switch (pt_eff) {
-                    inline else => |effect| {
-                        if (effect.obj_id == obj_id)
-                            return en;
-                    },
-                }
-            },
-            inline else => |obj| {
-                if (obj.obj_id == obj_id)
-                    return en;
-            },
-        }
-    }
-
+pub fn findObjectConst(comptime T: type, map_id: u32) ?T {
+    std.debug.assert(!useLockForType(T).tryLock());
+    for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
     return null;
 }
 
-pub fn findEntityRef(obj_id: i32) ?*Entity {
-    std.debug.assert(!object_lock.tryLock());
-    for (entities.items) |*en| {
-        switch (en.*) {
-            .particle => |*pt| {
-                switch (pt.*) {
-                    inline else => |*particle| {
-                        if (particle.obj_id == obj_id)
-                            return en;
-                    },
-                }
-            },
-            .particle_effect => |*pt_eff| {
-                switch (pt_eff.*) {
-                    inline else => |*effect| {
-                        if (effect.obj_id == obj_id)
-                            return en;
-                    },
-                }
-            },
-            inline else => |*obj| {
-                if (obj.obj_id == obj_id)
-                    return en;
-            },
-        }
-    }
-
+pub fn findObjectRef(comptime T: type, map_id: u32) ?*T {
+    std.debug.assert(!useLockForType(T).tryLock());
+    for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
     return null;
 }
 
-pub fn removeEntity(allocator: std.mem.Allocator, obj_id: i32) void {
-    std.debug.assert(!object_lock.tryLock());
-    for (entities.items, 0..) |*en, i| {
-        switch (en.*) {
-            .particle => |*pt| {
-                switch (pt.*) {
-                    inline else => |*particle| {
-                        if (particle.obj_id == obj_id) {
-                            disposeEntity(allocator, &entities.items[i]);
-                            _ = entities.orderedRemove(i);
-                            return;
-                        }
-                    },
-                }
-            },
-            .particle_effect => |*pt_eff| {
-                switch (pt_eff.*) {
-                    inline else => |*effect| {
-                        if (effect.obj_id == obj_id) {
-                            disposeEntity(allocator, &entities.items[i]);
-                            _ = entities.orderedRemove(i);
-                            return;
-                        }
-                    },
-                }
-            },
-            inline else => |obj| {
-                if (obj.obj_id == obj_id) {
-                    disposeEntity(allocator, &entities.items[i]);
-                    _ = entities.orderedRemove(i);
-                    return;
-                }
-            },
-        }
-    }
-
-    std.log.err("Could not remove object with id {d}", .{obj_id});
-}
-
-pub inline fn update(allocator: std.mem.Allocator) void {
-    if (!object_lock.tryLock())
-        return;
-    defer object_lock.unlock();
-
-    if (!add_lock.tryLock())
-        return;
-    entities.appendSlice(entities_to_add.items) catch |e| {
-        std.log.err("Adding new entities failed: {}, returning", .{e});
-        return;
+pub fn removeEntity(comptime T: type, allocator: std.mem.Allocator, map_id: u32) bool {
+    std.debug.assert(!useLockForType(T).tryLock());
+    var obj_list = listForType(T);
+    for (obj_list.items, 0..) |*obj, i| if (obj.map_id == map_id) {
+        obj.deinit(allocator);
+        _ = obj_list.orderedRemove(i);
+        return true;
     };
-    entities_to_add.clearRetainingCapacity();
-    add_lock.unlock();
 
-    if (entities.items.len <= 0)
-        return;
+    return false;
+}
 
-    entity_indices_to_remove.clearRetainingCapacity();
+pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
+    if (local_player_id == std.math.maxInt(u32)) return;
 
-    interactive_id.store(-1, .Release);
-    interactive_type.store(.game_object, .Release);
+    var should_unset_interactive = true;
+    defer if (should_unset_interactive) {
+        interactive.map_id.store(std.math.maxInt(u32), .release);
+        interactive.type.store(.unset, .release);
+    };
 
-    const time = std.time.microTimestamp() - main.start_time;
-    const dt: f32 = @floatFromInt(if (last_update > 0) time - last_update else 0);
-    last_update = time;
+    var should_unset_container = true;
+    defer if (should_unset_container) {
+        systems.ui_lock.lock();
+        defer systems.ui_lock.unlock();
+        if (systems.screen == .game) {
+            const screen = systems.screen.game;
+            if (screen.container_id != -1) {
+                inline for (0..8) |idx| screen.setContainerItem(std.math.maxInt(u16), idx);
+                screen.container_name.text_data.setText("", screen.allocator);
+            }
 
-    const cam_x = camera.x.load(.Acquire);
-    const cam_y = camera.y.load(.Acquire);
-
-    var interactive_set = false;
-    @prefetch(entities.items, .{ .rw = .write });
-    var iter = std.mem.reverseIterator(entities.items);
-    var i: usize = entities.items.len - 1;
-    while (iter.nextPtr()) |en| {
-        defer i -%= 1;
-
-        switch (en.*) {
-            .player => |*player| {
-                player.update(time, dt, allocator);
-                if (player.obj_id == local_player_id) {
-                    camera.update(player.x, player.y, dt, input.rotate);
-                    addMoveRecord(time, player.x, player.y);
-                    if (input.attacking) {
-                        const shoot_angle = std.math.atan2(input.mouse_y - camera.screen_height / 2.0, input.mouse_x - camera.screen_width / 2.0) + camera.angle;
-                        player.weaponShoot(shoot_angle, time);
-                    }
-                }
-            },
-            .object => |*object| {
-                if (systems.screen == .game and !interactive_set and object.class.isInteractive()) {
-                    const dt_x = cam_x - object.x;
-                    const dt_y = cam_y - object.y;
-                    if (dt_x * dt_x + dt_y * dt_y < 1) {
-                        interactive_id.store(object.obj_id, .Release);
-                        interactive_type.store(object.class, .Release);
-
-                        if (object.class == .container) {
-                            if (systems.screen.game.container_id != object.obj_id) {
-                                inline for (0..8) |idx| {
-                                    systems.screen.game.setContainerItem(object.inventory[idx], idx);
-                                }
-                            }
-
-                            systems.screen.game.container_id = object.obj_id;
-                            systems.screen.game.setContainerVisible(true);
-                        }
-
-                        interactive_set = true;
-                    }
-                }
-
-                object.update(time, dt);
-            },
-            .projectile => |*projectile| {
-                if (!projectile.update(time, dt, allocator)) {
-                    entity_indices_to_remove.append(i) catch |e| {
-                        std.log.err("Disposing entity at idx {d} failed: {}", .{ i, e });
-                        return;
-                    };
-                }
-            },
-            .particle => |*pt| {
-                switch (pt.*) {
-                    inline else => |*particle| {
-                        if (!particle.update(time, dt)) {
-                            entity_indices_to_remove.append(i) catch |e| {
-                                std.log.err("Disposing entity at idx {d} failed: {}", .{ i, e });
-                                return;
-                            };
-                        }
-                    },
-                }
-            },
-            .particle_effect => |*pt_eff| {
-                switch (pt_eff.*) {
-                    inline else => |*effect| {
-                        if (!effect.update(time, dt)) {
-                            entity_indices_to_remove.append(i) catch |e| {
-                                std.log.err("Disposing entity at idx {d} failed: {}", .{ i, e });
-                                return;
-                            };
-                        }
-                    },
-                }
-            },
+            screen.container_id = std.math.maxInt(u32);
+            screen.setContainerVisible(false);
         }
-    }
+    };
 
-    if (!interactive_set and systems.screen == .game) {
-        if (systems.screen.game.container_id != -1) {
-            inline for (0..8) |idx| {
-                systems.screen.game.setContainerItem(std.math.maxInt(u16), idx);
+    main.camera.lock.lock();
+    const cam_x = main.camera.x;
+    const cam_y = main.camera.y;
+    const cam_min_x: f32 = @floatFromInt(main.camera.min_x);
+    const cam_max_x: f32 = @floatFromInt(main.camera.max_x);
+    const cam_min_y: f32 = @floatFromInt(main.camera.min_y);
+    const cam_max_y: f32 = @floatFromInt(main.camera.max_y);
+    main.camera.lock.unlock();
+
+    inline for (.{ Entity, Enemy, Player, Portal, Projectile, Container, particles.Particle, particles.ParticleEffect, Purchasable }) |ObjType| {
+        var obj_lock = useLockForType(ObjType);
+        obj_lock.lock();
+        defer obj_lock.unlock();
+        var obj_list = listForType(ObjType);
+        {
+            var lock = addLockForType(ObjType);
+            lock.lock();
+            defer lock.unlock();
+            var obj_add_list = addListForType(ObjType);
+            defer obj_add_list.clearRetainingCapacity();
+            obj_list.appendSlice(allocator, obj_add_list.items) catch @panic("Failed to add objects");
+        }
+
+        var obj_remove_list = removeListForType(ObjType);
+        obj_remove_list.clearRetainingCapacity();
+
+        for (obj_list.items, 0..) |*obj, i| {
+            if (ObjType != particles.ParticleEffect and (ObjType != Player or obj.map_id != local_player_id)) {
+                const obj_x = switch (ObjType) {
+                    particles.Particle => switch (obj.*) {
+                        inline else => |pt| pt.x,
+                    },
+                    else => obj.x,
+                };
+                const obj_y = switch (ObjType) {
+                    particles.Particle => switch (obj.*) {
+                        inline else => |pt| pt.y,
+                    },
+                    else => obj.y,
+                };
+                if (obj_x < cam_min_x or obj_x > cam_max_x or obj_y < cam_min_y or obj_y > cam_max_y) continue;
+            }
+
+            switch (ObjType) {
+                Container => {
+                    {
+                        systems.ui_lock.lock();
+                        defer systems.ui_lock.unlock();
+                        if (systems.screen == .game) {
+                            const screen = systems.screen.game;
+                            const dt_x = cam_x - obj.x;
+                            const dt_y = cam_y - obj.y;
+                            if (dt_x * dt_x + dt_y * dt_y < 1) {
+                                interactive.map_id.store(obj.map_id, .release);
+                                interactive.type.store(.container, .release);
+
+                                if (screen.container_id != obj.map_id) {
+                                    inline for (0..8) |idx| screen.setContainerItem(obj.inventory[idx], idx);
+                                    if (obj.name) |name| screen.container_name.text_data.setText(name, screen.allocator);
+                                }
+
+                                screen.container_id = obj.map_id;
+                                screen.setContainerVisible(true);
+                                should_unset_interactive = false;
+                                should_unset_container = false;
+                            }
+                        }
+                    }
+
+                    obj.update(time);
+                },
+                Player => {
+                    const is_self = obj.map_id == local_player_id;
+                    if (is_self) useLockForType(Entity).lock();
+                    defer if (is_self) useLockForType(Entity).unlock();
+                    obj.walk_speed_multiplier = input.walking_speed_multiplier;
+                    obj.move_angle = input.move_angle;
+                    obj.update(time, dt, allocator);
+                    if (is_self) {
+                        main.camera.update(obj.x, obj.y, dt, input.rotate);
+                        addMoveRecord(allocator, time, obj.x, obj.y);
+                        if (input.attacking) {
+                            main.camera.lock.lock();
+                            defer main.camera.lock.unlock();
+                            const shoot_angle = std.math.atan2(
+                                input.mouse_y - main.camera.height / 2.0,
+                                input.mouse_x - main.camera.width / 2.0,
+                            ) + main.camera.angle;
+                            obj.weaponShoot(allocator, shoot_angle, time);
+                        }
+                    }
+                },
+                Portal => {
+                    const is_game = blk: {
+                        systems.ui_lock.lock();
+                        defer systems.ui_lock.unlock();
+                        break :blk systems.screen == .game;
+                    };
+                    if (is_game) {
+                        const dt_x = cam_x - obj.x;
+                        const dt_y = cam_y - obj.y;
+                        if (dt_x * dt_x + dt_y * dt_y < 1) {
+                            interactive.map_id.store(obj.map_id, .release);
+                            interactive.type.store(.portal, .release);
+                            should_unset_interactive = false;
+                        }
+                    }
+                    obj.update(time);
+                },
+                Purchasable => {
+                    const is_game = blk: {
+                        systems.ui_lock.lock();
+                        defer systems.ui_lock.unlock();
+                        break :blk systems.screen == .game;
+                    };
+                    if (is_game) {
+                        const dt_x = cam_x - obj.x;
+                        const dt_y = cam_y - obj.y;
+                        if (dt_x * dt_x + dt_y * dt_y < 1) {
+                            interactive.map_id.store(obj.map_id, .release);
+                            interactive.type.store(.purchasable, .release);
+                            should_unset_interactive = false;
+                        }
+                    }
+
+                    obj.update(time);
+                },
+                Projectile => if (!obj.update(time, dt, allocator))
+                    obj_remove_list.append(allocator, i) catch @panic("Removing projectile failed"),
+                particles.Particle => if (!obj.update(time, dt))
+                    obj_remove_list.append(allocator, i) catch @panic("Removing particle failed"),
+                particles.ParticleEffect => if (!obj.update(time, dt))
+                    obj_remove_list.append(allocator, i) catch @panic("Removing particle effect failed"),
+                Entity => obj.update(time),
+                Enemy => obj.update(time, dt),
+                else => @compileError("Invalid type"),
             }
         }
 
-        systems.screen.game.container_id = -1;
-        systems.screen.game.setContainerVisible(false);
-    }
-
-    for (entity_indices_to_remove.items) |idx| {
-        disposeEntity(allocator, &entities.items[idx]);
-        _ = entities.orderedRemove(idx);
-    }
-
-    if (entity_indices_to_remove.items.len > 0 or time - last_sort > 16 * std.time.us_per_ms) {
-        std.sort.pdq(Entity, entities.items, {}, lessThan);
-        last_sort = time;
+        var iter = std.mem.reverseIterator(obj_remove_list.items);
+        while (iter.next()) |i| {
+            if (@hasField(@TypeOf(obj_list.items[i]), "deinit")) obj_list.items[i].deinit(allocator);
+            _ = obj_list.orderedRemove(i);
+        }
     }
 }
 
 // x/y < 0 has to be handled before this, since it's a u32
-pub inline fn validPos(x: u32, y: u32) bool {
-    return !(x >= width or y >= height);
+pub fn validPos(x: u32, y: u32) bool {
+    return !(x >= info.width or y >= info.height);
 }
 
 // check_validity should always be on, unless you profiled that it causes clear slowdowns in your code.
 // even then, you should be very sure that the input can't ever go wrong or that it going wrong is inconsequential
-pub inline fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
-    if (check_validity and (x < 0 or y < 0))
+pub fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
+    if (check_validity and (x < 0 or y < 0)) {
+        @branchHint(.unlikely);
         return null;
+    }
 
     const floor_x: u32 = @intFromFloat(@floor(x));
     const floor_y: u32 = @intFromFloat(@floor(y));
-    if (check_validity and !validPos(floor_x, floor_y))
+    if (check_validity and !validPos(floor_x, floor_y)) {
+        @branchHint(.unlikely);
         return null;
+    }
 
-    const square = squares[floor_y * width + floor_x];
-    if (check_validity and square.tile_type == 0xFFFF)
+    const square = squares[floor_y * info.width + floor_x];
+    if (check_validity and (square.data_id == Square.empty_tile or square.data_id == Square.editor_tile))
         return null;
 
     return square;
 }
 
-pub inline fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Square {
-    if (check_validity and (x < 0 or y < 0))
+pub fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Square {
+    if (check_validity and (x < 0 or y < 0)) {
+        @branchHint(.unlikely);
         return null;
+    }
 
     const floor_x: u32 = @intFromFloat(@floor(x));
     const floor_y: u32 = @intFromFloat(@floor(y));
-    if (check_validity and !validPos(floor_x, floor_y))
+    if (check_validity and !validPos(floor_x, floor_y)) {
+        @branchHint(.unlikely);
         return null;
+    }
 
-    const square = &squares[floor_y * width + floor_x];
-    if (check_validity and square.tile_type == 0xFFFF)
+    const square = &squares[floor_y * info.width + floor_x];
+    if (check_validity and (square.data_id == Square.empty_tile or square.data_id == Square.editor_tile))
         return null;
 
     return square;
 }
 
-pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
+pub fn addMoveRecord(allocator: std.mem.Allocator, time: i64, x: f32, y: f32) void {
     if (last_records_clear_time < 0)
         return;
 
@@ -630,9 +578,7 @@ pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
         return;
 
     if (move_records.items.len == 0) {
-        move_records.append(.{ .time = time, .x = x, .y = y }) catch |e| {
-            std.log.err("Adding move record failed: {}", .{e});
-        };
+        move_records.append(allocator, .{ .time = time, .x = x, .y = y }) catch |e| std.log.err("Adding move record failed: {}", .{e});
         return;
     }
 
@@ -640,9 +586,7 @@ pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
     const curr_record = move_records.items[record_idx];
     const curr_id = getId(curr_record.time);
     if (id != curr_id) {
-        move_records.append(.{ .time = time, .x = x, .y = y }) catch |e| {
-            std.log.err("Adding move record failed: {}", .{e});
-        };
+        move_records.append(allocator, .{ .time = time, .x = x, .y = y }) catch |e| std.log.err("Adding move record failed: {}", .{e});
         return;
     }
 
@@ -660,10 +604,102 @@ pub fn clearMoveRecords(time: i64) void {
     last_records_clear_time = time;
 }
 
-inline fn getId(time: i64) i64 {
+fn getId(time: i64) i64 {
     return @divFloor(time - last_records_clear_time + 50, 100);
 }
 
-inline fn getScore(id: i64, time: i64) i64 {
+fn getScore(id: i64, time: i64) i64 {
     return @intCast(@abs(time - last_records_clear_time - id * 100));
+}
+
+pub fn takeDamage(
+    self: anytype,
+    damage: i32,
+    damage_type: network_data.DamageType,
+    conditions: utils.Condition,
+    proj_colors: []const u32,
+    allocator: std.mem.Allocator,
+) void {
+    if (self.dead)
+        return;
+
+    if (damage >= self.hp) {
+        self.dead = true;
+
+        assets.playSfx(self.data.death_sound);
+        particles.ExplosionEffect.addToMap(.{
+            .x = self.x,
+            .y = self.y,
+            .colors = self.colors,
+            .size = self.size_mult,
+            .amount = 30,
+        });
+    } else {
+        assets.playSfx(self.data.hit_sound);
+        particles.HitEffect.addToMap(.{
+            .x = self.x,
+            .y = self.y,
+            .colors = proj_colors,
+            .angle = 0.0,
+            .speed = 0.01,
+            .size = 1.0,
+            .amount = 3,
+        });
+
+        const cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.? = @bitCast(conditions);
+        for (0..@bitSizeOf(utils.Condition)) |i| {
+            if (cond_int & (@as(usize, 1) << @intCast(i)) != 0) {
+                const eff: utils.ConditionEnum = @enumFromInt(i + 1);
+                const cond_str = eff.toString();
+                if (cond_str.len == 0)
+                    continue;
+
+                self.condition.set(eff, true);
+
+                element.StatusText.add(.{
+                    .obj_type = switch (@TypeOf(self.*)) {
+                        Entity => .entity,
+                        Enemy => .enemy,
+                        Player => .player,
+                        else => @compileError("Invalid type"),
+                    },
+                    .map_id = self.map_id,
+                    .text_data = .{
+                        .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
+                        .text_type = .bold,
+                        .size = 16,
+                        .color = 0xB02020,
+                    },
+                    .initial_size = 16,
+                }) catch |e| {
+                    std.log.err("Allocation for condition text \"{s}\" failed: {}", .{ cond_str, e });
+                };
+            }
+        }
+    }
+
+    if (damage > 0) {
+        element.StatusText.add(.{
+            .obj_type = switch (@TypeOf(self.*)) {
+                Entity => .entity,
+                Enemy => .enemy,
+                Player => .player,
+                else => @compileError("Invalid type"),
+            },
+            .map_id = self.map_id,
+            .text_data = .{
+                .text = std.fmt.allocPrint(allocator, "-{}", .{damage}) catch unreachable,
+                .text_type = .bold,
+                .size = 16,
+                .color = switch (damage_type) {
+                    .physical => 0xB02020,
+                    .magic => 0xB02020,
+                    .true => 0xB02020,
+                },
+            },
+            .initial_size = 16,
+        }) catch |e| {
+            std.log.err("Allocation for damage text \"-{}\" failed: {}", .{ damage, e });
+        };
+    }
 }

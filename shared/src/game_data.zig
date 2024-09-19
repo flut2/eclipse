@@ -1,210 +1,530 @@
 const std = @import("std");
-const xml = @import("xml.zig");
 const utils = @import("utils.zig");
 
-pub const ServerData = struct {
-    name: []const u8,
-    dns: []const u8,
-    port: u16,
-    max_players: u16,
-    admin_only: bool,
+pub var class: Maps(ClassData) = .{};
+pub var container: Maps(ContainerData) = .{};
+pub var enemy: Maps(EnemyData) = .{};
+pub var entity: Maps(EntityData) = .{};
+pub var ground: Maps(GroundData) = .{};
+pub var item: Maps(ItemData) = .{};
+pub var portal: Maps(PortalData) = .{};
+pub var region: Maps(RegionData) = .{};
+pub var purchasable: Maps(PurchasableData) = .{};
 
-    pub fn parse(node: xml.Node) !ServerData {
-        return .{
-            .name = try node.getValueAlloc("Name", allocator, "Unknown"),
-            .dns = try node.getValueAlloc("DNS", allocator, "127.0.0.1"),
-            .port = try node.getValueInt("Port", u16, 2050),
-            .max_players = try node.getValueInt("MaxPlayers", u16, 0),
-            .admin_only = node.elementExists("AdminOnly") and std.mem.eql(u8, node.getValue("AdminOnly").?, "true"),
-        };
-    }
+var arena: std.heap.ArenaAllocator = undefined;
 
-    pub fn deinit(self: ServerData) void {
-        allocator.free(self.name);
-        allocator.free(self.dns);
-    }
-};
+pub fn Maps(comptime T: type) type {
+    return struct {
+        from_id: std.AutoHashMapUnmanaged(u16, T) = .empty,
+        from_name: std.HashMapUnmanaged([]const u8, T, StringContext, 80) = .empty,
+    };
+}
 
-pub const CharacterData = struct {
-    id: u32,
-    obj_type: u16,
-    name: []const u8,
-    health: u16,
-    mana: u16,
-    strength: u16,
-    wit: u16,
-    defense: u16,
-    resistance: u16,
-    speed: u16,
-    haste: u16,
-    stamina: u16,
-    intelligence: u16,
-    piercing: u16,
-    penetration: u16,
-    tenacity: u16,
-    tex_1: u32,
-    tex_2: u32,
-    texture: u16,
-    equipment: []u16,
+fn parseClasses(allocator: std.mem.Allocator, path: []const u8) !void {
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
 
-    pub fn parse(node: xml.Node, id: u32) !CharacterData {
-        const obj_type = try node.getValueInt("ObjectType", u16, 0);
+    const file_data = try file.readToEndAlloc(allocator, std.math.maxInt(u32));
+    defer allocator.free(file_data);
 
-        var equip_list = try std.ArrayListUnmanaged(u16).initCapacity(allocator, 22);
-        defer equip_list.deinit(allocator);
-        if (node.getValue("Equipment")) |equips| {
-            var equip_iter = std.mem.split(u8, equips, ", ");
-            while (equip_iter.next()) |s|
-                try equip_list.append(allocator, try std.fmt.parseInt(u16, s, 0));
+    const json = try std.json.parseFromSlice([]InternalClassData, allocator, file_data, .{});
+    defer json.deinit();
+
+    for (json.value) |int_class| {
+        const default_items: []u16 = try allocator.alloc(u16, int_class.default_items.len);
+        for (default_items, 0..) |*default_item, i| {
+            const item_name = int_class.default_items[i];
+            if (item_name.len == 0) {
+                default_item.* = std.math.maxInt(u16);
+                continue;
+            }
+            default_item.* = (item.from_name.get(item_name) orelse @panic("Invalid item given to ClassData")).id;
         }
 
-        return .{
-            .id = id,
-            .obj_type = obj_type,
-            .health = try node.getValueInt("Health", u16, 0),
-            .mana = try node.getValueInt("Mana", u16, 0),
-            .strength = try node.getValueInt("Strength", u16, 0),
-            .wit = try node.getValueInt("Wit", u16, 0),
-            .defense = try node.getValueInt("Defense", u16, 0),
-            .resistance = try node.getValueInt("Resistance", u16, 0),
-            .speed = try node.getValueInt("Speed", u16, 0),
-            .haste = try node.getValueInt("Haste", u16, 0),
-            .stamina = try node.getValueInt("Stamina", u16, 0),
-            .intelligence = try node.getValueInt("Intelligence", u16, 0),
-            .piercing = try node.getValueInt("Piercing", u16, 0),
-            .penetration = try node.getValueInt("Penetration", u16, 0),
-            .tenacity = try node.getValueInt("Tenacity", u16, 0),
-            .tex_1 = try node.getValueInt("Tex1", u32, 0),
-            .tex_2 = try node.getValueInt("Tex2", u32, 0),
-            .texture = try node.getValueInt("Texture", u16, 0),
-            .equipment = try allocator.dupe(u16, equip_list.items),
-            .name = try allocator.dupe(u8, obj_type_to_name.get(obj_type) orelse "Unknown Class"),
+        var abilities_copy: [4]AbilityData = undefined;
+        for (&abilities_copy, int_class.abilities) |*abil_data, old_abil| {
+            abil_data.* = .{
+                .name = try allocator.dupe(u8, old_abil.name),
+                .description = try allocator.dupe(u8, old_abil.description),
+                .mana_cost = old_abil.mana_cost,
+                .health_cost = old_abil.health_cost,
+                .gold_cost = old_abil.gold_cost,
+                .cooldown = old_abil.cooldown,
+                .icon = .{
+                    .sheet = try allocator.dupe(u8, old_abil.icon.sheet),
+                    .index = old_abil.icon.index,
+                },
+                .projectiles = if (old_abil.projectiles) |projs| try allocator.dupe(ProjectileData, projs) else null,
+            };
+        }
+
+        const class_data: ClassData = .{
+            .id = int_class.id,
+            .name = try allocator.dupe(u8, int_class.name),
+            .description = try allocator.dupe(u8, int_class.description),
+            .texture = .{
+                .sheet = try allocator.dupe(u8, int_class.texture.sheet),
+                .index = int_class.texture.index,
+            },
+            .item_types = int_class.item_types,
+            .default_items = default_items,
+            .stats = int_class.stats,
+            .hit_sound = try allocator.dupe(u8, int_class.hit_sound),
+            .death_sound = try allocator.dupe(u8, int_class.death_sound),
+            .rpc_name = try allocator.dupe(u8, int_class.rpc_name),
+            .abilities = abilities_copy,
+            .light = int_class.light,
+        };
+        try class.from_id.put(allocator, class_data.id, class_data);
+        try class.from_name.put(allocator, class_data.name, class_data);
+    }
+}
+
+fn parseGeneric(allocator: std.mem.Allocator, path: []const u8, comptime DataType: type, data_maps: *Maps(DataType)) !void {
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    const file_data = try file.readToEndAlloc(allocator, std.math.maxInt(u32));
+    defer allocator.free(file_data);
+
+    const data_slice = try std.json.parseFromSliceLeaky([]DataType, allocator, file_data, .{ .allocate = .alloc_always });
+    for (data_slice) |data| {
+        try data_maps.from_id.put(allocator, data.id, data);
+        try data_maps.from_name.put(allocator, data.name, data);
+    }
+}
+
+pub fn init(allocator: std.mem.Allocator) !void {
+    defer {
+        const dummy_id_ctx: std.hash_map.AutoContext(u16) = undefined;
+        const dummy_name_ctx: StringContext = undefined;
+        inline for (.{ &item, &container, &enemy, &entity, &ground, &portal, &region, &class }) |data_maps| {
+            if (data_maps.from_id.capacity() > 0) data_maps.from_id.rehash(dummy_id_ctx);
+            if (data_maps.from_name.capacity() > 0) data_maps.from_name.rehash(dummy_name_ctx);
+        }
+    }
+
+    arena = std.heap.ArenaAllocator.init(allocator);
+    const arena_allocator = arena.allocator();
+
+    try parseGeneric(arena_allocator, "./assets/data/items.json", ItemData, &item);
+    try parseGeneric(arena_allocator, "./assets/data/containers.json", ContainerData, &container);
+    try parseGeneric(arena_allocator, "./assets/data/enemies.json", EnemyData, &enemy);
+    try parseGeneric(arena_allocator, "./assets/data/entities.json", EntityData, &entity);
+    try parseGeneric(arena_allocator, "./assets/data/ground.json", GroundData, &ground);
+    try parseGeneric(arena_allocator, "./assets/data/portals.json", PortalData, &portal);
+    try parseGeneric(arena_allocator, "./assets/data/regions.json", RegionData, &region);
+    try parseGeneric(arena_allocator, "./assets/data/purchasables.json", PurchasableData, &purchasable);
+
+    // Must be last to resolve item name->id
+    try parseClasses(arena_allocator, "./assets/data/classes.json");
+}
+
+pub fn deinit() void {
+    arena.deinit();
+}
+
+fn isNumberFormattedLikeAnInteger(value: []const u8) bool {
+    if (std.mem.eql(u8, value, "-0")) return false;
+    return std.mem.indexOfAny(u8, value, ".eE") == null;
+}
+
+fn sliceToInt(comptime T: type, slice: []const u8) !T {
+    if (isNumberFormattedLikeAnInteger(slice))
+        return std.fmt.parseInt(T, slice, 0);
+    // Try to coerce a float to an integer.
+    const float = try std.fmt.parseFloat(f128, slice);
+    if (@round(float) != float) return error.InvalidNumber;
+    if (float > std.math.maxInt(T) or float < std.math.minInt(T)) return error.Overflow;
+    return @as(T, @intCast(@as(i128, @intFromFloat(float))));
+}
+
+fn freeAllocated(allocator: std.mem.Allocator, token: std.json.Token) void {
+    switch (token) {
+        .allocated_number, .allocated_string => |slice| {
+            allocator.free(slice);
+        },
+        else => {},
+    }
+}
+
+pub fn jsonParseWithHex(comptime T: type, allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!T {
+    const struct_info = @typeInfo(T).@"struct";
+
+    if (.object_begin != try source.next()) return error.UnexpectedToken;
+
+    var r: T = undefined;
+    var fields_seen = [_]bool{false} ** struct_info.fields.len;
+
+    while (true) {
+        var name_token: ?std.json.Token = try source.nextAllocMax(allocator, .alloc_if_needed, options.max_value_len.?);
+        const field_name = switch (name_token.?) {
+            inline .string, .allocated_string => |slice| slice,
+            .object_end => { // No more fields.
+                break;
+            },
+            else => {
+                return error.UnexpectedToken;
+            },
+        };
+
+        inline for (struct_info.fields, 0..) |field, i| {
+            if (field.is_comptime) @compileError("comptime fields are not supported: " ++ @typeName(LightData) ++ "." ++ field.name);
+            if (std.mem.eql(u8, field.name, field_name)) {
+                // Free the name token now in case we're using an allocator that optimizes freeing the last allocated object.
+                // (Recursing into innerParse() might trigger more allocations.)
+                freeAllocated(allocator, name_token.?);
+                name_token = null;
+                if (fields_seen[i]) {
+                    switch (options.duplicate_field_behavior) {
+                        .use_first => {
+                            // Parse and ignore the redundant value.
+                            // We don't want to skip the value, because we want type checking.
+                            _ = try std.json.innerParse(field.type, allocator, source, options);
+                            break;
+                        },
+                        .@"error" => return error.DuplicateField,
+                        .use_last => {},
+                    }
+                }
+                @field(r, field.name) = switch (@typeInfo(field.type)) {
+                    .int, .comptime_int => blk: {
+                        const token = try source.nextAllocMax(allocator, .alloc_if_needed, options.max_value_len.?);
+                        defer freeAllocated(allocator, token);
+                        const slice = switch (token) {
+                            inline .number, .allocated_number, .string, .allocated_string => |slice| slice,
+                            else => return error.UnexpectedToken,
+                        };
+                        break :blk try sliceToInt(field.type, slice);
+                    },
+                    else => try std.json.innerParse(field.type, allocator, source, options),
+                };
+                fields_seen[i] = true;
+                break;
+            }
+        } else {
+            // Didn't match anything.
+            freeAllocated(allocator, name_token.?);
+            if (options.ignore_unknown_fields) {
+                try source.skipValue();
+            } else {
+                return error.UnknownField;
+            }
+        }
+    }
+    inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
+        if (!fields_seen[i]) {
+            if (field.default_value) |default_ptr| {
+                const default = @as(*align(1) const field.type, @ptrCast(default_ptr)).*;
+                @field(r, field.name) = default;
+            } else {
+                return error.MissingField;
+            }
+        }
+    }
+    return r;
+}
+
+pub fn spiritGoal(aether: u8) u32 {
+    return switch (aether) {
+        1 => 2800,
+        2 => 9000,
+        3 => 22000,
+        else => 0,
+    };
+}
+
+pub fn physDamage(dmg: i32, defense: i32, condition: utils.Condition) i32 {
+    if (dmg == 0 or condition.invulnerable)
+        return 0;
+
+    const def = if (condition.armor_broken)
+        0
+    else if (condition.armored)
+        defense * 2
+    else
+        defense;
+
+    return @max(@divFloor(dmg, 5), dmg - def);
+}
+
+pub fn magicDamage(dmg: i32, resistance: i32, condition: utils.Condition) i32 {
+    if (dmg == 0 or condition.invulnerable)
+        return 0;
+
+    return @max(@divFloor(dmg, 5), dmg - resistance);
+}
+
+pub const ItemType = enum {
+    const weapon_types = [_]ItemType{ .sword, .bow, .staff };
+    const armor_types = [_]ItemType{ .leather, .plate, .robe };
+
+    consumable,
+    any,
+    any_weapon,
+    any_armor,
+    boots,
+    artifact,
+    sword,
+    bow,
+    staff,
+    leather,
+    plate,
+    robe,
+
+    pub fn toString(self: ItemType) []const u8 {
+        return switch (self) {
+            .boots => "Boots",
+            .artifact => "Artifact",
+            .consumable => "Consumable",
+            .sword => "Sword",
+            .bow => "Bow",
+            .staff => "Staff",
+            .leather => "Leather",
+            .plate => "Plate",
+            .robe => "Robe",
+            .any => "Any",
+            .any_weapon => "Any Weapon",
+            .any_armor => "Any Armor",
         };
     }
 
-    pub fn deinit(self: CharacterData) void {
-        allocator.free(self.name);
-        allocator.free(self.equipment);
+    pub fn typesMatch(self: ItemType, target: ItemType) bool {
+        return self == target or self == .any or target == .any or
+            std.mem.indexOfScalar(ItemType, &weapon_types, self) != null and target == .any_weapon or
+            std.mem.indexOfScalar(ItemType, &weapon_types, target) != null and self == .any_weapon or
+            std.mem.indexOfScalar(ItemType, &armor_types, self) != null and target == .any_armor or
+            std.mem.indexOfScalar(ItemType, &armor_types, target) != null and self == .any_armor;
     }
 };
 
-pub const ClassType = enum(u8) {
-    character,
-    container,
-    game_object,
-    guild_chronicle,
-    guild_hall_portal,
-    merchant,
-    player,
-    portal,
-    projectile,
-    wall,
-    skin,
+pub const Currency = enum {
+    gold,
+    gems,
+    crowns,
 
-    const map = std.ComptimeStringMap(ClassType, .{
-        .{ "Character", .character },
-        .{ "Container", .container },
-        .{ "GameObject", .game_object },
-        .{ "GuildChronicle", .guild_chronicle },
-        .{ "GuildHallPortal", .guild_hall_portal },
-        .{ "Merchant", .merchant },
-        .{ "Player", .player },
-        .{ "Portal", .portal },
-        .{ "Projectile", .projectile },
-        .{ "Wall", .wall },
-        .{ "Skin", .skin },
-    });
-
-    pub fn fromString(str: []const u8) ClassType {
-        return map.get(str) orelse .game_object;
-    }
-
-    pub fn isInteractive(class: ClassType) bool {
-        return class == .portal or class == .container or class == .merchant or class == .guild_chronicle;
+    pub fn icon(self: Currency) TextureData {
+        return switch (self) {
+            .gold => .{
+                .sheet = "misc",
+                .index = 20,
+            },
+            .gems => .{
+                .sheet = "misc",
+                .index = 21,
+            },
+            .crowns => .{
+                .sheet = "misc_big",
+                .index = 50,
+            },
+        };
     }
 };
 
-pub const TextureData = struct {
+const AnimationData = struct {
+    probability: f32 = 1.0,
+    period: f32,
+    period_jitter: f32 = 0.0,
+    frames: []struct {
+        time: f32,
+        texture: TextureData,
+    },
+};
+
+const TextureData = struct {
     sheet: []const u8,
     index: u16,
-    animated: bool,
-
-    pub fn parse(node: xml.Node, animated: bool) !TextureData {
-        return .{
-            .sheet = try node.getValueAlloc("Sheet", allocator, "Unknown"),
-            .index = try node.getValueInt("Index", u16, 0),
-            .animated = animated,
-        };
-    }
-
-    pub fn deinit(self: TextureData) void {
-        allocator.free(self.sheet);
-    }
 };
 
-pub const CharacterSkin = struct {
-    obj_type: u16,
-    name: []const u8,
-    texture: TextureData,
+const LightData = struct {
+    color: u32 = std.math.maxInt(u32),
+    intensity: f32 = 0.0,
+    radius: f32 = 1.0,
+    pulse: f32 = 0.0,
+    pulse_speed: f32 = 0.0,
 
-    pub fn parse(node: xml.Node) CharacterSkin {
-        return .{
-            .obj_type = try node.getAttributeInt("type", u16, 0),
-            .name = try node.getAttributeAlloc("id", allocator, "Unknown"),
-            .texture = try TextureData.parse(
-                node.findChild("AnimatedTexture") orelse
-                    std.debug.panic("Could not parse CharacterClass"),
-                false,
-            ),
-        };
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!LightData {
+        return jsonParseWithHex(LightData, allocator, source, options);
     }
+
+    pub const jsonStringify = @compileError("Not supported");
 };
 
-pub const Ability = struct {
-    icon: TextureData,
+const ClassStats = struct {
+    health: i32,
+    mana: i32,
+    strength: i16,
+    wit: i16,
+    defense: i16,
+    resistance: i16,
+    speed: i16,
+    stamina: i16,
+    intelligence: i16,
+    penetration: i16,
+    piercing: i16,
+    haste: i16,
+    tenacity: i16,
+};
+
+pub const AbilityData = struct {
     name: []const u8,
-    mana_cost: i32,
-    health_cost: i32,
-    gold_cost: i32,
-    cooldown: f32,
     description: []const u8,
-
-    pub fn parse(node: xml.Node) !Ability {
-        return .{
-            .icon = try TextureData.parse(node.findChild("Icon") orelse
-                std.debug.panic("Could not parse Ability: Icon node is missing", .{}), false),
-            .name = try node.getValueAlloc("Name", allocator, "Unknown"),
-            .mana_cost = try node.getValueInt("ManaCost", i32, 0),
-            .health_cost = try node.getValueInt("HealthCost", i32, 0),
-            .gold_cost = try node.getValueInt("GoldCost", i32, 0),
-            .cooldown = try node.getValueFloat("Cooldown", f32, 0.0),
-            .description = try node.getValueAlloc("Description", allocator, "Unknown"),
-        };
-    }
-
-    pub fn deinit(self: Ability) void {
-        self.icon.deinit();
-        allocator.free(self.name);
-        allocator.free(self.description);
-    }
+    mana_cost: i16 = 0,
+    health_cost: i16 = 0,
+    gold_cost: i16 = 0,
+    cooldown: f32,
+    icon: TextureData,
+    projectiles: ?[]ProjectileData = null,
 };
 
-pub const CharacterClass = struct {
-    obj_type: u16,
+const InternalClassData = struct {
+    id: u16,
     name: []const u8,
-    rpc_name: []const u8,
-    desc: []const u8,
+    description: []const u8,
+    texture: TextureData,
+    item_types: []const ItemType,
+    default_items: []const []const u8,
+    stats: ClassStats,
+    hit_sound: []const u8 = "Unknown",
+    death_sound: []const u8 = "Unknown",
+    rpc_name: []const u8 = "Unknown",
+    abilities: [4]AbilityData,
+    light: LightData = .{},
+};
+
+pub const ClassData = struct {
+    id: u16,
+    name: []const u8,
+    description: []const u8,
+    texture: TextureData,
+    item_types: []const ItemType,
+    default_items: []const u16,
+    stats: ClassStats,
     hit_sound: []const u8,
     death_sound: []const u8,
-    blood_prob: f32,
-    slot_types: []ItemType,
-    equipment: []u16,
-    ability_1: Ability,
-    ability_2: Ability,
-    ability_3: Ability,
-    ultimate_ability: Ability,
-    health: u16,
-    mana: u16,
+    rpc_name: []const u8,
+    abilities: [4]AbilityData,
+    light: LightData,
+};
+
+pub const ContainerData = struct {
+    id: u16,
+    name: []const u8,
+    textures: []const TextureData,
+    size_mult: f32 = 1.0,
+    item_types: []const ItemType = &[_]ItemType{.any} ** 8,
+    light: LightData = .{},
+    show_name: bool = false,
+    draw_on_ground: bool = false,
+    animation: ?AnimationData = null,
+};
+
+pub const ProjectileData = struct {
+    textures: []const TextureData,
+    speed: f32,
+    duration: f32,
+    phys_dmg: i32 = 0,
+    magic_dmg: i32 = 0,
+    true_dmg: i32 = 0,
+    angle_correction: i8 = 0,
+    size_mult: f32 = 1.0,
+    rotation: f32 = 0.0,
+    piercing: bool = false,
+    boomerang: bool = false,
+    amplitude: f32 = 0.0,
+    frequency: f32 = 0.0,
+    magnitude: f32 = 0.0,
+    accel: f32 = 0.0,
+    accel_delay: f32 = 0.0,
+    speed_clamp: f32 = 0.0,
+    angle_change: f32 = 0.0,
+    angle_change_delay: f32 = 0,
+    angle_change_end: f32 = 0,
+    angle_change_accel: f32 = 0.0,
+    angle_change_accel_delay: f32 = 0,
+    angle_change_clamp: f32 = 0.0,
+    zero_velocity_delay: f32 = 0,
+    heat_seek_speed: f32 = 0.0,
+    heat_seek_radius: f32 = 0.0,
+    heat_seek_delay: f32 = 0,
+    light: LightData = .{},
+    conditions: ?[]const TimedCondition = null,
+
+    pub fn range(self: ProjectileData) f32 {
+        return self.speed * self.duration * 10.0;
+    }
+};
+
+pub const EnemyData = struct {
+    id: u16,
+    name: []const u8,
+    texture: TextureData,
+    health: u32 = 0, // Having no health means it can't be hit/die
+    defense: i32 = 0,
+    resistance: i32 = 0,
+    projectiles: ?[]const ProjectileData = null,
+    size_mult: f32 = 1.0,
+    light: LightData = .{},
+    hit_sound: []const u8 = "Unknown",
+    death_sound: []const u8 = "Unknown",
+    show_name: bool = false,
+    draw_on_ground: bool = false,
+};
+
+pub const EntityData = struct {
+    id: u16,
+    name: []const u8,
+    textures: []const TextureData,
+    top_textures: ?[]const TextureData = null,
+    health: i32 = 0, // Having no health means it can't be hit/die
+    defense: i32 = 0,
+    resistance: i32 = 0,
+    size_mult: f32 = 1.0,
+    light: LightData = .{},
+    draw_on_ground: bool = false,
+    occupy_square: bool = false,
+    full_occupy: bool = false,
+    static: bool = true,
+    show_name: bool = false,
+    block_ground_damage: bool = false,
+    block_sink: bool = false,
+    hit_sound: []const u8 = "Unknown",
+    death_sound: []const u8 = "Unknown",
+    animation: ?AnimationData = null,
+    exp_reward: u32 = 0,
+};
+
+pub const PurchasableData = struct {
+    id: u16,
+    name: []const u8,
+    textures: []const TextureData,
+    light: LightData = .{},
+    show_name: bool = true,
+    draw_on_ground: bool = false,
+};
+
+pub const GroundData = struct {
+    id: u16,
+    name: []const u8,
+    textures: []const TextureData,
+    light: LightData = .{},
+    animation: struct {
+        type: enum { unset, flow, wave } = .unset,
+        delta_x: f32 = 0.0,
+        delta_y: f32 = 0.0,
+    } = .{},
+    sink: bool = false,
+    push: bool = false,
+    no_walk: bool = false,
+    slide_amount: f32 = 0.0,
+    speed_mult: f32 = 1.0,
+    damage: i16 = 0,
+    blend_prio: i16 = 0,
+};
+
+pub const StatIncreaseData = union(enum) {
+    max_hp: u16,
+    max_mp: u16,
     strength: u16,
     wit: u16,
     defense: u16,
@@ -216,700 +536,26 @@ pub const CharacterClass = struct {
     piercing: u16,
     haste: u16,
     tenacity: u16,
-    texture: TextureData,
-    projs: []ProjProps,
-    skins: ?[]CharacterSkin,
 
-    pub fn parse(node: xml.Node) !CharacterClass {
-        var slot_list = try std.ArrayListUnmanaged(ItemType).initCapacity(allocator, 22);
-        defer slot_list.deinit(allocator);
-        if (node.getValue("SlotTypes")) |slot_types| {
-            var slot_iter = std.mem.split(u8, slot_types, ", ");
-            while (slot_iter.next()) |s|
-                try slot_list.append(allocator, @enumFromInt(try std.fmt.parseInt(i8, s, 0)));
-        }
-
-        var equip_list = try std.ArrayListUnmanaged(u16).initCapacity(allocator, 22);
-        defer equip_list.deinit(allocator);
-        if (node.getValue("Equipment")) |equips| {
-            var equip_iter = std.mem.split(u8, equips, ", ");
-            while (equip_iter.next()) |s|
-                try equip_list.append(allocator, try std.fmt.parseInt(u16, s, 0));
-        }
-
-        const name = try node.getAttributeAlloc("id", allocator, "Unknown");
-        const rpc_name = try allocator.dupe(u8, name);
-        std.mem.replaceScalar(u8, rpc_name, ' ', '_');
-        for (rpc_name) |*char| {
-            char.* = std.ascii.toLower(char.*);
-        }
-
-        var proj_list: std.ArrayListUnmanaged(ProjProps) = .{};
-        defer proj_list.deinit(allocator);
-        var proj_iter = node.iterate(&.{}, "Projectile");
-        while (proj_iter.next()) |proj_node|
-            try proj_list.append(allocator, try ProjProps.parse(proj_node));
-
-        return .{
-            .obj_type = try node.getAttributeInt("type", u16, 0),
-            .name = name,
-            .rpc_name = rpc_name,
-            .desc = try node.getValueAlloc("Description", allocator, "Unknown"),
-            .hit_sound = try node.getValueAlloc("HitSound", allocator, "default_hit"),
-            .death_sound = try node.getValueAlloc("DeathSound", allocator, "default_death"),
-            .blood_prob = try node.getAttributeFloat("BloodProb", f32, 0.0),
-            .slot_types = try allocator.dupe(ItemType, slot_list.items),
-            .equipment = try allocator.dupe(u16, equip_list.items),
-            .ability_1 = try Ability.parse(node.findChild("Ability1") orelse
-                std.debug.panic("Could not parse CharacterClass: Ability1 node is missing", .{})),
-            .ability_2 = try Ability.parse(node.findChild("Ability2") orelse
-                std.debug.panic("Could not parse CharacterClass: Ability2 node is missing", .{})),
-            .ability_3 = try Ability.parse(node.findChild("Ability3") orelse
-                std.debug.panic("Could not parse CharacterClass: Ability3 node is missing", .{})),
-            .ultimate_ability = try Ability.parse(node.findChild("UltimateAbility") orelse
-                std.debug.panic("Could not parse CharacterClass: UltimateAbility node is missing", .{})),
-            .health = try node.getValueInt("Health", u16, 0),
-            .mana = try node.getValueInt("Mana", u16, 0),
-            .strength = try node.getValueInt("Strength", u16, 0),
-            .wit = try node.getValueInt("Wit", u16, 0),
-            .defense = try node.getValueInt("Defense", u16, 0),
-            .resistance = try node.getValueInt("Resistance", u16, 0),
-            .speed = try node.getValueInt("Speed", u16, 0),
-            .stamina = try node.getValueInt("Stamina", u16, 0),
-            .intelligence = try node.getValueInt("Intelligence", u16, 0),
-            .penetration = try node.getValueInt("Penetration", u16, 0),
-            .piercing = try node.getValueInt("Piercing", u16, 0),
-            .haste = try node.getValueInt("Haste", u16, 0),
-            .tenacity = try node.getValueInt("Tenacity", u16, 0),
-            .texture = try TextureData.parse(node.findChild("AnimatedTexture") orelse
-                std.debug.panic("Could not parse CharacterClass: Texture is missing", .{}), false),
-            .skins = null,
-            .projs = try allocator.dupe(ProjProps, proj_list.items),
-        };
-    }
-
-    pub fn deinit(self: CharacterClass) void {
-        self.texture.deinit();
-        allocator.free(self.hit_sound);
-        allocator.free(self.death_sound);
-        allocator.free(self.name);
-        allocator.free(self.rpc_name);
-        for (self.projs) |props| {
-            props.deinit();
-        }
-        allocator.free(self.projs);
-        allocator.free(self.desc);
-        allocator.free(self.slot_types);
-        allocator.free(self.equipment);
-        self.ability_1.deinit();
-        self.ability_2.deinit();
-        self.ability_3.deinit();
-        self.ultimate_ability.deinit();
-    }
-};
-
-pub const AnimFrame = struct {
-    time: i64,
-    tex: TextureData,
-
-    pub fn parse(node: xml.Node) !AnimFrame {
-        return .{
-            .time = @intFromFloat(try node.getAttributeFloat("time", f32, 0.0) * std.time.us_per_s),
-            .tex = try TextureData.parse(node.findChild("Texture").?, false),
-        };
-    }
-};
-
-pub const AnimProps = struct {
-    prob: f32,
-    period: i64,
-    period_jitter: i64,
-    frames: []AnimFrame,
-
-    pub fn parse(node: xml.Node) !AnimProps {
-        var frame_list = try std.ArrayListUnmanaged(AnimFrame).initCapacity(allocator, 5);
-        defer frame_list.deinit(allocator);
-        var frame_iter = node.iterate(&.{}, "Frame");
-        while (frame_iter.next()) |anim_node|
-            try frame_list.append(allocator, try AnimFrame.parse(anim_node));
-
-        return .{
-            .prob = try node.getAttributeFloat("prob", f32, 0.0),
-            .period = @intFromFloat(try node.getAttributeFloat("period", f32, 0.0) * std.time.us_per_s),
-            .period_jitter = @intFromFloat(try node.getAttributeFloat("periodJitter", f32, 0.0) * std.time.us_per_s),
-            .frames = try allocator.dupe(AnimFrame, frame_list.items),
-        };
-    }
-
-    pub fn deinit(self: AnimProps) void {
-        for (self.frames) |frame| {
-            frame.tex.deinit();
-        }
-        allocator.free(self.frames);
-    }
-};
-
-pub const GroundAnimType = enum(u8) {
-    none = 0,
-    wave = 1,
-    flow = 2,
-
-    const map = std.ComptimeStringMap(GroundAnimType, .{
-        .{ "Wave", .wave },
-        .{ "Flow", .flow },
-    });
-
-    pub fn fromString(str: []const u8) GroundAnimType {
-        return map.get(str) orelse .none;
-    }
-};
-
-pub const GroundProps = struct {
-    obj_type: i32,
-    obj_id: []const u8,
-    no_walk: bool,
-    physical_damage: u16,
-    magic_damage: u16,
-    true_damage: u16,
-    blend_prio: i32,
-    composite_prio: i32,
-    speed: f32,
-    x_offset: f32,
-    y_offset: f32,
-    push: bool,
-    sink: bool,
-    sinking: bool,
-    random_offset: bool,
-    light_color: u32,
-    light_intensity: f32,
-    light_radius: f32,
-    light_pulse: f32,
-    light_pulse_speed: f32,
-    anim_type: GroundAnimType,
-    anim_dx: f32,
-    anim_dy: f32,
-    slide_amount: f32,
-
-    pub fn parse(node: xml.Node) !GroundProps {
-        var anim_type: GroundAnimType = .none;
-        var dx: f32 = 0.0;
-        var dy: f32 = 0.0;
-        if (node.findChild("Animate")) |anim_node| {
-            anim_type = GroundAnimType.fromString(anim_node.currentValue().?);
-            dx = try anim_node.getAttributeFloat("dx", f32, 0.0);
-            dy = try anim_node.getAttributeFloat("dy", f32, 0.0);
-        }
-
-        return .{
-            .obj_type = try node.getAttributeInt("type", i32, 0),
-            .obj_id = try node.getAttributeAlloc("id", allocator, "Unknown"),
-            .no_walk = node.elementExists("NoWalk"),
-            .physical_damage = try node.getValueInt("PhysicalDamage", u16, 0),
-            .magic_damage = try node.getValueInt("MagicDamage", u16, 0),
-            .true_damage = try node.getValueInt("TrueDamage", u16, 0),
-            .blend_prio = try node.getValueInt("BlendPriority", i32, 0),
-            .composite_prio = try node.getValueInt("CompositePriority", i32, 0),
-            .speed = try node.getValueFloat("Speed", f32, 1.0),
-            .x_offset = try node.getValueFloat("XOffset", f32, 0.0),
-            .y_offset = try node.getValueFloat("YOffset", f32, 0.0),
-            .slide_amount = try node.getValueFloat("SlideAmount", f32, 0.0),
-            .push = node.elementExists("Push"),
-            .sink = node.elementExists("Sink"),
-            .sinking = node.elementExists("Sinking"),
-            .random_offset = node.elementExists("RandomOffset"),
-            .light_color = try node.getValueInt("LightColor", u32, std.math.maxInt(u32)),
-            .light_intensity = try node.getValueFloat("LightIntensity", f32, 0.1),
-            .light_radius = try node.getValueFloat("LightRadius", f32, 1.0),
-            .light_pulse = try node.getValueFloat("LightPulse", f32, 0.0),
-            .light_pulse_speed = try node.getValueFloat("LightPulseSpeed", f32, 1.0),
-            .anim_type = anim_type,
-            .anim_dx = dx,
-            .anim_dy = dy,
-        };
-    }
-};
-
-pub const ShowEffect = enum(u8) {
-    unknown = 0,
-    potion = 1,
-    teleport = 2,
-    stream = 3,
-    throw = 4,
-    area_blast = 5,
-    dead = 6,
-    trail = 7,
-    diffuse = 8,
-    flow = 9,
-    trap = 10,
-    lightning = 11,
-    concentrate = 12,
-    blast_wave = 13,
-    earthquake = 14,
-    flashing = 15,
-    beach_ball = 16,
-    ring = 17,
-
-    const map = std.ComptimeStringMap(ShowEffect, .{
-        .{ "Potion", .potion },
-        .{ "Teleport", .teleport },
-        .{ "Stream", .stream },
-        .{ "Throw", .throw },
-        .{ "AreaBlast", .area_blast },
-        .{ "Dead", .dead },
-        .{ "Trail", .trail },
-        .{ "Diffuse", .diffuse },
-        .{ "Flow", .flow },
-        .{ "Trap", .trap },
-        .{ "Lightning", .lightning },
-        .{ "Concentrate", .concentrate },
-        .{ "BlastWave", .blast_wave },
-        .{ "Earthquake", .earthquake },
-        .{ "Flashing", .flashing },
-        .{ "BeachBall", .beach_ball },
-        .{ "Ring", .ring },
-    });
-
-    pub fn fromString(str: []const u8) ShowEffect {
-        return map.get(str) orelse .unknown;
-    }
-};
-
-pub const ShowEffProps = struct {
-    effect: ShowEffect,
-    radius: f32,
-    cooldown: i64,
-    color: u32,
-
-    pub fn parse(node: xml.Node) !ShowEffProps {
-        return .{
-            .effect = ShowEffect.fromString(node.currentValue() orelse ""),
-            .radius = try node.getAttributeFloat("radius", f32, 5.0),
-            .cooldown = try node.getAttributeInt("cooldown", i64, 1000) * std.time.us_per_ms,
-            .color = try node.getAttributeInt("color", u32, 0xFFFFFF),
-        };
-    }
-};
-
-pub const ObjProps = struct {
-    obj_type: u16,
-    obj_id: []const u8,
-    display_id: []const u8,
-    shadow_size: i32,
-    is_player: bool,
-    is_enemy: bool,
-    draw_on_ground: bool,
-    draw_under: bool,
-    occupy_square: bool,
-    full_occupy: bool,
-    enemy_occupy_square: bool,
-    static: bool,
-    no_mini_map: bool,
-    protect_from_ground_damage: bool,
-    protect_from_sink: bool,
-    base_z: f32,
-    flying: bool,
-    color: u32,
-    show_name: bool,
-    face_attacks: bool,
-    blood_probability: f32,
-    blood_color: u32,
-    shadow_color: u32,
-    portrait: ?TextureData,
-    min_size: f32,
-    max_size: f32,
-    size_step: f32,
-    angle_correction: f32,
-    rotation: f32,
-    float: bool,
-    float_time: f32,
-    float_height: f32,
-    light_color: u32,
-    light_intensity: f32,
-    light_radius: f32,
-    light_pulse: f32,
-    light_pulse_speed: f32,
-    alpha_mult: f32,
-    show_effects: []ShowEffProps,
-    projectiles: []ProjProps,
-    hit_sound: []const u8,
-    death_sound: []const u8,
-    slot_types: []ItemType,
-    anim_props: ?AnimProps,
-    health: i32,
-    resistance: i32,
-    defense: i32,
-    damage_immune: bool,
-
-    pub fn parse(node: xml.Node) !ObjProps {
-        var slot_list = try std.ArrayListUnmanaged(ItemType).initCapacity(allocator, 9);
-        defer slot_list.deinit(allocator);
-        if (node.getValue("SlotTypes")) |slot_types| {
-            var slot_iter = std.mem.split(u8, slot_types, ", ");
-            while (slot_iter.next()) |s|
-                try slot_list.append(allocator, @enumFromInt(try std.fmt.parseInt(i8, s, 0)));
-        }
-
-        const obj_id = try node.getAttributeAlloc("id", allocator, "");
-        var min_size = try node.getValueFloat("MinSize", f32, 100.0) / 100.0;
-        var max_size = try node.getValueFloat("MaxSize", f32, 100.0) / 100.0;
-        const size = try node.getValueFloat("Size", f32, 0.0) / 100.0;
-        if (size > 0) {
-            min_size = size;
-            max_size = size;
-        }
-
-        var proj_it = node.iterate(&.{}, "Projectile");
-        var proj_list: std.ArrayListUnmanaged(ProjProps) = .{};
-        defer proj_list.deinit(allocator);
-        while (proj_it.next()) |proj_node|
-            try proj_list.append(allocator, try ProjProps.parse(proj_node));
-
-        var eff_it = node.iterate(&.{}, "ShowEffect");
-        var eff_list: std.ArrayListUnmanaged(ShowEffProps) = .{};
-        defer eff_list.deinit(allocator);
-        while (eff_it.next()) |eff_node|
-            try eff_list.append(allocator, try ShowEffProps.parse(eff_node));
-
-        const float_node = node.findChild("Float");
-        return .{
-            .obj_type = try node.getAttributeInt("type", u16, 0),
-            .obj_id = obj_id,
-            .display_id = try node.getValueAlloc("DisplayId", allocator, obj_id),
-            .shadow_size = try node.getValueInt("ShadowSize", i32, -1),
-            .is_player = node.elementExists("Player"),
-            .is_enemy = node.elementExists("Enemy"),
-            .draw_on_ground = node.elementExists("DrawOnGround"),
-            .draw_under = node.elementExists("DrawUnder"),
-            .occupy_square = node.elementExists("OccupySquare"),
-            .full_occupy = node.elementExists("FullOccupy"),
-            .enemy_occupy_square = node.elementExists("EnemyOccupySquare"),
-            .static = node.elementExists("Static"),
-            .no_mini_map = node.elementExists("NoMiniMap"),
-            .base_z = try node.getValueFloat("Z", f32, 0.0),
-            .flying = node.elementExists("Flying"),
-            .color = try node.getValueInt("Color", u32, 0xFFFFFF),
-            .show_name = node.elementExists("ShowName"),
-            .face_attacks = !node.elementExists("DontFaceAttacks"),
-            .blood_probability = try node.getValueFloat("BloodProb", f32, 0.0),
-            .blood_color = try node.getValueInt("BloodColor", u32, 0xFF0000),
-            .shadow_color = try node.getValueInt("ShadowColor", u32, 0),
-            .portrait = if (node.elementExists("Portrait")) try TextureData.parse(node.findChild("Portrait").?, false) else null,
-            .min_size = min_size,
-            .max_size = max_size,
-            .size_step = try node.getValueFloat("SizeStep", f32, 0.0) / 100.0,
-            .angle_correction = try node.getValueFloat("AngleCorrection", f32, 0.0) * (std.math.pi / 4.0),
-            .rotation = try node.getValueFloat("Rotation", f32, 0.0),
-            .light_color = try node.getValueInt("LightColor", u32, std.math.maxInt(u32)),
-            .light_intensity = try node.getValueFloat("LightIntensity", f32, 0.1),
-            .light_radius = try node.getValueFloat("LightRadius", f32, 1.0),
-            .light_pulse = try node.getValueFloat("LightPulse", f32, 0.0),
-            .light_pulse_speed = try node.getValueFloat("LightPulseSpeed", f32, 1.0),
-            .alpha_mult = try node.getValueFloat("AlphaMult", f32, 1.0),
-            .float = float_node != null,
-            .float_time = try std.fmt.parseFloat(f32, if (float_node != null) float_node.?.getAttribute("time") orelse "0.0" else "0.0") * std.time.us_per_ms,
-            .float_height = try std.fmt.parseFloat(f32, if (float_node != null) float_node.?.getAttribute("height") orelse "0.0" else "0.0"),
-            .show_effects = try allocator.dupe(ShowEffProps, eff_list.items),
-            .projectiles = try allocator.dupe(ProjProps, proj_list.items),
-            .slot_types = try allocator.dupe(ItemType, slot_list.items),
-            .hit_sound = try node.getValueAlloc("HitSound", allocator, "Unknown"),
-            .death_sound = try node.getValueAlloc("DeathSound", allocator, "Unknown"),
-            .protect_from_ground_damage = node.elementExists("ProtectFromGroundDamage"),
-            .protect_from_sink = node.elementExists("ProtectFromSink"),
-            .anim_props = if (node.elementExists("Animation")) try AnimProps.parse(node.findChild("Animation").?) else null,
-            .health = try node.getValueInt("Health", i32, 0),
-            .defense = try node.getValueInt("Defense", i32, 0),
-            .resistance = try node.getValueInt("Resistance", i32, 0),
-            .damage_immune = node.elementExists("DamageImmune"),
-        };
-    }
-
-    pub fn deinit(self: ObjProps) void {
-        allocator.free(self.obj_id);
-        allocator.free(self.display_id);
-        allocator.free(self.death_sound);
-        allocator.free(self.hit_sound);
-
-        if (self.portrait) |tex_data| {
-            tex_data.deinit();
-        }
-
-        allocator.free(self.show_effects);
-
-        for (self.projectiles) |proj_props| {
-            proj_props.deinit();
-        }
-
-        allocator.free(self.projectiles);
-
-        if (self.anim_props) |anim_props| {
-            anim_props.deinit();
-        }
-
-        allocator.free(self.slot_types);
-    }
-
-    pub fn getSize(self: *const ObjProps) f32 {
-        if (self.min_size == self.max_size)
-            return self.min_size;
-
-        const max_steps = std.math.round((self.max_size - self.min_size) / self.size_step);
-        return self.min_size + std.math.round(utils.rng.random().float(f32) * max_steps) * self.size_step;
-    }
-};
-
-pub const ConditionEffect = struct {
-    duration: f32,
-    condition: utils.ConditionEnum,
-
-    pub fn parse(node: xml.Node) !ConditionEffect {
-        return .{
-            .duration = try node.getAttributeFloat("duration", f32, 0.0),
-            .condition = utils.ConditionEnum.fromString(node.currentValue().?),
-        };
-    }
-};
-
-pub const CardProps = struct {
-    card_type: u16,
-    title: []const u8,
-    description: []const u8,
-
-    pub fn parse(node: xml.Node) !CardProps {
-        return .{
-            .card_type = try node.getAttributeInt("type", u16, 0),
-            .title = try node.getValueAlloc("Title", allocator, "Unknown"),
-            .description = try node.getValueAlloc("Description", allocator, ""),
-        };
-    }
-
-    pub fn deinit(self: CardProps) void {
-        allocator.free(self.title);
-        allocator.free(self.description);
-    }
-};
-
-pub const ProjProps = struct {
-    texture_data: []TextureData,
-    angle_correction: f32,
-    rotation: f32,
-    light_color: u32,
-    light_intensity: f32,
-    light_radius: f32,
-    light_pulse: f32,
-    light_pulse_speed: f32,
-    bullet_type: i32,
-    object_id: []const u8,
-    lifetime: i64,
-    speed: f32,
-    size: f32,
-    physical_damage: i32,
-    magic_damage: i32,
-    true_damage: i32,
-    effects: []ConditionEffect,
-    multi_hit: bool,
-    passes_cover: bool,
-    particle_trail: bool,
-    wavy: bool,
-    parametric: bool,
-    boomerang: bool,
-    amplitude: f32,
-    frequency: f32,
-    magnitude: f32,
-    accel: f32,
-    accel_delay: i64,
-    speed_clamp: u16,
-    angle_change: f32,
-    angle_change_delay: i64,
-    angle_change_end: u16,
-    angle_change_accel: f32,
-    angle_change_accel_delay: i64,
-    angle_change_clamp: f32,
-    zero_velocity_delay: i64,
-    heat_seek_speed: f32,
-    heat_seek_radius: f32,
-    heat_seek_delay: i64,
-    bouncing: bool,
-
-    pub fn parse(node: xml.Node) !ProjProps {
-        var effect_it = node.iterate(&.{}, "ConditionEffect");
-        var effect_list = try std.ArrayListUnmanaged(ConditionEffect).initCapacity(allocator, 2);
-        defer effect_list.deinit(allocator);
-        while (effect_it.next()) |effect_node|
-            try effect_list.append(allocator, try ConditionEffect.parse(effect_node));
-
-        return .{
-            .texture_data = try parseTexture(node),
-            .angle_correction = try node.getValueFloat("AngleCorrection", f32, 0.0) * (std.math.pi / 4.0),
-            .rotation = try node.getValueFloat("Rotation", f32, 0.0),
-            .light_color = try node.getValueInt("LightColor", u32, std.math.maxInt(u32)),
-            .light_intensity = try node.getValueFloat("LightIntensity", f32, 0.1),
-            .light_radius = try node.getValueFloat("LightRadius", f32, 1.0),
-            .light_pulse = try node.getValueFloat("LightPulse", f32, 0.0),
-            .light_pulse_speed = try node.getValueFloat("LightPulseSpeed", f32, 1.0),
-            .bullet_type = try node.getAttributeInt("type", i32, 0),
-            .object_id = try node.getValueAlloc("ObjectId", allocator, ""),
-            .lifetime = try node.getValueInt("Lifetime", i64, 0) * std.time.us_per_ms,
-            .speed = try node.getValueFloat("Speed", f32, 0) / 10000.0 / std.time.us_per_ms,
-            .size = try node.getValueFloat("Size", f32, 100) / 100.0,
-            .physical_damage = try node.getValueInt("Damage", i32, 0),
-            .magic_damage = try node.getValueInt("MagicDamage", i32, 0),
-            .true_damage = try node.getValueInt("TrueDamage", i32, 0),
-            .effects = try allocator.dupe(ConditionEffect, effect_list.items),
-            .multi_hit = node.elementExists("MultiHit"),
-            .passes_cover = node.elementExists("PassesCover"),
-            .particle_trail = node.elementExists("ParticleTrail"),
-            .wavy = node.elementExists("Wavy"),
-            .parametric = node.elementExists("Parametric"),
-            .boomerang = node.elementExists("Boomerang"),
-            .amplitude = try node.getValueFloat("Amplitude", f32, 0.0),
-            .frequency = try node.getValueFloat("Frequency", f32, 1.0),
-            .magnitude = try node.getValueFloat("Magnitude", f32, 3.0),
-            .accel = try node.getValueFloat("Acceleration", f32, 0.0),
-            .accel_delay = try node.getValueInt("AccelerationDelay", i64, 0) * std.time.us_per_ms,
-            .speed_clamp = try node.getValueInt("SpeedClamp", u16, 0),
-            .angle_change = std.math.degreesToRadians(f32, try node.getValueFloat("AngleChange", f32, 0.0)),
-            .angle_change_delay = try node.getValueInt("AngleChangeDelay", i64, 0) * std.time.us_per_ms,
-            .angle_change_end = try node.getValueInt("AngleChangeEnd", u16, 0),
-            .angle_change_accel = std.math.degreesToRadians(f32, try node.getValueFloat("AngleChangeAccel", f32, 0.0)),
-            .angle_change_accel_delay = try node.getValueInt("AngleChangeAccelDelay", i64, 0) * std.time.us_per_ms,
-            .angle_change_clamp = try node.getValueFloat("AngleChangeClamp", f32, 0.0),
-            .zero_velocity_delay = try node.getValueInt("ZeroVelocityDelay", i64, -1) * std.time.us_per_ms,
-            .heat_seek_speed = try node.getValueFloat("HeatSeekSpeed", f32, 0.0) / 10000.0,
-            .heat_seek_radius = try node.getValueFloat("HeatSeekRadius", f32, 0.0),
-            .heat_seek_delay = try node.getValueInt("HeatSeekDelay", i64, 0) * std.time.us_per_ms,
-            .bouncing = node.elementExists("Bouncing"),
-        };
-    }
-
-    pub fn deinit(self: ProjProps) void {
-        for (self.texture_data) |tex_data| {
-            tex_data.deinit();
-        }
-        allocator.free(self.texture_data);
-        allocator.free(self.object_id);
-        allocator.free(self.effects);
-    }
-};
-
-pub const StatType = enum(u8) {
-    hp = 0,
-    size = 1,
-    mp = 2,
-    inv_0 = 3,
-    inv_1 = 4,
-    inv_2 = 5,
-    inv_3 = 6,
-    inv_4 = 7,
-    inv_5 = 8,
-    inv_6 = 9,
-    inv_7 = 10,
-    inv_8 = 11,
-    inv_9 = 12,
-    inv_10 = 13,
-    inv_11 = 14,
-    inv_12 = 15,
-    inv_13 = 16,
-    inv_14 = 17,
-    inv_15 = 18,
-    inv_16 = 19,
-    inv_17 = 20,
-    inv_18 = 21,
-    inv_19 = 22,
-    inv_20 = 23,
-    inv_21 = 24,
-    name = 25,
-    merch_type = 26,
-    merch_price = 27,
-    merch_count = 28,
-    gems = 29,
-    gold = 30,
-    crowns = 31,
-    owner_account_id = 32,
-
-    max_hp = 33,
-    max_mp = 34,
-    strength = 35,
-    defense = 36,
-    speed = 37,
-    stamina = 38,
-    wit = 39,
-    resistance = 40,
-    intelligence = 41,
-    penetration = 42,
-    piercing = 43,
-    haste = 44,
-    tenacity = 45,
-
-    hp_bonus = 46,
-    mp_bonus = 47,
-    strength_bonus = 48,
-    defense_bonus = 49,
-    speed_bonus = 50,
-    stamina_bonus = 51,
-    wit_bonus = 52,
-    resistance_bonus = 53,
-    intelligence_bonus = 54,
-    penetration_bonus = 55,
-    piercing_bonus = 56,
-    haste_bonus = 57,
-    tenacity_bonus = 58,
-
-    condition = 59,
-    sellable_price = 62,
-    portal_usable = 63,
-    account_id = 64,
-    aether = 65,
-    damage_multiplier = 66,
-    hit_multiplier = 67,
-    texture = 72,
-    x = 73,
-    y = 74,
-    in_combat = 75,
-
-    none = 255,
-
-    const map = std.ComptimeStringMap(StatType, .{
-        .{ "MaxHP", .max_hp },
-        .{ "Max HP", .max_hp },
-        .{ "MaxMP", .max_mp },
-        .{ "Max MP", .max_mp },
-        .{ "Strength", .strength },
-        .{ "Defense", .defense },
-        .{ "Speed", .speed },
-        .{ "Stamina", .stamina },
-        .{ "Wit", .wit },
-        .{ "Resistance", .resistance },
-        .{ "Intelligence", .intelligence },
-        .{ "Penetration", .penetration },
-        .{ "Piercing", .piercing },
-        .{ "Haste", .haste },
-        .{ "Tenacity", .tenacity },
-    });
-
-    pub fn fromString(str: []const u8) StatType {
-        return map.get(str) orelse .max_hp;
-    }
-
-    pub fn toString(self: StatType) []const u8 {
+    pub fn toString(self: StatIncreaseData) []const u8 {
         return switch (self) {
             .max_hp => "Max HP",
             .max_mp => "Max MP",
             .strength => "Strength",
+            .wit => "Wit",
             .defense => "Defense",
+            .resistance => "Resistance",
             .speed => "Speed",
             .stamina => "Stamina",
-            .wit => "Wit",
-            .resistance => "Resistance",
             .intelligence => "Intelligence",
             .penetration => "Penetration",
             .piercing => "Piercing",
             .haste => "Haste",
             .tenacity => "Tenacity",
-            else => "Unknown Stat",
         };
     }
 
-    pub fn toControlCode(self: StatType) []const u8 {
+    pub fn toControlCode(self: StatIncreaseData) []const u8 {
         return switch (self) {
             .max_hp => "&img=\"misc_big,0x28\"",
             .max_mp => "&img=\"misc_big,0x27\"",
@@ -924,326 +570,79 @@ pub const StatType = enum(u8) {
             .piercing => "&img=\"misc_big,0x3c\"",
             .haste => "&img=\"misc_big,0x3a\"",
             .tenacity => "&img=\"misc_big,0x25\"",
-            else => "",
-        };
-    }
-};
-
-pub const ActivationType = enum(u8) {
-    open_portal,
-    cage,
-    clock,
-    hit_multiplier,
-    damage_multiplier,
-    stat_boost_self,
-    stat_boost_aura,
-    condition_effect_aura,
-    condition_effect_self,
-    heal,
-    heal_nova,
-    magic,
-    magic_nova,
-    teleport,
-    increment_stat,
-    create,
-    totem,
-    unlock_portal,
-    unlock_skin,
-    change_skin,
-    fixed_stat,
-    unlock_emote,
-    bloodstone,
-    unknown = std.math.maxInt(u8),
-
-    const map = std.ComptimeStringMap(ActivationType, .{
-        .{ "OpenPortal", .open_portal },
-        .{ "Cage", .cage },
-        .{ "Clock", .clock },
-        .{ "HitMultiplier", .hit_multiplier },
-        .{ "DamageMultiplier", .damage_multiplier },
-        .{ "StatBoostSelf", .stat_boost_self },
-        .{ "StatBoostAura", .stat_boost_aura },
-        .{ "ConditionEffectAura", .condition_effect_aura },
-        .{ "ConditionEffectSelf", .condition_effect_self },
-        .{ "Heal", .heal },
-        .{ "HealNova", .heal_nova },
-        .{ "Magic", .magic },
-        .{ "MagicNova", .magic_nova },
-        .{ "Teleport", .teleport },
-        .{ "IncrementStat", .increment_stat },
-        .{ "Create", .create },
-        .{ "Totem", .totem },
-        .{ "UnlockPortal", .unlock_portal },
-        .{ "UnlockSkin", .unlock_skin },
-        .{ "ChangeSkin", .change_skin },
-        .{ "FixedStat", .fixed_stat },
-        .{ "UnlockEmote", .unlock_emote },
-        .{ "Bloodstone", .bloodstone },
-    });
-
-    pub fn fromString(str: []const u8) ActivationType {
-        const ret = map.get(str) orelse {
-            std.log.warn("Could not find activation type for {s}. Using unknown", .{str});
-            return .unknown;
-        };
-        return ret;
-    }
-};
-
-pub const ActivationData = struct {
-    activation_type: ActivationType,
-    object_id: []const u8,
-    dungeon_name: []const u8,
-    obj_type: u16,
-    duration: f32,
-    max_distance: u8,
-    max_targets: u8,
-    radius: f32,
-    total_damage: u32,
-    cond_duration: f32,
-    id: []const u8,
-    effect: utils.ConditionEnum,
-    range: f32,
-    stat: ?StatType,
-    amount: i16,
-
-    pub fn parse(node: xml.Node) !ActivationData {
-        return .{
-            .activation_type = ActivationType.fromString(node.currentValue() orelse "IncrementStat"),
-            .object_id = try node.getAttributeAlloc("objectId", allocator, ""),
-            .obj_type = try node.getAttributeInt("objType", u16, std.math.maxInt(u16)),
-            .id = try node.getAttributeAlloc("id", allocator, ""),
-            .dungeon_name = try node.getAttributeAlloc("dungeonName", allocator, "Unknown"),
-            .effect = utils.ConditionEnum.fromString(node.getAttribute("effect") orelse ""),
-            .duration = try node.getAttributeFloat("duration", f32, 0.0),
-            .cond_duration = try node.getAttributeFloat("condDuration", f32, 0.0),
-            .max_distance = try node.getAttributeInt("maxDistance", u8, 0),
-            .max_targets = try node.getAttributeInt("maxTargets", u8, 0),
-            .radius = try node.getAttributeFloat("maxDistance", f32, 0.0),
-            .total_damage = try node.getAttributeInt("totalDamage", u32, 0),
-            .range = try node.getAttributeFloat("condDuration", f32, 0.0),
-            .stat = if (node.attributeExists("stat")) StatType.fromString(node.getAttribute("stat") orelse "MaxHP") else null,
-            .amount = try node.getAttributeInt("amount", i16, 0),
         };
     }
 
-    pub fn deinit(self: *ActivationData) void {
-        allocator.free(self.id);
-        allocator.free(self.object_id);
-        allocator.free(self.dungeon_name);
-    }
-};
-
-pub const StatIncrementData = struct {
-    stat: StatType,
-    amount: i16,
-
-    pub fn parse(node: xml.Node) !StatIncrementData {
-        return .{
-            .stat = StatType.fromString(node.getAttribute("stat") orelse "MaxHP"),
-            .amount = try node.getAttributeInt("amount", i16, 0),
-        };
-    }
-};
-
-pub const EffectInfo = struct {
-    name: []const u8,
-    description: []const u8,
-
-    pub fn parse(node: xml.Node) !EffectInfo {
-        return .{
-            .name = try node.getAttributeAlloc("name", allocator, ""),
-            .description = try node.getAttributeAlloc("description", allocator, ""),
-        };
-    }
-
-    pub fn deinit(self: *EffectInfo) void {
-        allocator.free(self.name);
-        allocator.free(self.description);
-    }
-};
-
-pub const ItemProps = struct {
-    consumable: bool,
-    untradeable: bool,
-    usable: bool,
-    slot_type: ItemType,
-    rarity: []const u8,
-    aether_req: u8,
-    mp_cost: f32,
-    bag_type: u8,
-    num_projectiles: u8,
-    arc_gap: f32,
-    id: []const u8,
-    display_id: []const u8,
-    rate_of_fire: f32,
-    texture_data: TextureData,
-    projectile: ?ProjProps,
-    stat_increments: ?[]StatIncrementData,
-    activations: ?[]ActivationData,
-    cooldown: f32,
-    sound: []const u8,
-    extra_tooltip_data: ?[]EffectInfo,
-    description: []const u8,
-
-    pub fn parse(node: xml.Node) !ItemProps {
-        var incr_it = node.iterate(&.{}, "IncrementStat");
-        var incr_list: std.ArrayListUnmanaged(StatIncrementData) = .{};
-        defer incr_list.deinit(allocator);
-        while (incr_it.next()) |incr_node|
-            try incr_list.append(allocator, try StatIncrementData.parse(incr_node));
-
-        var activate_it = node.iterate(&.{}, "Activate");
-        var activate_list: std.ArrayListUnmanaged(ActivationData) = .{};
-        defer activate_list.deinit(allocator);
-        while (activate_it.next()) |activate_node|
-            try activate_list.append(allocator, try ActivationData.parse(activate_node));
-
-        var extra_tooltip_it = node.iterate(&.{}, "ExtraTooltipData");
-        var extra_tooltip_list: std.ArrayListUnmanaged(EffectInfo) = .{};
-        defer extra_tooltip_list.deinit(allocator);
-        while (extra_tooltip_it.next()) |extra_tooltip_node|
-            try extra_tooltip_list.append(allocator, try EffectInfo.parse(extra_tooltip_node));
-
-        const id = try node.getAttributeAlloc("id", allocator, "Unknown");
-
-        return .{
-            .consumable = node.elementExists("Consumable"),
-            .untradeable = node.elementExists("Soulbound"),
-            .usable = node.elementExists("Usable"),
-            .slot_type = @enumFromInt(try node.getValueInt("SlotType", i8, 0)),
-            .rarity = try node.getValueAlloc("Rarity", allocator, "Unknown"),
-            .aether_req = try node.getValueInt("AetherReq", u8, 0),
-            .bag_type = try node.getValueInt("BagType", u8, 0),
-            .num_projectiles = try node.getValueInt("NumProjectiles", u8, 1),
-            .arc_gap = std.math.degreesToRadians(f32, try node.getValueFloat("ArcGap", f32, 0)),
-            .id = id,
-            .display_id = try node.getValueAlloc("DisplayId", allocator, id),
-            .mp_cost = try node.getValueFloat("MpCost", f32, 0.0),
-            .rate_of_fire = try node.getValueFloat("RateOfFire", f32, 0),
-            .texture_data = try TextureData.parse(node.findChild("Texture").?, false),
-            .projectile = if (node.elementExists("Projectile")) try ProjProps.parse(node.findChild("Projectile").?) else null,
-            .stat_increments = try allocator.dupe(StatIncrementData, incr_list.items),
-            .activations = try allocator.dupe(ActivationData, activate_list.items),
-            .sound = try node.getValueAlloc("Sound", allocator, "Unknown"),
-            .cooldown = try node.getValueFloat("Cooldown", f32, 0.5),
-            .extra_tooltip_data = try allocator.dupe(EffectInfo, extra_tooltip_list.items),
-            .description = try node.getValueAlloc("Description", allocator, ""),
-        };
-    }
-
-    pub fn deinit(self: *ItemProps) void {
-        if (self.stat_increments) |incr| {
-            allocator.free(incr);
-        }
-
-        if (self.activations) |activate| {
-            for (activate) |*data| {
-                data.deinit();
-            }
-            allocator.free(activate);
-        }
-
-        if (self.extra_tooltip_data) |data| {
-            for (data) |*effect| {
-                effect.deinit();
-            }
-            allocator.free(data);
-        }
-
-        allocator.free(self.texture_data.sheet);
-        allocator.free(self.rarity);
-        allocator.free(self.sound);
-        allocator.free(self.id);
-        allocator.free(self.display_id);
-        allocator.free(self.description);
-
-        if (self.projectile) |*props| {
-            props.deinit();
-        }
-    }
-};
-
-pub const UseType = enum(u8) {
-    default = 0,
-    start = 1,
-    end = 2,
-};
-
-pub const ItemType = enum(i8) {
-    const weapon_types = [_]ItemType{ .sword, .bow, .staff };
-    const armor_types = [_]ItemType{ .leather, .heavy, .robe };
-
-    no_item = -1,
-    any = 0,
-    boots = 9,
-    artifact = 23,
-    consumable = 10,
-
-    sword = 1,
-    bow = 3,
-    staff = 17,
-    any_weapon = 22,
-
-    leather = 6,
-    heavy = 7,
-    robe = 14,
-    any_armor = 20,
-
-    pub fn toString(self: ItemType) []const u8 {
+    pub fn amount(self: StatIncreaseData) u16 {
         return switch (self) {
-            .boots => "Boots",
-            .artifact => "Artifact",
-            .consumable => "Consumable",
-            .sword => "Sword",
-            .bow => "Bow",
-            .staff => "Staff",
-            .leather => "Leather",
-            .heavy => "Heavy",
-            .robe => "Robe",
-            .no_item, .any, .any_weapon, .any_armor => "Unknown",
+            inline else => |inner| inner,
         };
-    }
-
-    pub inline fn slotsMatch(self: ItemType, target: ItemType) bool {
-        return self == target or self == .any or target == .any or
-            std.mem.indexOfScalar(ItemType, &weapon_types, self) != null and target == .any_weapon or
-            std.mem.indexOfScalar(ItemType, &weapon_types, target) != null and self == .any_weapon or
-            std.mem.indexOfScalar(ItemType, &armor_types, self) != null and target == .any_armor or
-            std.mem.indexOfScalar(ItemType, &armor_types, target) != null and self == .any_armor;
     }
 };
 
-pub const Currency = enum(u8) { gold = 0, gems = 1, crowns = 2 };
+pub const TimedCondition = struct {
+    type: utils.ConditionEnum,
+    duration: f32,
+};
 
-pub const RegionType = enum(u8) {
-    spawn,
-    store_1,
-    store_2,
-    store_3,
-    desert_encounter,
-    volcano_encounter,
-    forest_encounter,
-    desert_setpiece,
-    volcano_setpiece,
-    forest_setpiece,
+pub const ActivationData = union(enum) {
+    heal: i32,
+    magic: i32,
+    create_entity: []const u8,
+    create_enemy: []const u8,
+    create_portal: []const u8,
+    heal_nova: struct { amount: i32, radius: f32 },
+    magic_nova: struct { amount: i32, radius: f32 },
+    stat_boost_self: struct { stat_incr: StatIncreaseData, amount: i16, duration: f32 },
+    stat_boost_aura: struct { stat_incr: StatIncreaseData, amount: i16, duration: f32, radius: f32 },
+    condition_effect_self: TimedCondition,
+    condition_effect_aura: struct { cond: TimedCondition, radius: f32 },
+};
 
-    const map = std.ComptimeStringMap(RegionType, .{
-        .{ "Spawn", .spawn },
-        .{ "Store 1", .store_1 },
-        .{ "Store 2", .store_2 },
-        .{ "Store 3", .store_3 },
-        .{ "Biome Desert Encounter Spawn", .desert_encounter },
-        .{ "Biome Volcano Encounter Spawn", .volcano_encounter },
-        .{ "Biome Forest Encounter Spawn", .forest_encounter },
-        .{ "Biome Desert Setpiece Spawn", .desert_encounter },
-        .{ "Biome Volcano Setpiece Spawn", .volcano_encounter },
-        .{ "Biome Forest Setpiece Spawn", .forest_encounter },
-    });
+pub const ItemData = struct {
+    id: u16,
+    name: []const u8,
+    description: []const u8 = "",
+    item_type: ItemType,
+    rarity: []const u8 = "Common",
+    texture: TextureData,
+    fire_rate: f32 = 1.0,
+    projectile_count: u8 = 1,
+    projectile: ?ProjectileData = null,
+    stat_increases: ?[]const StatIncreaseData = null,
+    activations: ?[]const ActivationData = null,
+    arc_gap: f32 = 5.0,
+    mana_cost: i16 = 0,
+    health_cost: i16 = 0,
+    gold_cost: i16 = 0,
+    cooldown: f32 = 0.0,
+    consumable: bool = false,
+    untradeable: bool = false,
+    bag_type: enum { brown, purple, blue, white } = .brown,
+    sound: []const u8 = "Unknown",
+};
 
-    pub fn fromString(str: []const u8) RegionType {
-        return map.get(str) orelse .store_1;
+pub const PortalData = struct {
+    id: u16,
+    name: []const u8,
+    textures: []const TextureData,
+    draw_on_ground: bool = false,
+    light: LightData = .{},
+    size_mult: f32 = 1.0,
+    show_name: bool = true,
+    animation: ?AnimationData = null,
+};
+
+pub const RegionData = struct {
+    id: u16,
+    name: []const u8,
+    color: u32,
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!RegionData {
+        return jsonParseWithHex(RegionData, allocator, source, options);
     }
+
+    pub const jsonStringify = @compileError("Not supported");
 };
 
 pub const StringContext = struct {
@@ -1262,293 +661,3 @@ pub const StringContext = struct {
         return true;
     }
 };
-
-pub var classes: std.AutoHashMapUnmanaged(u16, CharacterClass) = .{};
-pub var card_type_to_props: std.AutoHashMapUnmanaged(u16, CardProps) = .{};
-pub var item_name_to_type: std.HashMapUnmanaged([]const u8, u16, StringContext, 80) = .{};
-pub var item_type_to_props: std.AutoHashMapUnmanaged(u16, ItemProps) = .{};
-pub var item_type_to_name: std.AutoHashMapUnmanaged(u16, []const u8) = .{};
-pub var obj_name_to_type: std.HashMapUnmanaged([]const u8, u16, StringContext, 80) = .{};
-pub var obj_type_to_props: std.AutoHashMapUnmanaged(u16, ObjProps) = .{};
-pub var obj_type_to_name: std.AutoHashMapUnmanaged(u16, []const u8) = .{};
-pub var obj_type_to_tex_data: std.AutoHashMapUnmanaged(u16, []const TextureData) = .{};
-pub var obj_type_to_top_tex_data: std.AutoHashMapUnmanaged(u16, []const TextureData) = .{};
-pub var obj_type_to_anim_data: std.AutoHashMapUnmanaged(u16, AnimProps) = .{};
-pub var obj_type_to_class: std.AutoHashMapUnmanaged(u16, ClassType) = .{};
-pub var ground_name_to_type: std.HashMapUnmanaged([]const u8, u16, StringContext, 80) = .{};
-pub var ground_type_to_props: std.AutoHashMapUnmanaged(u16, GroundProps) = .{};
-pub var ground_type_to_name: std.AutoHashMapUnmanaged(u16, []const u8) = .{};
-pub var ground_type_to_tex_data: std.AutoHashMapUnmanaged(u16, []const TextureData) = .{};
-pub var region_type_to_name: std.AutoHashMapUnmanaged(u8, []const u8) = .{};
-pub var region_type_to_color: std.AutoHashMapUnmanaged(u8, u32) = .{};
-pub var region_type_to_enum: std.AutoHashMapUnmanaged(u8, RegionType) = .{};
-var allocator: std.mem.Allocator = undefined;
-
-pub fn init(ally: std.mem.Allocator) !void {
-    allocator = ally;
-
-    const xmls_dir = try std.fs.cwd().openDir("./assets/xmls", .{ .iterate = true });
-    var walker = try xmls_dir.walk(allocator);
-    defer walker.deinit();
-
-    while (try walker.next()) |entry| {
-        if (std.mem.endsWith(u8, entry.path, ".xml")) {
-            const path = std.fmt.allocPrintZ(allocator, "./assets/xmls/{s}", .{entry.path}) catch continue;
-            defer allocator.free(path);
-
-            const doc = try xml.Doc.fromFile(path);
-            defer doc.deinit();
-
-            const root_node = doc.getRootElement() catch {
-                std.log.err("Invalid XML in path {s}", .{path});
-                continue;
-            };
-
-            const root_name = std.mem.span(root_node.impl.name);
-            if (std.mem.eql(u8, root_name, "Items")) {
-                parseItems(doc) catch |e| {
-                    std.log.err("Item parsing error for path {s}: {}", .{ path, e });
-                };
-            } else if (std.mem.eql(u8, root_name, "Objects")) {
-                parseObjects(doc) catch |e| {
-                    std.log.err("Object parsing error for path {s}: {}", .{ path, e });
-                };
-            } else if (std.mem.eql(u8, root_name, "GroundTypes")) {
-                parseGrounds(doc) catch |e| {
-                    std.log.err("Ground parsing error for path {s}: {}", .{ path, e });
-                };
-            } else if (std.mem.eql(u8, root_name, "Regions")) {
-                parseRegions(doc) catch |e| {
-                    std.log.err("Region parsing error for path {s}: {}", .{ path, e });
-                };
-            } else if (std.mem.eql(u8, root_name, "Cards")) {
-                parseCards(doc) catch |e| {
-                    std.log.err("Card parsing error for path {s}: {}", .{ path, e });
-                };
-            } else {
-                std.log.err("Invalid root node for path {s}: {s}", .{ path, root_name });
-            }
-
-            if (@errorReturnTrace()) |trace| {
-                std.debug.dumpStackTrace(trace.*);
-            }
-        }
-    }
-
-    const player_doc = try xml.Doc.fromFile("./assets/xmls/players.xml");
-    defer player_doc.deinit();
-    const player_root = try player_doc.getRootElement();
-    var player_root_it = player_root.iterate(&.{}, "Object");
-
-    while (player_root_it.next()) |node| {
-        const class = try CharacterClass.parse(node);
-        try classes.put(allocator, class.obj_type, class);
-    }
-}
-
-pub fn deinit() void {
-    var obj_id_iter = obj_type_to_name.valueIterator();
-    while (obj_id_iter.next()) |id| {
-        allocator.free(id.*);
-    }
-
-    var obj_props_iter = obj_type_to_props.valueIterator();
-    while (obj_props_iter.next()) |props| {
-        props.deinit();
-    }
-
-    var card_props_iter = card_type_to_props.valueIterator();
-    while (card_props_iter.next()) |props| {
-        props.deinit();
-    }
-
-    var item_props_iter = item_type_to_props.valueIterator();
-    while (item_props_iter.next()) |props| {
-        props.deinit();
-    }
-
-    var item_name_iter = item_type_to_name.valueIterator();
-    while (item_name_iter.next()) |id| {
-        allocator.free(id.*);
-    }
-
-    var ground_name_iter = ground_type_to_name.valueIterator();
-    while (ground_name_iter.next()) |id| {
-        allocator.free(id.*);
-    }
-
-    var ground_iter = ground_type_to_props.valueIterator();
-    while (ground_iter.next()) |props| {
-        allocator.free(props.obj_id);
-    }
-
-    var region_iter = region_type_to_name.valueIterator();
-    while (region_iter.next()) |id| {
-        allocator.free(id.*);
-    }
-
-    var ground_tex_iter = ground_type_to_tex_data.valueIterator();
-    while (ground_tex_iter.next()) |tex_list| {
-        for (tex_list.*) |tex| {
-            tex.deinit();
-        }
-        allocator.free(tex_list.*);
-    }
-
-    var obj_tex_iter = obj_type_to_tex_data.valueIterator();
-    while (obj_tex_iter.next()) |tex_list| {
-        for (tex_list.*) |tex| {
-            tex.deinit();
-        }
-        allocator.free(tex_list.*);
-    }
-
-    var obj_top_tex_iter = obj_type_to_top_tex_data.valueIterator();
-    while (obj_top_tex_iter.next()) |tex_list| {
-        for (tex_list.*) |tex| {
-            tex.deinit();
-        }
-        allocator.free(tex_list.*);
-    }
-
-    var class_iter = classes.valueIterator();
-    while (class_iter.next()) |class| {
-        class.deinit();
-    }
-
-    classes.deinit(allocator);
-    item_name_to_type.deinit(allocator);
-    item_type_to_props.deinit(allocator);
-    item_type_to_name.deinit(allocator);
-    obj_name_to_type.deinit(allocator);
-    obj_type_to_props.deinit(allocator);
-    obj_type_to_name.deinit(allocator);
-    obj_type_to_tex_data.deinit(allocator);
-    obj_type_to_top_tex_data.deinit(allocator);
-    obj_type_to_anim_data.deinit(allocator);
-    obj_type_to_class.deinit(allocator);
-    ground_name_to_type.deinit(allocator);
-    ground_type_to_props.deinit(allocator);
-    ground_type_to_name.deinit(allocator);
-    ground_type_to_tex_data.deinit(allocator);
-    region_type_to_name.deinit(allocator);
-    region_type_to_color.deinit(allocator);
-}
-
-fn parseTexture(node: xml.Node) ![]TextureData {
-    if (node.findChild("RandomTexture")) |random_tex_child| {
-        var tex_iter = random_tex_child.iterate(&.{}, "Texture");
-        var tex_list = try std.ArrayListUnmanaged(TextureData).initCapacity(allocator, 4);
-        defer tex_list.deinit(allocator);
-        while (tex_iter.next()) |tex_node| {
-            try tex_list.append(allocator, try TextureData.parse(tex_node, false));
-        }
-
-        if (tex_list.capacity > 0) {
-            return try allocator.dupe(TextureData, tex_list.items);
-        } else {
-            var anim_tex_iter = random_tex_child.iterate(&.{}, "AnimatedTexture");
-            var anim_tex_list = try std.ArrayListUnmanaged(TextureData).initCapacity(allocator, 4);
-            defer anim_tex_list.deinit(allocator);
-            while (anim_tex_iter.next()) |tex_node| {
-                try anim_tex_list.append(allocator, try TextureData.parse(tex_node, true));
-            }
-
-            return try allocator.dupe(TextureData, anim_tex_list.items);
-        }
-    } else {
-        if (node.findChild("Texture")) |tex_child| {
-            const ret = try allocator.alloc(TextureData, 1);
-            ret[0] = try TextureData.parse(tex_child, false);
-            return ret;
-        } else {
-            if (node.findChild("AnimatedTexture")) |anim_tex_child| {
-                const ret = try allocator.alloc(TextureData, 1);
-                ret[0] = try TextureData.parse(anim_tex_child, true);
-                return ret;
-            }
-        }
-    }
-
-    return &[0]TextureData{};
-}
-
-pub fn parseItems(doc: xml.Doc) !void {
-    const root = try doc.getRootElement();
-    var iter = root.iterate(&.{}, "Item");
-    while (iter.next()) |node| {
-        const obj_type = try node.getAttributeInt("type", u16, 0);
-        const id = try node.getAttributeAlloc("id", allocator, "Unknown");
-        try item_name_to_type.put(allocator, id, obj_type);
-        try item_type_to_props.put(allocator, obj_type, try ItemProps.parse(node));
-        try item_type_to_name.put(allocator, obj_type, id);
-    }
-}
-
-pub fn parseObjects(doc: xml.Doc) !void {
-    const root = try doc.getRootElement();
-    var iter = root.iterate(&.{}, "Object");
-    while (iter.next()) |node| {
-        const obj_type = try node.getAttributeInt("type", u16, 0);
-        const id = try node.getAttributeAlloc("id", allocator, "Unknown");
-        try obj_type_to_class.put(allocator, obj_type, ClassType.fromString(node.getValue("Class") orelse "GameObject"));
-        try obj_name_to_type.put(allocator, id, obj_type);
-        try obj_type_to_props.put(allocator, obj_type, try ObjProps.parse(node));
-        try obj_type_to_name.put(allocator, obj_type, id);
-
-        try obj_type_to_tex_data.put(allocator, obj_type, try parseTexture(node));
-
-        if (node.findChild("Top")) |top_tex_child| {
-            try obj_type_to_top_tex_data.put(allocator, obj_type, try parseTexture(top_tex_child));
-        }
-    }
-}
-
-pub fn parseGrounds(doc: xml.Doc) !void {
-    const root = try doc.getRootElement();
-    var iter = root.iterate(&.{}, "Ground");
-    while (iter.next()) |node| {
-        const obj_type = try node.getAttributeInt("type", u16, 0);
-        const id = try node.getAttributeAlloc("id", allocator, "Unknown");
-        try ground_name_to_type.put(allocator, id, obj_type);
-        try ground_type_to_props.put(allocator, obj_type, try GroundProps.parse(node));
-        try ground_type_to_name.put(allocator, obj_type, id);
-
-        if (node.findChild("RandomTexture")) |random_tex_child| {
-            var tex_iter = random_tex_child.iterate(&.{}, "Texture");
-            var tex_list = try std.ArrayListUnmanaged(TextureData).initCapacity(allocator, 4);
-            defer tex_list.deinit(allocator);
-            while (tex_iter.next()) |tex_node| {
-                try tex_list.append(allocator, try TextureData.parse(tex_node, false));
-            }
-            try ground_type_to_tex_data.put(allocator, obj_type, try allocator.dupe(TextureData, tex_list.items));
-        } else {
-            if (node.findChild("Texture")) |tex_child| {
-                const ret = try allocator.alloc(TextureData, 1);
-                ret[0] = try TextureData.parse(tex_child, false);
-                try ground_type_to_tex_data.put(allocator, obj_type, ret);
-            }
-        }
-    }
-}
-
-pub fn parseRegions(doc: xml.Doc) !void {
-    const root = try doc.getRootElement();
-    var iter = root.iterate(&.{}, "Region");
-    while (iter.next()) |node| {
-        const obj_type = try node.getAttributeInt("type", u8, 0);
-        const id = try node.getAttributeAlloc("id", allocator, "Unknown");
-        try region_type_to_name.put(allocator, obj_type, id);
-        try region_type_to_color.put(allocator, obj_type, try node.getValueInt("Color", u32, 0));
-        try region_type_to_enum.put(allocator, obj_type, RegionType.fromString(id));
-    }
-}
-
-pub fn parseCards(doc: xml.Doc) !void {
-    const root = try doc.getRootElement();
-    var iter = root.iterate(&.{}, "Card");
-    while (iter.next()) |node| {
-        const card_type = try node.getAttributeInt("type", u16, 0);
-        try card_type_to_props.put(allocator, card_type, try CardProps.parse(node));
-    }
-}

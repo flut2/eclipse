@@ -1,185 +1,187 @@
 const std = @import("std");
-const utils = @import("shared").utils;
-const game_data = @import("shared").game_data;
+const shared = @import("shared");
+const utils = shared.utils;
+const game_data = shared.game_data;
+const maps = @import("map/maps.zig");
 
+const LightData = maps.LightData;
 const Tile = @import("map/tile.zig").Tile;
 const Entity = @import("map/entity.zig").Entity;
 const Enemy = @import("map/enemy.zig").Enemy;
 const Player = @import("map/player.zig").Player;
+const Portal = @import("map/portal.zig").Portal;
+const Container = @import("map/container.zig").Container;
 const Projectile = @import("map/projectile.zig").Projectile;
-const LightData = @import("map/maps.zig").LightData;
 
 pub const WorldPoint = struct { x: u16, y: u16 };
 
 pub const World = struct {
-    owner_portal_id: i32 = -1,
-    next_obj_id: i32 = 0,
+    id: i32 = std.math.minInt(i32),
+    owner_portal_id: u32 = std.math.maxInt(u32),
+    next_map_ids: struct {
+        entity: u32 = 0,
+        enemy: u32 = 0,
+        player: u32 = 0,
+        portal: u32 = 0,
+        container: u32 = 0,
+        projectile: u32 = 0,
+    } = .{},
     w: u16 = 0,
     h: u16 = 0,
+    time_added: i64 = 0,
     name: []const u8 = undefined,
     light_data: LightData = .{},
-    tiles: []Tile = &[0]Tile{},
-    regions: std.EnumArray(game_data.RegionType, []WorldPoint) = undefined,
-    entities: std.ArrayList(Entity) = undefined,
-    enemies: std.ArrayList(Enemy) = undefined,
-    players: std.ArrayList(Player) = undefined,
-    projectiles: std.ArrayList(Projectile) = undefined,
-    drops: std.ArrayList(i32) = undefined,
+    map_type: maps.MapType = .default,
+    tiles: []Tile = &.{},
+    regions: std.AutoHashMapUnmanaged(u16, []WorldPoint) = .empty,
+    drops: struct {
+        entity: std.ArrayListUnmanaged(u32) = .empty,
+        enemy: std.ArrayListUnmanaged(u32) = .empty,
+        player: std.ArrayListUnmanaged(u32) = .empty,
+        portal: std.ArrayListUnmanaged(u32) = .empty,
+        container: std.ArrayListUnmanaged(u32) = .empty,
+    } = .{},
+    lists: struct {
+        entity: std.ArrayListUnmanaged(Entity) = .empty,
+        enemy: std.ArrayListUnmanaged(Enemy) = .empty,
+        player: std.ArrayListUnmanaged(Player) = .empty,
+        portal: std.ArrayListUnmanaged(Portal) = .empty,
+        container: std.ArrayListUnmanaged(Container) = .empty,
+        projectile: std.ArrayListUnmanaged(Projectile) = .empty,
+    } = .{},
     allocator: std.mem.Allocator = undefined,
-    entity_lock: std.Thread.Mutex = .{},
-    enemy_lock: std.Thread.Mutex = .{},
-    player_lock: std.Thread.Mutex = .{},
-    proj_lock: std.Thread.Mutex = .{},
 
-    pub fn create(allocator: std.mem.Allocator, w: u16, h: u16, name: []const u8, light_data: LightData) !World {
+    pub fn listForType(self: *World, comptime T: type) *std.ArrayListUnmanaged(T) {
+        return switch (T) {
+            Entity => &self.lists.entity,
+            Enemy => &self.lists.enemy,
+            Player => &self.lists.player,
+            Portal => &self.lists.portal,
+            Container => &self.lists.container,
+            Projectile => &self.lists.projectile,
+            else => @compileError("Given type has no list"),
+        };
+    }
+
+    pub fn dropsForType(self: *World, comptime T: type) *std.ArrayListUnmanaged(u32) {
+        return switch (T) {
+            Entity => &self.drops.entity,
+            Enemy => &self.drops.enemy,
+            Player => &self.drops.player,
+            Portal => &self.drops.portal,
+            Container => &self.drops.container,
+            else => @compileError("Given type has no drops list"),
+        };
+    }
+
+    pub fn nextMapIdForType(self: *World, comptime T: type) *u32 {
+        return switch (T) {
+            Entity => &self.next_map_ids.entity,
+            Enemy => &self.next_map_ids.enemy,
+            Player => &self.next_map_ids.player,
+            Portal => &self.next_map_ids.portal,
+            Container => &self.next_map_ids.container,
+            Projectile => &self.next_map_ids.projectile,
+            else => @compileError("Invalid type"),
+        };
+    }
+
+    pub fn appendMap(self: *World, map: maps.MapData) !void {
+        @memcpy(self.tiles, map.tiles);
+        self.regions = map.regions;
+
+        self.name = map.details.name;
+        self.light_data = map.details.light;
+        self.map_type = map.details.map_type;
+
+        for (map.entities) |e| _ = try self.add(Entity, .{ .x = e.x, .y = e.y, .data_id = e.data_id });
+        for (map.enemies) |e| _ = try self.add(Enemy, .{ .x = e.x, .y = e.y, .data_id = e.data_id });
+        for (map.portals) |p| _ = try self.add(Portal, .{ .x = p.x, .y = p.y, .data_id = p.data_id });
+        for (map.containers) |c| _ = try self.add(Container, .{ .x = c.x, .y = c.y, .data_id = c.data_id });
+    }
+
+    pub fn create(allocator: std.mem.Allocator, w: u16, h: u16, id: i32) !World {
         return .{
+            .id = id,
             .w = w,
             .h = h,
-            .name = try allocator.dupe(u8, name),
-            .light_data = light_data,
             .tiles = try allocator.alloc(Tile, @as(u32, w) * @as(u32, h)),
-            .regions = std.EnumArray(game_data.RegionType, []WorldPoint).initUndefined(),
-            .entities = std.ArrayList(Entity).init(allocator),
-            .enemies = std.ArrayList(Enemy).init(allocator),
-            .players = std.ArrayList(Player).init(allocator),
-            .projectiles = std.ArrayList(Projectile).init(allocator),
-            .drops = std.ArrayList(i32).init(allocator),
             .allocator = allocator,
+            .time_added = @import("main.zig").current_time,
         };
     }
 
     pub fn deinit(self: *World) void {
-        {
-            self.entity_lock.lock();
-            defer self.entity_lock.unlock();
-            self.entities.deinit();
+        std.log.info("World \"{s}\" (id {}) removed", .{ self.name, self.id });
+
+        inline for (.{ &self.lists, &self.drops }) |list| {
+            inline for (@typeInfo(@TypeOf(list.*)).@"struct".fields) |field| @field(list, field.name).deinit(self.allocator);
         }
-        {
-            self.enemy_lock.lock();
-            defer self.enemy_lock.unlock();
-            self.enemies.deinit();
-        }
-        {
-            self.player_lock.lock();
-            defer self.player_lock.unlock();
-            self.players.deinit();
-        }
-        {
-            self.proj_lock.lock();
-            defer self.proj_lock.unlock();
-            self.projectiles.deinit();
-        }
-        self.drops.deinit();
-        self.allocator.free(self.name);
         self.allocator.free(self.tiles);
+        _ = maps.worlds.swapRemove(self.id);
     }
 
-    pub fn add(self: *World, comptime T: type, value: *T) !i32 {
-        value.obj_id = self.next_obj_id;
-        self.next_obj_id +%= 1;
+    pub fn addExisting(self: *World, comptime T: type, obj: *T) !u32 {
+        const next_map_id = self.nextMapIdForType(T);
+        obj.map_id = next_map_id.*;
+        next_map_id.* += 1;
 
-        value.world = self;
+        obj.world = self;
 
         if (std.meta.hasFn(T, "init"))
-            try value.init(self.allocator);
+            try obj.init(self.allocator);
 
-        var lock = switch (T) {
-            Entity => self.entity_lock,
-            Enemy => self.enemy_lock,
-            Player => self.player_lock,
-            Projectile => self.proj_lock,
-            else => @compileError("Invalid type for World.add()"),
-        };
+        try self.listForType(T).append(self.allocator, obj.*);
 
-        std.debug.assert(!lock.tryLock());
-        switch (T) {
-            Entity => try self.entities.append(value.*),
-            Enemy => try self.enemies.append(value.*),
-            Player => try self.players.append(value.*),
-            Projectile => try self.projectiles.append(value.*),
-            else => unreachable,
-        }
+        return obj.map_id;
+    }
 
-        return value.obj_id;
+    pub fn add(self: *World, comptime T: type, data: struct { x: f32, y: f32, data_id: u16 = std.math.maxInt(u16) }) !u32 {
+        var obj: T = .{ .x = data.x, .y = data.y };
+        if (@hasField(T, "data_id"))
+            obj.data_id = data.data_id;
+
+        const next_map_id = self.nextMapIdForType(T);
+        obj.map_id = next_map_id.*;
+        next_map_id.* += 1;
+
+        obj.world = self;
+
+        if (std.meta.hasFn(T, "init"))
+            try obj.init(self.allocator);
+
+        try self.listForType(T).append(self.allocator, obj);
+
+        return obj.map_id;
     }
 
     pub fn remove(self: *World, comptime T: type, value: *T) !void {
         if (std.meta.hasFn(T, "deinit"))
             try value.deinit();
 
-        try self.drops.append(value.obj_id);
+        if (T != Projectile) try self.dropsForType(T).append(self.allocator, value.map_id);
 
-        var list = switch (T) {
-            Entity => &self.entities,
-            Enemy => &self.enemies,
-            Player => &self.players,
-            Projectile => &self.projectiles,
-            else => @compileError("Invalid type for World.remove()"),
-        };
-
-        var lock = switch (T) {
-            Entity => self.entity_lock,
-            Enemy => self.enemy_lock,
-            Player => self.player_lock,
-            Projectile => self.proj_lock,
-            else => unreachable,
-        };
-
-        std.debug.assert(!lock.tryLock());
+        var list = self.listForType(T);
         for (list.items, 0..) |item, i| {
-            if (item.obj_id == value.obj_id) {
+            if (item.map_id == value.map_id) {
                 _ = list.swapRemove(i);
                 return;
             }
         }
     }
 
-    pub fn find(self: World, comptime T: type, obj_id: i32) ?T {
-        const list = switch (T) {
-            Entity => self.entities,
-            Enemy => self.enemies,
-            Player => self.players,
-            Projectile => self.projectiles,
-            else => @compileError("Invalid type for World.find()"),
-        };
-
-        var lock = switch (T) {
-            Entity => self.entity_lock,
-            Enemy => self.enemy_lock,
-            Player => self.player_lock,
-            Projectile => self.proj_lock,
-            else => unreachable,
-        };
-
-        std.debug.assert(!lock.tryLock());
-        for (list.items) |item| {
-            if (item.obj_id == obj_id)
+    pub fn find(self: *World, comptime T: type, map_id: u32) ?T {
+        for (self.listForType(T).items) |item| {
+            if (item.map_id == map_id)
                 return item;
         }
 
         return null;
     }
 
-    pub fn findRef(self: *World, comptime T: type, obj_id: i32) ?*T {
-        const list = switch (T) {
-            Entity => self.entities,
-            Enemy => self.enemies,
-            Player => self.players,
-            Projectile => self.projectiles,
-            else => @compileError("Invalid type for World.findRef()"),
-        };
-
-        var lock = switch (T) {
-            Entity => self.entity_lock,
-            Enemy => self.enemy_lock,
-            Player => self.player_lock,
-            Projectile => self.proj_lock,
-            else => unreachable,
-        };
-
-        std.debug.assert(!lock.tryLock());
-        for (list.items) |*item| {
-            if (item.obj_id == obj_id)
+    pub fn findRef(self: *World, comptime T: type, map_id: u32) ?*T {
+        for (self.listForType(T).items) |*item| {
+            if (item.map_id == map_id)
                 return item;
         }
 
@@ -187,45 +189,24 @@ pub const World = struct {
     }
 
     pub fn tick(self: *World, time: i64, dt: i64) !void {
+        if (self.id >= 0 and self.map_type != .realm and
+            time > self.time_added + 30 * std.time.us_per_s and self.listForType(Player).items.len == 0)
         {
-            self.entity_lock.lock();
-            defer self.entity_lock.unlock();
-            for (self.entities.items) |*entity| {
-                try entity.tick(time, dt);
-            }
+            self.deinit();
+            return;
         }
 
-        {
-            self.enemy_lock.lock();
-            defer self.enemy_lock.unlock();
-            for (self.enemies.items) |*enemy| {
-                try enemy.tick(time, dt);
-            }
-        }
-
-        {
-            self.player_lock.lock();
-            defer self.player_lock.unlock();
-            for (self.players.items) |*player| {
-                try player.tick(time, dt);
-            }
-        }
-
-        {
-            self.proj_lock.lock();
-            defer self.proj_lock.unlock();
-            for (self.projectiles.items) |*proj| {
-                try proj.tick(time, dt);
+        inline for (.{ Entity, Enemy, Portal, Container, Projectile, Player }) |ObjType| {
+            for (self.listForType(ObjType).items) |*obj| {
+                try obj.tick(time, dt);
             }
         }
     }
 
     pub fn getNearestPlayerWithin(self: *World, x: f32, y: f32, radius_sqr: f32) ?*Player {
-        std.debug.assert(!self.player_lock.tryLock());
-
         var min_dist_sqr = radius_sqr;
         var target: ?*Player = null;
-        for (self.players.items) |*p| {
+        for (self.listForType(Player).items) |*p| {
             const dx = p.x - x;
             const dy = p.y - y;
             const dist_sqr = dx * dx + dy * dy;
@@ -241,11 +222,9 @@ pub const World = struct {
     // If there is a target within radius_min_sqr, returns nothing
     // so that the caller can do nothing. Only one line differs.
     pub fn getNearestPlayerWithinRing(self: *World, x: f32, y: f32, radius_sqr: f32, radius_min_sqr: f32) ?*Player {
-        std.debug.assert(!self.player_lock.tryLock());
-
         var min_dist_sqr = radius_sqr;
         var target: ?*Player = null;
-        for (self.players.items) |*p| {
+        for (self.listForType(Player).items) |*p| {
             const dx = p.x - x;
             const dy = p.y - y;
             const dist_sqr = dx * dx + dy * dy;
@@ -262,11 +241,9 @@ pub const World = struct {
     }
 
     pub fn getNearestEnemyWithin(self: *World, x: f32, y: f32, radius_sqr: f32, en_type: u16) ?*Enemy {
-        std.debug.assert(!self.enemy_lock.tryLock());
-
         var min_dist_sqr = radius_sqr;
         var target: ?*Enemy = null;
-        for (self.enemies.items) |*e| {
+        for (self.listForType(Enemy).items) |*e| {
             const dx = e.x - x;
             const dy = e.y - y;
             const dist_sqr = dx * dx + dy * dy;
@@ -279,18 +256,16 @@ pub const World = struct {
         return target;
     }
 
-    pub fn aoePlayer(self: *World, time: i64, x: f32, y: f32, owner_name: []const u8, radius: f32, opts: struct {
+    pub fn aoePlayer(self: *World, x: f32, y: f32, owner_name: []const u8, radius: f32, opts: struct {
         phys_dmg: i32 = 0,
         magic_dmg: i32 = 0,
         true_dmg: i32 = 0,
-        effect: utils.ConditionEnum = .unknown,
+        effect: ?utils.ConditionEnum = null,
         effect_duration: i64 = 1 * std.time.us_per_s,
         aoe_color: u32 = 0xFFFFFF,
     }) void {
-        std.debug.assert(!self.player_lock.tryLock());
-
         const radius_sqr = radius * radius;
-        for (self.players.items) |*p| {
+        for (self.listForType(Player).items) |*p| {
             const dx = p.x - x;
             const dy = p.y - y;
             const dist_sqr = dx * dx + dy * dy;
@@ -299,7 +274,8 @@ pub const World = struct {
 
             p.client.queuePacket(.{ .show_effect = .{
                 .eff_type = .area_blast,
-                .obj_id = -1,
+                .obj_type = .entity,
+                .map_id = std.math.maxInt(u32),
                 .x1 = x,
                 .y1 = y,
                 .x2 = radius,
@@ -310,8 +286,8 @@ pub const World = struct {
             if (dist_sqr > radius_sqr)
                 continue;
 
-            p.damage(owner_name, time, opts.phys_dmg, opts.magic_dmg, opts.true_dmg);
-            p.applyCondition(opts.effect, opts.effect_duration) catch continue;
+            p.damage(owner_name, opts.phys_dmg, opts.magic_dmg, opts.true_dmg);
+            if (opts.effect) |eff| p.applyCondition(eff, opts.effect_duration) catch continue;
         }
     }
 };

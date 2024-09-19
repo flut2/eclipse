@@ -23,20 +23,23 @@ pub const TooltipParams = union(TooltipType) {
     none: void,
     item: struct { x: f32, y: f32, item: u16 },
     text: struct { x: f32, y: f32, text_data: element.TextData },
-    ability: struct { x: f32, y: f32, props: game_data.Ability },
+    ability: struct { x: f32, y: f32, props: game_data.AbilityData },
 };
 
-pub var map: std.AutoHashMap(TooltipType, *Tooltip) = undefined;
+pub var map: std.AutoHashMapUnmanaged(TooltipType, *Tooltip) = .empty;
 pub var current: *Tooltip = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
-    map = std.AutoHashMap(TooltipType, *Tooltip).init(allocator);
+    defer {
+        const dummy_tooltip_ctx: std.hash_map.AutoContext(TooltipType) = undefined;
+        if (map.capacity() > 0) map.rehash(dummy_tooltip_ctx);
+    }
 
-    inline for (std.meta.fields(Tooltip)) |field| {
+    inline for (@typeInfo(Tooltip).@"union".fields) |field| {
         var tooltip = try allocator.create(Tooltip);
         tooltip.* = @unionInit(Tooltip, field.name, .{});
         try @field(tooltip, field.name).init(allocator);
-        try map.put(std.meta.stringToEnum(TooltipType, field.name) orelse
+        try map.put(allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
             std.debug.panic("No enum type with name {s} found on TooltipType", .{field.name}), tooltip);
     }
 
@@ -55,25 +58,26 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         allocator.destroy(value.*);
     }
 
-    map.deinit();
+    map.deinit(allocator);
 }
 
-inline fn fieldName(comptime T: type) []const u8 {
-    comptime {
-        var field_name: []const u8 = "";
-        for (std.meta.fields(Tooltip)) |field| {
-            if (field.type == T)
-                field_name = field.name;
-        }
+fn fieldName(comptime T: type) []const u8 {
+    if (!@inComptime())
+        @compileError("This function is comptime only");
 
-        if (field_name.len <= 0)
-            @compileError("No params found");
-
-        return field_name;
+    var field_name: []const u8 = "";
+    for (@typeInfo(Tooltip).@"union".fields) |field| {
+        if (field.type == T)
+            field_name = field.name;
     }
+
+    if (field_name.len <= 0)
+        @compileError("No params found");
+
+    return field_name;
 }
 
-pub inline fn ParamsFor(comptime T: type) type {
+pub fn ParamsFor(comptime T: type) type {
     return std.meta.TagPayloadByName(TooltipParams, fieldName(T));
 }
 
@@ -89,10 +93,11 @@ pub fn switchTooltip(comptime tooltip_type: TooltipType, params: std.meta.TagPay
 
     current = map.get(tooltip_type) orelse blk: {
         std.log.err("Tooltip for {} was not found, using .none", .{tooltip_type});
-        break :blk map.get(.none) orelse std.debug.panic(".none was not a valid tooltip", .{});
+        break :blk map.get(.none) orelse @panic(".none was not a valid tooltip");
     };
 
     const T = std.meta.TagPayload(Tooltip, tooltip_type);
-    @field(current, fieldName(T)).root.visible = true;
-    @field(current, fieldName(T)).update(params);
+    const field_name = comptime fieldName(T);
+    @field(current, field_name).root.visible = true;
+    @field(current, field_name).update(params);
 }

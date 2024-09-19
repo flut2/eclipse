@@ -2,32 +2,29 @@ const std = @import("std");
 
 const u16_max = std.math.maxInt(u16);
 
+var arena: std.heap.ArenaAllocator = undefined;
 var allocator: std.mem.Allocator = undefined;
 var client: std.http.Client = undefined;
-var header_pool: std.heap.MemoryPool([u16_max]u8) = undefined;
-var body_pool: std.heap.MemoryPool([u16_max]u8) = undefined;
 
 pub fn init(ally: std.mem.Allocator) void {
-    allocator = ally;
+    arena = std.heap.ArenaAllocator.init(ally);
+    allocator = arena.allocator();
     client = .{ .allocator = allocator };
-    header_pool = std.heap.MemoryPool([u16_max]u8).init(allocator);
-    body_pool = std.heap.MemoryPool([u16_max]u8).init(allocator);
 }
 
 pub fn deinit() void {
     client.deinit();
-    header_pool.deinit();
-    body_pool.deinit();
+    arena.deinit();
 }
 
-pub fn sendRequest(uri: []const u8, values: std.StringHashMapUnmanaged([]const u8)) ![]u8 {
-    const header_buffer = try header_pool.create();
-    defer header_pool.destroy(header_buffer);
+pub fn sendRequest(uri: []const u8, values: std.StringHashMapUnmanaged([]const u8)) ![]const u8 {
+    const header_buffer = try allocator.alloc(u8, std.math.maxInt(u12));
+    defer allocator.free(header_buffer);
 
-    var mod_uri = std.ArrayList(u8).init(allocator);
-    defer mod_uri.deinit();
+    var mod_uri: std.ArrayListUnmanaged(u8) = .empty;
+    defer mod_uri.deinit(allocator);
 
-    var mod_uri_writer = mod_uri.writer();
+    var mod_uri_writer = mod_uri.writer(allocator);
     var iter = values.iterator();
     var idx: usize = 0;
     _ = try mod_uri_writer.writeAll(uri);
@@ -41,26 +38,22 @@ pub fn sendRequest(uri: []const u8, values: std.StringHashMapUnmanaged([]const u
         }
     }
 
-    std.log.err("sending {s}", .{mod_uri.items});
     var req = client.open(.POST, try std.Uri.parse(mod_uri.items), .{ .server_header_buffer = header_buffer }) catch |e| {
         std.log.err("Could not send {s}: {}", .{ uri, e });
-        return @constCast("<RequestError/>"); // inelegant is an understatement
+        return e;
     };
     defer req.deinit();
 
     req.transfer_encoding = .chunked;
-    try req.send(.{});
+    try req.send();
     try req.finish();
     try req.wait();
 
-    const body_buffer = try body_pool.create();
+    const body_buffer = try allocator.alloc(u8, std.math.maxInt(u12));
     const len = try req.readAll(body_buffer);
-    return body_buffer[0..len];
+    return try allocator.realloc(body_buffer, len);
 }
 
-pub fn freeResponse(buf: []u8) void {
-    if (std.mem.eql(u8, buf, "<RequestError/>"))
-        return;
-
-    body_pool.destroy(@ptrCast(@alignCast(buf)));
+pub fn freeResponse(buf: []const u8) void {
+    allocator.free(buf);
 }

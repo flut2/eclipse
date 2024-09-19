@@ -1,7 +1,9 @@
 const std = @import("std");
 const settings = @import("settings.zig");
 const builtin = @import("builtin");
-const xml = @import("shared").xml;
+const network_data = @import("shared").network_data;
+const main = @import("main.zig");
+const use_dragonfly = @import("options").use_dragonfly;
 
 pub const c = @cImport({
     @cDefine("REDIS_OPT_NONBLOCK", {});
@@ -9,22 +11,18 @@ pub const c = @cImport({
     @cInclude("hiredis.h");
 });
 
-inline fn printNum(val: anytype) ![:0]const u8 {
-    var buf: [256]u8 = undefined;
-    return try std.fmt.bufPrintZ(&buf, "{d}", .{val});
-}
-
-inline fn appendZ(str: []const u8) ![:0]const u8 {
-    var buf: [512]u8 = undefined;
-    return try std.fmt.bufPrintZ(&buf, "{s}", .{str});
-}
+// TODO: important, change this seed when hosting a server to the public to prevent login tokens from being predicted
+pub var csprng: std.Random.DefaultCsprng = blk: {
+    @setEvalBranchQuota(10000);
+    break :blk .init([_]u8{0} ** std.Random.DefaultCsprng.secret_seed_length);
+};
 
 inline fn anyToBytes(val: anytype) []const u8 {
     const T = @TypeOf(val);
     const type_info = @typeInfo(T);
     return switch (type_info) {
-        .Array => std.mem.sliceAsBytes(&val),
-        .Pointer => if (type_info.Pointer.size != .Slice)
+        .array => std.mem.sliceAsBytes(&val),
+        .pointer => if (type_info.pointer.size != .Slice)
             @compileError("You can not serialize a non-slice pointer")
         else
             std.mem.sliceAsBytes(val),
@@ -35,32 +33,136 @@ inline fn anyToBytes(val: anytype) []const u8 {
 inline fn bytesToAny(comptime T: type, bytes: []const u8) T {
     const type_info = @typeInfo(T);
     return switch (type_info) {
-        .Array => std.mem.bytesAsSlice(type_info.Array.child, bytes)[0..type_info.Array.len].*,
-        .Pointer => if (type_info.Pointer.size != .Slice)
+        .array => std.mem.bytesAsSlice(type_info.array.child, bytes)[0..type_info.array.len].*,
+        .pointer => if (type_info.pointer.size != .Slice)
             @compileError("You can not serialize a non-slice pointer")
         else
-            @alignCast(std.mem.bytesAsSlice(type_info.Pointer.child, bytes)),
+            @alignCast(std.mem.bytesAsSlice(type_info.pointer.child, bytes)),
         else => std.mem.bytesToValue(T, bytes),
     };
 }
 
-pub const Names = struct {
-    reply_list: std.ArrayList(*c.redisReply),
+pub const BannedHwids = struct {
+    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    allocator: std.mem.Allocator = undefined,
 
-    pub fn init(ally: std.mem.Allocator) Names {
-        return .{ .reply_list = std.ArrayList(*c.redisReply).init(ally) };
+    pub fn init(ally: std.mem.Allocator) BannedHwids {
+        return .{ .allocator = ally };
     }
 
-    pub fn deinit(self: Names) void {
-        for (self.reply_list.items) |r| {
-            c.freeReplyObject(r);
+    pub fn deinit(self: *BannedHwids) void {
+        for (self.reply_list.items) |r| c.freeReplyObject(r);
+        self.reply_list.deinit(self.allocator);
+    }
+
+    pub fn exists(self: *BannedHwids, hwid: []const u8) !bool {
+        if (redisCommand(context, "SISMEMBER banned_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
+            try self.reply_list.append(self.allocator, reply);
+            if (reply.len <= 0)
+                return false;
+
+            return bytesToAny(bool, reply.str[0..reply.len]);
+        } else return false;
+    }
+
+    pub fn add(self: *BannedHwids, hwid: []const u8, expiry_sec: u32) !void {
+        if (use_dragonfly) {
+            if (redisCommand(context, "SADDEX banned_hwids %d %b", .{ expiry_sec, hwid.ptr, hwid.len })) |reply| {
+                try self.reply_list.append(self.allocator, reply);
+            } else return error.NoData;
+        } else {
+            if (redisCommand(context, "SADD banned_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
+                try self.reply_list.append(self.allocator, reply);
+            } else return error.NoData;
         }
-        self.reply_list.deinit();
+    }
+
+    pub fn remove(self: *BannedHwids, hwid: []const u8) !void {
+        if (redisCommand(context, "SREM banned_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
+            try self.reply_list.append(self.allocator, reply);
+        } else return error.NoData;
+    }
+};
+
+pub const MutedHwids = struct {
+    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    allocator: std.mem.Allocator = undefined,
+
+    pub fn init(ally: std.mem.Allocator) MutedHwids {
+        return .{ .allocator = ally };
+    }
+
+    pub fn deinit(self: *MutedHwids) void {
+        for (self.reply_list.items) |r| c.freeReplyObject(r);
+        self.reply_list.deinit(self.allocator);
+    }
+
+    pub fn exists(self: *MutedHwids, hwid: []const u8) !bool {
+        if (redisCommand(context, "SISMEMBER muted_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
+            try self.reply_list.append(self.allocator, reply);
+            if (reply.len <= 0)
+                return false;
+
+            return bytesToAny(bool, reply.str[0..reply.len]);
+        } else return false;
+    }
+
+    pub fn add(self: *MutedHwids, hwid: []const u8, expiry_sec: u32) !void {
+        if (use_dragonfly) {
+            if (redisCommand(context, "SADDEX muted_hwids %d %b", .{ expiry_sec, hwid.ptr, hwid.len })) |reply| {
+                try self.reply_list.append(self.allocator, reply);
+            } else return error.NoData;
+        } else {
+            if (redisCommand(context, "SADD muted_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
+                try self.reply_list.append(self.allocator, reply);
+            } else return error.NoData;
+        }
+    }
+
+    pub fn remove(self: *MutedHwids, hwid: []const u8) !void {
+        if (redisCommand(context, "SREM muted_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
+            try self.reply_list.append(self.allocator, reply);
+        } else return error.NoData;
+    }
+
+    pub fn ttl(self: *MutedHwids, ip: []const u8) !u32 {
+        switch (builtin.os.tag) {
+            .linux => {
+                if (redisCommand(context, "FIELDTTL muted_hwids %b", .{ ip.ptr, ip.len })) |reply| {
+                    try self.reply_list.append(self.allocator, reply);
+                    if (reply.len <= 0)
+                        return error.NoData;
+
+                    const value = bytesToAny(i32, reply.str[0..reply.len]);
+                    return switch (value) {
+                        -1 => 0,
+                        -2 => error.NoKey,
+                        -3 => error.NoField,
+                        else => @intCast(value),
+                    };
+                } else return error.NoData;
+            },
+            else => return 0,
+        }
+    }
+};
+
+pub const Names = struct {
+    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    allocator: std.mem.Allocator = undefined,
+
+    pub fn init(ally: std.mem.Allocator) Names {
+        return .{ .allocator = ally };
+    }
+
+    pub fn deinit(self: *Names) void {
+        for (self.reply_list.items) |r| c.freeReplyObject(r);
+        self.reply_list.deinit(self.allocator);
     }
 
     pub fn get(self: *Names, name: []const u8) !u32 {
         if (redisCommand(context, "HGET names %b", .{ name.ptr, name.len })) |reply| {
-            self.reply_list.append(reply) catch @panic("OOM"); // todo don't do this
+            try self.reply_list.append(self.allocator, reply);
             if (reply.len <= 0)
                 return error.NoData;
 
@@ -69,52 +171,43 @@ pub const Names = struct {
     }
 
     pub fn set(self: *Names, name: []const u8, acc_id: u32) !void {
-        const acc_id_bytes = anyToBytes(acc_id);
-
-        if (redisCommand(context, "HSET names %b %b", .{ name.ptr, name.len, acc_id_bytes.ptr, acc_id_bytes.len })) |reply| {
-            try self.reply_list.append(reply);
+        if (redisCommand(context, "HSET names %b %d", .{ name.ptr, name.len, acc_id })) |reply| {
+            try self.reply_list.append(self.allocator, reply);
         } else return error.NoData;
     }
 };
 
 pub const LoginData = struct {
-    const DataIds = enum(u8) {
-        hashed_password = 0,
-        account_id = 1,
-    };
-    const DataTypes = union(DataIds) {
+    const Data = union(enum) {
         hashed_password: []const u8,
+        token: u128,
         account_id: u32,
     };
 
     email: []const u8,
-    reply_list: std.ArrayList(*c.redisReply),
+    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(ally: std.mem.Allocator, email: []const u8) LoginData {
-        return .{
-            .email = email,
-            .reply_list = std.ArrayList(*c.redisReply).init(ally),
-        };
+        return .{ .email = email, .allocator = ally };
     }
 
-    pub fn deinit(self: LoginData) void {
-        for (self.reply_list.items) |r| {
-            c.freeReplyObject(r);
-        }
-        self.reply_list.deinit();
+    pub fn deinit(self: *LoginData) void {
+        for (self.reply_list.items) |r| c.freeReplyObject(r);
+        self.reply_list.deinit(self.allocator);
     }
 
-    pub fn get(self: *LoginData, comptime id: DataIds) !(std.meta.fields(DataTypes)[@intFromEnum(id)].type) {
-        const T = std.meta.fields(DataTypes)[@intFromEnum(id)].type;
-        const id_bytes = anyToBytes(@intFromEnum(id));
+    pub fn get(self: *LoginData, comptime id: @typeInfo(Data).@"union".tag_type.?) !(@typeInfo(Data).@"union".fields[@intFromEnum(id)].type) {
+        const T = @typeInfo(Data).@"union".fields[@intFromEnum(id)].type;
+        const tag_name = @tagName(id);
 
         if (redisCommand(context, "HGET l%b %b", .{
             self.email.ptr,
             self.email.len,
-            id_bytes.ptr,
-            id_bytes.len,
+            tag_name.ptr,
+            tag_name.len,
         })) |reply| {
-            try self.reply_list.append(reply);
+            try self.reply_list.append(self.allocator, reply);
             if (reply.len <= 0)
                 return error.NoData;
 
@@ -122,86 +215,77 @@ pub const LoginData = struct {
         } else return error.NoData;
     }
 
-    pub fn set(self: *LoginData, value: DataTypes) !void {
-        const id_bytes = anyToBytes(@intFromEnum(value));
+    pub fn getWithDefault(
+        self: *LoginData,
+        comptime id: @typeInfo(Data).@"union".tag_type.?,
+        default: @typeInfo(Data).@"union".fields[@intFromEnum(id)].type,
+    ) !(@typeInfo(Data).@"union".fields[@intFromEnum(id)].type) {
+        return self.get(id) catch |e| {
+            if (e != error.NoData) return e;
+            try self.set(@unionInit(Data, @tagName(id), default));
+            return default;
+        };
+    }
+
+    pub fn set(self: *LoginData, value: Data) !void {
         const value_bytes = switch (value) {
             inline else => |v| anyToBytes(v),
         };
+        const tag_name = @tagName(value);
 
         if (redisCommand(context, "HSET l%b %b %b", .{
             self.email.ptr,
             self.email.len,
-            id_bytes.ptr,
-            id_bytes.len,
+            tag_name.ptr,
+            tag_name.len,
             value_bytes.ptr,
             value_bytes.len,
         })) |reply| {
-            try self.reply_list.append(reply);
+            try self.reply_list.append(self.allocator, reply);
         } else return error.NoData;
     }
 };
 
 pub const AccountData = struct {
-    const DataIds = enum(u8) {
-        email = 0,
-        name = 1,
-        hwid = 2,
-        ip = 3,
-        register_timestamp = 4,
-        last_login_timestamp = 5,
-        gold = 6,
-        gems = 7,
-        crowns = 8,
-        rank = 9,
-        next_char_id = 10,
-        alive_char_ids = 11,
-        max_char_slots = 12,
-    };
-    const DataTypes = union(DataIds) {
+    const Data = union(enum) {
         email: []const u8,
         name: []const u8,
         hwid: []const u8,
-        ip: []const u8,
-        register_timestamp: u64,
-        last_login_timestamp: u64,
+        register_timestamp: i64,
+        last_login_timestamp: i64,
+        mute_expiry: i64,
+        ban_expiry: i64,
+        fame: u32,
         gold: u32,
-        gems: u32,
-        crowns: u32,
-        rank: u8,
+        rank: network_data.Rank,
         next_char_id: u32,
         alive_char_ids: []const u32,
         max_char_slots: u32,
     };
 
     acc_id: u32,
-    reply_list: std.ArrayList(*c.redisReply),
+    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(ally: std.mem.Allocator, acc_id: u32) AccountData {
-        return .{
-            .acc_id = acc_id,
-            .reply_list = std.ArrayList(*c.redisReply).init(ally),
-        };
+        return .{ .acc_id = acc_id, .allocator = ally };
     }
 
-    pub fn deinit(self: AccountData) void {
-        for (self.reply_list.items) |r| {
-            c.freeReplyObject(r);
-        }
-        self.reply_list.deinit();
+    pub fn deinit(self: *AccountData) void {
+        for (self.reply_list.items) |r| c.freeReplyObject(r);
+        self.reply_list.deinit(self.allocator);
     }
 
-    pub fn get(self: *AccountData, comptime id: DataIds) !(std.meta.fields(DataTypes)[@intFromEnum(id)].type) {
-        const T = std.meta.fields(DataTypes)[@intFromEnum(id)].type;
-        const acc_id_bytes = anyToBytes(self.acc_id);
-        const id_bytes = anyToBytes(@intFromEnum(id));
+    pub fn get(self: *AccountData, comptime id: @typeInfo(Data).@"union".tag_type.?) !(@typeInfo(Data).@"union".fields[@intFromEnum(id)].type) {
+        const T = @typeInfo(Data).@"union".fields[@intFromEnum(id)].type;
+        const tag_name = @tagName(id);
 
-        if (redisCommand(context, "HGET a%b %b", .{
-            acc_id_bytes.ptr,
-            acc_id_bytes.len,
-            id_bytes.ptr,
-            id_bytes.len,
+        if (redisCommand(context, "HGET a%d %b", .{
+            self.acc_id,
+            tag_name.ptr,
+            tag_name.len,
         })) |reply| {
-            try self.reply_list.append(reply);
+            try self.reply_list.append(self.allocator, reply);
             if (reply.len <= 0)
                 return error.NoData;
 
@@ -209,97 +293,74 @@ pub const AccountData = struct {
         } else return error.NoData;
     }
 
-    pub fn set(self: *AccountData, value: DataTypes) !void {
-        const acc_id_bytes = anyToBytes(self.acc_id);
-        const id_bytes = anyToBytes(@intFromEnum(value));
+    pub fn getWithDefault(
+        self: *AccountData,
+        comptime id: @typeInfo(Data).@"union".tag_type.?,
+        default: @typeInfo(Data).@"union".fields[@intFromEnum(id)].type,
+    ) !(@typeInfo(Data).@"union".fields[@intFromEnum(id)].type) {
+        return self.get(id) catch |e| {
+            if (e != error.NoData) return e;
+            try self.set(@unionInit(Data, @tagName(id), default));
+            return default;
+        };
+    }
+
+    pub fn set(self: *AccountData, value: Data) !void {
         const value_bytes = switch (value) {
             inline else => |v| anyToBytes(v),
         };
+        const tag_name = @tagName(value);
 
-        if (redisCommand(context, "HSET a%b %b %b", .{
-            acc_id_bytes.ptr,
-            acc_id_bytes.len,
-            id_bytes.ptr,
-            id_bytes.len,
+        if (redisCommand(context, "HSET a%d %b %b", .{
+            self.acc_id,
+            tag_name.ptr,
+            tag_name.len,
             value_bytes.ptr,
             value_bytes.len,
         })) |reply| {
-            try self.reply_list.append(reply);
+            try self.reply_list.append(self.allocator, reply);
         } else return error.NoData;
-    }
-
-    pub fn writeXml(self: *AccountData, writer: xml.DocWriter) !void {
-        try writer.startElement("Account");
-        try writer.writeElement("AccountId", try printNum(self.acc_id));
-        try writer.writeElement("Name", try appendZ(try self.get(.name)));
-        if (try self.get(.rank) > 80)
-            try writer.writeElement("Admin", "true");
-        try writer.writeElement("Rank", try printNum(try self.get(.rank)));
-        try writer.writeElement("Gold", try printNum(try self.get(.gold)));
-        try writer.writeElement("Gems", try printNum(try self.get(.gems)));
-        try writer.writeElement("Crowns", try printNum(try self.get(.crowns)));
-        try writer.endElement();
     }
 };
 
 pub const CharacterData = struct {
-    const DataIds = enum(u8) {
-        char_type = 0,
-        create_timestamp = 1,
-        last_login_timestamp = 2,
-        aether = 3,
-        stats = 4,
-        items = 5,
-        hp = 6,
-        mp = 7,
-        skin_type = 8,
-    };
-    const DataTypes = union(DataIds) {
-        char_type: u16,
+    const Data = union(enum) {
+        class_id: u16,
         create_timestamp: u64,
         last_login_timestamp: u64,
         aether: u8,
+        spirits_communed: u32,
         stats: [13]i32,
         items: [22]u16,
         hp: i32,
         mp: i32,
-        skin_type: u16,
     };
 
     acc_id: u32,
     char_id: u32,
-    reply_list: std.ArrayList(*c.redisReply),
+    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    allocator: std.mem.Allocator = undefined,
 
     pub fn init(ally: std.mem.Allocator, acc_id: u32, char_id: u32) CharacterData {
-        return .{
-            .acc_id = acc_id,
-            .char_id = char_id,
-            .reply_list = std.ArrayList(*c.redisReply).init(ally),
-        };
+        return .{ .acc_id = acc_id, .char_id = char_id, .allocator = ally };
     }
 
-    pub fn deinit(self: CharacterData) void {
-        for (self.reply_list.items) |r| {
-            c.freeReplyObject(r);
-        }
-        self.reply_list.deinit();
+    pub fn deinit(self: *CharacterData) void {
+        for (self.reply_list.items) |r| c.freeReplyObject(r);
+        self.reply_list.deinit(self.allocator);
     }
 
-    pub fn get(self: *CharacterData, comptime id: DataIds) !(std.meta.fields(DataTypes)[@intFromEnum(id)].type) {
-        const T = std.meta.fields(DataTypes)[@intFromEnum(id)].type;
-        const char_id_bytes = anyToBytes(self.char_id);
-        const acc_id_bytes = anyToBytes(self.acc_id);
-        const id_bytes = anyToBytes(@intFromEnum(id));
+    pub fn get(self: *CharacterData, comptime id: @typeInfo(Data).@"union".tag_type.?) !(@typeInfo(Data).@"union".fields[@intFromEnum(id)].type) {
+        const T = @typeInfo(Data).@"union".fields[@intFromEnum(id)].type;
+        const tag_name = @tagName(id);
 
-        if (redisCommand(context, "HGET c%b:%b %b", .{
-            acc_id_bytes.ptr,
-            acc_id_bytes.len,
-            char_id_bytes.ptr,
-            char_id_bytes.len,
-            id_bytes.ptr,
-            id_bytes.len,
+        if (redisCommand(context, "HGET c%d:%d %b", .{
+            self.acc_id,
+            self.char_id,
+            tag_name.ptr,
+            tag_name.len,
         })) |reply| {
-            try self.reply_list.append(reply);
+            try self.reply_list.append(self.allocator, reply);
             if (reply.len <= 0)
                 return error.NoData;
 
@@ -307,41 +368,34 @@ pub const CharacterData = struct {
         } else return error.NoData;
     }
 
-    pub fn set(self: *CharacterData, value: DataTypes) !void {
-        const acc_id_bytes = anyToBytes(self.acc_id);
-        const char_id_bytes = anyToBytes(self.char_id);
-        const id_bytes = anyToBytes(@intFromEnum(value));
+    pub fn getWithDefault(
+        self: *CharacterData,
+        comptime id: @typeInfo(Data).@"union".tag_type.?,
+        default: @typeInfo(Data).@"union".fields[@intFromEnum(id)].type,
+    ) !(@typeInfo(Data).@"union".fields[@intFromEnum(id)].type) {
+        return self.get(id) catch |e| {
+            if (e != error.NoData) return e;
+            try self.set(@unionInit(Data, @tagName(id), default));
+            return default;
+        };
+    }
+
+    pub fn set(self: *CharacterData, value: Data) !void {
         const value_bytes = switch (value) {
             inline else => |v| anyToBytes(v),
         };
+        const tag_name = @tagName(value);
 
-        if (redisCommand(context, "HSET c%b:%b %b %b", .{ acc_id_bytes.ptr, acc_id_bytes.len, char_id_bytes.ptr, char_id_bytes.len, id_bytes.ptr, id_bytes.len, value_bytes.ptr, value_bytes.len })) |reply| {
-            try self.reply_list.append(reply);
+        if (redisCommand(context, "HSET c%d:%d %b %b", .{
+            self.acc_id,
+            self.char_id,
+            tag_name.ptr,
+            tag_name.len,
+            value_bytes.ptr,
+            value_bytes.len,
+        })) |reply| {
+            try self.reply_list.append(self.allocator, reply);
         } else return error.NoData;
-    }
-
-    pub fn writeXml(self: *CharacterData, writer: xml.DocWriter) !void {
-        const stats = try self.get(.stats);
-        const items = try self.get(.items);
-        _ = items;
-
-        try writer.startElement("Char");
-        try writer.writeAttribute("id", try printNum(self.char_id));
-        try writer.writeElement("ObjectType", try printNum(try self.get(.char_type)));
-        try writer.writeElement("Health", try printNum(stats[0]));
-        try writer.writeElement("Mana", try printNum(stats[1]));
-        try writer.writeElement("Strength", try printNum(stats[2]));
-        try writer.writeElement("Wit", try printNum(stats[3]));
-        try writer.writeElement("Defense", try printNum(stats[4]));
-        try writer.writeElement("Resistance", try printNum(stats[5]));
-        try writer.writeElement("Speed", try printNum(stats[6]));
-        try writer.writeElement("Stamina", try printNum(stats[7]));
-        try writer.writeElement("Intelligence", try printNum(stats[8]));
-        try writer.writeElement("Penetration", try printNum(stats[9]));
-        try writer.writeElement("Piercing", try printNum(stats[10]));
-        try writer.writeElement("Haste", try printNum(stats[11]));
-        try writer.writeElement("Tenacity", try printNum(stats[12]));
-        try writer.endElement();
     }
 };
 
@@ -356,16 +410,11 @@ fn redisCommand(ctx: [*c]c.redisContext, format: [*c]const u8, args: anytype) ?*
 
 pub fn init(ally: std.mem.Allocator) !void {
     allocator = ally;
-    const context_base = c.redisConnectWithTimeout(settings.redis_ip, settings.redis_port, .{ .tv_sec = 1, .tv_usec = 0 });
-
-    if (context_base) |ctx| {
-        context = ctx;
-
-        if (context.err != 0) {
-            std.log.err("Redis connection error: {s}", .{context.errstr});
-            return error.ConnectionError;
-        }
-    } else return error.OutOfMemory;
+    context = c.redisConnect(settings.redis_ip, settings.redis_port) orelse return error.OutOfMemory;
+    if (context.err != 0) {
+        std.log.err("Redis connection error: {s}", .{context.errstr});
+        return error.ConnectionError;
+    }
 }
 
 pub fn deinit() void {
@@ -394,9 +443,24 @@ pub fn nextAccId() !u32 {
     return error.NoData;
 }
 
-pub fn login(email: []const u8, password: []const u8) !u32 {
+pub fn isBanned(hwid: []const u8) !bool {
+    var banned_hwids = BannedHwids.init(allocator);
+    defer banned_hwids.deinit();
+    if (try banned_hwids.exists(hwid)) return true;
+    return false;
+}
+
+pub fn accountBanned(acc_data: *AccountData) !bool {
+    if (try acc_data.get(.ban_expiry) >= main.current_time) return true;
+    if (try isBanned(try acc_data.get(.hwid))) return true;
+    return false;
+}
+
+pub fn login(email: []const u8, token: u128) !u32 {
     var login_data = LoginData.init(allocator, email);
     defer login_data.deinit();
-    try std.crypto.pwhash.scrypt.strVerify(try login_data.get(.hashed_password), password, .{ .allocator = allocator });
-    return try login_data.get(.account_id);
+    return if (try login_data.get(.token) == token)
+        try login_data.get(.account_id)
+    else
+        error.InvalidToken;
 }

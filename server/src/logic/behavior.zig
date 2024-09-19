@@ -1,82 +1,92 @@
 const std = @import("std");
-const utils = @import("shared").utils;
-const game_data = @import("shared").game_data;
+const gen_behaviors = @import("../_gen_behavior_file_dont_use.zig");
+const behavs_len = @import("options").behavs_len;
+const shared = @import("shared");
+const utils = shared.utils;
+const game_data = shared.game_data;
 
-pub const Behavior = blk: {
-    const EnumField = std.builtin.Type.EnumField;
-    const UnionField = std.builtin.Type.UnionField;
+const Entity = @import("../map/entity.zig").Entity;
+const Enemy = @import("../map/enemy.zig").Enemy;
 
-    var union_fields: []const UnionField = &[_]UnionField{};
-    var enum_fields: []const EnumField = &[_]EnumField{};
-
-    var enum_index: u32 = 0;
-    for (0..@import("options").behavs_len) |i| {
-        const import = @field(@import("../_generated_dont_use.zig"), std.fmt.comptimePrint("b{d}", .{i}));
-        for (@typeInfo(import).Struct.decls) |d| {
-            const behav = @field(import, d.name);
-            const name = std.fmt.comptimePrint("{d}", .{utils.typeId(behav)});
-
-            enum_fields = enum_fields ++ &[_]EnumField{.{
-                .name = name,
-                .value = enum_index,
-            }};
-            enum_index += 1;
-
-            union_fields = union_fields ++ &[_]UnionField{.{
-                .name = name,
-                .type = behav,
-                .alignment = @alignOf(behav),
-            }};
-        }
-    }
-
-    const Enum = @Type(.{ .Enum = .{
-        .tag_type = u32,
-        .fields = enum_fields,
-        .decls = &.{},
-        .is_exhaustive = true,
-    } });
-
-    break :blk @Type(.{ .Union = .{
-        .layout = .Auto,
-        .fields = union_fields,
-        .decls = &.{},
-        .tag_type = Enum,
-    } });
+const BehaviorType = enum { entity, enemy };
+pub const BehaviorMetadata = struct {
+    type: BehaviorType,
+    name: []const u8,
 };
 
-pub var behavior_map: std.AutoHashMap(u16, Behavior) = undefined;
+fn getMetadata(comptime T: type) BehaviorMetadata {
+    comptime {
+        var ret: BehaviorMetadata = undefined;
+        var found_metadata = false;
+        for (@typeInfo(T).@"struct".decls) |decl| {
+            const metadata = @field(T, decl.name);
+            const is_metadata = @TypeOf(metadata) == BehaviorMetadata;
+            if (!is_metadata)
+                continue;
+
+            if (found_metadata)
+                @compileError("Duplicate behavior metadata");
+
+            ret = metadata;
+            found_metadata = true;
+        }
+
+        if (!found_metadata)
+            @compileError("No behavior metadata found");
+
+        return ret;
+    }
+}
+
+fn BehaviorVtable(comptime ChildType: type) type {
+    return struct {
+        spawn: ?*const fn (self: *ChildType) anyerror!void = null,
+        death: ?*const fn (self: *ChildType) anyerror!void = null,
+        entry: ?*const fn (self: *ChildType) anyerror!void = null,
+        exit: ?*const fn (self: *ChildType) anyerror!void = null,
+        tick: ?*const fn (self: *ChildType, time: i64, dt: i64) anyerror!void = null,
+    };
+}
+
+pub const EntityBehavior = BehaviorVtable(Entity);
+pub const EnemyBehavior = BehaviorVtable(Enemy);
+
+pub var entity_behavior_map: std.AutoHashMapUnmanaged(u16, EntityBehavior) = .empty;
+pub var enemy_behavior_map: std.AutoHashMapUnmanaged(u16, EnemyBehavior) = .empty;
 
 pub fn init(allocator: std.mem.Allocator) !void {
-    behavior_map = std.AutoHashMap(u16, Behavior).init(allocator);
-    inline for (0..@import("options").behavs_len) |i| {
-        const import = @field(@import("../_generated_dont_use.zig"), std.fmt.comptimePrint("b{d}", .{i}));
-        inline for (@typeInfo(import).Struct.decls) |d| {
+    inline for (0..behavs_len) |i| {
+        const import = @field(gen_behaviors, std.fmt.comptimePrint("b{}", .{i}));
+        inline for (@typeInfo(import).@"struct".decls) |d| @"continue": {
             const behav = @field(import, d.name);
+            const metadata = comptime getMetadata(behav);
+            const id = (switch (metadata.type) {
+                .entity => game_data.entity.from_name.get(metadata.name),
+                .enemy => game_data.enemy.from_name.get(metadata.name),
+            } orelse {
+                std.log.err("Adding behavior for \"{s}\" failed: object not found", .{metadata.name});
+                break :@"continue";
+            }).id;
 
-            // can be just for switching
-            if (@hasDecl(behav, "object_name")) {
-                const name = @field(behav, "object_name");
-                const obj_type = game_data.obj_name_to_type.get(name) orelse {
-                    std.log.err("Adding behavior for {s} failed: object type not found", .{name});
-                    return;
-                };
+            const res = try switch (metadata.type) {
+                .entity => entity_behavior_map.getOrPut(allocator, id),
+                .enemy => enemy_behavior_map.getOrPut(allocator, id),
+            };
+            if (res.found_existing)
+                std.log.err("The struct \"{s}\" overwrote the behavior for the object \"{s}\"", .{ @typeName(behav), metadata.name });
 
-                const res = try behavior_map.getOrPut(obj_type);
-                if (res.found_existing) {
-                    std.log.err("The struct \"{s}\" overwrote the behavior for the object \"{s}\"", .{ @typeName(behav), name });
-                }
-
-                res.value_ptr.* = @unionInit(Behavior, std.fmt.comptimePrint("{d}", .{utils.typeId(behav)}), .{});
-            }
+            res.value_ptr.* = .{
+                .spawn = if (std.meta.hasFn(behav, "spawn")) behav.spawn else null,
+                .death = if (std.meta.hasFn(behav, "death")) behav.death else null,
+                .entry = if (std.meta.hasFn(behav, "entry")) behav.entry else null,
+                .exit = if (std.meta.hasFn(behav, "exit")) behav.exit else null,
+                .tick = if (std.meta.hasFn(behav, "tick")) behav.tick else null,
+            };
         }
     }
 }
 
-pub fn deinit() void {
-    behavior_map.deinit();
-}
-
-pub inline fn fromType(comptime T: type) Behavior {
-    return @unionInit(Behavior, std.fmt.comptimePrint("{d}", .{utils.typeId(T)}), .{});
+pub fn deinit(allocator: std.mem.Allocator) void {
+    entity_behavior_map.deinit(allocator);
+    enemy_behavior_map.deinit(allocator);
 }

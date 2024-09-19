@@ -1,52 +1,63 @@
 const std = @import("std");
-const game_data = @import("shared").game_data;
-const xml = @import("shared").xml;
+const shared = @import("shared");
+const map_data = shared.map_data;
+const game_data = shared.game_data;
 const main = @import("../main.zig");
 const world = @import("../world.zig");
 
 const Tile = @import("tile.zig").Tile;
 const Entity = @import("entity.zig").Entity;
 const Enemy = @import("enemy.zig").Enemy;
+const Portal = @import("portal.zig").Portal;
+const Container = @import("container.zig").Container;
 const World = world.World;
 
 pub const retrieve_id = -1;
 
 pub const LightData = struct {
-    light_color: u32 = 0x000000,
-    light_intensity: f32 = 0.0,
-    day_light_intensity: f32 = 0.0,
-    night_light_intensity: f32 = 0.0,
+    color: u32 = 0x000000,
+    intensity: f32 = 0.0,
+    day_intensity: f32 = 0.0,
+    night_intensity: f32 = 0.0,
 
-    pub fn parse(node: xml.Node) !LightData {
-        return .{
-            .light_color = try node.currentValueInt(u32, 0x000000),
-            .light_intensity = try node.getAttributeFloat("intensity", f32, 0.0),
-            .day_light_intensity = try node.getAttributeFloat("dayIntensity", f32, 0.0),
-            .night_light_intensity = try node.getAttributeFloat("nightIntensity", f32, 0.0),
-        };
+    pub fn jsonParse(ally: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!@This() {
+        return game_data.jsonParseWithHex(@This(), ally, source, options);
     }
+
+    pub const jsonStringify = @compileError("Not supported");
 };
 
-const MapData = struct {
-    id: i32,
+pub const MapType = enum { default, realm, @"test" };
+
+pub const MapDetails = struct {
+    name: []const u8,
+    file: []const u8,
+    setpiece: bool = false,
+    id: i32 = 0,
+    light: LightData = .{},
+    portal_name: ?[]const u8 = null,
+    map_type: MapType = .default,
+};
+
+pub const MapData = struct {
+    details: MapDetails,
     w: u16,
     h: u16,
-    name: []const u8,
     tiles: []const Tile,
     entities: []const Entity,
     enemies: []const Enemy,
-    regions: std.EnumArray(game_data.RegionType, []world.WorldPoint),
-    light: LightData = .{},
+    portals: []const Portal,
+    containers: []const Container,
+    regions: std.AutoHashMapUnmanaged(u16, []world.WorldPoint),
 
     pub fn deinit(self: *MapData, ally: std.mem.Allocator) void {
-        var regions_iter = self.regions.iterator();
-        while (regions_iter.next()) |entry| {
-            ally.free(entry.value.*);
-        }
-        ally.free(self.name);
+        var regions_iter = self.regions.valueIterator();
+        while (regions_iter.next()) |points| ally.free(points.*);
         ally.free(self.tiles);
         ally.free(self.entities);
         ally.free(self.enemies);
+        ally.free(self.portals);
+        ally.free(self.containers);
     }
 };
 
@@ -55,269 +66,152 @@ pub var maps: std.AutoHashMapUnmanaged(u16, MapData) = .{};
 pub var worlds: std.AutoArrayHashMapUnmanaged(i32, World) = .{};
 pub var next_world_id: i32 = 0;
 pub var allocator: std.mem.Allocator = undefined;
+var arena: std.heap.ArenaAllocator = undefined;
 
 pub fn init(ally: std.mem.Allocator) !void {
-    allocator = ally;
+    arena = std.heap.ArenaAllocator.init(ally);
+    allocator = arena.allocator();
 
-    const doc = try xml.Doc.fromFile("./assets/worlds/maps.xml");
-    defer doc.deinit();
-    const root = try doc.getRootElement();
+    const file = try std.fs.cwd().openFile("./assets/worlds/maps.json", .{});
+    defer file.close();
 
-    var enemies = std.ArrayList(Enemy).init(allocator);
-    defer enemies.deinit();
-    var entities = std.ArrayList(Entity).init(allocator);
-    defer entities.deinit();
-    var regions = std.EnumArray(game_data.RegionType, std.ArrayList(world.WorldPoint)).initFill(std.ArrayList(world.WorldPoint).init(allocator));
+    const file_data = try file.readToEndAlloc(allocator, std.math.maxInt(u32));
+    defer allocator.free(file_data);
+
+    var tiles: std.ArrayListUnmanaged(Tile) = .empty;
+    var entities: std.ArrayListUnmanaged(Entity) = .empty;
+    var enemies: std.ArrayListUnmanaged(Enemy) = .empty;
+    var portals: std.ArrayListUnmanaged(Portal) = .empty;
+    var containers: std.ArrayListUnmanaged(Container) = .empty;
+    var regions: std.AutoHashMapUnmanaged(u16, std.ArrayListUnmanaged(world.WorldPoint)) = .empty;
     defer {
-        var regions_iter = regions.iterator();
-        while (regions_iter.next()) |entry| {
-            entry.value.deinit();
-        }
+        tiles.deinit(allocator);
+        entities.deinit(allocator);
+        enemies.deinit(allocator);
+        portals.deinit(allocator);
+        containers.deinit(allocator);
+        regions.deinit(allocator);
     }
 
-    var maps_iter = root.iterate(&.{}, "Map");
-    while (maps_iter.next()) |node| {
-        const file_name = node.getValue("File") orelse continue;
-        const path = try std.fmt.allocPrint(allocator, "./assets/worlds/{s}", .{file_name});
+    for (try std.json.parseFromSliceLeaky([]MapDetails, allocator, file_data, .{})) |details| {
+        var map: MapData = undefined;
+        map.details = details;
+        map.details.name = try allocator.dupe(u8, details.name);
+
+        const path = try std.fmt.allocPrint(allocator, "./assets/worlds/{s}", .{details.file});
         defer allocator.free(path);
 
-        var map_data: MapData = undefined;
-        map_data.id = try node.getAttributeInt("id", i32, 0);
-        map_data.name = try node.getValueAlloc("Name", allocator, "Unknown Map");
-        const light_node = node.findChild("Light");
-        map_data.light = if (light_node) |ln| try LightData.parse(ln) else .{};
+        const map_file = try std.fs.cwd().openFile(path, .{});
+        defer map_file.close();
 
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
-
-        var dcp = std.compress.zlib.decompressor(file.reader());
-
-        const version = try dcp.reader().readInt(u8, .little);
-        if (version != 2)
-            std.log.err("Reading map failed, unsupported version: {d}", .{version});
-
-        _ = try dcp.reader().readInt(u16, .little); // x, for editor
-        _ = try dcp.reader().readInt(u16, .little); // y, for editor
-        map_data.w = try dcp.reader().readInt(u16, .little);
-        map_data.h = try dcp.reader().readInt(u16, .little);
-
-        var tiles = try allocator.alloc(Tile, @as(u32, map_data.w) * @as(u32, map_data.h));
-        defer allocator.free(tiles);
-
-        const MapTile = struct {
-            tile_type: u16,
-            obj_type: u16,
-            region_type: u8,
-        };
-
-        const map_tiles = try allocator.alloc(MapTile, try dcp.reader().readInt(u16, .little));
-        defer allocator.free(map_tiles);
-        for (map_tiles) |*tile| {
-            tile.* = .{
-                .tile_type = try dcp.reader().readInt(u16, .little),
-                .obj_type = try dcp.reader().readInt(u16, .little),
-                .region_type = try dcp.reader().readInt(u8, .little),
-            };
-        }
-
-        enemies.clearRetainingCapacity();
+        tiles.clearRetainingCapacity();
         entities.clearRetainingCapacity();
-        var regions_iter = regions.iterator();
-        while (regions_iter.next()) |entry| {
-            entry.value.clearRetainingCapacity();
-        }
+        enemies.clearRetainingCapacity();
+        portals.clearRetainingCapacity();
+        containers.clearRetainingCapacity();
+        regions.clearRetainingCapacity();
 
-        var next_obj_id: i32 = 0;
-        const byte_len = map_tiles.len <= 256;
-        for (0..map_data.h) |y| {
-            for (0..map_data.w) |x| {
-                const ux: u16 = @intCast(x);
-                const uy: u16 = @intCast(y);
-                const fx: f32 = @floatFromInt(x);
-                const fy: f32 = @floatFromInt(y);
+        var map_arena: std.heap.ArenaAllocator = .init(allocator);
+        defer map_arena.deinit();
+        const parsed_map = try map_data.parseMap(map_file, &map_arena);
+        for (parsed_map.tiles, 0..) |tile, i| {
+            const ux: u16 = @intCast(i % parsed_map.w);
+            const uy: u16 = @intCast(@divFloor(i, parsed_map.w));
+            const fx: f32 = @as(f32, @floatFromInt(ux)) + 0.5;
+            const fy: f32 = @as(f32, @floatFromInt(uy)) + 0.5;
 
-                const idx = if (byte_len) try dcp.reader().readInt(u8, .little) else try dcp.reader().readInt(u16, .little);
-                const tile = map_tiles[idx];
-                if (tile.tile_type != std.math.maxInt(u16)) {
-                    tiles[y * map_data.w + x] = .{
-                        .x = ux,
-                        .y = uy,
-                        .tile_type = tile.tile_type,
-                        .props = game_data.ground_type_to_props.getPtr(tile.tile_type) orelse {
-                            std.log.err("Could not find props for tile with type 0x{x}", .{tile.tile_type});
-                            continue;
-                        },
-                    };
+            if (tile.ground_name.len > 0) {
+                const data = game_data.ground.from_name.getPtr(tile.ground_name) orelse @panic("Tile had no data attached");
+                try tiles.append(allocator, .{ .x = ux, .y = uy, .data_id = data.id, .data = data });
+            } else try tiles.append(allocator, .{ .x = ux, .y = uy, .data_id = std.math.maxInt(u16) });
+
+            if (tile.region_name.len > 0) {
+                const data = game_data.region.from_name.get(tile.region_name) orelse @panic("Region had no data attached");
+
+                if (regions.getPtr(data.id)) |list| {
+                    try list.append(allocator, .{ .x = ux, .y = uy });
+                } else {
+                    var list: std.ArrayListUnmanaged(world.WorldPoint) = .empty;
+                    try list.append(allocator, .{ .x = ux, .y = uy });
+                    try regions.put(allocator, data.id, list);
                 }
+            }
 
-                if (tile.obj_type != std.math.maxInt(u16)) {
-                    const props = game_data.obj_type_to_props.getPtr(tile.obj_type) orelse {
-                        std.log.err("Could not find props for object with type 0x{x}", .{tile.obj_type});
-                        continue;
-                    };
+            if (tile.entity_name.len > 0) {
+                const data = game_data.entity.from_name.getPtr(tile.entity_name) orelse @panic("Entity had no data attached");
+                try entities.append(allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
+            }
 
-                    if (props.is_enemy) {
-                        try enemies.append(.{
-                            .x = fx + 0.5,
-                            .y = fy + 0.5,
-                            .en_type = tile.obj_type,
-                            .obj_id = next_obj_id,
-                            .props = props,
-                        });
-                    } else {
-                        try entities.append(.{
-                            .x = fx + 0.5,
-                            .y = fy + 0.5,
-                            .en_type = tile.obj_type,
-                            .obj_id = next_obj_id,
-                            .props = props,
-                        });
-                    }
+            if (tile.enemy_name.len > 0) {
+                const data = game_data.enemy.from_name.getPtr(tile.enemy_name) orelse @panic("Enemy had no data attached");
+                try enemies.append(allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
+            }
 
-                    next_obj_id += 1;
-                }
+            if (tile.portal_name.len > 0) {
+                const data = game_data.portal.from_name.getPtr(tile.portal_name) orelse @panic("Portal had no data attached");
+                try portals.append(allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
+            }
 
-                if (tile.region_type != std.math.maxInt(u8)) {
-                    const region_type = game_data.region_type_to_enum.get(tile.region_type) orelse {
-                        std.log.err("Could not find enum for region with type 0x{x}", .{tile.region_type});
-                        continue;
-                    };
-
-                    var list = regions.getPtr(region_type);
-                    try list.append(.{ .x = ux, .y = uy });
-                }
+            if (tile.container_name.len > 0) {
+                const data = game_data.container.from_name.getPtr(tile.container_name) orelse @panic("Container had no data attached");
+                try containers.append(allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
             }
         }
 
-        const portal_name = node.getValue("PortalName");
-        const portal_type = if (portal_name) |name| game_data.obj_name_to_type.get(name) else 0xFFFF;
-        if (portal_type == 0xFFFF and map_data.id >= 0) {
-            map_data.deinit(allocator);
+        map.w = parsed_map.w;
+        map.h = parsed_map.h;
+        map.tiles = try allocator.dupe(Tile, tiles.items);
+        map.entities = try allocator.dupe(Entity, entities.items);
+        map.enemies = try allocator.dupe(Enemy, enemies.items);
+        map.portals = try allocator.dupe(Portal, portals.items);
+        map.containers = try allocator.dupe(Container, containers.items);
+
+        map.regions = .{};
+        var region_iter = regions.iterator();
+        while (region_iter.next()) |entry| {
+            try map.regions.put(allocator, entry.key_ptr.*, try allocator.dupe(world.WorldPoint, entry.value_ptr.*.items));
+        }
+
+        const portal_id = if (details.portal_name) |name|
+            (game_data.portal.from_name.get(name) orelse @panic("Given portal name has no data")).id
+        else
+            std.math.maxInt(u16);
+        if (portal_id == std.math.maxInt(u16) and details.id >= 0) {
+            map.deinit(allocator);
             continue;
         }
 
-        map_data.tiles = try allocator.dupe(Tile, tiles);
-        map_data.enemies = try allocator.dupe(Enemy, enemies.items);
-        map_data.entities = try allocator.dupe(Entity, entities.items);
-        map_data.regions = std.EnumArray(game_data.RegionType, []world.WorldPoint).initUndefined();
-        for (regions.values, &map_data.regions.values) |list, *slice| {
-            slice.* = try allocator.dupe(world.WorldPoint, list.items);
+        if (details.id < 0) {
+            try worlds.put(allocator, details.id, try World.create(allocator, map.w, map.h, details.id));
+            var new_world = worlds.getPtr(details.id).?;
+            try new_world.appendMap(map);
+            std.log.info("Added persistent world \"{s}\" (id {})", .{ details.name, details.id });
         }
 
-        if (map_data.id < 0) {
-            try worlds.put(allocator, map_data.id, try World.create(allocator, map_data.w, map_data.h, map_data.name, map_data.light));
-            var new_world = worlds.getPtr(map_data.id).?;
-            @memcpy(new_world.tiles, map_data.tiles);
-            var new_region_iter = map_data.regions.iterator();
-            while (new_region_iter.next()) |entry| {
-                new_world.regions.set(entry.key, entry.value.*);
-            }
+        if (portal_id != std.math.maxInt(u16))
+            try maps.put(allocator, portal_id, map);
 
-            {
-                new_world.enemy_lock.lock();
-                defer new_world.enemy_lock.unlock();
-                for (map_data.enemies) |e| {
-                    var enemy = Enemy{
-                        .x = e.x,
-                        .y = e.y,
-                        .en_type = e.en_type,
-                    };
-                    _ = try new_world.add(Enemy, &enemy);
-                }
-            }
-
-            {
-                new_world.entity_lock.lock();
-                defer new_world.entity_lock.unlock();
-                for (map_data.entities) |e| {
-                    var entity = Entity{
-                        .x = e.x,
-                        .y = e.y,
-                        .en_type = e.en_type,
-                    };
-                    _ = try new_world.add(Entity, &entity);
-                }
-            }
-
-            std.log.info("Added persistent world '{s}' (id {d})", .{ map_data.name, map_data.id });
-        }
-
-        if (portal_type != 0xFFFF)
-            try maps.put(allocator, portal_type.?, map_data);
-
-        std.log.info("Parsed world '{s}'", .{map_data.name});
+        std.log.info("Parsed world \"{s}\"", .{details.name});
     }
 }
 
 pub fn deinit() void {
-    var world_iter = worlds.iterator();
-    while (world_iter.next()) |w| {
-        w.value_ptr.deinit();
-    }
-    worlds.deinit(allocator);
-
-    var setpiece_iter = setpieces.valueIterator();
-    while (setpiece_iter.next()) |setpiece| {
-        setpiece.deinit(allocator);
-    }
-    setpieces.deinit(allocator);
-
-    var map_iter = maps.valueIterator();
-    while (map_iter.next()) |map| {
-        map.deinit(allocator);
-    }
-    maps.deinit(allocator);
+    arena.deinit();
 }
 
-pub fn portalWorld(portal_type: u16, portal_obj_id: i32) !?*World {
+pub fn portalWorld(portal_type: u16, portal_map_id: u32) !?*World {
     var world_iter = worlds.iterator();
-    while (world_iter.next()) |w| {
-        if (w.value_ptr.owner_portal_id == portal_obj_id)
-            return w.value_ptr;
-    }
+    while (world_iter.next()) |w| if (w.value_ptr.owner_portal_id == portal_map_id) return w.value_ptr;
 
-    if (maps.get(portal_type)) |map_data| {
-        if (map_data.id < 0)
-            return worlds.getPtr(map_data.id);
+    if (maps.get(portal_type)) |map| {
+        if (map.details.id < 0) return worlds.getPtr(map.details.id);
 
-        try worlds.put(allocator, next_world_id, try World.create(allocator, map_data.w, map_data.h, map_data.name, map_data.light));
-        std.log.info("Added world '{s}' (id {d})", .{ map_data.name, next_world_id });
+        try worlds.put(allocator, next_world_id, try World.create(allocator, map.w, map.h, next_world_id));
+        std.log.info("Added world \"{s}\" (id {})", .{ map.details.name, next_world_id });
         next_world_id += 1;
         if (worlds.getPtr(next_world_id - 1)) |new_world| {
-            new_world.owner_portal_id = portal_obj_id;
-            @memcpy(new_world.tiles, map_data.tiles);
-            var regions_copy = map_data.regions;
-            var new_region_iter = regions_copy.iterator();
-            while (new_region_iter.next()) |entry| {
-                new_world.regions.set(entry.key, entry.value.*);
-            }
-
-            {
-                new_world.enemy_lock.lock();
-                defer new_world.enemy_lock.unlock();
-                for (map_data.enemies) |e| {
-                    var enemy = Enemy{
-                        .x = e.x,
-                        .y = e.y,
-                        .en_type = e.en_type,
-                    };
-                    _ = try new_world.add(Enemy, &enemy);
-                }
-            }
-
-            {
-                new_world.entity_lock.lock();
-                defer new_world.entity_lock.unlock();
-                for (map_data.entities) |e| {
-                    var entity = Entity{
-                        .x = e.x,
-                        .y = e.y,
-                        .en_type = e.en_type,
-                    };
-                    _ = try new_world.add(Entity, &entity);
-                }
-            }
-
+            try new_world.appendMap(map);
+            new_world.owner_portal_id = portal_map_id;
             return new_world;
         } else return null;
     } else return null;

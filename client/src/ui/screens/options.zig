@@ -1,11 +1,10 @@
 const std = @import("std");
 const element = @import("../element.zig");
 const assets = @import("../../assets.zig");
-const camera = @import("../../camera.zig");
 const main = @import("../../main.zig");
-const settings = @import("../../settings.zig");
 const input = @import("../../input.zig");
 
+const Settings = @import("../../Settings.zig");
 const NineSlice = element.NineSliceImageData;
 const Interactable = element.InteractableImageData;
 const systems = @import("../systems.zig");
@@ -13,12 +12,7 @@ const systems = @import("../systems.zig");
 const button_width = 150;
 const button_height = 50;
 
-pub const TabType = enum {
-    general,
-    hotkeys,
-    graphics,
-    misc,
-};
+pub const TabType = enum { general, graphics, misc };
 
 pub const Options = struct {
     visible: bool = false,
@@ -28,7 +22,6 @@ pub const Options = struct {
     buttons: *element.Container = undefined,
     tabs: *element.Container = undefined,
     general_tab: *element.Container = undefined,
-    keys_tab: *element.Container = undefined,
     graphics_tab: *element.Container = undefined,
     misc_tab: *element.Container = undefined,
     options_bg: *element.Image = undefined,
@@ -42,8 +35,11 @@ pub const Options = struct {
         var screen = try allocator.create(Options);
         screen.* = .{ .allocator = allocator };
 
-        const width = camera.screen_width;
-        const height = camera.screen_height;
+        const cam_width, const cam_height = blk: {
+            main.camera.lock.lock();
+            defer main.camera.lock.unlock();
+            break :blk .{ main.camera.width, main.camera.height };
+        };
 
         screen.main = try element.create(allocator, element.Container{
             .x = 0,
@@ -53,7 +49,7 @@ pub const Options = struct {
 
         screen.buttons = try element.create(allocator, element.Container{
             .x = 0,
-            .y = height - button_height - 50,
+            .y = cam_height - button_height - 50,
             .visible = screen.visible,
         });
 
@@ -67,12 +63,6 @@ pub const Options = struct {
             .x = 100,
             .y = 150,
             .visible = screen.visible and screen.selected_tab == .general,
-        });
-
-        screen.keys_tab = try element.create(allocator, element.Container{
-            .x = 100,
-            .y = 150,
-            .visible = screen.visible and screen.selected_tab == .hotkeys,
         });
 
         screen.graphics_tab = try element.create(allocator, element.Container{
@@ -89,7 +79,7 @@ pub const Options = struct {
 
         const options_background = assets.getUiData("options_background", 0);
         screen.options_bg = try screen.main.createChild(element.Image{ .x = 0, .y = 0, .image_data = .{
-            .nine_slice = NineSlice.fromAtlasData(options_background, width, height, 0, 0, 8, 8, 1.0),
+            .nine_slice = NineSlice.fromAtlasData(options_background, cam_width, cam_height, 0, 0, 8, 8, 1.0),
         } });
 
         screen.options_text = try screen.main.createChild(element.Text{ .x = 0, .y = 25, .text_data = .{
@@ -97,13 +87,13 @@ pub const Options = struct {
             .size = 32,
             .text_type = .bold,
         } });
-        screen.options_text.x = (width - screen.options_text.width()) / 2;
+        screen.options_text.x = (cam_width - screen.options_text.width()) / 2;
 
         const button_data_base = assets.getUiData("button_base", 0);
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
         screen.continue_button = try screen.buttons.createChild(element.Button{
-            .x = (width - button_width) / 2,
+            .x = (cam_width - button_width) / 2,
             .y = button_height / 2 - 20,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
@@ -116,7 +106,7 @@ pub const Options = struct {
         });
 
         screen.disconnect_button = try screen.buttons.createChild(element.Button{
-            .x = width - button_width - 50,
+            .x = cam_width - button_width - 50,
             .y = button_height / 2 - 20,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
@@ -163,21 +153,6 @@ pub const Options = struct {
             .y = tab_y,
             .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
-                .text = "Hotkeys",
-                .size = 16,
-                .text_type = .bold,
-            },
-            .userdata = screen,
-            .press_callback = hotkeysTabCallback,
-        });
-
-        tabx_offset += button_width + 10;
-
-        _ = try screen.tabs.createChild(element.Button{
-            .x = tabx_offset,
-            .y = tab_y,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
-            .text_data = .{
                 .text = "Graphics",
                 .size = 16,
                 .text_type = .bold,
@@ -201,34 +176,29 @@ pub const Options = struct {
             .press_callback = miscTabCallback,
         });
 
-        try addKeyMap(screen.general_tab, &settings.move_up, "Move Up", "");
-        try addKeyMap(screen.general_tab, &settings.move_down, "Move Down", "");
-        try addKeyMap(screen.general_tab, &settings.move_right, "Move Right", "");
-        try addKeyMap(screen.general_tab, &settings.move_left, "Move Left", "");
-        try addKeyMap(screen.general_tab, &settings.rotate_left, "Rotate Left", "");
-        try addKeyMap(screen.general_tab, &settings.rotate_right, "Rotate Right", "");
-        try addKeyMap(screen.general_tab, &settings.escape, "Return to the Retrieve", "");
-        try addKeyMap(screen.general_tab, &settings.interact, "Interact", "");
-        try addKeyMap(screen.general_tab, &settings.shoot, "Shoot", "");
-        try addKeyMap(screen.general_tab, &settings.ability_1, "Use Ability 1", "");
-        try addKeyMap(screen.general_tab, &settings.ability_2, "Use Ability 2", "");
-        try addKeyMap(screen.general_tab, &settings.ability_3, "Use Ability 3", "");
-        try addKeyMap(screen.general_tab, &settings.ultimate_ability, "Use Ultimate Ability", "");
-        try addKeyMap(screen.general_tab, &settings.reset_camera, "Reset Camera", "This resets the camera's angle to the default of 0");
-        try addKeyMap(screen.general_tab, &settings.toggle_stats, "Toggle Stats", "This toggles whether to show the stats view");
-        try addKeyMap(screen.general_tab, &settings.toggle_perf_stats, "Toggle Performance Counter", "This toggles whether to show the performance counter");
-        try addKeyMap(screen.general_tab, &settings.toggle_centering, "Toggle Centering", "This toggles whether to center the camera on the player or ahead of it");
+        try addKeyMap(screen.general_tab, &main.settings.move_up, "Move Up", "");
+        try addKeyMap(screen.general_tab, &main.settings.move_down, "Move Down", "");
+        try addKeyMap(screen.general_tab, &main.settings.move_right, "Move Right", "");
+        try addKeyMap(screen.general_tab, &main.settings.move_left, "Move Left", "");
+        try addKeyMap(screen.general_tab, &main.settings.rotate_left, "Rotate Left", "");
+        try addKeyMap(screen.general_tab, &main.settings.rotate_right, "Rotate Right", "");
+        try addKeyMap(screen.general_tab, &main.settings.escape, "Return to the Retrieve", "");
+        try addKeyMap(screen.general_tab, &main.settings.interact, "Interact", "");
+        try addKeyMap(screen.general_tab, &main.settings.shoot, "Shoot", "");
+        try addKeyMap(screen.general_tab, &main.settings.ability, "Use Ability", "");
+        try addKeyMap(screen.general_tab, &main.settings.walk, "Walk", "Allows you to move slowly");
+        try addKeyMap(screen.general_tab, &main.settings.reset_camera, "Reset Camera", "This resets the camera's angle to the default of 0");
+        try addKeyMap(screen.general_tab, &main.settings.toggle_stats, "Toggle Stats", "This toggles whether to show the stats view");
+        try addKeyMap(screen.general_tab, &main.settings.toggle_perf_stats, "Toggle Performance Counter", "This toggles whether to show the performance counter");
 
-        try addToggle(screen.graphics_tab, &settings.enable_vsync, "V-Sync", "Toggles vertical syncing, which can reduce screen tearing");
-        try addToggle(screen.graphics_tab, &settings.enable_lights, "Lights", "Toggles lights, which can reduce frame rates");
-        try addSlider(screen.graphics_tab, &settings.fps_cap, 60.0, 999.99, "FPS Cap", "Changes the FPS cap");
+        try addToggle(screen.graphics_tab, &main.settings.enable_vsync, "V-Sync", "Toggles vertical syncing, which can reduce screen tearing");
+        try addToggle(screen.graphics_tab, &main.settings.enable_lights, "Lights", "Toggles lights, which can reduce frame rates");
 
-        try addSlider(screen.misc_tab, &settings.sfx_volume, 0.0, 1.0, "SFX Volume", "Changes the volume of sound effects");
-        try addSlider(screen.misc_tab, &settings.music_volume, 0.0, 1.0, "Music Volume", "Changes the volume of music");
+        try addSlider(screen.misc_tab, &main.settings.sfx_volume, 0.0, 1.0, "SFX Volume", "Changes the volume of sound effects");
+        try addSlider(screen.misc_tab, &main.settings.music_volume, 0.0, 1.0, "Music Volume", "Changes the volume of music");
 
         switch (screen.selected_tab) {
             .general => positionElements(screen.general_tab),
-            .hotkeys => positionElements(screen.keys_tab),
             .graphics => positionElements(screen.graphics_tab),
             .misc => positionElements(screen.misc_tab),
         }
@@ -238,11 +208,12 @@ pub const Options = struct {
     }
 
     pub fn deinit(self: *Options) void {
+        self.inited = false;
+
         element.destroy(self.main);
         element.destroy(self.buttons);
         element.destroy(self.tabs);
         element.destroy(self.general_tab);
-        element.destroy(self.keys_tab);
         element.destroy(self.graphics_tab);
         element.destroy(self.misc_tab);
 
@@ -258,13 +229,12 @@ pub const Options = struct {
         self.continue_button.x = (w - button_width) / 2;
         switch (self.selected_tab) {
             .general => positionElements(self.general_tab),
-            .hotkeys => positionElements(self.keys_tab),
             .graphics => positionElements(self.graphics_tab),
             .misc => positionElements(self.misc_tab),
         }
     }
 
-    fn addKeyMap(target_tab: *element.Container, button: *settings.Button, title: []const u8, desc: []const u8) !void {
+    fn addKeyMap(target_tab: *element.Container, button: *Settings.Button, title: []const u8, desc: []const u8) !void {
         const button_data_base = assets.getUiData("button_base", 0);
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
@@ -361,16 +331,18 @@ pub const Options = struct {
     }
 
     fn positionElements(container: *element.Container) void {
-        const no_lock_hack = !container.lock_hack;
-        if (no_lock_hack) container.lock.lock();
-        defer if (no_lock_hack) container.lock.unlock();
+        const cam_width, const cam_height = blk: {
+            main.camera.lock.lock();
+            defer main.camera.lock.unlock();
+            break :blk .{ main.camera.width, main.camera.height };
+        };
 
         for (container.elements.items, 0..) |elem, i| {
             switch (elem) {
                 .scrollable_container, .container => {},
                 inline else => |inner| {
-                    inner.x = @as(f32, @floatFromInt(@divFloor(i, 6))) * (camera.screen_width / 4.0);
-                    inner.y = @as(f32, @floatFromInt(@mod(i, 6))) * (camera.screen_height / 9.0);
+                    inner.x = @as(f32, @floatFromInt(@divFloor(i, 6))) * (cam_width / 4.0);
+                    inner.y = @as(f32, @floatFromInt(@mod(i, 6))) * (cam_height / 9.0);
                 },
             }
         }
@@ -378,11 +350,9 @@ pub const Options = struct {
 
     fn sliderCallback(slider: *element.Slider) void {
         if (slider.target) |target| {
-            if (target == &settings.music_volume)
-                assets.main_music.setVolume(slider.current_value)
-            else if (target == &settings.fps_cap)
-                settings.fps_us = @intFromFloat(std.time.us_per_s / slider.current_value);
-        } else std.debug.panic("Options slider has no target pointer. This is a bug, please add", .{});
+            if (target == &main.settings.music_volume)
+                assets.main_music.setVolume(slider.current_value);
+        } else @panic("Options slider has no target pointer. This is a bug, please add");
 
         trySave();
     }
@@ -394,8 +364,8 @@ pub const Options = struct {
             else => .{ .key = key_mapper.key },
         };
 
-        if (key_mapper.settings_button == &settings.interact)
-            settings.interact_key_tex = settings.getKeyTexture(settings.interact);
+        if (key_mapper.settings_button == &main.settings.interact)
+            assets.interact_key_tex = assets.getKeyTexture(main.settings.interact);
 
         trySave();
     }
@@ -409,15 +379,11 @@ pub const Options = struct {
     }
 
     fn resetToDefaultsCallback(_: ?*anyopaque) void {
-        settings.resetToDefault();
+        main.settings.resetToDefaults();
     }
 
     fn generalTabCallback(ud: ?*anyopaque) void {
         switchTab(@alignCast(@ptrCast(ud.?)), .general);
-    }
-
-    fn hotkeysTabCallback(ud: ?*anyopaque) void {
-        switchTab(@alignCast(@ptrCast(ud.?)), .hotkeys);
     }
 
     fn graphicsTabCallback(ud: ?*anyopaque) void {
@@ -430,12 +396,12 @@ pub const Options = struct {
 
     fn disconnectCallback(ud: ?*anyopaque) void {
         closeCallback(ud);
-        main.disconnect(true);
+        main.server.signalShutdown();
     }
 
     fn trySave() void {
-        settings.save() catch |err| {
-            std.log.err("Error while saving settings in Options: {}", .{err});
+        main.settings.save() catch |e| {
+            std.log.err("Error while saving settings in options: {}", .{e});
             return;
         };
     }
@@ -443,13 +409,11 @@ pub const Options = struct {
     pub fn switchTab(self: *Options, tab: TabType) void {
         self.selected_tab = tab;
         self.general_tab.visible = tab == .general;
-        self.keys_tab.visible = tab == .hotkeys;
         self.graphics_tab.visible = tab == .graphics;
         self.misc_tab.visible = tab == .misc;
 
         switch (tab) {
             .general => positionElements(self.general_tab),
-            .hotkeys => positionElements(self.keys_tab),
             .graphics => positionElements(self.graphics_tab),
             .misc => positionElements(self.misc_tab),
         }
@@ -465,7 +429,6 @@ pub const Options = struct {
             self.switchTab(.general);
         } else {
             self.general_tab.visible = false;
-            self.keys_tab.visible = false;
             self.graphics_tab.visible = false;
             self.misc_tab.visible = false;
         }

@@ -1,62 +1,107 @@
-struct Uniforms {
-  left_top_mask_uv: vec4<f32>,
-  right_bottom_mask_uv: vec4<f32>,
-}
-
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-@group(0) @binding(1) var default_sampler: sampler;
-@group(0) @binding(2) var tex: texture_2d<f32>;
+@group(0) @binding(1) var<storage, read> instances: array<InstanceData>;
+@group(0) @binding(2) var default_sampler: sampler;
+@group(0) @binding(3) var tex: texture_2d<f32>;
 
-struct VertexInput {
-  @location(0) pos_uv: vec4<f32>,
-  @location(1) left_top_blend_uv: vec4<f32>,
-  @location(2) right_bottom_blend_uv: vec4<f32>,
-  @location(3) base_and_offset_uv: vec4<f32>,
+const pos: array<vec2<f32>, 6> = array<vec2<f32>, 6>(
+    vec2<f32>(-0.5, 0.5),
+    vec2<f32>(0.5, 0.5),
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(0.5, 0.5),
+    vec2<f32>(0.5, -0.5),
+);
+
+const uv: array<vec2<f32>, 6> = array<vec2<f32>, 6>(
+    vec2<f32>(0.0, 1.0),
+    vec2<f32>(1.0, 1.0),
+    vec2<f32>(0.0, 0.0),
+    vec2<f32>(0.0, 0.0),
+    vec2<f32>(1.0, 1.0),
+    vec2<f32>(1.0, 0.0),
+);
+
+const base_size: vec2<f32> = vec2<f32>(8.0, 8.0); // atlas px per tile
+const scaled_size: vec2<f32> = vec2<f32>(64.0, 64.0); // screen px per tile
+const invert_y: vec2<f32> = vec2<f32>(1.0, -1.0);
+
+struct Uniforms {
+    rotation: f32,
+    scale: f32,
+    left_mask_uv: vec2<f32>,
+    top_mask_uv: vec2<f32>,
+    right_mask_uv: vec2<f32>,
+    bottom_mask_uv: vec2<f32>,
+    clip_scale: vec2<f32>,
+    clip_offset: vec2<f32>,
+    atlas_size: vec2<f32>,
 }
 
-struct VertexOutput {
-  @builtin(position) position: vec4<f32>,
-  @location(0) @interpolate(linear) pos_uv: vec4<f32>,
-  @location(1) @interpolate(flat) left_top_blend_uv: vec4<f32>,
-  @location(2) @interpolate(flat) right_bottom_blend_uv: vec4<f32>,
-  @location(3) @interpolate(flat) base_and_offset_uv: vec4<f32>,
+struct InstanceData {
+    pos: vec2<f32>,
+    uv: vec2<f32>,
+    offset_uv: vec2<f32>,
+    left_blend_uv: vec2<f32>,
+    top_blend_uv: vec2<f32>,
+    right_blend_uv: vec2<f32>,
+    bottom_blend_uv: vec2<f32>,
+    padding: vec2<f32>,
+}
+
+struct VertexData {
+    @builtin(vertex_index) vert_id: u32,
+}
+
+struct FragmentData {
+    @builtin(position) position: vec4<f32>,
+    @location(0) @interpolate(flat) instance_id: u32,
+    @location(1) uv_offset: vec2<f32>,
 }
 
 @vertex
-fn vs_main(in: VertexInput) -> VertexOutput {
-    var out: VertexOutput;
-    out.position = vec4(in.pos_uv.xy, 0.0, 1.0);
-    out.pos_uv = in.pos_uv;
-    out.left_top_blend_uv = in.left_top_blend_uv;
-    out.right_bottom_blend_uv = in.right_bottom_blend_uv;
-    out.base_and_offset_uv = in.base_and_offset_uv;
+fn vs_main(vertex: VertexData) -> FragmentData {
+    let cos = cos(uniforms.rotation);
+    let sin = sin(uniforms.rotation);
+    let rot_mat = mat2x2<f32>(cos, sin, -sin, cos);
+    let instance_id = vertex.vert_id / 6;
+    let sub_vert_id = vertex.vert_id % 6;
+    let instance = instances[instance_id];
+
+    var out: FragmentData;
+    out.position = vec4((pos[sub_vert_id] * rot_mat * scaled_size * uniforms.scale + instance.pos + uniforms.clip_offset) 
+        * uniforms.clip_scale * invert_y, 0.0, 1.0);
+    out.uv_offset = uv[sub_vert_id] / uniforms.atlas_size * base_size;
+    out.instance_id = instance_id;
     return out;
 }
 
 @fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let dx = dpdx(in.pos_uv.zw);
-    let dy = dpdy(in.pos_uv.zw);
+fn fs_main(fragment: FragmentData) -> @location(0) vec4<f32> {
+    let instance = instances[fragment.instance_id];
+    let dx = dpdx(fragment.uv_offset);
+    let dy = dpdy(fragment.uv_offset);
 
-    if in.left_top_blend_uv.x >= 0.0 && textureSampleGrad(tex, default_sampler, uniforms.left_top_mask_uv.xy + in.pos_uv.zw, dx, dy).a == 1.0 {
-        return textureSampleGrad(tex, default_sampler, in.left_top_blend_uv.xy + in.pos_uv.zw, dx, dy);
+    if (instance.left_blend_uv.x > 0.0 || instance.left_blend_uv.y > 0.0) &&
+        textureSampleGrad(tex, default_sampler, uniforms.left_mask_uv + fragment.uv_offset, dx, dy).a == 1.0 {
+        return textureSampleGrad(tex, default_sampler, instance.left_blend_uv + fragment.uv_offset, dx, dy);
     }
 
-    if in.left_top_blend_uv.z >= 0.0 && textureSampleGrad(tex, default_sampler, uniforms.left_top_mask_uv.zw + in.pos_uv.zw, dx, dy).a == 1.0 {
-        return textureSampleGrad(tex, default_sampler, in.left_top_blend_uv.zw + in.pos_uv.zw, dx, dy);
+    if (instance.top_blend_uv.x > 0.0 || instance.top_blend_uv.y > 0.0) &&
+        textureSampleGrad(tex, default_sampler, uniforms.top_mask_uv + fragment.uv_offset, dx, dy).a == 1.0 {
+        return textureSampleGrad(tex, default_sampler, instance.top_blend_uv + fragment.uv_offset, dx, dy);
     }
 
-    if in.right_bottom_blend_uv.x >= 0.0 && textureSampleGrad(tex, default_sampler, uniforms.right_bottom_mask_uv.xy + in.pos_uv.zw, dx, dy).a == 1.0 {
-        return textureSampleGrad(tex, default_sampler, in.right_bottom_blend_uv.xy + in.pos_uv.zw, dx, dy);
+    if (instance.right_blend_uv.x > 0.0 || instance.right_blend_uv.y > 0.0) &&
+        textureSampleGrad(tex, default_sampler, uniforms.right_mask_uv + fragment.uv_offset, dx, dy).a == 1.0 {
+        return textureSampleGrad(tex, default_sampler, instance.right_blend_uv + fragment.uv_offset, dx, dy);
     }
 
-    if in.right_bottom_blend_uv.z >= 0.0 && textureSampleGrad(tex, default_sampler, uniforms.right_bottom_mask_uv.zw + in.pos_uv.zw, dx, dy).a == 1.0 {
-        return textureSampleGrad(tex, default_sampler, in.right_bottom_blend_uv.zw + in.pos_uv.zw, dx, dy);
+    if (instance.bottom_blend_uv.x > 0.0 || instance.bottom_blend_uv.y > 0.0) &&
+        textureSampleGrad(tex, default_sampler, uniforms.bottom_mask_uv + fragment.uv_offset, dx, dy).a == 1.0 {
+        return textureSampleGrad(tex, default_sampler, instance.bottom_blend_uv + fragment.uv_offset, dx, dy);
     }
 
-    const atlas_w = 2048.0;
-    const atlas_h = 1024.0;
-    const dims = vec2<f32>(8.0 / atlas_w, 8.0 / atlas_h);
-    let uv = abs((in.pos_uv.zw + in.base_and_offset_uv.zw + dims) % dims);
-    return textureSampleGrad(tex, default_sampler, uv + in.base_and_offset_uv.xy, dx, dy);
+    let dims = base_size / uniforms.atlas_size;
+    let clamp_uv = (fragment.uv_offset + instance.offset_uv + dims) % dims;
+    return textureSampleGrad(tex, default_sampler, clamp_uv + instance.uv, dx, dy);
 }

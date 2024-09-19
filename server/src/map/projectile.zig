@@ -1,41 +1,41 @@
 const std = @import("std");
-const game_data = @import("shared").game_data;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const network_data = shared.network_data;
 
 const Player = @import("player.zig").Player;
 const World = @import("../world.zig").World;
 
 pub const Projectile = struct {
-    obj_id: i32 = -1,
+    map_id: u32 = std.math.maxInt(u32),
+    index: u8 = 0,
     x: f32 = 0.0,
     y: f32 = 0.0,
     angle: f32 = 0.0,
     phys_dmg: i32 = 0,
     magic_dmg: i32 = 0,
     true_dmg: i32 = 0,
-    owner_id: i32 = -1,
-    bullet_id: u8 = 0,
+    owner_obj_type: network_data.ObjectType,
+    owner_map_id: u32 = std.math.maxInt(u32),
     start_time: i64 = 0,
-    obj_ids_hit: std.AutoHashMapUnmanaged(i32, void) = .{},
-    props: *const game_data.ProjProps = undefined,
+    hit_list: std.AutoHashMapUnmanaged(u32, void) = .empty,
+    data: *const game_data.ProjectileData,
     world: *World = undefined,
 
     pub fn deinit(self: *Projectile) !void {
-        self.obj_ids_hit.deinit(self.world.allocator);
+        self.hit_list.deinit(self.world.allocator);
     }
 
     pub fn delete(self: *Projectile) !void {
-        std.debug.assert(!self.world.player_lock.tryLock());
-        if (self.world.findRef(Player, self.owner_id)) |player| {
-            player.bullets[self.bullet_id] = null;
+        if (self.world.findRef(Player, self.owner_map_id)) |player| {
+            player.projectiles[self.index] = null;
         }
 
         try self.world.remove(Projectile, self);
     }
 
     pub fn tick(self: *Projectile, time: i64, _: i64) !void {
-        if (time - self.start_time >= self.props.lifetime + 250) {
-            self.world.player_lock.lock();
-            defer self.world.player_lock.unlock();
+        if (time - self.start_time >= @as(i64, @intFromFloat(self.data.duration + 0.25 * std.time.us_per_s))) {
             try self.delete();
             return;
         }

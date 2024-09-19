@@ -1,21 +1,25 @@
 const std = @import("std");
-const glfw = @import("mach-glfw");
+const glfw = @import("zglfw");
 const nfd = @import("nfd");
 const assets = @import("../../assets.zig");
-const camera = @import("../../camera.zig");
 const main = @import("../../main.zig");
 const input = @import("../../input.zig");
 const map = @import("../../game/map.zig");
 const element = @import("../element.zig");
-const game_data = @import("shared").game_data;
-const settings = @import("../../settings.zig");
-const utils = @import("shared").utils;
-const rpc = @import("rpc");
+const dialog = @import("../dialogs/dialog.zig");
+const shared = @import("shared");
+const map_data = shared.map_data;
+const game_data = shared.game_data;
+const utils = shared.utils;
 
 const ui_systems = @import("../systems.zig");
 
+const Settings = @import("../../Settings.zig");
 const Player = @import("../../game/player.zig").Player;
-const GameObject = @import("../../game/game_object.zig").GameObject;
+const Entity = @import("../../game/entity.zig").Entity;
+const Enemy = @import("../../game/enemy.zig").Enemy;
+const Portal = @import("../../game/portal.zig").Portal;
+const Container = @import("../../game/container.zig").Container;
 const Square = @import("../../game/square.zig").Square;
 
 const Interactable = element.InteractableImageData;
@@ -30,14 +34,16 @@ const palette_decor_h = 400;
 const dropdown_w = 200;
 const dropdown_h = 130;
 
-// used for map parse/write
-const Tile = struct { tile_type: u16, obj_type: u16, region_type: u8 };
-
 const MapEditorTile = struct {
-    object_id: i32 = -1,
-    obj_type: u16 = std.math.maxInt(u16),
-    tile_type: u16 = 0xFFFE,
-    region_type: u8 = std.math.maxInt(u8),
+    // map ids
+    entity: u32 = std.math.maxInt(u32),
+    enemy: u32 = std.math.maxInt(u32),
+    portal: u32 = std.math.maxInt(u32),
+    container: u32 = std.math.maxInt(u32),
+
+    // data ids
+    ground: u16 = Square.editor_tile,
+    region: u16 = std.math.maxInt(u16),
 };
 
 pub const EditorCommand = union(enum) {
@@ -57,31 +63,40 @@ const EditorAction = enum {
 };
 
 const Layer = enum(u8) {
-    ground = 0,
-    object = 1,
-    region = 2,
+    entity,
+    enemy,
+    portal,
+    container,
+    ground,
+    region,
 };
 
 const Place = packed struct {
     x: u16,
     y: u16,
-    new_type: u16,
-    old_type: u16,
+    new_id: u16,
+    old_id: u16,
     layer: Layer,
 
     pub fn execute(self: Place) void {
         switch (self.layer) {
-            .ground => ui_systems.screen.editor.setTile(self.x, self.y, self.new_type),
-            .object => ui_systems.screen.editor.setObject(self.x, self.y, self.new_type),
-            .region => ui_systems.screen.editor.setRegion(self.x, self.y, @intCast(self.new_type)),
+            .ground => ui_systems.screen.editor.setTile(self.x, self.y, self.new_id),
+            .region => ui_systems.screen.editor.setRegion(self.x, self.y, self.new_id),
+            .entity => ui_systems.screen.editor.setObject(Entity, self.x, self.y, self.new_id),
+            .enemy => ui_systems.screen.editor.setObject(Enemy, self.x, self.y, self.new_id),
+            .portal => ui_systems.screen.editor.setObject(Portal, self.x, self.y, self.new_id),
+            .container => ui_systems.screen.editor.setObject(Container, self.x, self.y, self.new_id),
         }
     }
 
     pub fn unexecute(self: Place) void {
         switch (self.layer) {
-            .ground => ui_systems.screen.editor.setTile(self.x, self.y, self.old_type),
-            .object => ui_systems.screen.editor.setObject(self.x, self.y, self.old_type),
-            .region => ui_systems.screen.editor.setRegion(self.x, self.y, @intCast(self.old_type)),
+            .ground => ui_systems.screen.editor.setTile(self.x, self.y, self.old_id),
+            .region => ui_systems.screen.editor.setRegion(self.x, self.y, self.old_id),
+            .entity => ui_systems.screen.editor.setObject(Entity, self.x, self.y, self.old_id),
+            .enemy => ui_systems.screen.editor.setObject(Enemy, self.x, self.y, self.old_id),
+            .portal => ui_systems.screen.editor.setObject(Portal, self.x, self.y, self.old_id),
+            .container => ui_systems.screen.editor.setObject(Container, self.x, self.y, self.old_id),
         }
     }
 };
@@ -99,13 +114,17 @@ const MultiPlace = struct {
 };
 
 const CommandQueue = struct {
-    command_list: std.ArrayList(EditorCommand) = undefined,
-    current_position: u32 = 0,
+    command_list: std.ArrayListUnmanaged(EditorCommand) = .empty,
+    current_position: usize = 0,
     allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *CommandQueue, allocator: std.mem.Allocator) void {
         self.allocator = allocator;
-        self.command_list = std.ArrayList(EditorCommand).init(allocator);
+    }
+
+    pub fn clear(self: *CommandQueue) void {
+        self.command_list.clearRetainingCapacity();
+        self.current_position = 0;
     }
 
     pub fn deinit(self: *CommandQueue) void {
@@ -113,7 +132,7 @@ const CommandQueue = struct {
             if (cmd == .multi_place)
                 self.allocator.free(cmd.multi_place.places);
         }
-        self.command_list.deinit();
+        self.command_list.deinit(self.allocator);
     }
 
     pub fn addCommand(self: *CommandQueue, command: EditorCommand) void {
@@ -126,7 +145,7 @@ const CommandQueue = struct {
             inline else => |c| c.execute(),
         }
 
-        self.command_list.append(command) catch return;
+        self.command_list.append(self.allocator, command) catch return;
         self.current_position += 1;
     }
 
@@ -156,28 +175,38 @@ const CommandQueue = struct {
 };
 
 pub const MapEditorScreen = struct {
-    const layers_text = [_][]const u8{ "Tiles", "Objects", "Regions" };
-    const layers = [_]Layer{ .ground, .object, .region };
+    const layers_text = [_][]const u8{ "Tiles", "Entities", "Enemies", "Portal", "Container", "Regions" };
+    const layers = [_]Layer{ .ground, .entity, .enemy, .portal, .container, .region };
 
     const sizes_text = [_][]const u8{ "64x64", "128x128", "256x256", "512x512", "1024x1024", "2048x2048" };
-    const sizes = [_]u32{ 64, 128, 256, 512, 1024, 2048 };
+    const sizes = [_]u16{ 64, 128, 256, 512, 1024, 2048 };
 
     allocator: std.mem.Allocator,
     inited: bool = false,
 
-    next_obj_id: i32 = -1,
+    next_map_ids: struct {
+        entity: u32 = 0,
+        enemy: u32 = 0,
+        portal: u32 = 0,
+        container: u32 = 0,
+    } = .{},
     editor_ready: bool = false,
 
-    map_size: u32 = 0,
-    map_tile_data: []MapEditorTile = &[0]MapEditorTile{},
+    map_size: u16 = 64,
+    map_tile_data: []MapEditorTile = &.{},
 
     command_queue: CommandQueue = .{},
 
     action: EditorAction = .none,
     active_layer: Layer = .ground,
-    selected_tile: u16 = defaultType(.ground),
-    selected_object: u16 = defaultType(.object),
-    selected_region: u8 = defaultType(.region),
+    selected: struct {
+        entity: u16 = defaultType(.entity),
+        enemy: u16 = defaultType(.enemy),
+        portal: u16 = defaultType(.portal),
+        container: u16 = defaultType(.container),
+        ground: u16 = defaultType(.ground),
+        region: u16 = defaultType(.region),
+    } = .{},
 
     brush_size: f32 = 0.5,
     random_chance: f32 = 0.01,
@@ -186,37 +215,40 @@ pub const MapEditorScreen = struct {
     controls_container: *element.Container = undefined,
     map_size_dropdown: *element.Dropdown = undefined,
     palette_decor: *element.Image = undefined,
-    palette_container_tile: *element.ScrollableContainer = undefined,
-    palette_container_object: *element.ScrollableContainer = undefined,
-    palette_container_region: *element.ScrollableContainer = undefined,
+    palette_containers: struct {
+        ground: *element.ScrollableContainer,
+        entity: *element.ScrollableContainer,
+        enemy: *element.ScrollableContainer,
+        portal: *element.ScrollableContainer,
+        container: *element.ScrollableContainer,
+        region: *element.ScrollableContainer,
+    } = undefined,
     layer_dropdown: *element.Dropdown = undefined,
 
-    place_key: settings.Button = .{ .mouse = .left },
-    sample_key: settings.Button = .{ .mouse = .middle },
-    erase_key: settings.Button = .{ .mouse = .right },
-    random_key: settings.Button = .{ .key = .t },
-    undo_key: settings.Button = .{ .key = .u },
-    redo_key: settings.Button = .{ .key = .r },
-    fill_key: settings.Button = .{ .key = .f },
+    place_key: Settings.Button = .{ .mouse = .left },
+    sample_key: Settings.Button = .{ .mouse = .middle },
+    erase_key: Settings.Button = .{ .mouse = .right },
+    random_key: Settings.Button = .{ .key = .t },
+    undo_key: Settings.Button = .{ .key = .u },
+    redo_key: Settings.Button = .{ .key = .r },
+    fill_key: Settings.Button = .{ .key = .f },
 
-    start_x_override: u16 = 0xFFFF,
-    start_y_override: u16 = 0xFFFF,
+    start_x_override: u16 = std.math.maxInt(u16),
+    start_y_override: u16 = std.math.maxInt(u16),
+
+    pub fn nextMapIdForType(self: *MapEditorScreen, comptime T: type) *u32 {
+        return switch (T) {
+            Entity => &self.next_map_ids.entity,
+            Enemy => &self.next_map_ids.enemy,
+            Portal => &self.next_map_ids.portal,
+            Container => &self.next_map_ids.container,
+            else => @compileError("Invalid type"),
+        };
+    }
 
     pub fn init(allocator: std.mem.Allocator) !*MapEditorScreen {
         var screen = try allocator.create(MapEditorScreen);
         screen.* = .{ .allocator = allocator };
-
-        const presence = rpc.Packet.Presence{
-            .assets = .{
-                .large_image = rpc.Packet.ArrayString(256).create("logo"),
-                .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
-            },
-            .state = rpc.Packet.ArrayString(128).create("Map Editor"),
-            .timestamps = .{
-                .start = main.rpc_start,
-            },
-        };
-        try main.rpc_client.setPresence(presence);
 
         screen.command_queue.init(allocator);
 
@@ -233,7 +265,7 @@ pub const MapEditorScreen = struct {
         const key_mapper_width = 35.0;
         const key_mapper_height = 35.0;
 
-        var fps_text_data = element.TextData{
+        var fps_text_data: element.TextData = .{
             .text = "",
             .size = 12,
             .text_type = .bold,
@@ -539,13 +571,18 @@ pub const MapEditorScreen = struct {
             },
         });
 
+        const cam_width = blk: {
+            main.camera.lock.lock();
+            defer main.camera.lock.unlock();
+            break :blk main.camera.width;
+        };
         screen.palette_decor = try element.create(allocator, element.Image{
-            .x = camera.screen_width - palette_decor_w - 5,
+            .x = cam_width - palette_decor_w - 5,
             .y = 5,
             .image_data = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(background_decor, palette_decor_w, palette_decor_h, 34, 34, 1, 1, 1.0) },
         });
 
-        screen.palette_container_tile = try element.create(allocator, element.ScrollableContainer{
+        screen.palette_containers.ground = try element.create(allocator, element.ScrollableContainer{
             .x = screen.palette_decor.x + 8,
             .y = screen.palette_decor.y + 9,
             .scissor_w = palette_decor_w - 20 - 6,
@@ -561,59 +598,116 @@ pub const MapEditorScreen = struct {
             .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
         });
 
-        var tile_iter = game_data.ground_type_to_tex_data.iterator();
+        var tile_iter = game_data.ground.from_id.iterator();
         var i: isize = 0;
         while (tile_iter.next()) |entry| : (i += 1) {
-            if (entry.key_ptr.* == 0xFF or entry.key_ptr.* == 0xFFFE) {
+            if (entry.key_ptr.* == Square.editor_tile) {
                 i -= 1;
                 continue;
             }
 
             var atlas_data = blk: {
-                if (entry.value_ptr.len <= 0) {
-                    std.log.err("Tile with type 0x{x} has an empty texture list. Using error texture", .{entry.key_ptr.*});
+                if (entry.value_ptr.textures.len <= 0) {
+                    std.log.err("Tile with data id {} has an empty texture list. Using error texture", .{entry.key_ptr.*});
                     break :blk assets.error_data;
                 }
 
-                const tex = if (entry.value_ptr.len == 1) entry.value_ptr.*[0] else entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                const tex = if (entry.value_ptr.textures.len == 1) entry.value_ptr.textures[0] else entry.value_ptr.textures[utils.rng.next() % entry.value_ptr.textures.len];
 
                 if (assets.atlas_data.get(tex.sheet)) |data| {
                     if (tex.index >= data.len) {
-                        std.log.err("Could not find index 0x{x} for tile with type 0x{x}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
+                        std.log.err("Could not find index {} for tile with data id {}. Using error texture", .{ tex.index, entry.key_ptr.* });
                         break :blk assets.error_data;
                     }
 
                     break :blk data[tex.index];
                 } else {
-                    std.log.err("Could not find sheet {s} for tile with type 0x{x}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
+                    std.log.err("Could not find sheet {s} for tile with data id {}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
                     break :blk assets.error_data;
                 }
             };
 
             if (atlas_data.tex_w <= 0 or atlas_data.tex_h <= 0) {
-                std.log.err("Tile with type 0x{x} has an empty texture. Using error texture", .{entry.key_ptr.*});
+                std.log.err("Tile with data id {} has an empty texture. Using error texture", .{entry.key_ptr.*});
                 atlas_data = assets.error_data;
             }
 
-            _ = try screen.palette_container_tile.createChild(element.Button{
+            _ = try screen.palette_containers.ground.createChild(element.Button{
                 .x = @floatFromInt(@mod(i, 5) * 34),
                 .y = @floatFromInt(@divFloor(i, 5) * 34),
                 .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = 4.0, .scale_y = 4.0 } } },
                 .userdata = entry.key_ptr,
                 .press_callback = groundClicked,
                 .tooltip_text = .{
-                    .text = game_data.ground_type_to_name.get(entry.key_ptr.*) orelse {
-                        std.log.err("Could find name for tile with type 0x{x}. Not adding to tile list", .{entry.key_ptr.*});
+                    .text = (game_data.ground.from_id.get(entry.key_ptr.*) orelse {
+                        std.log.err("Could find name for tile with data id {}. Not adding to tile list", .{entry.key_ptr.*});
                         i -= 1;
                         continue;
-                    },
+                    }).name,
                     .size = 12,
                     .text_type = .bold_italic,
                 },
             });
         }
 
-        screen.palette_container_object = try element.create(allocator, element.ScrollableContainer{
+        try addObjectContainer(
+            &screen.palette_containers.entity,
+            allocator,
+            screen.palette_decor.x,
+            screen.palette_decor.y,
+            scroll_background_data,
+            scroll_knob_base,
+            scroll_knob_hover,
+            scroll_knob_press,
+            scroll_decor_data,
+            game_data.EntityData,
+            game_data.entity,
+            entityClicked,
+        );
+        try addObjectContainer(
+            &screen.palette_containers.enemy,
+            allocator,
+            screen.palette_decor.x,
+            screen.palette_decor.y,
+            scroll_background_data,
+            scroll_knob_base,
+            scroll_knob_hover,
+            scroll_knob_press,
+            scroll_decor_data,
+            game_data.EnemyData,
+            game_data.enemy,
+            enemyClicked,
+        );
+        try addObjectContainer(
+            &screen.palette_containers.portal,
+            allocator,
+            screen.palette_decor.x,
+            screen.palette_decor.y,
+            scroll_background_data,
+            scroll_knob_base,
+            scroll_knob_hover,
+            scroll_knob_press,
+            scroll_decor_data,
+            game_data.PortalData,
+            game_data.portal,
+            portalClicked,
+        );
+        try addObjectContainer(
+            &screen.palette_containers.container,
+            allocator,
+            screen.palette_decor.x,
+            screen.palette_decor.y,
+            scroll_background_data,
+            scroll_knob_base,
+            scroll_knob_hover,
+            scroll_knob_press,
+            scroll_decor_data,
+            game_data.ContainerData,
+            game_data.container,
+            containerClicked,
+        );
+
+        screen.palette_containers.region = try element.create(allocator, element.ScrollableContainer{
             .x = screen.palette_decor.x + 8,
             .y = screen.palette_decor.y + 9,
             .scissor_w = palette_decor_w - 20 - 6,
@@ -630,105 +724,24 @@ pub const MapEditorScreen = struct {
             .visible = false,
         });
 
-        var obj_iter = game_data.obj_type_to_tex_data.iterator();
-        i = 0;
-        while (obj_iter.next()) |entry| : (i += 1) {
-            if (game_data.obj_type_to_class.get(entry.key_ptr.*)) |class| {
-                if (class == .projectile or class == .character or class == .player or class == .skin) {
-                    i -= 1;
-                    continue;
-                }
-            } else {
-                i -= 1;
-                std.log.err("Could not find class for object with type 0x{x}, skipping", .{entry.key_ptr.*});
-                continue;
-            }
-
-            var atlas_data = blk: {
-                if (entry.value_ptr.len <= 0) {
-                    std.log.err("Object with type 0x{x} has an empty texture list. Using error texture", .{entry.key_ptr.*});
-                    break :blk assets.error_data;
-                }
-
-                const tex = if (entry.value_ptr.len == 1) entry.value_ptr.*[0] else entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
-
-                if (assets.atlas_data.get(tex.sheet)) |data| {
-                    if (tex.index >= data.len) {
-                        std.log.err("Could not find index 0x{x} for object with type 0x{x}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
-                        break :blk assets.error_data;
-                    }
-
-                    break :blk data[tex.index];
-                } else {
-                    std.log.err("Could not find sheet {s} for object with type 0x{x}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
-                    break :blk assets.error_data;
-                }
-            };
-
-            if (atlas_data.tex_w <= 0 or atlas_data.tex_h <= 0) {
-                std.log.err("Object with type 0x{x} has an empty texture. Using error texture", .{entry.key_ptr.*});
-                atlas_data = assets.error_data;
-            }
-
-            const scale = 10.0 / @max(atlas_data.texWRaw(), atlas_data.texHRaw()) * 3.0;
-
-            _ = try screen.palette_container_object.createChild(element.Button{
-                .x = @as(f32, @floatFromInt(@mod(i, 5) * 32)) + (32 - atlas_data.texWRaw() * scale) / 2.0,
-                .y = @as(f32, @floatFromInt(@divFloor(i, 5) * 32)) + (32 - atlas_data.texHRaw() * scale) / 2.0,
-                .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = scale, .scale_y = scale } } },
-                .userdata = entry.key_ptr,
-                .press_callback = objectClicked,
-                .tooltip_text = .{
-                    .text = game_data.obj_type_to_name.get(entry.key_ptr.*) orelse {
-                        std.log.err("Could find name for object with type 0x{x}. Not adding to object list", .{entry.key_ptr.*});
-                        i -= 1;
-                        continue;
-                    },
-                    .size = 12,
-                    .text_type = .bold_italic,
-                },
-            });
-        }
-
-        screen.palette_container_region = try element.create(allocator, element.ScrollableContainer{
-            .x = screen.palette_decor.x + 8,
-            .y = screen.palette_decor.y + 9,
-            .scissor_w = palette_decor_w - 20 - 6,
-            .scissor_h = palette_decor_h - 17,
-            .scroll_x = screen.palette_decor.x + palette_decor_w - 20 + 2,
-            .scroll_y = screen.palette_decor.y + 9,
-            .scroll_w = 4,
-            .scroll_h = palette_decor_h - 17,
-            .scroll_side_x = screen.palette_decor.x + palette_decor_w - 20 + 2 - 6,
-            .scroll_side_y = screen.palette_decor.y + 9,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
-            .visible = false,
-        });
-
-        var region_iter = game_data.region_type_to_color.iterator();
+        var region_iter = game_data.region.from_id.iterator();
         i = 0;
         while (region_iter.next()) |entry| : (i += 1) {
-            _ = try screen.palette_container_region.createChild(element.Button{
+            _ = try screen.palette_containers.region.createChild(element.Button{
                 .x = @floatFromInt(@mod(i, 5) * 34),
                 .y = @floatFromInt(@divFloor(i, 5) * 34),
                 .image_data = .{ .base = .{ .normal = .{
-                    .atlas_data = assets.wall_backface_data,
+                    .atlas_data = assets.generic_8x8,
                     .scale_x = 4.0,
                     .scale_y = 4.0,
                     .alpha = 0.6,
-                    .color = entry.value_ptr.*,
+                    .color = entry.value_ptr.color,
                     .color_intensity = 1.0,
                 } } },
                 .userdata = entry.key_ptr,
                 .press_callback = regionClicked,
                 .tooltip_text = .{
-                    .text = game_data.region_type_to_name.get(entry.key_ptr.*) orelse {
-                        std.log.err("Could find name for region with type 0x{x}. Not adding to region list", .{entry.key_ptr.*});
-                        i -= 1;
-                        continue;
-                    },
+                    .text = entry.value_ptr.name,
                     .size = 12,
                     .text_type = .bold_italic,
                 },
@@ -780,149 +793,227 @@ pub const MapEditorScreen = struct {
         }
 
         screen.inited = true;
+        screen.initialize();
         return screen;
     }
 
-    fn groundClicked(ud: ?*anyopaque) void {
-        ui_systems.screen.editor.selected_tile = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    fn addObjectContainer(
+        container: **element.ScrollableContainer,
+        allocator: std.mem.Allocator,
+        px: f32,
+        py: f32,
+        scroll_background_data: assets.AtlasData,
+        scroll_knob_base: assets.AtlasData,
+        scroll_knob_hover: assets.AtlasData,
+        scroll_knob_press: assets.AtlasData,
+        scroll_decor_data: assets.AtlasData,
+        comptime T: type,
+        data: game_data.Maps(T),
+        callback: *const fn (?*anyopaque) void,
+    ) !void {
+        container.* = try element.create(allocator, element.ScrollableContainer{
+            .x = px + 8,
+            .y = py + 9,
+            .scissor_w = palette_decor_w - 20 - 6,
+            .scissor_h = palette_decor_h - 17,
+            .scroll_x = px + palette_decor_w - 20 + 2,
+            .scroll_y = py + 9,
+            .scroll_w = 4,
+            .scroll_h = palette_decor_h - 17,
+            .scroll_side_x = px + palette_decor_w - 20 + 2 - 6,
+            .scroll_side_y = py + 9,
+            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
+            .visible = false,
+        });
+
+        var iter = data.from_id.iterator();
+        var i: usize = 0;
+        while (iter.next()) |entry| {
+            // region placeholder
+            if (T == game_data.EntityData and entry.key_ptr.* == 65534) continue;
+
+            defer i += 1;
+
+            var atlas_data = blk: {
+                const tex = texBlk: {
+                    if (@hasField(@TypeOf(entry.value_ptr.*), "texture"))
+                        break :texBlk entry.value_ptr.texture;
+
+                    const tex_list = entry.value_ptr.textures;
+                    if (tex_list.len <= 0) {
+                        std.log.err("Object with data id {} has an empty texture list. Using error texture", .{entry.key_ptr.*});
+                        break :blk assets.error_data;
+                    }
+
+                    break :texBlk tex_list[utils.rng.next() % tex_list.len];
+                };
+
+                if (assets.anim_enemies.get(tex.sheet)) |anim_data| {
+                    if (tex.index >= anim_data.len) {
+                        std.log.err("Could not find index {} for object with data id {}. Using error texture", .{ tex.index, entry.key_ptr.* });
+                        break :blk assets.error_data;
+                    }
+
+                    break :blk anim_data[tex.index].walk_anims[0];
+                } else if (assets.atlas_data.get(tex.sheet)) |atlas_data| {
+                    if (tex.index >= atlas_data.len) {
+                        std.log.err("Could not find index {} for object with data id {}. Using error texture", .{ tex.index, entry.key_ptr.* });
+                        break :blk assets.error_data;
+                    }
+
+                    break :blk atlas_data[tex.index];
+                } else {
+                    std.log.err("Could not find sheet {s} for object with data id {}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
+                    break :blk assets.error_data;
+                }
+            };
+
+            if (atlas_data.tex_w <= 0 or atlas_data.tex_h <= 0) {
+                std.log.err("Object with data id {} has an empty texture. Using error texture", .{entry.key_ptr.*});
+                atlas_data = assets.error_data;
+            }
+
+            const scale = 8.0 / @max(atlas_data.width(), atlas_data.height()) * 3.0;
+
+            _ = try container.*.createChild(element.Button{
+                .x = @as(f32, @floatFromInt(@mod(i, 5) * 32)) + (32 - atlas_data.width() * scale) / 2.0,
+                .y = @as(f32, @floatFromInt(@divFloor(i, 5) * 32)) + (32 - atlas_data.height() * scale) / 2.0,
+                .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = scale, .scale_y = scale } } },
+                .userdata = entry.key_ptr,
+                .press_callback = callback,
+                .tooltip_text = .{
+                    .text = entry.value_ptr.name,
+                    .size = 12,
+                    .text_type = .bold_italic,
+                },
+            });
+        }
     }
 
-    fn objectClicked(ud: ?*anyopaque) void {
-        ui_systems.screen.editor.selected_object = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    fn groundClicked(ud: ?*anyopaque) void {
+        ui_systems.screen.editor.selected.ground = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    }
+
+    fn entityClicked(ud: ?*anyopaque) void {
+        ui_systems.screen.editor.selected.entity = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    }
+
+    fn enemyClicked(ud: ?*anyopaque) void {
+        ui_systems.screen.editor.selected.enemy = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    }
+
+    fn portalClicked(ud: ?*anyopaque) void {
+        ui_systems.screen.editor.selected.portal = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    }
+
+    fn containerClicked(ud: ?*anyopaque) void {
+        ui_systems.screen.editor.selected.container = @as(*u16, @alignCast(@ptrCast(ud))).*;
     }
 
     fn regionClicked(ud: ?*anyopaque) void {
-        ui_systems.screen.editor.selected_region = @as(*u8, @alignCast(@ptrCast(ud))).*;
+        ui_systems.screen.editor.selected.region = @as(*u8, @alignCast(@ptrCast(ud))).*;
     }
 
     fn sizeCallback(dc: *element.DropdownContainer) void {
         const screen = ui_systems.screen.editor;
         screen.map_size = sizes[dc.index];
+        screen.initialize();
     }
 
     fn layerCallback(dc: *element.DropdownContainer) void {
         const next_layer = layers[dc.index];
         const screen = ui_systems.screen.editor;
         screen.active_layer = next_layer;
+        inline for (@typeInfo(@TypeOf(screen.palette_containers)).@"struct".fields) |field| {
+            @field(screen.palette_containers, field.name).visible = false;
+        }
         switch (next_layer) {
-            .ground => {
-                screen.palette_container_tile.visible = true;
-                screen.palette_container_object.visible = false;
-                screen.palette_container_region.visible = false;
-            },
-            .object => {
-                screen.palette_container_tile.visible = false;
-                screen.palette_container_object.visible = true;
-                screen.palette_container_region.visible = false;
-            },
-            .region => {
-                screen.palette_container_tile.visible = false;
-                screen.palette_container_object.visible = false;
-                screen.palette_container_region.visible = true;
-            },
+            inline else => |tag| @field(screen.palette_containers, @tagName(tag)).visible = true,
         }
     }
 
     fn noAction(_: *element.KeyMapper) void {}
 
-    fn newCreateCallback(ud: ?*anyopaque) void {
-        const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
+    fn initialize(self: *MapEditorScreen) void {
+        map.dispose(self.allocator);
+        map.setMapInfo(.{
+            .width = self.map_size,
+            .height = self.map_size,
+            .bg_color = 0,
+            .bg_intensity = 0.15,
+        }, self.allocator);
+        self.command_queue.clear();
 
-        map.dispose(screen.allocator);
-        map.setWH(screen.map_size, screen.map_size, screen.allocator);
-        map.bg_light_color = 0;
-        map.bg_light_intensity = 0.15;
+        self.map_tile_data = if (self.map_tile_data.len == 0)
+            self.allocator.alloc(MapEditorTile, @as(u32, self.map_size) * @as(u32, self.map_size)) catch return
+        else
+            self.allocator.realloc(self.map_tile_data, @as(u32, self.map_size) * @as(u32, self.map_size)) catch return;
 
-        if (screen.map_tile_data.len == 0) {
-            screen.map_tile_data = screen.allocator.alloc(MapEditorTile, screen.map_size * screen.map_size) catch return;
-        } else {
-            screen.map_tile_data = screen.allocator.realloc(screen.map_tile_data, screen.map_size * screen.map_size) catch return;
-        }
+        @memset(self.map_tile_data, MapEditorTile{});
 
-        @memset(screen.map_tile_data, MapEditorTile{});
+        const center = @as(f32, @floatFromInt(self.map_size)) / 2.0;
 
-        const center = @as(f32, @floatFromInt(screen.map_size)) / 2.0;
-
-        for (0..screen.map_size) |y| {
-            for (0..screen.map_size) |x| {
-                var square = Square{
-                    .x = @as(f32, @floatFromInt(x)),
-                    .y = @as(f32, @floatFromInt(y)),
-                    .tile_type = 0xFFFE,
-                };
-                square.addToMap();
+        {
+            map.square_lock.lock();
+            defer map.square_lock.unlock();
+            for (0..self.map_size) |y| {
+                for (0..self.map_size) |x| {
+                    var square: Square = .{
+                        .x = @floatFromInt(x),
+                        .y = @floatFromInt(y),
+                        .data_id = Square.editor_tile,
+                    };
+                    square.addToMap();
+                }
             }
         }
 
-        map.local_player_id = 0x7D000000 - 1; // particle effect base id = 0x7D000000
-        var player = Player{
-            .x = if (screen.start_x_override == 0xFFFF) center else @floatFromInt(screen.start_x_override),
-            .y = if (screen.start_y_override == 0xFFFF) center else @floatFromInt(screen.start_y_override),
-            .obj_id = map.local_player_id,
-            .obj_type = 0x0300,
-            .size = 100,
+        map.local_player_id = std.math.maxInt(u32) - 1;
+        var player: Player = .{
+            .x = if (self.start_x_override == std.math.maxInt(u16)) center else @floatFromInt(self.start_x_override),
+            .y = if (self.start_y_override == std.math.maxInt(u16)) center else @floatFromInt(self.start_y_override),
+            .map_id = map.local_player_id,
+            .data_id = 0,
             .speed = 300,
         };
-        player.addToMap(screen.allocator);
+        player.addToMap(self.allocator);
 
         main.editing_map = true;
         ui_systems.menu_background.visible = false;
-        screen.start_x_override = 0xFFFF;
-        screen.start_y_override = 0xFFFF;
+        self.start_x_override = std.math.maxInt(u16);
+        self.start_y_override = std.math.maxInt(u16);
     }
 
     // for easier error handling
     fn openInner(screen: *MapEditorScreen) !void {
-        // todo popup for save
+        // TODO: popup for save
 
-        const file_path = try nfd.openFileDialog("em", null);
+        const file_path = try nfd.openFileDialog("map", null);
         if (file_path) |path| {
             defer nfd.freePath(path);
 
             const file = try std.fs.openFileAbsolute(path, .{});
             defer file.close();
 
-            var dcp = std.compress.zlib.decompressor(file.reader());
+            var arena: std.heap.ArenaAllocator = .init(screen.allocator);
+            defer arena.deinit();
+            const parsed_map = try map_data.parseMap(file, &arena);
+            screen.start_x_override = parsed_map.x + @divFloor(parsed_map.w, 2);
+            screen.start_y_override = parsed_map.y + @divFloor(parsed_map.h, 2);
+            screen.map_size = utils.nextPowerOfTwo(@max(parsed_map.x + parsed_map.w, parsed_map.y + parsed_map.h));
+            screen.initialize();
 
-            const version = try dcp.reader().readInt(u8, .little);
-            if (version != 2)
-                std.log.err("Reading map failed, unsupported version: {d}", .{version});
-
-            const x_start = try dcp.reader().readInt(u16, .little);
-            const y_start = try dcp.reader().readInt(u16, .little);
-            const w = try dcp.reader().readInt(u16, .little);
-            const h = try dcp.reader().readInt(u16, .little);
-
-            screen.start_x_override = x_start + @divFloor(w, 2);
-            screen.start_y_override = y_start + @divFloor(h, 2);
-            screen.map_size = utils.nextPowerOfTwo(@max(x_start + w, y_start + h));
-            newCreateCallback(screen);
-
-            const tiles = try screen.allocator.alloc(Tile, try dcp.reader().readInt(u16, .little));
-            defer screen.allocator.free(tiles);
-            for (tiles) |*tile| {
-                const tile_type = try dcp.reader().readInt(u16, .little);
-                const obj_type = try dcp.reader().readInt(u16, .little);
-                const region_type = try dcp.reader().readInt(u8, .little);
-
-                tile.* = .{
-                    .tile_type = tile_type,
-                    .obj_type = obj_type,
-                    .region_type = region_type,
-                };
-            }
-
-            const byte_len = tiles.len <= 256;
-            for (y_start..y_start + h) |y| {
-                for (x_start..x_start + w) |x| {
-                    const ux: u32 = @intCast(x);
-                    const uy: u32 = @intCast(y);
-                    const idx = if (byte_len) try dcp.reader().readInt(u8, .little) else try dcp.reader().readInt(u16, .little);
-                    const tile = tiles[idx];
-                    if (tile.tile_type != std.math.maxInt(u16)) screen.setTile(ux, uy, tile.tile_type);
-                    if (tile.obj_type != std.math.maxInt(u16)) screen.setObject(ux, uy, tile.obj_type);
-                    if (tile.region_type != std.math.maxInt(u8)) screen.setRegion(ux, uy, tile.region_type);
-                }
+            for (parsed_map.tiles, 0..) |tile, i| {
+                const ux: u16 = @intCast(i % parsed_map.w + parsed_map.x);
+                const uy: u16 = @intCast(@divFloor(i, parsed_map.w) + parsed_map.y);
+                if (tile.ground_name.len > 0) screen.setTile(ux, uy, game_data.ground.from_name.get(tile.ground_name).?.id);
+                if (tile.region_name.len > 0) screen.setRegion(ux, uy, game_data.region.from_name.get(tile.region_name).?.id);
+                if (tile.entity_name.len > 0) screen.setObject(Entity, ux, uy, game_data.entity.from_name.get(tile.entity_name).?.id);
+                if (tile.enemy_name.len > 0) screen.setObject(Enemy, ux, uy, game_data.enemy.from_name.get(tile.enemy_name).?.id);
+                if (tile.portal_name.len > 0) screen.setObject(Portal, ux, uy, game_data.portal.from_name.get(tile.portal_name).?.id);
+                if (tile.container_name.len > 0) screen.setObject(Container, ux, uy, game_data.container.from_name.get(tile.container_name).?.id);
             }
         }
     }
@@ -930,121 +1021,179 @@ pub const MapEditorScreen = struct {
     fn openCallback(ud: ?*anyopaque) void {
         openInner(@alignCast(@ptrCast(ud.?))) catch |e| {
             std.log.err("Error while parsing map: {}", .{e});
-            if (@errorReturnTrace()) |trace| {
-                std.debug.dumpStackTrace(trace.*);
-            }
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
         };
     }
 
     fn tileBounds(tiles: []MapEditorTile) struct { min_x: u16, max_x: u16, min_y: u16, max_y: u16 } {
-        var min_x = map.width;
-        var min_y = map.height;
-        var max_x: u32 = 0;
-        var max_y: u32 = 0;
+        var min_x = map.info.width;
+        var min_y = map.info.height;
+        var max_x: u16 = 0;
+        var max_y: u16 = 0;
 
-        for (0..map.height) |y| {
-            for (0..map.width) |x| {
-                const map_tile = tiles[@intCast(y * map.width + x)];
-                if (map_tile.tile_type != 0xFFFE or
-                    map_tile.obj_type != std.math.maxInt(u16) or
-                    map_tile.region_type != std.math.maxInt(u8))
-                {
-                    const ux: u32 = @intCast(x);
-                    const uy: u32 = @intCast(y);
+        for (0..map.info.height) |y| {
+            for (0..map.info.width) |x| {
+                const map_tile = tiles[@intCast(y * map.info.width + x)];
+                inline for (@typeInfo(MapEditorTile).@"struct".fields) |field| {
+                    if (comptime std.mem.eql(u8, field.name, "object_id"))
+                        continue;
 
-                    min_x = @min(min_x, ux);
-                    min_y = @min(min_y, uy);
-                    max_x = @max(max_x, ux);
-                    max_y = @max(max_y, uy);
+                    if (@field(map_tile, field.name) != @as(*const field.type, @ptrCast(@alignCast(field.default_value.?))).*) {
+                        const ux: u16 = @intCast(x);
+                        const uy: u16 = @intCast(y);
+
+                        min_x = @min(min_x, ux);
+                        min_y = @min(min_y, uy);
+                        max_x = @max(max_x, ux);
+                        max_y = @max(max_y, uy);
+                        break;
+                    }
                 }
             }
         }
 
-        return .{ .min_x = @intCast(min_x), .min_y = @intCast(min_y), .max_x = @intCast(max_x), .max_y = @intCast(max_y) };
+        return .{ .min_x = @intCast(min_x), .min_y = @intCast(min_y), .max_x = @intCast(max_x + 1), .max_y = @intCast(max_y + 1) };
     }
 
-    pub fn indexOfTile(tiles: []const Tile, value: Tile) ?usize {
-        for (tiles, 0..) |tile, i| {
-            if (tile.obj_type == value.obj_type and
-                tile.region_type == value.region_type and
-                tile.tile_type == value.tile_type)
-                return i;
+    pub fn indexOfTile(tiles: []const map_data.Tile, value: map_data.Tile) ?usize {
+        tileLoop: for (tiles, 0..) |tile, i| {
+            inline for (@typeInfo(map_data.Tile).@"struct".fields) |field| {
+                if (!std.mem.eql(u8, @field(tile, field.name), @field(value, field.name)))
+                    continue :tileLoop;
+            }
+
+            return i;
         }
 
         return null;
     }
 
     fn mapData(screen: *MapEditorScreen) ![]u8 {
-        var data = std.ArrayList(u8).init(screen.allocator);
+        var data: std.ArrayListUnmanaged(u8) = .empty;
 
-        const tile_data = screen.map_tile_data;
-        const bounds = tileBounds(tile_data);
+        const bounds = tileBounds(screen.map_tile_data);
+        if (bounds.min_x >= bounds.max_x or bounds.min_y >= bounds.max_y)
+            return error.InvalidMap;
 
-        try data.writer().writeInt(u8, 2, .little); // version
-        try data.writer().writeInt(u16, bounds.min_x, .little);
-        try data.writer().writeInt(u16, bounds.min_y, .little);
-        try data.writer().writeInt(u16, bounds.max_x - bounds.min_x, .little);
-        try data.writer().writeInt(u16, bounds.max_y - bounds.min_y, .little);
+        var writer = data.writer(screen.allocator);
+        try writer.writeInt(u8, 0, .little); // version
+        try writer.writeInt(u16, bounds.min_x, .little);
+        try writer.writeInt(u16, bounds.min_y, .little);
+        try writer.writeInt(u16, bounds.max_x - bounds.min_x, .little);
+        try writer.writeInt(u16, bounds.max_y - bounds.min_y, .little);
 
-        var tiles = std.ArrayList(Tile).init(screen.allocator);
-        defer tiles.deinit();
+        var tiles: std.ArrayListUnmanaged(map_data.Tile) = .empty;
+        defer tiles.deinit(screen.allocator);
 
         for (bounds.min_y..bounds.max_y) |y| {
             for (bounds.min_x..bounds.max_x) |x| {
-                const map_tile = tile_data[y * map.width + x];
-                const tile = Tile{
-                    .tile_type = if (map_tile.tile_type == 0xFFFE) 0xFFFF else map_tile.tile_type,
-                    .obj_type = map_tile.obj_type,
-                    .region_type = map_tile.region_type,
+                const map_tile = screen.getTile(x, y);
+                const tile: map_data.Tile = .{
+                    .ground_name = if (map_tile.ground == defaultType(.ground)) "" else game_data.ground.from_id.get(map_tile.ground).?.name,
+                    .region_name = if (map_tile.region == defaultType(.region)) "" else game_data.region.from_id.get(map_tile.region).?.name,
+                    .enemy_name = blk: {
+                        var lock = map.useLockForType(Enemy);
+                        lock.lock();
+                        defer lock.unlock();
+                        break :blk if (map.findObjectConst(Enemy, map_tile.enemy)) |e| e.data.name else "";
+                    },
+                    .entity_name = blk: {
+                        var lock = map.useLockForType(Entity);
+                        lock.lock();
+                        defer lock.unlock();
+                        break :blk if (map.findObjectConst(Entity, map_tile.entity)) |e| e.data.name else "";
+                    },
+                    .portal_name = blk: {
+                        var lock = map.useLockForType(Portal);
+                        lock.lock();
+                        defer lock.unlock();
+                        break :blk if (map.findObjectConst(Portal, map_tile.portal)) |p| p.data.name else "";
+                    },
+                    .container_name = blk: {
+                        var lock = map.useLockForType(Container);
+                        lock.lock();
+                        defer lock.unlock();
+                        break :blk if (map.findObjectConst(Container, map_tile.container)) |c| c.data.name else "";
+                    },
                 };
 
                 if (indexOfTile(tiles.items, tile) == null)
-                    try tiles.append(tile);
+                    try tiles.append(screen.allocator, tile);
             }
         }
 
-        try data.writer().writeInt(u16, @intCast(tiles.items.len), .little);
+        try writer.writeInt(u16, @intCast(tiles.items.len), .little);
         const byte_len = tiles.items.len <= 256;
 
         for (tiles.items) |tile| {
-            try data.writer().writeInt(u16, tile.tile_type, .little);
-            try data.writer().writeInt(u16, tile.obj_type, .little);
-            try data.writer().writeInt(u8, tile.region_type, .little);
+            inline for (@typeInfo(map_data.Tile).@"struct".fields) |field| {
+                try writer.writeInt(u16, @intCast(@field(tile, field.name).len), .little);
+                try writer.writeAll(@field(tile, field.name));
+            }
         }
 
         for (bounds.min_y..bounds.max_y) |y| {
             for (bounds.min_x..bounds.max_x) |x| {
-                const map_tile = tile_data[y * map.width + x];
-                const tile = Tile{
-                    .tile_type = if (map_tile.tile_type == 0xFFFE) 0xFFFF else map_tile.tile_type,
-                    .obj_type = map_tile.obj_type,
-                    .region_type = map_tile.region_type,
+                const map_tile = screen.getTile(x, y);
+                const tile: map_data.Tile = .{
+                    .ground_name = if (map_tile.ground == defaultType(.ground)) "" else game_data.ground.from_id.get(map_tile.ground).?.name,
+                    .region_name = if (map_tile.region == defaultType(.region)) "" else game_data.region.from_id.get(map_tile.region).?.name,
+                    .enemy_name = blk: {
+                        var lock = map.useLockForType(Enemy);
+                        lock.lock();
+                        defer lock.unlock();
+                        break :blk if (map.findObjectConst(Enemy, map_tile.enemy)) |e| e.data.name else "";
+                    },
+                    .entity_name = blk: {
+                        var lock = map.useLockForType(Entity);
+                        lock.lock();
+                        defer lock.unlock();
+                        break :blk if (map.findObjectConst(Entity, map_tile.entity)) |e| e.data.name else "";
+                    },
+                    .portal_name = blk: {
+                        var lock = map.useLockForType(Portal);
+                        lock.lock();
+                        defer lock.unlock();
+                        break :blk if (map.findObjectConst(Portal, map_tile.portal)) |p| p.data.name else "";
+                    },
+                    .container_name = blk: {
+                        var lock = map.useLockForType(Container);
+                        lock.lock();
+                        defer lock.unlock();
+                        break :blk if (map.findObjectConst(Container, map_tile.container)) |c| c.data.name else "";
+                    },
                 };
 
                 if (indexOfTile(tiles.items, tile)) |idx| {
                     if (byte_len)
-                        try data.writer().writeInt(u8, @intCast(idx), .little)
+                        try writer.writeInt(u8, @intCast(idx), .little)
                     else
-                        try data.writer().writeInt(u16, @intCast(idx), .little);
-                }
+                        try writer.writeInt(u16, @intCast(idx), .little);
+                } else @panic("No index found");
             }
         }
 
-        return try data.toOwnedSlice();
+        return try data.toOwnedSlice(screen.allocator);
     }
 
     fn saveInner(screen: *MapEditorScreen) !void {
         if (!main.editing_map) return;
 
-        const file_path = nfd.saveFileDialog("em", null) catch return;
+        const file_path = nfd.saveFileDialog("map", null) catch return;
         if (file_path) |path| {
             defer nfd.freePath(path);
 
+            const data = mapData(screen) catch {
+                dialog.showDialog(.text, .{
+                    .title = "Map Error",
+                    .body = "Map was invalid",
+                });
+                return;
+            };
+            defer screen.allocator.free(data);
+
             const file = try std.fs.createFileAbsolute(path, .{});
             defer file.close();
-
-            const data = try mapData(screen);
-            defer screen.allocator.free(data);
 
             var fbs = std.io.fixedBufferStream(data);
             try std.compress.zlib.compress(fbs.reader(), file.writer(), .{});
@@ -1054,26 +1203,23 @@ pub const MapEditorScreen = struct {
     fn saveCallback(ud: ?*anyopaque) void {
         saveInner(@alignCast(@ptrCast(ud.?))) catch |e| {
             std.log.err("Error while saving map: {}", .{e});
-            if (@errorReturnTrace()) |trace| {
-                std.debug.dumpStackTrace(trace.*);
-            }
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
         };
     }
 
     fn exitCallback(_: ?*anyopaque) void {
-        ui_systems.switchScreen(.main_menu);
+        if (main.character_list == null)
+            ui_systems.switchScreen(.main_menu)
+        else if (main.character_list.?.characters.len > 0)
+            ui_systems.switchScreen(.char_select)
+        else
+            ui_systems.switchScreen(.char_create);
     }
 
     fn testCallback(ud: ?*anyopaque) void {
-        if (main.character_list.len == 0)
-            return;
-
-        if (main.server_list) |server_list| {
-            if (server_list.len > 0) {
+        if (main.character_list) |list| {
+            if (list.servers.len > 0) {
                 const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
-                if (ui_systems.editor_backup == null)
-                    ui_systems.editor_backup = screen.allocator.create(MapEditorScreen) catch return;
-                // @memcpy(ui_systems.editor_backup.?, screen);
 
                 const data = mapData(screen) catch |e| {
                     std.log.err("Error while testing map: {}", .{e});
@@ -1084,16 +1230,20 @@ pub const MapEditorScreen = struct {
                 };
                 defer screen.allocator.free(data);
 
-                var eclipse_map = std.ArrayList(u8).init(screen.allocator);
+                if (ui_systems.editor_backup == null)
+                    ui_systems.editor_backup = screen.allocator.create(MapEditorScreen) catch return;
+                // @memcpy(ui_systems.editor_backup.?, screen);
+
+                var test_map: std.ArrayListUnmanaged(u8) = .empty;
                 var fbs = std.io.fixedBufferStream(data);
-                std.compress.zlib.compress(fbs.reader(), eclipse_map.writer(), .{}) catch |e| {
+                std.compress.zlib.compress(fbs.reader(), test_map.writer(screen.allocator), .{}) catch |e| {
                     std.log.err("Error while testing map: {}", .{e});
                     if (@errorReturnTrace()) |trace| {
                         std.debug.dumpStackTrace(trace.*);
                     }
                     return;
                 };
-                main.enterTest(server_list[0], main.character_list[0].id, eclipse_map.toOwnedSlice() catch return);
+                main.enterTest(list.servers[0], list.characters[0].char_id, test_map.toOwnedSlice(screen.allocator) catch return);
                 return;
             }
         }
@@ -1101,24 +1251,22 @@ pub const MapEditorScreen = struct {
 
     pub fn deinit(self: *MapEditorScreen) void {
         self.inited = false;
+
         self.command_queue.deinit();
 
         element.destroy(self.fps_text);
         element.destroy(self.palette_decor);
-        element.destroy(self.palette_container_tile);
-        element.destroy(self.palette_container_object);
-        element.destroy(self.palette_container_region);
+        inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field| {
+            element.destroy(@field(self.palette_containers, field.name));
+        }
         element.destroy(self.layer_dropdown);
         element.destroy(self.controls_container);
         element.destroy(self.map_size_dropdown);
 
-        if (self.map_tile_data.len > 0)
-            self.allocator.free(self.map_tile_data);
+        self.allocator.free(self.map_tile_data);
 
-        if (main.editing_map) {
-            main.editing_map = false;
-            map.dispose(self.allocator);
-        }
+        main.editing_map = false;
+        map.dispose(self.allocator);
 
         self.allocator.destroy(self);
 
@@ -1130,12 +1278,9 @@ pub const MapEditorScreen = struct {
         const cont_x = palette_x + 8;
 
         self.palette_decor.x = palette_x;
-        self.palette_container_tile.x = cont_x;
-        self.palette_container_tile.container.x = cont_x;
-        self.palette_container_object.x = cont_x;
-        self.palette_container_object.container.x = cont_x;
-        self.palette_container_region.x = cont_x;
-        self.palette_container_region.container.x = cont_x;
+        inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field| {
+            @field(self.palette_containers, field.name).x = cont_x;
+        }
         self.layer_dropdown.x = palette_x;
         self.layer_dropdown.container.x = palette_x + self.layer_dropdown.container_inlay_x;
         self.layer_dropdown.container.container.x = palette_x + self.layer_dropdown.container_inlay_x;
@@ -1198,94 +1343,96 @@ pub const MapEditorScreen = struct {
             self.action = .none;
     }
 
-    fn setTile(self: *MapEditorScreen, x: u32, y: u32, value: u16) void {
-        const tile = &self.map_tile_data[y * self.map_size + x];
-        if (tile.tile_type == value)
-            return;
+    fn getTile(self: *MapEditorScreen, x: usize, y: usize) MapEditorTile {
+        return self.map_tile_data[y * self.map_size + x];
+    }
 
-        if (game_data.ground_type_to_props.get(value) == null) {
-            std.log.err("Props not found for tile with type 0x{x}, setting at x={d}, y={d} cancelled", .{ value, x, y });
+    fn getTilePtr(self: *MapEditorScreen, x: usize, y: usize) *MapEditorTile {
+        return &self.map_tile_data[y * self.map_size + x];
+    }
+
+    fn setTile(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
+        const tile = self.getTilePtr(x, y);
+        if (tile.ground == data_id) return;
+
+        if (game_data.ground.from_id.get(data_id) == null) {
+            std.log.err("Data not found for tile with data id {}, setting at x={}, y={} cancelled", .{ data_id, x, y });
             return;
         }
 
-        tile.tile_type = value;
-        var square = Square{
-            .x = @as(f32, @floatFromInt(x)),
-            .y = @as(f32, @floatFromInt(y)),
-            .tile_type = value,
+        tile.ground = data_id;
+
+        map.square_lock.lock();
+        defer map.square_lock.unlock();
+        var square: Square = .{
+            .x = @floatFromInt(x),
+            .y = @floatFromInt(y),
+            .data_id = data_id,
         };
         square.addToMap();
     }
 
-    fn getTile(self: *MapEditorScreen, x: f32, y: f32) MapEditorTile {
-        const floor_x: u32 = @intFromFloat(@floor(x));
-        const floor_y: u32 = @intFromFloat(@floor(y));
-        return self.map_tile_data[floor_y * self.map_size + floor_x];
-    }
+    fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
+        const tile = self.getTilePtr(x, y);
+        if (tile.region == data_id) return;
 
-    fn setObject(self: *MapEditorScreen, x: u32, y: u32, value: u16) void {
-        const tile = &self.map_tile_data[y * self.map_size + x];
-
-        if (tile.obj_type == value)
-            return;
-
-        if (game_data.obj_type_to_props.get(value) == null) {
-            std.log.err("Props not found for object with type 0x{x}, setting at x={d}, y={d} cancelled", .{ value, x, y });
+        if (data_id != std.math.maxInt(u16) and game_data.region.from_id.get(data_id) == null) {
+            std.log.err("Data not found for region with data id {}, setting at x={}, y={} cancelled", .{ data_id, x, y });
             return;
         }
 
-        if (value == std.math.maxInt(u16)) {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
-            map.removeEntity(self.allocator, tile.object_id);
+        tile.region = data_id;
+    }
 
-            tile.obj_type = value;
-            tile.object_id = value;
+    fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, data_id: u16) void {
+        const tile = self.getTilePtr(x, y);
+        const field = switch (ObjType) {
+            Entity => &tile.entity,
+            Enemy => &tile.enemy,
+            Portal => &tile.portal,
+            Container => &tile.container,
+            else => @compileError("Invalid type"),
+        };
+
+        var lock = map.useLockForType(ObjType);
+        if (data_id == std.math.maxInt(u16)) {
+            lock.lock();
+            defer lock.unlock();
+            _ = map.removeEntity(ObjType, self.allocator, field.*);
+            field.* = std.math.maxInt(u32);
         } else {
-            if (tile.object_id != -1) {
-                map.object_lock.lock();
-                defer map.object_lock.unlock();
-                map.removeEntity(self.allocator, tile.object_id);
+            if (game_data.entity.from_id.get(data_id) == null) {
+                std.log.err("Data not found for object with data id {}, setting at x={}, y={} cancelled", .{ data_id, x, y });
+                return;
             }
 
-            self.next_obj_id += 1;
+            if (field.* != std.math.maxInt(u32)) {
+                lock.lock();
+                defer lock.unlock();
+                if (map.findObjectConst(ObjType, field.*)) |obj| if (obj.data_id == data_id) return;
+                _ = map.removeEntity(ObjType, self.allocator, field.*);
+            }
 
-            tile.obj_type = value;
-            tile.object_id = self.next_obj_id;
+            const next_map_id = self.nextMapIdForType(ObjType);
+            defer next_map_id.* += 1;
 
-            var obj = GameObject{
-                .x = @as(f32, @floatFromInt(x)),
-                .y = @as(f32, @floatFromInt(y)),
-                .obj_id = self.next_obj_id,
-                .obj_type = value,
-                .size = 100,
-                .alpha = 1.0,
+            field.* = next_map_id.*;
+
+            var obj: ObjType = .{
+                .x = @floatFromInt(x),
+                .y = @floatFromInt(y),
+                .map_id = next_map_id.*,
+                .data_id = data_id,
             };
-
-            obj.addToMap(self.allocator, true);
+            obj.addToMap(self.allocator);
         }
-    }
-
-    fn setRegion(self: *MapEditorScreen, x: u32, y: u32, value: u8) void {
-        var tile = &self.map_tile_data[y * self.map_size + x];
-        if (tile.region_type == value)
-            return;
-
-        if (game_data.region_type_to_enum.get(value) == null) {
-            std.log.err("Enum not found for region with type 0x{x}, setting at x={d}, y={d} cancelled", .{ value, x, y });
-            return;
-        }
-
-        tile.region_type = value;
     }
 
     fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_type: enum { place, erase, random }) !void {
-        var places = std.ArrayList(Place).init(self.allocator);
+        var places: std.ArrayListUnmanaged(Place) = .empty;
         const size_sqr = self.brush_size * self.brush_size;
         const sel_type: u16 = if (place_type == .erase) defaultType(self.active_layer) else switch (self.active_layer) {
-            .ground => self.selected_tile,
-            .object => self.selected_object,
-            .region => @intCast(self.selected_region),
+            inline else => |tag| @field(self.selected, @tagName(tag)),
         };
         if (place_type != .erase and sel_type == defaultType(self.active_layer))
             return;
@@ -1305,16 +1452,39 @@ pub const MapEditorScreen = struct {
                     if (place_type == .random and utils.rng.random().float(f32) > self.random_chance)
                         continue;
 
-                    try places.append(.{
+                    try places.append(self.allocator, .{
                         .x = @intCast(x),
                         .y = @intCast(y),
-                        .new_type = sel_type,
-                        .old_type = blk: {
+                        .new_id = sel_type,
+                        .old_id = blk: {
                             const tile = self.map_tile_data[y * self.map_size + x];
                             switch (self.active_layer) {
-                                .ground => break :blk tile.tile_type,
-                                .object => break :blk tile.obj_type,
-                                .region => break :blk @intCast(tile.region_type),
+                                .ground => break :blk tile.ground,
+                                .region => break :blk tile.region,
+                                .entity => break :blk lockBlk: {
+                                    var lock = map.useLockForType(Entity);
+                                    lock.lock();
+                                    defer lock.unlock();
+                                    break :lockBlk if (map.findObjectConst(Entity, tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+                                },
+                                .enemy => break :blk lockBlk: {
+                                    var lock = map.useLockForType(Enemy);
+                                    lock.lock();
+                                    defer lock.unlock();
+                                    break :lockBlk if (map.findObjectConst(Enemy, tile.enemy)) |e| e.data_id else std.math.maxInt(u16);
+                                },
+                                .portal => break :blk lockBlk: {
+                                    var lock = map.useLockForType(Portal);
+                                    lock.lock();
+                                    defer lock.unlock();
+                                    break :lockBlk if (map.findObjectConst(Portal, tile.portal)) |p| p.data_id else std.math.maxInt(u16);
+                                },
+                                .container => break :blk lockBlk: {
+                                    var lock = map.useLockForType(Container);
+                                    lock.lock();
+                                    defer lock.unlock();
+                                    break :lockBlk if (map.findObjectConst(Container, tile.container)) |c| c.data_id else std.math.maxInt(u16);
+                                },
                             }
 
                             break :blk defaultType(self.active_layer);
@@ -1327,9 +1497,9 @@ pub const MapEditorScreen = struct {
 
         if (places.items.len <= 1) {
             if (places.items.len == 1) self.command_queue.addCommand(.{ .place = places.items[0] });
-            places.deinit();
+            places.deinit(self.allocator);
         } else {
-            self.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice() } });
+            self.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice(self.allocator) } });
         }
     }
 
@@ -1345,94 +1515,114 @@ pub const MapEditorScreen = struct {
         return false;
     }
 
-    inline fn defaultType(layer: Layer) u16 {
+    fn defaultType(layer: Layer) u16 {
         return switch (layer) {
-            .ground => 0xFFFE,
-            .object => 0xFFFF,
-            .region => 0xFF,
+            .ground => Square.editor_tile,
+            else => std.math.maxInt(u16),
         };
     }
 
-    inline fn typeAt(layer: Layer, screen: *MapEditorScreen, x: i32, y: i32) u16 {
+    fn typeAt(layer: Layer, screen: *MapEditorScreen, x: u16, y: u16) u16 {
         if (x < 0 or y < 0)
             return defaultType(layer);
 
-        const size: i32 = @intCast(screen.map_size);
-        const tile = screen.map_tile_data[@intCast(y * size + x)];
+        const map_tile = screen.getTile(x, y);
         return switch (layer) {
-            .ground => tile.tile_type,
-            .object => tile.obj_type,
-            .region => @as(u16, tile.region_type),
+            .ground => map_tile.ground,
+            .region => map_tile.region,
+            .enemy => blk: {
+                var lock = map.useLockForType(Enemy);
+                lock.lock();
+                defer lock.unlock();
+                break :blk if (map.findObjectConst(Enemy, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+            },
+            .entity => blk: {
+                var lock = map.useLockForType(Entity);
+                lock.lock();
+                defer lock.unlock();
+                break :blk if (map.findObjectConst(Entity, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+            },
+            .portal => blk: {
+                var lock = map.useLockForType(Portal);
+                lock.lock();
+                defer lock.unlock();
+                break :blk if (map.findObjectConst(Portal, map_tile.entity)) |p| p.data_id else std.math.maxInt(u16);
+            },
+            .container => blk: {
+                var lock = map.useLockForType(Container);
+                lock.lock();
+                defer lock.unlock();
+                break :blk if (map.findObjectConst(Container, map_tile.entity)) |c| c.data_id else std.math.maxInt(u16);
+            },
         };
     }
 
-    inline fn inside(screen: *MapEditorScreen, places: []Place, x: i32, y: i32, layer: Layer, current_type: u16) bool {
-        return !placesContain(places, x, y) and typeAt(layer, screen, x, y) == current_type;
+    fn inside(screen: *MapEditorScreen, places: []Place, x: i32, y: i32, layer: Layer, current_type: u16) bool {
+        return x >= 0 and y >= 0 and x < screen.map_size and y < screen.map_size and
+            !placesContain(places, x, y) and typeAt(layer, screen, @intCast(x), @intCast(y)) == current_type;
     }
 
     fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
         const FillData = struct { x1: i32, x2: i32, y: i32, dy: i32 };
 
-        var places = std.ArrayList(Place).init(screen.allocator);
+        var places: std.ArrayListUnmanaged(Place) = .empty;
 
         const layer = screen.active_layer;
-        const target_type = switch (screen.active_layer) {
-            .ground => screen.selected_tile,
-            .object => screen.selected_object,
-            .region => screen.selected_region,
+        const target_id = switch (screen.active_layer) {
+            inline else => |tag| @field(screen.selected, @tagName(tag)),
         };
 
-        const current_type = typeAt(layer, screen, x, y);
-        if (current_type == target_type or target_type == defaultType(layer))
+        const current_id = typeAt(layer, screen, x, y);
+        if (current_id == target_id or target_id == defaultType(layer))
             return;
 
-        var stack = std.ArrayList(FillData).init(screen.allocator);
-        defer stack.deinit();
+        var stack: std.ArrayListUnmanaged(FillData) = .empty;
+        defer stack.deinit(screen.allocator);
 
-        try stack.append(.{ .x1 = x, .x2 = x, .y = y, .dy = 1 });
-        try stack.append(.{ .x1 = x, .x2 = x, .y = y - 1, .dy = -1 });
+        try stack.append(screen.allocator, .{ .x1 = x, .x2 = x, .y = y, .dy = 1 });
+        try stack.append(screen.allocator, .{ .x1 = x, .x2 = x, .y = y - 1, .dy = -1 });
 
         while (stack.items.len > 0) {
             const pop = stack.pop();
             var px = pop.x1;
 
-            if (inside(screen, places.items, px, pop.y, layer, current_type)) {
-                while (inside(screen, places.items, px - 1, pop.y, layer, current_type)) {
-                    try places.append(.{
+            if (inside(screen, places.items, px, pop.y, layer, current_id)) {
+                while (inside(screen, places.items, px - 1, pop.y, layer, current_id)) {
+                    try places.append(screen.allocator, .{
                         .x = @intCast(px - 1),
                         .y = @intCast(pop.y),
-                        .new_type = target_type,
-                        .old_type = current_type,
+                        .new_id = target_id,
+                        .old_id = current_id,
                         .layer = layer,
                     });
                     px -= 1;
                 }
 
                 if (px < pop.x1)
-                    try stack.append(.{ .x1 = px, .x2 = pop.x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
+                    try stack.append(screen.allocator, .{ .x1 = px, .x2 = pop.x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
             }
 
             var x1 = pop.x1;
             while (x1 <= pop.x2) {
-                while (inside(screen, places.items, x1, pop.y, layer, current_type)) {
-                    try places.append(.{
+                while (inside(screen, places.items, x1, pop.y, layer, current_id)) {
+                    try places.append(screen.allocator, .{
                         .x = @intCast(x1),
                         .y = @intCast(pop.y),
-                        .old_type = current_type,
-                        .new_type = target_type,
+                        .old_id = current_id,
+                        .new_id = target_id,
                         .layer = layer,
                     });
                     x1 += 1;
                 }
 
                 if (x1 > px)
-                    try stack.append(.{ .x1 = px, .x2 = x1 - 1, .y = pop.y + pop.dy, .dy = pop.dy });
+                    try stack.append(screen.allocator, .{ .x1 = px, .x2 = x1 - 1, .y = pop.y + pop.dy, .dy = pop.dy });
 
                 if (x1 - 1 > pop.x2)
-                    try stack.append(.{ .x1 = pop.x2 + 1, .x2 = x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
+                    try stack.append(screen.allocator, .{ .x1 = pop.x2 + 1, .x2 = x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
 
                 x1 += 1;
-                while (x1 < pop.x2 and !inside(screen, places.items, x1, pop.y, layer, current_type))
+                while (x1 < pop.x2 and !inside(screen, places.items, x1, pop.y, layer, current_id))
                     x1 += 1;
                 px = x1;
             }
@@ -1440,9 +1630,9 @@ pub const MapEditorScreen = struct {
 
         if (places.items.len <= 1) {
             if (places.items.len == 1) screen.command_queue.addCommand(.{ .place = places.items[0] });
-            places.deinit();
+            places.deinit(screen.allocator);
         } else {
-            screen.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice() } });
+            screen.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice(screen.allocator) } });
         }
     }
 
@@ -1450,12 +1640,17 @@ pub const MapEditorScreen = struct {
         if (self.map_tile_data.len <= 0)
             return;
 
-        const world_point = camera.screenToWorld(input.mouse_x, input.mouse_y);
+        const world_point = blk: {
+            main.camera.lock.lock();
+            defer main.camera.lock.unlock();
+            break :blk main.camera.screenToWorld(input.mouse_x, input.mouse_y);
+        };
         const size: f32 = @floatFromInt(self.map_size - 1);
         const x = @floor(@max(0, @min(world_point.x, size)));
         const y = @floor(@max(0, @min(world_point.y, size)));
-        const int_x: u16 = @intFromFloat(x);
-        const int_y: u16 = @intFromFloat(y);
+        const ux: u16 = @intFromFloat(x);
+        const uy: u16 = @intFromFloat(y);
+        const map_tile = self.getTile(ux, uy);
 
         switch (self.action) {
             .place => try place(self, x, y, .place),
@@ -1464,11 +1659,34 @@ pub const MapEditorScreen = struct {
             .undo => self.command_queue.undo(),
             .redo => self.command_queue.redo(),
             .sample => switch (self.active_layer) {
-                .ground => self.selected_tile = self.map_tile_data[int_y * self.map_size + int_x].tile_type,
-                .object => self.selected_object = self.map_tile_data[int_y * self.map_size + int_x].obj_type,
-                .region => self.selected_region = self.map_tile_data[int_y * self.map_size + int_x].region_type,
+                .ground => self.selected.ground = map_tile.ground,
+                .region => self.selected.region = map_tile.region,
+                .enemy => self.selected.enemy = blk: {
+                    var lock = map.useLockForType(Enemy);
+                    lock.lock();
+                    defer lock.unlock();
+                    break :blk if (map.findObjectConst(Enemy, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+                },
+                .entity => self.selected.entity = blk: {
+                    var lock = map.useLockForType(Entity);
+                    lock.lock();
+                    defer lock.unlock();
+                    break :blk if (map.findObjectConst(Entity, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+                },
+                .portal => self.selected.portal = blk: {
+                    var lock = map.useLockForType(Portal);
+                    lock.lock();
+                    defer lock.unlock();
+                    break :blk if (map.findObjectConst(Portal, map_tile.entity)) |p| p.data_id else std.math.maxInt(u16);
+                },
+                .container => self.selected.container = blk: {
+                    var lock = map.useLockForType(Container);
+                    lock.lock();
+                    defer lock.unlock();
+                    break :blk if (map.findObjectConst(Container, map_tile.entity)) |c| c.data_id else std.math.maxInt(u16);
+                },
             },
-            .fill => try fill(self, int_x, int_y),
+            .fill => try fill(self, ux, uy),
             .none => {},
         }
     }
@@ -1478,7 +1696,7 @@ pub const MapEditorScreen = struct {
             return;
 
         self.fps_text.text_data.setText(
-            try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, "FPS: {d}\nMemory: {d:.1} MB", .{ fps, mem }),
+            try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, "FPS: {}\nMemory: {d:.1} MB", .{ fps, mem }),
             self.allocator,
         );
     }

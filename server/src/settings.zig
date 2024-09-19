@@ -4,5 +4,5 @@ pub const redis_ip = "127.0.0.1";
 pub const redis_port = 6379;
 pub const public_ip = "127.0.0.1";
 pub const server_name = "Eclipse";
-pub const build_version = "0.5";
+pub const build_version = "1.0";
 pub const tps = 30;

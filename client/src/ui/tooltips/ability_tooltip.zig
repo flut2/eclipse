@@ -1,7 +1,6 @@
 const std = @import("std");
 const element = @import("../element.zig");
 const assets = @import("../../assets.zig");
-const camera = @import("../../camera.zig");
 const game_data = @import("shared").game_data;
 const map = @import("../../game/map.zig");
 const tooltip = @import("tooltip.zig");
@@ -113,8 +112,8 @@ pub const AbilityTooltip = struct {
                     .{params.props.cooldown},
                 ) catch self.subtext.text_data.text;
             } else {
-                const mana_icon = comptime game_data.StatType.max_mp.toControlCode();
-                const health_icon = comptime game_data.StatType.max_hp.toControlCode();
+                const mana_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_mp = undefined });
+                const health_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_hp = undefined });
                 const gold_icon = "&img=\"misc,0x14\"";
 
                 if (has_health_cost and has_mana_cost) {

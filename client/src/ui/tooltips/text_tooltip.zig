@@ -1,7 +1,6 @@
 const std = @import("std");
 const element = @import("../element.zig");
 const assets = @import("../../assets.zig");
-const camera = @import("../../camera.zig");
 const game_data = @import("shared").game_data;
 const map = @import("../../game/map.zig");
 const tooltip = @import("tooltip.zig");
@@ -29,19 +28,19 @@ pub const TextTooltip = struct {
         self.decor = try self.root.createChild(element.Image{
             .x = 0,
             .y = 0,
-            .image_data = .{
-                .nine_slice = NineSlice.fromAtlasData(tooltip_background_data, 0, 0, 34, 34, 1, 1, 1.0),
-            },
+            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(tooltip_background_data, 0, 0, 34, 34, 1, 1, 1.0) },
         });
 
         self.text = try self.root.createChild(element.Text{
             .x = 16,
             .y = 16,
-            .text_data = .{
-                .text = "",
-                .size = 0,
-            },
+            .text_data = .{ .text = "", .size = 0 },
         });
+
+        self.text.text_data.lock.lock();
+        defer self.text.text_data.lock.unlock();
+
+        self.text.text_data.recalculateAttributes(self.allocator);
     }
 
     pub fn deinit(self: *TextTooltip) void {
@@ -49,9 +48,13 @@ pub const TextTooltip = struct {
     }
 
     pub fn update(self: *TextTooltip, params: tooltip.ParamsFor(TextTooltip)) void {
-        inline for (std.meta.fields(element.TextData)) |field| {
-            if (field.name.len > 0 and field.name[0] != '_')
-                @field(self.text.text_data, field.name) = @field(params.text_data, field.name);
+        inline for (@typeInfo(element.TextData).@"struct".fields) |field| {
+            comptime if (std.mem.eql(u8, field.name, "backing_buffer") or
+                std.mem.eql(u8, field.name, "line_widths") or
+                std.mem.eql(u8, field.name, "break_indices") or
+                std.mem.eql(u8, field.name, "lock")) continue;
+
+            @field(self.text.text_data, field.name) = @field(params.text_data, field.name);
         }
 
         {

@@ -1,5 +1,5 @@
-pub const version = @import("std").SemanticVersion{ .major = 0, .minor = 9, .patch = 3 };
 const std = @import("std");
+const testing = std.testing;
 const assert = std.debug.assert;
 
 pub fn init(allocator: std.mem.Allocator) void {
@@ -21,9 +21,6 @@ pub fn init(allocator: std.mem.Allocator) void {
 }
 
 pub fn deinit() void {
-    assert(mem_allocator != null);
-    // assert(mem_allocations.?.count() == 0);
-
     setFlipVerticallyOnLoad(false);
     setFlipVerticallyOnWrite(false);
 
@@ -96,7 +93,7 @@ pub const Image = struct {
                 @as(c_int, @intCast(forced_num_components)),
             );
             if (ptr == null) {
-                std.log.err("Image parsing error for path {s}: {s}", .{ pathname, stbi_failure_reason() });
+                std.log.err("Loading path \"{s}\" failed", .{pathname});
                 return error.ImageInitFailed;
             }
 
@@ -134,7 +131,7 @@ pub const Image = struct {
                 @as(c_int, @intCast(forced_num_components)),
             );
             if (ptr == null) {
-                std.log.err("Image parsing error for path {s}: {s}", .{ pathname, stbi_failure_reason() });
+                std.log.err("Loading path \"{s}\" failed", .{pathname});
                 return error.ImageInitFailed;
             }
 
@@ -181,10 +178,7 @@ pub const Image = struct {
                 &ch,
                 @as(c_int, @intCast(forced_num_components)),
             );
-            if (ptr == null) {
-                std.log.err("Image parsing error: {s}", .{stbi_failure_reason()});
-                return error.ImageInitFailed;
-            }
+            if (ptr == null) return error.ImageInitFailed;
 
             num_components = if (forced_num_components == 0) @as(u32, @intCast(ch)) else forced_num_components;
             width = @as(u32, @intCast(x));
@@ -213,10 +207,7 @@ pub const Image = struct {
                 &ch,
                 @as(c_int, @intCast(forced_num_components)),
             );
-            if (ptr == null) {
-                std.log.err("Image parsing error: {s}", .{stbi_failure_reason()});
-                return error.ImageInitFailed;
-            }
+            if (ptr == null) return error.ImageInitFailed;
 
             num_components = if (forced_num_components == 0) @as(u32, @intCast(ch)) else forced_num_components;
             width = @as(u32, @intCast(x));
@@ -507,8 +498,6 @@ pub extern fn stbi_loadf_from_memory(
     desired_channels: c_int,
 ) ?[*]f32;
 
-extern fn stbi_failure_reason() [*c]u8;
-
 extern fn stbi_image_free(image_data: ?[*]u8) void;
 
 extern fn stbi_hdr_to_ldr_scale(scale: f32) void;
@@ -543,6 +532,7 @@ extern fn stbi_write_jpg(
     data: [*]const u8,
     quality: c_int,
 ) c_int;
+
 extern fn stbi_write_png(
     filename: [*:0]const u8,
     w: c_int,
@@ -572,10 +562,61 @@ extern fn stbi_write_jpg_to_func(
     quality: c_int,
 ) c_int;
 
-test "zstbi.basic" {
-    init(std.testing.allocator);
+test "zstbi basic" {
+    init(testing.allocator);
     defer deinit();
 
-    var image = try Image.createEmpty(64, 64, 4, .{});
-    defer image.deinit();
+    var im1 = try Image.createEmpty(8, 6, 4, .{});
+    defer im1.deinit();
+
+    try testing.expect(im1.width == 8);
+    try testing.expect(im1.height == 6);
+    try testing.expect(im1.num_components == 4);
+}
+
+test "zstbi resize" {
+    init(testing.allocator);
+    defer deinit();
+
+    var im1 = try Image.createEmpty(32, 32, 4, .{});
+    defer im1.deinit();
+
+    var im2 = im1.resize(8, 6);
+    defer im2.deinit();
+
+    try testing.expect(im2.width == 8);
+    try testing.expect(im2.height == 6);
+    try testing.expect(im2.num_components == 4);
+}
+
+test "zstbi write and load file" {
+    init(testing.allocator);
+    defer deinit();
+
+    const pth = try std.fs.selfExeDirPathAlloc(testing.allocator);
+    defer testing.allocator.free(pth);
+    try std.posix.chdir(pth);
+
+    var img = try Image.createEmpty(8, 6, 4, .{});
+    defer img.deinit();
+
+    try img.writeToFile("test_img.png", ImageWriteFormat.png);
+    try img.writeToFile("test_img.jpg", .{ .jpg = .{ .quality = 80 } });
+
+    var img_png = try Image.loadFromFile("test_img.png", 0);
+    defer img_png.deinit();
+
+    try testing.expect(img_png.width == img.width);
+    try testing.expect(img_png.height == img.height);
+    try testing.expect(img_png.num_components == img.num_components);
+
+    var img_jpg = try Image.loadFromFile("test_img.jpg", 0);
+    defer img_jpg.deinit();
+
+    try testing.expect(img_jpg.width == img.width);
+    try testing.expect(img_jpg.height == img.height);
+    try testing.expect(img_jpg.num_components == 3); // RGB JPEG
+
+    try std.fs.cwd().deleteFile("test_img.png");
+    try std.fs.cwd().deleteFile("test_img.jpg");
 }

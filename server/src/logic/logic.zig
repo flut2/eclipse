@@ -1,48 +1,75 @@
 const std = @import("std");
-const game_data = @import("shared").game_data;
-const utils = @import("shared").utils;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const network_data = shared.network_data;
+const utils = shared.utils;
 
+const Player = @import("../map/player.zig").Player;
 const Projectile = @import("../map/projectile.zig").Projectile;
 const Enemy = @import("../map/enemy.zig").Enemy;
+const Entity = @import("../map/entity.zig").Entity;
 
-pub const Storages = struct {
-    heal: std.AutoHashMapUnmanaged(u64, HealStorage) = .{},
-    charge: std.AutoHashMapUnmanaged(u64, ChargeStorage) = .{},
-    aoe: std.AutoHashMapUnmanaged(u64, AoeStorage) = .{},
-    follow: std.AutoHashMapUnmanaged(u64, FollowStorage) = .{},
-    wander: std.AutoHashMapUnmanaged(u64, WanderStorage) = .{},
-    shoot: std.AutoHashMapUnmanaged(u64, ShootStorage) = .{},
+pub const EnemyStorages = struct {
+    heal: std.AutoHashMapUnmanaged(u64, HealStorage) = .empty,
+    charge: std.AutoHashMapUnmanaged(u64, ChargeStorage) = .empty,
+    aoe: std.AutoHashMapUnmanaged(u64, AoeStorage) = .empty,
+    follow: std.AutoHashMapUnmanaged(u64, FollowStorage) = .empty,
+    wander: std.AutoHashMapUnmanaged(u64, WanderStorage) = .empty,
+    shoot: std.AutoHashMapUnmanaged(u64, ShootStorage) = .empty,
 
-    pub fn clear(self: *Storages) void {
-        inline for (@typeInfo(@TypeOf(self.*)).Struct.fields) |field| {
+    pub fn clear(self: *EnemyStorages) void {
+        inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
             @field(self.*, field.name).clearRetainingCapacity();
         }
     }
 
-    pub fn deinit(self: *Storages) void {
-        inline for (@typeInfo(@TypeOf(self.*)).Struct.fields) |field| {
+    pub fn deinit(self: *EnemyStorages) void {
+        inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
             @field(self.*, field.name).deinit(allocator);
         }
     }
 };
 
-var allocator: std.mem.Allocator = undefined;
-pub fn init(ally: std.mem.Allocator) void {
-    allocator = ally;
+pub const EntityStorages = struct {
+    heal: std.AutoHashMapUnmanaged(u64, HealStorage) = .empty,
+    aoe: std.AutoHashMapUnmanaged(u64, AoeStorage) = .empty,
+
+    pub fn clear(self: *EntityStorages) void {
+        inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
+            @field(self.*, field.name).clearRetainingCapacity();
+        }
+    }
+
+    pub fn deinit(self: *EntityStorages) void {
+        inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
+            @field(self.*, field.name).deinit(allocator);
+        }
+    }
+};
+
+pub var allocator: std.mem.Allocator = undefined;
+
+fn getStorageId(comptime src_loc: std.builtin.SourceLocation) u64 {
+    return @as(u64, std.hash.XxHash32.hash(0, src_loc.file)) << 32 | @as(u64, @intCast(src_loc.line));
 }
 
-pub inline fn getStorageId(comptime type_id: u32, call_id: u32) u64 {
-    return @as(u64, type_id) << 32 | @as(u64, @intCast(call_id));
+fn verifyType(comptime T: type) void {
+    const type_info = @typeInfo(T);
+    if (type_info != .pointer or type_info.pointer.child != Enemy and type_info.pointer.child != Entity)
+        @compileError("Invalid type given");
 }
 
 const HealStorage = struct { time: i64 = 0 };
-pub inline fn heal(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct {
+pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64, opts: struct {
     range: f32,
     amount: i32,
     target_name: []const u8,
     cooldown: i64,
 }) bool {
-    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    const T = @TypeOf(host);
+    verifyType(T);
+
+    const storage_id = getStorageId(src_loc);
     var storage = host.storages.heal.getPtr(storage_id) orelse blk: {
         host.storages.heal.put(allocator, storage_id, .{}) catch return false;
         break :blk host.storages.heal.getPtr(storage_id).?;
@@ -52,10 +79,10 @@ pub inline fn heal(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct {
         return false;
     defer storage.time = opts.cooldown;
 
-    for (host.world.enemies.items) |*e| {
+    for (host.world.listForType(Enemy).items) |*e| {
         const dx = e.x - host.x;
         const dy = e.y - host.y;
-        if (std.mem.eql(u8, e.props.display_id, opts.target_name) and dx * dx + dy * dy <= opts.range * opts.range) {
+        if (std.mem.eql(u8, e.data.name, opts.target_name) and dx * dx + dy * dy <= opts.range * opts.range) {
             const pre_hp = e.hp;
             e.hp = @min(e.max_hp, e.hp + opts.amount);
             const hp_delta = e.hp - pre_hp;
@@ -63,20 +90,21 @@ pub inline fn heal(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct {
                 return false;
 
             var buf: [64]u8 = undefined;
-            const msg = std.fmt.bufPrint(&buf, "+{d}", .{hp_delta}) catch return false;
+            const msg = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return false;
 
-            host.world.player_lock.lock();
-            defer host.world.player_lock.unlock();
-            for (host.world.players.items) |p| {
+            const obj_type: network_data.ObjectType = if (@TypeOf(host.*) == Enemy) .enemy else .entity;
+            for (host.world.listForType(Player).items) |p| {
                 p.client.queuePacket(.{ .notification = .{
-                    .obj_id = e.obj_id,
+                    .obj_type = obj_type,
+                    .map_id = e.map_id,
                     .message = msg,
                     .color = 0x00FF00,
                 } });
 
                 p.client.queuePacket(.{ .show_effect = .{
                     .eff_type = .trail,
-                    .obj_id = host.obj_id,
+                    .obj_type = obj_type,
+                    .map_id = host.map_id,
                     .x1 = e.x,
                     .y1 = e.y,
                     .x2 = 0,
@@ -93,12 +121,12 @@ pub inline fn heal(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct {
 }
 
 const ChargeStorage = struct { target_x: f32 = std.math.nan(f32), target_y: f32 = std.math.nan(f32), time: i64 = 0 };
-pub inline fn charge(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct {
+pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i64, opts: struct {
     speed: f32,
     range: f32,
     cooldown: i64,
 }) bool {
-    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    const storage_id = getStorageId(src_loc);
     var storage = host.storages.charge.getPtr(storage_id) orelse blk: {
         host.storages.charge.put(allocator, storage_id, .{}) catch return false;
         break :blk host.storages.charge.getPtr(storage_id).?;
@@ -120,9 +148,6 @@ pub inline fn charge(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct 
         if (storage.time > 0)
             return false;
 
-        host.world.player_lock.lock();
-        defer host.world.player_lock.unlock();
-
         if (host.world.getNearestPlayerWithin(host.x, host.y, opts.range * opts.range)) |p| {
             const dx = host.x - p.x;
             const dy = host.y - p.y;
@@ -135,7 +160,7 @@ pub inline fn charge(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct 
     }
 }
 
-pub inline fn orbit(host: *Enemy, dt: i64, opts: struct {
+pub fn orbit(host: *Enemy, dt: i64, opts: struct {
     speed: f32,
     radius: f32,
     acquire_range: f32,
@@ -143,10 +168,10 @@ pub inline fn orbit(host: *Enemy, dt: i64, opts: struct {
     rotate_speed: f32 = 1.0,
 }) bool {
     const acq_sqr = opts.acquire_range * opts.acquire_range;
-    for (host.world.enemies.items) |*e| {
+    for (host.world.listForType(Enemy).items) |*e| {
         const dx = host.x - e.x;
         const dy = host.y - e.y;
-        if (std.mem.eql(u8, opts.target_name, e.props.display_id) and
+        if (std.mem.eql(u8, opts.target_name, e.data.name) and
             dx * dx + dy * dy <= acq_sqr)
         {
             const angle = std.math.atan2(dy, dx) + @mod(@as(f32, @floatFromInt(dt)) / std.time.us_per_s * opts.rotate_speed, std.math.tau);
@@ -159,17 +184,19 @@ pub inline fn orbit(host: *Enemy, dt: i64, opts: struct {
 }
 
 const AoeStorage = struct { time: i64 = 0 };
-pub inline fn aoe(comptime call_id: u32, host: *Enemy, time: i64, dt: i64, opts: struct {
+pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64, opts: struct {
     radius: f32,
     phys_dmg: i32 = 0,
     magic_dmg: i32 = 0,
     true_dmg: i32 = 0,
-    effect: utils.ConditionEnum = .unknown,
+    effect: ?utils.ConditionEnum = null,
     effect_duration: i64 = 1 * std.time.us_per_s,
     cooldown: i64 = 1 * std.time.us_per_s,
     color: u32 = 0xFFFFFF,
 }) void {
-    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    verifyType(@TypeOf(host));
+
+    const storage_id = getStorageId(src_loc);
     var storage = host.storages.aoe.getPtr(storage_id) orelse blk: {
         host.storages.aoe.put(allocator, storage_id, .{}) catch return;
         break :blk host.storages.aoe.getPtr(storage_id).?;
@@ -180,10 +207,7 @@ pub inline fn aoe(comptime call_id: u32, host: *Enemy, time: i64, dt: i64, opts:
         return;
     defer storage.time = opts.cooldown;
 
-    host.world.player_lock.lock();
-    defer host.world.player_lock.unlock();
-
-    host.world.aoePlayer(time, host.x, host.y, host.props.display_id, opts.radius, .{
+    host.world.aoePlayer(host.x, host.y, host.data.name, opts.radius, .{
         .phys_dmg = opts.phys_dmg,
         .magic_dmg = opts.magic_dmg,
         .true_dmg = opts.true_dmg,
@@ -194,13 +218,13 @@ pub inline fn aoe(comptime call_id: u32, host: *Enemy, time: i64, dt: i64, opts:
 }
 
 const FollowStorage = struct { time: i64 = 0 };
-pub inline fn follow(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct {
+pub fn follow(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i64, opts: struct {
     speed: f32,
     acquire_range: f32,
     range: f32,
     cooldown: i64,
 }) bool {
-    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    const storage_id = getStorageId(src_loc);
     var storage = host.storages.follow.getPtr(storage_id) orelse blk: {
         host.storages.follow.put(allocator, storage_id, .{}) catch return false;
         break :blk host.storages.follow.getPtr(storage_id).?;
@@ -214,17 +238,14 @@ pub inline fn follow(comptime call_id: u32, host: *Enemy, dt: i64, opts: struct 
     const acq_sqr = opts.acquire_range * opts.acquire_range;
     const range_sqr = opts.range * opts.range;
 
-    host.world.player_lock.lock();
-    defer host.world.player_lock.unlock();
-
     const target = host.world.getNearestPlayerWithinRing(host.x, host.y, acq_sqr, range_sqr) orelse return false;
     host.moveToward(target.x, target.y, range_sqr, opts.speed, dt);
     return true;
 }
 
 const WanderStorage = struct { move_cos: f32 = 0.0, move_sin: f32 = 0.0, rem_dist: f32 = 0.0 };
-pub inline fn wander(comptime call_id: u32, host: *Enemy, dt: i64, speed: f32) void {
-    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+pub fn wander(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i64, speed: f32) void {
+    const storage_id = getStorageId(src_loc);
     var storage = host.storages.wander.getPtr(storage_id) orelse blk: {
         host.storages.wander.put(allocator, storage_id, .{}) catch return;
         break :blk host.storages.wander.getPtr(storage_id).?;
@@ -244,7 +265,7 @@ pub inline fn wander(comptime call_id: u32, host: *Enemy, dt: i64, speed: f32) v
 }
 
 const ShootStorage = struct { cooldown: i64 = -1, rotate_count: f32 = 0.0 };
-pub inline fn shoot(comptime call_id: u32, host: *Enemy, time: i64, dt: i64, opts: struct {
+pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i64, dt: i64, opts: struct {
     proj_index: u8,
     shoot_angle: f32,
     angle_offset: f32 = 0.0,
@@ -256,7 +277,7 @@ pub inline fn shoot(comptime call_id: u32, host: *Enemy, time: i64, dt: i64, opt
     fixed_angle: f32 = std.math.nan(f32),
     rotate_angle: f32 = std.math.nan(f32),
 }) void {
-    const storage_id = getStorageId(utils.typeId(@This()), call_id);
+    const storage_id = getStorageId(src_loc);
     var storage = host.storages.shoot.getPtr(storage_id) orelse blk: {
         host.storages.shoot.put(allocator, storage_id, .{}) catch return;
         break :blk host.storages.shoot.getPtr(storage_id).?;
@@ -272,77 +293,68 @@ pub inline fn shoot(comptime call_id: u32, host: *Enemy, time: i64, dt: i64, opt
 
     var angle: f32 = 0.0;
     if (std.math.isNan(opts.fixed_angle)) {
-        {
-            host.world.player_lock.lock();
-            defer host.world.player_lock.unlock();
-            if (host.world.getNearestPlayerWithin(host.x, host.y, radius_sqr)) |p| {
-                angle = if (opts.predictivity > 0 and opts.predictivity > utils.rng.random().float(f32))
-                    0.0 // predict(host, p)
-                else
-                    std.math.atan2(p.y - host.y, p.x - host.x);
-            }
+        if (host.world.getNearestPlayerWithin(host.x, host.y, radius_sqr)) |p| {
+            angle = if (opts.predictivity > 0 and opts.predictivity > utils.rng.random().float(f32))
+                0.0 // predict(host, p)
+            else
+                std.math.atan2(p.y - host.y, p.x - host.x);
         }
 
         if (!std.math.isNan(opts.default_angle))
-            angle = std.math.degreesToRadians(f32, opts.default_angle);
-    } else angle = std.math.degreesToRadians(f32, opts.fixed_angle);
+            angle = std.math.degreesToRadians(opts.default_angle);
+    } else angle = std.math.degreesToRadians(opts.fixed_angle);
 
-    angle += std.math.degreesToRadians(f32, opts.angle_offset) + if (!std.math.isNan(opts.rotate_angle))
-        std.math.degreesToRadians(f32, opts.rotate_angle) * storage.rotate_count
+    angle += std.math.degreesToRadians(opts.angle_offset) + if (!std.math.isNan(opts.rotate_angle))
+        std.math.degreesToRadians(opts.rotate_angle) * storage.rotate_count
     else
         0.0;
     storage.rotate_count += 1.0;
 
-    const shoot_angle_deg = std.math.degreesToRadians(f32, opts.shoot_angle);
+    const shoot_angle_deg = std.math.degreesToRadians(opts.shoot_angle);
     const fcount: f32 = @floatFromInt(opts.count);
     const start_angle = angle - shoot_angle_deg * (fcount - 1.0) / 2.0;
-    const bullet_id_start = host.next_bullet_id;
-    const proj_props = host.props.projectiles[opts.proj_index];
+    const proj_index_start = host.next_proj_index;
+    const proj_data = host.data.projectiles.?[opts.proj_index];
 
     for (0..opts.count) |i| {
         const fi: f32 = @floatFromInt(i);
 
         var proj: Projectile = .{
-            .owner_id = host.obj_id,
+            .owner_obj_type = .enemy,
+            .owner_map_id = host.map_id,
             .x = host.x,
             .y = host.y,
             .angle = start_angle + fi * shoot_angle_deg,
             .start_time = time,
-            .phys_dmg = proj_props.physical_damage,
-            .magic_dmg = proj_props.magic_damage,
-            .true_dmg = proj_props.true_damage,
-            .bullet_id = host.next_bullet_id,
-            .props = &proj_props,
+            .phys_dmg = proj_data.phys_dmg,
+            .magic_dmg = proj_data.magic_dmg,
+            .true_dmg = proj_data.true_dmg,
+            .index = host.next_proj_index,
+            .data = &host.data.projectiles.?[opts.proj_index],
         };
 
-        {
-            host.world.proj_lock.lock();
-            defer host.world.proj_lock.unlock();
-            _ = host.world.add(Projectile, &proj) catch return;
-        }
+        _ = host.world.addExisting(Projectile, &proj) catch return;
 
-        host.bullets[host.next_bullet_id] = proj.obj_id;
-        host.next_bullet_id +%= 1;
+        host.projectiles[host.next_proj_index] = proj.map_id;
+        host.next_proj_index +%= 1;
     }
 
-    host.world.player_lock.lock();
-    defer host.world.player_lock.unlock();
-    for (host.world.players.items) |p| {
+    for (host.world.listForType(Player).items) |p| {
         const dx = p.x - host.x;
         const dy = p.y - host.y;
         if (dx * dx + dy * dy <= 20 * 20) {
-            p.client.queuePacket(.{ .enemy_shoot = .{
-                .bullet_id = bullet_id_start,
-                .owner_id = host.obj_id,
-                .bullet_index = opts.proj_index,
+            p.client.queuePacket(.{ .enemy_projectile = .{
+                .proj_index = proj_index_start,
+                .enemy_map_id = host.map_id,
+                .proj_data_id = opts.proj_index,
                 .x = host.x,
                 .y = host.y,
                 .angle = start_angle,
-                .phys_dmg = @intCast(proj_props.physical_damage),
-                .magic_dmg = @intCast(proj_props.magic_damage),
-                .true_dmg = @intCast(proj_props.true_damage),
-                .num_shots = opts.count,
-                .angle_inc = shoot_angle_deg,
+                .phys_dmg = proj_data.phys_dmg,
+                .magic_dmg = proj_data.magic_dmg,
+                .true_dmg = proj_data.true_dmg,
+                .num_projs = opts.count,
+                .angle_incr = shoot_angle_deg,
             } });
         }
     }

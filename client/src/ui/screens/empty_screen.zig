@@ -11,6 +11,8 @@ pub const EmptyScreen = struct {
     }
 
     pub fn deinit(self: *EmptyScreen) void {
+        self.inited = false;
+
         self.allocator.destroy(self);
     }
 

@@ -1,92 +1,77 @@
 const std = @import("std");
-const game_data = @import("shared").game_data;
-const utils = @import("shared").utils;
+const shared = @import("shared");
+const network_data = shared.network_data;
+const game_data = shared.game_data;
+const utils = shared.utils;
 const stat_util = @import("stat_util.zig");
 const behavior_logic = @import("../logic/logic.zig");
 const behavior = @import("../logic/behavior.zig");
 const main = @import("../main.zig");
 
-const Behavior = behavior.Behavior;
 const World = @import("../world.zig").World;
+const Player = @import("player.zig").Player;
 
 pub const Enemy = struct {
-    obj_id: i32 = -1,
+    map_id: u32 = std.math.maxInt(u32),
+    data_id: u16 = std.math.maxInt(u16),
     x: f32 = 0.0,
     y: f32 = 0.0,
-    en_type: u16 = 0xFFFF,
     max_hp: i32 = 100,
     hp: i32 = 100,
-    next_bullet_id: u8 = 0,
-    bullets: [256]?i32 = [_]?i32{null} ** 256,
+    size_mult: f32 = 1.0,
+    name: ?[]const u8 = null,
+    next_proj_index: u8 = 0,
+    projectiles: [256]?u32 = [_]?u32{null} ** 256,
     stats_writer: utils.PacketWriter = .{},
     condition: utils.Condition = .{},
-    props: *const game_data.ObjProps = undefined,
-    behavior: ?*Behavior = null,
+    damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
+    data: *const game_data.EnemyData = undefined,
+    behavior: ?behavior.EnemyBehavior = null,
     world: *World = undefined,
     spawned: bool = false,
-    storages: behavior_logic.Storages = .{},
+    storages: behavior_logic.EnemyStorages = .{},
 
     pub fn init(self: *Enemy, allocator: std.mem.Allocator) !void {
-        if (behavior.behavior_map.get(self.en_type)) |behav| {
-            self.behavior = try allocator.create(Behavior);
-            self.behavior.?.* = behav;
-            switch (self.behavior.?.*) {
-                inline else => |*b| {
-                    const T = @TypeOf(b.*);
-                    if (std.meta.hasFn(T, "spawn")) try b.spawn(self);
-                    if (std.meta.hasFn(T, "entry")) try b.entry(self);
-                },
-            }
+        self.behavior = behavior.enemy_behavior_map.get(self.data_id);
+        if (self.behavior) |behav| {
+            if (behav.spawn) |spawn| try spawn(self);
+            if (behav.entry) |entry| try entry(self);
         }
 
-        self.stats_writer.buffer = try allocator.alloc(u8, 32);
+        self.stats_writer.list = try .initCapacity(allocator, 32);
 
-        self.props = game_data.obj_type_to_props.getPtr(self.en_type) orelse {
-            std.log.err("Could not find props for enemy with type 0x{x}", .{self.en_type});
+        self.data = game_data.enemy.from_id.getPtr(self.data_id) orelse {
+            std.log.err("Could not find data for enemy with data id {}", .{self.data_id});
             return;
         };
-        self.hp = self.props.health;
-        self.max_hp = self.props.health;
+        self.hp = @intCast(self.data.health);
+        self.max_hp = @intCast(self.data.health);
     }
 
     pub fn deinit(self: *Enemy) !void {
         const allocator = self.world.allocator;
 
         if (self.behavior) |behav| {
-            switch (behav.*) {
-                inline else => |*b| {
-                    const T = @TypeOf(b.*);
-                    if (std.meta.hasFn(T, "death")) try b.death(self);
-                    if (std.meta.hasFn(T, "exit")) try b.exit(self);
-                },
-            }
-
-            allocator.destroy(behav);
+            if (behav.death) |death| try death(self);
+            if (behav.exit) |exit| try exit(self);
         }
 
         self.storages.deinit();
-        allocator.free(self.stats_writer.buffer);
-    }
-
-    pub fn switchBehavior(self: *Enemy, comptime TargetBehavior: type) !void {
-        const behav = behavior.fromType(TargetBehavior);
-        if (self.behavior) |old_behav| {
-            switch (old_behav.*) {
-                inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "exit")) try b.exit(self),
-            }
-            self.storages.clear();
-        } else self.behavior = try self.world.allocator.create(Behavior);
-
-        self.behavior.?.* = behav;
-        switch (self.behavior.?.*) {
-            inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "entry")) try b.entry(self),
-        }
+        self.damages_dealt.deinit(allocator);
+        self.stats_writer.list.deinit(allocator);
     }
 
     pub fn move(self: *Enemy, x: f32, y: f32) void {
+        if (x < 0.0 or y < 0.0)
+            return;
+
         const ux: u32 = @intFromFloat(x);
         const uy: u32 = @intFromFloat(y);
-        if (!self.world.tiles[uy * self.world.w + ux].occupied) {
+        if (ux >= self.world.w or uy >= self.world.h)
+            return;
+
+        const tile = self.world.tiles[uy * self.world.w + ux];
+        if (tile.data_id != std.math.maxInt(u16) and !tile.data.no_walk and !tile.occupied) {
             self.x = x;
             self.y = y;
         }
@@ -97,39 +82,41 @@ pub const Enemy = struct {
     }
 
     pub fn tick(self: *Enemy, time: i64, dt: i64) !void {
-        if (!self.props.damage_immune and self.hp <= 0) try self.delete();
-        if (self.behavior) |behav| {
-            switch (behav.*) {
-                inline else => |*b| {
-                    if (std.meta.hasFn(@TypeOf(b.*), "tick"))
-                        try b.tick(self, time, dt);
-                },
-            }
-        }
+        if (self.data.health > 0 and self.hp <= 0) try self.delete();
+        if (self.behavior) |behav| if (behav.tick) |behav_tick| try behav_tick(self, time, dt);
     }
 
-    pub fn damage(self: *Enemy, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
-        if (self.props.damage_immune)
+    pub fn damage(self: *Enemy, owner_id: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
+        if (self.data.health == 0)
             return;
 
-        self.hp -= phys_dmg - self.props.defense;
-        self.hp -= magic_dmg - self.props.resistance;
-        self.hp -= true_dmg;
-        if (self.hp <= 0) self.delete() catch return;
+        const dmg = game_data.physDamage(phys_dmg, self.data.defense, self.condition) + 
+            game_data.magicDamage(magic_dmg, self.data.resistance, self.condition) + 
+            true_dmg;
+        self.hp -= dmg;
+        if (self.hp <= 0) {
+            self.delete() catch return;
+            return;
+        }
+
+        const res = self.damages_dealt.getOrPut(self.world.allocator, owner_id) catch return;
+        if (res.found_existing) res.value_ptr.* += dmg else res.value_ptr.* = dmg;
     }
 
-    pub fn exportStats(self: *Enemy, stat_cache: *std.EnumArray(game_data.StatType, ?stat_util.StatValue)) ![]u8 {
-        var writer = &self.stats_writer;
-        writer.index = 0;
+    pub fn exportStats(self: *Enemy, cache: *[@typeInfo(network_data.EnemyStat).@"union".fields.len]?network_data.EnemyStat) ![]u8 {
+        const writer = &self.stats_writer;
+        writer.list.clearRetainingCapacity();
 
         const allocator = self.world.allocator;
-        stat_util.write(writer, stat_cache, allocator, .x, self.x);
-        stat_util.write(writer, stat_cache, allocator, .y, self.y);
-        stat_util.write(writer, stat_cache, allocator, .max_hp, self.max_hp);
-        stat_util.write(writer, stat_cache, allocator, .hp, self.hp);
-        stat_util.write(writer, stat_cache, allocator, .condition, self.condition);
+        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .x = self.x });
+        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .y = self.y });
+        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .size_mult = self.size_mult });
+        if (self.name) |name| stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .name = name });
+        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .hp = self.hp });
+        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .max_hp = self.max_hp });
+        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .condition = self.condition });
 
-        return writer.buffer[0..writer.index];
+        return writer.list.items;
     }
 
     // Move toward or onto, but not through. Don't move if too close

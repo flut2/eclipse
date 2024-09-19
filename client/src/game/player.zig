@@ -1,44 +1,55 @@
 const std = @import("std");
 const element = @import("../ui/element.zig");
-const utils = @import("shared").utils;
-const game_data = @import("shared").game_data;
+const shared = @import("shared");
+const utils = shared.utils;
+const game_data = shared.game_data;
 const assets = @import("../assets.zig");
 const map = @import("map.zig");
-const rpc = @import("rpc");
 const main = @import("../main.zig");
 const input = @import("../input.zig");
 const network = @import("../network.zig");
-const camera = @import("../camera.zig");
 const particles = @import("particles.zig");
-const systems = @import("../ui/systems.zig");
+const ui_systems = @import("../ui/systems.zig");
+const base = @import("object_base.zig");
+const render = @import("../render.zig");
+const Camera = @import("../Camera.zig");
+const px_per_tile = Camera.px_per_tile;
+const size_mult = Camera.size_mult;
 
+const Entity = @import("entity.zig").Entity;
 const Projectile = @import("projectile.zig").Projectile;
+const Square = @import("square.zig").Square;
 
 pub const Player = struct {
+    const float_us: comptime_float = std.time.us_per_s;
     pub const move_threshold = 0.4;
-    pub const min_move_speed = 4.0 / @as(f32, std.time.us_per_s);
-    pub const max_move_speed = 9.6 / @as(f32, std.time.us_per_s);
-    pub const attack_frequency = 5.0 / @as(f32, std.time.us_per_s);
-    pub const min_attack_mult = 0.5;
-    pub const max_attack_mult = 2.0;
+    pub const min_move_speed = 4.0 / float_us;
+    pub const max_move_speed = 9.6 / float_us;
+    pub const attack_frequency = 5.0 / float_us;
     pub const max_sink_level = 18.0;
 
-    obj_id: i32 = -1,
-    obj_type: u16 = 0,
+    map_id: u32 = std.math.maxInt(u32),
+    data_id: u16 = std.math.maxInt(u16),
     dead: bool = false,
     x: f32 = 0.0,
     y: f32 = 0.0,
     z: f32 = 0.0,
-    screen_x: f32 = 0.0,
-    screen_y: f32 = 0.0,
     alpha: f32 = 1.0,
     name: ?[]const u8 = null,
     name_text_data: ?element.TextData = null,
     name_text_data_inited: bool = false,
-    account_id: i32 = 0,
-    size: f32 = 0,
+    in_combat: bool = false,
+    aether: u8 = 1,
+    spirits_communed: u32 = 0,
+    muted_until: i64 = 0,
+    gold: i32 = 0,
+    gems: i32 = 0,
+    crowns: i32 = 0,
+    damage_mult: f32 = 1.0,
+    hit_mult: f32 = 1.0,
+    size_mult: f32 = 1.0,
     max_hp: i32 = 0,
-    max_mp: i16 = 0,
+    max_mp: i32 = 0,
     hp: i32 = 0,
     mp: i32 = 0,
     strength: i16 = 0,
@@ -52,8 +63,8 @@ pub const Player = struct {
     piercing: i16 = 0,
     haste: i16 = 0,
     tenacity: i16 = 0,
-    hp_bonus: i16 = 0,
-    mp_bonus: i16 = 0,
+    max_hp_bonus: i32 = 0,
+    max_mp_bonus: i32 = 0,
     strength_bonus: i16 = 0,
     defense_bonus: i16 = 0,
     speed_bonus: i16 = 0,
@@ -67,81 +78,85 @@ pub const Player = struct {
     tenacity_bonus: i16 = 0,
     hit_multiplier: f32 = 1.0,
     damage_multiplier: f32 = 1.0,
-    condition: utils.Condition = utils.Condition{},
+    condition: utils.Condition = .{},
     inventory: [22]u16 = [_]u16{std.math.maxInt(u16)} ** 22,
-    aether: u8 = 0,
-    spirits_communed: i32 = 0,
-    next_spirits: i32 = 1000,
-    tex_1: i32 = 0,
-    tex_2: i32 = 0,
-    skin: u16 = 0,
-    gold: i32 = 0,
-    gems: i32 = 0,
-    crowns: i32 = 0,
     attack_start: i64 = 0,
     attack_period: i64 = 0,
     attack_angle: f32 = 0,
-    next_bullet_id: u8 = 0,
+    next_proj_index: u8 = 0,
     move_angle: f32 = std.math.nan(f32),
     move_step: f32 = 0.0,
     target_x: f32 = 0.0,
     target_y: f32 = 0.0,
-    move_x_dir: bool = false,
-    move_y_dir: bool = false,
     walk_speed_multiplier: f32 = 1.0,
-    props: *const game_data.ObjProps = undefined,
-    class_data: *const game_data.CharacterClass = undefined,
+    data: *const game_data.ClassData = undefined,
     last_ground_damage_time: i64 = -1,
     anim_data: assets.AnimPlayerData = undefined,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
-    renderx_offset: f32 = 0.0,
+    atlas_data: assets.AtlasData = .default,
     move_multiplier: f32 = 1.0,
     sink_level: f32 = 0,
-    colors: []u32 = &[0]u32{},
-    next_ability_attack_time: i64 = -1,
-    mp_zeroed: bool = false,
+    colors: []u32 = &.{},
     x_dir: f32 = 0.0,
     y_dir: f32 = 0.0,
     facing: f32 = std.math.nan(f32),
-    ability_use_times: [4]i64 = [_]i64{-1} ** 4,
-    ability_data: std.ArrayList(u8) = undefined,
-    in_combat: bool = false,
+    direction: assets.Direction = .right,
     disposed: bool = false,
 
-    pub fn onMove(self: *Player) void {
-        if (map.getSquare(self.x, self.y, true)) |square| {
-            if (square.props.sinking) {
-                self.sink_level = @min(self.sink_level + 1, max_sink_level);
-                self.move_multiplier = 0.1 + (1 - self.sink_level / max_sink_level) * (square.props.speed - 0.1);
-            } else {
-                self.sink_level = 0;
-                self.move_multiplier = square.props.speed;
-            }
+    pub fn addToMap(self: *Player, allocator: std.mem.Allocator) void {
+        self.data = game_data.class.from_id.getPtr(self.data_id) orelse {
+            std.log.err("Player with data id {} has no class data, can't add", .{self.data_id});
+            return;
+        };
+
+        if (assets.anim_players.get(self.data.texture.sheet)) |anim_data| {
+            self.anim_data = anim_data[self.data.texture.index];
+        } else {
+            std.log.err("Could not find anim sheet {s} for player with data id {}. Using error texture", .{ self.data.texture.sheet, self.data_id });
+            self.anim_data = assets.error_data_player;
         }
+
+        self.colors = assets.atlas_to_color_data.get(@bitCast(self.anim_data.walk_anims[0])) orelse blk: {
+            std.log.err("Could not parse color data for player with data id {}. Setting it to empty", .{self.data_id});
+            break :blk &.{};
+        };
+
+        if (self.name_text_data == null) {
+            self.name_text_data = .{
+                .text = undefined,
+                .text_type = .bold,
+                .size = 12,
+                .color = 0xFCDF00,
+                .max_width = 200,
+            };
+            self.name_text_data.?.setText(if (self.name) |player_name| player_name else self.data.name, allocator);
+        }
+
+        var lock = map.addLockForType(Player);
+        lock.lock();
+        defer lock.unlock();
+        map.addListForType(Player).append(allocator, self.*) catch @panic("Adding player failed");
     }
 
-    pub fn strengthMultiplier(self: Player) f32 {
-        if (self.condition.weak)
-            return min_attack_mult;
+    pub fn deinit(self: *Player, allocator: std.mem.Allocator) void {
+        base.deinit(self, Player, allocator);
+    }
 
-        const float_strength: f32 = @floatFromInt(self.strength);
-        var mult = min_attack_mult + float_strength / 75.0 * (max_attack_mult - min_attack_mult);
-        if (self.condition.damaging)
-            mult *= 1.5;
+    pub fn onMove(self: *Player) void {
+        if (map.getSquare(self.x, self.y, true)) |square| self.move_multiplier = square.data.speed_mult;
+    }
 
+    pub fn strengthMult(self: Player) f32 {
+        if (self.condition.weak) return 0.5;
+
+        const fstr: f32 = @floatFromInt(self.strength + self.strength_bonus);
+        var mult = 0.5 + fstr / 75.0;
+        if (self.condition.damaging) mult *= 1.5;
         return mult;
     }
 
-    pub fn witMultiplier(self: Player) f32 {
-        if (self.condition.weak)
-            return min_attack_mult;
-
-        const float_wit: f32 = @floatFromInt(self.wit);
-        var mult = min_attack_mult + float_wit / 75.0 * (max_attack_mult - min_attack_mult);
-        if (self.condition.damaging)
-            mult *= 1.5;
-
-        return mult;
+    pub fn witMult(self: Player) f32 {
+        const fwit: f32 = @floatFromInt(self.wit + self.wit_bonus);
+        return 0.5 + fwit / 75.0;
     }
 
     pub fn moveSpeedMultiplier(self: Player) f32 {
@@ -156,367 +171,274 @@ pub const Player = struct {
         return move_speed * self.move_multiplier * self.walk_speed_multiplier;
     }
 
-    pub inline fn addToMap(self: *Player, allocator: std.mem.Allocator) void {
-        self.ability_data = std.ArrayList(u8).init(allocator);
-
-        if (game_data.obj_type_to_tex_data.get(self.obj_type)) |tex_list| {
-            const tex = tex_list[@as(usize, @intCast(self.obj_id)) % tex_list.len];
-            if (assets.anim_players.get(tex.sheet)) |anim_data| {
-                self.anim_data = anim_data[tex.index];
-            } else {
-                std.log.err("Could not find anim sheet {s} for player with type 0x{x}. Using error texture", .{ tex.sheet, self.obj_type });
-                self.anim_data = assets.error_data_player;
-            }
-
-            self.colors = assets.atlas_to_color_data.get(@bitCast(self.anim_data.walk_anims[0])) orelse blk: {
-                std.log.err("Could not parse color data for player with id {d}. Setting it to empty", .{self.obj_id});
-                break :blk &[0]u32{};
-            };
-        }
-
-        self.props = game_data.obj_type_to_props.getPtr(self.obj_type) orelse {
-            std.log.err("Player with type 0x{x} has no props, can't add", .{self.obj_type});
+    pub fn useAbility(self: *Player) void {
+        const item_data = game_data.item.from_id.get(self.inventory[1]) orelse {
+            assets.playSfx("error.mp3");
             return;
         };
-        self.size = self.props.getSize();
+        assets.playSfx(item_data.sound);
 
-        self.class_data = game_data.classes.getPtr(self.obj_type) orelse {
-            std.log.err("Player with type 0x{x} has no class data, can't add", .{self.obj_type});
-            return;
-        };
-
-        if (self.name_text_data == null) {
-            self.name_text_data = element.TextData{
-                // name could have been set (usually is) before adding to map
-                .text = if (self.name) |player_name| player_name else self.class_data.name,
-                .text_type = .bold,
-                .size = 12,
-                .color = 0xFCDF00,
-                .max_width = 200,
-            };
-
-            {
-                self.name_text_data.?.lock.lock();
-                defer self.name_text_data.?.lock.unlock();
-
-                self.name_text_data.?.recalculateAttributes(allocator);
-            }
-        }
-
-        setRpc: {
-            if (self.obj_id == map.local_player_id and !map.rpc_set) {
-                const presence = rpc.Packet.Presence{
-                    .assets = .{
-                        .large_image = rpc.Packet.ArrayString(256).create("logo"),
-                        .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
-                        .small_image = rpc.Packet.ArrayString(256).create(self.class_data.rpc_name),
-                        .small_text = rpc.Packet.ArrayString(128).createFromFormat("Aether {s}", .{utils.toRoman(self.aether)}) catch {
-                            std.log.err("Setting Discord RPC failed, small_text buffer was out of space", .{});
-                            break :setRpc;
-                        },
-                    },
-                    .state = rpc.Packet.ArrayString(128).createFromFormat("Visiting {s}", .{map.name}) catch {
-                        std.log.err("Setting Discord RPC failed, state buffer was out of space", .{});
-                        break :setRpc;
-                    },
-                    .timestamps = .{
-                        .start = main.rpc_start,
-                    },
-                };
-                main.rpc_client.setPresence(presence) catch |e| {
-                    std.log.err("Setting Discord RPC failed: {}", .{e});
-                };
-                map.rpc_set = true;
-            }
-        }
-
-        map.add_lock.lockShared();
-        defer map.add_lock.unlockShared();
-        map.entities_to_add.append(.{ .player = self.* }) catch |e| {
-            std.log.err("Could not add player to map (obj_id={d}, obj_type={d}, x={d}, y={d}): {}", .{ self.obj_id, self.obj_type, self.x, self.y, e });
-        };
+        main.server.sendPacket(.{ .use_item = .{
+            .time = main.current_time,
+            .x = self.x,
+            .y = self.y,
+            .slot_id = 1,
+            .obj_type = .player,
+            .map_id = self.map_id,
+        } });
     }
 
-    pub fn useAbility(self: *Player, idx: u8) void {
-        const abil_props = switch (idx) {
-            0 => self.class_data.ability_1,
-            1 => self.class_data.ability_2,
-            2 => self.class_data.ability_3,
-            3 => self.class_data.ultimate_ability,
-            else => {
-                std.log.err("Invalid idx {d} for useAbility()", .{idx});
-                return;
-            },
-        };
-
-        const int_cd_ms: i64 = @intFromFloat(abil_props.cooldown * 1000);
-        if (int_cd_ms > main.current_time - self.ability_use_times[idx] or
-            abil_props.mana_cost > self.mp or
-            abil_props.health_cost > self.hp - 1)
-        {
-            assets.playSfx("error");
-            return;
-        }
-
-        self.ability_use_times[idx] = main.current_time;
-        self.ability_data.clearRetainingCapacity();
-
-        if (std.mem.eql(u8, abil_props.name, "Anomalous Burst")) {
-            if (self.class_data.projs.len <= 0) {
-                std.log.err("Attempted to cast Anomalous Burst without any projectiles attached to the player (type: 0x{x})", .{self.obj_type});
-                return;
-            }
-
-            const attack_angle = std.math.atan2(input.mouse_y, input.mouse_x);
-            const num_projs: u16 = @intCast(6 + @divFloor(self.speed, 30));
-            const arc_gap = std.math.degreesToRadians(f32, 24);
-            const float_str: f32 = @floatFromInt(self.strength);
-
-            const attack_angle_left = attack_angle - std.math.pi / 2.0;
-            const left_proj_count = @divFloor(num_projs, 2);
-            var left_angle = attack_angle_left - arc_gap * @as(f32, @floatFromInt(left_proj_count - 1));
-            for (0..left_proj_count) |_| {
-                const bullet_id = @mod(self.next_bullet_id + 1, 128);
-                self.next_bullet_id = bullet_id;
-                const x = self.x + @cos(attack_angle) * 0.25;
-                const y = self.y + @sin(attack_angle) * 0.25;
-
-                var proj = Projectile{
-                    .x = x,
-                    .y = y,
-                    .props = self.class_data.projs[0],
-                    .angle = left_angle,
-                    .bullet_id = bullet_id,
-                    .owner_id = self.obj_id,
-                    .physical_damage = @intFromFloat((750 + float_str * 0.75) * self.damage_multiplier),
-                    .piercing = self.piercing,
-                    .penetration = self.penetration,
-                };
-                proj.addToMap();
-
-                left_angle += arc_gap;
-            }
-
-            const attack_angle_right = attack_angle + std.math.pi / 2.0;
-            const right_proj_count = num_projs - left_proj_count;
-            var right_angle = attack_angle_right - arc_gap * @as(f32, @floatFromInt(right_proj_count - 1));
-            for (0..left_proj_count) |_| {
-                const bullet_id = @mod(self.next_bullet_id + 1, 128);
-                self.next_bullet_id = bullet_id;
-                const x = self.x + @cos(attack_angle) * 0.25;
-                const y = self.y + @sin(attack_angle) * 0.25;
-
-                var proj = Projectile{
-                    .x = x,
-                    .y = y,
-                    .props = self.class_data.projs[0],
-                    .angle = right_angle,
-                    .bullet_id = bullet_id,
-                    .owner_id = self.obj_id,
-                    .physical_damage = @intFromFloat((750 + float_str * 0.75) * self.damage_multiplier),
-                    .piercing = self.piercing,
-                    .penetration = self.penetration,
-                };
-                proj.addToMap();
-
-                right_angle += arc_gap;
-            }
-
-            self.ability_data.writer().writeAll(&std.mem.toBytes(attack_angle)) catch |e| {
-                std.log.err("Writing to ability data buffer failed: {}", .{e});
-                return;
-            };
-        } else if (std.mem.eql(u8, abil_props.name, "Possession")) {
-            self.ability_data.writer().writeAll(&std.mem.toBytes(@as(f32, -1))) catch |e| {
-                std.log.err("Writing to ability data buffer failed: {}", .{e});
-                return;
-            };
-        }
-
-        main.server.queuePacket(.{ .use_ability = .{ .time = main.current_time, .ability_type = idx, .data = self.ability_data.items } });
-    }
-
-    pub fn doShoot(self: *Player, time: i64, weapon_type: i32, item_props: ?*game_data.ItemProps, attack_angle: f32) void {
-        const projs_len = item_props.?.num_projectiles;
-        const arc_gap = item_props.?.arc_gap;
+    pub fn doShoot(
+        self: *Player,
+        allocator: std.mem.Allocator,
+        time: i64,
+        item_props: *game_data.ItemData,
+        attack_angle: f32,
+    ) void {
+        const projs_len = item_props.projectile_count;
+        const arc_gap = std.math.degreesToRadians(item_props.arc_gap);
         const total_angle = arc_gap * @as(f32, @floatFromInt(projs_len - 1));
         var angle = attack_angle - total_angle / 2.0;
-        const proj_props = item_props.?.projectile.?;
-
-        const container_type = if (weapon_type == -1) std.math.maxInt(u16) else @as(u16, @intCast(weapon_type));
+        const proj_data = item_props.projectile.?;
 
         for (0..projs_len) |_| {
-            const bullet_id = @mod(self.next_bullet_id + 1, 128);
-            self.next_bullet_id = bullet_id;
+            const proj_index = @mod(self.next_proj_index + 1, 128);
+            self.next_proj_index = proj_index;
             const x = self.x + @cos(attack_angle) * 0.25;
             const y = self.y + @sin(attack_angle) * 0.25;
 
-            const physical_damage = @as(f32, @floatFromInt(proj_props.physical_damage)) * self.strengthMultiplier();
-            const magic_damage = @as(f32, @floatFromInt(proj_props.magic_damage)) * self.witMultiplier();
-            const true_damage = @as(f32, @floatFromInt(proj_props.true_damage));
-
-            var proj = Projectile{
+            var proj: Projectile = .{
                 .x = x,
                 .y = y,
-                .props = proj_props,
+                .data = &item_props.projectile.?,
                 .angle = angle,
-                .bullet_id = bullet_id,
-                .owner_id = self.obj_id,
-                .physical_damage = @intFromFloat(physical_damage * self.damage_multiplier),
-                .magic_damage = @intFromFloat(magic_damage * self.damage_multiplier),
-                .true_damage = @intFromFloat(true_damage * self.damage_multiplier),
-                .piercing = self.piercing,
-                .penetration = self.penetration,
+                .index = proj_index,
+                .owner_map_id = self.map_id,
+                .phys_dmg = @intFromFloat(@as(f32, @floatFromInt(proj_data.phys_dmg)) * self.strengthMult()),
             };
-            proj.addToMap();
+            proj.addToMap(allocator);
 
-            main.server.queuePacket(.{
-                .player_shoot = .{
-                    .time = time,
-                    .bullet_id = bullet_id,
-                    .container_type = container_type, // todo mabye convert to a i32 for packet or convert client into u16?
-                    .start_x = x,
-                    .start_y = y,
-                    .angle = angle,
-                },
-            });
+            main.server.sendPacket(.{ .player_projectile = .{
+                .time = time,
+                .proj_index = proj_index,
+                .x = x,
+                .y = y,
+                .angle = angle,
+            } });
 
             angle += arc_gap;
         }
     }
 
-    pub fn weaponShoot(self: *Player, angle: f32, time: i64) void {
-        const weapon_type: i32 = self.inventory[0];
-        if (weapon_type == -1)
+    pub fn weaponShoot(self: *Player, allocator: std.mem.Allocator, angle: f32, time: i64) void {
+        std.debug.assert(!main.camera.lock.tryLock());
+
+        const item_data = game_data.item.from_id.getPtr(self.inventory[0]) orelse return;
+        if (item_data.projectile == null)
             return;
 
-        const item_props = game_data.item_type_to_props.getPtr(@intCast(weapon_type));
-        if (item_props == null or item_props.?.projectile == null)
-            return;
-
-        const attack_delay: i64 = @intFromFloat(1.0 / (item_props.?.rate_of_fire * attack_frequency));
+        const attack_delay: i64 = @intFromFloat(1.0 / (item_data.fire_rate * attack_frequency));
         if (time < self.attack_start + attack_delay)
             return;
 
-        assets.playSfx(item_props.?.sound);
+        assets.playSfx(item_data.sound);
 
         self.attack_period = attack_delay;
-        self.attack_angle = angle - camera.angle;
+        self.attack_angle = angle - main.camera.angle;
         self.attack_start = time;
 
-        self.doShoot(self.attack_start, weapon_type, item_props, angle);
+        self.doShoot(allocator, self.attack_start, item_data, angle);
     }
 
-    pub fn takeDamage(
-        self: *Player,
-        phys_dmg: i32,
-        magic_dmg: i32,
-        true_dmg: i32,
-        kill: bool,
-        conditions: utils.Condition,
-        proj_colors: []const u32,
-        proj_angle: f32,
-        proj_speed: f32,
-        allocator: std.mem.Allocator,
-    ) void {
-        if (self.dead)
-            return;
+    pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator) void {
+        if (ui_systems.screen == .editor or self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
 
-        if (kill) {
-            self.dead = true;
+        const size = size_mult * cam_data.scale * self.size_mult;
 
-            assets.playSfx(self.props.death_sound);
-            var effect = particles.ExplosionEffect{
-                .x = self.x,
-                .y = self.y,
-                .colors = self.colors,
-                .size = self.size,
-                .amount = 30,
-            };
-            effect.addToMap();
-        } else {
-            assets.playSfx(self.props.hit_sound);
-            if (proj_angle == 0.0 and proj_speed == 0.0) {
-                var effect = particles.ExplosionEffect{
-                    .x = self.x,
-                    .y = self.y,
-                    .colors = self.colors,
-                    .size = self.size,
-                    .amount = 30,
-                };
-                effect.addToMap();
-            } else {
-                var effect = particles.HitEffect{
-                    .x = self.x,
-                    .y = self.y,
-                    .colors = proj_colors,
-                    .angle = proj_angle,
-                    .speed = proj_speed,
-                    .size = 1.0,
-                    .amount = 3,
-                };
-                effect.addToMap();
-            }
+        var atlas_data = self.atlas_data;
+        var sink: f32 = 1.0;
+        if (map.getSquare(self.x, self.y, true)) |square| sink += if (square.data.sink) 0.75 else 0;
+        atlas_data.tex_h /= sink;
 
-            const cond_int: @typeInfo(utils.Condition).Struct.backing_integer.? = @bitCast(conditions);
-            for (0..@bitSizeOf(utils.Condition)) |i| {
-                if (cond_int & (@as(usize, 1) << @intCast(i)) != 0) {
-                    const eff: utils.ConditionEnum = @enumFromInt(i + 1);
-                    const cond_str = eff.toString();
-                    if (cond_str.len == 0)
-                        continue;
+        const w = atlas_data.texWRaw() * size;
+        const h = atlas_data.texHRaw() * size;
+        const dir_idx: u8 = @intFromEnum(self.direction);
+        const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions];
+        const stand_w = stand_data.width() * size;
+        const x_offset = (if (self.direction == .left) stand_w - w else w - stand_w) / 2.0;
 
-                    self.condition.set(eff, true);
+        var screen_pos = cam_data.worldToScreen(self.x, self.y);
+        screen_pos.x += x_offset;
+        screen_pos.y += self.z * -px_per_tile - h + assets.padding * size;
 
-                    element.StatusText.add(.{
-                        .obj_id = self.obj_id,
-                        .text_data = .{
-                            .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
-                            .text_type = .bold,
-                            .size = 16,
-                            .color = 0xB02020,
-                        },
-                        .initial_size = 16,
-                    }) catch |e| {
-                        std.log.err("Allocation for condition text \"{s}\" failed: {}", .{ cond_str, e });
-                    };
-                }
-            }
+        var alpha_mult: f32 = self.alpha;
+        if (self.condition.invisible)
+            alpha_mult = 0.6;
+
+        var color: u32 = 0;
+        var color_intensity: f32 = 0.0;
+        _ = &color;
+        _ = &color_intensity;
+        // flash
+
+        if (main.settings.enable_lights and self.data.light.color != std.math.maxInt(u32)) {
+            const light_size = self.data.light.radius + self.data.light.pulse *
+                @sin(float_time_ms / 1000.0 * self.data.light.pulse_speed);
+
+            const light_w = w * light_size * 4;
+            const light_h = h * light_size * 4;
+            render.lights.append(allocator, .{
+                .x = screen_pos.x - light_w / 2.0,
+                .y = screen_pos.y - h * light_size * 1.5,
+                .w = light_w,
+                .h = light_h,
+                .color = self.data.light.color,
+                .intensity = self.data.light.intensity,
+            }) catch unreachable;
         }
 
-        if (phys_dmg > 0 or magic_dmg > 0 or true_dmg > 0) {
-            map.showDamageText(phys_dmg, magic_dmg, true_dmg, self.obj_id, allocator);
+        if (self.name_text_data) |*data| {
+            data.sort_extra = -data.height;
+            render.drawText(
+                screen_pos.x - x_offset - data.width / 2 - assets.padding * 2,
+                screen_pos.y - data.height,
+                cam_data.scale,
+                data,
+                .{},
+            );
+        }
+
+        render.drawQuad(
+            screen_pos.x - w / 2.0,
+            screen_pos.y,
+            w,
+            h,
+            atlas_data,
+            .{
+                .shadow_texel_mult = 2.0 / size,
+                .alpha_mult = alpha_mult,
+                .color = color,
+                .color_intensity = color_intensity,
+            },
+        );
+
+        var y_pos: f32 = if (sink != 1.0) 10.0 else 0.0;
+
+        if (self.hp >= 0 and self.hp < self.max_hp) {
+            const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * cam_data.scale;
+            const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * cam_data.scale;
+            const hp_bar_y = screen_pos.y + h + y_pos;
+
+            render.drawQuad(
+                screen_pos.x - x_offset - hp_bar_w / 2.0,
+                hp_bar_y,
+                hp_bar_w,
+                hp_bar_h,
+                assets.empty_bar_data,
+                .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
+            );
+
+            const float_hp: f32 = @floatFromInt(self.hp);
+            const float_max_hp: f32 = @floatFromInt(self.max_hp);
+            const left_pad = 2.0;
+            const w_no_pad = 20.0;
+            const total_w = 24.0;
+            const hp_perc = (left_pad / total_w) + (w_no_pad / total_w) * (float_hp / float_max_hp);
+
+            var hp_bar_data = assets.hp_bar_data;
+            hp_bar_data.tex_w *= hp_perc;
+
+            render.drawQuad(
+                screen_pos.x - x_offset - hp_bar_w / 2.0,
+                hp_bar_y,
+                hp_bar_w * hp_perc,
+                hp_bar_h,
+                hp_bar_data,
+                .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
+            );
+
+            y_pos += hp_bar_h;
+        }
+
+        if (self.mp >= 0 and self.mp < self.max_mp) {
+            const mp_bar_w = assets.mp_bar_data.width() * 2 * cam_data.scale;
+            const mp_bar_h = assets.mp_bar_data.height() * 2 * cam_data.scale;
+            const mp_bar_y = screen_pos.y + h + y_pos;
+
+            render.drawQuad(
+                screen_pos.x - x_offset - mp_bar_w / 2.0,
+                mp_bar_y,
+                mp_bar_w,
+                mp_bar_h,
+                assets.empty_bar_data,
+                .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
+            );
+
+            const float_mp: f32 = @floatFromInt(self.mp);
+            const float_max_mp: f32 = @floatFromInt(self.max_mp);
+            const left_pad = 2.0;
+            const w_no_pad = 20.0;
+            const total_w = 24.0;
+            const mp_perc = (left_pad / total_w) + (w_no_pad / total_w) * (float_mp / float_max_mp);
+
+            var mp_bar_data = assets.mp_bar_data;
+            mp_bar_data.tex_w *= mp_perc;
+
+            render.drawQuad(
+                screen_pos.x - x_offset - mp_bar_w / 2.0,
+                mp_bar_y,
+                mp_bar_w * mp_perc,
+                mp_bar_h,
+                mp_bar_data,
+                .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
+            );
+
+            y_pos += mp_bar_h;
+        }
+
+        const cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.? = @bitCast(self.condition);
+        if (cond_int > 0) {
+            base.drawConditions(cond_int, float_time_ms, screen_pos.x - x_offset, screen_pos.y + h + y_pos);
+            y_pos += 20;
         }
     }
 
-    pub inline fn update(self: *Player, time: i64, dt: f32, allocator: std.mem.Allocator) void {
+    pub fn update(self: *Player, time: i64, dt: f32, allocator: std.mem.Allocator) void {
         var float_period: f32 = 0.0;
         var action: assets.Action = .stand;
 
+        main.camera.lock.lock();
+        defer main.camera.lock.unlock();
         if (time < self.attack_start + self.attack_period) {
             const time_dt: f32 = @floatFromInt(time - self.attack_start);
             float_period = @floatFromInt(self.attack_period);
             float_period = @mod(time_dt, float_period) / float_period;
-            self.facing = self.attack_angle + camera.angle;
+            self.facing = self.attack_angle + main.camera.angle;
             action = .attack;
-        } else if (self.x_dir != 0.0 or self.y_dir != 0.0) {
+        } else if (map.local_player_id == self.map_id) {
+            if (self.x_dir != 0.0 or self.y_dir != 0.0) {
+                const float_time: f32 = @floatFromInt(time);
+                float_period = 3.5 / self.moveSpeedMultiplier();
+                float_period = @mod(float_time, float_period) / float_period;
+                self.facing = std.math.atan2(self.y_dir, self.x_dir);
+                action = .walk;
+            }
+        } else if (!std.math.isNan(self.move_angle)) {
             const float_time: f32 = @floatFromInt(time);
             float_period = 3.5 / self.moveSpeedMultiplier();
             float_period = @mod(float_time, float_period) / float_period;
-            self.facing = std.math.atan2(self.y_dir, self.x_dir);
+            self.facing = self.move_angle;
             action = .walk;
         } else {
             float_period = 0.0;
             action = .stand;
         }
 
-        const size = camera.size_mult * camera.scale * self.size;
-
         const pi_div_4 = std.math.pi / 4.0;
         const angle = if (std.math.isNan(self.facing))
-            utils.halfBound(camera.angle) / pi_div_4
+            utils.halfBound(main.camera.angle) / pi_div_4
         else
-            utils.halfBound(self.facing - camera.angle) / pi_div_4;
+            utils.halfBound(self.facing - main.camera.angle) / pi_div_4;
 
         const dir: assets.Direction = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
             0, 7 => .left,
@@ -537,31 +459,24 @@ pub const Player = struct {
             .stand => stand_data,
         };
 
-        const screen_pos = camera.rotateAroundCamera(self.x, self.y);
-        const w = (self.atlas_data.texWRaw() - assets.padding * 2) * size;
-        const h = (self.atlas_data.texHRaw() - assets.padding * 2) * size;
-        const stand_w = (stand_data.texWRaw() - assets.padding * 2) * size;
-        self.renderx_offset = (if (dir == .left) stand_w - w else w - stand_w) / 2.0;
+        self.direction = dir;
 
-        self.screen_x = screen_pos.x;
-        self.screen_y = screen_pos.y + self.z * -camera.px_per_tile - h - 30; // account for name
-
-        if (self.obj_id == map.local_player_id) {
-            if (systems.screen == .editor) {
+        if (self.map_id == map.local_player_id) {
+            if (ui_systems.screen == .editor) {
                 if (!std.math.isNan(self.move_angle)) {
-                    const move_angle = camera.angle + self.move_angle;
+                    const move_angle = main.camera.angle + self.move_angle;
                     const move_speed = self.moveSpeedMultiplier();
                     const new_x = self.x + move_speed * @cos(move_angle) * dt;
                     const new_y = self.y + move_speed * @sin(move_angle) * dt;
 
-                    self.x = @max(0, @min(new_x, @as(f32, @floatFromInt(map.width - 1))));
-                    self.y = @max(0, @min(new_y, @as(f32, @floatFromInt(map.height - 1))));
+                    self.x = @max(0, @min(new_x, @as(f32, @floatFromInt(map.info.width - 1))));
+                    self.y = @max(0, @min(new_y, @as(f32, @floatFromInt(map.info.height - 1))));
                 }
             } else {
                 if (map.getSquare(self.x, self.y, true)) |square| {
-                    const slide_amount = square.props.slide_amount;
+                    const slide_amount = square.data.slide_amount;
                     if (!std.math.isNan(self.move_angle)) {
-                        const move_angle = camera.angle + self.move_angle;
+                        const move_angle = main.camera.angle + self.move_angle;
                         const move_speed = self.moveSpeedMultiplier();
                         const vec_x = move_speed * @cos(move_angle);
                         const vec_y = move_speed * @sin(move_angle);
@@ -592,9 +507,9 @@ pub const Player = struct {
                         }
                     }
 
-                    if (square.props.push) {
-                        self.x_dir -= square.props.anim_dx / 1000.0;
-                        self.y_dir -= square.props.anim_dy / 1000.0;
+                    if (square.data.push) {
+                        self.x_dir -= square.data.animation.delta_x / 1000.0;
+                        self.y_dir -= square.data.animation.delta_y / 1000.0;
                     }
                 }
 
@@ -605,34 +520,25 @@ pub const Player = struct {
 
                 if (!self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
                     if (map.getSquare(self.x, self.y, true)) |square| {
-                        const total_damage = square.props.physical_damage + square.props.magic_damage + square.props.true_damage;
                         const protect = blk: {
-                            const en = map.findEntityConst(square.static_obj_id) orelse break :blk false;
-                            break :blk en == .object and en.object.props.protect_from_ground_damage;
+                            const e = map.findObjectConst(Entity, square.entity_map_id) orelse break :blk false;
+                            break :blk e.data.block_ground_damage;
                         };
-                        if (total_damage > 0 and !protect) {
-                            main.server.queuePacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
-                            self.takeDamage(
-                                @intCast(square.props.physical_damage),
-                                @intCast(square.props.magic_damage),
-                                @intCast(square.props.true_damage),
-                                total_damage >= self.hp,
-                                .{},
-                                self.colors,
-                                0.0,
-                                100.0 / 10000.0,
-                                allocator,
-                            );
+                        if (square.data.damage > 0 and !protect) {
+                            main.server.sendPacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
+                            map.takeDamage(self, square.data.damage, .true, .{}, self.colors, allocator);
                             self.last_ground_damage_time = time;
                         }
                     }
                 }
             }
         } else if (!std.math.isNan(self.move_angle) and self.move_step > 0.0) {
-            const next_x = self.x + dt * self.move_step * @cos(self.move_angle);
-            const next_y = self.y + dt * self.move_step * @sin(self.move_angle);
-            self.x = if (self.move_x_dir) @min(self.target_x, next_x) else @max(self.target_x, next_x);
-            self.y = if (self.move_y_dir) @min(self.target_y, next_y) else @max(self.target_y, next_y);
+            const cos_angle = @cos(self.move_angle);
+            const sin_angle = @sin(self.move_angle);
+            const next_x = self.x + dt * self.move_step * cos_angle;
+            const next_y = self.y + dt * self.move_step * sin_angle;
+            self.x = if (cos_angle > 0.0) @min(self.target_x, next_x) else @max(self.target_x, next_x);
+            self.y = if (sin_angle > 0.0) @min(self.target_y, next_y) else @max(self.target_y, next_y);
         }
     }
 
@@ -645,20 +551,11 @@ pub const Player = struct {
             return;
         }
 
-        var step_size = move_threshold / @max(@abs(dx), @abs(dy));
-
         target_x.* = self.x;
         target_y.* = self.y;
 
-        var d: f32 = 0.0;
-        while (true) {
-            if (d + step_size >= 1.0) {
-                step_size = 1.0 - d;
-                break;
-            }
-            modifyStep(self, target_x.* + dx * step_size, target_y.* + dy * step_size, target_x, target_y);
-            d += step_size;
-        }
+        const step_size = move_threshold / @max(@abs(dx), @abs(dy));
+        for (0..@intFromFloat(1.0 / step_size)) |_| modifyStep(self, target_x.* + dx * step_size, target_y.* + dy * step_size, target_x, target_y);
     }
 
     fn isValidPosition(x: f32, y: f32) bool {
@@ -698,19 +595,19 @@ pub const Player = struct {
 
     fn isWalkable(x: f32, y: f32) bool {
         if (map.getSquare(x, y, true)) |square| {
-            const walkable = !square.props.no_walk;
+            const walkable = !square.data.no_walk;
             const not_occupied = blk: {
-                const en = map.findEntityConst(square.static_obj_id) orelse break :blk true;
-                break :blk en != .object or !en.object.props.occupy_square;
+                const e = map.findObjectConst(Entity, square.entity_map_id) orelse break :blk true;
+                break :blk !e.data.occupy_square;
             };
-            return square.tile_type < 0xFFFE and walkable and not_occupied;
+            return square.data_id != Square.editor_tile and square.data_id != Square.empty_tile and walkable and not_occupied;
         } else return false;
     }
 
     fn isFullOccupy(x: f32, y: f32) bool {
         if (map.getSquare(x, y, true)) |square| {
-            const en = map.findEntityConst(square.static_obj_id) orelse return false;
-            return en == .object and en.object.props.full_occupy;
+            const e = map.findObjectConst(Entity, square.entity_map_id) orelse return false;
+            return e.data.full_occupy;
         } else return true;
     }
 

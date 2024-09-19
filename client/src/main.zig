@@ -1,50 +1,65 @@
 const std = @import("std");
+const shared = @import("shared");
+const network_data = shared.network_data;
+const game_data = shared.game_data;
+const requests = shared.requests;
+const utils = shared.utils;
+const uv = shared.uv;
 const assets = @import("assets.zig");
-const game_data = @import("shared").game_data;
-const settings = @import("settings.zig");
-const requests = @import("shared").requests;
 const network = @import("network.zig");
 const builtin = @import("builtin");
-const xml = @import("shared").xml;
-const glfw = @import("mach-glfw");
+const glfw = @import("zglfw");
 const zstbi = @import("zstbi");
 const input = @import("input.zig");
-const utils = @import("shared").utils;
-const camera = @import("camera.zig");
 const map = @import("game/map.zig");
 const element = @import("ui/element.zig");
-const render = @import("render/base.zig");
-const tracy = @import("tracy");
+const render = @import("render.zig");
+const tracy = if (build_options.enable_tracy) @import("tracy") else {};
 const zaudio = @import("zaudio");
 const ui_systems = @import("ui/systems.zig");
-const rpc = @import("rpc");
 const dialog = @import("ui/dialogs/dialog.zig");
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
-const xev = @import("xev");
+const build_options = @import("options");
+const gpu = @import("zgpu");
 
-const sysgpu = @import("mach").sysgpu;
-const wgpu = @import("mach-gpu");
-const use_dawn = @import("builtin").os.tag == .windows;
-const gpu = if (use_dawn) wgpu else sysgpu.sysgpu;
+const Camera = @import("Camera.zig");
+const Settings = @import("Settings.zig");
+
+const AccountData = struct {
+    email: []const u8,
+    token: u128,
+
+    pub fn load() !AccountData {
+        const file = try std.fs.cwd().openFile("login_data_do_not_share.json", .{});
+        defer file.close();
+
+        const file_data = try file.readToEndAlloc(account_arena_allocator, std.math.maxInt(u32));
+        defer account_arena_allocator.free(file_data);
+
+        return try std.json.parseFromSliceLeaky(
+            AccountData,
+            account_arena_allocator,
+            file_data,
+            .{ .ignore_unknown_fields = true, .allocate = .alloc_always },
+        );
+    }
+
+    pub fn save(self: AccountData) !void {
+        const file = try std.fs.cwd().createFile("login_data_do_not_share.json", .{});
+        defer file.close();
+
+        const json = try std.json.stringifyAlloc(account_arena_allocator, self, .{ .whitespace = .indent_4 });
+        try file.writeAll(json);
+    }
+};
 
 pub export var NvOptimusEnablement: c_int = 1;
 pub export var AmdPowerXpressRequestHighPerformance: c_int = 1;
 
-pub const GPUInterface = wgpu.dawn.Interface;
-pub const SYSGPUInterface = sysgpu.Impl;
-
-pub const AccountData = struct {
-    name: []const u8 = "",
-    email: []const u8 = "",
-    password: []const u8 = "",
-    admin: bool = false,
-};
-
-pub var current_account = AccountData{};
-pub var character_list: []game_data.CharacterData = undefined;
-pub var server_list: ?[]game_data.ServerData = null;
-pub var next_char_id: u32 = 0;
-pub var max_chars: u32 = 0;
+pub var ctx: *gpu.GraphicsContext = undefined;
+pub var account_arena_allocator: std.mem.Allocator = undefined;
+pub var current_account: ?AccountData = null;
+pub var character_list: ?network_data.CharacterListData = null;
 pub var current_time: i64 = 0;
 pub var render_thread: std.Thread = undefined;
 pub var network_thread: ?std.Thread = null;
@@ -55,33 +70,43 @@ pub var need_minimap_update = false;
 pub var need_force_update = false;
 pub var minimap_lock: std.Thread.Mutex = .{};
 pub var need_swap_chain_update = false;
-pub var minimap_update_min_x: u32 = std.math.maxInt(u32);
-pub var minimap_update_max_x: u32 = std.math.minInt(u32);
-pub var minimap_update_min_y: u32 = std.math.maxInt(u32);
-pub var minimap_update_max_y: u32 = std.math.minInt(u32);
-pub var rpc_client: *rpc = undefined;
-pub var rpc_start: u64 = 0;
+pub var minimap_update: struct {
+    min_x: u32 = std.math.maxInt(u32),
+    max_x: u32 = std.math.minInt(u32),
+    min_y: u32 = std.math.maxInt(u32),
+    max_y: u32 = std.math.minInt(u32),
+} = .{};
 pub var version_text: []const u8 = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var start_time: i64 = 0;
 pub var server: network.Server = undefined;
+pub var camera: Camera = .{};
+pub var settings: Settings = .{};
 
-fn onResize(_: glfw.Window, w: u32, h: u32) void {
+fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
     const float_w: f32 = @floatFromInt(w);
     const float_h: f32 = @floatFromInt(h);
 
-    camera.screen_width = float_w;
-    camera.screen_height = float_h;
-    camera.clip_scale_x = 2.0 / float_w;
-    camera.clip_scale_y = 2.0 / float_h;
+    {
+        camera.lock.lock();
+        defer camera.lock.unlock();
+        camera.width = float_w;
+        camera.height = float_h;
+        camera.clip_scale[0] = 2.0 / float_w;
+        camera.clip_scale[1] = 2.0 / float_h;
+        camera.clip_offset[0] = -float_w / 2.0;
+        camera.clip_offset[1] = -float_h / 2.0;
+    }
 
     ui_systems.resize(float_w, float_h);
 
     need_swap_chain_update = true;
 }
 
-fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) void {
-    tracy.setThreadName("Network");
+fn networkCallback(ip: []const u8, port: u16, hello_data: network_data.C2SPacket) void {
+    defer network_thread = null;
+
+    if (build_options.enable_tracy) tracy.SetThreadName("Network");
 
     rpmalloc.initThread() catch |e| {
         std.log.err("Network thread initialization failed: {}", .{e});
@@ -89,55 +114,50 @@ fn networkCallback(ip: []const u8, port: u16, hello_data: network.C2SPacket) voi
     };
     defer rpmalloc.deinitThread(true);
 
-    if (server.socket != null)
-        return;
+    server = .{ .hello_data = hello_data };
+    defer server.deinit();
 
-    server.connect(ip, port, hello_data) catch |e| {
+    server.connect(ip, port) catch |e| {
         std.log.err("Connection failed: {}", .{e});
         return;
     };
-
-    network_thread = null;
 }
 
 // lock ui_systems.ui_lock before calling (UI already does this implicitly)
-pub fn enterGame(selected_server: game_data.ServerData, selected_char_id: u32, char_create_type: u16, char_create_skin_type: u16) void {
-    if (network_thread != null)
+pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_data_id: u16) void {
+    if (network_thread != null or current_account == null)
         return;
 
-    ui_systems.switchScreen(.game);
-    network_thread = std.Thread.spawn(.{}, networkCallback, .{ selected_server.dns, selected_server.port, network.C2SPacket{ .hello = .{
-        .build_ver = settings.build_version,
-        .email = current_account.email,
-        .password = current_account.password,
-        .char_id = @intCast(selected_char_id),
-        .class_type = char_create_type,
-        .skin_type = char_create_skin_type,
+    network_thread = std.Thread.spawn(.{ .allocator = allocator }, networkCallback, .{ selected_server.ip, selected_server.port, network_data.C2SPacket{ .hello = .{
+        .build_ver = build_options.version,
+        .email = current_account.?.email,
+        .token = current_account.?.token,
+        .char_id = @intCast(char_id),
+        .class_id = class_data_id,
     } } }) catch |e| {
         std.log.err("Connection failed: {}", .{e});
         return;
     };
 }
 
-pub fn enterTest(selected_server: game_data.ServerData, selected_char_id: u32, eclipse_map: []u8) void {
-    if (network_thread != null)
+pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_map: []u8) void {
+    if (network_thread != null or current_account == null)
         return;
 
-    ui_systems.switchScreen(.game);
-    network_thread = std.Thread.spawn(.{}, networkCallback, .{ selected_server.dns, selected_server.port, network.C2SPacket{ .map_hello = .{
-        .build_ver = settings.build_version,
-        .email = current_account.email,
-        .password = current_account.password,
-        .char_id = @intCast(selected_char_id),
-        .eclipse_map = eclipse_map,
+    network_thread = std.Thread.spawn(.{ .allocator = allocator }, networkCallback, .{ selected_server.ip, selected_server.port, network_data.C2SPacket{ .map_hello = .{
+        .build_ver = build_options.version,
+        .email = current_account.?.email,
+        .token = current_account.?.token,
+        .char_id = char_id,
+        .map = test_map,
     } } }) catch |e| {
         std.log.err("Connection failed: {}", .{e});
         return;
     };
 }
 
-fn renderTick(window: glfw.Window) !void {
-    tracy.setThreadName("Render");
+fn renderTick() !void {
+    if (build_options.enable_tracy) tracy.SetThreadName("Render");
 
     rpmalloc.initThread() catch |e| {
         std.log.err("Render thread initialization failed: {}", .{e});
@@ -145,20 +165,17 @@ fn renderTick(window: glfw.Window) !void {
     };
     defer rpmalloc.deinitThread(true);
 
-    var last_aa_type = settings.aa_type;
     var last_vsync = settings.enable_vsync;
     var fps_time_start: i64 = 0;
     var frames: usize = 0;
-    var last_update: i64 = 0;
     while (tick_render) {
         if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
-            render.swap_chain.release();
-            const framebuffer_size = window.getFramebufferSize();
-            render.swap_chain_desc.width = framebuffer_size.width;
-            render.swap_chain_desc.height = framebuffer_size.height;
-            render.swap_chain_desc.present_mode = if (settings.enable_vsync) .fifo else .immediate;
-            render.swap_chain = render.device.createSwapChain(render.surface, &render.swap_chain_desc);
-            render.createColorTexture();
+            ctx.swapchain.release();
+            const framebuffer_size = ctx.window_provider.fn_getFramebufferSize(ctx.window_provider.window);
+            ctx.swapchain_descriptor.width = framebuffer_size[0];
+            ctx.swapchain_descriptor.height = framebuffer_size[1];
+            ctx.swapchain_descriptor.present_mode = if (settings.enable_vsync) .fifo else .immediate;
+            ctx.swapchain = ctx.device.createSwapChain(ctx.surface, ctx.swapchain_descriptor);
             last_vsync = settings.enable_vsync;
             need_swap_chain_update = false;
         }
@@ -166,95 +183,83 @@ fn renderTick(window: glfw.Window) !void {
         if (!tick_render)
             return;
 
-        const time = std.time.microTimestamp();
-        if (time - last_update >= settings.fps_us) {
-            defer {
-                frames += 1;
-                std.time.sleep(settings.fps_us / 2 * std.time.ns_per_us);
-            }
-            render.draw(time);
+        defer frames += 1;
+        const back_buffer = ctx.swapchain.getCurrentTextureView();
+        const encoder = ctx.device.createCommandEncoder(null);
 
-            if (last_aa_type != settings.aa_type) {
-                render.createColorTexture();
-                last_aa_type = settings.aa_type;
-            }
+        render.draw(current_time, back_buffer, encoder, allocator);
 
-            if (time - fps_time_start > 1 * std.time.us_per_s) {
-                try if (settings.stats_enabled) switch (ui_systems.screen) {
-                    inline .game, .editor => |screen| if (screen.inited) screen.updateFpsText(frames, try utils.currentMemoryUse(time)),
-                    else => {},
-                };
-                frames = 0;
-                fps_time_start = time;
-            }
+        const commands = encoder.finish(null);
+        encoder.release();
 
-            minimapUpdate: {
-                minimap_lock.lock();
-                defer minimap_lock.unlock();
+        ctx.queue.submit(&.{commands});
+        commands.release();
 
-                if (need_minimap_update) {
-                    const min_x = @min(map.minimap.width, minimap_update_min_x);
-                    const max_x = @max(map.minimap.width, minimap_update_max_x + 1);
-                    const min_y = @min(map.minimap.height, minimap_update_min_y);
-                    const max_y = @max(map.minimap.height, minimap_update_max_y + 1);
+        ctx.swapchain.present();
+        back_buffer.release();
 
-                    const w = max_x - min_x;
-                    const h = max_y - min_y;
-                    if (w <= 0 or h <= 0)
-                        break :minimapUpdate;
+        if (current_time - fps_time_start > 1 * std.time.us_per_s) {
+            try if (settings.stats_enabled) switch (ui_systems.screen) {
+                inline .game, .editor => |screen| if (screen.inited) screen.updateFpsText(frames, try utils.currentMemoryUse(current_time)),
+                else => {},
+            };
+            frames = 0;
+            fps_time_start = current_time;
+        }
 
-                    const comp_len = map.minimap.num_components * map.minimap.bytes_per_component;
-                    const copy = allocator.alloc(u8, w * h * comp_len) catch |e| {
-                        std.log.err("Minimap alloc failed: {}", .{e});
-                        need_minimap_update = false;
-                        minimap_update_min_x = std.math.maxInt(u32);
-                        minimap_update_max_x = std.math.minInt(u32);
-                        minimap_update_min_y = std.math.maxInt(u32);
-                        minimap_update_max_y = std.math.minInt(u32);
-                        break :minimapUpdate;
-                    };
-                    defer allocator.free(copy);
+        minimapUpdate: {
+            if (!tick_frame or ui_systems.screen == .editor)
+                break :minimapUpdate;
 
-                    var idx: u32 = 0;
-                    for (min_y..max_y) |y| {
-                        const base_map_idx = y * map.minimap.width * comp_len + min_x * comp_len;
-                        @memcpy(
-                            copy[idx * w * comp_len .. (idx + 1) * w * comp_len],
-                            map.minimap.data[base_map_idx .. base_map_idx + w * comp_len],
-                        );
-                        idx += 1;
-                    }
+            minimap_lock.lock();
+            defer minimap_lock.unlock();
 
-                    render.queue.writeTexture(
-                        &.{ .texture = render.minimap_texture, .origin = .{ .x = min_x, .y = min_y } },
-                        &.{ .bytes_per_row = comp_len * w, .rows_per_image = h },
-                        &.{ .width = w, .height = h },
-                        copy,
+            if (need_minimap_update) {
+                const min_x = @min(map.minimap.width, minimap_update.min_x);
+                const max_x = @max(map.minimap.width, minimap_update.max_x + 1);
+                const min_y = @min(map.minimap.height, minimap_update.min_y);
+                const max_y = @max(map.minimap.height, minimap_update.max_y + 1);
+
+                const w = max_x - min_x;
+                const h = max_y - min_y;
+                if (w <= 0 or h <= 0)
+                    break :minimapUpdate;
+
+                const comp_len = map.minimap.num_components * map.minimap.bytes_per_component;
+
+                for (min_y..max_y, 0..) |y, i| {
+                    const base_map_idx = y * map.minimap.width * comp_len + min_x * comp_len;
+                    @memcpy(
+                        map.minimap_copy[i * w * comp_len .. (i + 1) * w * comp_len],
+                        map.minimap.data[base_map_idx .. base_map_idx + w * comp_len],
                     );
-
-                    need_minimap_update = false;
-                    minimap_update_min_x = std.math.maxInt(u32);
-                    minimap_update_max_x = std.math.minInt(u32);
-                    minimap_update_min_y = std.math.maxInt(u32);
-                    minimap_update_max_y = std.math.minInt(u32);
-                } else if (need_force_update) {
-                    render.queue.writeTexture(
-                        &.{ .texture = render.minimap_texture },
-                        &.{ .bytes_per_row = map.minimap.bytes_per_row, .rows_per_image = map.minimap.height },
-                        &.{ .width = map.minimap.width, .height = map.minimap.height },
-                        map.minimap.data,
-                    );
-                    need_force_update = false;
                 }
-            }
 
-            last_update = time;
+                ctx.queue.writeTexture(
+                    .{ .texture = render.minimap.texture, .origin = .{ .x = min_x, .y = min_y } },
+                    .{ .bytes_per_row = comp_len * w, .rows_per_image = h },
+                    .{ .width = w, .height = h },
+                    u8,
+                    map.minimap_copy[0 .. w * h * comp_len],
+                );
+
+                need_minimap_update = false;
+                minimap_update = .{};
+            } else if (need_force_update) {
+                ctx.queue.writeTexture(
+                    .{ .texture = render.minimap.texture },
+                    .{ .bytes_per_row = map.minimap.bytes_per_row, .rows_per_image = map.minimap.height },
+                    .{ .width = map.minimap.width, .height = map.minimap.height },
+                    u8,
+                    map.minimap.data,
+                );
+                need_force_update = false;
+            }
         }
     }
 }
 
 pub fn disconnect(has_lock: bool) void {
-    server.shutdown();
     map.dispose(allocator);
     input.reset();
     {
@@ -264,74 +269,53 @@ pub fn disconnect(has_lock: bool) void {
         if (ui_systems.editor_backup) |editor| {
             ui_systems.switchScreen(.editor);
             _ = editor;
-            // @memcpy(ui_systems.screen.editor, editor);
             ui_systems.editor_backup = null;
-        } else ui_systems.switchScreen(.char_select);
+        } else {
+            if (character_list == null)
+                ui_systems.switchScreen(.main_menu)
+            else if (character_list.?.characters.len > 0)
+                ui_systems.switchScreen(.char_select)
+            else
+                ui_systems.switchScreen(.char_create);
+        }
     }
-    dialog.showDialog(.none, {});
 }
 
 pub fn main() !void {
-    tracy.setThreadName("Main");
-    
-    start_time = std.time.microTimestamp();
+    if (build_options.enable_tracy) tracy.SetThreadName("Main");
+
+    const win_freq = if (builtin.os.tag == .windows) std.os.windows.QueryPerformanceFrequency() else {};
+    const start_instant = std.time.Instant.now() catch unreachable;
+    start_time = switch (builtin.os.tag) {
+        .windows => @intCast(@divFloor(start_instant.timestamp * std.time.us_per_s, win_freq)),
+        else => @divFloor(start_instant.timestamp.nsec, std.time.ns_per_us) + start_instant.timestamp.sec * std.time.us_per_s,
+    };
     utils.rng.seed(@intCast(start_time));
 
     const is_debug = builtin.mode == .Debug;
-    var gpa = if (is_debug) std.heap.GeneralPurposeAllocator(.{}){} else {};
+    var gpa = if (is_debug) std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 10 }).init else {};
     defer _ = if (is_debug) gpa.deinit();
 
     try rpmalloc.init(null, .{});
     defer rpmalloc.deinit();
 
-    allocator = if (@import("options").enable_tracy) blk: {
-        var tracing_allocator = tracy.TracingAllocator.init(switch (builtin.mode) {
-            .Debug => gpa.allocator(),
-            else => rpmalloc.allocator(),
-        });
-        break :blk tracing_allocator.allocator();
-    } else switch (builtin.mode) {
-        .Debug => gpa.allocator(),
-        else => rpmalloc.allocator(),
-    };
+    const child_allocator = if (is_debug)
+        gpa.allocator()
+    else
+        rpmalloc.allocator();
+    allocator = if (build_options.enable_tracy) blk: {
+        var tracy_alloc = tracy.TracyAllocator.init(child_allocator);
+        break :blk tracy_alloc.allocator();
+    } else child_allocator;
 
-    defer {
-        if (current_account.name.len > 0)
-            allocator.free(current_account.name);
+    var account_arena = std.heap.ArenaAllocator.init(allocator);
+    account_arena_allocator = account_arena.allocator();
+    defer account_arena.deinit();
 
-        if (current_account.email.len > 0)
-            allocator.free(current_account.email);
+    current_account = AccountData.load() catch null;
+    defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
 
-        if (current_account.password.len > 0)
-            allocator.free(current_account.password);
-
-        if (character_list.len > 0) {
-            for (character_list) |char| {
-                char.deinit();
-            }
-            allocator.free(character_list);
-        }
-
-        if (server_list) |srv_list| {
-            for (srv_list) |srv| {
-                srv.deinit();
-            }
-            allocator.free(srv_list);
-        }
-    }
-
-    version_text = "v" ++ settings.build_version;
-    rpc_client = try rpc.init(allocator, &ready);
-    defer rpc_client.deinit();
-
-    if (!glfw.init(.{})) {
-        glfw.getErrorCode() catch |err| switch (err) {
-            error.PlatformError,
-            error.PlatformUnavailable,
-            => return err,
-            else => unreachable,
-        };
-    }
+    try glfw.init();
     defer glfw.terminate();
 
     zstbi.init(allocator);
@@ -340,8 +324,8 @@ pub fn main() !void {
     zaudio.init(allocator);
     defer zaudio.deinit();
 
-    try settings.init(allocator);
-    defer settings.deinit(allocator);
+    settings = try Settings.init(allocator);
+    defer settings.deinit();
 
     try assets.init(allocator);
     defer assets.deinit(allocator);
@@ -355,38 +339,58 @@ pub fn main() !void {
     try map.init(allocator);
     defer map.deinit(allocator);
 
-    input.init(allocator);
-    defer input.deinit(allocator);
-
     try ui_systems.init(allocator);
     defer ui_systems.deinit();
 
-    {
+    input.init(allocator);
+    defer input.deinit();
+
+    if (current_account) |acc| {
+        const token_str = try std.fmt.allocPrint(account_arena_allocator, "{}", .{acc.token});
+        defer account_arena_allocator.free(token_str);
+
+        var data: std.StringHashMapUnmanaged([]const u8) = .empty;
+        try data.put(account_arena_allocator, "email", acc.email);
+        try data.put(account_arena_allocator, "token", token_str);
+        defer data.deinit(account_arena_allocator);
+
+        var needs_free = true;
+        const response = requests.sendRequest(build_options.login_server_uri ++ "char/list", data) catch |e| blk: {
+            switch (e) {
+                error.ConnectionRefused => {
+                    needs_free = false;
+                    break :blk "Connection Refused";
+                },
+                else => return e,
+            }
+        };
+        defer if (needs_free) requests.freeResponse(response);
+
+        enterGame: {
+            character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, account_arena_allocator, response, .{ .allocate = .alloc_always }) catch {
+                ui_systems.ui_lock.lock();
+                defer ui_systems.ui_lock.unlock();
+                ui_systems.switchScreen(.main_menu);
+                break :enterGame;
+            };
+            if (character_list.?.characters.len == 0) {
+                ui_systems.ui_lock.lock();
+                defer ui_systems.ui_lock.unlock();
+                ui_systems.switchScreen(.main_menu);
+                break :enterGame;
+            }
+            enterGame(character_list.?.servers[0], character_list.?.characters[0].char_id, std.math.maxInt(u16));
+        }
+    } else {
         ui_systems.ui_lock.lock();
         defer ui_systems.ui_lock.unlock();
         ui_systems.switchScreen(.main_menu);
     }
 
-    const window = glfw.Window.create(
-        1280,
-        720,
-        "Eclipse",
-        null,
-        null,
-        .{ .client_api = .no_api, .cocoa_retina_framebuffer = true },
-    ) orelse switch (glfw.mustGetErrorCode()) {
-        error.InvalidEnum,
-        error.InvalidValue,
-        error.FormatUnavailable,
-        => unreachable,
-        error.APIUnavailable,
-        error.VersionUnavailable,
-        error.PlatformError,
-        => |err| return err,
-        else => unreachable,
-    };
+    glfw.windowHintTyped(.client_api, .no_api);
+    const window = try glfw.Window.create(1280, 720, "Eclipse", null);
     defer window.destroy();
-    window.setSizeLimits(.{ .width = 1280, .height = 720 }, .{ .width = null, .height = null });
+    window.setSizeLimits(1280, 720, -1, -1);
     window.setCursor(switch (settings.cursor_type) {
         .basic => assets.default_cursor,
         .royal => assets.royal_cursor,
@@ -397,81 +401,60 @@ pub fn main() !void {
         .target_ally => assets.target_ally_cursor,
     });
 
-    window.setKeyCallback(input.keyEvent);
-    window.setCharCallback(input.charEvent);
-    window.setCursorPosCallback(input.mouseMoveEvent);
-    window.setMouseButtonCallback(input.mouseEvent);
-    window.setScrollCallback(input.scrollEvent);
-    window.setFramebufferSizeCallback(onResize);
+    ctx = gpu.GraphicsContext.create(
+        allocator,
+        .{
+            .window = window,
+            .fn_getTime = @ptrCast(&glfw.getTime),
+            .fn_getFramebufferSize = @ptrCast(&glfw.Window.getFramebufferSize),
+            .fn_getWin32Window = @ptrCast(&glfw.getWin32Window),
+            .fn_getX11Display = @ptrCast(&glfw.getX11Display),
+            .fn_getX11Window = @ptrCast(&glfw.getX11Window),
+            .fn_getWaylandDisplay = @ptrCast(&glfw.getWaylandDisplay),
+            .fn_getWaylandSurface = @ptrCast(&glfw.getWaylandWindow),
+            .fn_getCocoaWindow = @ptrCast(&glfw.getCocoaWindow),
+        },
+        .{ .present_mode = if (settings.enable_vsync) .fifo else .immediate },
+    ) catch |e| {
+        std.log.err("Failed to create graphics context: {any}", .{e});
+        return;
+    };
+    defer ctx.destroy(allocator);
 
-    try render.init(window, allocator);
-    defer render.deinit();
+    _ = window.setKeyCallback(input.keyEvent);
+    _ = window.setCharCallback(input.charEvent);
+    _ = window.setCursorPosCallback(input.mouseMoveEvent);
+    _ = window.setMouseButtonCallback(input.mouseEvent);
+    _ = window.setScrollCallback(input.scrollEvent);
+    _ = window.setFramebufferSizeCallback(onResize);
 
-    var thread_pool = xev.ThreadPool.init(.{});
-    defer thread_pool.deinit();
-    defer thread_pool.shutdown();
+    try render.init(ctx, allocator);
+    defer render.deinit(allocator);
 
-    server = try network.Server.init(allocator, &thread_pool);
-    defer server.deinit();
-
-    var rpc_thread = try std.Thread.spawn(.{}, runRpc, .{rpc_client});
-    defer {
-        rpc_client.stop();
-        rpc_thread.join();
-    }
-
-    render_thread = try std.Thread.spawn(.{}, renderTick, .{window});
+    render_thread = try std.Thread.spawn(.{ .allocator = allocator }, renderTick, .{});
     defer {
         tick_render = false;
         render_thread.join();
     }
 
-    var last_update: i64 = 0;
-    var last_ui_update: i64 = 0;
-    while (!window.shouldClose()) {
-        const time = std.time.microTimestamp() - start_time;
-        current_time = time;
+    defer server.signalShutdown();
 
+    while (!window.shouldClose()) {
         glfw.pollEvents();
 
-        if (time - last_update >= settings.fps_us) {
-            if (tick_frame or editing_map)
-                map.update(allocator);
+        const instant = std.time.Instant.now() catch unreachable;
+        const time = switch (builtin.os.tag) {
+            .windows => @as(i64, @intCast(@divFloor(instant.timestamp * std.time.us_per_s, win_freq))),
+            else => @divFloor(instant.timestamp.nsec, std.time.ns_per_us) + instant.timestamp.sec * std.time.us_per_s,
+        } - start_time;
+        const dt: f32 = @floatFromInt(if (current_time > 0) time - current_time else 0);
+        current_time = time;
 
-            if (ui_systems.screen == .editor or time - last_ui_update > 16 * std.time.us_per_ms) {
-                try ui_systems.update();
-                last_ui_update = time;
-            }
-
-            last_update = time;
-            std.time.sleep(settings.fps_us / 2 * std.time.ns_per_us);
+        if (tick_frame or editing_map) {
+            @branchHint(.likely);
+            map.update(allocator, time, dt);
         }
+
+        try ui_systems.update(time, dt);
     }
-}
-
-fn ready(cli: *rpc) !void {
-    rpc_start = @intCast(std.time.timestamp());
-    try cli.setPresence(.{
-        .assets = .{
-            .large_image = rpc.Packet.ArrayString(256).create("logo"),
-            .large_text = rpc.Packet.ArrayString(128).create(version_text),
-        },
-        .timestamps = .{
-            .start = rpc_start,
-        },
-    });
-}
-
-fn runRpc(cli: *rpc) void {
-    tracy.setThreadName("RPC");
-
-    rpmalloc.initThread() catch |e| {
-        std.log.err("RPC thread initialization failed: {}", .{e});
-        return;
-    };
-    defer rpmalloc.deinitThread(true);
-
-    cli.run(.{ .client_id = "1223822665748320317" }) catch |e| {
-        std.log.err("Setting up RPC failed: {}", .{e});
-    };
 }

@@ -1,0 +1,189 @@
+[
+    {
+        "id": 65534,
+        "name": "Map Editor Region Placeholder",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 53
+            }
+        ],
+        "show_name": true
+    },
+    {
+        "id": 0,
+        "name": "Health Shrine",
+        "textures": [
+            {
+                "sheet": "props_big",
+                "index": 1
+            }
+        ],
+        "size_mult": 1.6,
+        "light": {
+            "color": "0xE54242",
+            "intensity": 0.25
+        },
+        "static": true,
+        "occupy_square": true
+    },
+    {
+        "id": 1,
+        "name": "Magic Shrine",
+        "textures": [
+            {
+                "sheet": "props_big",
+                "index": 2
+            }
+        ],
+        "size_mult": 1.6,
+        "light": {
+            "color": "0x4C8AED",
+            "intensity": 0.25
+        },
+        "static": true,
+        "occupy_square": true,
+        "animation": {
+            "period": 1.6,
+            "frames": [
+                {
+                    "time": 0.4,
+                    "texture": {
+                        "sheet": "props_big",
+                        "index": 2
+                    }
+                },
+                {
+                    "time": 0.4,
+                    "texture": {
+                        "sheet": "props_big",
+                        "index": 3
+                    }
+                },
+                {
+                    "time": 0.4,
+                    "texture": {
+                        "sheet": "props_big",
+                        "index": 4
+                    }
+                },
+                {
+                    "time": 0.4,
+                    "texture": {
+                        "sheet": "props_big",
+                        "index": 3
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "id": 2,
+        "name": "Gravestone 0",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 32
+            }
+        ],
+        "show_name": true
+    },
+    {
+        "id": 3,
+        "name": "Gravestone 1",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 33
+            }
+        ],
+        "show_name": true
+    },
+    {
+        "id": 4,
+        "name": "Gravestone 2",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 34
+            }
+        ],
+        "show_name": true
+    },
+    {
+        "id": 5,
+        "name": "Gravestone 3",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 35
+            }
+        ],
+        "show_name": true
+    },
+    {
+        "id": 6,
+        "name": "Gravestone 4",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 36
+            }
+        ],
+        "show_name": true
+    },
+    {
+        "id": 7,
+        "name": "Grass",
+        "textures": [
+            {
+                "sheet": "props",
+                "index": 0
+            }
+        ]
+    },
+    {
+        "id": 8,
+        "name": "Rock",
+        "textures": [
+            {
+                "sheet": "props",
+                "index": 1
+            },
+            {
+                "sheet": "props",
+                "index": 2
+            }
+        ]
+    },
+    {
+        "id": 9,
+        "name": "Bush",
+        "textures": [
+            {
+                "sheet": "props",
+                "index": 3
+            }
+        ],
+        "occupy_square": true
+    },
+    {
+        "id": 10,
+        "name": "Flowers",
+        "textures": [
+            {
+                "sheet": "props",
+                "index": 4
+            },
+            {
+                "sheet": "props",
+                "index": 5
+            },
+            {
+                "sheet": "props",
+                "index": 6
+            }
+        ],
+        "draw_on_ground": true
+    }
+]

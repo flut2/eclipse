@@ -1,0 +1,53 @@
+[
+    {
+        "id": 0,
+        "name": "Realm",
+        "textures": [
+            {
+                "sheet": "portals_big",
+                "index": 0
+            }
+        ]
+    },
+    {
+        "id": 1,
+        "name": "Crown Cove",
+        "textures": [
+            {
+                "sheet": "portals",
+                "index": 0
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "name": "Slimy Ruins",
+        "textures": [
+            {
+                "sheet": "portals",
+                "index": 5
+            }
+        ]
+    },
+    {
+        "id": 3,
+        "name": "Crimson Chasm",
+        "textures": [
+            {
+                "sheet": "portals",
+                "index": 2
+            }
+        ],
+        "draw_on_ground": true
+    },
+    {
+        "id": 4,
+        "name": "Dusty Dune",
+        "textures": [
+            {
+                "sheet": "portals",
+                "index": 3
+            }
+        ]
+    }
+]

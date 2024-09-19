@@ -1,42 +1,42 @@
 const std = @import("std");
-const game_data = @import("shared").game_data;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const network_data = shared.network_data;
+const utils = shared.utils;
+const db = @import("db.zig");
+const main = @import("main.zig");
 
 const Entity = @import("map/entity.zig").Entity;
 const Enemy = @import("map/enemy.zig").Enemy;
+const Portal = @import("map/portal.zig").Portal;
+const Container = @import("map/container.zig").Container;
 const Player = @import("map/player.zig").Player;
 const Client = @import("client.zig").Client;
 
-inline fn h(str: []const u8) u64 {
+fn h(str: []const u8) u64 {
     return std.hash.Wyhash.hash(0, str);
 }
 
-inline fn sendMessage(client: *Client, msg: []const u8) void {
-    client.queuePacket(.{ .text = .{
-        .name = "Server",
-        .obj_id = -1,
-        .bubble_time = 0,
-        .recipient = "",
-        .text = msg,
-        .name_color = 0xCC00CC,
-        .text_color = 0xFF99FF,
-    } });
-}
-
-inline fn checkRank(player: *Player, comptime rank: u16) bool {
-    if (player.rank >= rank)
+fn checkRank(player: *Player, comptime rank: network_data.Rank) bool {
+    if (@intFromEnum(player.rank) >= @intFromEnum(rank))
         return true;
 
-    sendMessage(player.client, "You don't meet the rank requirements");
+    player.client.sendMessage("You don't meet the rank requirements");
     return false;
 }
 
 pub fn handle(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     const command_name = iter.next() orelse return;
     switch (h(command_name)) {
-        h("/spawn") => if (checkRank(player, 100)) handleSpawn(iter, player),
-        h("/clearspawn") => if (checkRank(player, 100)) handleClearSpawn(player),
-        h("/give") => if (checkRank(player, 100)) handleGive(iter, player),
-        else => sendMessage(player.client, "Unknown command"),
+        h("/spawn") => if (checkRank(player, .admin)) handleSpawn(iter, player),
+        h("/clearspawn") => if (checkRank(player, .admin)) handleClearSpawn(player),
+        h("/give") => if (checkRank(player, .admin)) handleGive(iter, player),
+        h("/ban") => if (checkRank(player, .mod)) handleBan(iter, player),
+        h("/unban") => if (checkRank(player, .mod)) handleUnban(iter, player),
+        h("/mute") => if (checkRank(player, .mod)) handleMute(iter, player),
+        h("/unmute") => if (checkRank(player, .mod)) handleUnmute(iter, player),
+        h("/cond"), h("/condition") => if (checkRank(player, .staff)) handleCond(iter, player),
+        else => player.client.sendMessage("Unknown command"),
     }
 }
 
@@ -58,82 +58,234 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
         _ = name_stream.write(iter.buffer[i..]) catch unreachable;
     }
 
-    const obj_type = game_data.obj_name_to_type.get(name_stream.getWritten()) orelse return;
-    const props = game_data.obj_type_to_props.getPtr(obj_type) orelse return;
+    var response_buf: [256]u8 = undefined;
 
-    for (0..count) |_| {
-        if (props.is_enemy) {
-            var enemy: Enemy = .{
-                .x = player.x,
-                .y = player.y,
-                .en_type = obj_type,
-                .props = props,
-                .spawned = true,
-            };
-            player.world.enemy_lock.lock();
-            defer player.world.enemy_lock.unlock();
-            _ = player.world.add(Enemy, &enemy) catch return;
-        } else {
-            var entity: Entity = .{
-                .x = player.x,
-                .y = player.y,
-                .en_type = obj_type,
-                .props = props,
-                .spawned = true,
-            };
-            player.world.entity_lock.lock();
-            defer player.world.entity_lock.unlock();
-            _ = player.world.add(Entity, &entity) catch return;
-        }
-    }
-
-    sendMessage(player.client, std.fmt.bufPrint(&buf, "Spawned {d}x {s}", .{ count, game_data.obj_type_to_name.get(obj_type) orelse "Unknown" }) catch return);
-}
-
-fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
-    const item_type = game_data.item_name_to_type.get(iter.buffer[iter.index orelse 0 ..]) orelse return;
-    const props = game_data.item_type_to_props.getPtr(item_type) orelse return;
-    const class_data = game_data.classes.get(player.player_type) orelse return;
-    for (&player.equips, class_data.slot_types) |*equip, slot_type| {
-        var buf: [256]u8 = undefined;
-        if (equip.* == std.math.maxInt(u16) and slot_type.slotsMatch(props.slot_type)) {
-            equip.* = item_type;
-            sendMessage(player.client, std.fmt.bufPrint(&buf, "You've been given the \"{s}\"", .{props.display_id}) catch return);
-            return;
-        }
-    }
-
-    sendMessage(player.client, "You don't have enough space");
-}
-
-fn handleClearSpawn(player: *Player) void {
-    var count: usize = 0;
-    {
-        player.world.enemy_lock.lock();
-        defer player.world.enemy_lock.unlock();
-        for (player.world.enemies.items) |*en| {
-            if (en.spawned) {
-                player.world.remove(Enemy, en) catch continue;
-                count += 1;
+    const written_name = name_stream.getWritten();
+    var name: ?[]const u8 = null;
+    inline for (.{ Entity, Enemy, Portal, Container }) |ObjType| {
+        if (switch (ObjType) {
+            Entity => game_data.entity,
+            Enemy => game_data.enemy,
+            Portal => game_data.portal,
+            Container => game_data.container,
+            else => unreachable,
+        }.from_name.get(written_name)) |data| {
+            name = data.name;
+            for (0..count) |_| {
+                var obj: ObjType = .{
+                    .x = player.x,
+                    .y = player.y,
+                    .data_id = data.id,
+                    .spawned = true,
+                };
+                _ = player.world.addExisting(ObjType, &obj) catch return;
             }
         }
     }
 
-    {
-        player.world.entity_lock.lock();
-        defer player.world.entity_lock.unlock();
-        for (player.world.entities.items) |*en| {
-            if (en.spawned) {
-                player.world.remove(Entity, en) catch continue;
+    if (name) |name_inner| {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Spawned {}x \"{s}\"", .{ count, name_inner }) catch return);
+    } else {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "\"{s}\" not found in game data", .{written_name}) catch return);
+        return;
+    }
+}
+
+fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+    var response_buf: [256]u8 = undefined;
+
+    const item_name = iter.buffer[iter.index orelse 0 ..];
+    const item_data = game_data.item.from_name.get(item_name) orelse {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "\"{s}\" not found in game data", .{item_name}) catch return);
+        return;
+    };
+    const class_data = game_data.class.from_id.get(player.data_id) orelse return;
+    for (&player.inventory, 0..) |*equip, i| {
+        if (equip.* == std.math.maxInt(u16) and (i >= 4 or class_data.item_types[i].typesMatch(item_data.item_type))) {
+            equip.* = item_data.id;
+            player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've been given a \"{s}\"", .{item_data.name}) catch return);
+            return;
+        }
+    }
+
+    player.client.sendMessage("You don't have enough space");
+}
+
+fn handleClearSpawn(player: *Player) void {
+    var count: usize = 0;
+    inline for (.{ Entity, Enemy, Portal, Container }) |ObjType| {
+        for (player.world.listForType(ObjType).items) |*obj| {
+            if (obj.spawned) {
+                player.world.remove(ObjType, obj) catch continue;
                 count += 1;
             }
         }
     }
 
     if (count == 0) {
-        sendMessage(player.client, "No entities found");
+        player.client.sendMessage("No entities found");
     } else {
         var buf: [256]u8 = undefined;
-        sendMessage(player.client, std.fmt.bufPrint(&buf, "Cleared {d} entities", .{count}) catch return);
+        player.client.sendMessage(std.fmt.bufPrint(&buf, "Cleared {} entities", .{count}) catch return);
+    }
+}
+
+fn handleBan(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+    var response_buf: [256]u8 = undefined;
+
+    const allocator = player.world.allocator;
+    var names = db.Names.init(allocator);
+    defer names.deinit();
+
+    const player_name = iter.next() orelse {
+        player.client.sendMessage("Invalid command usage. Arguments: /ban [name] [optional expiry, in seconds]");
+        return;
+    };
+    const acc_id = names.get(player_name) catch {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch unreachable);
+        return;
+    };
+
+    var acc_data = db.AccountData.init(allocator, acc_id);
+    defer acc_data.deinit();
+
+    const expiry_str = iter.next();
+    const expiry = if (expiry_str) |str| std.fmt.parseInt(u32, str, 10) catch std.math.maxInt(u32) else std.math.maxInt(u32);
+
+    banHwid: {
+        const hwid = acc_data.get(.hwid) catch break :banHwid;
+        var banned_hwids = db.BannedHwids.init(allocator);
+        defer banned_hwids.deinit();
+        banned_hwids.add(hwid, expiry) catch break :banHwid;
+    }
+
+    acc_data.set(.{ .ban_expiry = main.current_time + expiry * std.time.us_per_s }) catch {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch unreachable);
+        return;
+    };
+
+    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully banned", .{player_name}) catch unreachable);
+}
+
+fn handleUnban(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+    var response_buf: [256]u8 = undefined;
+
+    const allocator = player.world.allocator;
+    var names = db.Names.init(allocator);
+    defer names.deinit();
+
+    const player_name = iter.next() orelse {
+        player.client.sendMessage("Invalid command usage. Arguments: /unban [name]");
+        return;
+    };
+    const acc_id = names.get(player_name) catch {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch unreachable);
+        return;
+    };
+
+    var acc_data = db.AccountData.init(allocator, acc_id);
+    defer acc_data.deinit();
+
+    unbanHwid: {
+        const hwid = acc_data.get(.hwid) catch break :unbanHwid;
+        var banned_hwids = db.BannedHwids.init(allocator);
+        defer banned_hwids.deinit();
+        banned_hwids.remove(hwid) catch break :unbanHwid;
+    }
+
+    acc_data.set(.{ .ban_expiry = 0 }) catch {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch unreachable);
+        return;
+    };
+
+    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully unbanned", .{player_name}) catch unreachable);
+}
+
+fn handleMute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+    var response_buf: [256]u8 = undefined;
+
+    const allocator = player.world.allocator;
+    var names = db.Names.init(allocator);
+    defer names.deinit();
+
+    const player_name = iter.next() orelse {
+        player.client.sendMessage("Invalid command usage. Arguments: /mute [name] [optional expiry, in seconds]");
+        return;
+    };
+    const acc_id = names.get(player_name) catch {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch unreachable);
+        return;
+    };
+
+    var acc_data = db.AccountData.init(allocator, acc_id);
+    defer acc_data.deinit();
+
+    const expiry_str = iter.next();
+    const expiry = if (expiry_str) |str| std.fmt.parseInt(u32, str, 10) catch std.math.maxInt(u32) else std.math.maxInt(u32);
+
+    muteHwid: {
+        const hwid = acc_data.get(.hwid) catch break :muteHwid;
+        var muted_hwids = db.MutedHwids.init(allocator);
+        defer muted_hwids.deinit();
+        muted_hwids.add(hwid, expiry) catch break :muteHwid;
+    }
+
+    acc_data.set(.{ .mute_expiry = main.current_time + expiry * std.time.us_per_s }) catch {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch unreachable);
+        return;
+    };
+
+    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully muted", .{player_name}) catch unreachable);
+}
+
+fn handleUnmute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+    var response_buf: [256]u8 = undefined;
+
+    const allocator = player.world.allocator;
+    var names = db.Names.init(allocator);
+    defer names.deinit();
+
+    const player_name = iter.next() orelse {
+        player.client.sendMessage("Invalid command usage. Arguments: /unmute [name]");
+        return;
+    };
+    const acc_id = names.get(player_name) catch {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch unreachable);
+        return;
+    };
+
+    var acc_data = db.AccountData.init(allocator, acc_id);
+    defer acc_data.deinit();
+
+    unmuteHwid: {
+        const hwid = acc_data.get(.hwid) catch break :unmuteHwid;
+        var muted_hwids = db.MutedHwids.init(allocator);
+        defer muted_hwids.deinit();
+        muted_hwids.remove(hwid) catch break :unmuteHwid;
+    }
+
+    acc_data.set(.{ .mute_expiry = 0 }) catch {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch unreachable);
+        return;
+    };
+
+    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully unmuted", .{player_name}) catch unreachable);
+}
+
+fn handleCond(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+    var response_buf: [256]u8 = undefined;
+
+    const cond_name = iter.buffer[iter.index orelse 0 ..];
+    const cond = std.meta.stringToEnum(utils.ConditionEnum, cond_name) orelse {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Condition \"{s}\" not found in game data", .{cond_name}) catch return);
+        return;
+    };
+    player.condition.toggle(cond);
+    if (player.condition.get(cond)) {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Condition applied: \"{s}\"", .{@tagName(cond)}) catch return);
+        return;
+    } else {
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Condition removed: \"{s}\"", .{@tagName(cond)}) catch return);
+        return;
     }
 }

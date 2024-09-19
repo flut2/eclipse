@@ -1,59 +1,82 @@
 const std = @import("std");
-const game_data = @import("shared").game_data;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const network_data = shared.network_data;
+const utils = shared.utils;
 const stat_util = @import("stat_util.zig");
-const utils = @import("shared").utils;
+const behavior_logic = @import("../logic/logic.zig");
+const behavior = @import("../logic/behavior.zig");
 
 const World = @import("../world.zig").World;
 
 pub const Entity = struct {
-    obj_id: i32 = -1,
+    map_id: u32 = std.math.maxInt(u32),
+    data_id: u16 = std.math.maxInt(u16),
     x: f32 = 0.0,
     y: f32 = 0.0,
-    en_type: u16 = 0xFFFF,
+    hp: i32 = 0,
     stats_writer: utils.PacketWriter = .{},
-    props: *const game_data.ObjProps = undefined,
+    data: *const game_data.EntityData = undefined,
     world: *World = undefined,
     spawned: bool = false,
+    behavior: ?behavior.EntityBehavior = null,
+    behavior_data: ?*anyopaque = null,
+    storages: behavior_logic.EntityStorages = .{},
 
     pub fn init(self: *Entity, allocator: std.mem.Allocator) !void {
-        self.stats_writer.buffer = try allocator.alloc(u8, 32);
+        self.behavior = behavior.entity_behavior_map.get(self.data_id);
+        if (self.behavior) |behav| {
+            if (behav.spawn) |spawn| try spawn(self);
+            if (behav.entry) |entry| try entry(self);
+        }
 
-        self.props = game_data.obj_type_to_props.getPtr(self.en_type) orelse {
-            std.log.err("Could not find props for entity with type 0x{x}", .{self.en_type});
+        self.stats_writer.list = try .initCapacity(allocator, 32);
+
+        self.data = game_data.entity.from_id.getPtr(self.data_id) orelse {
+            std.log.err("Could not find data for entity with data id {}", .{self.data_id});
             return;
         };
 
-        if (self.props.occupy_square) {
+        if (self.data.occupy_square or self.data.full_occupy) {
             const ux: u32 = @intFromFloat(self.x);
             const uy: u32 = @intFromFloat(self.y);
             self.world.tiles[uy * self.world.w + ux].occupied = true;
         }
+
+        self.hp = self.data.health;
     }
 
     pub fn deinit(self: *Entity) !void {
-        if (self.props.occupy_square) {
+        if (self.behavior) |behav| {
+            if (behav.death) |death| try death(self);
+            if (behav.exit) |exit| try exit(self);
+        }
+
+        if (self.data.occupy_square or self.data.full_occupy) {
             const ux: u32 = @intFromFloat(self.x);
             const uy: u32 = @intFromFloat(self.y);
             self.world.tiles[uy * self.world.w + ux].occupied = false;
         }
 
-        self.world.allocator.free(self.stats_writer.buffer);
+        self.stats_writer.list.deinit(self.world.allocator);
     }
 
     pub fn tick(self: *Entity, time: i64, dt: i64) !void {
-        _ = self;
-        _ = time;
-        _ = dt;
+        if (self.data.health > 0 and self.hp <= 0) try self.world.remove(Entity, self);
+        if (self.behavior) |behav| {
+            if (behav.tick) |behav_tick| try behav_tick(self, time, dt);
+        }
     }
 
-    pub fn exportStats(self: *Entity, stat_cache: *std.EnumArray(game_data.StatType, ?stat_util.StatValue)) ![]u8 {
-        var writer = &self.stats_writer;
-        writer.index = 0;
+    pub fn exportStats(self: *Entity, cache: *[@typeInfo(network_data.EntityStat).@"union".fields.len]?network_data.EntityStat) ![]u8 {
+        const writer = &self.stats_writer;
+        writer.list.clearRetainingCapacity();
 
         const allocator = self.world.allocator;
-        stat_util.write(writer, stat_cache, allocator, .x, self.x);
-        stat_util.write(writer, stat_cache, allocator, .y, self.y);
+        stat_util.write(network_data.EntityStat, allocator, writer, cache, .{ .x = self.x });
+        stat_util.write(network_data.EntityStat, allocator, writer, cache, .{ .y = self.y });
+        if (self.data.health > 0) stat_util.write(network_data.EntityStat, allocator, writer, cache, .{ .hp = self.hp });
 
-        return writer.buffer[0..writer.index];
+        return writer.list.items;
     }
 };

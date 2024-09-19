@@ -1,9 +1,11 @@
 const std = @import("std");
-const xev = @import("xev");
-const utils = @import("shared").utils;
+const shared = @import("shared");
+const utils = shared.utils;
+const game_data = shared.game_data;
+const network_data = shared.network_data;
+const uv = shared.uv;
 const settings = @import("settings.zig");
 const main = @import("main.zig");
-const game_data = @import("shared").game_data;
 const builtin = @import("builtin");
 const db = @import("db.zig");
 const maps = @import("map/maps.zig");
@@ -14,521 +16,329 @@ const Entity = @import("map/entity.zig").Entity;
 const Enemy = @import("map/enemy.zig").Enemy;
 const Projectile = @import("map/projectile.zig").Projectile;
 const Player = @import("map/player.zig").Player;
+const Portal = @import("map/portal.zig").Portal;
+const Container = @import("map/container.zig").Container;
 
-pub const FailureType = enum(i8) {
-    message_no_disconnect = -1,
-    message_with_disconnect = 0,
-    client_update_needed = 1,
-    force_close_game = 2,
-    invalid_teleport_target = 3,
-};
-
-pub const TimedPosition = extern struct {
-    time: i64,
-    x: f32,
-    y: f32,
-};
-
-pub const ObjectData = struct {
-    obj_type: u16,
-    obj_id: i32,
-    stats: []u8,
-};
-
-pub const TileData = extern struct {
-    x: u16,
-    y: u16,
-    tile_type: u16,
-};
-
-const C2SPacketId = enum(u8) {
-    unknown = 0,
-    player_shoot = 1,
-    move = 2,
-    player_text = 3,
-    update_ack = 4,
-    inv_swap = 5,
-    use_item = 6,
-    hello = 7,
-    inv_drop = 8,
-    pong = 9,
-    teleport = 10,
-    use_portal = 11,
-    buy = 12,
-    ground_damage = 13,
-    player_hit = 14,
-    enemy_hit = 15,
-    aoe_ack = 16,
-    shoot_ack = 17,
-    other_hit = 18,
-    square_hit = 19,
-    escape = 28,
-    map_hello = 32,
-    use_ability = 33,
-};
-
-const S2CPacketId = enum(u8) {
-    unknown = 0,
-    create_success = 1,
-    text = 2,
-    server_player_shoot = 3,
-    damage = 4,
-    update = 5,
-    notification = 6,
-    new_tick = 7,
-    show_effect = 8,
-    goto = 9,
-    inv_result = 10,
-    ping = 11,
-    map_info = 12,
-    death = 13,
-    aoe = 15,
-    ally_shoot = 19,
-    enemy_shoot = 20,
-    failure = 28,
-};
-
-// All packets without variable length fields (like slices) should be packed.
-// This allows us to directly copy the struct into the buffer
-pub const S2CPacket = union(S2CPacketId) {
-    unknown: packed struct {},
-    create_success: packed struct { player_id: i32, char_id: u32 },
-    text: struct {
-        name: []const u8,
-        obj_id: i32,
-        bubble_time: u8,
-        recipient: []const u8,
-        text: []const u8,
-        name_color: u32,
-        text_color: u32,
-    },
-    server_player_shoot: packed struct {},
-    damage: packed struct {
-        target_id: i32,
-        effects: utils.Condition,
-        amount: u16,
-        kill: bool,
-        bullet_id: u8,
-        object_id: i32,
-    },
-    update: struct { tiles: []const TileData, drops: []const i32, new_objs: []const ObjectData },
-    notification: struct { obj_id: i32, message: []const u8, color: u32 },
-    new_tick: struct { tick_id: u8, ticks_per_sec: u8, objs: []const ObjectData },
-    show_effect: packed struct {
-        eff_type: game_data.ShowEffect,
-        obj_id: i32,
-        x1: f32,
-        y1: f32,
-        x2: f32,
-        y2: f32,
-        color: u32,
-    },
-    goto: packed struct { obj_id: i32, x: f32, y: f32 },
-    inv_result: packed struct { result: u8 },
-    ping: packed struct { serial: i64 },
-    map_info: struct {
-        width: i32,
-        height: i32,
-        name: []const u8,
-        bg_light_color: u32,
-        bg_light_intensity: f32,
-        day_light_intensity: f32,
-        night_light_intensity: f32,
-        server_time: i64,
-    },
-    death: struct { acc_id: i32, char_id: i32, killer: []const u8 },
-    aoe: struct {
-        x: f32,
-        y: f32,
-        radius: f32,
-        damage: u16,
-        eff: utils.Condition,
-        duration: f32,
-        orig_type: u8,
-        color: u32,
-    },
-    ally_shoot: packed struct { bullet_id: u8, owner_id: i32, container_type: u16, angle: f32 },
-    enemy_shoot: packed struct {
-        bullet_id: u8,
-        owner_id: i32,
-        bullet_index: u8,
-        x: f32,
-        y: f32,
-        angle: f32,
-        phys_dmg: i16,
-        magic_dmg: i16,
-        true_dmg: i16,
-        num_shots: u8,
-        angle_inc: f32,
-    },
-    failure: struct {
-        fail_type: FailureType,
-        desc: []const u8,
-    },
+const WriteRequest = extern struct {
+    request: uv.uv_write_t = .{},
+    buffer: uv.uv_buf_t = .{},
 };
 
 pub const Client = struct {
-    loop: ?*xev.Loop = null,
-    socket: ?*xev.TCP = null,
-    write_queue: utils.MPSCQueue = undefined,
-    reader: utils.PacketReader = .{},
-    write_lock: std.Thread.Mutex = .{},
-    write_comp: ?*xev.Completion = null,
-    allocator: std.mem.Allocator = undefined,
+    socket: *uv.uv_tcp_t = undefined,
+    arena: std.heap.ArenaAllocator = undefined,
     needs_shutdown: bool = false,
     world: *World = undefined,
+    ip: []const u8 = "",
     acc_id: u32 = std.math.maxInt(u32),
     char_id: u32 = std.math.maxInt(u32),
-    plr_id: i32 = -1,
+    player_map_id: u32 = std.math.maxInt(u32),
 
-    pub fn init(
-        allocator: std.mem.Allocator,
-        loop: *xev.Loop,
-        socket: *xev.TCP,
-        read_buffer: *[main.read_buffer_size]u8,
-        secondary_read_buffer: *[main.read_buffer_size]u8,
-    ) !Client {
-        var ret = Client{ .allocator = allocator, .loop = loop, .socket = socket };
-        ret.reader.buffer = read_buffer;
-        ret.reader.fba = std.heap.FixedBufferAllocator.init(secondary_read_buffer);
-        ret.write_queue.init(try allocator.create(utils.MPSCQueue.Node));
-        return ret;
+    fn PacketData(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?) type {
+        return @typeInfo(network_data.C2SPacket).@"union".fields[@intFromEnum(tag)].type;
     }
 
-    pub fn deinit(self: *Client) void {
-        self.allocator.destroy(self.write_queue.stub);
-        main.read_buffer_pool.destroy(@alignCast(
-            @as(*[main.read_buffer_size]u8, @ptrFromInt(@intFromPtr(self.reader.buffer.ptr))),
-        ));
-        main.read_buffer_pool.destroy(@alignCast(
-            @as(*[main.read_buffer_size]u8, @ptrFromInt(@intFromPtr(self.reader.fba.buffer.ptr))),
-        ));
+    fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?) fn (*Client, PacketData(tag)) void {
+        return switch (tag) {
+            .player_projectile => handlePlayerProjectile,
+            .move => handleMove,
+            .player_text => handlePlayerText,
+            .inv_swap => handleInvSwap,
+            .use_item => handleUseItem,
+            .hello => handleHello,
+            .inv_drop => handleInvDrop,
+            .pong => handlePong,
+            .teleport => handleTeleport,
+            .use_portal => handleUsePortal,
+            .buy => handleBuy,
+            .ground_damage => handleGroundDamage,
+            .player_hit => handlePlayerHit,
+            .enemy_hit => handleEnemyHit,
+            .escape => handleEscape,
+            .map_hello => handleMapHello,
+        };
     }
 
-    pub fn shutdown(self: *Client) void {
-        if (self.socket == null or self.loop == null)
+    pub export fn allocBuffer(socket: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) void {
+        const client: *Client = @ptrCast(@alignCast(socket.*.data));
+        buf.*.base = @ptrCast(client.arena.allocator().alloc(u8, suggested_size) catch {
+            client.sameThreadShutdown(); // no failure, if we can't alloc it wouldn't go through anyway
             return;
-
-        const c = main.completion_pool.create() catch unreachable;
-        self.socket.?.shutdown(self.loop.?, c, Client, self, shutdownCallback);
+        });
+        buf.*.len = @intCast(suggested_size);
     }
 
-    pub fn queuePacket(self: *Client, packet: S2CPacket) void {
-        if (self.socket == null or self.loop == null)
+    export fn closeCallback(socket: [*c]uv.uv_handle_t) void {
+        const client: *Client = @ptrCast(@alignCast(socket.*.data));
+
+        removePlayer: {
+            if (client.player_map_id == std.math.maxInt(u32)) break :removePlayer;
+            client.world.remove(Player, client.world.findRef(Player, client.player_map_id) orelse break :removePlayer) catch break :removePlayer;
+        }
+
+        main.socket_pool.destroy(client.socket);
+        client.arena.deinit();
+        main.client_pool.destroy(client);
+    }
+
+    export fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) void {
+        const wr: *WriteRequest = @ptrCast(ud);
+        const client: *Client = @ptrCast(@alignCast(wr.request.data));
+
+        if (status != 0) {
+            client.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Socket write error" } });
             return;
-
-        // What's the point of the MPSC queue if we're going to have to lock either way for MemoryPool? todo thread safe MemoryPool
-        self.write_lock.lock();
-        defer self.write_lock.unlock();
-
-        var writer = utils.PacketWriter{ .buffer = main.write_buffer_pool.create() catch unreachable };
-        writer.writeLength();
-        writer.write(@intFromEnum(std.meta.activeTag(packet)));
-        switch (packet) {
-            inline else => |data| {
-                var data_bytes = std.mem.asBytes(&data);
-                const data_type = @TypeOf(data);
-                const data_info = @typeInfo(data_type);
-                if (data_info.Struct.layout == .Packed) {
-                    const field_len = (@bitSizeOf(data_info.Struct.backing_integer.?) + 7) / 8;
-                    if (field_len > 0)
-                        writer.writeDirect(data_bytes[0..field_len]);
-                } else {
-                    inline for (data_info.Struct.fields) |field| {
-                        const base_offset = @offsetOf(data_type, field.name);
-                        const type_info = @typeInfo(field.type);
-                        if (type_info == .Pointer and (type_info.Pointer.size == .Slice or type_info.Pointer.size == .Many)) {
-                            writer.write(std.mem.bytesAsValue([]type_info.Pointer.child, data_bytes[base_offset .. base_offset + 16]).*);
-                        } else {
-                            const field_len = (@bitSizeOf(field.type) + 7) / 8;
-                            if (field_len > 0)
-                                writer.writeDirect(data_bytes[base_offset .. base_offset + field_len]);
-                        }
-                    }
-                }
-            },
-        }
-        writer.updateLength();
-
-        if (packet == .failure) {
-            self.needs_shutdown = true;
-            std.log.err("fail received: {s}", .{packet.failure.desc});
         }
 
-        const empty = self.write_queue.isEmpty();
-        const node = main.node_pool.create() catch unreachable;
-        node.buf = writer.buffer[0..writer.index];
-        self.write_queue.push(node);
-        if (empty) {
-            self.write_comp = main.completion_pool.create() catch unreachable;
-            self.socket.?.write(self.loop.?, self.write_comp.?, .{ .slice = node.buf }, Client, self, writeCallback);
-        }
+        const arena_allocator = client.arena.allocator();
+        arena_allocator.free(wr.buffer.base[0..wr.buffer.len]);
+        arena_allocator.destroy(wr);
     }
 
-    fn writeCallback(self: ?*Client, _: *xev.Loop, c: *xev.Completion, _: xev.TCP, buf: xev.WriteBuffer, result: xev.TCP.WriteError!usize) xev.CallbackAction {
-        if (self) |cli| {
-            if (cli.socket == null or cli.loop == null)
-                return .disarm;
+    pub export fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) void {
+        const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
+        const client: *Client = @ptrCast(@alignCast(socket.data));
+        // if (client.ip.len == 0) {
+        //     const sockname_status = uv.uv_tcp_getsockname(@ptrCast(socket), @ptrCast(&address.any), @sizeOf(std.posix.socklen_t));
+        //     if (sockname_status != 0) {
+        //         std.log.err("Failed to get sockname: {s}", .{uv.uv_strerror(sockname_status)});
+        //         uv.uv_close(@ptrCast(socket), closeCallback);
+        //         return;
+        //     }
 
-            if (cli.write_queue.pop()) |node| {
-                if (cli.write_queue.getNext(node)) |next| {
-                    cli.socket.?.write(cli.loop.?, c, .{ .slice = next.buf }, Client, cli, writeCallback);
-                } else {
-                    main.completion_pool.destroy(c);
-                    cli.write_comp = null;
-                }
+        //     client.ip = main.getIp(address) catch |e| {
+        //         std.log.err("Failed to parse IP from socket: {}", .{e});
+        //         uv.uv_close(@ptrCast(socket), closeCallback);
+        //         return;
+        //     };
+        // }
+        const arena_allocator = client.arena.allocator();
+        var child_arena = std.heap.ArenaAllocator.init(arena_allocator);
+        defer child_arena.deinit();
+        const child_arena_allocator = child_arena.allocator();
 
-                main.write_buffer_pool.destroy(
-                    @alignCast(
-                        @as(*[main.write_buffer_size]u8, @ptrFromInt(@intFromPtr(node.buf.ptr))),
-                    ),
-                );
-                main.node_pool.destroy(node);
-            }
+        if (bytes_read > 0) {
+            var reader: utils.PacketReader = .{ .buffer = buf.*.base[0..@intCast(bytes_read)] };
 
-            _ = result catch |e| {
-                std.log.err("Socket write error: {}", .{e});
-                cli.shutdown();
-                return .disarm;
-            };
+            while (reader.index <= bytes_read - 3) {
+                defer _ = child_arena.reset(.retain_capacity);
 
-            if (buf.slice[2] == @intFromEnum(S2CPacket.failure) and cli.needs_shutdown)
-                cli.shutdown();
-        }
+                const len = reader.read(u16, child_arena_allocator);
+                if (len > bytes_read - reader.index)
+                    return;
 
-        return .disarm;
-    }
-
-    pub fn readCallback(self: ?*Client, _: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, result: xev.TCP.ReadError!usize) xev.CallbackAction {
-        if (self) |cli| {
-            if (cli.socket == null or cli.loop == null)
-                return .disarm;
-
-            const size = result catch |e| {
-                std.log.err("Socket read error: {}", .{e});
-                cli.shutdown();
-                return .disarm;
-            };
-            cli.reader.reset();
-            cli.reader.size = size;
-
-            while (cli.reader.index <= size - 3) {
-                const len = cli.reader.read(u16);
-                if (len > size - cli.reader.index)
-                    return .rearm;
-
-                const next_packet_idx = cli.reader.index + len;
-                const byte_id = cli.reader.read(u8);
-                const packet_id = std.meta.intToEnum(C2SPacketId, byte_id) catch |e| {
-                    std.log.err("Error parsing C2SPacketId ({}): id={d}, size={d}, len={d}", .{ e, byte_id, size, len });
-                    cli.reader.reset();
-                    return .rearm;
+                const next_packet_idx = reader.index + len;
+                const EnumType = @typeInfo(network_data.C2SPacket).@"union".tag_type.?;
+                const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), child_arena_allocator);
+                const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
+                    std.log.err("Error parsing C2SPacketId ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
+                    client.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Socket read error" } });
+                    return;
                 };
 
                 switch (packet_id) {
-                    .player_shoot => cli.handlePlayerShoot(),
-                    .move => cli.handleMove(),
-                    .player_text => cli.handlePlayerText(),
-                    .update_ack => cli.handleUpdateAck(),
-                    .inv_swap => cli.handleInvSwap(),
-                    .use_item => cli.handleUseItem(),
-                    .hello => cli.handleHello(),
-                    .inv_drop => cli.handleInvDrop(),
-                    .pong => cli.handlePong(),
-                    .teleport => cli.handleTeleport(),
-                    .use_portal => cli.handleUsePortal(),
-                    .buy => cli.handleBuy(),
-                    .ground_damage => cli.handleGroundDamage(),
-                    .player_hit => cli.handlePlayerHit(),
-                    .enemy_hit => cli.handleEnemyHit(),
-                    .aoe_ack => cli.handleAoeAck(),
-                    .shoot_ack => cli.handleShootAck(),
-                    .other_hit => cli.handleOtherHit(),
-                    .square_hit => cli.handleSquareHit(),
-                    .escape => cli.handleEscape(),
-                    .map_hello => cli.handleMapHello(),
-                    .use_ability => cli.handleUseAbility(),
-                    else => {
-                        std.log.err("Unknown C2SPacketId: id={}, size={d}, len={d}", .{ packet_id, size, len });
-                        cli.reader.reset();
-                        return .rearm;
-                    },
+                    inline else => |id| handlerFn(id)(client, reader.read(PacketData(id), child_arena_allocator)),
                 }
 
-                if (cli.reader.index < next_packet_idx) {
-                    std.log.err("C2S packet {} has {d} bytes left over", .{ packet_id, next_packet_idx - cli.reader.index });
-                    cli.reader.index = next_packet_idx;
+                if (reader.index < next_packet_idx) {
+                    std.log.err("C2S packet {} has {} bytes left over", .{ packet_id, next_packet_idx - reader.index });
+                    reader.index = next_packet_idx;
                 }
             }
+        } else if (bytes_read < 0) {
+            if (bytes_read != uv.UV_EOF) {
+                client.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Socket read error" } });
+            } else client.sameThreadShutdown();
+            return;
         }
 
-        return .rearm;
+        arena_allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
     }
 
-    fn shutdownCallback(self: ?*Client, _: *xev.Loop, c: *xev.Completion, socket: xev.TCP, _: xev.TCP.ShutdownError!void) xev.CallbackAction {
-        if (self) |cli| {
-            if (cli.loop == null)
-                return .disarm;
+    export fn asyncCloseCallback(_: [*c]uv.uv_handle_t) void {}
 
-            socket.close(cli.loop.?, c, Client, cli, closeCallback);
-        }
-
-        return .disarm;
+    pub export fn shutdownCallback(handle: [*c]uv.uv_async_t) void {
+        const client: *Client = @ptrCast(@alignCast(handle.*.data));
+        client.sameThreadShutdown();
     }
 
-    fn closeCallback(self: ?*Client, _: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.TCP.CloseError!void) xev.CallbackAction {
-        if (self) |cli| {
-            cli.loop = null;
-            cli.socket = null;
-            cli.write_comp = null;
-            cli.deinit();
-        }
-
-        return .disarm;
+    pub fn sameThreadShutdown(self: *Client) void {
+        if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
     }
 
-    fn handlePlayerShoot(self: *Client) void {
-        var reader = &self.reader;
-        const time = reader.read(i64);
-        _ = time;
-        const bullet_id = reader.read(u8);
-        const cont_type = reader.read(u16);
-        {
-            self.world.player_lock.lock();
-            defer self.world.player_lock.unlock();
-            if (self.world.findRef(Player, self.plr_id)) |player| {
-                if (player.equips[0] != cont_type)
+    pub fn queuePacket(self: *Client, packet: network_data.S2CPacket) void {
+        switch (packet) {
+            inline else => |data| {
+                const arena_allocator = self.arena.allocator();
+
+                var writer: utils.PacketWriter = .{};
+                writer.writeLength(arena_allocator);
+                writer.write(@intFromEnum(std.meta.activeTag(packet)), arena_allocator);
+                writer.write(data, arena_allocator);
+                writer.updateLength();
+
+                const wr: *WriteRequest = arena_allocator.create(WriteRequest) catch unreachable;
+                wr.buffer.base = @ptrCast(writer.list.items);
+                wr.buffer.len = @intCast(writer.list.items.len);
+                wr.request.data = @ptrCast(self);
+                const write_status = uv.uv_write(@ptrCast(wr), @ptrCast(self.socket), @ptrCast(&wr.buffer), 1, writeCallback);
+                if (write_status != 0) {
+                    self.sameThreadShutdown();
                     return;
-            }
+                }
+            },
         }
 
-        const x = reader.read(f32);
-        const y = reader.read(f32);
-        const angle = reader.read(f32);
-        const item_props = game_data.item_type_to_props.get(cont_type) orelse return;
-        const proj_props = item_props.projectile orelse return;
+        if (packet == .@"error") self.sameThreadShutdown();
+    }
+
+    pub fn sendMessage(self: *Client, msg: []const u8) void {
+        self.queuePacket(.{ .text = .{
+            .name = "Server",
+            .obj_type = .entity,
+            .map_id = std.math.maxInt(u32),
+            .bubble_time = 0,
+            .recipient = "",
+            .text = msg,
+            .name_color = 0xCC00CC,
+            .text_color = 0xFF99FF,
+        } });
+    }
+
+    fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) void {
+        const player = self.world.findRef(Player, self.player_map_id) orelse return;
+        const item_data = game_data.item.from_id.getPtr(player.inventory[0]) orelse return;
+        const proj_data = item_data.projectile orelse return;
+
         var proj: Projectile = .{
-            .owner_id = self.plr_id,
-            .x = x,
-            .y = y,
-            .angle = angle,
-            .start_time = std.time.microTimestamp(),
-            .phys_dmg = proj_props.physical_damage,
-            .magic_dmg = proj_props.magic_damage,
-            .true_dmg = proj_props.true_damage,
-            .bullet_id = bullet_id,
-            .props = &proj_props,
+            .x = data.x,
+            .y = data.y,
+            .owner_obj_type = .player,
+            .owner_map_id = self.player_map_id,
+            .angle = data.angle,
+            .start_time = main.current_time,
+            .phys_dmg = proj_data.phys_dmg,
+            .magic_dmg = proj_data.magic_dmg,
+            .true_dmg = proj_data.true_dmg,
+            .index = data.proj_index,
+            .data = &item_data.projectile.?,
         };
-        {
-            self.world.proj_lock.lock();
-            defer self.world.proj_lock.unlock();
-            _ = self.world.add(Projectile, &proj) catch return;
-        }
 
-        {
-            self.world.player_lock.lock();
-            defer self.world.player_lock.unlock();
-            if (self.world.findRef(Player, self.plr_id)) |player| {
-                player.bullets[bullet_id] = proj.obj_id;
-            }
-        }
+        _ = self.world.addExisting(Projectile, &proj) catch return;
+
+        player.projectiles[data.proj_index] = proj.map_id;
     }
 
-    fn handleMove(self: *Client) void {
-        var reader = &self.reader;
-        const tick_id = reader.read(u8);
-        const time = reader.read(i64);
-        const x = reader.read(f32);
-        const y = reader.read(f32);
-        const records = reader.read([]TimedPosition);
-        _ = records;
-        _ = time;
-        _ = tick_id;
-
-        if (x < 0.0 or y < 0.0)
+    fn handleMove(self: *Client, data: PacketData(.move)) void {
+        if (data.x < 0.0 or data.y < 0.0)
             return;
 
-        self.world.player_lock.lock();
-        defer self.world.player_lock.unlock();
-        if (self.world.findRef(Player, self.plr_id)) |player| {
-            player.x = x;
-            player.y = y;
+        const player = self.world.findRef(Player, self.player_map_id) orelse {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Player not found" } });
+            return;
+        };
+
+        const idx = @as(u32, @intFromFloat(data.y)) * @as(u32, self.world.w) + @as(u32, @intFromFloat(data.x));
+        if (idx > self.world.tiles.len) {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Invalid position" } });
+            return;
         }
+
+        const tile = self.world.tiles[idx];
+        if (tile.data.no_walk or tile.occupied) {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Tile occupied" } });
+            return;
+        }
+
+        player.x = data.x;
+        player.y = data.y;
     }
 
-    fn handlePlayerText(self: *Client) void {
-        var reader = &self.reader;
-        const text = reader.read([]u8);
-        if (text.len == 0 or text.len > 256)
+    fn handlePlayerText(self: *Client, data: PacketData(.player_text)) void {
+        if (data.text.len == 0 or data.text.len > 256)
             return;
 
-        self.world.player_lock.lock();
-        defer self.world.player_lock.unlock();
-        if (self.world.findRef(Player, self.plr_id)) |player| {
-            if (text[0] == '/') {
-                var split = std.mem.splitScalar(u8, text, ' ');
-                command.handle(&split, player);
-                return;
-            }
+        const player = self.world.findRef(Player, self.player_map_id) orelse return;
+        if (data.text[0] == '/') {
+            var split = std.mem.splitScalar(u8, data.text, ' ');
+            command.handle(&split, player);
+            return;
+        }
 
-            for (self.world.players.items) |*other_player| {
-                other_player.client.queuePacket(.{ .text = .{
-                    .name = player.name,
-                    .obj_id = self.plr_id,
-                    .bubble_time = 0,
-                    .recipient = "",
-                    .text = text,
-                    .name_color = if (player.rank >= 80) 0xF2CA46 else 0xEBEBEB,
-                    .text_color = if (player.rank >= 80) 0xD4AF37 else 0xB0B0B0,
-                } });
-            }
+        if (player.muted_until >= main.current_time) return;
+
+        for (self.world.listForType(Player).items) |*other_player| {
+            other_player.client.queuePacket(.{ .text = .{
+                .name = player.name,
+                .obj_type = .player,
+                .map_id = self.player_map_id,
+                .bubble_time = 0,
+                .recipient = "",
+                .text = data.text,
+                .name_color = if (@intFromEnum(player.rank) >= @intFromEnum(network_data.Rank.staff)) 0xF2CA46 else 0xEBEBEB,
+                .text_color = if (@intFromEnum(player.rank) >= @intFromEnum(network_data.Rank.staff)) 0xD4AF37 else 0xB0B0B0,
+            } });
         }
     }
 
-    fn handleUpdateAck(self: *Client) void {
-        _ = self;
+    fn verifySwap(item_id: u16, target_type: game_data.ItemType) bool {
+        const item_type = blk: {
+            if (item_id == std.math.maxInt(u16)) break :blk .any;
+            break :blk (game_data.item.from_id.get(item_id) orelse return false).item_type;
+        };
+        return game_data.ItemType.typesMatch(item_type, target_type);
     }
 
-    fn handleInvSwap(self: *Client) void {
-        var reader = &self.reader;
-        const time = reader.read(i64);
-        _ = time;
-        const x = reader.read(f32);
-        _ = x;
-        const y = reader.read(f32);
-        _ = y;
-        const from_obj_id = reader.read(i32);
-        const from_slot_id = reader.read(u8);
-        const to_obj_id = reader.read(i32);
-        _ = to_obj_id;
-        const to_slot_id = reader.read(u8);
+    fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
+        switch (data.from_obj_type) {
+            .player => if (self.world.findRef(Player, data.from_map_id)) |player| {
+                const start = player.inventory[data.from_slot_id];
+                switch (data.to_obj_type) {
+                    .player => {
+                        if (!verifySwap(start, if (data.to_slot_id < 4) player.data.item_types[data.to_slot_id] else .any) or
+                            !verifySwap(player.inventory[data.to_slot_id], if (data.from_slot_id < 4) player.data.item_types[data.from_slot_id] else .any))
+                            return;
+                        player.inventory[data.from_slot_id] = player.inventory[data.to_slot_id];
+                        player.inventory[data.to_slot_id] = start;
+                    },
+                    .container => if (self.world.findRef(Container, data.to_map_id)) |cont| {
+                        if (!verifySwap(cont.inventory[data.to_slot_id], if (data.from_slot_id < 4) player.data.item_types[data.from_slot_id] else .any))
+                            return;
+                        player.inventory[data.from_slot_id] = cont.inventory[data.to_slot_id];
+                        cont.inventory[data.to_slot_id] = start;
+                    } else return,
+                    else => return,
+                }
 
-        // todo container stuff
-        self.world.player_lock.lock();
-        defer self.world.player_lock.unlock();
-        if (self.world.findRef(Player, from_obj_id)) |player| {
-            const start = player.equips[from_slot_id];
-            player.equips[from_slot_id] = player.equips[to_slot_id];
-            player.equips[to_slot_id] = start;
-            player.recalculateItems();
+                player.recalculateItems();
+            } else return,
+            .container => if (self.world.findRef(Container, data.from_map_id)) |cont| {
+                const start = cont.inventory[data.from_slot_id];
+                switch (data.to_obj_type) {
+                    .player => if (self.world.findRef(Player, data.to_map_id)) |player| {
+                        if (!verifySwap(start, if (data.to_slot_id < 4) player.data.item_types[data.to_slot_id] else .any))
+                            return;
+                        cont.inventory[data.from_slot_id] = player.inventory[data.to_slot_id];
+                        player.inventory[data.to_slot_id] = start;
+                        player.recalculateItems();
+                    } else return,
+                    .container => if (self.world.findRef(Container, data.to_map_id)) |other_cont| {
+                        cont.inventory[data.from_slot_id] = other_cont.inventory[data.to_slot_id];
+                        other_cont.inventory[data.to_slot_id] = start;
+                    } else return,
+                    else => return,
+                }
+            } else return,
+            else => return,
         }
     }
 
-    fn handleUseItem(self: *Client) void {
-        _ = self;
-        // var reader = &self.reader;
-        // const time = reader.read(i64);
-        // const obj_id = reader.read(i32);
-        // const slot_id = reader.read(u8);
-        // const x = reader.read(f32);
-        // const y = reader.read(f32);
-        // const use_type = reader.read(game_data.UseType);
-    }
+    fn handleUseItem(_: *Client, _: PacketData(.use_item)) void {}
 
-    inline fn createChar(player: *Player, char_type: u16, skin_type: u16, timestamp: u64) !void {
-        if (game_data.classes.get(char_type)) |class| {
+    fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
+        if (game_data.class.from_id.get(class_id)) |class_data| {
             const max_slots = try player.acc_data.get(.max_char_slots);
-            const alive_ids = player.acc_data.get(.alive_char_ids) catch &[0]u32{};
+            const alive_ids: []const u32 = player.acc_data.get(.alive_char_ids) catch &.{};
             if (alive_ids.len >= max_slots)
                 return error.SlotsFull;
 
@@ -536,397 +346,281 @@ pub const Client = struct {
             player.char_data.char_id = next_char_id;
             try player.acc_data.set(.{ .next_char_id = next_char_id + 1 });
 
-            const new_alive_ids = try std.mem.concat(player.client.allocator, u32, &.{ alive_ids, &[_]u32{next_char_id} });
+            const new_alive_ids = try std.mem.concat(player.client.arena.allocator(), u32, &.{ alive_ids, &[_]u32{next_char_id} });
             try player.acc_data.set(.{ .alive_char_ids = new_alive_ids });
 
-            try player.char_data.set(.{ .char_type = char_type });
-            try player.char_data.set(.{ .skin_type = skin_type });
+            try player.char_data.set(.{ .class_id = class_id });
             try player.char_data.set(.{ .create_timestamp = timestamp });
             try player.char_data.set(.{ .aether = 1 });
+            try player.char_data.set(.{ .spirits_communed = 0 });
 
             var stats: [13]i32 = undefined;
-            stats[Player.health_stat] = class.health;
-            stats[Player.mana_stat] = class.mana;
-            stats[Player.strength_stat] = class.strength;
-            stats[Player.wit_stat] = class.wit;
-            stats[Player.defense_stat] = class.defense;
-            stats[Player.resistance_stat] = class.resistance;
-            stats[Player.speed_stat] = class.speed;
-            stats[Player.stamina_stat] = class.stamina;
-            stats[Player.intelligence_stat] = class.intelligence;
-            stats[Player.penetration_stat] = class.penetration;
-            stats[Player.piercing_stat] = class.piercing;
-            stats[Player.haste_stat] = class.haste;
-            stats[Player.tenacity_stat] = class.tenacity;
-            try player.char_data.set(.{ .hp = class.health });
-            try player.char_data.set(.{ .mp = class.mana });
+            stats[Player.health_stat] = class_data.stats.health;
+            stats[Player.mana_stat] = class_data.stats.mana;
+            stats[Player.strength_stat] = class_data.stats.strength;
+            stats[Player.wit_stat] = class_data.stats.wit;
+            stats[Player.defense_stat] = class_data.stats.defense;
+            stats[Player.resistance_stat] = class_data.stats.resistance;
+            stats[Player.speed_stat] = class_data.stats.speed;
+            stats[Player.stamina_stat] = class_data.stats.stamina;
+            stats[Player.intelligence_stat] = class_data.stats.intelligence;
+            stats[Player.penetration_stat] = class_data.stats.penetration;
+            stats[Player.piercing_stat] = class_data.stats.piercing;
+            stats[Player.haste_stat] = class_data.stats.haste;
+            stats[Player.tenacity_stat] = class_data.stats.tenacity;
+            try player.char_data.set(.{ .hp = class_data.stats.health });
+            try player.char_data.set(.{ .mp = class_data.stats.mana });
             try player.char_data.set(.{ .stats = stats });
-            try player.char_data.set(.{ .items = class.equipment[0..22].* });
-        } else return error.InvalidCharType;
+            var starting_items: [22]u16 = [_]u16{std.math.maxInt(u16)} ** 22;
+            for (class_data.default_items, 0..) |item, i| starting_items[i] = item;
+            try player.char_data.set(.{ .items = starting_items });
+        } else return error.InvalidCharId;
     }
 
-    fn handleHello(self: *Client) void {
-        if (self.plr_id != -1) {
-            self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Already connected" } });
+    fn handleHello(self: *Client, data: PacketData(.hello)) void {
+        if (self.player_map_id != std.math.maxInt(u32)) {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Already connected" } });
             return;
         }
 
-        var reader = &self.reader;
-        const build_ver = reader.read([]u8);
-        if (!std.mem.eql(u8, build_ver, settings.build_version)) {
-            self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Incorrect version" } });
+        if (!std.mem.eql(u8, data.build_ver, settings.build_version)) {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Incorrect version" } });
             return;
         }
 
-        const email = reader.read([]u8);
-        const password = reader.read([]u8);
-
-        const HasherError = std.crypto.pwhash.HasherError;
-        const acc_id = db.login(email, password) catch |e| {
+        const acc_id = db.login(data.email, data.token) catch |e| {
             switch (e) {
-                error.NoData => self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Invalid email" } }),
-                HasherError.PasswordVerificationFailed => self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Invalid credentials" } }),
-                else => self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Unknown error" } }),
+                error.NoData => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Invalid email" } }),
+                error.InvalidToken => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Invalid credentials" } }),
+                else => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Unknown error" } }),
             }
             return;
         };
         self.acc_id = acc_id;
 
-        const char_id: u32 = @intCast(reader.read(i16));
-        const char_type = reader.read(u16);
-        const skin_type = reader.read(u16);
-
+        const arena_allocator = self.arena.allocator();
         var player: Player = .{
-            .acc_data = db.AccountData.init(self.allocator, acc_id),
-            .char_data = db.CharacterData.init(self.allocator, acc_id, char_id),
+            .acc_data = db.AccountData.init(arena_allocator, acc_id),
+            .char_data = db.CharacterData.init(arena_allocator, acc_id, data.char_id),
             .client = self,
         };
 
+        const is_banned = db.accountBanned(&player.acc_data) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Database is missing data" } });
+            return;
+        };
+        if (is_banned) {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Account banned" } });
+            return;
+        }
+
         const timestamp: u64 = @intCast(std.time.milliTimestamp());
-        if (char_type != 0) {
-            createChar(&player, char_type, skin_type, timestamp) catch {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Character creation failed" } });
+        if (data.class_id != std.math.maxInt(u16)) {
+            createChar(&player, data.class_id, timestamp) catch {
+                self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Character creation failed" } });
                 return;
             };
         }
 
         self.char_id = player.char_data.char_id;
-        player.char_data.set(.{ .create_timestamp = timestamp }) catch {}; // doesn't matter really
-
-        self.world = maps.worlds.getPtr(maps.retrieve_id) orelse {
-            self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Retrieve does not exist" } });
+        player.char_data.set(.{ .create_timestamp = timestamp }) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Could not interact with database" } });
             return;
         };
 
-        {
-            self.world.player_lock.lock();
-            defer self.world.player_lock.unlock();
-            self.plr_id = self.world.add(Player, &player) catch {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Adding player to map failed" } });
-                return;
-            };
-        }
+        self.world = maps.worlds.getPtr(maps.retrieve_id) orelse {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Retrieve does not exist" } });
+            return;
+        };
+
+        self.player_map_id = self.world.addExisting(Player, &player) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Adding player to map failed" } });
+            return;
+        };
 
         self.queuePacket(.{ .map_info = .{
-            .width = @intCast(self.world.w),
-            .height = @intCast(self.world.h),
+            .width = self.world.w,
+            .height = self.world.h,
             .name = self.world.name,
-            .bg_light_color = self.world.light_data.light_color,
-            .bg_light_intensity = self.world.light_data.light_intensity,
-            .day_light_intensity = self.world.light_data.day_light_intensity,
-            .night_light_intensity = self.world.light_data.night_light_intensity,
-            .server_time = std.time.microTimestamp(),
+            .bg_color = self.world.light_data.color,
+            .bg_intensity = self.world.light_data.intensity,
+            .day_intensity = self.world.light_data.day_intensity,
+            .night_intensity = self.world.light_data.night_intensity,
+            .server_time = main.current_time,
         } });
 
-        self.queuePacket(.{ .create_success = .{
-            .player_id = self.plr_id,
-            .char_id = char_id,
-        } });
+        self.queuePacket(.{ .self_map_id = .{ .player_map_id = self.player_map_id } });
     }
 
-    fn handleInvDrop(self: *Client) void {
-        var reader = &self.reader;
-        const obj_id = reader.read(i32);
-        const slot_id = reader.read(u8);
+    fn handleInvDrop(self: *Client, data: PacketData(.inv_drop)) void {
+        const player = self.world.findRef(Player, data.player_map_id) orelse return;
+        var cont: Container = .{
+            .x = player.x,
+            .y = player.y,
+            .data_id = game_data.container.from_name.get("Brown Bag").?.id,
+            .name = self.world.allocator.dupe(u8, player.name) catch {
+                self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Bag name creation failed" } });
+                return;
+            },
+        };
+        cont.inventory[0] = player.inventory[data.slot_id];
+        _ = self.world.addExisting(Container, &cont) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Bag spawning failed" } });
+            return;
+        };
 
-        {
-            self.world.player_lock.lock();
-            defer self.world.player_lock.unlock();
-            if (self.world.findRef(Player, obj_id)) |player| {
-                // todo spawn bag
-                player.equips[slot_id] = 0xFFFF;
-                player.recalculateItems();
-            }
-        }
-
-        // todo container (should it even be a thing?)
+        player.inventory[data.slot_id] = std.math.maxInt(u16);
+        player.recalculateItems();
     }
 
-    fn handlePong(self: *Client) void {
-        _ = self;
-        // var reader = &self.reader;
-        // const serial = reader.read(i64);
-        // const time = reader.read(i64);
-    }
+    fn handlePong(_: *Client, _: PacketData(.pong)) void {}
 
-    fn handleTeleport(self: *Client) void {
-        _ = self;
-        // var reader = &self.reader;
-        // const obj_id = reader.read(i32);
-    }
+    fn handleTeleport(_: *Client, _: PacketData(.teleport)) void {}
 
-    fn handleUsePortal(self: *Client) void {
-        var reader = &self.reader;
-        const obj_id = reader.read(i32);
+    fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
+        const en_type = if (self.world.find(Portal, data.portal_map_id)) |e| e.data_id else {
+            self.sendMessage("Portal not found");
+            return;
+        };
 
-        self.world.entity_lock.lock();
-        const en_type = if (self.world.find(Entity, obj_id)) |e| e.en_type else return;
-        self.world.entity_lock.unlock();
-
-        {
-            self.world.player_lock.lock();
-            defer self.world.player_lock.unlock();
-            const player = self.world.findRef(Player, self.plr_id) orelse {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player does not exist" } });
-                return;
-            };
-            if (player.inCombat(main.current_time)) {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Can't use portals in combat" } });
-                return;
-            }
-            player.save() catch {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player save failed" } });
-                return;
-            };
-
-            self.world.remove(Player, player) catch {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Removing player from map failed" } });
-                return;
-            };
-        }
-
-        self.world = maps.portalWorld(en_type, obj_id) catch {
-            self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Map load failed" } });
+        const new_world = maps.portalWorld(en_type, data.portal_map_id) catch {
+            self.sendMessage("Map load failed");
             return;
         } orelse {
-            self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Map does not exist" } });
+            self.sendMessage("Map does not exist");
             return;
         };
 
-        var new_player: Player = .{
-            .acc_data = db.AccountData.init(self.allocator, self.acc_id),
-            .char_data = db.CharacterData.init(self.allocator, self.acc_id, self.char_id),
-            .client = self,
+        const player = self.world.findRef(Player, self.player_map_id) orelse {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Player does not exist" } });
+            return;
+        };
+        player.save() catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Player save failed" } });
+            return;
         };
 
-        {
-            self.world.player_lock.lock();
-            defer self.world.player_lock.unlock();
-            self.plr_id = self.world.add(Player, &new_player) catch {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Adding player to map failed" } });
-                return;
-            };
-        }
+        self.world.remove(Player, player) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Removing player from map failed" } });
+            return;
+        };
+
+        self.world = new_world;
+
+        const arena_allocator = self.arena.allocator();
+        var new_player: Player = .{
+            .acc_data = db.AccountData.init(arena_allocator, self.acc_id),
+            .char_data = db.CharacterData.init(arena_allocator, self.acc_id, self.char_id),
+            .client = self,
+        };
+        self.player_map_id = self.world.addExisting(Player, &new_player) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Adding player to map failed" } });
+            return;
+        };
 
         self.queuePacket(.{ .map_info = .{
             .width = @intCast(self.world.w),
             .height = @intCast(self.world.h),
             .name = self.world.name,
-            .bg_light_color = self.world.light_data.light_color,
-            .bg_light_intensity = self.world.light_data.light_intensity,
-            .day_light_intensity = self.world.light_data.day_light_intensity,
-            .night_light_intensity = self.world.light_data.night_light_intensity,
-            .server_time = std.time.microTimestamp(),
+            .bg_color = self.world.light_data.color,
+            .bg_intensity = self.world.light_data.intensity,
+            .day_intensity = self.world.light_data.day_intensity,
+            .night_intensity = self.world.light_data.night_intensity,
+            .server_time = main.current_time,
         } });
 
-        self.queuePacket(.{ .create_success = .{
-            .player_id = self.plr_id,
-            .char_id = self.char_id,
-        } });
+        self.queuePacket(.{ .self_map_id = .{ .player_map_id = self.player_map_id } });
     }
 
-    fn handleBuy(self: *Client) void {
-        _ = self;
-        // var reader = &self.reader;
-        // const obj_id = reader.read(i32);
-    }
+    fn handleBuy(_: *Client, _: PacketData(.buy)) void {}
 
-    fn handleGroundDamage(self: *Client) void {
-        var reader = &self.reader;
-        const time = reader.read(i64);
-        const x = reader.read(f32);
-        const y = reader.read(f32);
+    fn handleGroundDamage(self: *Client, data: PacketData(.ground_damage)) void {
+        const ux: u16 = @intFromFloat(data.x);
+        const uy: u16 = @intFromFloat(data.y);
+        const tile = self.world.tiles[uy * self.world.w + ux];
+        if (tile.data_id == std.math.maxInt(u16)) return;
 
-        const ux: u16 = @intFromFloat(x);
-        const uy: u16 = @intFromFloat(y);
-        const props = self.world.tiles[uy * self.world.w + ux].props;
+        const player = self.world.findRef(Player, self.player_map_id) orelse return;
+        for (self.world.listForType(Player).items) |world_player| {
+            if (world_player.map_id == self.player_map_id) continue;
 
-        self.world.player_lock.lock();
-        defer self.world.player_lock.unlock();
-        if (self.world.findRef(Player, self.plr_id)) |player| {
-            player.damage(props.obj_id, time, props.physical_damage, props.magic_damage, props.true_damage);
-        }
-    }
-
-    fn handlePlayerHit(self: *Client) void {
-        var reader = &self.reader;
-        const bullet_id = reader.read(u8);
-        const obj_id = reader.read(i32);
-        self.world.enemy_lock.lock();
-        defer self.world.enemy_lock.unlock();
-        if (self.world.find(Enemy, obj_id)) |enemy| {
-            self.world.proj_lock.lock();
-            defer self.world.proj_lock.unlock();
-            if (self.world.findRef(Projectile, enemy.bullets[bullet_id] orelse return)) |proj| {
-                if (proj.obj_ids_hit.contains(self.plr_id))
-                    return;
-
-                self.world.player_lock.lock();
-                defer self.world.player_lock.unlock();
-                if (self.world.findRef(Player, self.plr_id)) |player| {
-                    player.damage(enemy.props.display_id, main.current_time, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
-                    proj.obj_ids_hit.put(self.world.allocator, self.plr_id, {}) catch return;
-                }
+            if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
+                self.queuePacket(.{ .damage = .{
+                    .player_map_id = self.player_map_id,
+                    .effects = .{},
+                    .damage_type = .true,
+                    .amount = @intCast(tile.data.damage),
+                } });
             }
         }
+
+        player.damage(tile.data.name, 0, 0, tile.data.damage);
     }
 
-    fn handleEnemyHit(self: *Client) void {
-        var reader = &self.reader;
-        const time = reader.read(i64);
-        _ = time;
-        const bullet_id = reader.read(u8);
-        const target_id = reader.read(i32);
-        const killed = reader.read(bool);
-        _ = killed;
-
-        self.world.player_lock.lock();
-        defer self.world.player_lock.unlock();
-        if (self.world.find(Player, self.plr_id)) |player| {
-            self.world.enemy_lock.lock();
-            defer self.world.enemy_lock.unlock();
-            if (self.world.findRef(Enemy, target_id)) |enemy| {
-                self.world.proj_lock.lock();
-                defer self.world.proj_lock.unlock();
-                if (self.world.findRef(Projectile, player.bullets[bullet_id] orelse return)) |proj| {
-                    enemy.damage(proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
-                    if (!proj.props.multi_hit) proj.delete() catch return;
-                }
-            }
-        }
+    fn handlePlayerHit(self: *Client, data: PacketData(.player_hit)) void {
+        const enemy = self.world.find(Enemy, data.enemy_map_id) orelse return;
+        const proj = self.world.findRef(Projectile, enemy.projectiles[data.proj_index] orelse return) orelse return;
+        if (proj.hit_list.contains(self.player_map_id)) return;
+        const player = self.world.findRef(Player, self.player_map_id) orelse return;
+        player.damage(enemy.data.name, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
+        proj.hit_list.put(self.world.allocator, self.player_map_id, {}) catch return;
     }
 
-    fn handleAoeAck(self: *Client) void {
-        _ = self;
-        // var reader = &self.reader;
-        // const time = reader.read(i64);
-        // const x = reader.read(f32);
-        // const y = reader.read(f32);
+    fn handleEnemyHit(self: *Client, data: PacketData(.enemy_hit)) void {
+        const player = self.world.find(Player, self.player_map_id) orelse return;
+        const enemy = self.world.findRef(Enemy, data.enemy_map_id) orelse return;
+        const proj = self.world.findRef(Projectile, player.projectiles[data.proj_index] orelse return) orelse return;
+
+        enemy.damage(self.player_map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
+        if (!proj.data.piercing)
+            proj.delete() catch return;
     }
 
-    fn handleShootAck(self: *Client) void {
-        var reader = &self.reader;
-        const time = reader.read(i64);
-        _ = time;
-    }
+    fn handleEscape(self: *Client, _: PacketData(.escape)) void {
+        const player = self.world.findRef(Player, self.player_map_id) orelse {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Player does not exist" } });
+            return;
+        };
+        player.save() catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Player save failed" } });
+            return;
+        };
 
-    fn handleOtherHit(self: *Client) void {
-        var reader = &self.reader;
-        const time = reader.read(i64);
-        _ = time;
-        const bullet_id = reader.read(u8);
-        _ = bullet_id;
-        const obj_id = reader.read(i32);
-        _ = obj_id;
-        const target_id = reader.read(i32);
-        _ = target_id;
-    }
-
-    fn handleSquareHit(self: *Client) void {
-        var reader = &self.reader;
-        const time = reader.read(i64);
-        _ = time;
-        const bullet_id = reader.read(u8);
-        _ = bullet_id;
-        const obj_id = reader.read(i32);
-        _ = obj_id;
-    }
-
-    fn handleEscape(self: *Client) void {
-        {
-            self.world.player_lock.lock();
-            defer self.world.player_lock.unlock();
-            const player = self.world.findRef(Player, self.plr_id) orelse {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player does not exist" } });
-                return;
-            };
-            if (player.inCombat(main.current_time)) {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Can't return to the Retrieve in combat" } });
-                return;
-            }
-            player.save() catch {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Player save failed" } });
-                return;
-            };
-
-            self.world.remove(Player, player) catch {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Removing player from map failed" } });
-                return;
-            };
-        }
+        self.world.remove(Player, player) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Removing player from map failed" } });
+            return;
+        };
 
         self.world = maps.worlds.getPtr(maps.retrieve_id) orelse {
-            self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Retrieve does not exist" } });
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Retrieve does not exist" } });
             return;
         };
 
+        const arena_allocator = self.arena.allocator();
         var new_player: Player = .{
-            .acc_data = db.AccountData.init(self.allocator, self.acc_id),
-            .char_data = db.CharacterData.init(self.allocator, self.acc_id, self.char_id),
+            .acc_data = db.AccountData.init(arena_allocator, self.acc_id),
+            .char_data = db.CharacterData.init(arena_allocator, self.acc_id, self.char_id),
             .client = self,
         };
 
-        {
-            self.world.player_lock.lock();
-            defer self.world.player_lock.unlock();
-            self.plr_id = self.world.add(Player, &new_player) catch {
-                self.queuePacket(.{ .failure = .{ .fail_type = .message_with_disconnect, .desc = "Adding player to map failed" } });
-                return;
-            };
-        }
+        self.player_map_id = self.world.addExisting(Player, &new_player) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Adding player to map failed" } });
+            return;
+        };
 
         self.queuePacket(.{ .map_info = .{
-            .width = @intCast(self.world.w),
-            .height = @intCast(self.world.h),
+            .width = self.world.w,
+            .height = self.world.h,
             .name = self.world.name,
-            .bg_light_color = self.world.light_data.light_color,
-            .bg_light_intensity = self.world.light_data.light_intensity,
-            .day_light_intensity = self.world.light_data.day_light_intensity,
-            .night_light_intensity = self.world.light_data.night_light_intensity,
-            .server_time = std.time.microTimestamp(),
+            .bg_color = self.world.light_data.color,
+            .bg_intensity = self.world.light_data.intensity,
+            .day_intensity = self.world.light_data.day_intensity,
+            .night_intensity = self.world.light_data.night_intensity,
+            .server_time = main.current_time,
         } });
 
-        self.queuePacket(.{ .create_success = .{
-            .player_id = self.plr_id,
-            .char_id = self.char_id,
-        } });
+        self.queuePacket(.{ .self_map_id = .{ .player_map_id = self.player_map_id } });
     }
 
-    fn handleMapHello(self: *Client) void {
-        _ = self;
-        // var reader = &self.reader;
-        // const build_ver = reader.readArray(u8);
-        // const email = reader.readArray(u8);
-        // const password = reader.readArray(u8);
-        // const char_id = reader.read(i16);
-        // const eclipse_map = reader.readArray(u8);
-    }
-
-    fn handleUseAbility(self: *Client) void {
-        _ = self;
-        // var reader = &self.reader;
-        // const time = reader.read(i64);
-        // const ability_type = reader.read(u8);
-        // const data = reader.read([]u8);
-    }
+    fn handleMapHello(_: *Client, _: PacketData(.map_hello)) void {}
 };

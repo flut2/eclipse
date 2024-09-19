@@ -6,52 +6,103 @@
         {
             "label": "Debug Client",
             "type": "shell",
-            "command": "zig build -Dclient -Doptimize=Debug -freference-trace",
+            "command": "cd client && zig build -Doptimize=Debug -freference-trace",
         },
         {
             "label": "Debug Client (Tracy)",
             "type": "shell",
-            "command": "zig build -Denable_tracy -Dclient -Doptimize=Debug -freference-trace",
+            "command": "cd client && zig build -Denable_tracy -Doptimize=Debug -freference-trace",
         },
         {
             "label": "ReleaseSafe Client",
             "type": "shell",
-            "command": "zig build -Dclient -Doptimize=ReleaseSafe"
+            "command": "cd client && zig build -Doptimize=ReleaseSafe"
         },
         {
             "label": "ReleaseFast Client",
             "type": "shell",
-            "command": "zig build -Dclient -Doptimize=ReleaseFast"
+            "command": "cd client && zig build -Doptimize=ReleaseFast"
         },
         {
             "label": "ReleaseSmall Client",
             "type": "shell",
-            "command": "zig build -Dclient -Doptimize=ReleaseSmall"
+            "command": "cd client && zig build -Doptimize=ReleaseSmall"
+        },
+
+        {
+            "label": "Debug Client (Windows)",
+            "type": "shell",
+            "command": "cd client ; zig build -Doptimize=Debug -freference-trace",
+        },
+        {
+            "label": "Debug Client (Tracy, Windows)",
+            "type": "shell",
+            "command": "cd client ; zig build -Denable_tracy -Doptimize=Debug -freference-trace",
+        },
+        {
+            "label": "ReleaseSafe Client (Windows)",
+            "type": "shell",
+            "command": "cd client ; zig build -Doptimize=ReleaseSafe"
+        },
+        {
+            "label": "ReleaseFast Client (Windows)",
+            "type": "shell",
+            "command": "cd client ; zig build -Doptimize=ReleaseFast"
+        },
+        {
+            "label": "ReleaseSmall Client (Windows)",
+            "type": "shell",
+            "command": "cd client ; zig build -Doptimize=ReleaseSmall"
         },
         {
             "label": "Debug Server",
             "type": "shell",
-            "command": "zig build -Dserver -Doptimize=Debug -freference-trace",
+            "command": "cd server && zig build -Doptimize=Debug -freference-trace",
         },
         {
             "label": "Debug Server (Tracy)",
             "type": "shell",
-            "command": "zig build -Denable_tracy -Dserver -Doptimize=Debug -freference-trace",
+            "command": "cd server && zig build -Denable_tracy -Doptimize=Debug -freference-trace",
         },
         {
             "label": "ReleaseSafe Server",
             "type": "shell",
-            "command": "zig build -Dserver -Doptimize=ReleaseSafe"
+            "command": "cd server && zig build -Doptimize=ReleaseSafe"
         },
         {
             "label": "ReleaseFast Server",
             "type": "shell",
-            "command": "zig build -Dserver -Doptimize=ReleaseFast"
+            "command": "cd server && zig build -Doptimize=ReleaseFast"
         },
         {
             "label": "ReleaseSmall Server",
             "type": "shell",
-            "command": "zig build -Dserver -Doptimize=ReleaseSmall"
+            "command": "cd server && zig build -Doptimize=ReleaseSmall"
+        },
+        {
+            "label": "Debug Server (Windows)",
+            "type": "shell",
+            "command": "cd server ; zig build -Doptimize=Debug -freference-trace",
+        },
+        {
+            "label": "Debug Server (Tracy, Windows)",
+            "type": "shell",
+            "command": "cd server ; zig build -Denable_tracy -Doptimize=Debug -freference-trace",
+        },
+        {
+            "label": "ReleaseSafe Server (Windows)",
+            "type": "shell",
+            "command": "cd server ; zig build -Doptimize=ReleaseSafe"
+        },
+        {
+            "label": "ReleaseFast Server (Windows)",
+            "type": "shell",
+            "command": "cd server ; zig build -Doptimize=ReleaseFast"
+        },
+        {
+            "label": "ReleaseSmall Server (Windows)",
+            "type": "shell",
+            "command": "cd server ; zig build -Doptimize=ReleaseSmall"
         }
     ]
 }

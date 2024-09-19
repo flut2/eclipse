@@ -1,16 +1,14 @@
 const std = @import("std");
+const shared = @import("shared");
+const requests = shared.requests;
+const network_data = shared.network_data;
 const element = @import("../element.zig");
 const assets = @import("../../assets.zig");
-const camera = @import("../../camera.zig");
-const requests = @import("shared").requests;
-const xml = @import("shared").xml;
 const main = @import("../../main.zig");
-const game_data = @import("shared").game_data;
-const rpc = @import("rpc");
 const dialog = @import("../dialogs/dialog.zig");
-const settings = @import("../../settings.zig");
-
+const build_options = @import("options");
 const ui_systems = @import("../systems.zig");
+const builtin = @import("builtin");
 
 const Interactable = element.InteractableImageData;
 
@@ -33,18 +31,6 @@ pub const AccountRegisterScreen = struct {
         var screen = try allocator.create(AccountRegisterScreen);
         screen.* = .{ .allocator = allocator };
 
-        const presence = rpc.Packet.Presence{
-            .assets = .{
-                .large_image = rpc.Packet.ArrayString(256).create("logo"),
-                .large_text = rpc.Packet.ArrayString(128).create(main.version_text),
-            },
-            .state = rpc.Packet.ArrayString(128).create("Register Screen"),
-            .timestamps = .{
-                .start = main.rpc_start,
-            },
-        };
-        try main.rpc_client.setPresence(presence);
-
         const input_w = 300;
         const input_h = 50;
 
@@ -52,8 +38,14 @@ pub const AccountRegisterScreen = struct {
         const input_data_hover = assets.getUiData("text_input_hover", 0);
         const input_data_press = assets.getUiData("text_input_press", 0);
 
-        const x_offset = (camera.screen_width - input_w) / 2;
-        var y_offset: f32 = camera.screen_height / 7.2;
+        const cam_width, const cam_height = blk: {
+            main.camera.lock.lock();
+            defer main.camera.lock.unlock();
+            break :blk .{ main.camera.width, main.camera.height };
+        };
+
+        const x_offset = (cam_width - input_w) / 2;
+        var y_offset: f32 = cam_height / 7.2;
 
         screen.username_text = try element.create(allocator, element.Text{
             .x = x_offset,
@@ -234,6 +226,8 @@ pub const AccountRegisterScreen = struct {
     }
 
     pub fn deinit(self: *AccountRegisterScreen) void {
+        self.inited = false;
+
         element.destroy(self.username_text);
         element.destroy(self.username_input);
         element.destroy(self.email_text);
@@ -273,129 +267,121 @@ pub const AccountRegisterScreen = struct {
 
     pub fn update(_: *AccountRegisterScreen, _: i64, _: f32) !void {}
 
+    fn getHwid(allocator: std.mem.Allocator) ![]const u8 {
+        return switch (builtin.os.tag) {
+            .windows => {
+                const windows = std.os.windows;
+                const sub_key = try std.unicode.utf8ToUtf16LeAllocZ(allocator, "SOFTWARE\\Microsoft\\Cryptography");
+                defer allocator.free(sub_key);
+                const value = try std.unicode.utf8ToUtf16LeAllocZ(allocator, "MachineGuid");
+                defer allocator.free(value);
+                var buf: [128:0]u16 = undefined;
+                var len: u32 = 128;
+                _ = windows.advapi32.RegGetValueW(
+                    windows.HKEY_LOCAL_MACHINE,
+                    sub_key,
+                    value,
+                    windows.advapi32.RRF.SUBKEY_WOW6464KEY | windows.advapi32.RRF.RT_REG_SZ,
+                    null,
+                    &buf,
+                    &len,
+                );
+                return try std.unicode.utf16LeToUtf8Alloc(allocator, std.mem.span(@as([*:0]const u16, &buf)));
+            },
+            .macos => {
+                const proc = std.process.Child.run(.{
+                    .allocator = allocator,
+                    .argv = &.{ "ioreg", "-rd1", "-c", "IOPlatformExpertDevice" },
+                }) catch @panic("Failed to spawn child process");
+                defer {
+                    allocator.free(proc.stdout);
+                    allocator.free(proc.stderr);
+                }
+                var line_split = std.mem.splitScalar(u8, proc.stdout, '\n');
+                while (line_split.next()) |line| {
+                    if (std.mem.indexOf(u8, line, "IOPlatformUUID") != null) {
+                        const left_bound = (std.mem.indexOf(u8, line, " = \"") orelse @panic("No HWID found")) + " = \"".len;
+                        const right_bound = std.mem.lastIndexOfScalar(u8, line, '"') orelse @panic("No HWID found");
+                        return allocator.dupe(u8, line[left_bound..right_bound]) catch @panic("OOM");
+                    }
+                }
+                @panic("No HWID found");
+            },
+            .linux => {
+                tryVar: {
+                    const file = std.fs.cwd().openFile("/var/lib/dbus/machine-id", .{}) catch break :tryVar;
+                    defer file.close();
+
+                    var buf: [256]u8 = undefined;
+                    const size = try file.readAll(&buf);
+                    return std.mem.trim(u8, std.mem.trim(u8, buf[0..size], " "), "\n");
+                }
+
+                tryEtc: {
+                    const file = std.fs.cwd().openFile("/etc/machine-id", .{}) catch break :tryEtc;
+                    defer file.close();
+
+                    var buf: [256]u8 = undefined;
+                    const size = try file.readAll(&buf);
+                    return std.mem.trim(u8, std.mem.trim(u8, buf[0..size], " "), "\n");
+                }
+
+                @panic("No hwid found");
+            },
+            else => @compileError("Unsupported OS"),
+        };
+    }
+
     fn register(allocator: std.mem.Allocator, email: []const u8, password: []const u8, name: []const u8) !bool {
-        var data: std.StringHashMapUnmanaged([]const u8) = .{};
+        const hwid = try getHwid(allocator);
+        defer if (builtin.os.tag == .windows or builtin.os.tag == .macos) allocator.free(hwid);
+        var data: std.StringHashMapUnmanaged([]const u8) = .empty;
         try data.put(allocator, "name", name);
-        try data.put(allocator, "hwid", "hello");
+        try data.put(allocator, "hwid", hwid);
         try data.put(allocator, "email", email);
         try data.put(allocator, "password", password);
         defer data.deinit(allocator);
 
-        const response = try requests.sendRequest(settings.app_engine_uri ++ "account/register", data);
-        defer requests.freeResponse(response);
-
-        std.log.err("register {s}", .{response});
-
-        if (std.mem.eql(u8, response, "<RequestError/>")) {
-            dialog.showDialog(.text, .{
-                .title = "Register Failed",
-                .body = "Add something here after server rewrite...",
-            });
-            return false;
-        }
-
-        return true;
-    }
-
-    fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) !bool {
-        defer {
-            if (main.character_list.len > 0) {
-                ui_systems.switchScreen(.char_select);
-            } else {
-                ui_systems.switchScreen(.char_create);
+        var needs_free = true;
+        const response = requests.sendRequest(build_options.login_server_uri ++ "account/register", data) catch |e| blk: {
+            switch (e) {
+                error.ConnectionRefused => {
+                    needs_free = false;
+                    break :blk "Connection Refused";
+                },
+                else => return e,
             }
-        }
-        
-        var verify_data: std.StringHashMapUnmanaged([]const u8) = .{};
-        try verify_data.put(allocator, "email", email);
-        try verify_data.put(allocator, "password", password);
-        defer verify_data.deinit(allocator);
+        };
+        defer if (needs_free) requests.freeResponse(response);
 
-        const response = try requests.sendRequest(settings.app_engine_uri ++ "account/verify", verify_data);
-        defer requests.freeResponse(response);
-
-        if (std.mem.eql(u8, response, "<RequestError/>")) {
+        main.character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, allocator, response, .{ .allocate = .alloc_always }) catch {
             dialog.showDialog(.text, .{
                 .title = "Login Failed",
-                .body = "Invalid credentials",
+                .body = try std.fmt.allocPrint(allocator, "Error: {s}", .{response}),
             });
             return false;
-        }
+        };
+        main.current_account = .{
+            .email = try allocator.dupe(u8, email),
+            .token = main.character_list.?.token,
+        };
 
-        const verify_doc = try xml.Doc.fromMemory(response);
-        defer verify_doc.deinit();
-        const verify_root = try verify_doc.getRootElement();
-
-        if (std.mem.eql(u8, verify_root.currentName().?, "Error")) {
-            dialog.showDialog(.text, .{
-                .title = "Login Failed",
-                .body = try allocator.dupe(u8, verify_root.currentValue().?),
-                .dispose_body = true,
-            });
-            return false;
-        }
-
-        main.current_account.name = try allocator.dupe(u8, verify_root.getValue("Name") orelse "Guest");
-        main.current_account.email = try allocator.dupe(u8, email);
-        main.current_account.password = try allocator.dupe(u8, password);
-        main.current_account.admin = verify_root.elementExists("Admin");
-
-        var list_data: std.StringHashMapUnmanaged([]const u8) = .{};
-        try list_data.put(allocator, "email", email);
-        try list_data.put(allocator, "password", password);
-        defer list_data.deinit(allocator);
-
-        const list_response = try requests.sendRequest(settings.app_engine_uri ++ "char/list", list_data);
-        defer requests.freeResponse(list_response);
-
-        const list_doc = try xml.Doc.fromMemory(list_response);
-        defer list_doc.deinit();
-        const list_root = try list_doc.getRootElement();
-        main.next_char_id = try list_root.getAttributeInt("nextCharId", u8, 0);
-        main.max_chars = try list_root.getAttributeInt("maxNumChars", u8, 0);
-
-        var char_list = try std.ArrayListUnmanaged(game_data.CharacterData).initCapacity(allocator, 4);
-        defer char_list.deinit(allocator);
-
-        var char_iter = list_root.iterate(&.{}, "Char");
-        while (char_iter.next()) |node|
-            try char_list.append(allocator, try game_data.CharacterData.parse(node, try node.getAttributeInt("id", u32, 0)));
-
-        main.character_list = try allocator.dupe(game_data.CharacterData, char_list.items);
-
-        const server_root = list_root.findChild("Servers");
-        if (server_root) |srv_root| {
-            var server_data_list = try std.ArrayListUnmanaged(game_data.ServerData).initCapacity(allocator, 4);
-            defer server_data_list.deinit(allocator);
-
-            var server_iter = srv_root.iterate(&.{}, "Server");
-            while (server_iter.next()) |server_node|
-                try server_data_list.append(allocator, try game_data.ServerData.parse(server_node));
-
-            main.server_list = try allocator.dupe(game_data.ServerData, server_data_list.items);
-        }
-
+        if (main.character_list.?.characters.len > 0)
+            ui_systems.switchScreen(.char_select)
+        else
+            ui_systems.switchScreen(.char_create);
         return true;
     }
 
     fn registerCallback(ud: ?*anyopaque) void {
         const current_screen: *AccountRegisterScreen = @alignCast(@ptrCast(ud.?));
         _ = register(
-            current_screen.allocator,
+            main.account_arena_allocator,
             current_screen.email_input.text_data.text,
             current_screen.password_input.text_data.text,
             current_screen.username_input.text_data.text,
         ) catch |e| {
             std.log.err("Register failed: {}", .{e});
-            return;
-        };
-
-        _ = login(
-            current_screen.allocator,
-            current_screen.email_input.text_data.text,
-            current_screen.password_input.text_data.text,
-        ) catch |e| {
-            std.log.err("Login failed: {}", .{e});
             return;
         };
     }

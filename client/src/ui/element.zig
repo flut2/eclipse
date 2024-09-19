@@ -1,24 +1,27 @@
 const std = @import("std");
-const camera = @import("../camera.zig");
+const shared = @import("shared");
+const game_data = shared.game_data;
+const network_data = shared.network_data;
+const utils = shared.utils;
 const assets = @import("../assets.zig");
 const main = @import("../main.zig");
-const glfw = @import("mach-glfw");
-const game_data = @import("shared").game_data;
-const settings = @import("../settings.zig");
+const glfw = @import("zglfw");
 const systems = @import("systems.zig");
 const tooltip = @import("tooltips/tooltip.zig");
 const input = @import("../input.zig");
-const utils = @import("shared").utils;
+
+const Settings = @import("../Settings.zig");
 
 pub fn create(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data) {
-    var elem = try allocator.create(@TypeOf(data));
+    const T = @TypeOf(data);
+    var elem = try allocator.create(T);
     elem.* = data;
     elem.allocator = allocator;
-    if (std.meta.hasFn(@TypeOf(data), "init")) elem.init();
+    if (std.meta.hasFn(T, "init")) elem.init();
 
     comptime var field_name: []const u8 = "";
-    inline for (std.meta.fields(UiElement)) |field| {
-        if (@typeInfo(field.type).Pointer.child == @TypeOf(data)) {
+    inline for (@typeInfo(UiElement).@"union".fields) |field| {
+        if (@typeInfo(field.type).pointer.child == T) {
             field_name = field.name;
             break;
         }
@@ -27,7 +30,7 @@ pub fn create(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data) {
     if (field_name.len == 0)
         @compileError("Could not find field name");
 
-    try systems.elements_to_add.append(@unionInit(UiElement, field_name, elem));
+    try systems.elements_to_add.append(allocator, @unionInit(UiElement, field_name, elem));
     return elem;
 }
 
@@ -38,7 +41,7 @@ pub fn destroy(self: anytype) void {
     self.disposed = true;
 
     comptime var field_name: []const u8 = "";
-    inline for (std.meta.fields(UiElement)) |field| {
+    inline for (@typeInfo(UiElement).@"union".fields) |field| {
         if (field.type == @TypeOf(self)) {
             field_name = field.name;
             break;
@@ -53,42 +56,44 @@ pub fn destroy(self: anytype) void {
     systems.hover_lock.lock();
     defer systems.hover_lock.unlock();
     if (systems.hover_target != null and
-        std.meta.activeTag(systems.hover_target.?) == tag and
+        systems.hover_target.? == tag.? and
         self == @field(systems.hover_target.?, field_name))
         systems.hover_target = null;
 
     std.debug.assert(!systems.ui_lock.tryLock());
-    for (systems.elements.items, 0..) |element, i| {
-        if (std.meta.activeTag(element) == tag and @field(element, field_name) == self) {
-            _ = systems.elements.orderedRemove(i);
-            break;
+
+    removeFromList: inline for (.{ &systems.elements, &systems.elements_to_add }) |elems| {
+        for (elems.items, 0..) |element, i| {
+            if (element == tag.? and @field(element, field_name) == self) {
+                _ = elems.orderedRemove(i);
+                break :removeFromList;
+            }
         }
     }
 
-    const ChildType = @typeInfo(@TypeOf(self)).Pointer.child;
-    if (std.meta.hasFn(ChildType, "deinit")) self.deinit();
-    if (ChildType != Container) self.allocator.destroy(self);
+    if (std.meta.hasFn(@typeInfo(@TypeOf(self)).pointer.child, "deinit")) self.deinit();
+    self.allocator.destroy(self);
 }
 
-inline fn intersects(self: anytype, x: f32, y: f32) bool {
-    const has_scissor = @hasField(@typeInfo(@TypeOf(self)).Pointer.child, "scissor");
+fn intersects(self: anytype, x: f32, y: f32) bool {
+    const has_scissor = @hasField(@typeInfo(@TypeOf(self)).pointer.child, "scissor");
     if (has_scissor and
         (self.scissor.min_x != ScissorRect.dont_scissor and x - self.x < self.scissor.min_x or
         self.scissor.min_y != ScissorRect.dont_scissor and y - self.y < self.scissor.min_y))
         return false;
 
-    const w = if (has_scissor and self.scissor.max_x != ScissorRect.dont_scissor) @min(self.width(), self.scissor.max_x) else self.width();
-    const h = if (has_scissor and self.scissor.max_y != ScissorRect.dont_scissor) @min(self.height(), self.scissor.max_y) else self.height();
+    const w = if (has_scissor and self.scissor.max_x != ScissorRect.dont_scissor) @min(self.texWRaw(), self.scissor.max_x) else self.texWRaw();
+    const h = if (has_scissor and self.scissor.max_y != ScissorRect.dont_scissor) @min(self.texHRaw(), self.scissor.max_y) else self.texHRaw();
     return utils.isInBounds(x, y, self.x, self.y, w, h);
 }
 
-pub const Layer = enum(u8) {
-    default = 0,
-    dialog = 1,
-    tooltip = 2,
+pub const Layer = enum {
+    default,
+    dialog,
+    tooltip,
 };
 
-pub const EventPolicy = struct {
+pub const EventPolicy = packed struct {
     pass_press: bool = false,
     pass_release: bool = false,
     pass_move: bool = false,
@@ -113,23 +118,24 @@ pub const RGBF32 = extern struct {
     }
 };
 
-pub const TextType = enum(u8) {
+// Renderer reuses this for extern structs, the explicit u32 is needed
+pub const TextType = enum(u32) {
     medium = 0,
     medium_italic = 1,
     bold = 2,
     bold_italic = 3,
 };
 
-pub const AlignHori = enum(u8) {
-    left = 0,
-    middle = 1,
-    right = 2,
+pub const AlignHori = enum {
+    left,
+    middle,
+    right,
 };
 
-pub const AlignVert = enum(u8) {
-    top = 0,
-    middle = 1,
-    bottom = 2,
+pub const AlignVert = enum {
+    top,
+    middle,
+    bottom,
 };
 
 pub const TextData = struct {
@@ -154,13 +160,14 @@ pub const TextData = struct {
     vert_align: AlignVert = .top,
     max_width: f32 = std.math.floatMax(f32),
     max_height: f32 = std.math.floatMax(f32),
-    backing_buffer: []u8 = &[0]u8{},
+    backing_buffer: []u8 = &.{},
     lock: std.Thread.Mutex = .{},
     width: f32 = 0.0,
     height: f32 = 0.0,
     line_count: f32 = 0.0,
-    line_widths: ?std.ArrayList(f32) = null,
-    break_indices: ?std.ArrayList(usize) = null,
+    sort_extra: f32 = 0.0,
+    line_widths: ?std.ArrayListUnmanaged(f32) = null,
+    break_indices: ?std.ArrayListUnmanaged(usize) = null,
 
     pub fn setText(self: *TextData, text: []const u8, allocator: std.mem.Allocator) void {
         self.lock.lock();
@@ -174,18 +181,18 @@ pub const TextData = struct {
         std.debug.assert(!self.lock.tryLock());
 
         if (self.backing_buffer.len == 0 and self.max_chars > 0)
-            self.backing_buffer = allocator.alloc(u8, self.max_chars) catch std.debug.panic("Failed to allocate the backing buffer", .{});
+            self.backing_buffer = allocator.alloc(u8, self.max_chars) catch @panic("OOM");
 
         if (self.line_widths) |*line_widths| {
             line_widths.clearRetainingCapacity();
         } else {
-            self.line_widths = std.ArrayList(f32).init(allocator);
+            self.line_widths = .{};
         }
 
         if (self.break_indices) |*break_indices| {
             break_indices.clearRetainingCapacity();
         } else {
-            self.break_indices = std.ArrayList(usize).init(allocator);
+            self.break_indices = .{};
         }
 
         const size_scale = self.size / assets.CharacterData.size * assets.CharacterData.padding_mult;
@@ -206,7 +213,7 @@ pub const TextData = struct {
             const offset_i = i + index_offset;
             if (offset_i >= self.text.len) {
                 self.width = @max(x_max, x_pointer);
-                self.line_widths.?.append(x_pointer) catch |e| {
+                self.line_widths.?.append(allocator, x_pointer) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
@@ -227,7 +234,7 @@ pub const TextData = struct {
                         current_type = self.text_type;
                         current_size = size_scale;
                         line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
-                        y_pointer += line_height - start_line_height;
+                        y_pointer += (line_height - start_line_height) / 2.0;
                         index_offset += @intCast(reset.len);
                         continue;
                     }
@@ -256,7 +263,7 @@ pub const TextData = struct {
                                 };
                                 current_size = size / assets.CharacterData.size * assets.CharacterData.padding_mult;
                                 line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
-                                y_pointer += line_height - start_line_height;
+                                y_pointer += (line_height - start_line_height) / 2.0;
                             } else if (std.mem.eql(u8, name, "type")) {
                                 if (std.mem.eql(u8, value, "med")) {
                                     current_type = .medium;
@@ -288,7 +295,7 @@ pub const TextData = struct {
                                     break :specialChar;
                                 };
                                 if (index >= data.len) {
-                                    std.log.err("The index {d} given for sheet {s} in control code was out of bounds", .{ index, sheet.? });
+                                    std.log.err("The index {} given for sheet {s} in control code was out of bounds", .{ index, sheet.? });
                                     break :specialChar;
                                 }
 
@@ -301,11 +308,11 @@ pub const TextData = struct {
                                 x_pointer += current_size * assets.CharacterData.size;
                                 if (x_pointer > self.max_width) {
                                     self.width = @max(x_max, last_word_end_pointer);
-                                    self.line_widths.?.append(last_word_end_pointer) catch |e| {
+                                    self.line_widths.?.append(allocator, last_word_end_pointer) catch |e| {
                                         std.log.err("Attribute recalculation for text data failed: {}", .{e});
                                         return;
                                     };
-                                    self.break_indices.?.append(word_start) catch |e| {
+                                    self.break_indices.?.append(allocator, word_start) catch |e| {
                                         std.log.err("Attribute recalculation for text data failed: {}", .{e});
                                         return;
                                     };
@@ -345,11 +352,11 @@ pub const TextData = struct {
             if (char == '\n' or next_x_pointer > self.max_width) {
                 const next_pointer = if (char == '\n') next_x_pointer else last_word_end_pointer;
                 self.width = @max(x_max, next_pointer);
-                self.line_widths.?.append(next_pointer) catch |e| {
+                self.line_widths.?.append(allocator, next_pointer) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
-                self.break_indices.?.append(if (char == '\n') i else word_start) catch |e| {
+                self.break_indices.?.append(allocator, if (char == '\n') i else word_start) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
@@ -364,7 +371,7 @@ pub const TextData = struct {
         }
 
         self.width = @max(x_max, x_pointer);
-        self.line_widths.?.append(x_pointer) catch |e| {
+        self.line_widths.?.append(allocator, x_pointer) catch |e| {
             std.log.err("Attribute recalculation for text data failed: {}", .{e});
             return;
         };
@@ -375,16 +382,15 @@ pub const TextData = struct {
         self.lock.lock();
         defer self.lock.unlock();
 
-        if (self.backing_buffer.len > 0)
-            allocator.free(self.backing_buffer);
+        allocator.free(self.backing_buffer);
 
-        if (self.line_widths) |line_widths| {
-            line_widths.deinit();
+        if (self.line_widths) |*line_widths| {
+            line_widths.deinit(allocator);
             self.line_widths = null;
         }
 
-        if (self.break_indices) |break_indices| {
-            break_indices.deinit();
+        if (self.break_indices) |*break_indices| {
+            break_indices.deinit(allocator);
             self.break_indices = null;
         }
     }
@@ -412,10 +418,10 @@ pub const NineSliceImageData = struct {
     atlas_data: [9]AtlasData,
 
     pub fn fromAtlasData(data: AtlasData, w: f32, h: f32, slice_x: f32, slice_y: f32, slice_w: f32, slice_h: f32, alpha: f32) NineSliceImageData {
-        const base_u = data.texURaw() + assets.padding;
-        const base_v = data.texVRaw() + assets.padding;
-        const base_w = data.texWRaw() - assets.padding * 2;
-        const base_h = data.texHRaw() - assets.padding * 2;
+        const base_u = data.texURaw();
+        const base_v = data.texVRaw();
+        const base_w = data.width();
+        const base_h = data.height();
         return .{
             .w = w,
             .h = h,
@@ -476,15 +482,24 @@ pub const NormalImageData = struct {
     scale_y: f32 = 1.0,
     alpha: f32 = 1.0,
     color: u32 = std.math.maxInt(u32),
+    glow: bool = false,
     color_intensity: f32 = 0,
     scissor: ScissorRect = .{},
     atlas_data: assets.AtlasData,
 
     pub fn width(self: NormalImageData) f32 {
-        return self.atlas_data.texWRaw() * self.scale_x;
+        return self.atlas_data.width() * self.scale_x;
     }
 
     pub fn height(self: NormalImageData) f32 {
+        return self.atlas_data.height() * self.scale_y;
+    }
+
+    pub fn texWRaw(self: NormalImageData) f32 {
+        return self.atlas_data.texWRaw() * self.scale_x;
+    }
+
+    pub fn texHRaw(self: NormalImageData) f32 {
         return self.atlas_data.texHRaw() * self.scale_y;
     }
 };
@@ -527,6 +542,20 @@ pub const ImageData = union(enum) {
             .normal => |normal| normal.height(),
         };
     }
+
+    pub fn texWRaw(self: ImageData) f32 {
+        return switch (self) {
+            .nine_slice => |nine_slice| nine_slice.w,
+            .normal => |normal| normal.texWRaw(),
+        };
+    }
+
+    pub fn texHRaw(self: ImageData) f32 {
+        return switch (self) {
+            .nine_slice => |nine_slice| nine_slice.h,
+            .normal => |normal| normal.texHRaw(),
+        };
+    }
 };
 
 pub const InteractableState = enum {
@@ -554,6 +583,14 @@ pub const InteractableImageData = struct {
 
     pub fn height(self: InteractableImageData, state: InteractableState) f32 {
         return self.current(state).height();
+    }
+
+    pub fn texWRaw(self: InteractableImageData, state: InteractableState) f32 {
+        return self.current(state).texWRaw();
+    }
+
+    pub fn texHRaw(self: InteractableImageData, state: InteractableState) f32 {
+        return self.current(state).texHRaw();
     }
 
     pub fn setScissor(self: *InteractableImageData, scissor: ScissorRect) void {
@@ -699,7 +736,7 @@ pub const Input = struct {
             return false;
 
         if (intersects(self, x, y)) {
-            self.state = .none;
+            self.state = .hovered;
         }
 
         return !(self.event_policy.pass_release or !intersects(self, x, y));
@@ -712,7 +749,7 @@ pub const Input = struct {
         if (intersects(self, x, y)) {
             systems.hover_lock.lock();
             defer systems.hover_lock.unlock();
-            systems.hover_target = .{ .input_field = self };
+            systems.hover_target = UiElement{ .input_field = self }; // TODO: re-add RLS when fixed
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -762,6 +799,20 @@ pub const Input = struct {
         return @max(self.text_data.height, switch (self.image_data.current(self.state)) {
             .nine_slice => |nine_slice| return nine_slice.h,
             .normal => |image_data| return image_data.height(),
+        });
+    }
+
+    pub fn texWRaw(self: Input) f32 {
+        return @max(self.text_data.width, switch (self.image_data.current(self.state)) {
+            .nine_slice => |nine_slice| return nine_slice.w,
+            .normal => |image_data| return image_data.texWRaw(),
+        });
+    }
+
+    pub fn texHRaw(self: Input) f32 {
+        return @max(self.text_data.height, switch (self.image_data.current(self.state)) {
+            .nine_slice => |nine_slice| return nine_slice.h,
+            .normal => |image_data| return image_data.texHRaw(),
         });
     }
 
@@ -820,7 +871,7 @@ pub const Button = struct {
         if (intersects(self, x, y)) {
             self.state = .pressed;
             self.press_callback(self.userdata);
-            assets.playSfx("button_click");
+            assets.playSfx("button.mp3");
             return true;
         }
 
@@ -832,7 +883,7 @@ pub const Button = struct {
             return false;
 
         if (intersects(self, x, y)) {
-            self.state = .none;
+            self.state = .hovered;
         }
 
         return !(self.event_policy.pass_release or !intersects(self, x, y));
@@ -854,7 +905,7 @@ pub const Button = struct {
 
             systems.hover_lock.lock();
             defer systems.hover_lock.unlock();
-            systems.hover_target = .{ .button = self };
+            systems.hover_target = UiElement{ .button = self }; // TODO: re-add RLS when fixed
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -867,6 +918,11 @@ pub const Button = struct {
         if (self.text_data) |*text_data| {
             text_data.lock.lock();
             defer text_data.lock.unlock();
+
+            text_data.max_width = self.width();
+            text_data.max_height = self.height();
+            text_data.vert_align = .middle;
+            text_data.hori_align = .middle;
 
             text_data.recalculateAttributes(self.allocator);
         }
@@ -916,6 +972,34 @@ pub const Button = struct {
             };
         }
     }
+
+    pub fn texWRaw(self: Button) f32 {
+        if (self.text_data) |text| {
+            return @max(text.width, switch (self.image_data.current(self.state)) {
+                .nine_slice => |nine_slice| return nine_slice.w,
+                .normal => |image_data| return image_data.texWRaw(),
+            });
+        } else {
+            return switch (self.image_data.current(self.state)) {
+                .nine_slice => |nine_slice| return nine_slice.w,
+                .normal => |image_data| return image_data.texWRaw(),
+            };
+        }
+    }
+
+    pub fn texHRaw(self: Button) f32 {
+        if (self.text_data) |text| {
+            return @max(text.height, switch (self.image_data.current(self.state)) {
+                .nine_slice => |nine_slice| return nine_slice.h,
+                .normal => |image_data| return image_data.texHRaw(),
+            });
+        } else {
+            return switch (self.image_data.current(self.state)) {
+                .nine_slice => |nine_slice| return nine_slice.h,
+                .normal => |image_data| return image_data.texHRaw(),
+            };
+        }
+    }
 };
 
 pub const KeyMapper = struct {
@@ -923,7 +1007,7 @@ pub const KeyMapper = struct {
     y: f32,
     set_key_callback: *const fn (*KeyMapper) void,
     image_data: InteractableImageData,
-    settings_button: *settings.Button,
+    settings_button: *Settings.Button,
     key: glfw.Key = .unknown,
     mouse: glfw.MouseButton = .eight,
     title_text_data: ?TextData = null,
@@ -949,7 +1033,7 @@ pub const KeyMapper = struct {
                 input.selected_key_mapper = self;
             }
 
-            assets.playSfx("button_click");
+            assets.playSfx("button.mp3");
             return true;
         }
 
@@ -961,7 +1045,7 @@ pub const KeyMapper = struct {
             return false;
 
         if (intersects(self, x, y)) {
-            self.state = .none;
+            self.state = .hovered;
         }
 
         return !(self.event_policy.pass_release or !intersects(self, x, y));
@@ -983,7 +1067,7 @@ pub const KeyMapper = struct {
 
             systems.hover_lock.lock();
             defer systems.hover_lock.unlock();
-            systems.hover_target = .{ .key_mapper = self };
+            systems.hover_target = UiElement{ .key_mapper = self }; // TODO: re-add RLS when fixed
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -1032,13 +1116,28 @@ pub const KeyMapper = struct {
             .normal => |image_data| return image_data.height(),
         };
     }
+
+    pub fn texWRaw(self: KeyMapper) f32 {
+        const extra = if (self.title_text_data) |t| t.width else 0;
+        return switch (self.image_data.current(self.state)) {
+            .nine_slice => |nine_slice| return nine_slice.w + extra,
+            .normal => |image_data| return image_data.texWRaw() + extra,
+        };
+    }
+
+    pub fn texHRaw(self: KeyMapper) f32 {
+        return switch (self.image_data.current(self.state)) {
+            .nine_slice => |nine_slice| return nine_slice.h,
+            .normal => |image_data| return image_data.texHRaw(),
+        };
+    }
 };
 
 pub const CharacterBox = struct {
     x: f32,
     y: f32,
     id: u32,
-    obj_type: u16, //added so I don't have to make a NewCharacterBox struct rn
+    class_data_id: u16,
     press_callback: *const fn (*CharacterBox) void,
     image_data: InteractableImageData,
     state: InteractableState = .none,
@@ -1057,7 +1156,7 @@ pub const CharacterBox = struct {
         if (intersects(self, x, y)) {
             self.state = .pressed;
             self.press_callback(self);
-            assets.playSfx("button_click");
+            assets.playSfx("button.mp3");
             return true;
         }
 
@@ -1069,7 +1168,7 @@ pub const CharacterBox = struct {
             return false;
 
         if (intersects(self, x, y)) {
-            self.state = .none;
+            self.state = .hovered;
         }
 
         return !(self.event_policy.pass_release or !intersects(self, x, y));
@@ -1082,7 +1181,7 @@ pub const CharacterBox = struct {
         if (intersects(self, x, y)) {
             systems.hover_lock.lock();
             defer systems.hover_lock.unlock();
-            systems.hover_target = .{ .char_box = self };
+            systems.hover_target = UiElement{ .char_box = self }; // TODO: re-add RLS when fixed
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -1133,6 +1232,34 @@ pub const CharacterBox = struct {
             };
         }
     }
+
+    pub fn texWRaw(self: CharacterBox) f32 {
+        if (self.text_data) |text| {
+            return @max(text.width, switch (self.image_data.current(self.state)) {
+                .nine_slice => |nine_slice| return nine_slice.w,
+                .normal => |image_data| return image_data.texWRaw(),
+            });
+        } else {
+            return switch (self.image_data.current(self.state)) {
+                .nine_slice => |nine_slice| return nine_slice.w,
+                .normal => |image_data| return image_data.texWRaw(),
+            };
+        }
+    }
+
+    pub fn texHRaw(self: CharacterBox) f32 {
+        if (self.text_data) |text| {
+            return @max(text.height, switch (self.image_data.current(self.state)) {
+                .nine_slice => |nine_slice| return nine_slice.h,
+                .normal => |image_data| return image_data.texHRaw(),
+            });
+        } else {
+            return switch (self.image_data.current(self.state)) {
+                .nine_slice => |nine_slice| return nine_slice.h,
+                .normal => |image_data| return image_data.texHRaw(),
+            };
+        }
+    }
 };
 
 pub const Image = struct {
@@ -1145,8 +1272,8 @@ pub const Image = struct {
     event_policy: EventPolicy = .{},
     // hack
     is_minimap_decor: bool = false,
-    ability_props: ?game_data.Ability = null,
     tooltip_text: ?TextData = null,
+    ability_props: ?game_data.AbilityData = null,
     minimap_offset_x: f32 = 0.0,
     minimap_offset_y: f32 = 0.0,
     minimap_width: f32 = 0.0,
@@ -1207,6 +1334,20 @@ pub const Image = struct {
             .normal => |image_data| return image_data.height(),
         }
     }
+
+    pub fn texWRaw(self: Image) f32 {
+        switch (self.image_data) {
+            .nine_slice => |nine_slice| return nine_slice.w,
+            .normal => |image_data| return image_data.texWRaw(),
+        }
+    }
+
+    pub fn texHRaw(self: Image) f32 {
+        switch (self.image_data) {
+            .nine_slice => |nine_slice| return nine_slice.h,
+            .normal => |image_data| return image_data.texHRaw(),
+        }
+    }
 };
 
 pub const MenuBackground = struct {
@@ -1226,6 +1367,14 @@ pub const MenuBackground = struct {
     }
 
     pub fn height(_: MenuBackground) f32 {
+        return @floatFromInt(assets.menu_background.height);
+    }
+
+    pub fn texWRaw(_: MenuBackground) f32 {
+        return @floatFromInt(assets.menu_background.width);
+    }
+
+    pub fn texHRaw(_: MenuBackground) f32 {
         return @floatFromInt(assets.menu_background.height);
     }
 };
@@ -1329,6 +1478,20 @@ pub const Item = struct {
             .normal => |image_data| return image_data.height(),
         }
     }
+
+    pub fn texWRaw(self: Item) f32 {
+        switch (self.image_data) {
+            .nine_slice => |nine_slice| return nine_slice.w,
+            .normal => |image_data| return image_data.texWRaw(),
+        }
+    }
+
+    pub fn texHRaw(self: Item) f32 {
+        switch (self.image_data) {
+            .nine_slice => |nine_slice| return nine_slice.h,
+            .normal => |image_data| return image_data.texHRaw(),
+        }
+    }
 };
 
 pub const Bar = struct {
@@ -1367,6 +1530,20 @@ pub const Bar = struct {
             .normal => |image_data| return image_data.height(),
         }
     }
+
+    pub fn texWRaw(self: Bar) f32 {
+        switch (self.image_data) {
+            .nine_slice => |nine_slice| return nine_slice.w,
+            .normal => |image_data| return image_data.texWRaw(),
+        }
+    }
+
+    pub fn texHRaw(self: Bar) f32 {
+        switch (self.image_data) {
+            .nine_slice => |nine_slice| return nine_slice.h,
+            .normal => |image_data| return image_data.texHRaw(),
+        }
+    }
 };
 
 pub const Text = struct {
@@ -1396,6 +1573,14 @@ pub const Text = struct {
     }
 
     pub fn height(self: Text) f32 {
+        return self.text_data.height;
+    }
+
+    pub fn texWRaw(self: Text) f32 {
+        return self.text_data.width;
+    }
+
+    pub fn texHRaw(self: Text) f32 {
         return self.text_data.height;
     }
 };
@@ -1492,7 +1677,7 @@ pub const ScrollableContainer = struct {
 
         self.base_y = self.y;
 
-        self.container = self.allocator.create(Container) catch std.debug.panic("ScrollableContainer child container alloc failed", .{});
+        self.container = self.allocator.create(Container) catch @panic("OOM");
         self.container.* = .{
             .x = self.x,
             .y = self.y,
@@ -1505,9 +1690,8 @@ pub const ScrollableContainer = struct {
             .layer = self.layer,
             .allocator = self.allocator,
         };
-        self.container.init();
 
-        self.scroll_bar = self.allocator.create(Slider) catch std.debug.panic("ScrollableContainer scroll bar alloc failed", .{});
+        self.scroll_bar = self.allocator.create(Slider) catch @panic("ScrollableContainer scroll bar alloc failed");
         self.scroll_bar.* = .{
             .x = self.scroll_x,
             .y = self.scroll_y,
@@ -1529,7 +1713,7 @@ pub const ScrollableContainer = struct {
         self.scroll_bar.init();
 
         if (self.hasScrollDecor()) {
-            self.scroll_bar_decor = self.allocator.create(Image) catch std.debug.panic("ScrollableContainer scroll bar decor alloc failed", .{});
+            self.scroll_bar_decor = self.allocator.create(Image) catch @panic("ScrollableContainer scroll bar decor alloc failed");
             self.scroll_bar_decor.* = .{
                 .x = self.scroll_side_x,
                 .y = self.scroll_side_y,
@@ -1556,9 +1740,15 @@ pub const ScrollableContainer = struct {
 
     pub fn deinit(self: *ScrollableContainer) void {
         self.container.deinit();
+        self.allocator.destroy(self.container);
 
         self.scroll_bar.deinit();
         self.allocator.destroy(self.scroll_bar);
+
+        if (self.hasScrollDecor()) {
+            self.scroll_bar_decor.deinit();
+            self.allocator.destroy(self.scroll_bar_decor);
+        }
     }
 
     pub fn width(self: ScrollableContainer) f32 {
@@ -1567,6 +1757,14 @@ pub const ScrollableContainer = struct {
 
     pub fn height(self: ScrollableContainer) f32 {
         return @max(self.container.height(), (self.scroll_bar.y - self.container.y) + self.scroll_bar.height());
+    }
+
+    pub fn texWRaw(self: ScrollableContainer) f32 {
+        return @max(self.container.texWRaw(), (self.scroll_bar.x - self.container.x) + self.scroll_bar.texWRaw());
+    }
+
+    pub fn texHRaw(self: ScrollableContainer) f32 {
+        return @max(self.container.texHRaw(), (self.scroll_bar.y - self.container.y) + self.scroll_bar.texHRaw());
     }
 
     pub fn hasScrollDecor(self: ScrollableContainer) bool {
@@ -1631,8 +1829,7 @@ pub const Container = struct {
     draggable: bool = false,
     layer: Layer = .default,
 
-    elements: std.ArrayList(UiElement) = undefined,
-    lock: std.Thread.Mutex = .{},
+    elements: std.ArrayListUnmanaged(UiElement) = .empty,
     disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
@@ -1644,24 +1841,16 @@ pub const Container = struct {
     clamp_x: bool = false,
     clamp_y: bool = false,
     clamp_to_screen: bool = false,
-    lock_hack: bool = false,
 
     pub fn mousePress(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
         if (!self.visible)
             return false;
 
-        self.lock.lock();
-        self.lock_hack = true;
-        defer {
-            self.lock.unlock();
-            self.lock_hack = false;
-        }
-
         var iter = std.mem.reverseIterator(self.elements.items);
         while (iter.next()) |elem| {
             switch (elem) {
                 inline else => |inner_elem| {
-                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mousePress") and
                         inner_elem.mousePress(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, mods))
                         return true;
                 },
@@ -1687,23 +1876,14 @@ pub const Container = struct {
         if (self.is_dragging)
             self.is_dragging = false;
 
-        {
-            self.lock.lock();
-            self.lock_hack = true;
-            defer {
-                self.lock.unlock();
-                self.lock_hack = false;
-            }
-
-            var iter = std.mem.reverseIterator(self.elements.items);
-            while (iter.next()) |elem| {
-                switch (elem) {
-                    inline else => |inner_elem| {
-                        if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease") and
-                            inner_elem.mouseRelease(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
-                            return true;
-                    },
-                }
+        var iter = std.mem.reverseIterator(self.elements.items);
+        while (iter.next()) |elem| {
+            switch (elem) {
+                inline else => |inner_elem| {
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseRelease") and
+                        inner_elem.mouseRelease(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
+                        return true;
+                },
             }
         }
 
@@ -1714,6 +1894,12 @@ pub const Container = struct {
         if (!self.visible)
             return false;
 
+        const cam_width, const cam_height = blk: {
+            main.camera.lock.lock();
+            defer main.camera.lock.unlock();
+            break :blk .{ main.camera.width, main.camera.height };
+        };
+
         if (self.is_dragging) {
             if (!self.clamp_x) {
                 self.x = x + self.drag_offset_x;
@@ -1722,7 +1908,7 @@ pub const Container = struct {
                         self.x = 0;
 
                     const bottom_x = self.x + self.width();
-                    if (bottom_x < camera.screen_width)
+                    if (bottom_x < cam_width)
                         self.x = self.width();
                 }
             }
@@ -1733,29 +1919,20 @@ pub const Container = struct {
                         self.y = 0;
 
                     const bottom_y = self.y + self.height();
-                    if (bottom_y < camera.screen_height)
+                    if (bottom_y < cam_height)
                         self.y = bottom_y;
                 }
             }
         }
 
-        {
-            self.lock.lock();
-            self.lock_hack = true;
-            defer {
-                self.lock.unlock();
-                self.lock_hack = false;
-            }
-
-            var iter = std.mem.reverseIterator(self.elements.items);
-            while (iter.next()) |elem| {
-                switch (elem) {
-                    inline else => |inner_elem| {
-                        if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove") and
-                            inner_elem.mouseMove(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
-                            return true;
-                    },
-                }
+        var iter = std.mem.reverseIterator(self.elements.items);
+        while (iter.next()) |elem| {
+            switch (elem) {
+                inline else => |inner_elem| {
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseMove") and
+                        inner_elem.mouseMove(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset))
+                        return true;
+                },
             }
         }
 
@@ -1766,46 +1943,26 @@ pub const Container = struct {
         if (!self.visible)
             return false;
 
-        {
-            self.lock.lock();
-            self.lock_hack = true;
-            defer {
-                self.lock.unlock();
-                self.lock_hack = false;
-            }
-
-            var iter = std.mem.reverseIterator(self.elements.items);
-            while (iter.next()) |elem| {
-                switch (elem) {
-                    inline else => |inner_elem| {
-                        if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseScroll") and
-                            inner_elem.mouseScroll(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, x_scroll, y_scroll))
-                            return true;
-                    },
-                }
+        var iter = std.mem.reverseIterator(self.elements.items);
+        while (iter.next()) |elem| {
+            switch (elem) {
+                inline else => |inner_elem| {
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseScroll") and
+                        inner_elem.mouseScroll(x - self.x, y - self.y, self.x + x_offset, self.y + y_offset, x_scroll, y_scroll))
+                        return true;
+                },
             }
         }
 
         return !(self.event_policy.pass_scroll or !intersects(self, x, y));
     }
 
-    pub fn init(self: *Container) void {
-        const no_lock_hack = !self.lock_hack;
-        if (no_lock_hack) self.lock.lock();
-        defer if (no_lock_hack) self.lock.unlock();
-
-        self.elements = std.ArrayList(UiElement).initCapacity(self.allocator, 8) catch std.debug.panic("Container element buffer alloc failed", .{});
-    }
-
-    pub fn deinitInner(self: *Container) void {
-        systems.hover_lock.lock();
-        defer systems.hover_lock.unlock();
-
+    pub fn deinit(self: *Container) void {
         for (self.elements.items) |*elem| {
             switch (elem.*) {
                 inline else => |inner_elem| {
                     comptime var field_name: []const u8 = "";
-                    inline for (std.meta.fields(UiElement)) |field| {
+                    inline for (@typeInfo(UiElement).@"union".fields) |field| {
                         if (field.type == @TypeOf(inner_elem)) {
                             field_name = field.name;
                             break;
@@ -1821,23 +1978,15 @@ pub const Container = struct {
                         inner_elem == @field(systems.hover_target.?, field_name))
                         systems.hover_target = null;
 
-                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "deinit")) inner_elem.deinit();
+                    if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "deinit")) inner_elem.deinit();
                     self.allocator.destroy(inner_elem);
                 },
             }
         }
-        self.elements.deinit();
-    }
-
-    pub fn deinit(self: *Container) void {
-        systems.containers_to_remove.append(self) catch std.debug.panic("Deiniting container failed", .{});
+        self.elements.deinit(self.allocator);
     }
 
     pub fn width(self: *Container) f32 {
-        const no_lock_hack = !self.lock_hack;
-        if (no_lock_hack) self.lock.lock();
-        defer if (no_lock_hack) self.lock.unlock();
-
         if (self.elements.items.len <= 0)
             return 0.0;
 
@@ -1856,10 +2005,6 @@ pub const Container = struct {
     }
 
     pub fn height(self: *Container) f32 {
-        const no_lock_hack = !self.lock_hack;
-        if (no_lock_hack) self.lock.lock();
-        defer if (no_lock_hack) self.lock.unlock();
-
         if (self.elements.items.len <= 0)
             return 0.0;
 
@@ -1870,6 +2015,42 @@ pub const Container = struct {
                 inline else => |inner_elem| {
                     min_y = @min(min_y, inner_elem.y);
                     max_y = @max(max_y, inner_elem.y + inner_elem.height());
+                },
+            }
+        }
+
+        return max_y - min_y;
+    }
+
+    pub fn texWRaw(self: *Container) f32 {
+        if (self.elements.items.len <= 0)
+            return 0.0;
+
+        var min_x = std.math.floatMax(f32);
+        var max_x = std.math.floatMin(f32);
+        for (self.elements.items) |elem| {
+            switch (elem) {
+                inline else => |inner_elem| {
+                    min_x = @min(min_x, inner_elem.x);
+                    max_x = @max(max_x, inner_elem.x + inner_elem.texWRaw());
+                },
+            }
+        }
+
+        return max_x - min_x;
+    }
+
+    pub fn texHRaw(self: *Container) f32 {
+        if (self.elements.items.len <= 0)
+            return 0.0;
+
+        var min_y = std.math.floatMax(f32);
+        var max_y = std.math.floatMin(f32);
+        for (self.elements.items) |elem| {
+            switch (elem) {
+                inline else => |inner_elem| {
+                    min_y = @min(min_y, inner_elem.y);
+                    max_y = @max(max_y, inner_elem.y + inner_elem.texHRaw());
                 },
             }
         }
@@ -1903,8 +2084,8 @@ pub const Container = struct {
         };
 
         comptime var field_name: []const u8 = "";
-        inline for (std.meta.fields(UiElement)) |field| {
-            if (@typeInfo(field.type).Pointer.child == T) {
+        inline for (@typeInfo(UiElement).@"union".fields) |field| {
+            if (@typeInfo(field.type).pointer.child == T) {
                 field_name = field.name;
                 break;
             }
@@ -1913,19 +2094,11 @@ pub const Container = struct {
         if (field_name.len == 0)
             @compileError("Could not find field name");
 
-        const no_lock_hack = !self.lock_hack;
-        if (no_lock_hack) self.lock.lock();
-        defer if (no_lock_hack) self.lock.unlock();
-
-        try self.elements.append(@unionInit(UiElement, field_name, elem));
+        try self.elements.append(self.allocator, @unionInit(UiElement, field_name, elem));
         return elem;
     }
 
     pub fn updateScissors(self: *Container) void {
-        const no_lock_hack = !self.lock_hack;
-        if (no_lock_hack) self.lock.lock();
-        defer if (no_lock_hack) self.lock.unlock();
-
         for (self.elements.items) |elem| {
             switch (elem) {
                 .scrollable_container => {},
@@ -1990,7 +2163,7 @@ pub const Toggle = struct {
             if (self.state_change) |callback| {
                 callback(self);
             }
-            assets.playSfx("button_click");
+            assets.playSfx("button.mp3");
             return true;
         }
 
@@ -2002,7 +2175,7 @@ pub const Toggle = struct {
             return false;
 
         if (intersects(self, x, y)) {
-            self.state = .none;
+            self.state = .hovered;
         }
 
         return !(self.event_policy.pass_release or !intersects(self, x, y));
@@ -2024,7 +2197,7 @@ pub const Toggle = struct {
 
             systems.hover_lock.lock();
             defer systems.hover_lock.unlock();
-            systems.hover_target = .{ .toggle = self };
+            systems.hover_target = UiElement{ .toggle = self }; // TODO: re-add RLS when fixed
             self.state = .hovered;
         } else {
             self.state = .none;
@@ -2076,6 +2249,26 @@ pub const Toggle = struct {
             self.off_image_data.current(self.state)) {
             .nine_slice => |nine_slice| return nine_slice.h,
             .normal => |image_data| return image_data.height(),
+        }
+    }
+
+    pub fn texWRaw(self: Toggle) f32 {
+        switch (if (self.toggled.*)
+            self.on_image_data.current(self.state)
+        else
+            self.off_image_data.current(self.state)) {
+            .nine_slice => |nine_slice| return nine_slice.w,
+            .normal => |image_data| return image_data.texWRaw(),
+        }
+    }
+
+    pub fn texHRaw(self: Toggle) f32 {
+        switch (if (self.toggled.*)
+            self.on_image_data.current(self.state)
+        else
+            self.off_image_data.current(self.state)) {
+            .nine_slice => |nine_slice| return nine_slice.h,
+            .normal => |image_data| return image_data.texHRaw(),
         }
     }
 };
@@ -2155,7 +2348,7 @@ pub const Slider = struct {
             if (utils.isInBounds(x, y, self.knob_x, self.knob_y, knob_w, knob_h)) {
                 systems.hover_lock.lock();
                 defer systems.hover_lock.unlock();
-                systems.hover_target = .{ .slider = self };
+                systems.hover_target = UiElement{ .slider = self }; // TODO: re-add RLS when fixed
                 self.state = .hovered;
             } else {
                 self.state = .none;
@@ -2197,7 +2390,7 @@ pub const Slider = struct {
         } else if (utils.isInBounds(x, y, self.x + self.knob_x, self.y + self.knob_y, knob_w, knob_h)) {
             systems.hover_lock.lock();
             defer systems.hover_lock.unlock();
-            systems.hover_target = .{ .slider = self };
+            systems.hover_target = UiElement{ .slider = self }; // todo re-add RLS when fixed
             self.state = .hovered;
         } else if (self.state == .hovered) {
             self.state = .none;
@@ -2355,6 +2548,34 @@ pub const Slider = struct {
         return @max(decor_h, knob_h);
     }
 
+    pub fn texWRaw(self: Slider) f32 {
+        const decor_w = switch (self.decor_image_data) {
+            .nine_slice => |nine_slice| nine_slice.w,
+            .normal => |image_data| image_data.texWRaw(),
+        };
+
+        const knob_w = switch (self.knob_image_data.current(self.state)) {
+            .nine_slice => |nine_slice| nine_slice.w,
+            .normal => |normal| normal.texWRaw(),
+        };
+
+        return @max(decor_w, knob_w);
+    }
+
+    pub fn texHRaw(self: Slider) f32 {
+        const decor_h = switch (self.decor_image_data) {
+            .nine_slice => |nine_slice| nine_slice.h,
+            .normal => |image_data| image_data.texHRaw(),
+        };
+
+        const knob_h = switch (self.knob_image_data.current(self.state)) {
+            .nine_slice => |nine_slice| nine_slice.h,
+            .normal => |normal| normal.texHRaw(),
+        };
+
+        return @max(decor_h, knob_h);
+    }
+
     fn pressed(self: *Slider, x: f32, y: f32, knob_h: f32, knob_w: f32) void {
         const prev_value = self.current_value;
 
@@ -2461,7 +2682,7 @@ pub const DropdownContainer = struct {
 
         const in_bounds = intersects(self, x, y);
         if (in_bounds) {
-            self.state = .none;
+            self.state = .hovered;
         }
 
         return !(self.event_policy.pass_release or !in_bounds);
@@ -2475,17 +2696,13 @@ pub const DropdownContainer = struct {
         if (in_bounds) {
             systems.hover_lock.lock();
             defer systems.hover_lock.unlock();
-            systems.hover_target = .{ .dropdown_container = self };
+            systems.hover_target = UiElement{ .dropdown_container = self }; // TODO: re-add RLS when fixed
             self.state = .hovered;
         } else {
             self.state = .none;
         }
 
         return !(self.event_policy.pass_move or !in_bounds);
-    }
-
-    pub fn init(self: *DropdownContainer) void {
-        self.container.init();
     }
 
     pub fn deinit(self: *DropdownContainer) void {
@@ -2498,6 +2715,14 @@ pub const DropdownContainer = struct {
 
     pub fn height(self: *DropdownContainer) f32 {
         return @max(self.background_data.height(self.state), self.container.height());
+    }
+
+    pub fn texWRaw(self: *DropdownContainer) f32 {
+        return @max(self.background_data.texWRaw(self.state), self.container.texWRaw());
+    }
+
+    pub fn texHRaw(self: *DropdownContainer) f32 {
+        return @max(self.background_data.texHRaw(self.state), self.container.texHRaw());
     }
 };
 
@@ -2537,7 +2762,7 @@ pub const Dropdown = struct {
     next_index: u32 = 0,
     selected_index: u32 = std.math.maxInt(u32),
     lock: std.Thread.Mutex = .{},
-    children: std.ArrayList(*DropdownContainer) = undefined,
+    children: std.ArrayListUnmanaged(*DropdownContainer) = .empty,
 
     pub fn mousePress(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
         if (!self.visible)
@@ -2549,7 +2774,7 @@ pub const Dropdown = struct {
         if (in_bounds) {
             self.button_state = .pressed;
             self.toggled = !self.toggled;
-            assets.playSfx("button_click");
+            assets.playSfx("button.mp3");
             return true;
         }
 
@@ -2588,7 +2813,7 @@ pub const Dropdown = struct {
         if (in_bounds) {
             systems.hover_lock.lock();
             defer systems.hover_lock.unlock();
-            systems.hover_target = .{ .dropdown = self };
+            systems.hover_target = UiElement{ .dropdown = self }; // TODO: re-add RLS when fixed
             self.button_state = .hovered;
         } else {
             self.button_state = .none;
@@ -2623,8 +2848,6 @@ pub const Dropdown = struct {
             self.main_background_data.height(.hovered) == self.alt_background_data.height(.hovered) and
             self.main_background_data.height(.pressed) == self.alt_background_data.height(.pressed));
 
-        self.children = std.ArrayList(*DropdownContainer).init(self.allocator);
-
         self.background_data.scaleWidth(self.w);
         self.title_data.scaleWidth(self.w - self.button_data_collapsed.width(.none));
         self.title_data.scaleHeight(self.button_data_collapsed.height(.none));
@@ -2649,7 +2872,7 @@ pub const Dropdown = struct {
 
         const scroll_x_base = self.x + self.container_inlay_x + scissor_w + 2;
         const scroll_y_base = self.y + self.container_inlay_y + self.title_data.height();
-        self.container = self.allocator.create(ScrollableContainer) catch std.debug.panic("Dropdown child container alloc failed", .{});
+        self.container = self.allocator.create(ScrollableContainer) catch @panic("Dropdown child container alloc failed");
         self.container.* = .{
             .x = self.x + self.container_inlay_x,
             .y = self.y + self.container_inlay_y + self.title_data.height(),
@@ -2671,8 +2894,10 @@ pub const Dropdown = struct {
     }
 
     pub fn deinit(self: *Dropdown) void {
+        self.title_text.deinit(self.allocator);
         self.container.deinit();
-        self.children.deinit();
+        self.children.deinit(self.allocator);
+        self.allocator.destroy(self.container);
     }
 
     pub fn width(self: Dropdown) f32 {
@@ -2681,6 +2906,14 @@ pub const Dropdown = struct {
 
     pub fn height(self: Dropdown) f32 {
         return self.title_data.height() + (if (self.toggled) self.background_data.height() else 0.0);
+    }
+
+    pub fn texWRaw(self: Dropdown) f32 {
+        return self.background_data.texWRaw();
+    }
+
+    pub fn texHRaw(self: Dropdown) f32 {
+        return self.title_data.texHRaw() + (if (self.toggled) self.background_data.texHRaw() else 0.0);
     }
 
     // the container field's x/y are relative to parents
@@ -2708,7 +2941,7 @@ pub const Dropdown = struct {
             .background_data = if (@mod(self.next_index, 2) == 0) self.main_background_data else self.alt_background_data,
         });
         self.next_index += 1;
-        try self.children.append(ret);
+        try self.children.append(self.allocator, ret);
 
         if (self.container.scroll_bar.visible and !scroll_vis_pre) {
             self.main_background_data.scaleWidth(self.container.scissor_w);
@@ -2726,7 +2959,8 @@ pub const Dropdown = struct {
 pub const SpeechBalloon = struct {
     image_data: ImageData,
     text_data: TextData,
-    target_id: i32,
+    target_obj_type: network_data.ObjectType,
+    target_map_id: u32,
     start_time: i64 = 0,
     visible: bool = true,
     // the texts' internal x/y, don't touch outside of systems.update()
@@ -2748,6 +2982,20 @@ pub const SpeechBalloon = struct {
         });
     }
 
+    pub fn texWRaw(self: SpeechBalloon) f32 {
+        return @max(self.text_data.width, switch (self.image_data) {
+            .nine_slice => |nine_slice| return nine_slice.w,
+            .normal => |image_data| return image_data.texWRaw(),
+        });
+    }
+
+    pub fn texHRaw(self: SpeechBalloon) f32 {
+        return @max(self.text_data.height, switch (self.image_data) {
+            .nine_slice => |nine_slice| return nine_slice.h,
+            .normal => |image_data| return image_data.texHRaw(),
+        });
+    }
+
     pub fn add(data: SpeechBalloon) !void {
         var balloon = Temporary{ .balloon = data };
         balloon.balloon.start_time = main.current_time;
@@ -2758,7 +3006,7 @@ pub const SpeechBalloon = struct {
             balloon.balloon.text_data.recalculateAttributes(main.allocator);
         }
 
-        try systems.temp_elements_to_add.append(balloon);
+        try systems.temp_elements_to_add.append(systems.allocator, balloon);
     }
 
     pub fn destroy(self: *SpeechBalloon, allocator: std.mem.Allocator) void {
@@ -2778,10 +3026,11 @@ pub const SpeechBalloon = struct {
 pub const StatusText = struct {
     text_data: TextData,
     initial_size: f32,
+    obj_type: network_data.ObjectType,
+    map_id: u32,
     lifetime: i64 = 500,
     start_time: i64 = 0,
     delay: i64 = 0,
-    obj_id: i32 = -1,
     visible: bool = true,
     // the texts' internal x/y, don't touch outside of systems.update()
     screen_x: f32 = 0.0,
@@ -2796,6 +3045,14 @@ pub const StatusText = struct {
         return self.text_data.height;
     }
 
+    pub fn texWRaw(self: StatusText) f32 {
+        return self.text_data.width;
+    }
+
+    pub fn texHRaw(self: StatusText) f32 {
+        return self.text_data.height;
+    }
+
     pub fn add(data: StatusText) !void {
         var status = Temporary{ .status = data };
         status.status.start_time = main.current_time + data.delay;
@@ -2805,7 +3062,7 @@ pub const StatusText = struct {
 
             status.status.text_data.recalculateAttributes(main.allocator);
         }
-        try systems.temp_elements_to_add.append(status);
+        try systems.temp_elements_to_add.append(systems.allocator, status);
     }
 
     pub fn destroy(self: *StatusText, allocator: std.mem.Allocator) void {

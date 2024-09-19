@@ -6,21 +6,22 @@ const map = @import("map.zig");
 const utils = @import("shared").utils;
 const network = @import("../network.zig");
 const particles = @import("particles.zig");
+const render = @import("../render.zig");
+const Camera = @import("../Camera.zig");
+const px_per_tile = Camera.px_per_tile;
+const size_mult = Camera.size_mult;
 
 const Player = @import("player.zig").Player;
-const GameObject = @import("game_object.zig").GameObject;
+const Entity = @import("entity.zig").Entity;
+const Enemy = @import("enemy.zig").Enemy;
+const Square = @import("square.zig").Square;
 
 pub const Projectile = struct {
-    var next_obj_id: i32 = 0x7F000000;
-
     x: f32 = 0.0,
     y: f32 = 0.0,
     z: f32 = 0.0,
-    screen_x: f32 = 0.0,
-    screen_y: f32 = 0.0,
     size: f32 = 1.0,
-    obj_id: i32 = 0,
-    atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
+    atlas_data: assets.AtlasData = .default,
     start_time: i64 = 0,
     angle: f32 = 0.0,
     visual_angle: f32 = 0.0,
@@ -29,101 +30,102 @@ pub const Projectile = struct {
     start_x: f32 = 0.0,
     start_y: f32 = 0.0,
     last_deflect: f32 = 0.0,
-    bullet_id: u8 = 0,
-    owner_id: i32 = 0,
+    index: u8 = 0,
+    owner_map_id: u32 = std.math.maxInt(u32),
     damage_players: bool = false,
-    physical_damage: i32 = 0,
-    magic_damage: i32 = 0,
-    true_damage: i32 = 0,
-    penetration: i32 = 0,
-    piercing: i32 = 0,
-    props: game_data.ProjProps,
-    colors: []u32 = &[0]u32{},
-    hit_list: std.AutoHashMap(i32, void) = undefined,
+    phys_dmg: i32 = 0,
+    magic_dmg: i32 = 0,
+    true_dmg: i32 = 0,
+    data: *const game_data.ProjectileData,
+    colors: []u32 = &.{},
+    hit_list: std.AutoHashMapUnmanaged(u32, void) = .empty,
     heat_seek_fired: bool = false,
     last_hit_check: i64 = 0,
     disposed: bool = false,
 
-    pub inline fn addToMap(self: *Projectile) void {
-        self.hit_list = std.AutoHashMap(i32, void).init(main.allocator);
+    pub fn addToMap(self: *Projectile, allocator: std.mem.Allocator) void {
         self.start_time = main.current_time;
 
-        const tex_list = self.props.texture_data;
-        const tex = tex_list[@as(usize, @intCast(self.obj_id)) % tex_list.len];
+        const tex_list = self.data.textures;
+        const tex = tex_list[utils.rng.next() % tex_list.len];
         if (assets.atlas_data.get(tex.sheet)) |data| {
             self.atlas_data = data[tex.index];
         } else {
-            std.log.err("Could not find sheet {s} for proj with id {d}. Using error texture", .{ tex.sheet, self.obj_id });
+            std.log.err("Could not find sheet {s} for projectile. Using error texture", .{tex.sheet});
             self.atlas_data = assets.error_data;
         }
 
         self.colors = assets.atlas_to_color_data.get(@bitCast(self.atlas_data)) orelse blk: {
-            std.log.err("Could not parse color data for projectile with id {d}. Setting it to empty", .{self.obj_id});
-            break :blk &[0]u32{};
+            std.log.err("Could not parse color data for projectile. Setting it to empty", .{});
+            break :blk &.{};
         };
 
-        self.obj_id = Projectile.next_obj_id + 1;
-        Projectile.next_obj_id += 1;
-        if (Projectile.next_obj_id == std.math.maxInt(i32))
-            Projectile.next_obj_id = 0x7F000000;
+        var lock = map.addLockForType(Projectile);
+        lock.lock();
+        defer lock.unlock();
+        map.addListForType(Projectile).append(allocator, self.*) catch @panic("Adding projectile failed");
+    }
 
-        map.add_lock.lockShared();
-        defer map.add_lock.unlockShared();
-        map.entities_to_add.append(.{ .projectile = self.* }) catch |e| {
-            std.log.err("Could not add projectile to map (obj_id={d}, x={d}, y={d}): {}", .{ self.obj_id, self.x, self.y, e });
-        };
+    pub fn deinit(self: *Projectile, allocator: std.mem.Allocator) void {
+        if (self.disposed)
+            return;
+
+        self.disposed = true;
+        self.hit_list.deinit(allocator);
     }
 
     fn findTargetPlayer(x: f32, y: f32, radius: f32) ?*Player {
         var min_dist = radius * radius;
         var target: ?*Player = null;
 
-        for (map.entities.items) |*en| {
-            if (en.* == .player) {
-                const dist_sqr = utils.distSqr(en.player.x, en.player.y, x, y);
-                if (dist_sqr < min_dist) {
-                    min_dist = dist_sqr;
-                    target = &en.player;
-                }
+        var lock = map.useLockForType(Player);
+        lock.lock();
+        defer lock.unlock();
+        for (map.listForType(Player).items) |*p| {
+            const dist_sqr = utils.distSqr(p.x, p.y, x, y);
+            if (dist_sqr < min_dist) {
+                min_dist = dist_sqr;
+                target = p;
             }
         }
 
         return target;
     }
 
-    fn findTargetObject(x: f32, y: f32, radius: f32, enemy_only: bool) ?*GameObject {
+    fn findTargetEnemy(x: f32, y: f32, radius: f32) ?*Enemy {
         var min_dist = radius * radius;
-        var target: ?*GameObject = null;
+        var target: ?*Enemy = null;
 
-        for (map.entities.items) |*en| {
-            if (en.* == .object) {
-                if ((en.object.props.is_enemy and !en.object.props.damage_immune) or !enemy_only and (en.object.props.occupy_square or en.object.props.enemy_occupy_square)) {
-                    const dist_sqr = utils.distSqr(en.object.x, en.object.y, x, y);
-                    if (dist_sqr < min_dist) {
-                        min_dist = dist_sqr;
-                        target = &en.object;
-                    }
-                }
+        var lock = map.useLockForType(Enemy);
+        lock.lock();
+        defer lock.unlock();
+        for (map.listForType(Enemy).items) |*e| {
+            if (e.data.health <= 0) continue;
+
+            const dist_sqr = utils.distSqr(e.x, e.y, x, y);
+            if (dist_sqr < min_dist) {
+                min_dist = dist_sqr;
+                target = e;
             }
         }
 
         return target;
     }
 
-    fn updatePosition(self: *Projectile, elapsed: i64, dt: f32) void {
-        if (self.props.heat_seek_radius > 0 and elapsed >= self.props.heat_seek_delay and !self.heat_seek_fired) {
+    fn updatePosition(self: *Projectile, elapsed: f32, dt: f32) void {
+        if (self.data.heat_seek_radius > 0 and elapsed >= self.data.heat_seek_delay and !self.heat_seek_fired) {
             var target_x: f32 = -1.0;
             var target_y: f32 = -1.0;
 
             if (self.damage_players) {
-                if (findTargetPlayer(self.x, self.y, self.props.heat_seek_radius * self.props.heat_seek_radius)) |player| {
+                if (findTargetPlayer(self.x, self.y, self.data.heat_seek_radius * self.data.heat_seek_radius)) |player| {
                     target_x = player.x;
                     target_y = player.y;
                 }
             } else {
-                if (findTargetObject(self.x, self.y, self.props.heat_seek_radius * self.props.heat_seek_radius, true)) |object| {
-                    target_x = object.x;
-                    target_y = object.y;
+                if (findTargetEnemy(self.x, self.y, self.data.heat_seek_radius * self.data.heat_seek_radius)) |enemy| {
+                    target_x = enemy.x;
+                    target_y = enemy.y;
                 }
             }
 
@@ -134,18 +136,18 @@ pub const Projectile = struct {
         }
 
         var angle_change: f32 = 0.0;
-        if (self.props.angle_change != 0 and elapsed < self.props.angle_change_end and elapsed >= self.props.angle_change_delay) {
-            angle_change += dt / std.time.us_per_s * self.props.angle_change;
+        if (self.data.angle_change != 0 and elapsed < self.data.angle_change_end and elapsed >= self.data.angle_change_delay) {
+            angle_change += dt * std.math.degreesToRadians(self.data.angle_change);
         }
 
-        if (self.props.angle_change_accel != 0 and elapsed >= self.props.angle_change_accel_delay) {
-            const time_in_accel: f32 = @floatFromInt(elapsed - self.props.angle_change_accel_delay);
-            angle_change += dt / std.time.us_per_s * self.props.angle_change_accel * time_in_accel / std.time.us_per_s;
+        if (self.data.angle_change_accel != 0 and elapsed >= self.data.angle_change_accel_delay) {
+            const time_in_accel = elapsed - self.data.angle_change_accel_delay;
+            angle_change += dt * std.math.degreesToRadians(self.data.angle_change_accel) * time_in_accel;
         }
 
         if (angle_change != 0.0) {
-            if (self.props.angle_change_clamp != 0) {
-                const clamp_dt = self.props.angle_change_clamp - self.total_angle_change;
+            if (self.data.angle_change_clamp != 0) {
+                const clamp_dt = self.data.angle_change_clamp - self.total_angle_change;
                 const clamped_change = @min(angle_change, clamp_dt);
                 self.total_angle_change += clamped_change;
                 self.angle += clamped_change;
@@ -155,18 +157,18 @@ pub const Projectile = struct {
         }
 
         var dist: f32 = 0.0;
-        const uses_zero_vel = self.props.zero_velocity_delay > 0;
-        if (!uses_zero_vel or self.props.zero_velocity_delay > elapsed) {
-            if (self.props.accel == 0.0 or elapsed < self.props.accel_delay) {
-                dist = dt * self.props.speed;
+        const uses_zero_vel = self.data.zero_velocity_delay > 0;
+        if (!uses_zero_vel or self.data.zero_velocity_delay > elapsed) {
+            if (self.data.accel == 0.0 or elapsed < self.data.accel_delay) {
+                dist = dt * self.data.speed * 10.0;
             } else {
-                const time_in_accel: f32 = @floatFromInt(elapsed - self.props.accel_delay);
-                const accel_dist = dt * ((self.props.speed * 10 * std.time.us_per_s + self.props.accel * time_in_accel / std.time.us_per_s) / (10 * std.time.us_per_s));
-                if (self.props.speed_clamp != -1) {
+                const time_in_accel = elapsed - self.data.accel_delay;
+                const accel_dist = dt * (self.data.speed * 10.0 + self.data.accel * 10.0 * time_in_accel);
+                if (self.data.speed_clamp == 0.0) {
                     dist = accel_dist;
                 } else {
-                    const clamp_dist = dt * self.props.speed_clamp / (10 * std.time.us_per_s);
-                    dist = if (self.props.accel > 0) @min(accel_dist, clamp_dist) else @max(accel_dist, clamp_dist);
+                    const clamp_dist = dt * self.data.speed_clamp * 10.0;
+                    dist = if (self.data.accel > 0) @min(accel_dist, clamp_dist) else @max(accel_dist, clamp_dist);
                 }
             }
         } else {
@@ -179,48 +181,71 @@ pub const Projectile = struct {
             return;
         }
 
-        if (self.props.parametric) {
-            const t = @as(f32, @floatFromInt(@divTrunc(elapsed, self.props.lifetime))) * std.math.tau;
-            const x = @sin(t) * if (self.bullet_id % 2 == 0) @as(f32, 1.0) else @as(f32, -1.0);
-            const y = @sin(2 * t) * if (self.bullet_id % 4 < 2) @as(f32, 1.0) else @as(f32, -1.0);
-            self.x += (x * @cos(self.angle) - y * @sin(self.angle)) * self.props.magnitude;
-            self.y += (x * @sin(self.angle) + y * @cos(self.angle)) * self.props.magnitude;
-        } else {
-            if (self.props.boomerang and elapsed > @divFloor(self.props.lifetime, 2))
-                dist = -dist;
+        if (self.data.boomerang and elapsed > self.data.duration / 2.0)
+            dist = -dist;
 
-            self.x += dist * @cos(self.angle);
-            self.y += dist * @sin(self.angle);
-            if (self.props.amplitude != 0) {
-                const phase: f32 = if (self.bullet_id % 2 == 0) 0.0 else std.math.pi;
-                const time_ratio = @as(f32, @floatFromInt(elapsed)) / @as(f32, @floatFromInt(self.props.lifetime));
-                const deflection_target = self.props.amplitude * @sin(phase + time_ratio * self.props.frequency * std.math.tau);
-                self.x += (deflection_target - self.last_deflect) * @cos(self.angle + std.math.pi / 2.0);
-                self.y += (deflection_target - self.last_deflect) * @sin(self.angle + std.math.pi / 2.0);
-                self.last_deflect = deflection_target;
-            }
+        self.x += dist * @cos(self.angle);
+        self.y += dist * @sin(self.angle);
+        if (self.data.amplitude != 0) {
+            const phase: f32 = if (self.index % 2 == 0) 0.0 else std.math.pi;
+            const time_ratio = elapsed / self.data.duration;
+            const deflection_target = self.data.amplitude * @sin(phase + time_ratio * self.data.frequency * std.math.tau);
+            self.x += (deflection_target - self.last_deflect) * @cos(self.angle + std.math.pi / 2.0);
+            self.y += (deflection_target - self.last_deflect) * @sin(self.angle + std.math.pi / 2.0);
+            self.last_deflect = deflection_target;
         }
     }
 
-    pub inline fn update(self: *Projectile, time: i64, dt: f32, allocator: std.mem.Allocator) bool {
-        const elapsed = time - self.start_time;
-        if (elapsed >= self.props.lifetime)
+    pub fn draw(self: Projectile, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator) void {
+        if (!cam_data.visibleInCamera(self.x, self.y)) return;
+
+        const size = size_mult * cam_data.scale * self.data.size_mult;
+        const w = self.atlas_data.texWRaw() * size;
+        const h = self.atlas_data.texHRaw() * size;
+        const screen_pos = cam_data.worldToScreen(self.x, self.y);
+        const z_offset = self.z * -px_per_tile - h + assets.padding * size;
+        const rotation = self.data.rotation;
+        const angle_correction = @as(f32, @floatFromInt(self.data.angle_correction)) * std.math.degreesToRadians(45);
+        const angle = -(self.visual_angle + angle_correction +
+            (if (rotation == 0.0) 0.0 else float_time_ms / rotation) - cam_data.angle);
+
+        if (main.settings.enable_lights and self.data.light.color != std.math.maxInt(u32)) {
+            const light_size = self.data.light.radius + self.data.light.pulse * @sin(float_time_ms / 1000.0 * self.data.light.pulse_speed);
+            const light_w = w * light_size * 4;
+            const light_h = h * light_size * 4;
+            render.lights.append(allocator, .{
+                .x = screen_pos.x - light_w / 2.0,
+                .y = screen_pos.y + z_offset - h * light_size * 1.5,
+                .w = light_w,
+                .h = light_h,
+                .color = self.data.light.color,
+                .intensity = self.data.light.intensity,
+            }) catch unreachable;
+        }
+
+        render.drawQuad(
+            screen_pos.x - w / 2.0,
+            screen_pos.y + z_offset,
+            w,
+            h,
+            self.atlas_data,
+            .{ .shadow_texel_mult = 2.0 / size, .rotation = angle },
+        );
+    }
+
+    pub fn update(self: *Projectile, time: i64, dt: f32, allocator: std.mem.Allocator) bool {
+        const elapsed_sec = @as(f32, @floatFromInt(time - self.start_time)) / std.time.us_per_s;
+        const dt_sec = dt / std.time.us_per_s;
+        if (elapsed_sec >= self.data.duration)
             return false;
 
         const last_x = self.x;
         const last_y = self.y;
 
-        self.updatePosition(elapsed, dt);
-        if (self.x < 0 or self.y < 0 or self.x > @as(f32, @floatFromInt(map.width)) or self.y > @as(f32, @floatFromInt(map.height))) {
-            if (self.damage_players)
-                main.server.queuePacket(.{ .square_hit = .{
-                    .time = time,
-                    .bullet_id = self.bullet_id,
-                    .obj_id = self.owner_id,
-                } });
-
+        self.updatePosition(elapsed_sec, dt_sec);
+        if (self.x < 0 or self.y < 0 or
+            self.x >= @as(f32, @floatFromInt(map.info.width)) or self.y >= @as(f32, @floatFromInt(map.info.height)))
             return false;
-        }
 
         if (last_x == 0 and last_y == 0) {
             self.visual_angle = self.angle;
@@ -236,148 +261,85 @@ pub const Projectile = struct {
         self.last_hit_check = time;
 
         const square = map.getSquare(self.x, self.y, false).?;
-        if (map.findEntityConst(square.static_obj_id)) |entity| {
-            if (entity == .object and
-                (entity.object.props.enemy_occupy_square or (!self.props.passes_cover and entity.object.props.occupy_square)))
-            {
-                if (self.props.bouncing) {
-                    const angle = std.math.atan2(entity.object.y - last_y, entity.object.x - last_x);
-                    self.angle = std.math.pi / 2.0 - angle;
-                } else {
-                    if (self.damage_players) {
-                        main.server.queuePacket(.{ .other_hit = .{
-                            .time = time,
-                            .bullet_id = self.bullet_id,
-                            .object_id = self.owner_id,
-                            .target_id = square.static_obj_id,
-                        } });
-                    } else {
-                        var effect = particles.HitEffect{
-                            .x = self.x,
-                            .y = self.y,
-                            .colors = self.colors,
-                            .angle = self.angle,
-                            .speed = self.props.speed,
-                            .size = 1.0,
-                            .amount = 3,
-                        };
-                        effect.addToMap();
-                    }
-                    return false;
-                }
-            }
-        } else if (square.tile_type == 0xFFFE or square.tile_type == 0xFFFF) {
-            if (self.damage_players) {
-                main.server.queuePacket(.{ .square_hit = .{
-                    .time = time,
-                    .bullet_id = self.bullet_id,
-                    .obj_id = self.owner_id,
-                } });
-            }
+        if (square.data_id == Square.editor_tile or square.data_id == Square.empty_tile)
             return false;
-        }
 
-        if (self.damage_players) {
-            if (findTargetPlayer(self.x, self.y, 0.57)) |player| {
-                if (self.hit_list.contains(player.obj_id))
-                    return true;
-
-                if (player.condition.invulnerable) {
-                    assets.playSfx(player.props.hit_sound);
-                    return false;
-                }
-
-                if (map.local_player_id == player.obj_id) {
-                    const phys_dmg = map.physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(player.defense - self.penetration), player.condition);
-                    const magic_dmg = map.magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(player.resistance - self.piercing), player.condition);
-                    const true_dmg: f32 = @floatFromInt(self.true_damage);
-                    const dead = @as(f32, @floatFromInt(player.hp)) <= (phys_dmg + magic_dmg + true_dmg);
-
-                    player.takeDamage(
-                        @intFromFloat(phys_dmg * player.hit_multiplier),
-                        @intFromFloat(magic_dmg * player.hit_multiplier),
-                        @intFromFloat(true_dmg * player.hit_multiplier),
-                        dead,
-                        utils.Condition.fromCondSlice(self.props.effects),
-                        self.colors,
-                        self.angle,
-                        self.props.speed,
-                        allocator,
-                    );
-                    main.server.queuePacket(.{ .player_hit = .{ .bullet_id = self.bullet_id, .object_id = self.owner_id } });
-                } else if (!self.props.multi_hit) {
-                    var effect = particles.HitEffect{
+        {
+            var lock = map.useLockForType(Entity);
+            lock.lock();
+            defer lock.unlock();
+            if (map.findObjectConst(Entity, square.entity_map_id)) |e| {
+                if (e.data.occupy_square) {
+                    particles.HitEffect.addToMap(.{
                         .x = self.x,
                         .y = self.y,
                         .colors = self.colors,
                         .angle = self.angle,
-                        .speed = self.props.speed,
+                        .speed = self.data.speed,
                         .size = 1.0,
                         .amount = 3,
-                    };
-                    effect.addToMap();
-
-                    main.server.queuePacket(.{ .other_hit = .{
-                        .time = time,
-                        .bullet_id = self.bullet_id,
-                        .object_id = self.owner_id,
-                        .target_id = player.obj_id,
-                    } });
-                }
-
-                if (self.props.multi_hit) {
-                    self.hit_list.put(player.obj_id, {}) catch |e| {
-                        std.log.err("Failed to add player with type 0x{x} to the hit list: {}", .{ player.obj_type, e });
-                    };
-                } else {
-                    return false;
-                }
-            }
-        } else {
-            if (findTargetObject(self.x, self.y, 0.57, true)) |object| {
-                if (self.hit_list.contains(object.obj_id))
-                    return true;
-
-                if (object.condition.invulnerable) {
-                    assets.playSfx(object.props.hit_sound);
-                    return false;
-                }
-
-                if (object.props.is_enemy and !object.props.damage_immune) {
-                    const phys_dmg = map.physicalDamage(@floatFromInt(self.physical_damage), @floatFromInt(object.defense - self.penetration), object.condition);
-                    const magic_dmg = map.magicDamage(@floatFromInt(self.magic_damage), @floatFromInt(object.resistance - self.piercing), object.condition);
-                    const true_dmg: f32 = @floatFromInt(self.true_damage);
-                    const dead = @as(f32, @floatFromInt(object.hp)) <= (phys_dmg + magic_dmg + true_dmg);
-
-                    object.takeDamage(
-                        @intFromFloat(phys_dmg),
-                        @intFromFloat(magic_dmg),
-                        @intFromFloat(true_dmg),
-                        dead,
-                        utils.Condition.fromCondSlice(self.props.effects),
-                        self.colors,
-                        self.angle,
-                        self.props.speed,
-                        allocator,
-                    );
-
-                    main.server.queuePacket(.{ .enemy_hit = .{
-                        .time = time,
-                        .bullet_id = self.bullet_id,
-                        .target_id = object.obj_id,
-                        .killed = dead,
-                    } });
-                }
-
-                if (self.props.multi_hit) {
-                    self.hit_list.put(object.obj_id, {}) catch |e| {
-                        std.log.err("Failed to add object with type 0x{x} to the hit list: {}", .{ object.obj_type, e });
-                    };
-                } else {
+                    });
                     return false;
                 }
             }
         }
+
+        if (self.damage_players) {
+            if (findTargetPlayer(self.x, self.y, 0.6)) |player| return self.hit(Player, player, time, allocator);
+        } else if (findTargetEnemy(self.x, self.y, 0.6)) |enemy| return self.hit(Enemy, enemy, time, allocator);
+
+        return true;
+    }
+
+    fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64, allocator: std.mem.Allocator) bool {
+        if (self.hit_list.contains(obj.map_id))
+            return true;
+
+        if (obj.condition.invulnerable) {
+            assets.playSfx(obj.data.hit_sound);
+            return false;
+        }
+
+        particles.HitEffect.addToMap(.{
+            .x = self.x,
+            .y = self.y,
+            .colors = self.colors,
+            .angle = self.angle,
+            .speed = self.data.speed,
+            .size = 1.0,
+            .amount = 3,
+        });
+
+        const is_self = map.local_player_id == obj.map_id;
+        var phys_dmg: i32 = 0;
+        var magic_dmg: i32 = 0;
+        const true_dmg = self.true_dmg;
+        if (self.damage_players) {
+            if (is_self) {
+                phys_dmg = game_data.physDamage(self.phys_dmg, obj.defense, obj.condition);
+                magic_dmg = game_data.magicDamage(self.magic_dmg, obj.resistance, obj.condition);
+                main.server.sendPacket(.{ .player_hit = .{ .proj_index = self.index, .enemy_map_id = self.owner_map_id } });
+            }
+        } else {
+            phys_dmg = game_data.physDamage(self.phys_dmg, obj.defense, obj.condition);
+            magic_dmg = game_data.magicDamage(self.magic_dmg, obj.resistance, obj.condition);
+            main.server.sendPacket(.{ .enemy_hit = .{
+                .time = time,
+                .proj_index = self.index,
+                .enemy_map_id = obj.map_id,
+                .killed = obj.hp <= phys_dmg + magic_dmg + true_dmg,
+            } });
+        }
+
+        if (!self.damage_players or is_self) {
+            const cond = utils.Condition.fromCondSlice(self.data.conditions);
+            if (phys_dmg > 0) map.takeDamage(obj, phys_dmg, .physical, cond, self.colors, allocator);
+            if (magic_dmg > 0) map.takeDamage(obj, magic_dmg, .magic, cond, self.colors, allocator);
+            if (true_dmg > 0) map.takeDamage(obj, true_dmg, .true, cond, self.colors, allocator);
+        }
+
+        if (!self.data.piercing) return false;
+        self.hit_list.put(allocator, obj.map_id, {}) catch @panic("OOM");
 
         return true;
     }

@@ -1,41 +1,31 @@
-const xml = @import("shared").xml;
 const zstbi = @import("zstbi");
 const std = @import("std");
 const game_data = @import("shared").game_data;
-const settings = @import("settings.zig");
 const builtin = @import("builtin");
 const zaudio = @import("zaudio");
 const main = @import("main.zig");
-const glfw = @import("mach-glfw");
+const glfw = @import("zglfw");
 const pack = @import("turbopack");
+
+const Settings = @import("Settings.zig");
 
 pub const padding = 0;
 
 pub const atlas_width = 2048;
 pub const atlas_height = 1024;
-pub const base_texel_w = 1.0 / @as(f32, atlas_width);
-pub const base_texel_h = 1.0 / @as(f32, atlas_height);
+pub const base_texel_w = 1.0 / @as(comptime_float, atlas_width);
+pub const base_texel_h = 1.0 / @as(comptime_float, atlas_height);
 
 pub const ui_atlas_width = 2048;
 pub const ui_atlas_height = 1024;
-pub const ui_texel_w = 1.0 / @as(f32, ui_atlas_width);
-pub const ui_texel_h = 1.0 / @as(f32, ui_atlas_height);
+pub const ui_texel_w = 1.0 / @as(comptime_float, ui_atlas_width);
+pub const ui_texel_h = 1.0 / @as(comptime_float, ui_atlas_height);
 
 // for packing
 const Position = struct { x: u16, y: u16 };
 
-pub const Action = enum {
-    stand,
-    walk,
-    attack,
-};
-
-pub const Direction = enum {
-    right,
-    left,
-    down,
-    up,
-};
+pub const Action = enum { stand, walk, attack };
+pub const Direction = enum { right, left, down, up };
 
 pub const CharacterData = struct {
     pub const size = 64.0;
@@ -57,7 +47,7 @@ pub const CharacterData = struct {
     height: f32,
 
     pub fn parse(split: *std.mem.SplitIterator(u8, .sequence), atlas_w: f32, atlas_h: f32) !CharacterData {
-        var data = CharacterData{
+        var data: CharacterData = .{
             .atlas_w = atlas_w,
             .atlas_h = atlas_h,
             .x_advance = try std.fmt.parseFloat(f32, split.next().?) * size,
@@ -100,14 +90,14 @@ pub const AtlasType = enum(u8) {
     base,
     ui,
 
-    pub inline fn width(self: AtlasType) f32 {
+    pub fn width(self: AtlasType) f32 {
         return switch (self) {
             .base => atlas_width,
             .ui => ui_atlas_width,
         };
     }
 
-    pub inline fn height(self: AtlasType) f32 {
+    pub fn height(self: AtlasType) f32 {
         return switch (self) {
             .base => atlas_height,
             .ui => ui_atlas_height,
@@ -119,6 +109,8 @@ pub const AtlasData = extern struct {
     pub fn whole(atlas_type: AtlasType) AtlasData {
         return fromRawF32(1.0, 1.0, 1.0, 1.0, atlas_type);
     }
+
+    pub const default = AtlasData.fromRaw(0, 0, 0, 0, .base);
 
     tex_u: f32,
     tex_v: f32,
@@ -136,14 +128,14 @@ pub const AtlasData = extern struct {
         self.tex_h -= float_pad * 2 / h;
     }
 
-    pub inline fn fromRaw(u: c_int, v: c_int, w: c_int, h: c_int, ui: AtlasType) AtlasData {
+    pub fn fromRaw(u: c_int, v: c_int, w: c_int, h: c_int, ui: AtlasType) AtlasData {
         return fromRawF32(@floatFromInt(u), @floatFromInt(v), @floatFromInt(w), @floatFromInt(h), ui);
     }
 
-    pub inline fn fromRawF32(u: f32, v: f32, w: f32, h: f32, atlas_type: AtlasType) AtlasData {
+    pub fn fromRawF32(u: f32, v: f32, w: f32, h: f32, atlas_type: AtlasType) AtlasData {
         const atlas_w = atlas_type.width();
         const atlas_h = atlas_type.height();
-        return AtlasData{
+        return .{
             .tex_u = u / atlas_w,
             .tex_v = v / atlas_h,
             .tex_w = w / atlas_w,
@@ -152,20 +144,28 @@ pub const AtlasData = extern struct {
         };
     }
 
-    pub inline fn texURaw(self: AtlasData) f32 {
-        return self.tex_u * self.atlas_type.width();
+    pub fn texURaw(self: AtlasData) f32 {
+        return self.tex_u * self.atlas_type.width() + padding;
     }
 
-    pub inline fn texVRaw(self: AtlasData) f32 {
-        return self.tex_v * self.atlas_type.height();
+    pub fn texVRaw(self: AtlasData) f32 {
+        return self.tex_v * self.atlas_type.height() + padding;
     }
 
-    pub inline fn texWRaw(self: AtlasData) f32 {
+    pub fn texWRaw(self: AtlasData) f32 {
         return self.tex_w * self.atlas_type.width();
     }
 
-    pub inline fn texHRaw(self: AtlasData) f32 {
+    pub fn texHRaw(self: AtlasData) f32 {
         return self.tex_h * self.atlas_type.height();
+    }
+
+    pub fn width(self: AtlasData) f32 {
+        return self.texWRaw() - padding * 2.0;
+    }
+
+    pub fn height(self: AtlasData) f32 {
+        return self.texHRaw() - padding * 2.0;
     }
 };
 
@@ -173,42 +173,30 @@ const AudioState = struct {
     device: *zaudio.Device,
     engine: *zaudio.Engine,
 
-    fn audioCallback(
-        device: *zaudio.Device,
-        output: ?*anyopaque,
-        _: ?*const anyopaque,
-        num_frames: u32,
-    ) callconv(.C) void {
-        const audio = @as(*AudioState, @ptrCast(@alignCast(device.getUserData())));
+    export fn audioCallback(device: *zaudio.Device, output: ?*anyopaque, _: ?*const anyopaque, num_frames: u32) void {
+        const audio: *AudioState = @ptrCast(@alignCast(device.getUserData()));
         audio.engine.readPcmFrames(output.?, num_frames, null) catch {};
     }
 
     fn create(allocator: std.mem.Allocator) !*AudioState {
         const audio = try allocator.create(AudioState);
 
-        const device = device: {
-            var config = zaudio.Device.Config.init(.playback);
-            config.data_callback = audioCallback;
-            config.user_data = audio;
-            config.sample_rate = 48000;
-            config.period_size_in_frames = 480;
-            config.period_size_in_milliseconds = 10;
-            config.playback.format = .float32;
-            config.playback.channels = 2;
-            break :device try zaudio.Device.create(null, config);
-        };
+        var device_config = zaudio.Device.Config.init(.playback);
+        device_config.data_callback = audioCallback;
+        device_config.user_data = audio;
+        device_config.sample_rate = 48000;
+        device_config.period_size_in_frames = 480;
+        device_config.period_size_in_milliseconds = 10;
+        device_config.playback.format = .float32;
+        device_config.playback.channels = 2;
+        const device = try zaudio.Device.create(null, device_config);
 
-        const engine = engine: {
-            var config = zaudio.Engine.Config.init();
-            config.device = device;
-            config.no_auto_start = .true32;
-            break :engine try zaudio.Engine.create(config);
-        };
+        var engine_config = zaudio.Engine.Config.init();
+        engine_config.device = device;
+        engine_config.no_auto_start = .true32;
+        const engine = try zaudio.Engine.create(engine_config);
 
-        audio.* = .{
-            .device = device,
-            .engine = engine,
-        };
+        audio.* = .{ .device = device, .engine = engine };
         return audio;
     }
 
@@ -225,8 +213,6 @@ const RGBA = packed struct(u32) {
     b: u8 = 0,
     a: u8 = 0,
 };
-
-const AtlasHashHack = [5]u32;
 
 pub var sfx_path_buffer: [256]u8 = undefined;
 pub var audio_state: *AudioState = undefined;
@@ -246,43 +232,50 @@ pub var medium_italic_atlas: zstbi.Image = undefined;
 pub var medium_italic_chars: [256]CharacterData = undefined;
 
 // horrible, but no other option since cursor is opaque
-pub var default_cursor_pressed: glfw.Cursor = undefined;
-pub var default_cursor: glfw.Cursor = undefined;
-pub var royal_cursor_pressed: glfw.Cursor = undefined;
-pub var royal_cursor: glfw.Cursor = undefined;
-pub var ranger_cursor_pressed: glfw.Cursor = undefined;
-pub var ranger_cursor: glfw.Cursor = undefined;
-pub var aztec_cursor_pressed: glfw.Cursor = undefined;
-pub var aztec_cursor: glfw.Cursor = undefined;
-pub var fiery_cursor_pressed: glfw.Cursor = undefined;
-pub var fiery_cursor: glfw.Cursor = undefined;
-pub var target_enemy_cursor_pressed: glfw.Cursor = undefined;
-pub var target_enemy_cursor: glfw.Cursor = undefined;
-pub var target_ally_cursor_pressed: glfw.Cursor = undefined;
-pub var target_ally_cursor: glfw.Cursor = undefined;
+pub var default_cursor_pressed: *glfw.Cursor = undefined;
+pub var default_cursor: *glfw.Cursor = undefined;
+pub var royal_cursor_pressed: *glfw.Cursor = undefined;
+pub var royal_cursor: *glfw.Cursor = undefined;
+pub var ranger_cursor_pressed: *glfw.Cursor = undefined;
+pub var ranger_cursor: *glfw.Cursor = undefined;
+pub var aztec_cursor_pressed: *glfw.Cursor = undefined;
+pub var aztec_cursor: *glfw.Cursor = undefined;
+pub var fiery_cursor_pressed: *glfw.Cursor = undefined;
+pub var fiery_cursor: *glfw.Cursor = undefined;
+pub var target_enemy_cursor_pressed: *glfw.Cursor = undefined;
+pub var target_enemy_cursor: *glfw.Cursor = undefined;
+pub var target_ally_cursor_pressed: *glfw.Cursor = undefined;
+pub var target_ally_cursor: *glfw.Cursor = undefined;
 
-pub var sfx_copy_map: std.AutoHashMap(*zaudio.Sound, std.ArrayList(*zaudio.Sound)) = undefined;
-pub var sfx_map: std.StringHashMap(*zaudio.Sound) = undefined;
-pub var dominant_color_data: std.StringHashMap([]RGBA) = undefined;
-pub var atlas_to_color_data: std.AutoHashMap(AtlasHashHack, []u32) = undefined;
-pub var atlas_data: std.StringHashMap([]AtlasData) = undefined;
-pub var ui_atlas_data: std.StringHashMap([]AtlasData) = undefined;
-pub var anim_enemies: std.StringHashMap([]AnimEnemyData) = undefined;
-pub var anim_players: std.StringHashMap([]AnimPlayerData) = undefined;
+pub var sfx_copy_map: std.AutoHashMapUnmanaged(*zaudio.Sound, std.ArrayListUnmanaged(*zaudio.Sound)) = .empty;
+pub var sfx_map: std.StringHashMapUnmanaged(*zaudio.Sound) = .empty;
+pub var dominant_color_data: std.StringHashMapUnmanaged([]RGBA) = .empty;
+pub var atlas_to_color_data: std.AutoHashMapUnmanaged(u160, []u32) = .empty;
+pub var atlas_data: std.StringHashMapUnmanaged([]AtlasData) = .empty;
+pub var ui_atlas_data: std.StringHashMapUnmanaged([]AtlasData) = .empty;
+pub var anim_enemies: std.StringHashMapUnmanaged([]AnimEnemyData) = .empty;
+pub var anim_players: std.StringHashMapUnmanaged([]AnimPlayerData) = .empty;
 
-pub var left_top_mask_uv: [4]f32 = undefined;
-pub var right_bottom_mask_uv: [4]f32 = undefined;
-pub var wall_backface_data: AtlasData = undefined;
+pub var interact_key_tex: AtlasData = AtlasData.fromRawF32(0.0, 0.0, 0.0, 0.0, .ui);
+pub var key_tex_map: std.AutoHashMapUnmanaged(Settings.Button, u16) = .empty;
+
+pub var left_mask_uv: [2]f32 = undefined;
+pub var top_mask_uv: [2]f32 = undefined;
+pub var right_mask_uv: [2]f32 = undefined;
+pub var bottom_mask_uv: [2]f32 = undefined;
+pub var minimap_icons: []AtlasData = undefined;
+pub var particle: AtlasData = undefined;
+pub var generic_8x8: AtlasData = undefined;
 pub var empty_bar_data: AtlasData = undefined;
 pub var hp_bar_data: AtlasData = undefined;
 pub var mp_bar_data: AtlasData = undefined;
-pub var particle_data: AtlasData = undefined;
 pub var error_data: AtlasData = undefined;
 pub var error_data_enemy: AnimEnemyData = undefined;
 pub var error_data_player: AnimPlayerData = undefined;
 pub var light_w: f32 = 1.0;
 pub var light_h: f32 = 1.0;
 pub var light_data: AtlasData = undefined;
+pub var region_icon: AtlasData = undefined;
 
 fn packSort(_: void, lhs: pack.IdRect, rhs: pack.IdRect) bool {
     return lhs.rect.w < rhs.rect.w;
@@ -326,7 +319,7 @@ fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, compti
 
     const img_size = cut_width * cut_height;
     const len = std.math.divExact(u32, img.width * img.height, img_size) catch
-        std.debug.panic("Cursor image " ++ image_name ++ " has an incorrect resolution: {d}x{d} (cut_w={d}, cut_h={d})", .{ img.width, img.height, cut_width, cut_height });
+        std.debug.panic("Cursor image " ++ image_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{ img.width, img.height, cut_width, cut_height });
 
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
@@ -343,28 +336,28 @@ fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, compti
             @memcpy(temp[target_idx .. target_idx + 4], img.data[src_idx .. src_idx + 4]);
         }
 
-        if (glfw.Cursor.create(
-            glfw.Image{ .width = cut_width, .height = cut_height, .pixels = temp, .owned = true },
+        const cursor = try glfw.Cursor.create(
+            .{ .w = cut_width, .h = cut_height, .pixels = temp.ptr },
             cut_width / 2,
             cut_height / 2,
-        )) |cursor| {
-            switch (i) {
-                0 => default_cursor_pressed = cursor,
-                1 => default_cursor = cursor,
-                2 => royal_cursor_pressed = cursor,
-                3 => royal_cursor = cursor,
-                4 => ranger_cursor_pressed = cursor,
-                5 => ranger_cursor = cursor,
-                6 => aztec_cursor_pressed = cursor,
-                7 => aztec_cursor = cursor,
-                8 => fiery_cursor_pressed = cursor,
-                9 => fiery_cursor = cursor,
-                10 => target_enemy_cursor_pressed = cursor,
-                11 => target_enemy_cursor = cursor,
-                12 => target_ally_cursor_pressed = cursor,
-                13 => target_ally_cursor = cursor,
-                else => {},
-            }
+        );
+
+        switch (i) {
+            0 => default_cursor_pressed = cursor,
+            1 => default_cursor = cursor,
+            2 => royal_cursor_pressed = cursor,
+            3 => royal_cursor = cursor,
+            4 => ranger_cursor_pressed = cursor,
+            5 => ranger_cursor = cursor,
+            6 => aztec_cursor_pressed = cursor,
+            7 => aztec_cursor = cursor,
+            8 => fiery_cursor_pressed = cursor,
+            9 => fiery_cursor = cursor,
+            10 => target_enemy_cursor_pressed = cursor,
+            11 => target_enemy_cursor = cursor,
+            12 => target_ally_cursor_pressed = cursor,
+            13 => target_ally_cursor = cursor,
+            else => {},
         }
     }
 }
@@ -382,7 +375,7 @@ fn addImage(
     defer img.deinit();
 
     const len = std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
-        std.debug.panic("Sheet " ++ sheet_name ++ " has an incorrect resolution: {d}x{d} (cut_w={d}, cut_h={d})", .{ img.width, img.height, cut_width, cut_height });
+        std.debug.panic("Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{ img.width, img.height, cut_width, cut_height });
 
     var current_rects = try allocator.alloc(pack.IdRect, len);
     defer allocator.free(current_rects);
@@ -421,8 +414,8 @@ fn addImage(
     var dominant_colors = try allocator.alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
-    var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
-    defer color_counts.deinit();
+    var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
+    defer color_counts.deinit(allocator);
 
     for (0..len) |i| {
         const id_rect = current_rects[i];
@@ -456,21 +449,21 @@ fn addImage(
                         .a = 255,
                     };
                     if (color_counts.get(rgba)) |count| {
-                        try color_counts.put(rgba, count + 1);
+                        try color_counts.put(allocator, rgba, count + 1);
                     } else {
-                        try color_counts.put(rgba, 1);
+                        try color_counts.put(allocator, rgba, 1);
                     }
                 }
             }
         }
 
-        var colors = std.ArrayList(u32).init(allocator);
-        defer colors.deinit();
+        var colors: std.ArrayListUnmanaged(u32) = .empty;
+        defer colors.deinit(allocator);
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
+            try colors.append(allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
                 @as(u32, @intCast(entry.key_ptr.g)) << 8 |
                 @as(u32, @intCast(entry.key_ptr.b)));
 
@@ -481,11 +474,11 @@ fn addImage(
         }
 
         data[idx] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
-        try atlas_to_color_data.put(@bitCast(data[idx]), try allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(allocator, @bitCast(data[idx]), try allocator.dupe(u32, colors.items));
     }
 
-    try atlas_data.put(sheet_name, data);
-    try dominant_color_data.put(sheet_name, dominant_colors);
+    try atlas_data.put(allocator, sheet_name, data);
+    try dominant_color_data.put(allocator, sheet_name, dominant_colors);
 }
 
 fn addUiImage(
@@ -496,7 +489,7 @@ fn addUiImage(
     ctx: *pack.Context,
     allocator: std.mem.Allocator,
 ) !void {
-    var img = try zstbi.Image.loadFromFile("./assets/" ++ image_name, 4);
+    var img = try zstbi.Image.loadFromFile("./assets/ui/" ++ image_name, 4);
     defer img.deinit();
 
     const imply_size = std.math.maxInt(u32);
@@ -504,7 +497,7 @@ fn addUiImage(
     const cut_height = if (cut_height_base == imply_size) img.height else cut_height_base;
 
     const len = std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
-        std.debug.panic("Sheet " ++ sheet_name ++ " has an incorrect resolution: {d}x{d} (cut_w={d}, cut_h={d})", .{ img.width, img.height, cut_width, cut_height });
+        std.debug.panic("Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{ img.width, img.height, cut_width, cut_height });
 
     var current_rects = try allocator.alloc(pack.IdRect, len);
     defer allocator.free(current_rects);
@@ -550,7 +543,7 @@ fn addUiImage(
         data[idx] = AtlasData.fromRaw(rect.x, rect.y, rect.w, rect.h, .ui);
     }
 
-    try ui_atlas_data.put(sheet_name, data);
+    try ui_atlas_data.put(allocator, sheet_name, data);
 }
 
 fn addAnimEnemy(
@@ -566,7 +559,7 @@ fn addAnimEnemy(
 
     const len = @divExact(std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
         std.debug.panic(
-        "Sheet " ++ sheet_name ++ " has an incorrect resolution: {d}x{d} (cut_w={d}, cut_h={d})",
+        "Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
         .{ img.width, img.height, cut_width, cut_height },
     ), 6) * 5 * AnimEnemyData.directions;
 
@@ -602,8 +595,8 @@ fn addAnimEnemy(
     var dominant_colors = try allocator.alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
-    var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
-    defer color_counts.deinit();
+    var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
+    defer color_counts.deinit(allocator);
 
     for (0..len) |i| {
         const id_rect = current_rects[i];
@@ -652,20 +645,20 @@ fn addAnimEnemy(
                     .a = 255,
                 };
                 if (color_counts.get(rgba)) |count| {
-                    try color_counts.put(rgba, count + 1);
+                    try color_counts.put(allocator, rgba, count + 1);
                 } else {
-                    try color_counts.put(rgba, 1);
+                    try color_counts.put(allocator, rgba, 1);
                 }
             }
         }
 
-        var colors = std.ArrayList(u32).init(allocator);
-        defer colors.deinit();
+        var colors: std.ArrayListUnmanaged(u32) = .empty;
+        defer colors.deinit(allocator);
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(@as(u32, @intCast(entry.key_ptr.r)) << 16 |
+            try colors.append(allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
                 @as(u32, @intCast(entry.key_ptr.g)) << 8 |
                 @as(u32, @intCast(entry.key_ptr.b)));
 
@@ -675,11 +668,11 @@ fn addAnimEnemy(
             }
         }
 
-        try atlas_to_color_data.put(@bitCast(data), try allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(allocator, @bitCast(data), try allocator.dupe(u32, colors.items));
     }
 
-    try anim_enemies.put(sheet_name, enemy_data);
-    try dominant_color_data.put(sheet_name, dominant_colors);
+    try anim_enemies.put(allocator, sheet_name, enemy_data);
+    try dominant_color_data.put(allocator, sheet_name, dominant_colors);
 }
 
 fn addAnimPlayer(
@@ -695,7 +688,7 @@ fn addAnimPlayer(
 
     var len = @divExact(std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
         std.debug.panic(
-        "Sheet " ++ sheet_name ++ " has an incorrect resolution: {d}x{d} (cut_w={d}, cut_h={d})",
+        "Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
         .{ img.width, img.height, cut_width, cut_height },
     ), 6) * 5;
     len += @divFloor(len, 3); // for the "missing" left side
@@ -734,8 +727,8 @@ fn addAnimPlayer(
     var dominant_colors = try allocator.alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
-    var color_counts = std.AutoHashMap(RGBA, u32).init(allocator);
-    defer color_counts.deinit();
+    var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
+    defer color_counts.deinit(allocator);
 
     for (0..len) |j| {
         const id_rect = current_rects[j];
@@ -788,20 +781,20 @@ fn addAnimPlayer(
                     .a = 255,
                 };
                 if (color_counts.get(rgba)) |count| {
-                    try color_counts.put(rgba, count + 1);
+                    try color_counts.put(allocator, rgba, count + 1);
                 } else {
-                    try color_counts.put(rgba, 1);
+                    try color_counts.put(allocator, rgba, 1);
                 }
             }
         }
 
-        var colors = std.ArrayList(u32).init(allocator);
-        defer colors.deinit();
+        var colors: std.ArrayListUnmanaged(u32) = .empty;
+        defer colors.deinit(allocator);
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(@as(u32, entry.key_ptr.r) << 16 |
+            try colors.append(allocator, @as(u32, entry.key_ptr.r) << 16 |
                 @as(u32, entry.key_ptr.g) << 8 |
                 @as(u32, entry.key_ptr.b));
 
@@ -811,11 +804,11 @@ fn addAnimPlayer(
             }
         }
 
-        try atlas_to_color_data.put(@bitCast(data), try allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(allocator, @bitCast(data), try allocator.dupe(u32, colors.items));
     }
 
-    try anim_players.put(sheet_name, player_data);
-    try dominant_color_data.put(sheet_name, dominant_colors);
+    try anim_players.put(allocator, sheet_name, player_data);
+    try dominant_color_data.put(allocator, sheet_name, dominant_colors);
 }
 
 fn parseFontData(allocator: std.mem.Allocator, comptime atlas_w: f32, comptime atlas_h: f32, comptime path: []const u8, chars: *[256]CharacterData) !void {
@@ -837,47 +830,48 @@ fn parseFontData(allocator: std.mem.Allocator, comptime atlas_w: f32, comptime a
 }
 
 pub fn playSfx(name: []const u8) void {
-    if (settings.sfx_volume <= 0.0)
+    if (main.settings.sfx_volume <= 0.0)
         return;
 
+    const allocator = main.allocator;
     if (sfx_map.get(name)) |audio| {
         if (!audio.isPlaying()) {
-            audio.setVolume(settings.sfx_volume);
+            audio.setVolume(main.settings.sfx_volume);
             audio.start() catch return;
             return;
         }
 
         var audio_copies = sfx_copy_map.get(audio);
         if (audio_copies == null)
-            audio_copies = std.ArrayList(*zaudio.Sound).init(main.allocator);
+            audio_copies = .empty;
 
         for (audio_copies.?.items) |copy_audio| {
             if (!copy_audio.isPlaying()) {
-                copy_audio.setVolume(settings.sfx_volume);
+                copy_audio.setVolume(main.settings.sfx_volume);
                 copy_audio.start() catch return;
                 return;
             }
         }
 
         var new_copy_audio = audio_state.engine.createSoundCopy(audio, .{}, null) catch return;
-        new_copy_audio.setVolume(settings.sfx_volume);
+        new_copy_audio.setVolume(main.settings.sfx_volume);
         new_copy_audio.start() catch return;
-        audio_copies.?.append(new_copy_audio) catch return;
-        sfx_copy_map.put(audio, audio_copies.?) catch return;
+        audio_copies.?.append(allocator, new_copy_audio) catch return;
+        sfx_copy_map.put(allocator, audio, audio_copies.?) catch return;
         return;
     }
 
-    const path = std.fmt.bufPrintZ(&sfx_path_buffer, "./assets/sfx/{s}.mp3", .{name}) catch return;
+    const path = std.fmt.bufPrintZ(&sfx_path_buffer, "./assets/sfx/{s}", .{name}) catch return;
 
     if (std.fs.cwd().access(path, .{})) |_| {
         var audio = audio_state.engine.createSoundFromFile(path, .{}) catch return;
-        audio.setVolume(settings.sfx_volume);
+        audio.setVolume(main.settings.sfx_volume);
         audio.start() catch return;
 
-        sfx_map.put(name, audio) catch return;
+        sfx_map.put(allocator, name, audio) catch return;
     } else |_| {
         if (!std.mem.eql(u8, name, "Unknown"))
-            std.log.err("Could not find sound effect for '{s}.mp3'", .{name});
+            std.log.err("Could not find sound effect for \"{s}\"", .{name});
     }
 }
 
@@ -889,15 +883,15 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         for (copy_audio_list.items) |copy_audio| {
             copy_audio.*.destroy();
         }
-        copy_audio_list.deinit();
+        copy_audio_list.deinit(allocator);
     }
-    sfx_copy_map.deinit();
+    sfx_copy_map.deinit(allocator);
 
     var audio_iter = sfx_map.valueIterator();
     while (audio_iter.next()) |audio| {
         audio.*.destroy();
     }
-    sfx_map.deinit();
+    sfx_map.deinit(allocator);
     audio_state.destroy(allocator);
 
     default_cursor_pressed.destroy();
@@ -927,49 +921,52 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 
     var rects_iter = atlas_data.valueIterator();
     while (rects_iter.next()) |sheet_rects| {
-        if (sheet_rects.len > 0) {
-            allocator.free(sheet_rects.*);
-        }
+        allocator.free(sheet_rects.*);
     }
 
     var ui_rects_iter = ui_atlas_data.valueIterator();
     while (ui_rects_iter.next()) |sheet_rects| {
-        if (sheet_rects.len > 0) {
-            allocator.free(sheet_rects.*);
-        }
+        allocator.free(sheet_rects.*);
     }
 
     var anim_enemy_iter = anim_enemies.valueIterator();
     while (anim_enemy_iter.next()) |enemy_data| {
-        if (enemy_data.len > 0) {
-            allocator.free(enemy_data.*);
-        }
+        allocator.free(enemy_data.*);
     }
 
     var anim_player_iter = anim_players.valueIterator();
     while (anim_player_iter.next()) |player_data| {
-        if (player_data.len > 0) {
-            allocator.free(player_data.*);
-        }
+        allocator.free(player_data.*);
     }
 
-    dominant_color_data.deinit();
-    atlas_to_color_data.deinit();
-    atlas_data.deinit();
-    ui_atlas_data.deinit();
-    anim_enemies.deinit();
-    anim_players.deinit();
+    dominant_color_data.deinit(allocator);
+    atlas_to_color_data.deinit(allocator);
+    atlas_data.deinit(allocator);
+    ui_atlas_data.deinit(allocator);
+    anim_enemies.deinit(allocator);
+    anim_players.deinit(allocator);
+    key_tex_map.deinit(allocator);
 }
 
 pub fn init(allocator: std.mem.Allocator) !void {
-    sfx_copy_map = std.AutoHashMap(*zaudio.Sound, std.ArrayList(*zaudio.Sound)).init(allocator);
-    sfx_map = std.StringHashMap(*zaudio.Sound).init(allocator);
-    dominant_color_data = std.StringHashMap([]RGBA).init(allocator);
-    atlas_to_color_data = std.AutoHashMap(AtlasHashHack, []u32).init(allocator);
-    atlas_data = std.StringHashMap([]AtlasData).init(allocator);
-    ui_atlas_data = std.StringHashMap([]AtlasData).init(allocator);
-    anim_enemies = std.StringHashMap([]AnimEnemyData).init(allocator);
-    anim_players = std.StringHashMap([]AnimPlayerData).init(allocator);
+    defer {
+        const dummy_string_ctx: std.hash_map.StringContext = undefined;
+        if (sfx_map.capacity() > 0) sfx_map.rehash(dummy_string_ctx);
+        if (dominant_color_data.capacity() > 0) dominant_color_data.rehash(dummy_string_ctx);
+        if (atlas_data.capacity() > 0) atlas_data.rehash(dummy_string_ctx);
+        if (ui_atlas_data.capacity() > 0) ui_atlas_data.rehash(dummy_string_ctx);
+        if (anim_enemies.capacity() > 0) anim_enemies.rehash(dummy_string_ctx);
+        if (anim_players.capacity() > 0) anim_players.rehash(dummy_string_ctx);
+
+        const dummy_sfx_ctx: std.hash_map.AutoContext(*zaudio.Sound) = undefined;
+        if (sfx_copy_map.capacity() > 0) sfx_copy_map.rehash(dummy_sfx_ctx);
+
+        const dummy_atlas_ctx: std.hash_map.AutoContext(u160) = undefined;
+        if (atlas_to_color_data.capacity() > 0) atlas_to_color_data.rehash(dummy_atlas_ctx);
+
+        const dummy_button_ctx: std.hash_map.AutoContext(Settings.Button) = undefined;
+        if (key_tex_map.capacity() > 0) key_tex_map.rehash(dummy_button_ctx);
+    }
 
     menu_background = try zstbi.Image.loadFromFile("./assets/ui/menu_background.png", 4);
 
@@ -988,7 +985,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     main_music = try audio_state.engine.createSoundFromFile("./assets/music/main_menu.mp3", .{});
     main_music.setLooping(true);
-    main_music.setVolume(settings.music_volume);
+    main_music.setVolume(main.settings.music_volume);
     try main_music.start();
 
     try addCursors("cursors.png", 32, 32, allocator);
@@ -1004,7 +1001,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("invisible", "invisible.png", 8, 8, true, &ctx, allocator);
     try addImage("ground", "ground.png", 8, 8, true, &ctx, allocator);
     try addImage("ground_masks", "ground_masks.png", 8, 8, true, &ctx, allocator);
-    try addImage("key_indicators", "key_indicators.png", 100, 100, true, &ctx, allocator);
     try addImage("items", "items.png", 10, 10, false, &ctx, allocator);
     try addImage("misc", "misc.png", 10, 10, false, &ctx, allocator);
     try addImage("misc_big", "misc_big.png", 18, 18, false, &ctx, allocator);
@@ -1015,7 +1011,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("projectiles", "projectiles.png", 8, 8, true, &ctx, allocator);
     try addImage("basic_items", "basic_items.png", 8, 8, false, &ctx, allocator);
     try addImage("basic_projectiles", "basic_projectiles.png", 8, 8, true, &ctx, allocator);
-    try addImage("wall_backface", "wall_backface.png", 8, 8, true, &ctx, allocator);
+    try addImage("generic_8x8", "generic_8x8.png", 8, 8, true, &ctx, allocator);
     try addImage("particles", "particles.png", 8, 8, false, &ctx, allocator);
 
     try addAnimEnemy("low_realm", "low_realm.png", 10, 10, &ctx, allocator);
@@ -1025,166 +1021,285 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addAnimPlayer("players", "players.png", 10, 10, &ctx, allocator);
     try addAnimPlayer("player_skins", "player_skins.png", 8, 8, &ctx, allocator);
 
-    if (settings.print_atlas)
-        try zstbi.Image.writeToFile(atlas, "atlas.png", .png);
+    // try zstbi.Image.writeToFile(atlas, "atlas.png", .png);
 
     ui_atlas = try zstbi.Image.createEmpty(ui_atlas_width, ui_atlas_height, 4, .{});
     var ui_ctx = try pack.Context.create(allocator, ui_atlas_width, ui_atlas_height, .{ .spaces_to_prealloc = 4096 });
     defer ui_ctx.deinit();
 
     const imply_size = std.math.maxInt(u32);
-    try addUiImage("ability_icons", "sheets/ability_icons.png", 44, 44, &ui_ctx, allocator);
-    try addUiImage("menu_decor_frame", "ui/menu_decor_frame.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("retrieve_button", "ui/retrieve_button.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("options_button", "ui/options_button.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("rare_slot", "ui/rare_slot.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("epic_slot", "ui/epic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("legendary_slot", "ui/legendary_slot.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("mythic_slot", "ui/mythic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("rare_slot_equip", "ui/rare_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("epic_slot_equip", "ui/epic_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("legendary_slot_equip", "ui/legendary_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("mythic_slot_equip", "ui/mythic_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("in_combat_icon", "ui/in_combat_icon.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("out_of_combat_icon", "ui/out_of_combat_icon.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("out_of_mana_slot", "ui/out_of_mana_slot.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("out_of_health_slot", "ui/out_of_health_slot.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dialog_base_background", "ui/screens/dialog_base_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dialog_title_background", "ui/screens/dialog_title_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("button_base", "ui/screens/button_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("button_hover", "ui/screens/button_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("button_press", "ui/screens/button_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_collapsed_icon_base", "ui/screens/dropdown_collapsed_icon_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_collapsed_icon_hover", "ui/screens/dropdown_collapsed_icon_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_collapsed_icon_press", "ui/screens/dropdown_collapsed_icon_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_extended_icon_base", "ui/screens/dropdown_extended_icon_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_extended_icon_hover", "ui/screens/dropdown_extended_icon_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_extended_icon_press", "ui/screens/dropdown_extended_icon_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_main_color_base", "ui/screens/dropdown_main_color_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_main_color_hover", "ui/screens/dropdown_main_color_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_main_color_press", "ui/screens/dropdown_main_color_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_alt_color_base", "ui/screens/dropdown_alt_color_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_alt_color_hover", "ui/screens/dropdown_alt_color_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_alt_color_press", "ui/screens/dropdown_alt_color_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_title_background", "ui/screens/dropdown_title_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("dropdown_background", "ui/screens/dropdown_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("checked_box_base", "ui/screens/checked_box_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("checked_box_hover", "ui/screens/checked_box_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("checked_box_press", "ui/screens/checked_box_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("slider_background", "ui/screens/slider_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("slider_knob_base", "ui/screens/slider_knob_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("slider_knob_hover", "ui/screens/slider_knob_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("slider_knob_press", "ui/screens/slider_knob_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("text_input_base", "ui/screens/text_input_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("text_input_hover", "ui/screens/text_input_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("text_input_press", "ui/screens/text_input_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("toggle_slider_base_off", "ui/screens/toggle_slider_base_off.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("toggle_slider_hover_off", "ui/screens/toggle_slider_hover_off.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("toggle_slider_press_off", "ui/screens/toggle_slider_press_off.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("toggle_slider_base_on", "ui/screens/toggle_slider_base_on.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("toggle_slider_hover_on", "ui/screens/toggle_slider_hover_on.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("toggle_slider_press_on", "ui/screens/toggle_slider_press_on.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_background", "ui/screens/tooltip_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_background_rare", "ui/screens/tooltip_background_rare.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_background_epic", "ui/screens/tooltip_background_epic.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_background_legendary", "ui/screens/tooltip_background_legendary.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_background_mythic", "ui/screens/tooltip_background_mythic.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_bottom", "ui/screens/tooltip_line_spacer_bottom.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_bottom_rare", "ui/screens/tooltip_line_spacer_bottom_rare.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_bottom_epic", "ui/screens/tooltip_line_spacer_bottom_epic.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_bottom_legendary", "ui/screens/tooltip_line_spacer_bottom_legendary.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_bottom_mythic", "ui/screens/tooltip_line_spacer_bottom_mythic.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_top", "ui/screens/tooltip_line_spacer_top.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_top_rare", "ui/screens/tooltip_line_spacer_top_rare.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_top_epic", "ui/screens/tooltip_line_spacer_top_epic.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_top_legendary", "ui/screens/tooltip_line_spacer_top_legendary.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("tooltip_line_spacer_top_mythic", "ui/screens/tooltip_line_spacer_top_mythic.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("unchecked_box_base", "ui/screens/unchecked_box_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("unchecked_box_hover", "ui/screens/unchecked_box_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("unchecked_box_press", "ui/screens/unchecked_box_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("container_view", "ui/container_view.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("minimap", "ui/minimap.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("minimap_slots", "ui/minimap_slots.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("minimap_icons", "ui/minimap_icons.png", 8, 8, &ui_ctx, allocator);
-    try addUiImage("player_inventory", "ui/player_inventory.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_health_bar", "ui/player_health_bar.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_mana_bar", "ui/player_mana_bar.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_abilities_bars", "ui/player_abilities_bars.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_xp_bar", "ui/player_xp_bar.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_xp_decor", "ui/player_xp_decor.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("options_background", "ui/options_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("player_stats", "ui/player_stats.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_background", "ui/chatbox_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_input", "ui/chatbox_input.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("chatbox_cursor", "ui/chatbox_cursor.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("scroll_background", "ui/scroll_background.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("scroll_wheel_base", "ui/scroll_wheel_base.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("scroll_wheel_hover", "ui/scroll_wheel_hover.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("scroll_wheel_press", "ui/scroll_wheel_press.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("scrollbar_decor", "ui/scrollbar_decor.png", imply_size, imply_size, &ui_ctx, allocator);
-    try addUiImage("speech_balloons", "ui/speech_balloons.png", 65, 45, &ui_ctx, allocator);
+    try addUiImage("menu_decor_frame", "menu_decor_frame.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("retrieve_button", "retrieve_button.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("options_button", "options_button.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("rare_slot", "rare_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("epic_slot", "epic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("legendary_slot", "legendary_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("mythic_slot", "mythic_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("rare_slot_equip", "rare_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("epic_slot_equip", "epic_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("legendary_slot_equip", "legendary_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("mythic_slot_equip", "mythic_slot_equip.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("in_combat_icon", "in_combat_icon.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("out_of_combat_icon", "out_of_combat_icon.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("out_of_mana_slot", "out_of_mana_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("out_of_health_slot", "out_of_health_slot.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dialog_base_background", "screens/dialog_base_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dialog_title_background", "screens/dialog_title_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("button_base", "screens/button_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("button_hover", "screens/button_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("button_press", "screens/button_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_collapsed_icon_base", "screens/dropdown_collapsed_icon_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_collapsed_icon_hover", "screens/dropdown_collapsed_icon_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_collapsed_icon_press", "screens/dropdown_collapsed_icon_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_extended_icon_base", "screens/dropdown_extended_icon_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_extended_icon_hover", "screens/dropdown_extended_icon_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_extended_icon_press", "screens/dropdown_extended_icon_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_main_color_base", "screens/dropdown_main_color_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_main_color_hover", "screens/dropdown_main_color_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_main_color_press", "screens/dropdown_main_color_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_alt_color_base", "screens/dropdown_alt_color_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_alt_color_hover", "screens/dropdown_alt_color_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_alt_color_press", "screens/dropdown_alt_color_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_title_background", "screens/dropdown_title_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("dropdown_background", "screens/dropdown_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("checked_box_base", "screens/checked_box_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("checked_box_hover", "screens/checked_box_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("checked_box_press", "screens/checked_box_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("slider_background", "screens/slider_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("slider_knob_base", "screens/slider_knob_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("slider_knob_hover", "screens/slider_knob_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("slider_knob_press", "screens/slider_knob_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("text_input_base", "screens/text_input_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("text_input_hover", "screens/text_input_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("text_input_press", "screens/text_input_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("toggle_slider_base_off", "screens/toggle_slider_base_off.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("toggle_slider_hover_off", "screens/toggle_slider_hover_off.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("toggle_slider_press_off", "screens/toggle_slider_press_off.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("toggle_slider_base_on", "screens/toggle_slider_base_on.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("toggle_slider_hover_on", "screens/toggle_slider_hover_on.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("toggle_slider_press_on", "screens/toggle_slider_press_on.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_background", "screens/tooltip_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_background_rare", "screens/tooltip_background_rare.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_background_epic", "screens/tooltip_background_epic.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_background_legendary", "screens/tooltip_background_legendary.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_background_mythic", "screens/tooltip_background_mythic.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_bottom", "screens/tooltip_line_spacer_bottom.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_bottom_rare", "screens/tooltip_line_spacer_bottom_rare.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_bottom_epic", "screens/tooltip_line_spacer_bottom_epic.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_bottom_legendary", "screens/tooltip_line_spacer_bottom_legendary.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_bottom_mythic", "screens/tooltip_line_spacer_bottom_mythic.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_top", "screens/tooltip_line_spacer_top.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_top_rare", "screens/tooltip_line_spacer_top_rare.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_top_epic", "screens/tooltip_line_spacer_top_epic.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_top_legendary", "screens/tooltip_line_spacer_top_legendary.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("tooltip_line_spacer_top_mythic", "screens/tooltip_line_spacer_top_mythic.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("unchecked_box_base", "screens/unchecked_box_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("unchecked_box_hover", "screens/unchecked_box_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("unchecked_box_press", "screens/unchecked_box_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("container_view", "container_view.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("minimap", "minimap.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("minimap_slots", "minimap_slots.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("minimap_icons", "minimap_icons.png", 8, 8, &ui_ctx, allocator);
+    try addUiImage("player_inventory", "player_inventory.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_health_bar", "player_health_bar.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_mana_bar", "player_mana_bar.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_abilities_bars", "player_abilities_bars.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_xp_bar", "player_xp_bar.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_xp_decor", "player_xp_decor.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("options_background", "options_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("player_stats", "player_stats.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_background", "chatbox_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_input", "chatbox_input.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("chatbox_cursor", "chatbox_cursor.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scroll_background", "scroll_background.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scroll_wheel_base", "scroll_wheel_base.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scroll_wheel_hover", "scroll_wheel_hover.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scroll_wheel_press", "scroll_wheel_press.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("scrollbar_decor", "scrollbar_decor.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("stats_button", "stats_button.png", imply_size, imply_size, &ui_ctx, allocator);
+    try addUiImage("ability_icons", "ability_icons.png", 44, 44, &ui_ctx, allocator);
+    try addUiImage("speech_balloons", "speech_balloons.png", 65, 45, &ui_ctx, allocator);
+    try addUiImage("key_indicators", "key_indicators.png", 100, 100, &ui_ctx, allocator);
 
-    if (settings.print_ui_atlas)
-        try zstbi.Image.writeToFile(ui_atlas, "ui_atlas.png", .png);
+    // try zstbi.Image.writeToFile(ui_atlas, "ui_atlas.png", .png);
+
+    if (ui_atlas_data.get("minimap_icons")) |icons| minimap_icons = icons else @panic("minimap_icons not found in UI atlas");
 
     if (atlas_data.get("light")) |light| {
-        light_data = light[0x0];
-    } else std.debug.panic("Could not find light in the atlas", .{});
+        light_data = light[0];
+    } else @panic("Could not find light in the atlas");
+
+    if (atlas_data.get("misc")) |misc| {
+        region_icon = misc[29];
+    } else @panic("Could not find misc in the atlas");
 
     if (atlas_data.get("ground_masks")) |ground_masks| {
-        var left_mask_data = ground_masks[0x0];
-        left_mask_data.removePadding();
+        var left_mask_rect = ground_masks[0];
+        left_mask_rect.removePadding();
 
-        var top_mask_data = ground_masks[0x1];
-        top_mask_data.removePadding();
+        var top_mask_rect = ground_masks[1];
+        top_mask_rect.removePadding();
 
-        left_top_mask_uv = [4]f32{ left_mask_data.tex_u, left_mask_data.tex_v, top_mask_data.tex_u, top_mask_data.tex_v };
-
-        var right_mask_rect = ground_masks[0x2];
+        var right_mask_rect = ground_masks[2];
         right_mask_rect.removePadding();
 
-        var bottom_mask_rect = ground_masks[0x3];
+        var bottom_mask_rect = ground_masks[3];
         bottom_mask_rect.removePadding();
 
-        right_bottom_mask_uv = [4]f32{ right_mask_rect.tex_u, right_mask_rect.tex_v, bottom_mask_rect.tex_u, bottom_mask_rect.tex_v };
-    } else std.debug.panic("Could not find ground_masks in the atlas", .{});
+        left_mask_uv = [_]f32{ left_mask_rect.tex_u, left_mask_rect.tex_v };
+        top_mask_uv = [_]f32{ top_mask_rect.tex_u, top_mask_rect.tex_v };
+        right_mask_uv = [_]f32{ right_mask_rect.tex_u, right_mask_rect.tex_v };
+        bottom_mask_uv = [_]f32{ bottom_mask_rect.tex_u, bottom_mask_rect.tex_v };
+    } else @panic("Could not find ground_masks in the atlas");
 
-    if (atlas_data.get("wall_backface")) |backfaces| {
-        wall_backface_data = backfaces[0x0];
-        wall_backface_data.removePadding();
-    } else std.debug.panic("Could not find wall_backface in the atlas", .{});
+    if (atlas_data.get("generic_8x8")) |backfaces| {
+        generic_8x8 = backfaces[0];
+        generic_8x8.removePadding();
+    } else @panic("Could not find generic_8x8 in the atlas");
 
     if (atlas_data.get("particles")) |particles| {
-        particle_data = particles[0x0];
-    } else std.debug.panic("Could not find particle in the atlas", .{});
+        particle = particles[0];
+    } else @panic("Could not find particle in the atlas");
 
     if (atlas_data.get("bars")) |bars| {
-        hp_bar_data = bars[0x0];
-        mp_bar_data = bars[0x1];
-        empty_bar_data = bars[0x4];
+        hp_bar_data = bars[0];
+        mp_bar_data = bars[1];
+        empty_bar_data = bars[2];
     } else std.debug.panic("Could not find bars in the atlas", .{});
 
     if (atlas_data.get("error_texture")) |error_tex| {
-        error_data = error_tex[0x0];
+        error_data = error_tex[0];
 
         const enemy_walk_frames = AnimEnemyData.directions * AnimEnemyData.walk_actions;
         const enemy_attack_frames = AnimEnemyData.directions * AnimEnemyData.attack_actions;
-        error_data_enemy = AnimEnemyData{
+        error_data_enemy = .{
             .walk_anims = [_]AtlasData{error_data} ** enemy_walk_frames,
             .attack_anims = [_]AtlasData{error_data} ** enemy_attack_frames,
         };
 
         const player_walk_frames = AnimPlayerData.directions * AnimPlayerData.walk_actions;
         const player_attack_frames = AnimPlayerData.directions * AnimPlayerData.attack_actions;
-        error_data_player = AnimPlayerData{
+        error_data_player = .{
             .walk_anims = [_]AtlasData{error_data} ** player_walk_frames,
             .attack_anims = [_]AtlasData{error_data} ** player_attack_frames,
         };
     } else std.debug.panic("Could not find error_texture in the atlas", .{});
 
-    settings.interact_key_tex = settings.getKeyTexture(settings.interact);
+    try populateKeyMap(allocator);
+    interact_key_tex = getKeyTexture(main.settings.interact);
 }
 
-pub inline fn getUiData(comptime name: []const u8, idx: usize) AtlasData {
-    return (ui_atlas_data.get(name) orelse std.debug.panic("Could not find " ++ name ++ " in the UI atlas", .{}))[idx];
+fn populateKeyMap(allocator: std.mem.Allocator) !void {
+    try key_tex_map.put(allocator, .{ .mouse = .left }, 46);
+    try key_tex_map.put(allocator, .{ .mouse = .right }, 59);
+    try key_tex_map.put(allocator, .{ .mouse = .middle }, 58);
+    try key_tex_map.put(allocator, .{ .mouse = .four }, 108);
+    try key_tex_map.put(allocator, .{ .mouse = .five }, 109);
+    try key_tex_map.put(allocator, .{ .key = .zero }, 0);
+    try key_tex_map.put(allocator, .{ .key = .one }, 4);
+    try key_tex_map.put(allocator, .{ .key = .two }, 5);
+    try key_tex_map.put(allocator, .{ .key = .three }, 6);
+    try key_tex_map.put(allocator, .{ .key = .four }, 7);
+    try key_tex_map.put(allocator, .{ .key = .five }, 8);
+    try key_tex_map.put(allocator, .{ .key = .six }, 16);
+    try key_tex_map.put(allocator, .{ .key = .seven }, 17);
+    try key_tex_map.put(allocator, .{ .key = .eight }, 18);
+    try key_tex_map.put(allocator, .{ .key = .nine }, 19);
+    try key_tex_map.put(allocator, .{ .key = .kp_0 }, 91);
+    try key_tex_map.put(allocator, .{ .key = .kp_1 }, 92);
+    try key_tex_map.put(allocator, .{ .key = .kp_2 }, 93);
+    try key_tex_map.put(allocator, .{ .key = .kp_3 }, 94);
+    try key_tex_map.put(allocator, .{ .key = .kp_4 }, 95);
+    try key_tex_map.put(allocator, .{ .key = .kp_5 }, 96);
+    try key_tex_map.put(allocator, .{ .key = .kp_6 }, 97);
+    try key_tex_map.put(allocator, .{ .key = .kp_7 }, 98);
+    try key_tex_map.put(allocator, .{ .key = .kp_8 }, 99);
+    try key_tex_map.put(allocator, .{ .key = .kp_9 }, 100);
+    try key_tex_map.put(allocator, .{ .key = .F1 }, 68);
+    try key_tex_map.put(allocator, .{ .key = .F2 }, 69);
+    try key_tex_map.put(allocator, .{ .key = .F3 }, 70);
+    try key_tex_map.put(allocator, .{ .key = .F4 }, 71);
+    try key_tex_map.put(allocator, .{ .key = .F5 }, 72);
+    try key_tex_map.put(allocator, .{ .key = .F6 }, 73);
+    try key_tex_map.put(allocator, .{ .key = .F7 }, 74);
+    try key_tex_map.put(allocator, .{ .key = .F8 }, 75);
+    try key_tex_map.put(allocator, .{ .key = .F9 }, 76);
+    try key_tex_map.put(allocator, .{ .key = .F10 }, 1);
+    try key_tex_map.put(allocator, .{ .key = .F11 }, 2);
+    try key_tex_map.put(allocator, .{ .key = .F12 }, 3);
+    try key_tex_map.put(allocator, .{ .key = .a }, 20);
+    try key_tex_map.put(allocator, .{ .key = .b }, 34);
+    try key_tex_map.put(allocator, .{ .key = .c }, 39);
+    try key_tex_map.put(allocator, .{ .key = .d }, 50);
+    try key_tex_map.put(allocator, .{ .key = .e }, 52);
+    try key_tex_map.put(allocator, .{ .key = .f }, 84);
+    try key_tex_map.put(allocator, .{ .key = .g }, 85);
+    try key_tex_map.put(allocator, .{ .key = .h }, 86);
+    try key_tex_map.put(allocator, .{ .key = .i }, 88);
+    try key_tex_map.put(allocator, .{ .key = .j }, 63);
+    try key_tex_map.put(allocator, .{ .key = .k }, 74);
+    try key_tex_map.put(allocator, .{ .key = .l }, 75);
+    try key_tex_map.put(allocator, .{ .key = .m }, 76);
+    try key_tex_map.put(allocator, .{ .key = .n }, 61);
+    try key_tex_map.put(allocator, .{ .key = .o }, 65);
+    try key_tex_map.put(allocator, .{ .key = .p }, 66);
+    try key_tex_map.put(allocator, .{ .key = .q }, 25);
+    try key_tex_map.put(allocator, .{ .key = .r }, 28);
+    try key_tex_map.put(allocator, .{ .key = .s }, 29);
+    try key_tex_map.put(allocator, .{ .key = .t }, 73);
+    try key_tex_map.put(allocator, .{ .key = .u }, 67);
+    try key_tex_map.put(allocator, .{ .key = .v }, 31);
+    try key_tex_map.put(allocator, .{ .key = .w }, 10);
+    try key_tex_map.put(allocator, .{ .key = .x }, 12);
+    try key_tex_map.put(allocator, .{ .key = .y }, 13);
+    try key_tex_map.put(allocator, .{ .key = .z }, 14);
+    try key_tex_map.put(allocator, .{ .key = .up }, 32);
+    try key_tex_map.put(allocator, .{ .key = .down }, 22);
+    try key_tex_map.put(allocator, .{ .key = .left }, 23);
+    try key_tex_map.put(allocator, .{ .key = .right }, 24);
+    try key_tex_map.put(allocator, .{ .key = .left_shift }, 15);
+    try key_tex_map.put(allocator, .{ .key = .right_shift }, 9);
+    try key_tex_map.put(allocator, .{ .key = .left_bracket }, 37);
+    try key_tex_map.put(allocator, .{ .key = .right_bracket }, 38);
+    try key_tex_map.put(allocator, .{ .key = .left_control }, 49);
+    try key_tex_map.put(allocator, .{ .key = .right_control }, 49);
+    try key_tex_map.put(allocator, .{ .key = .left_alt }, 21);
+    try key_tex_map.put(allocator, .{ .key = .right_alt }, 21);
+    try key_tex_map.put(allocator, .{ .key = .comma }, 101);
+    try key_tex_map.put(allocator, .{ .key = .period }, 102);
+    try key_tex_map.put(allocator, .{ .key = .slash }, 103);
+    try key_tex_map.put(allocator, .{ .key = .backslash }, 41);
+    try key_tex_map.put(allocator, .{ .key = .semicolon }, 30);
+    try key_tex_map.put(allocator, .{ .key = .minus }, 45);
+    try key_tex_map.put(allocator, .{ .key = .equal }, 42);
+    try key_tex_map.put(allocator, .{ .key = .tab }, 79);
+    try key_tex_map.put(allocator, .{ .key = .space }, 57);
+    try key_tex_map.put(allocator, .{ .key = .backspace }, 35);
+    try key_tex_map.put(allocator, .{ .key = .enter }, 54);
+    try key_tex_map.put(allocator, .{ .key = .delete }, 51);
+    try key_tex_map.put(allocator, .{ .key = .end }, 53);
+    try key_tex_map.put(allocator, .{ .key = .print_screen }, 44);
+    try key_tex_map.put(allocator, .{ .key = .insert }, 62);
+    try key_tex_map.put(allocator, .{ .key = .escape }, 64);
+    try key_tex_map.put(allocator, .{ .key = .home }, 87);
+    try key_tex_map.put(allocator, .{ .key = .page_up }, 89);
+    try key_tex_map.put(allocator, .{ .key = .page_down }, 90);
+    try key_tex_map.put(allocator, .{ .key = .caps_lock }, 40);
+    try key_tex_map.put(allocator, .{ .key = .kp_add }, 43);
+    try key_tex_map.put(allocator, .{ .key = .kp_subtract }, 107);
+    try key_tex_map.put(allocator, .{ .key = .kp_multiply }, 33);
+    try key_tex_map.put(allocator, .{ .key = .kp_divide }, 106);
+    try key_tex_map.put(allocator, .{ .key = .kp_decimal }, 105);
+    try key_tex_map.put(allocator, .{ .key = .kp_enter }, 56);
+    try key_tex_map.put(allocator, .{ .key = .left_super }, if (builtin.os.tag == .windows) 11 else 48);
+    try key_tex_map.put(allocator, .{ .key = .right_super }, if (builtin.os.tag == .windows) 11 else 48);
+}
+
+pub fn getKeyTexture(button: Settings.Button) AtlasData {
+    const tex_list = ui_atlas_data.get("key_indicators") orelse @panic("Key texture parsing failed, the key_indicators sheet is missing");
+    return tex_list[key_tex_map.get(button) orelse 104];
+}
+
+pub fn getUiData(comptime name: []const u8, idx: usize) AtlasData {
+    return (ui_atlas_data.get(name) orelse @panic("Could not find " ++ name ++ " in the UI atlas"))[idx];
 }

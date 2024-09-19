@@ -1,14 +1,16 @@
 const std = @import("std");
+const shared = @import("shared");
+const utils = shared.utils;
+const network_data = shared.network_data;
 const element = @import("element.zig");
 const input = @import("../input.zig");
-const camera = @import("../camera.zig");
-const utils = @import("shared").utils;
 const main = @import("../main.zig");
 const map = @import("../game/map.zig");
 const assets = @import("../assets.zig");
 const tooltip = @import("tooltips/tooltip.zig");
 const dialog = @import("dialogs/dialog.zig");
-const glfw = @import("mach-glfw");
+const glfw = @import("zglfw");
+const network = @import("../network.zig");
 
 const AccountLoginScreen = @import("screens/account_login_screen.zig").AccountLoginScreen;
 const AccountRegisterScreen = @import("screens/account_register_screen.zig").AccountRegisterScreen;
@@ -40,11 +42,10 @@ pub const Screen = union(ScreenType) {
 
 pub var ui_lock: std.Thread.Mutex = .{};
 pub var temp_elem_lock: std.Thread.Mutex = .{};
-pub var elements: std.ArrayList(element.UiElement) = undefined;
-pub var elements_to_add: std.ArrayList(element.UiElement) = undefined;
-pub var temp_elements: std.ArrayList(element.Temporary) = undefined;
-pub var temp_elements_to_add: std.ArrayList(element.Temporary) = undefined;
-pub var containers_to_remove: std.ArrayList(*element.Container) = undefined;
+pub var elements: std.ArrayListUnmanaged(element.UiElement) = .empty;
+pub var elements_to_add: std.ArrayListUnmanaged(element.UiElement) = .empty;
+pub var temp_elements: std.ArrayListUnmanaged(element.Temporary) = .empty;
+pub var temp_elements_to_add: std.ArrayListUnmanaged(element.Temporary) = .empty;
 pub var screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
 pub var hover_lock: std.Thread.Mutex = .{};
@@ -52,25 +53,25 @@ pub var hover_target: ?element.UiElement = null;
 pub var editor_backup: ?*MapEditorScreen = null;
 
 var last_element_update: i64 = 0;
-var allocator: std.mem.Allocator = undefined;
+pub var allocator: std.mem.Allocator = undefined;
 
 pub fn init(ally: std.mem.Allocator) !void {
     allocator = ally;
 
-    elements = try std.ArrayList(element.UiElement).initCapacity(ally, 32);
-    elements_to_add = try std.ArrayList(element.UiElement).initCapacity(ally, 16);
-    temp_elements = try std.ArrayList(element.Temporary).initCapacity(ally, 32);
-    temp_elements_to_add = try std.ArrayList(element.Temporary).initCapacity(ally, 16);
-    containers_to_remove = try std.ArrayList(*element.Container).initCapacity(ally, 16);
+    const cam_width, const cam_height = blk: {
+        main.camera.lock.lock();
+        defer main.camera.lock.unlock();
+        break :blk .{ main.camera.width, main.camera.height };
+    };
 
     menu_background = try element.create(ally, element.MenuBackground{
         .x = 0,
         .y = 0,
-        .w = camera.screen_width,
-        .h = camera.screen_height,
+        .w = cam_width,
+        .h = cam_height,
     });
 
-    screen = .{ .empty = EmptyScreen.init(ally) catch std.debug.panic("Initializing EmptyScreen failed", .{}) };
+    screen = Screen{ .empty = EmptyScreen.init(ally) catch @panic("Initializing EmptyScreen failed") }; // TODO: re-add RLS when fixed
 
     try tooltip.init(ally);
     try dialog.init(ally);
@@ -83,17 +84,11 @@ pub fn deinit() void {
     tooltip.deinit(allocator);
     dialog.deinit(allocator);
 
-    element.destroy(menu_background);
-
     switch (screen) {
         inline else => |inner_screen| inner_screen.deinit(),
     }
 
-    for (containers_to_remove.items) |container| {
-        container.lock.lock(); // no need to unlock, we're disposing. can cause problems but what's the alternative?
-        container.deinitInner();
-        allocator.destroy(container);
-    }
+    element.destroy(menu_background);
 
     temp_elem_lock.lock();
     defer temp_elem_lock.unlock();
@@ -114,17 +109,23 @@ pub fn deinit() void {
         }
     }
 
-    elements_to_add.deinit();
-    temp_elements_to_add.deinit();
-    elements.deinit();
-    temp_elements.deinit();
-    containers_to_remove.deinit();
+    elements_to_add.deinit(allocator);
+    temp_elements_to_add.deinit(allocator);
+    elements.deinit(allocator);
+    temp_elements.deinit(allocator);
 }
 
 pub fn switchScreen(comptime screen_type: ScreenType) void {
+    if (screen == screen_type)
+        return;
+
     std.debug.assert(!ui_lock.tryLock());
 
-    camera.scale = 1.0;
+    {
+        main.camera.lock.lock();
+        defer main.camera.lock.unlock();
+        main.camera.scale = 1.0;
+    }
     menu_background.visible = screen_type != .game and screen_type != .editor;
     input.selected_key_mapper = null;
 
@@ -135,7 +136,7 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
     screen = @unionInit(
         Screen,
         @tagName(screen_type),
-        @typeInfo(std.meta.TagPayloadByName(Screen, @tagName(screen_type))).Pointer.child.init(allocator) catch |e| {
+        @typeInfo(std.meta.TagPayloadByName(Screen, @tagName(screen_type))).pointer.child.init(allocator) catch |e| {
             std.log.err("Initializing screen for {} failed: {}", .{ screen_type, e });
             return;
         },
@@ -146,8 +147,8 @@ pub fn resize(w: f32, h: f32) void {
     ui_lock.lock();
     defer ui_lock.unlock();
 
-    menu_background.w = camera.screen_width;
-    menu_background.h = camera.screen_height;
+    menu_background.w = w;
+    menu_background.h = h;
 
     switch (screen) {
         inline else => |inner_screen| inner_screen.resize(w, h),
@@ -156,7 +157,7 @@ pub fn resize(w: f32, h: f32) void {
     dialog.resize(w, h);
 }
 
-pub fn removeAttachedUi(obj_id: i32) void {
+pub fn removeAttachedUi(obj_type: network_data.ObjectType, map_id: u32) void {
     temp_elem_lock.lock();
     defer temp_elem_lock.unlock();
 
@@ -170,17 +171,13 @@ pub fn removeAttachedUi(obj_id: i32) void {
         defer i -%= 1;
 
         switch (elem.*) {
-            .status => |*status| {
-                if (status.obj_id == obj_id) {
-                    status.destroy(allocator);
-                    _ = temp_elements.orderedRemove(i);
-                }
+            .status => |*status| if (status.obj_type == obj_type and status.map_id == map_id) {
+                status.destroy(allocator);
+                _ = temp_elements.orderedRemove(i);
             },
-            .balloon => |*balloon| {
-                if (balloon.target_id == obj_id) {
-                    balloon.destroy(allocator);
-                    _ = temp_elements.orderedRemove(i);
-                }
+            .balloon => |*balloon| if (balloon.target_obj_type == obj_type and balloon.target_map_id == map_id) {
+                balloon.destroy(allocator);
+                _ = temp_elements.orderedRemove(i);
             },
         }
     }
@@ -223,7 +220,7 @@ pub fn mouseMove(x: f32, y: f32) bool {
         switch (elem) {
             else => {},
             .slider => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove") and inner_elem.mouseMove(x, y, 0, 0))
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseMove") and inner_elem.mouseMove(x, y, 0, 0))
                     return true;
             },
         }
@@ -234,7 +231,7 @@ pub fn mouseMove(x: f32, y: f32) bool {
         switch (elem) {
             .slider => {},
             inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseMove") and inner_elem.mouseMove(x, y, 0, 0))
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseMove") and inner_elem.mouseMove(x, y, 0, 0))
                     return true;
             },
         }
@@ -264,7 +261,7 @@ pub fn mousePress(x: f32, y: f32, mods: glfw.Mods, button: glfw.MouseButton) boo
     while (elem_iter.next()) |elem| {
         switch (elem) {
             inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))
                     return true;
             },
         }
@@ -281,7 +278,7 @@ pub fn mouseRelease(x: f32, y: f32) bool {
     while (elem_iter.next()) |elem| {
         switch (elem) {
             inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseRelease") and inner_elem.mouseRelease(x, y, 0, 0))
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseRelease") and inner_elem.mouseRelease(x, y, 0, 0))
                     return true;
             },
         }
@@ -298,7 +295,7 @@ pub fn mouseScroll(x: f32, y: f32, x_scroll: f32, y_scroll: f32) bool {
     while (elem_iter.next()) |elem| {
         switch (elem) {
             inline else => |inner_elem| {
-                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).Pointer.child, "mouseScroll") and inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll))
+                if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseScroll") and inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll))
                     return true;
             },
         }
@@ -315,26 +312,16 @@ fn lessThan(_: void, lhs: element.UiElement, rhs: element.UiElement) bool {
     };
 }
 
-inline fn updateElements() !void {
+fn updateElements(time: i64, dt: f32) !void {
     ui_lock.lock();
     defer ui_lock.unlock();
 
-    elements.appendSlice(elements_to_add.items) catch |e| {
+    elements.appendSlice(allocator, elements_to_add.items) catch |e| {
+        @branchHint(.cold);
         std.log.err("Adding new elements failed: {}, returning", .{e});
         return;
     };
     elements_to_add.clearRetainingCapacity();
-
-    for (containers_to_remove.items) |container| {
-        container.lock.lock(); // no need to unlock, we're disposing. can cause problems but what's the alternative?
-        container.deinitInner();
-        allocator.destroy(container);
-    }
-    containers_to_remove.clearRetainingCapacity();
-
-    const time = std.time.microTimestamp() - main.start_time;
-    const dt = if (last_element_update > 0) @as(f32, @floatFromInt(time - last_element_update)) else 0.0;
-    last_element_update = time;
 
     std.sort.block(element.UiElement, elements.items, {}, lessThan);
 
@@ -343,107 +330,117 @@ inline fn updateElements() !void {
     }
 }
 
-inline fn updateTempElements() !void {
-    if (!temp_elem_lock.tryLock())
-        return;
-    defer temp_elem_lock.unlock();
+fn updateTempElements(time: i64, _: f32) !void {
+    _ = time;
+    // if (!temp_elem_lock.tryLock())
+    //     return;
+    // defer temp_elem_lock.unlock();
 
-    temp_elements.appendSlice(temp_elements_to_add.items) catch |e| {
-        std.log.err("Adding new temporary elements failed: {}, returning", .{e});
-        return;
-    };
-    temp_elements_to_add.clearRetainingCapacity();
+    // temp_elements.appendSlice(allocator, temp_elements_to_add.items) catch |e| {
+    //     @branchHint(.cold);
+    //     std.log.err("Adding new temporary elements failed: {}, returning", .{e});
+    //     return;
+    // };
+    // temp_elements_to_add.clearRetainingCapacity();
 
-    if (temp_elements.items.len <= 0)
-        return;
+    // if (temp_elements.items.len <= 0)
+    //     return;
 
-    if (!map.object_lock.tryLockShared())
-        return;
-    defer map.object_lock.unlockShared();
+    // // We iterate in reverse in order to preserve integrity, because we remove elements in place
+    // var iter = std.mem.reverseIterator(temp_elements.items);
+    // var i: usize = temp_elements.items.len - 1;
+    // while (iter.nextPtr()) |elem| {
+    //     defer i -%= 1;
 
-    const time = std.time.microTimestamp() - main.start_time;
+    //     switch (elem.*) {
+    //         .status => |*status_text| {
+    //             @branchHint(.likely);
+    //             const elapsed = time - status_text.start_time;
+    //             if (elapsed > status_text.lifetime * std.time.us_per_ms) {
+    //                 @branchHint(.unlikely);
+    //                 status_text.destroy(allocator);
+    //                 _ = temp_elements.orderedRemove(i);
+    //                 continue;
+    //             }
 
-    // We iterate in reverse in order to preserve integrity, because we remove elements in place
-    var iter = std.mem.reverseIterator(temp_elements.items);
-    var i: usize = temp_elements.items.len - 1;
-    while (iter.nextPtr()) |elem| {
-        defer i -%= 1;
+    //             status_text.visible = false;
+    //             switch (status_text.obj_type) {
+    //                 inline else => |obj_enum| {
+    //                     const T = network.ObjEnumToType(obj_enum);
+    //                     var lock = map.useLockForType(T);
+    //                     lock.lock();
+    //                     defer lock.unlock();
+    //                     if (map.findObjectConst(T, status_text.map_id)) |obj| {
+    //                         @branchHint(.likely);
+    //                         status_text.visible = true;
 
-        switch (elem.*) {
-            .status => |*status_text| {
-                const elapsed = time - status_text.start_time;
-                if (elapsed > status_text.lifetime * std.time.us_per_ms) {
-                    status_text.destroy(allocator);
-                    _ = temp_elements.orderedRemove(i);
-                    continue;
-                }
+    //                         const frac = @as(f32, @floatFromInt(elapsed)) / @as(f32, @floatFromInt(status_text.lifetime * std.time.us_per_ms));
+    //                         status_text.text_data.size = status_text.initial_size * @min(1.0, @max(0.7, 1.0 - frac * 0.3 + 0.075));
+    //                         status_text.text_data.alpha = 1.0 - frac + 0.33;
 
-                status_text.visible = false;
-                if (map.findEntityConst(status_text.obj_id)) |en| {
-                    status_text.visible = true;
+    //                         {
+    //                             status_text.text_data.lock.lock();
+    //                             defer status_text.text_data.lock.unlock();
 
-                    const frac = @as(f32, @floatFromInt(elapsed)) / @as(f32, @floatFromInt(status_text.lifetime * std.time.us_per_ms));
-                    status_text.text_data.size = status_text.initial_size * @min(1.0, @max(0.7, 1.0 - frac * 0.3 + 0.075));
-                    status_text.text_data.alpha = 1.0 - frac + 0.33;
+    //                             status_text.text_data.recalculateAttributes(allocator);
+    //                         }
 
-                    {
-                        status_text.text_data.lock.lock();
-                        defer status_text.text_data.lock.unlock();
+    //                         if (@hasField(@TypeOf(obj), "dead") and obj.dead) {
+    //                             @branchHint(.unlikely);
+    //                             status_text.destroy(allocator);
+    //                             _ = temp_elements.orderedRemove(i);
+    //                             continue;
+    //                         }
+    //                         status_text.screen_x = obj.screen_x - status_text.text_data.width / 2;
+    //                         status_text.screen_y = obj.screen_y - status_text.text_data.height - frac * 40;
+    //                     }
+    //                 },
+    //             }
+    //         },
+    //         .balloon => |*speech_balloon| {
+    //             @branchHint(.unlikely);
+    //             const elapsed = time - speech_balloon.start_time;
+    //             const lifetime = 5 * std.time.us_per_s;
+    //             if (elapsed > lifetime) {
+    //                 @branchHint(.unlikely);
+    //                 speech_balloon.destroy(allocator);
+    //                 _ = temp_elements.orderedRemove(i);
+    //                 continue;
+    //             }
 
-                        status_text.text_data.recalculateAttributes(allocator);
-                    }
+    //             speech_balloon.visible = false;
+    //             switch (speech_balloon.target_obj_type) {
+    //                 inline else => |obj_enum| {
+    //                     const T = network.ObjEnumToType(obj_enum);
+    //                     var lock = map.useLockForType(T);
+    //                     lock.lock();
+    //                     defer lock.unlock();
+    //                     if (map.findObjectConst(T, speech_balloon.target_map_id)) |obj| {
+    //                         @branchHint(.likely);
+    //                         speech_balloon.visible = true;
 
-                    switch (en) {
-                        .particle, .particle_effect, .projectile => {},
-                        inline else => |obj| {
-                            if (obj.dead) {
-                                status_text.destroy(allocator);
-                                _ = temp_elements.orderedRemove(i);
-                                continue;
-                            }
-                            status_text.screen_x = obj.screen_x - status_text.text_data.width / 2;
-                            status_text.screen_y = obj.screen_y - status_text.text_data.height - frac * 40;
-                        },
-                    }
-                }
-            },
-            .balloon => |*speech_balloon| {
-                const elapsed = time - speech_balloon.start_time;
-                const lifetime = 5 * std.time.us_per_s;
-                if (elapsed > lifetime) {
-                    speech_balloon.destroy(allocator);
-                    _ = temp_elements.orderedRemove(i);
-                    continue;
-                }
+    //                         const frac = @as(f32, @floatFromInt(elapsed)) / @as(f32, lifetime);
+    //                         const alpha = 1.0 - frac * 2.0 + 0.9;
+    //                         speech_balloon.image_data.normal.alpha = alpha; // assume no 9 slice
+    //                         speech_balloon.text_data.alpha = alpha;
 
-                speech_balloon.visible = false;
-                if (map.findEntityConst(speech_balloon.target_id)) |en| {
-                    speech_balloon.visible = true;
-
-                    const frac = @as(f32, @floatFromInt(elapsed)) / @as(f32, lifetime);
-                    const alpha = 1.0 - frac * 2.0 + 0.9;
-                    speech_balloon.image_data.normal.alpha = alpha; // assume no 9 slice
-                    speech_balloon.text_data.alpha = alpha;
-
-                    switch (en) {
-                        .particle, .particle_effect, .projectile => {},
-                        inline else => |obj| {
-                            if (obj.dead) {
-                                speech_balloon.destroy(allocator);
-                                _ = temp_elements.orderedRemove(i);
-                                continue;
-                            }
-                            speech_balloon.screen_x = obj.screen_x - speech_balloon.width() / 2;
-                            speech_balloon.screen_y = obj.screen_y - speech_balloon.height();
-                        },
-                    }
-                }
-            },
-        }
-    }
+    //                         if (@hasField(@TypeOf(obj), "dead") and obj.dead) {
+    //                             @branchHint(.unlikely);
+    //                             speech_balloon.destroy(allocator);
+    //                             _ = temp_elements.orderedRemove(i);
+    //                             continue;
+    //                         }
+    //                         speech_balloon.screen_x = obj.screen_x - speech_balloon.width() / 2;
+    //                         speech_balloon.screen_y = obj.screen_y - speech_balloon.height();
+    //                     }
+    //                 },
+    //             }
+    //         },
+    //     }
+    // }
 }
 
-pub fn update() !void {
-    try updateElements();
-    try updateTempElements();
+pub fn update(time: i64, dt: f32) !void {
+    try updateElements(time, dt);
+    try updateTempElements(time, dt);
 }

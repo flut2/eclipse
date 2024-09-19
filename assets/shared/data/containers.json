@@ -1,0 +1,46 @@
+[
+    {
+        "id": 0,
+        "name": "Brown Bag",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 22
+            }
+        ],
+        "size_mult": 0.8
+    },
+    {
+        "id": 1,
+        "name": "Purple Bag",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 23
+            }
+        ],
+        "size_mult": 0.8
+    },
+    {
+        "id": 2,
+        "name": "Blue Bag",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 24
+            }
+        ],
+        "size_mult": 0.8
+    },
+    {
+        "id": 3,
+        "name": "White Bag",
+        "textures": [
+            {
+                "sheet": "misc",
+                "index": 25
+            }
+        ],
+        "size_mult": 0.8
+    }
+]
