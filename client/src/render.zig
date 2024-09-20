@@ -784,7 +784,7 @@ pub fn drawText(
         sort_extras.append(main.allocator, text_data.sort_extra) catch @panic("OOM");
         generics.append(main.allocator, .{
             .render_type = render_type,
-            .text_type = text_data.text_type,
+            .text_type = current_type,
             .text_dist_factor = current_size * px_range,
             .pos = pos,
             .size = [_]f32{ w, h },
