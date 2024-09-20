@@ -44,6 +44,8 @@ pub const Projectile = struct {
 
     pub fn addToMap(self: *Projectile, allocator: std.mem.Allocator) void {
         self.start_time = main.current_time;
+        self.start_x = self.x;
+        self.start_y = self.y;
 
         const tex_list = self.data.textures;
         const tex = tex_list[utils.rng.next() % tex_list.len];
@@ -239,7 +241,7 @@ pub const Projectile = struct {
 
         self.updatePosition(elapsed_sec, dt_sec);
         if (self.x < 0 or self.y < 0 or
-            @as(u16, @intFromFloat(self.x + 0.5)) >= map.info.width or @as(u16, @intFromFloat(self.y + 0.5)) >= map.info.height)
+            self.x >= @as(f32, @floatFromInt(map.info.width - 1)) or self.y >= @as(f32, @floatFromInt(map.info.height - 1)))
             return false;
 
         if (last_x == 0 and last_y == 0) {

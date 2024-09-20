@@ -415,7 +415,7 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
                     },
                     else => obj.y,
                 };
-                if (obj_x < cam_min_x or obj_x > cam_max_x or obj_y < cam_min_y or obj_y > cam_max_y) continue;
+                if (obj_x <= cam_min_x - 0.0001 or obj_x >= cam_max_x + 0.0001 or obj_y <= cam_min_y - 0.0001 or obj_y >= cam_max_y + 0.0001) continue;
             }
 
             switch (ObjType) {
