@@ -557,19 +557,19 @@ pub const StatIncreaseData = union(enum) {
 
     pub fn toControlCode(self: StatIncreaseData) []const u8 {
         return switch (self) {
-            .max_hp => "&img=\"misc_big,0x28\"",
-            .max_mp => "&img=\"misc_big,0x27\"",
-            .strength => "&img=\"misc_big,0x20\"",
-            .defense => "&img=\"misc_big,0x21\"",
-            .speed => "&img=\"misc_big,0x22\"",
-            .stamina => "&img=\"misc_big,0x24\"",
-            .wit => "&img=\"misc_big,0x23\"",
-            .resistance => "&img=\"misc_big,0x39\"",
-            .intelligence => "&img=\"misc_big,0x3b\"",
-            .penetration => "&img=\"misc_big,0x26\"",
-            .piercing => "&img=\"misc_big,0x3c\"",
-            .haste => "&img=\"misc_big,0x3a\"",
-            .tenacity => "&img=\"misc_big,0x25\"",
+            .max_hp => "&img=\"misc_big,40\"",
+            .max_mp => "&img=\"misc_big,39\"",
+            .strength => "&img=\"misc_big,32\"",
+            .defense => "&img=\"misc_big,33\"",
+            .speed => "&img=\"misc_big,34\"",
+            .stamina => "&img=\"misc_big,36\"",
+            .wit => "&img=\"misc_big,35\"",
+            .resistance => "&img=\"misc_big,57\"",
+            .intelligence => "&img=\"misc_big,59\"",
+            .penetration => "&img=\"misc_big,38\"",
+            .piercing => "&img=\"misc_big,60\"",
+            .haste => "&img=\"misc_big,58\"",
+            .tenacity => "&img=\"misc_big,37\"",
         };
     }
 

@@ -101,7 +101,7 @@ pub const AbilityTooltip = struct {
 
             self.title.text_data.setText(params.props.name, self.allocator);
 
-            const cooldown_icon = "&img=\"misc_big,0x45\"";
+            const cooldown_icon = "&img=\"misc_big,69\"";
             const has_mana_cost = params.props.mana_cost > 0;
             const has_health_cost = params.props.health_cost > 0;
             const has_gold_cost = params.props.gold_cost > 0;
@@ -114,7 +114,7 @@ pub const AbilityTooltip = struct {
             } else {
                 const mana_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_mp = undefined });
                 const health_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_hp = undefined });
-                const gold_icon = "&img=\"misc,0x14\"";
+                const gold_icon = "&img=\"misc,20\"";
 
                 if (has_health_cost and has_mana_cost) {
                     self.subtext.text_data.text = std.fmt.bufPrint(
