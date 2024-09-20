@@ -35,11 +35,6 @@ pub fn create(allocator: std.mem.Allocator, data: anytype) !*@TypeOf(data) {
 }
 
 pub fn destroy(self: anytype) void {
-    if (self.disposed)
-        return;
-
-    self.disposed = true;
-
     comptime var field_name: []const u8 = "";
     inline for (@typeInfo(UiElement).@"union".fields) |field| {
         if (field.type == @TypeOf(self)) {
@@ -715,7 +710,6 @@ pub const Input = struct {
     last_input: i64 = -1,
     x_offset: f32 = 0.0,
     index: u32 = 0,
-    disposed: bool = false,
 
     pub fn mousePress(self: *Input, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
         if (!self.visible)
@@ -861,7 +855,6 @@ pub const Button = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
@@ -1018,7 +1011,6 @@ pub const KeyMapper = struct {
     visible: bool = true,
     event_policy: EventPolicy = .{},
     listening: bool = false,
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
@@ -1146,7 +1138,6 @@ pub const CharacterBox = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *CharacterBox, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
@@ -1278,7 +1269,6 @@ pub const Image = struct {
     minimap_offset_y: f32 = 0.0,
     minimap_width: f32 = 0.0,
     minimap_height: f32 = 0.0,
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
@@ -1359,7 +1349,6 @@ pub const MenuBackground = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn width(_: MenuBackground) f32 {
@@ -1403,7 +1392,6 @@ pub const Item = struct {
     drag_offset_y: f32 = 0,
     last_click_time: i64 = 0,
     item: u16 = std.math.maxInt(u16),
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: glfw.Mods) bool {
@@ -1503,7 +1491,6 @@ pub const Bar = struct {
     visible: bool = true,
     event_policy: EventPolicy = .{},
     text_data: TextData,
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *Bar) void {
@@ -1554,7 +1541,6 @@ pub const Text = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn init(self: *Text) void {
@@ -1609,7 +1595,6 @@ pub const ScrollableContainer = struct {
     container: *Container = undefined,
     scroll_bar: *Slider = undefined,
     scroll_bar_decor: *Image = undefined,
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
@@ -1830,7 +1815,6 @@ pub const Container = struct {
     layer: Layer = .default,
 
     elements: std.ArrayListUnmanaged(UiElement) = .empty,
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     drag_start_x: f32 = 0,
@@ -2150,7 +2134,6 @@ pub const Toggle = struct {
     state_change: ?*const fn (*Toggle) void = null,
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *Toggle, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
@@ -2304,7 +2287,6 @@ pub const Slider = struct {
     knob_offset_x: f32 = 0.0,
     knob_offset_y: f32 = 0.0,
     current_value: f32 = 0.0,
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *Slider, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
@@ -2648,7 +2630,6 @@ pub const DropdownContainer = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn mousePress(self: *DropdownContainer, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
@@ -2757,7 +2738,6 @@ pub const Dropdown = struct {
     visible: bool = true,
     toggled: bool = false,
     event_policy: EventPolicy = .{},
-    disposed: bool = false,
     allocator: std.mem.Allocator = undefined,
     next_index: u32 = 0,
     selected_index: u32 = std.math.maxInt(u32),
@@ -2966,7 +2946,6 @@ pub const SpeechBalloon = struct {
     // the texts' internal x/y, don't touch outside of systems.update()
     screen_x: f32 = 0.0,
     screen_y: f32 = 0.0,
-    disposed: bool = false,
 
     pub fn width(self: SpeechBalloon) f32 {
         return @max(self.text_data.width, switch (self.image_data) {
@@ -3010,11 +2989,6 @@ pub const SpeechBalloon = struct {
     }
 
     pub fn destroy(self: *SpeechBalloon, allocator: std.mem.Allocator) void {
-        if (self.disposed)
-            return;
-
-        self.disposed = true;
-
         self.text_data.lock.lock();
         allocator.free(self.text_data.text);
         self.text_data.lock.unlock();
@@ -3035,7 +3009,6 @@ pub const StatusText = struct {
     // the texts' internal x/y, don't touch outside of systems.update()
     screen_x: f32 = 0.0,
     screen_y: f32 = 0.0,
-    disposed: bool = false,
 
     pub fn width(self: StatusText) f32 {
         return self.text_data.width;
@@ -3066,11 +3039,6 @@ pub const StatusText = struct {
     }
 
     pub fn destroy(self: *StatusText, allocator: std.mem.Allocator) void {
-        if (self.disposed)
-            return;
-
-        self.disposed = true;
-
         self.text_data.lock.lock();
         allocator.free(self.text_data.text);
         self.text_data.lock.unlock();

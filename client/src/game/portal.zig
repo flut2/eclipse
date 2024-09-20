@@ -27,7 +27,6 @@ pub const Portal = struct {
     data: *const game_data.PortalData = undefined,
     anim_idx: u8 = 0,
     next_anim: i64 = -1,
-    disposed: bool = false,
 
     pub fn addToMap(self: *Portal, allocator: std.mem.Allocator) void {
         base.addToMap(self, Portal, allocator);

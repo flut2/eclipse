@@ -98,11 +98,6 @@ pub fn deinit() void {
     for (temp_elements.items) |*elem| {
         switch (elem.*) {
             inline else => |*inner| {
-                if (inner.disposed)
-                    return;
-
-                inner.disposed = true;
-
                 allocator.free(inner.text_data.text);
                 inner.text_data.deinit(allocator);
             },

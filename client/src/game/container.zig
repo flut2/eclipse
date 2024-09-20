@@ -28,7 +28,6 @@ pub const Container = struct {
     inventory: [9]u16 = [_]u16{std.math.maxInt(u16)} ** 9,
     anim_idx: u8 = 0,
     next_anim: i64 = -1,
-    disposed: bool = false,
 
     pub fn addToMap(self: *Container, allocator: std.mem.Allocator) void {
         base.addToMap(self, Container, allocator);

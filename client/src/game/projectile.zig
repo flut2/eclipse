@@ -41,7 +41,6 @@ pub const Projectile = struct {
     hit_list: std.AutoHashMapUnmanaged(u32, void) = .empty,
     heat_seek_fired: bool = false,
     last_hit_check: i64 = 0,
-    disposed: bool = false,
 
     pub fn addToMap(self: *Projectile, allocator: std.mem.Allocator) void {
         self.start_time = main.current_time;
@@ -67,10 +66,6 @@ pub const Projectile = struct {
     }
 
     pub fn deinit(self: *Projectile, allocator: std.mem.Allocator) void {
-        if (self.disposed)
-            return;
-
-        self.disposed = true;
         self.hit_list.deinit(allocator);
     }
 
@@ -244,7 +239,7 @@ pub const Projectile = struct {
 
         self.updatePosition(elapsed_sec, dt_sec);
         if (self.x < 0 or self.y < 0 or
-            self.x >= @as(f32, @floatFromInt(map.info.width)) or self.y >= @as(f32, @floatFromInt(map.info.height)))
+            @as(u16, @intFromFloat(self.x + 0.5)) >= map.info.width or @as(u16, @intFromFloat(self.y + 0.5)) >= map.info.height)
             return false;
 
         if (last_x == 0 and last_y == 0) {

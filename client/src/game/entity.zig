@@ -35,7 +35,6 @@ pub const Entity = struct {
     colors: []u32 = &.{},
     anim_idx: u8 = 0,
     next_anim: i64 = -1,
-    disposed: bool = false,
 
     pub fn addToMap(self: *Entity, allocator: std.mem.Allocator) void {
         self.data = game_data.entity.from_id.getPtr(self.data_id) orelse {

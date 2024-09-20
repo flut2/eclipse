@@ -24,7 +24,6 @@ pub const Purchasable = struct {
     size_mult: f32 = 0,
     atlas_data: assets.AtlasData = .default,
     data: *const game_data.PurchasableData = undefined,
-    disposed: bool = false,
 
     pub fn addToMap(self: *Purchasable, allocator: std.mem.Allocator) void {
         base.addToMap(self, Purchasable, allocator);

@@ -100,7 +100,6 @@ pub const Player = struct {
     y_dir: f32 = 0.0,
     facing: f32 = std.math.nan(f32),
     direction: assets.Direction = .right,
-    disposed: bool = false,
 
     pub fn addToMap(self: *Player, allocator: std.mem.Allocator) void {
         self.data = game_data.class.from_id.getPtr(self.data_id) orelse {
