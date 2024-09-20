@@ -524,7 +524,7 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
 
 // x/y < 0 has to be handled before this, since it's a u32
 pub fn validPos(x: u32, y: u32) bool {
-    return !(x >= info.width - 1 or y >= info.height - 1);
+    return !(info.width == 0 or info.height == 0 or x >= info.width - 1 or y >= info.height - 1);
 }
 
 // check_validity should always be on, unless you profiled that it causes clear slowdowns in your code.
