@@ -517,6 +517,7 @@ pub const GameScreen = struct {
         element.destroy(self.bars_decor);
         element.destroy(self.stats_button);
         element.destroy(self.stats_container);
+        element.destroy(self.ability_container);
         element.destroy(self.chat_container);
         element.destroy(self.health_bar);
         element.destroy(self.mana_bar);
