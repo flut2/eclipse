@@ -2,7 +2,9 @@ const std = @import("std");
 const map = @import("game/map.zig");
 const assets = @import("assets.zig");
 const gpu = @import("zgpu");
-const utils = @import("shared").utils;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const utils = shared.utils;
 const zstbi = @import("zstbi");
 const element = @import("ui/element.zig");
 const main = @import("main.zig");
@@ -806,6 +808,20 @@ pub fn drawText(
     }
 }
 
+pub fn drawLight(allocator: std.mem.Allocator, data: game_data.LightData, tile_cx: f32, tile_cy: f32, scale: f32, float_time_ms: f32) void {
+    if (data.color == std.math.maxInt(u32)) return;
+    
+    const size = px_per_tile * (data.radius + data.pulse * @sin(float_time_ms / 1000.0 * data.pulse_speed)) * scale * 4;
+    lights.append(allocator, .{
+        .x = tile_cx - size / 2.0,
+        .y = tile_cy - size / 2.0,
+        .w = size,
+        .h = size,
+        .color = data.color,
+        .intensity = data.intensity,
+    }) catch @panic("OOM");
+}
+
 pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.CommandEncoder, allocator: std.mem.Allocator) void {
     main.camera.lock.lock();
     var cam_data: CameraData = undefined;
@@ -850,24 +866,7 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
 
                     const screen_pos = cam_data.worldToScreen(square.x, square.y);
 
-                    if (main.settings.enable_lights) {
-                        const light_color = square.data.light.color;
-                        if (light_color != std.math.maxInt(u32)) {
-                            const size = px_per_tile * (square.data.light.radius + square.data.light.pulse *
-                                @sin(float_time_ms / 1000.0 * square.data.light.pulse_speed));
-
-                            const light_w = size * 4;
-                            const light_h = size * 4;
-                            lights.append(allocator, .{
-                                .x = screen_pos.x - light_w / 2.0,
-                                .y = screen_pos.y - size * 1.5,
-                                .w = light_w,
-                                .h = light_h,
-                                .color = light_color,
-                                .intensity = square.data.light.intensity,
-                            }) catch unreachable;
-                        }
-                    }
+                    if (main.settings.enable_lights) drawLight(allocator, square.data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
 
                     const time_sec = float_time_ms / std.time.ms_per_s;
                     const u_offset, const v_offset = switch (square.data.animation.type) {

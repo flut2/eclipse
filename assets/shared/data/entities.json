@@ -22,7 +22,8 @@
         "size_mult": 1.6,
         "light": {
             "color": "0xE54242",
-            "intensity": 0.25
+            "intensity": 0.25,
+            "radius": 3.0
         },
         "static": true,
         "occupy_square": true
@@ -39,7 +40,8 @@
         "size_mult": 1.6,
         "light": {
             "color": "0x4C8AED",
-            "intensity": 0.25
+            "intensity": 0.25,
+            "radius": 3.0
         },
         "static": true,
         "occupy_square": true,

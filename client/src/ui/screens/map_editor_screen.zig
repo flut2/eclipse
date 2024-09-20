@@ -40,6 +40,7 @@ const MapEditorTile = struct {
     enemy: u32 = std.math.maxInt(u32),
     portal: u32 = std.math.maxInt(u32),
     container: u32 = std.math.maxInt(u32),
+    region_map_id: u32 = std.math.maxInt(u32), // for the indicator
 
     // data ids
     ground: u16 = Square.editor_tile,
@@ -1374,14 +1375,49 @@ pub const MapEditorScreen = struct {
 
     fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
         const tile = self.getTilePtr(x, y);
-        if (tile.region == data_id) return;
 
-        if (data_id != std.math.maxInt(u16) and game_data.region.from_id.get(data_id) == null) {
-            std.log.err("Data not found for region with data id {}, setting at x={}, y={} cancelled", .{ data_id, x, y });
-            return;
+        var lock = map.useLockForType(Entity);
+        if (data_id == std.math.maxInt(u16)) {
+            lock.lock();
+            defer lock.unlock();
+            _ = map.removeEntity(Entity, self.allocator, tile.region_map_id);
+            tile.region_map_id = std.math.maxInt(u32);
+        } else {
+            const data = game_data.region.from_id.get(data_id) orelse {
+                std.log.err("Data not found for region with data id {}, setting at x={}, y={} cancelled", .{ data_id, x, y });
+                return;
+            };
+
+            if (tile.region_map_id != std.math.maxInt(u32)) {
+                lock.lock();
+                defer lock.unlock();
+                if (map.findObjectConst(Entity, tile.region_map_id)) |obj| if (std.mem.eql(u8, obj.name orelse "", data.name)) return;
+                _ = map.removeEntity(Entity, self.allocator, tile.region_map_id);
+            }
+
+            const next_map_id = self.nextMapIdForType(Entity);
+            defer next_map_id.* += 1;
+            tile.region_map_id = next_map_id.*;
+
+            const duped_name = self.allocator.dupe(u8, data.name) catch @panic("OOM");
+            var indicator: Entity = .{
+                .x = @floatFromInt(x),
+                .y = @floatFromInt(y),
+                .map_id = next_map_id.*,
+                .data_id = 0xFFFE,
+                .name = duped_name,
+                .render_color_override = data.color,
+            };
+            indicator.addToMap(self.allocator);
+            indicator.name_text_data = .{
+                .text = undefined,
+                .text_type = .bold,
+                .size = 12,
+            };
+            indicator.name_text_data.?.setText(duped_name, self.allocator);
+
+            tile.region = data_id;
         }
-
-        tile.region = data_id;
     }
 
     fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, data_id: u16) void {

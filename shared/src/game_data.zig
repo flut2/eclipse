@@ -336,7 +336,7 @@ const TextureData = struct {
     index: u16,
 };
 
-const LightData = struct {
+pub const LightData = struct {
     color: u32 = std.math.maxInt(u32),
     intensity: f32 = 0.0,
     radius: f32 = 1.0,

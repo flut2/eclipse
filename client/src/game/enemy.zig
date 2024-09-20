@@ -83,18 +83,9 @@ pub const Enemy = struct {
         _ = &color_intensity;
         // flash
 
-        if (main.settings.enable_lights and self.data.light.color != std.math.maxInt(u32)) {
-            const light_size = self.data.light.radius + self.data.light.pulse * @sin(float_time_ms / 1000.0 * self.data.light.pulse_speed);
-            const light_w = w * light_size * 4;
-            const light_h = h * light_size * 4;
-            render.lights.append(allocator, .{
-                .x = screen_pos.x - light_w / 2.0,
-                .y = screen_pos.y - h * light_size * 1.5,
-                .w = light_w,
-                .h = light_h,
-                .color = self.data.light.color,
-                .intensity = self.data.light.intensity,
-            }) catch unreachable;
+       if (main.settings.enable_lights) {
+            const tile_pos = cam_data.worldToScreen(self.x, self.y);
+            render.drawLight(allocator, self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
         }
 
         if (self.data.show_name) {
