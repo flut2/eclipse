@@ -147,7 +147,7 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
     }
 }
 
-pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.?, float_time_ms: f32, x: f32, y: f32) void {
+pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.?, float_time_ms: f32, x: f32, y: f32, scale: f32) void {
     var cond_len: f32 = 0.0;
     for (0..@bitSizeOf(utils.Condition)) |i| {
         if (cond_int & (@as(usize, 1) << @intCast(i)) != 0)
@@ -161,8 +161,8 @@ pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_int
             if (data.len > 0) {
                 const frame_new_idx: usize = @intFromFloat(float_time_ms / (0.5 * std.time.us_per_s));
                 const current_frame = data[@mod(frame_new_idx, data.len)];
-                const cond_w = current_frame.texWRaw();
-                const cond_h = current_frame.texHRaw();
+                const cond_w = current_frame.texWRaw() * scale;
+                const cond_h = current_frame.texHRaw() * scale;
 
                 render.drawQuad(
                     x - cond_len * (cond_w + 2) / 2 + cond_new_idx * (cond_w + 2),

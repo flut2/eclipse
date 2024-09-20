@@ -148,7 +148,7 @@ pub const Enemy = struct {
 
         const cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.? = @bitCast(self.condition);
         if (cond_int > 0) {
-            base.drawConditions(cond_int, float_time_ms, screen_pos.x - x_offset, screen_pos.y + h + y_pos);
+            base.drawConditions(cond_int, float_time_ms, screen_pos.x - x_offset, screen_pos.y + h + y_pos, cam_data.scale);
             y_pos += 20;
         }
     }

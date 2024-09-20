@@ -55,9 +55,9 @@ pub const SpikeBall = struct {
     pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
         logic.wander(@src(), host, dt, 2.5);
         logic.shoot(@src(), host, time, dt, .{
-            .shoot_angle = 72.0,
+            .shoot_angle = 36.0,
             .proj_index = 0,
-            .count = 5,
+            .count = 10,
             .radius = 16.0,
             .cooldown = 0.4 * std.time.us_per_s,
         });
