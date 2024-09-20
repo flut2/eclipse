@@ -4,8 +4,8 @@
         "name": "Map Editor Region Placeholder",
         "textures": [
             {
-                "sheet": "misc",
-                "index": 53
+                "sheet": "misc_big",
+                "index": 70
             }
         ],
         "show_name": true
