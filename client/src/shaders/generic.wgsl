@@ -55,15 +55,17 @@ struct InstanceData {
     text_type: u32,
     rotation: f32,
     text_dist_factor: f32,
+    shadow_color: u32,
+    alpha_mult: f32,
+    outline_color: u32,
+    outline_width: f32,
+    base_color: u32,
+    color_intensity: f32,
     pos: vec2<f32>,
     size: vec2<f32>,
     uv: vec2<f32>,
     uv_size: vec2<f32>,
     shadow_texel_size: vec2<f32>,
-    padding: vec2<f32>,
-    shadow_color_and_alpha: vec4<f32>,
-    outline_color_and_width: vec4<f32>,
-    color_and_intensity: vec4<f32>,
     scissor: vec4<f32>,
 }
 
@@ -78,7 +80,7 @@ struct FragmentData {
 }
 
 @vertex
-fn vs_main(vertex: VertexData) -> FragmentData {
+fn vertexMain(vertex: VertexData) -> FragmentData {
     let instance_id = vertex.vert_id / 6;
     let sub_vert_id = vertex.vert_id % 6;
     let instance = instances[instance_id];
@@ -95,7 +97,7 @@ fn vs_main(vertex: VertexData) -> FragmentData {
 }
 
 @fragment
-fn fs_main(fragment: FragmentData) -> @location(0) vec4<f32> {
+fn fragmentMain(fragment: FragmentData) -> @location(0) vec4<f32> {
     let instance = instances[fragment.instance_id];
     let dx = dpdx(fragment.uv);
     let dy = dpdy(fragment.uv);
@@ -113,12 +115,12 @@ fn fs_main(fragment: FragmentData) -> @location(0) vec4<f32> {
 
         case quad_render_type {
             let pixel = textureSampleGrad(game_tex, default_sampler, fragment.uv, dx, dy);
-            return vec4(mix(pixel.rgb, instance.color_and_intensity.rgb, instance.color_and_intensity.a), pixel.a * instance.shadow_color_and_alpha.w);
+            return vec4(mix(pixel.rgb, unpackColor(instance.base_color), instance.color_intensity), pixel.a * instance.alpha_mult);
         }
 
         case ui_quad_render_type {
             let pixel = textureSampleGrad(ui_tex, default_sampler, fragment.uv, dx, dy);
-            return vec4(mix(pixel.rgb, instance.color_and_intensity.rgb, instance.color_and_intensity.a), pixel.a * instance.shadow_color_and_alpha.w);
+            return vec4(mix(pixel.rgb, unpackColor(instance.base_color), instance.color_intensity), pixel.a * instance.alpha_mult);
         }
 
         case minimap_render_type {
@@ -167,15 +169,16 @@ fn fs_main(fragment: FragmentData) -> @location(0) vec4<f32> {
                 }
             }
 
-            let red = sample_msdf(red_tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, 0.5);
-            let green = sample_msdf(green_tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, 0.5);
-            let blue = sample_msdf(blue_tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, 0.5);
+            let red = sampleMsdf(red_tex, instance.text_dist_factor, instance.alpha_mult, 0.5);
+            let green = sampleMsdf(green_tex, instance.text_dist_factor, instance.alpha_mult, 0.5);
+            let blue = sampleMsdf(blue_tex, instance.text_dist_factor, instance.alpha_mult, 0.5);
 
             let alpha = clamp((red + green + blue) / 3.0, 0.0, 1.0);
-            let base_pixel = vec4(red * instance.color_and_intensity.r, green * instance.color_and_intensity.g, blue * instance.color_and_intensity.b, alpha);
+            let base_color = unpackColor(instance.base_color);
+            let base_pixel = vec4(red * base_color.r, green * base_color.g, blue * base_color.b, alpha);
 
-            let outline_alpha = sample_msdf(green_tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, instance.outline_color_and_width.w);
-            return mix(vec4(instance.outline_color_and_width.rgb, outline_alpha), base_pixel, alpha);
+            let outline_alpha = sampleMsdf(green_tex, instance.text_dist_factor, instance.alpha_mult, instance.outline_width);
+            return mix(vec4(unpackColor(instance.outline_color), outline_alpha), base_pixel, alpha);
         }
 
         case text_normal_subpixel_off_render_type {
@@ -202,11 +205,11 @@ fn fs_main(fragment: FragmentData) -> @location(0) vec4<f32> {
                 }
             }
 
-            let alpha = sample_msdf(tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, 0.5);
-            let base_pixel = vec4(instance.color_and_intensity.rgb, alpha);
+            let alpha = sampleMsdf(tex, instance.text_dist_factor, instance.alpha_mult, 0.5);
+            let base_pixel = vec4(unpackColor(instance.base_color), alpha);
 
-            let outline_alpha = sample_msdf(tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, instance.outline_color_and_width.w);
-            return mix(vec4(instance.outline_color_and_width.rgb, outline_alpha), base_pixel, alpha);
+            let outline_alpha = sampleMsdf(tex, instance.text_dist_factor, instance.alpha_mult, instance.outline_width);
+            return mix(vec4(unpackColor(instance.outline_color), outline_alpha), base_pixel, alpha);
         }
 
         case text_drop_shadow_render_type {
@@ -251,19 +254,20 @@ fn fs_main(fragment: FragmentData) -> @location(0) vec4<f32> {
                 }
             }
 
-            let red = sample_msdf(red_tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, 0.5);
-            let green = sample_msdf(green_tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, 0.5);
-            let blue = sample_msdf(blue_tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, 0.5);
+            let red = sampleMsdf(red_tex, instance.text_dist_factor, instance.alpha_mult, 0.5);
+            let green = sampleMsdf(green_tex, instance.text_dist_factor, instance.alpha_mult, 0.5);
+            let blue = sampleMsdf(blue_tex, instance.text_dist_factor, instance.alpha_mult, 0.5);
 
             let alpha = clamp((red + green + blue) / 3.0, 0.0, 1.0);
-            let base_pixel = vec4(red * instance.color_and_intensity.r, green * instance.color_and_intensity.g, blue * instance.color_and_intensity.b, alpha);
+            let base_color = unpackColor(instance.base_color);
+            let base_pixel = vec4(red * base_color.r, green * base_color.g, blue * base_color.b, alpha);
 
-            let outline_alpha = sample_msdf(green_tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, instance.outline_color_and_width.w);
-            let outlined_pixel = mix(vec4(instance.outline_color_and_width.rgb, outline_alpha), base_pixel, alpha);
+            let outline_alpha = sampleMsdf(green_tex, instance.text_dist_factor, instance.alpha_mult, instance.outline_width);
+            let outlined_pixel = mix(vec4(unpackColor(instance.outline_color), outline_alpha), base_pixel, alpha);
 
             // don't subpixel aa the offset, it's supposed to be a shadow
-            let offset_opacity = sample_msdf(tex_offset, instance.text_dist_factor, instance.shadow_color_and_alpha.w, instance.outline_color_and_width.w);
-            let offset_pixel = vec4(instance.shadow_color_and_alpha.rgb, offset_opacity);
+            let offset_opacity = sampleMsdf(tex_offset, instance.text_dist_factor, instance.alpha_mult, instance.outline_width);
+            let offset_pixel = vec4(unpackColor(instance.shadow_color), offset_opacity);
 
             return mix(offset_pixel, base_pixel, outline_alpha);
         }
@@ -297,14 +301,14 @@ fn fs_main(fragment: FragmentData) -> @location(0) vec4<f32> {
                 }
             }
 
-            let alpha = sample_msdf(tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, 0.5);
-            let base_pixel = vec4(instance.color_and_intensity.rgb, alpha);
+            let alpha = sampleMsdf(tex, instance.text_dist_factor, instance.alpha_mult, 0.5);
+            let base_pixel = vec4(unpackColor(instance.base_color), alpha);
 
-            let outline_alpha = sample_msdf(tex, instance.text_dist_factor, instance.shadow_color_and_alpha.w, instance.outline_color_and_width.w);
-            let outlined_pixel = mix(vec4(instance.outline_color_and_width.rgb, outline_alpha), base_pixel, alpha);
+            let outline_alpha = sampleMsdf(tex, instance.text_dist_factor, instance.alpha_mult, instance.outline_width);
+            let outlined_pixel = mix(vec4(unpackColor(instance.outline_color), outline_alpha), base_pixel, alpha);
 
-            let offset_opacity = sample_msdf(tex_offset, instance.text_dist_factor, instance.shadow_color_and_alpha.w, instance.outline_color_and_width.w);
-            let offset_pixel = vec4(instance.shadow_color_and_alpha.rgb, offset_opacity);
+            let offset_opacity = sampleMsdf(tex_offset, instance.text_dist_factor, instance.alpha_mult, instance.outline_width);
+            let offset_pixel = vec4(unpackColor(instance.shadow_color), offset_opacity);
 
             return mix(offset_pixel, base_pixel, outline_alpha);
         }
@@ -313,10 +317,14 @@ fn fs_main(fragment: FragmentData) -> @location(0) vec4<f32> {
     return vec4(0.0, 1.0, 0.0, 1.0);
 }
 
+fn unpackColor(color: u32) -> vec3<f32> {
+    return vec3<f32>(f32((color & 0xFF0000) >> 16) / 255.0, f32((color & 0x00FF00) >> 8) / 255.0, f32(color & 0x0000FF) / 255.0);
+}
+
 fn median(r: f32, g: f32, b: f32) -> f32 {
     return max(min(r, g), min(max(r, g), b));
 }
 
-fn sample_msdf(tex: vec4<f32>, dist_factor: f32, alpha_mult: f32, width: f32) -> f32 {
+fn sampleMsdf(tex: vec4<f32>, dist_factor: f32, alpha_mult: f32, width: f32) -> f32 {
     return clamp((median(tex.r, tex.g, tex.b) - 0.5) * dist_factor + width, 0.0, 1.0) * alpha_mult;
 }

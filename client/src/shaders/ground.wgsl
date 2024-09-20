@@ -59,7 +59,7 @@ struct FragmentData {
 }
 
 @vertex
-fn vs_main(vertex: VertexData) -> FragmentData {
+fn vertexMain(vertex: VertexData) -> FragmentData {
     let cos = cos(uniforms.rotation);
     let sin = sin(uniforms.rotation);
     let rot_mat = mat2x2<f32>(cos, sin, -sin, cos);
@@ -76,7 +76,7 @@ fn vs_main(vertex: VertexData) -> FragmentData {
 }
 
 @fragment
-fn fs_main(fragment: FragmentData) -> @location(0) vec4<f32> {
+fn fragmentMain(fragment: FragmentData) -> @location(0) vec4<f32> {
     let instance = instances[fragment.instance_id];
     let dx = dpdx(fragment.uv_offset);
     let dy = dpdy(fragment.uv_offset);

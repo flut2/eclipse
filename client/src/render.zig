@@ -99,16 +99,17 @@ pub const GenericData = extern struct {
     text_type: element.TextType = .bold,
     rotation: f32 = 0.0,
     text_dist_factor: f32 = 0.0,
+    shadow_color: u32 = 0,
+    alpha_mult: f32 = 1.0,
+    outline_color: u32 = 0,
+    outline_width: f32 = 0.0,
+    base_color: u32 = 0,
+    color_intensity: f32 = 0.0,
     pos: [2]f32 = [_]f32{ 0.0, 0.0 },
     size: [2]f32 = [_]f32{ 1.0, 1.0 },
     uv: [2]f32 = [_]f32{ -1.0, -1.0 },
     uv_size: [2]f32 = [_]f32{ 0.0, 0.0 },
     shadow_texel_size: [2]f32 = [_]f32{ 0.0, 0.0 },
-    padding: [2]f32 = [_]f32{ 0.0, 0.0 },
-    // These are joined together because of vec3 having vec4 alignment in WebGPU
-    shadow_color_and_alpha: [4]f32 = [_]f32{ 0.0, 0.0, 0.0, 1.0 },
-    outline_color_and_width: [4]f32 = [_]f32{ 0.0, 0.0, 0.0, 0.0 },
-    color_and_intensity: [4]f32 = [_]f32{ 0.0, 0.0, 0.0, 0.0 },
     scissor: [4]f32 = [_]f32{ 0.0, 1.0, 0.0, 1.0 }, // min x, max x, min y, max y, in tex coord space
 };
 
@@ -308,7 +309,7 @@ fn createPipelines(ctx: *gpu.GraphicsContext) void {
         .layout = generic_pipeline_layout,
         .vertex = .{
             .module = generic_shader,
-            .entry_point = "vs_main",
+            .entry_point = "vertexMain",
         },
         .primitive = .{
             .front_face = .cw,
@@ -317,7 +318,7 @@ fn createPipelines(ctx: *gpu.GraphicsContext) void {
         },
         .fragment = &.{
             .module = generic_shader,
-            .entry_point = "fs_main",
+            .entry_point = "fragmentMain",
             .target_count = generic_color_targets.len,
             .targets = generic_color_targets.ptr,
         },
@@ -329,7 +330,7 @@ fn createPipelines(ctx: *gpu.GraphicsContext) void {
         .layout = ground_pipeline_layout,
         .vertex = .{
             .module = ground_shader,
-            .entry_point = "vs_main",
+            .entry_point = "vertexMain",
         },
         .primitive = .{
             .front_face = .cw,
@@ -338,7 +339,7 @@ fn createPipelines(ctx: *gpu.GraphicsContext) void {
         },
         .fragment = &.{
             .module = ground_shader,
-            .entry_point = "fs_main",
+            .entry_point = "fragmentMain",
             .target_count = ground_color_targets.len,
             .targets = ground_color_targets.ptr,
         },
@@ -529,9 +530,6 @@ pub fn init(ctx: *gpu.GraphicsContext, allocator: std.mem.Allocator) !void {
 }
 
 pub fn drawQuad(x: f32, y: f32, w: f32, h: f32, atlas_data: assets.AtlasData, opts: QuadOptions) void {
-    const rgb = element.RGBF32.fromInt(opts.color);
-    const shadow_rgb = element.RGBF32.fromInt(opts.shadow_color);
-
     const render_type: RenderType = switch (atlas_data.atlas_type) {
         .ui => .ui_quad,
         .base => .quad,
@@ -549,13 +547,15 @@ pub fn drawQuad(x: f32, y: f32, w: f32, h: f32, atlas_data: assets.AtlasData, op
     generics.append(main.allocator, .{
         .render_type = render_type,
         .rotation = opts.rotation,
+        .shadow_color = opts.shadow_color,
+        .alpha_mult = opts.alpha_mult,
+        .base_color = opts.color,
+        .color_intensity = opts.color_intensity,
         .pos = [_]f32{ x, y },
         .size = [_]f32{ w, h },
         .uv = [_]f32{ atlas_data.tex_u, atlas_data.tex_v },
         .uv_size = [_]f32{ atlas_data.tex_w, atlas_data.tex_h },
         .shadow_texel_size = [_]f32{ shadow_texel_w, shadow_texel_h },
-        .color_and_intensity = [_]f32{ rgb.r, rgb.g, rgb.b, opts.color_intensity },
-        .shadow_color_and_alpha = [_]f32{ shadow_rgb.r, shadow_rgb.g, shadow_rgb.b, opts.alpha_mult },
         .scissor = [_]f32{
             atlas_data.tex_u + if (opts.scissor.min_x == dont_scissor) 0 else opts.scissor.min_x * uv_w_per_px,
             atlas_data.tex_u + if (opts.scissor.max_x == dont_scissor) atlas_data.tex_w else opts.scissor.max_x * uv_w_per_px,
@@ -577,10 +577,6 @@ pub fn drawText(
 
     if (text_data.line_widths == null or text_data.break_indices == null)
         return;
-
-    const rgb = element.RGBF32.fromInt(text_data.color);
-    const shadow_rgb = element.RGBF32.fromInt(text_data.shadow_color);
-    const outline_rgb = element.RGBF32.fromInt(text_data.outline_color);
 
     const size_scale = text_data.size / assets.CharacterData.size * scale * assets.CharacterData.padding_mult;
     const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
@@ -609,7 +605,7 @@ pub fn drawText(
     };
     var x_pointer = x_base;
     var y_pointer = y_base;
-    var current_color = rgb;
+    var current_color = text_data.color;
     var current_size = size_scale;
     var current_type = text_data.text_type;
     var index_offset: u16 = 0;
@@ -628,7 +624,7 @@ pub fn drawText(
                 const reset = "reset";
                 if (text_data.text.len >= offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
                     current_type = text_data.text_type;
-                    current_color = rgb;
+                    current_color = text_data.color;
                     current_size = size_scale;
                     line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
                     y_pointer += (line_height - start_line_height) / 2.0;
@@ -653,11 +649,10 @@ pub fn drawText(
                         const name = name_start[0..eql_idx];
                         const value = value_start[0..value_end_idx];
                         if (std.mem.eql(u8, name, "col")) {
-                            const int_color = std.fmt.parseInt(u32, value, 16) catch {
+                            current_color = std.fmt.parseInt(u32, value, 16) catch {
                                 std.log.err("Invalid color given to control code: {s}", .{value});
                                 break :specialChar;
                             };
-                            current_color = element.RGBF32.fromInt(int_color);
                         } else if (std.mem.eql(u8, name, "size")) {
                             const size = std.fmt.parseFloat(f32, value) catch {
                                 std.log.err("Invalid size given to control code: {s}", .{value});
@@ -788,14 +783,17 @@ pub fn drawText(
             .render_type = render_type,
             .text_type = current_type,
             .text_dist_factor = current_size * px_range,
+            .shadow_color = text_data.shadow_color,
+            .alpha_mult = text_data.alpha,
+            .outline_color = text_data.outline_color,
+            .outline_width = text_data.outline_width,
+            .base_color = current_color,
+            .color_intensity = 1.0,
             .pos = pos,
             .size = [_]f32{ w, h },
             .uv = [_]f32{ char_data.tex_u, char_data.tex_v },
             .uv_size = [_]f32{ char_data.tex_w, char_data.tex_h },
             .shadow_texel_size = [_]f32{ shadow_texel_w, shadow_texel_h },
-            .shadow_color_and_alpha = [_]f32{ shadow_rgb.r, shadow_rgb.g, shadow_rgb.b, text_data.alpha },
-            .outline_color_and_width = [_]f32{ outline_rgb.r, outline_rgb.g, outline_rgb.b, text_data.outline_width },
-            .color_and_intensity = [_]f32{ current_color.r, current_color.g, current_color.b, 1.0 },
             .scissor = [_]f32{
                 char_data.tex_u + if (scissor.min_x == dont_scissor) 0 else (scissor.min_x + x_off) * uv_w_per_px,
                 char_data.tex_u + if (scissor.max_x == dont_scissor) char_data.tex_w else (scissor.max_x + x_off) * uv_w_per_px,

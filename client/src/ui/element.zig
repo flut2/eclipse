@@ -95,24 +95,6 @@ pub const EventPolicy = packed struct {
     pass_scroll: bool = false,
 };
 
-pub const RGBF32 = extern struct {
-    r: f32,
-    g: f32,
-    b: f32,
-
-    pub fn fromValues(r: f32, g: f32, b: f32) RGBF32 {
-        return .{ .r = r, .g = g, .b = b };
-    }
-
-    pub fn fromInt(int: u32) RGBF32 {
-        return .{
-            .r = @as(f32, @floatFromInt((int & 0xFF0000) >> 16)) / 255.0,
-            .g = @as(f32, @floatFromInt((int & 0x00FF00) >> 8)) / 255.0,
-            .b = @as(f32, @floatFromInt((int & 0x0000FF) >> 0)) / 255.0,
-        };
-    }
-};
-
 // Renderer reuses this for extern structs, the explicit u32 is needed
 pub const TextType = enum(u32) {
     medium = 0,
@@ -141,10 +123,10 @@ pub const TextData = struct {
     text_type: TextType = .medium,
     color: u32 = 0xFFFFFF,
     alpha: f32 = 1.0,
-    shadow_color: u32 = 0xFF000000,
+    shadow_color: u32 = 0x000000,
     shadow_alpha_mult: f32 = 0.5,
     shadow_texel_offset_mult: f32 = 0.0,
-    outline_color: u32 = 0xFF000000,
+    outline_color: u32 = 0x000000,
     outline_width: f32 = 1.0, // 0.5 for off
     password: bool = false,
     handle_special_chars: bool = true,
