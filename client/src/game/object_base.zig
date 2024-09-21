@@ -88,18 +88,7 @@ pub fn addToMap(self: anytype, comptime ObjType: type, allocator: std.mem.Alloca
 }
 
 pub fn deinit(self: anytype, comptime ObjType: type, allocator: std.mem.Allocator) void {
-    const type_name = switch (ObjType) {
-        Player => "player",
-        Entity => "entity",
-        Enemy => "enemy",
-        Portal => "portal",
-        Container => "container",
-        Purchasable => "purchasable",
-        else => @compileError("Invalid type"),
-    };
-
-    ui_systems.removeAttachedUi(comptime std.meta.stringToEnum(network_data.ObjectType, type_name).?, self.map_id);
-
+    _ = ObjType;
     if (self.name_text_data) |*data|
         data.deinit(allocator);
 

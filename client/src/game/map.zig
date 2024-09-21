@@ -656,50 +656,52 @@ pub fn takeDamage(
 
                 self.condition.set(eff, true);
 
-                element.StatusText.add(.{
-                    .obj_type = switch (@TypeOf(self.*)) {
-                        Entity => .entity,
-                        Enemy => .enemy,
-                        Player => .player,
-                        else => @compileError("Invalid type"),
-                    },
-                    .map_id = self.map_id,
-                    .text_data = .{
-                        .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
-                        .text_type = .bold,
-                        .size = 16,
-                        .color = 0xB02020,
-                    },
-                    .initial_size = 16,
-                }) catch |e| {
-                    std.log.err("Allocation for condition text \"{s}\" failed: {}", .{ cond_str, e });
-                };
+                _ = allocator;
+                // element.StatusText.add(.{
+                //     .obj_type = switch (@TypeOf(self.*)) {
+                //         Entity => .entity,
+                //         Enemy => .enemy,
+                //         Player => .player,
+                //         else => @compileError("Invalid type"),
+                //     },
+                //     .map_id = self.map_id,
+                //     .text_data = .{
+                //         .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
+                //         .text_type = .bold,
+                //         .size = 16,
+                //         .color = 0xB02020,
+                //     },
+                //     .initial_size = 16,
+                // }) catch |e| {
+                //     std.log.err("Allocation for condition text \"{s}\" failed: {}", .{ cond_str, e });
+                // };
             }
         }
     }
 
-    if (damage > 0) {
-        element.StatusText.add(.{
-            .obj_type = switch (@TypeOf(self.*)) {
-                Entity => .entity,
-                Enemy => .enemy,
-                Player => .player,
-                else => @compileError("Invalid type"),
-            },
-            .map_id = self.map_id,
-            .text_data = .{
-                .text = std.fmt.allocPrint(allocator, "-{}", .{damage}) catch unreachable,
-                .text_type = .bold,
-                .size = 16,
-                .color = switch (damage_type) {
-                    .physical => 0xB02020,
-                    .magic => 0xB02020,
-                    .true => 0xB02020,
-                },
-            },
-            .initial_size = 16,
-        }) catch |e| {
-            std.log.err("Allocation for damage text \"-{}\" failed: {}", .{ damage, e });
-        };
-    }
+    _ = damage_type;
+    // if (damage > 0) {
+    //     element.StatusText.add(.{
+    //         .obj_type = switch (@TypeOf(self.*)) {
+    //             Entity => .entity,
+    //             Enemy => .enemy,
+    //             Player => .player,
+    //             else => @compileError("Invalid type"),
+    //         },
+    //         .map_id = self.map_id,
+    //         .text_data = .{
+    //             .text = std.fmt.allocPrint(allocator, "-{}", .{damage}) catch unreachable,
+    //             .text_type = .bold,
+    //             .size = 16,
+    //             .color = switch (damage_type) {
+    //                 .physical => 0xB02020,
+    //                 .magic => 0xB02020,
+    //                 .true => 0xB02020,
+    //             },
+    //         },
+    //         .initial_size = 16,
+    //     }) catch |e| {
+    //         std.log.err("Allocation for damage text \"-{}\" failed: {}", .{ damage, e });
+    //     };
+    // }
 }

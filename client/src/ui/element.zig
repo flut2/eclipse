@@ -667,11 +667,6 @@ pub const UiElement = union(enum) {
     dropdown_container: *DropdownContainer,
 };
 
-pub const Temporary = union(enum) {
-    balloon: SpeechBalloon,
-    status: StatusText,
-};
-
 pub const Input = struct {
     x: f32,
     y: f32,
@@ -2915,116 +2910,5 @@ pub const Dropdown = struct {
         }
 
         return ret;
-    }
-};
-
-pub const SpeechBalloon = struct {
-    image_data: ImageData,
-    text_data: TextData,
-    target_obj_type: network_data.ObjectType,
-    target_map_id: u32,
-    start_time: i64 = 0,
-    visible: bool = true,
-    // the texts' internal x/y, don't touch outside of systems.update()
-    screen_x: f32 = 0.0,
-    screen_y: f32 = 0.0,
-
-    pub fn width(self: SpeechBalloon) f32 {
-        return @max(self.text_data.width, switch (self.image_data) {
-            .nine_slice => |nine_slice| return nine_slice.w,
-            .normal => |image_data| return image_data.width(),
-        });
-    }
-
-    pub fn height(self: SpeechBalloon) f32 {
-        return @max(self.text_data.height, switch (self.image_data) {
-            .nine_slice => |nine_slice| return nine_slice.h,
-            .normal => |image_data| return image_data.height(),
-        });
-    }
-
-    pub fn texWRaw(self: SpeechBalloon) f32 {
-        return @max(self.text_data.width, switch (self.image_data) {
-            .nine_slice => |nine_slice| return nine_slice.w,
-            .normal => |image_data| return image_data.texWRaw(),
-        });
-    }
-
-    pub fn texHRaw(self: SpeechBalloon) f32 {
-        return @max(self.text_data.height, switch (self.image_data) {
-            .nine_slice => |nine_slice| return nine_slice.h,
-            .normal => |image_data| return image_data.texHRaw(),
-        });
-    }
-
-    pub fn add(data: SpeechBalloon) !void {
-        var balloon = Temporary{ .balloon = data };
-        balloon.balloon.start_time = main.current_time;
-        {
-            balloon.balloon.text_data.lock.lock();
-            defer balloon.balloon.text_data.lock.unlock();
-
-            balloon.balloon.text_data.recalculateAttributes(main.allocator);
-        }
-
-        try systems.temp_elements_to_add.append(systems.allocator, balloon);
-    }
-
-    pub fn destroy(self: *SpeechBalloon, allocator: std.mem.Allocator) void {
-        self.text_data.lock.lock();
-        allocator.free(self.text_data.text);
-        self.text_data.lock.unlock();
-
-        self.text_data.deinit(allocator);
-    }
-};
-
-pub const StatusText = struct {
-    text_data: TextData,
-    initial_size: f32,
-    obj_type: network_data.ObjectType,
-    map_id: u32,
-    lifetime: i64 = 500,
-    start_time: i64 = 0,
-    delay: i64 = 0,
-    visible: bool = true,
-    // the texts' internal x/y, don't touch outside of systems.update()
-    screen_x: f32 = 0.0,
-    screen_y: f32 = 0.0,
-
-    pub fn width(self: StatusText) f32 {
-        return self.text_data.width;
-    }
-
-    pub fn height(self: StatusText) f32 {
-        return self.text_data.height;
-    }
-
-    pub fn texWRaw(self: StatusText) f32 {
-        return self.text_data.width;
-    }
-
-    pub fn texHRaw(self: StatusText) f32 {
-        return self.text_data.height;
-    }
-
-    pub fn add(data: StatusText) !void {
-        var status = Temporary{ .status = data };
-        status.status.start_time = main.current_time + data.delay;
-        {
-            status.status.text_data.lock.lock();
-            defer status.status.text_data.lock.unlock();
-
-            status.status.text_data.recalculateAttributes(main.allocator);
-        }
-        try systems.temp_elements_to_add.append(systems.allocator, status);
-    }
-
-    pub fn destroy(self: *StatusText, allocator: std.mem.Allocator) void {
-        self.text_data.lock.lock();
-        allocator.free(self.text_data.text);
-        self.text_data.lock.unlock();
-
-        self.text_data.deinit(allocator);
     }
 };

@@ -538,18 +538,18 @@ pub const Server = struct {
             },
         }
 
-        element.StatusText.add(.{
-            .obj_type = data.obj_type,
-            .map_id = data.map_id,
-            .lifetime = 2000,
-            .text_data = .{
-                .text = main.allocator.dupe(u8, data.message) catch return,
-                .text_type = .bold,
-                .size = 16,
-                .color = data.color,
-            },
-            .initial_size = 16,
-        }) catch unreachable;
+        // element.StatusText.add(.{
+        //     .obj_type = data.obj_type,
+        //     .map_id = data.map_id,
+        //     .lifetime = 2000,
+        //     .text_data = .{
+        //         .text = main.allocator.dupe(u8, data.message) catch return,
+        //         .text_type = .bold,
+        //         .size = 16,
+        //         .color = data.color,
+        //     },
+        //     .initial_size = 16,
+        // }) catch unreachable;
     }
 
     fn handlePing(self: *Server, data: PacketData(.ping)) void {
@@ -683,23 +683,23 @@ pub const Server = struct {
                 }
             } else @panic("Could not find speech_balloons in the UI atlas");
 
-            element.SpeechBalloon.add(.{
-                .image_data = .{ .normal = .{
-                    .scale_x = 3.0,
-                    .scale_y = 3.0,
-                    .atlas_data = atlas_data,
-                } },
-                .text_data = .{
-                    .text = main.allocator.dupe(u8, data.text) catch unreachable,
-                    .size = 16,
-                    .max_width = 160,
-                    .outline_width = 1.5,
-                    .disable_subpixel = true,
-                    .color = data.text_color,
-                },
-                .target_obj_type = data.obj_type,
-                .target_map_id = data.map_id,
-            }) catch unreachable;
+            // element.SpeechBalloon.add(.{
+            //     .image_data = .{ .normal = .{
+            //         .scale_x = 3.0,
+            //         .scale_y = 3.0,
+            //         .atlas_data = atlas_data,
+            //     } },
+            //     .text_data = .{
+            //         .text = main.allocator.dupe(u8, data.text) catch unreachable,
+            //         .size = 16,
+            //         .max_width = 160,
+            //         .outline_width = 1.5,
+            //         .disable_subpixel = true,
+            //         .color = data.text_color,
+            //     },
+            //     .target_obj_type = data.obj_type,
+            //     .target_map_id = data.map_id,
+            // }) catch unreachable;
         }
     }
 

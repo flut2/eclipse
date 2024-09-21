@@ -310,7 +310,7 @@ pub const Player = struct {
             },
         );
 
-        var y_pos: f32 = if (sink != 1.0) 10.0 else 0.0;
+        var y_pos: f32 = if (sink != 1.0) 15.0 else 5.0;
 
         if (self.hp >= 0 and self.hp < self.max_hp) {
             const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * cam_data.scale;
@@ -323,7 +323,7 @@ pub const Player = struct {
                 hp_bar_w,
                 hp_bar_h,
                 assets.empty_bar_data,
-                .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
+                .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos - 0.0001 },
             );
 
             const float_hp: f32 = @floatFromInt(self.hp);
@@ -345,7 +345,7 @@ pub const Player = struct {
                 .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
             );
 
-            y_pos += hp_bar_h;
+            y_pos += hp_bar_h + 5.0;
         }
 
         if (self.mp >= 0 and self.mp < self.max_mp) {
@@ -359,7 +359,7 @@ pub const Player = struct {
                 mp_bar_w,
                 mp_bar_h,
                 assets.empty_bar_data,
-                .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
+                .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos - 0.0001 },
             );
 
             const float_mp: f32 = @floatFromInt(self.mp);
@@ -381,7 +381,7 @@ pub const Player = struct {
                 .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
             );
 
-            y_pos += mp_bar_h;
+            y_pos += mp_bar_h + 5.0;
         }
 
         const cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.? = @bitCast(self.condition);

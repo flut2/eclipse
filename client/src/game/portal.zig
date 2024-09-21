@@ -54,8 +54,8 @@ pub const Portal = struct {
             render.drawQuad(
                 screen_pos.x - tile_size / 2.0,
                 screen_pos.y - h_half,
-                tile_size,
-                tile_size,
+                tile_size * cam_data.scale,
+                tile_size * cam_data.scale,
                 self.atlas_data,
                 .{ .rotation = cam_data.angle, .alpha_mult = self.alpha, .sort_extra = -4096 },
             );
@@ -69,15 +69,15 @@ pub const Portal = struct {
             );
 
             if (int_id == self.map_id) {
-                const button_w = 100 / 5;
-                const button_h = 100 / 5;
+                const button_w = 100.0 / 5.0;
+                const button_h = 100.0 / 5.0;
                 const total_w = render.enter_text_data.width * cam_data.scale + button_w;
 
                 render.drawQuad(
                     screen_pos.x - total_w / 2,
                     screen_pos.y + h_half + 5,
-                    button_w,
-                    button_h,
+                    button_w * cam_data.scale,
+                    button_h * cam_data.scale,
                     assets.interact_key_tex,
                     .{},
                 );
@@ -121,15 +121,15 @@ pub const Portal = struct {
         );
 
         if (int_id == self.map_id) {
-            const button_w = 100 / 5;
-            const button_h = 100 / 5;
+            const button_w = 100.0 / 5.0;
+            const button_h = 100.0 / 5.0;
             const total_w = render.enter_text_data.width * cam_data.scale + button_w;
 
             render.drawQuad(
                 screen_pos.x - total_w / 2,
                 screen_pos.y + h + 5,
-                button_w,
-                button_h,
+                button_w * cam_data.scale,
+                button_h * cam_data.scale,
                 assets.interact_key_tex,
                 .{},
             );
