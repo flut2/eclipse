@@ -403,7 +403,7 @@ pub const Player = struct {
             float_period = @mod(time_dt, float_period) / float_period;
             self.facing = self.attack_angle + main.camera.angle;
             action = .attack;
-        } else if (map.local_player_id == self.map_id) {
+        } else if (map.info.player_map_id == self.map_id) {
             if (self.x_dir != 0.0 or self.y_dir != 0.0) {
                 const float_time: f32 = @floatFromInt(time);
                 float_period = 3.5 / self.moveSpeedMultiplier();
@@ -449,7 +449,7 @@ pub const Player = struct {
 
         self.direction = dir;
 
-        if (self.map_id == map.local_player_id) {
+        if (self.map_id == map.info.player_map_id) {
             if (ui_systems.screen == .editor) {
                 if (!std.math.isNan(self.move_angle)) {
                     const move_angle = main.camera.angle + self.move_angle;
@@ -509,7 +509,7 @@ pub const Player = struct {
                 if (!self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
                     if (map.getSquare(self.x, self.y, true)) |square| {
                         const protect = blk: {
-                            const e = map.findObjectConst(Entity, square.entity_map_id) orelse break :blk false;
+                            const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk false;
                             break :blk e.data.block_ground_damage;
                         };
                         if (square.data.damage > 0 and !protect) {
@@ -585,7 +585,7 @@ pub const Player = struct {
         if (map.getSquare(x, y, true)) |square| {
             const walkable = !square.data.no_walk;
             const not_occupied = blk: {
-                const e = map.findObjectConst(Entity, square.entity_map_id) orelse break :blk true;
+                const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk true;
                 break :blk !e.data.occupy_square;
             };
             return square.data_id != Square.editor_tile and square.data_id != Square.empty_tile and walkable and not_occupied;
@@ -594,7 +594,7 @@ pub const Player = struct {
 
     fn isFullOccupy(x: f32, y: f32) bool {
         if (map.getSquare(x, y, true)) |square| {
-            const e = map.findObjectConst(Entity, square.entity_map_id) orelse return false;
+            const e = map.findObject(Entity, square.entity_map_id, .con) orelse return false;
             return e.data.full_occupy;
         } else return true;
     }

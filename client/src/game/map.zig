@@ -90,7 +90,6 @@ pub var squares: []Square = &.{};
 pub var move_records: std.ArrayListUnmanaged(network_data.TimedPosition) = .empty;
 pub var info: network_data.MapInfo = .{};
 pub var last_records_clear_time: i64 = 0;
-pub var local_player_id: u32 = std.math.maxInt(u32);
 pub var minimap: zstbi.Image = undefined;
 pub var minimap_copy: []u8 = undefined;
 
@@ -219,7 +218,6 @@ pub fn dispose(allocator: std.mem.Allocator) void {
     interactive.map_id.store(std.math.maxInt(u32), .release);
     interactive.type.store(.unset, .release);
 
-    local_player_id = std.math.maxInt(u32);
     info = .{};
 
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
@@ -312,29 +310,20 @@ pub fn setMapInfo(data: network_data.MapInfo, allocator: std.mem.Allocator) void
     // main.need_force_update = true;
 }
 
-pub fn localPlayerConst() ?Player {
-    std.debug.assert(!useLockForType(Player).tryLock());
-    if (local_player_id == -1) return null;
-    if (findObjectConst(Player, local_player_id)) |player| return player;
-    return null;
-}
-
-pub fn localPlayerRef() ?*Player {
-    std.debug.assert(!useLockForType(Player).tryLock());
-    if (local_player_id == -1) return null;
-    if (findObjectRef(Player, local_player_id)) |player| return player;
-    return null;
-}
-
-pub fn findObjectConst(comptime T: type, map_id: u32) ?T {
+const Constness = enum { con, ref };
+pub fn findObject(comptime T: type, map_id: u32, comptime constness: Constness) if (constness == .con) ?T else ?*T {
     std.debug.assert(!useLockForType(T).tryLock());
-    for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
+    switch (constness) {
+        .con => for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj,
+        .ref => for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj,
+    }
     return null;
 }
 
-pub fn findObjectRef(comptime T: type, map_id: u32) ?*T {
-    std.debug.assert(!useLockForType(T).tryLock());
-    for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
+pub fn localPlayer(comptime constness: Constness) if (constness == .con) ?Player else ?*Player {
+    std.debug.assert(!useLockForType(Player).tryLock());
+    if (info.player_map_id == std.math.maxInt(u32)) return null;
+    if (findObject(Player, info.player_map_id, constness)) |player| return player;
     return null;
 }
 
@@ -351,7 +340,7 @@ pub fn removeEntity(comptime T: type, allocator: std.mem.Allocator, map_id: u32)
 }
 
 pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
-    if (local_player_id == std.math.maxInt(u32)) return;
+    if (info.player_map_id == std.math.maxInt(u32)) return;
 
     var should_unset_interactive = true;
     defer if (should_unset_interactive) {
@@ -402,7 +391,7 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
         obj_remove_list.clearRetainingCapacity();
 
         for (obj_list.items, 0..) |*obj, i| {
-            if (ObjType != particles.ParticleEffect and (ObjType != Player or obj.map_id != local_player_id)) {
+            if (ObjType != particles.ParticleEffect and (ObjType != Player or obj.map_id != info.player_map_id)) {
                 const obj_x = switch (ObjType) {
                     particles.Particle => switch (obj.*) {
                         inline else => |pt| pt.x,
@@ -447,7 +436,7 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
                     obj.update(time);
                 },
                 Player => {
-                    const is_self = obj.map_id == local_player_id;
+                    const is_self = obj.map_id == info.player_map_id;
                     if (is_self) useLockForType(Entity).lock();
                     defer if (is_self) useLockForType(Entity).unlock();
                     obj.walk_speed_multiplier = input.walking_speed_multiplier;

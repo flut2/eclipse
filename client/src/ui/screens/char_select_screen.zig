@@ -10,7 +10,6 @@ const Interactable = element.InteractableImageData;
 
 pub const CharSelectScreen = struct {
     boxes: std.ArrayListUnmanaged(*element.CharacterBox) = .empty,
-    inited: bool = false,
 
     allocator: std.mem.Allocator = undefined,
     new_char_button: *element.Button = undefined,
@@ -97,13 +96,10 @@ pub const CharSelectScreen = struct {
             .press_callback = backCallback,
         });
 
-        screen.inited = true;
         return screen;
     }
 
     pub fn deinit(self: *CharSelectScreen) void {
-        self.inited = false;
-
         for (self.boxes.items) |box| element.destroy(box);
         self.boxes.clearAndFree(self.allocator);
 

@@ -183,7 +183,6 @@ pub const MapEditorScreen = struct {
     const sizes = [_]u16{ 64, 128, 256, 512, 1024, 2048 };
 
     allocator: std.mem.Allocator,
-    inited: bool = false,
 
     next_map_ids: struct {
         entity: u32 = 0,
@@ -414,6 +413,7 @@ pub const MapEditorScreen = struct {
                 .size = 16,
                 .text_type = .bold,
             },
+            .userdata = screen,
             .press_callback = exitCallback,
         });
 
@@ -793,8 +793,10 @@ pub const MapEditorScreen = struct {
             });
         }
 
-        screen.inited = true;
-        screen.initialize();
+        if (ui_systems.last_map_data) |data| {
+            var fbs = std.io.fixedBufferStream(data);
+            try screen.loadMap(fbs.reader());
+        } else screen.initialize();
         return screen;
     }
 
@@ -971,20 +973,40 @@ pub const MapEditorScreen = struct {
             }
         }
 
-        map.local_player_id = std.math.maxInt(u32) - 1;
+        map.info.player_map_id = std.math.maxInt(u32) - 1;
         var player: Player = .{
             .x = if (self.start_x_override == std.math.maxInt(u16)) center else @floatFromInt(self.start_x_override),
             .y = if (self.start_y_override == std.math.maxInt(u16)) center else @floatFromInt(self.start_y_override),
-            .map_id = map.local_player_id,
+            .map_id = map.info.player_map_id,
             .data_id = 0,
             .speed = 300,
         };
         player.addToMap(self.allocator);
 
         main.editing_map = true;
-        ui_systems.menu_background.visible = false;
         self.start_x_override = std.math.maxInt(u16);
         self.start_y_override = std.math.maxInt(u16);
+    }
+
+    fn loadMap(screen: *MapEditorScreen, data_reader: anytype) !void {
+        var arena: std.heap.ArenaAllocator = .init(screen.allocator);
+        defer arena.deinit();
+        const parsed_map = try map_data.parseMap(data_reader, &arena);
+        screen.start_x_override = parsed_map.x + @divFloor(parsed_map.w, 2);
+        screen.start_y_override = parsed_map.y + @divFloor(parsed_map.h, 2);
+        screen.map_size = utils.nextPowerOfTwo(@max(parsed_map.x + parsed_map.w, parsed_map.y + parsed_map.h));
+        screen.initialize();
+
+        for (parsed_map.tiles, 0..) |tile, i| {
+            const ux: u16 = @intCast(i % parsed_map.w + parsed_map.x);
+            const uy: u16 = @intCast(@divFloor(i, parsed_map.w) + parsed_map.y);
+            if (tile.ground_name.len > 0) screen.setTile(ux, uy, game_data.ground.from_name.get(tile.ground_name).?.id);
+            if (tile.region_name.len > 0) screen.setRegion(ux, uy, game_data.region.from_name.get(tile.region_name).?.id);
+            if (tile.entity_name.len > 0) screen.setObject(Entity, ux, uy, game_data.entity.from_name.get(tile.entity_name).?.id);
+            if (tile.enemy_name.len > 0) screen.setObject(Enemy, ux, uy, game_data.enemy.from_name.get(tile.enemy_name).?.id);
+            if (tile.portal_name.len > 0) screen.setObject(Portal, ux, uy, game_data.portal.from_name.get(tile.portal_name).?.id);
+            if (tile.container_name.len > 0) screen.setObject(Container, ux, uy, game_data.container.from_name.get(tile.container_name).?.id);
+        }
     }
 
     // for easier error handling
@@ -994,28 +1016,9 @@ pub const MapEditorScreen = struct {
         const file_path = try nfd.openFileDialog("map", null);
         if (file_path) |path| {
             defer nfd.freePath(path);
-
             const file = try std.fs.openFileAbsolute(path, .{});
             defer file.close();
-
-            var arena: std.heap.ArenaAllocator = .init(screen.allocator);
-            defer arena.deinit();
-            const parsed_map = try map_data.parseMap(file, &arena);
-            screen.start_x_override = parsed_map.x + @divFloor(parsed_map.w, 2);
-            screen.start_y_override = parsed_map.y + @divFloor(parsed_map.h, 2);
-            screen.map_size = utils.nextPowerOfTwo(@max(parsed_map.x + parsed_map.w, parsed_map.y + parsed_map.h));
-            screen.initialize();
-
-            for (parsed_map.tiles, 0..) |tile, i| {
-                const ux: u16 = @intCast(i % parsed_map.w + parsed_map.x);
-                const uy: u16 = @intCast(@divFloor(i, parsed_map.w) + parsed_map.y);
-                if (tile.ground_name.len > 0) screen.setTile(ux, uy, game_data.ground.from_name.get(tile.ground_name).?.id);
-                if (tile.region_name.len > 0) screen.setRegion(ux, uy, game_data.region.from_name.get(tile.region_name).?.id);
-                if (tile.entity_name.len > 0) screen.setObject(Entity, ux, uy, game_data.entity.from_name.get(tile.entity_name).?.id);
-                if (tile.enemy_name.len > 0) screen.setObject(Enemy, ux, uy, game_data.enemy.from_name.get(tile.enemy_name).?.id);
-                if (tile.portal_name.len > 0) screen.setObject(Portal, ux, uy, game_data.portal.from_name.get(tile.portal_name).?.id);
-                if (tile.container_name.len > 0) screen.setObject(Container, ux, uy, game_data.container.from_name.get(tile.container_name).?.id);
-            }
+            try screen.loadMap(file.reader());
         }
     }
 
@@ -1071,6 +1074,7 @@ pub const MapEditorScreen = struct {
 
     fn mapData(screen: *MapEditorScreen) ![]u8 {
         var data: std.ArrayListUnmanaged(u8) = .empty;
+        defer data.deinit(screen.allocator);
 
         const bounds = tileBounds(screen.map_tile_data);
         if (bounds.min_x >= bounds.max_x or bounds.min_y >= bounds.max_y)
@@ -1096,25 +1100,25 @@ pub const MapEditorScreen = struct {
                         var lock = map.useLockForType(Enemy);
                         lock.lock();
                         defer lock.unlock();
-                        break :blk if (map.findObjectConst(Enemy, map_tile.enemy)) |e| e.data.name else "";
+                        break :blk if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "";
                     },
                     .entity_name = blk: {
                         var lock = map.useLockForType(Entity);
                         lock.lock();
                         defer lock.unlock();
-                        break :blk if (map.findObjectConst(Entity, map_tile.entity)) |e| e.data.name else "";
+                        break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "";
                     },
                     .portal_name = blk: {
                         var lock = map.useLockForType(Portal);
                         lock.lock();
                         defer lock.unlock();
-                        break :blk if (map.findObjectConst(Portal, map_tile.portal)) |p| p.data.name else "";
+                        break :blk if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "";
                     },
                     .container_name = blk: {
                         var lock = map.useLockForType(Container);
                         lock.lock();
                         defer lock.unlock();
-                        break :blk if (map.findObjectConst(Container, map_tile.container)) |c| c.data.name else "";
+                        break :blk if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "";
                     },
                 };
 
@@ -1143,25 +1147,25 @@ pub const MapEditorScreen = struct {
                         var lock = map.useLockForType(Enemy);
                         lock.lock();
                         defer lock.unlock();
-                        break :blk if (map.findObjectConst(Enemy, map_tile.enemy)) |e| e.data.name else "";
+                        break :blk if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "";
                     },
                     .entity_name = blk: {
                         var lock = map.useLockForType(Entity);
                         lock.lock();
                         defer lock.unlock();
-                        break :blk if (map.findObjectConst(Entity, map_tile.entity)) |e| e.data.name else "";
+                        break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "";
                     },
                     .portal_name = blk: {
                         var lock = map.useLockForType(Portal);
                         lock.lock();
                         defer lock.unlock();
-                        break :blk if (map.findObjectConst(Portal, map_tile.portal)) |p| p.data.name else "";
+                        break :blk if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "";
                     },
                     .container_name = blk: {
                         var lock = map.useLockForType(Container);
                         lock.lock();
                         defer lock.unlock();
-                        break :blk if (map.findObjectConst(Container, map_tile.container)) |c| c.data.name else "";
+                        break :blk if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "";
                     },
                 };
 
@@ -1174,7 +1178,10 @@ pub const MapEditorScreen = struct {
             }
         }
 
-        return try data.toOwnedSlice(screen.allocator);
+        var compressed_data: std.ArrayListUnmanaged(u8) = .empty;
+        var fbs = std.io.fixedBufferStream(data.items);
+        try std.compress.zlib.compress(fbs.reader(), compressed_data.writer(screen.allocator), .{});
+        return try compressed_data.toOwnedSlice(screen.allocator);
     }
 
     fn saveInner(screen: *MapEditorScreen) !void {
@@ -1195,9 +1202,7 @@ pub const MapEditorScreen = struct {
 
             const file = try std.fs.createFileAbsolute(path, .{});
             defer file.close();
-
-            var fbs = std.io.fixedBufferStream(data);
-            try std.compress.zlib.compress(fbs.reader(), file.writer(), .{});
+            try file.writeAll(data);
         }
     }
 
@@ -1208,7 +1213,16 @@ pub const MapEditorScreen = struct {
         };
     }
 
-    fn exitCallback(_: ?*anyopaque) void {
+    fn exitCallback(ud: ?*anyopaque) void {
+        const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
+        const data = mapData(screen) catch |e| {
+            std.log.err("Error while saving map (for testing): {}", .{e});
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            return;
+        };
+        if (ui_systems.last_map_data) |last_map_data| screen.allocator.free(last_map_data);
+        ui_systems.last_map_data = data;
+
         if (main.character_list == null)
             ui_systems.switchScreen(.main_menu)
         else if (main.character_list.?.characters.len > 0)
@@ -1219,40 +1233,25 @@ pub const MapEditorScreen = struct {
 
     fn testCallback(ud: ?*anyopaque) void {
         if (main.character_list) |list| {
-            if (list.servers.len > 0) {
+            if (list.servers.len > 0 and list.characters.len > 0) {
                 const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
 
                 const data = mapData(screen) catch |e| {
-                    std.log.err("Error while testing map: {}", .{e});
-                    if (@errorReturnTrace()) |trace| {
-                        std.debug.dumpStackTrace(trace.*);
-                    }
+                    std.log.err("Error while saving map (for testing): {}", .{e});
+                    if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
                     return;
                 };
-                defer screen.allocator.free(data);
+                if (ui_systems.last_map_data) |last_map_data| screen.allocator.free(last_map_data);
+                ui_systems.last_map_data = data;
+                ui_systems.is_testing = true;
 
-                if (ui_systems.editor_backup == null)
-                    ui_systems.editor_backup = screen.allocator.create(MapEditorScreen) catch return;
-                // @memcpy(ui_systems.editor_backup.?, screen);
-
-                var test_map: std.ArrayListUnmanaged(u8) = .empty;
-                var fbs = std.io.fixedBufferStream(data);
-                std.compress.zlib.compress(fbs.reader(), test_map.writer(screen.allocator), .{}) catch |e| {
-                    std.log.err("Error while testing map: {}", .{e});
-                    if (@errorReturnTrace()) |trace| {
-                        std.debug.dumpStackTrace(trace.*);
-                    }
-                    return;
-                };
-                main.enterTest(list.servers[0], list.characters[0].char_id, test_map.toOwnedSlice(screen.allocator) catch return);
+                main.enterTest(list.servers[0], list.characters[0].char_id, data);
                 return;
             }
         }
     }
 
     pub fn deinit(self: *MapEditorScreen) void {
-        self.inited = false;
-
         self.command_queue.deinit();
 
         element.destroy(self.fps_text);
@@ -1270,8 +1269,6 @@ pub const MapEditorScreen = struct {
         map.dispose(self.allocator);
 
         self.allocator.destroy(self);
-
-        ui_systems.menu_background.visible = true;
     }
 
     pub fn resize(self: *MapEditorScreen, w: f32, _: f32) void {
@@ -1391,7 +1388,7 @@ pub const MapEditorScreen = struct {
             if (tile.region_map_id != std.math.maxInt(u32)) {
                 lock.lock();
                 defer lock.unlock();
-                if (map.findObjectConst(Entity, tile.region_map_id)) |obj| if (std.mem.eql(u8, obj.name orelse "", data.name)) return;
+                if (map.findObject(Entity, tile.region_map_id, .con)) |obj| if (std.mem.eql(u8, obj.name orelse "", data.name)) return;
                 _ = map.removeEntity(Entity, self.allocator, tile.region_map_id);
             }
 
@@ -1445,7 +1442,7 @@ pub const MapEditorScreen = struct {
             if (field.* != std.math.maxInt(u32)) {
                 lock.lock();
                 defer lock.unlock();
-                if (map.findObjectConst(ObjType, field.*)) |obj| if (obj.data_id == data_id) return;
+                if (map.findObject(ObjType, field.*, .con)) |obj| if (obj.data_id == data_id) return;
                 _ = map.removeEntity(ObjType, self.allocator, field.*);
             }
 
@@ -1466,12 +1463,13 @@ pub const MapEditorScreen = struct {
 
     fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_type: enum { place, erase, random }) !void {
         var places: std.ArrayListUnmanaged(Place) = .empty;
+
         const size_sqr = self.brush_size * self.brush_size;
-        const sel_type: u16 = if (place_type == .erase) defaultType(self.active_layer) else switch (self.active_layer) {
+        const sel_type = if (place_type == .erase) defaultType(self.active_layer) else switch (self.active_layer) {
             inline else => |tag| @field(self.selected, @tagName(tag)),
         };
-        if (place_type != .erase and sel_type == defaultType(self.active_layer))
-            return;
+
+        if (place_type != .erase and sel_type == defaultType(self.active_layer)) return;
 
         const size: f32 = @floatFromInt(self.map_size - 1);
         const y_left: usize = @intFromFloat(@max(0, @floor(center_y - self.brush_size)));
@@ -1501,25 +1499,25 @@ pub const MapEditorScreen = struct {
                                     var lock = map.useLockForType(Entity);
                                     lock.lock();
                                     defer lock.unlock();
-                                    break :lockBlk if (map.findObjectConst(Entity, tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+                                    break :lockBlk if (map.findObject(Entity, tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
                                 },
                                 .enemy => break :blk lockBlk: {
                                     var lock = map.useLockForType(Enemy);
                                     lock.lock();
                                     defer lock.unlock();
-                                    break :lockBlk if (map.findObjectConst(Enemy, tile.enemy)) |e| e.data_id else std.math.maxInt(u16);
+                                    break :lockBlk if (map.findObject(Enemy, tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
                                 },
                                 .portal => break :blk lockBlk: {
                                     var lock = map.useLockForType(Portal);
                                     lock.lock();
                                     defer lock.unlock();
-                                    break :lockBlk if (map.findObjectConst(Portal, tile.portal)) |p| p.data_id else std.math.maxInt(u16);
+                                    break :lockBlk if (map.findObject(Portal, tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
                                 },
                                 .container => break :blk lockBlk: {
                                     var lock = map.useLockForType(Container);
                                     lock.lock();
                                     defer lock.unlock();
-                                    break :lockBlk if (map.findObjectConst(Container, tile.container)) |c| c.data_id else std.math.maxInt(u16);
+                                    break :lockBlk if (map.findObject(Container, tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
                                 },
                             }
 
@@ -1570,25 +1568,25 @@ pub const MapEditorScreen = struct {
                 var lock = map.useLockForType(Enemy);
                 lock.lock();
                 defer lock.unlock();
-                break :blk if (map.findObjectConst(Enemy, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+                break :blk if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
             },
             .entity => blk: {
                 var lock = map.useLockForType(Entity);
                 lock.lock();
                 defer lock.unlock();
-                break :blk if (map.findObjectConst(Entity, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+                break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
             },
             .portal => blk: {
                 var lock = map.useLockForType(Portal);
                 lock.lock();
                 defer lock.unlock();
-                break :blk if (map.findObjectConst(Portal, map_tile.entity)) |p| p.data_id else std.math.maxInt(u16);
+                break :blk if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
             },
             .container => blk: {
                 var lock = map.useLockForType(Container);
                 lock.lock();
                 defer lock.unlock();
-                break :blk if (map.findObjectConst(Container, map_tile.entity)) |c| c.data_id else std.math.maxInt(u16);
+                break :blk if (map.findObject(Container, map_tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
             },
         };
     }
@@ -1701,25 +1699,25 @@ pub const MapEditorScreen = struct {
                     var lock = map.useLockForType(Enemy);
                     lock.lock();
                     defer lock.unlock();
-                    break :blk if (map.findObjectConst(Enemy, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+                    break :blk if (map.findObject(Enemy, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
                 },
                 .entity => self.selected.entity = blk: {
                     var lock = map.useLockForType(Entity);
                     lock.lock();
                     defer lock.unlock();
-                    break :blk if (map.findObjectConst(Entity, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16);
+                    break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
                 },
                 .portal => self.selected.portal = blk: {
                     var lock = map.useLockForType(Portal);
                     lock.lock();
                     defer lock.unlock();
-                    break :blk if (map.findObjectConst(Portal, map_tile.entity)) |p| p.data_id else std.math.maxInt(u16);
+                    break :blk if (map.findObject(Portal, map_tile.entity, .con)) |p| p.data_id else std.math.maxInt(u16);
                 },
                 .container => self.selected.container = blk: {
                     var lock = map.useLockForType(Container);
                     lock.lock();
                     defer lock.unlock();
-                    break :blk if (map.findObjectConst(Container, map_tile.entity)) |c| c.data_id else std.math.maxInt(u16);
+                    break :blk if (map.findObject(Container, map_tile.entity, .con)) |c| c.data_id else std.math.maxInt(u16);
                 },
             },
             .fill => try fill(self, ux, uy),
@@ -1728,9 +1726,6 @@ pub const MapEditorScreen = struct {
     }
 
     pub fn updateFpsText(self: *MapEditorScreen, fps: usize, mem: f32) !void {
-        if (!self.inited)
-            return;
-
         self.fps_text.text_data.setText(
             try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, "FPS: {}\nMemory: {d:.1} MB", .{ fps, mem }),
             self.allocator,

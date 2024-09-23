@@ -281,7 +281,7 @@ pub const HealParticle = struct {
                 var lock = map.useLockForType(T);
                 lock.lock();
                 defer lock.unlock();
-                if (map.findObjectConst(T, self.target_map_id)) |obj| {
+                if (map.findObject(T, self.target_map_id, .con)) |obj| {
                     self.x = obj.x + self.dist * @cos(self.angle);
                     self.y = obj.y + self.dist * @sin(self.angle);
                     const displacement = 8.0 / @as(f32, std.time.us_per_s);
@@ -582,7 +582,7 @@ pub const HealEffect = struct {
                 var lock = map.useLockForType(T);
                 lock.lock();
                 defer lock.unlock();
-                if (map.findObjectConst(T, self.target_map_id)) |obj| {
+                if (map.findObject(T, self.target_map_id, .con)) |obj| {
                     for (0..10) |i| {
                         const float_i: f32 = @floatFromInt(i);
                         const angle = std.math.tau * (float_i / 10.0);

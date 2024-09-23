@@ -256,7 +256,7 @@ pub const Projectile = struct {
             var lock = map.useLockForType(Entity);
             lock.lock();
             defer lock.unlock();
-            if (map.findObjectConst(Entity, square.entity_map_id)) |e| {
+            if (map.findObject(Entity, square.entity_map_id, .con)) |e| {
                 if (e.data.occupy_square) {
                     particles.HitEffect.addToMap(.{
                         .x = self.x,
@@ -298,7 +298,7 @@ pub const Projectile = struct {
             .amount = 3,
         });
 
-        const is_self = map.local_player_id == obj.map_id;
+        const is_self = map.info.player_map_id == obj.map_id;
         var phys_dmg: i32 = 0;
         var magic_dmg: i32 = 0;
         const true_dmg = self.true_dmg;

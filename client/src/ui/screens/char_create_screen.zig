@@ -8,7 +8,6 @@ const systems = @import("../systems.zig");
 const Interactable = element.InteractableImageData;
 
 pub const CharCreateScreen = struct {
-    inited: bool = false,
     boxes: std.ArrayListUnmanaged(*element.CharacterBox) = .empty,
     allocator: std.mem.Allocator = undefined,
 
@@ -47,16 +46,11 @@ pub const CharCreateScreen = struct {
             screen.boxes.append(allocator, box) catch return screen;
         }
 
-        screen.inited = true;
         return screen;
     }
 
     pub fn deinit(self: *CharCreateScreen) void {
-        self.inited = false;
-
-        for (self.boxes.items) |box| {
-            element.destroy(box);
-        }
+        for (self.boxes.items) |box| element.destroy(box);
         self.boxes.clearAndFree(self.allocator);
 
         self.allocator.destroy(self);

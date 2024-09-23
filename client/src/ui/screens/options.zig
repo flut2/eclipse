@@ -16,7 +16,6 @@ pub const TabType = enum { general, graphics, misc };
 
 pub const Options = struct {
     visible: bool = false,
-    inited: bool = false,
     selected_tab: TabType = .general,
     main: *element.Container = undefined,
     buttons: *element.Container = undefined,
@@ -203,13 +202,10 @@ pub const Options = struct {
             .misc => positionElements(screen.misc_tab),
         }
 
-        screen.inited = true;
         return screen;
     }
 
     pub fn deinit(self: *Options) void {
-        self.inited = false;
-
         element.destroy(self.main);
         element.destroy(self.buttons);
         element.destroy(self.tabs);

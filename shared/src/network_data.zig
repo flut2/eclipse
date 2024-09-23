@@ -1,3 +1,4 @@
+const std = @import("std");
 const utils = @import("utils.zig");
 const game_data = @import("game_data.zig");
 
@@ -194,6 +195,7 @@ pub const MapInfo = struct {
     day_intensity: f32 = 0.0,
     night_intensity: f32 = 0.0,
     server_time: i64 = 0,
+    player_map_id: u32 = std.math.maxInt(u32),
 };
 
 pub const DamageType = enum(u2) { physical, magic, true };
@@ -242,7 +244,6 @@ pub const C2SPacket = union(enum) {
 };
 
 pub const S2CPacket = union(enum) {
-    self_map_id: packed struct { player_map_id: u32 },
     text: struct {
         name: []const u8,
         obj_type: ObjectType,

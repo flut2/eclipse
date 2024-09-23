@@ -357,7 +357,7 @@ pub const ItemTooltip = struct {
                 var lock = map.useLockForType(Player);
                 lock.lock();
                 defer lock.unlock();
-                if (map.localPlayerConst()) |player| {
+                if (map.localPlayer(.con)) |player| {
                     const has_type = blk: {
                         for (player.data.item_types) |item_type| {
                             if (item_type != .any and item_type.typesMatch(data.item_type))

@@ -69,7 +69,6 @@ pub const Server = struct {
         return switch (tag) {
             .ally_projectile => handleAllyProjectile,
             .aoe => handleAoe,
-            .self_map_id => handleSelfMapId,
             .damage => handleDamage,
             .death => handleDeath,
             .enemy_projectile => handleEnemyProjectile,
@@ -256,7 +255,7 @@ pub const Server = struct {
             var lock = map.useLockForType(Player); // not great assuming that this won't ever deadlock...
             lock.lock();
             defer lock.unlock();
-            if (map.localPlayerRef()) |player| {
+            if (map.localPlayer(.ref)) |player| {
                 player.x = -1.0;
                 player.y = -1.0;
                 map.clearMoveRecords(main.current_time);
@@ -372,7 +371,7 @@ pub const Server = struct {
         lock.lock();
         defer lock.unlock();
 
-        if (map.findObjectRef(Player, data.player_map_id)) |player| {
+        if (map.findObject(Player, data.player_map_id, .ref)) |player| {
             const item_data = game_data.item.from_id.getPtr(data.item_data_id);
             var proj: Projectile = .{
                 .x = player.x,
@@ -404,17 +403,12 @@ pub const Server = struct {
         if (logRead(.non_tick)) std.log.debug("Recv - Aoe: {}", .{data});
     }
 
-    fn handleSelfMapId(_: *Server, data: PacketData(.self_map_id)) void {
-        map.local_player_id = data.player_map_id;
-        if (logRead(.non_tick)) std.log.debug("Recv - SelfMapId: {}", .{data});
-    }
-
     fn handleDamage(_: *Server, data: PacketData(.damage)) void {
         var lock = map.useLockForType(Player);
         lock.lock();
         defer lock.unlock();
 
-        if (map.findObjectRef(Player, data.player_map_id)) |player| {
+        if (map.findObject(Player, data.player_map_id, .ref)) |player| {
             map.takeDamage(
                 player,
                 data.amount,
@@ -442,7 +436,7 @@ pub const Server = struct {
         lock.lock();
         defer lock.unlock();
 
-        var owner = if (map.findObjectRef(Enemy, data.enemy_map_id)) |enemy| enemy else return;
+        var owner = if (map.findObject(Enemy, data.enemy_map_id, .ref)) |enemy| enemy else return;
 
         const owner_data = game_data.enemy.from_id.getPtr(owner.data_id);
         if (owner_data == null or owner_data.?.projectiles == null or data.proj_data_id >= owner_data.?.projectiles.?.len)
@@ -534,7 +528,7 @@ pub const Server = struct {
                 var lock = map.useLockForType(T);
                 lock.lock();
                 defer lock.unlock();
-                if (map.findObjectConst(T, data.map_id) == null) return;
+                if (map.findObject(T, data.map_id, .con) == null) return;
             },
         }
 
@@ -578,7 +572,7 @@ pub const Server = struct {
                         var lock = map.useLockForType(T);
                         lock.lock();
                         defer lock.unlock();
-                        if (map.findObjectConst(T, data.map_id)) |obj| {
+                        if (map.findObject(T, data.map_id, .con)) |obj| {
                             start_x = obj.x;
                             start_y = obj.y;
                         }
@@ -609,7 +603,7 @@ pub const Server = struct {
                         var lock = map.useLockForType(T);
                         lock.lock();
                         defer lock.unlock();
-                        if (map.findObjectConst(T, data.map_id)) |obj| {
+                        if (map.findObject(T, data.map_id, .con)) |obj| {
                             start_x = obj.x;
                             start_y = obj.y;
                         }
@@ -658,7 +652,7 @@ pub const Server = struct {
                         var lock = map.useLockForType(T);
                         lock.lock();
                         defer lock.unlock();
-                        if (map.findObjectConst(T, data.map_id) == null) return;
+                        if (map.findObject(T, data.map_id, .con) == null) return;
                     },
                 }
             }
@@ -712,7 +706,7 @@ pub const Server = struct {
                 var lock = map.useLockForType(Player);
                 lock.lock();
                 defer lock.unlock();
-                if (map.localPlayerRef()) |local_player| {
+                if (map.localPlayer(.ref)) |local_player| {
                     self.sendPacket(.{ .move = .{
                         .tick_id = data.tick_id,
                         .time = time,
@@ -768,7 +762,7 @@ pub const Server = struct {
                 var add_lock = map.addLockForType(T);
                 var need_add_unlock = false;
                 defer if (need_add_unlock) add_lock.unlock();
-                const current_obj = map.findObjectRef(T, obj.map_id) orelse findAddObj: {
+                const current_obj = map.findObject(T, obj.map_id, .ref) orelse findAddObj: {
                     add_lock.lock();
                     for (map.addListForType(T).items) |*add_obj| {
                         if (add_obj.map_id == obj.map_id) {
@@ -794,10 +788,10 @@ pub const Server = struct {
 
                     switch (T) {
                         Player => {
-                            if (object.map_id != map.local_player_id)
+                            if (object.map_id != map.info.player_map_id)
                                 updateMove(object, pre_x, pre_y, tick_time);
 
-                            if (object.map_id == map.local_player_id and ui_systems.screen == .game)
+                            if (object.map_id == map.info.player_map_id and ui_systems.screen == .game)
                                 ui_systems.screen.game.updateStats();
                         },
                         Enemy => updateMove(object, pre_x, pre_y, tick_time),
@@ -874,7 +868,7 @@ pub const Server = struct {
     }
 
     fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat, allocator: std.mem.Allocator) void {
-        const is_self = player.map_id == map.local_player_id;
+        const is_self = player.map_id == map.info.player_map_id;
         switch (stat) {
             .x => |val| player.x = val,
             .y => |val| player.y = val,

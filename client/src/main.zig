@@ -200,7 +200,7 @@ fn renderTick() !void {
 
         if (current_time - fps_time_start > 1 * std.time.us_per_s) {
             try if (settings.stats_enabled) switch (ui_systems.screen) {
-                inline .game, .editor => |screen| if (screen.inited) screen.updateFpsText(frames, try utils.currentMemoryUse(current_time)),
+                inline .game, .editor => |screen| screen.updateFpsText(frames, try utils.currentMemoryUse(current_time)),
                 else => {},
             };
             frames = 0;
@@ -266,10 +266,9 @@ pub fn disconnect(has_lock: bool) void {
         if (!has_lock) ui_systems.ui_lock.lock();
         defer if (!has_lock) ui_systems.ui_lock.unlock();
 
-        if (ui_systems.editor_backup) |editor| {
+        if (ui_systems.is_testing) {
             ui_systems.switchScreen(.editor);
-            _ = editor;
-            ui_systems.editor_backup = null;
+            ui_systems.is_testing = false;
         } else {
             if (character_list == null)
                 ui_systems.switchScreen(.main_menu)

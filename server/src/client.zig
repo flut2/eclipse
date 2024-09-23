@@ -423,7 +423,7 @@ pub const Client = struct {
         }
 
         self.char_id = player.char_data.char_id;
-        player.char_data.set(.{ .create_timestamp = timestamp }) catch {
+        player.char_data.set(.{ .last_login_timestamp = timestamp }) catch {
             self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Could not interact with database" } });
             return;
         };
@@ -447,9 +447,8 @@ pub const Client = struct {
             .day_intensity = self.world.light_data.day_intensity,
             .night_intensity = self.world.light_data.night_intensity,
             .server_time = main.current_time,
+            .player_map_id = self.player_map_id,
         } });
-
-        self.queuePacket(.{ .self_map_id = .{ .player_map_id = self.player_map_id } });
     }
 
     fn handleInvDrop(self: *Client, data: PacketData(.inv_drop)) void {
@@ -527,9 +526,8 @@ pub const Client = struct {
             .day_intensity = self.world.light_data.day_intensity,
             .night_intensity = self.world.light_data.night_intensity,
             .server_time = main.current_time,
+            .player_map_id = self.player_map_id,
         } });
-
-        self.queuePacket(.{ .self_map_id = .{ .player_map_id = self.player_map_id } });
     }
 
     fn handleBuy(_: *Client, _: PacketData(.buy)) void {}
@@ -617,10 +615,75 @@ pub const Client = struct {
             .day_intensity = self.world.light_data.day_intensity,
             .night_intensity = self.world.light_data.night_intensity,
             .server_time = main.current_time,
+            .player_map_id = self.player_map_id,
         } });
-
-        self.queuePacket(.{ .self_map_id = .{ .player_map_id = self.player_map_id } });
     }
 
-    fn handleMapHello(_: *Client, _: PacketData(.map_hello)) void {}
+    fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
+        if (self.player_map_id != std.math.maxInt(u32)) {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Already connected" } });
+            return;
+        }
+
+        if (!std.mem.eql(u8, data.build_ver, settings.build_version)) {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Incorrect version" } });
+            return;
+        }
+
+        const acc_id = db.login(data.email, data.token) catch |e| {
+            switch (e) {
+                error.NoData => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Invalid email" } }),
+                error.InvalidToken => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Invalid credentials" } }),
+                else => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Unknown error" } }),
+            }
+            return;
+        };
+        self.acc_id = acc_id;
+
+        const arena_allocator = self.arena.allocator();
+        var player: Player = .{
+            .acc_data = db.AccountData.init(arena_allocator, acc_id),
+            .char_data = db.CharacterData.init(arena_allocator, acc_id, data.char_id),
+            .client = self,
+        };
+
+        const is_banned = db.accountBanned(&player.acc_data) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Database is missing data" } });
+            return;
+        };
+        if (is_banned) {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Account banned" } });
+            return;
+        }
+
+        const timestamp: u64 = @intCast(std.time.milliTimestamp());
+
+        self.char_id = player.char_data.char_id;
+        player.char_data.set(.{ .last_login_timestamp = timestamp }) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Could not interact with database" } });
+            return;
+        };
+
+        self.world = maps.testWorld(data.map) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Creating test map failed" } });
+            return;
+        };
+
+        self.player_map_id = self.world.addExisting(Player, &player) catch {
+            self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Adding player to map failed" } });
+            return;
+        };
+
+        self.queuePacket(.{ .map_info = .{
+            .width = self.world.w,
+            .height = self.world.h,
+            .name = self.world.name,
+            .bg_color = self.world.light_data.color,
+            .bg_intensity = self.world.light_data.intensity,
+            .day_intensity = self.world.light_data.day_intensity,
+            .night_intensity = self.world.light_data.night_intensity,
+            .server_time = main.current_time,
+            .player_map_id = self.player_map_id,
+        } });
+    }
 };

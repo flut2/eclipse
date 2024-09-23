@@ -15,7 +15,6 @@ const NineSlice = element.NineSliceImageData;
 
 pub const AccountLoginScreen = struct {
     allocator: std.mem.Allocator = undefined,
-    inited: bool = false,
 
     email_text: *element.Text = undefined,
     email_input: *element.Input = undefined,
@@ -168,13 +167,10 @@ pub const AccountLoginScreen = struct {
             .press_callback = registerCallback,
         });
 
-        screen.inited = true;
         return screen;
     }
 
     pub fn deinit(self: *AccountLoginScreen) void {
-        self.inited = false;
-
         element.destroy(self.email_text);
         element.destroy(self.email_input);
         element.destroy(self.password_text);

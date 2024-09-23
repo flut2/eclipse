@@ -17,9 +17,9 @@ pub const Map = struct {
     tiles: []Tile,
 };
 
-pub fn parseMap(file: std.fs.File, arena: *std.heap.ArenaAllocator) !Map {
+pub fn parseMap(data_reader: anytype, arena: *std.heap.ArenaAllocator) !Map {
     const allocator = arena.allocator();
-    var dcp = std.compress.zlib.decompressor(file.reader());
+    var dcp = std.compress.zlib.decompressor(data_reader);
     var reader = dcp.reader();
 
     const version = try reader.readInt(u8, .little);

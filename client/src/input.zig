@@ -88,7 +88,7 @@ fn keyPress(window: *glfw.Window, key: glfw.Key) void {
         var lock = map.useLockForType(Player);
         lock.lock();
         defer lock.unlock();
-        if (map.localPlayerRef()) |player| player.useAbility();
+        if (map.localPlayer(.ref)) |player| player.useAbility();
     } else if (key == main.settings.options.getKey()) {
         openOptions();
     } else if (key == main.settings.escape.getKey()) {
@@ -178,7 +178,7 @@ fn mousePress(window: *glfw.Window, button: glfw.MouseButton) void {
         var lock = map.useLockForType(Player);
         lock.lock();
         defer lock.unlock();
-        if (map.localPlayerRef()) |player| player.useAbility();
+        if (map.localPlayer(.ref)) |player| player.useAbility();
     } else if (button == main.settings.options.getMouse()) {
         openOptions();
     } else if (button == main.settings.escape.getMouse()) {

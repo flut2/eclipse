@@ -47,7 +47,8 @@ pub var screen: Screen = undefined;
 pub var menu_background: *element.MenuBackground = undefined;
 pub var hover_lock: std.Thread.Mutex = .{};
 pub var hover_target: ?element.UiElement = null;
-pub var editor_backup: ?*MapEditorScreen = null;
+pub var last_map_data: ?[]u8 = null;
+pub var is_testing: bool = false;
 
 var last_element_update: i64 = 0;
 pub var allocator: std.mem.Allocator = undefined;
@@ -89,6 +90,8 @@ pub fn deinit() void {
 
     elements_to_add.deinit(allocator);
     elements.deinit(allocator);
+
+    if (last_map_data) |data| allocator.free(data);
 }
 
 pub fn switchScreen(comptime screen_type: ScreenType) void {
@@ -106,7 +109,7 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
     input.selected_key_mapper = null;
 
     switch (screen) {
-        inline else => |inner_screen| if (inner_screen.inited) inner_screen.deinit(),
+        inline else => |inner_screen| inner_screen.deinit(),
     }
 
     screen = @unionInit(
@@ -276,6 +279,6 @@ pub fn update(time: i64, dt: f32) !void {
     std.sort.block(element.UiElement, elements.items, {}, lessThan);
 
     switch (screen) {
-        inline else => |inner_screen| if (inner_screen.inited) try inner_screen.update(time, dt),
+        inline else => |inner_screen| try inner_screen.update(time, dt),
     }
 }

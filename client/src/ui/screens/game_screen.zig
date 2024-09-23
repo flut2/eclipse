@@ -144,7 +144,6 @@ pub const GameScreen = struct {
     inventory_pos_data: [22]utils.Rect = undefined,
     container_pos_data: [9]utils.Rect = undefined,
 
-    inited: bool = false,
     allocator: std.mem.Allocator = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*GameScreen {
@@ -423,8 +422,6 @@ pub const GameScreen = struct {
         });
 
         screen.options = try Options.init(allocator);
-
-        screen.inited = true;
         return screen;
     }
 
@@ -507,8 +504,6 @@ pub const GameScreen = struct {
     }
 
     pub fn deinit(self: *GameScreen) void {
-        self.inited = false;
-
         element.destroy(self.minimap_decor);
         element.destroy(self.minimap_slots);
         element.destroy(self.inventory_decor);
@@ -537,7 +532,7 @@ pub const GameScreen = struct {
         }
 
         self.chat_lines.deinit(self.allocator);
-        if (self.options.inited) self.options.deinit();
+        self.options.deinit();
 
         self.allocator.destroy(self);
     }
@@ -609,7 +604,7 @@ pub const GameScreen = struct {
         var lock = map.useLockForType(Player);
         lock.lock();
         defer lock.unlock();
-        if (map.localPlayerConst()) |local_player| {
+        if (map.localPlayer(.con)) |local_player| {
             if (!self.abilities_inited) {
                 var idx: f32 = 0;
                 for (0..4) |i| try addAbility(self.ability_container, local_player.data.abilities[i], &idx);
@@ -724,11 +719,8 @@ pub const GameScreen = struct {
     }
 
     pub fn updateStats(self: *GameScreen) void {
-        if (!self.inited)
-            return;
-
         std.debug.assert(!map.useLockForType(Player).tryLock());
-        if (map.localPlayerConst()) |player| {
+        if (map.localPlayer(.con)) |player| {
             updateStat(self.allocator, &self.strength_stat_text.text_data, player.strength, player.strength_bonus);
             updateStat(self.allocator, &self.wit_stat_text.text_data, player.wit, player.wit_bonus);
             updateStat(self.allocator, &self.defense_stat_text.text_data, player.defense, player.defense_bonus);
@@ -815,7 +807,7 @@ pub const GameScreen = struct {
             if (!start_slot.is_container) {
                 self.setInvItem(std.math.maxInt(u16), start_slot.idx);
                 main.server.sendPacket(.{ .inv_drop = .{
-                    .player_map_id = map.local_player_id,
+                    .player_map_id = map.info.player_map_id,
                     .slot_id = start_slot.idx,
                 } });
             } else {
@@ -823,7 +815,7 @@ pub const GameScreen = struct {
                 return;
             }
         } else {
-            if (map.localPlayerConst()) |local_player| {
+            if (map.localPlayer(.con)) |local_player| {
                 const start_data = game_data.item.from_id.get(start_item) orelse {
                     self.swapError(start_slot, start_item);
                     return;
@@ -834,7 +826,7 @@ pub const GameScreen = struct {
                         var cont_lock = map.useLockForType(Container);
                         cont_lock.lock();
                         defer cont_lock.unlock();
-                        const container = map.findObjectConst(Container, self.container_id) orelse {
+                        const container = map.findObject(Container, self.container_id, .con) orelse {
                             self.swapError(start_slot, start_item);
                             return;
                         };
@@ -869,10 +861,10 @@ pub const GameScreen = struct {
                     .x = local_player.x,
                     .y = local_player.y,
                     .from_obj_type = if (start_slot.is_container) .container else .player,
-                    .from_map_id = if (start_slot.is_container) int_id else map.local_player_id,
+                    .from_map_id = if (start_slot.is_container) int_id else map.info.player_map_id,
                     .from_slot_id = start_slot.idx,
                     .to_obj_type = if (end_slot.is_container) .container else .player,
-                    .to_map_id = if (end_slot.is_container) int_id else map.local_player_id,
+                    .to_map_id = if (end_slot.is_container) int_id else map.info.player_map_id,
                     .to_slot_id = end_slot.idx,
                 } });
 
@@ -891,10 +883,10 @@ pub const GameScreen = struct {
                 var lock = map.useLockForType(Player);
                 lock.lock();
                 defer lock.unlock();
-                if (map.localPlayerConst()) |local_player| {
+                if (map.localPlayer(.con)) |local_player| {
                     main.server.sendPacket(.{ .use_item = .{
                         .obj_type = .player,
-                        .map_id = map.local_player_id,
+                        .map_id = map.info.player_map_id,
                         .slot_id = start_slot.idx,
                         .x = local_player.x,
                         .y = local_player.y,
@@ -910,7 +902,7 @@ pub const GameScreen = struct {
         var lock = map.useLockForType(Player);
         lock.lock();
         defer lock.unlock();
-        if (map.localPlayerConst()) |local_player| {
+        if (map.localPlayer(.con)) |local_player| {
             if (game_data.item.from_id.get(@intCast(item.item))) |data| {
                 if (start_slot.is_container) {
                     const end_slot = Slot.nextAvailableSlot(systems.screen.game.*, local_player.data.item_types, data.item_type);
@@ -1008,10 +1000,10 @@ pub const GameScreen = struct {
                 var lock = map.useLockForType(Player);
                 lock.lock();
                 defer lock.unlock();
-                if (map.localPlayerConst()) |local_player| {
+                if (map.localPlayer(.con)) |local_player| {
                     main.server.sendPacket(.{ .use_item = .{
                         .obj_type = if (slot.is_container) .container else .player,
-                        .map_id = if (slot.is_container) current_screen.container_id else map.local_player_id,
+                        .map_id = if (slot.is_container) current_screen.container_id else map.info.player_map_id,
                         .slot_id = slot.idx,
                         .x = local_player.x,
                         .y = local_player.y,
@@ -1143,9 +1135,6 @@ pub const GameScreen = struct {
     }
 
     pub fn setContainerVisible(self: *GameScreen, visible: bool) void {
-        if (!self.inited)
-            return;
-
         self.container_visible = visible;
         self.container_decor.visible = visible;
     }

@@ -2,17 +2,14 @@ const std = @import("std");
 
 pub const EmptyScreen = struct {
     allocator: std.mem.Allocator,
-    inited: bool = false,
 
     pub fn init(allocator: std.mem.Allocator) !*EmptyScreen {
         const screen = try allocator.create(EmptyScreen);
-        screen.* = .{ .allocator = allocator, .inited = true };
+        screen.* = .{ .allocator = allocator };
         return screen;
     }
 
     pub fn deinit(self: *EmptyScreen) void {
-        self.inited = false;
-
         self.allocator.destroy(self);
     }
 

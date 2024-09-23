@@ -23,7 +23,6 @@ pub const AccountRegisterScreen = struct {
     password_repeat_input: *element.Input = undefined,
     confirm_button: *element.Button = undefined,
     back_button: *element.Button = undefined,
-    inited: bool = false,
 
     allocator: std.mem.Allocator = undefined,
 
@@ -221,13 +220,10 @@ pub const AccountRegisterScreen = struct {
             .press_callback = backCallback,
         });
 
-        screen.inited = true;
         return screen;
     }
 
     pub fn deinit(self: *AccountRegisterScreen) void {
-        self.inited = false;
-
         element.destroy(self.username_text);
         element.destroy(self.username_input);
         element.destroy(self.email_text);
