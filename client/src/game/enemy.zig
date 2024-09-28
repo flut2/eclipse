@@ -49,7 +49,7 @@ pub const Enemy = struct {
     }
 
     pub fn deinit(self: *Enemy, allocator: std.mem.Allocator) void {
-        base.deinit(self, Enemy, allocator);
+        base.deinit(self, allocator);
     }
 
     pub fn draw(self: *Enemy, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator) void {

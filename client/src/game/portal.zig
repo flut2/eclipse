@@ -33,7 +33,7 @@ pub const Portal = struct {
     }
 
     pub fn deinit(self: *Portal, allocator: std.mem.Allocator) void {
-        base.deinit(self, Portal, allocator);
+        base.deinit(self, allocator);
     }
 
     pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator, int_id: u32) void {

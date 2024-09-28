@@ -137,7 +137,7 @@ pub const Player = struct {
     }
 
     pub fn deinit(self: *Player, allocator: std.mem.Allocator) void {
-        base.deinit(self, Player, allocator);
+        base.deinit(self, allocator);
     }
 
     pub fn onMove(self: *Player) void {

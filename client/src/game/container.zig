@@ -34,7 +34,7 @@ pub const Container = struct {
     }
 
     pub fn deinit(self: *Container, allocator: std.mem.Allocator) void {
-        base.deinit(self, Container, allocator);
+        base.deinit(self, allocator);
     }
 
     pub fn draw(self: *Container, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator) void {

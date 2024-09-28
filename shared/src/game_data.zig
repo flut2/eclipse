@@ -321,7 +321,7 @@ pub const Currency = enum {
     }
 };
 
-const AnimationData = struct {
+pub const AnimationData = struct {
     probability: f32 = 1.0,
     period: f32,
     period_jitter: f32 = 0.0,
@@ -474,8 +474,11 @@ pub const EnemyData = struct {
 pub const EntityData = struct {
     id: u16,
     name: []const u8,
-    textures: []const TextureData,
+    textures: []const TextureData, // This is the "upper" (z+1) texture for walls
     top_textures: ?[]const TextureData = null,
+    bottom_textures: ?[]const TextureData = null,
+    left_textures: ?[]const TextureData = null,
+    right_textures: ?[]const TextureData = null,
     health: i32 = 0, // Having no health means it can't be hit/die
     defense: i32 = 0,
     resistance: i32 = 0,
@@ -488,10 +491,14 @@ pub const EntityData = struct {
     show_name: bool = false,
     block_ground_damage: bool = false,
     block_sink: bool = false,
+    is_wall: bool = false,
     hit_sound: []const u8 = "Unknown",
     death_sound: []const u8 = "Unknown",
     animation: ?AnimationData = null,
-    exp_reward: u32 = 0,
+    top_animation: ?AnimationData = null,
+    bottom_animation: ?AnimationData = null,
+    left_animation: ?AnimationData = null,
+    right_animation: ?AnimationData = null,
 };
 
 pub const PurchasableData = struct {

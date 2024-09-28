@@ -68,7 +68,7 @@ pub fn addToMap(self: anytype, comptime ObjType: type, allocator: std.mem.Alloca
             break :blk &.{};
         };
 
-        if (self.data.draw_on_ground)
+        if (self.data.draw_on_ground or @hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall)
             self.atlas_data.removePadding();
     }
 
@@ -87,13 +87,49 @@ pub fn addToMap(self: anytype, comptime ObjType: type, allocator: std.mem.Alloca
     map.addListForType(ObjType).append(allocator, self.*) catch @panic("Adding " ++ type_name ++ " failed");
 }
 
-pub fn deinit(self: anytype, comptime ObjType: type, allocator: std.mem.Allocator) void {
-    _ = ObjType;
+pub fn deinit(self: anytype, allocator: std.mem.Allocator) void {
     if (self.name_text_data) |*data|
         data.deinit(allocator);
 
     if (self.name) |en_name|
         allocator.free(en_name);
+}
+
+pub fn updateAnimation(
+    comptime type_name: []const u8,
+    time: i64,
+    anim: ?game_data.AnimationData,
+    data_id: u16,
+    draw_on_ground: bool,
+    atlas_data: *assets.AtlasData,
+    next_anim: *i64,
+    anim_idx: *u8,
+) void {
+    if (anim) |animation| {
+        if (time >= next_anim.*) {
+            const frame_len = animation.frames.len;
+            if (frame_len < 2) {
+                std.log.err("The amount of frames ({}) was not enough for {s} with data id {}", .{ frame_len, type_name, data_id });
+                return;
+            }
+
+            const frame_data = animation.frames[anim_idx.*];
+            const tex_data = frame_data.texture;
+            if (assets.atlas_data.get(tex_data.sheet)) |tex| {
+                if (tex_data.index >= tex.len) {
+                    std.log.err("Incorrect index ({}) given to anim with sheet {s}, {s} with data id: {}", .{ tex_data.index, tex_data.sheet, type_name, data_id });
+                    return;
+                }
+                atlas_data.* = tex[tex_data.index];
+                if (draw_on_ground) atlas_data.removePadding();
+                anim_idx.* = @intCast((anim_idx.* + 1) % frame_len);
+                next_anim.* = time + @as(i64, @intFromFloat(frame_data.time * std.time.us_per_s));
+            } else {
+                std.log.err("Could not find sheet {s} for anim on {s} with data id {}", .{ tex_data.sheet, type_name, data_id });
+                return;
+            }
+        }
+    }
 }
 
 pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
@@ -106,34 +142,7 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
         else => @compileError("Invalid type"),
     };
 
-    if (self.data.animation) |animation| {
-        updateAnim: {
-            if (time >= self.next_anim) {
-                const frame_len = animation.frames.len;
-                if (frame_len < 2) {
-                    std.log.err("The amount of frames ({}) was not enough for {s} with data id {}", .{ frame_len, type_name, self.data_id });
-                    break :updateAnim;
-                }
-
-                const frame_data = animation.frames[self.anim_idx];
-                const tex_data = frame_data.texture;
-                if (assets.atlas_data.get(tex_data.sheet)) |tex| {
-                    if (tex_data.index >= tex.len) {
-                        std.log.err("Incorrect index ({}) given to anim with sheet {s}, {s} with data id: {}", .{ tex_data.index, tex_data.sheet, type_name, self.data_id });
-                        break :updateAnim;
-                    }
-                    self.atlas_data = tex[tex_data.index];
-                    if (self.data.draw_on_ground)
-                        self.atlas_data.removePadding();
-                    self.anim_idx = @intCast((self.anim_idx + 1) % frame_len);
-                    self.next_anim = time + @as(i64, @intFromFloat(frame_data.time * std.time.us_per_s));
-                } else {
-                    std.log.err("Could not find sheet {s} for anim on {s} with data id {}", .{ tex_data.sheet, type_name, self.data_id });
-                    break :updateAnim;
-                }
-            }
-        }
-    }
+    updateAnimation(type_name, time, self.data.animation, self.data_id, self.data.draw_on_ground, &self.atlas_data, &self.next_anim, &self.anim_idx);
 }
 
 pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.?, float_time_ms: f32, x: f32, y: f32, scale: f32) void {

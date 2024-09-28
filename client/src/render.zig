@@ -81,6 +81,7 @@ pub const QuadOptions = struct {
     shadow_color: u32 = 0x000000,
     scissor: element.ScissorRect = .{},
     sort_extra: f32 = 0,
+    render_type_override: ?RenderType = null,
 };
 
 pub const RenderType = enum(u32) {
@@ -92,6 +93,11 @@ pub const RenderType = enum(u32) {
     text_drop_shadow = 5,
     text_normal_subpixel_off = 6,
     text_drop_shadow_subpixel_off = 7,
+    wall_upper = 8,
+    wall_top_side = 9,
+    wall_bottom_side = 10,
+    wall_left_side = 11,
+    wall_right_side = 12,
 };
 
 pub const GenericData = extern struct {
@@ -530,7 +536,7 @@ pub fn init(ctx: *gpu.GraphicsContext, allocator: std.mem.Allocator) !void {
 }
 
 pub fn drawQuad(x: f32, y: f32, w: f32, h: f32, atlas_data: assets.AtlasData, opts: QuadOptions) void {
-    const render_type: RenderType = switch (atlas_data.atlas_type) {
+    const render_type: RenderType = if (opts.render_type_override) |rt| rt else switch (atlas_data.atlas_type) {
         .ui => .ui_quad,
         .base => .quad,
     };

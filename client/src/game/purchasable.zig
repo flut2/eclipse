@@ -30,7 +30,7 @@ pub const Purchasable = struct {
     }
 
     pub fn deinit(self: *Purchasable, allocator: std.mem.Allocator) void {
-        base.deinit(self, Purchasable, allocator);
+        base.deinit(self, allocator);
     }
 
     pub fn update(_: *Purchasable, _: i64) void {}

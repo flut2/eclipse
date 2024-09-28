@@ -187,5 +187,40 @@
             }
         ],
         "draw_on_ground": true
+    },
+    {
+        "id": 11,
+        "name": "Sandstone Wall",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 15
+            }
+        ],
+        "top_textures": [
+            {
+                "sheet": "ground",
+                "index": 14
+            }
+        ],
+        "bottom_textures": [
+            {
+                "sheet": "ground",
+                "index": 14
+            }
+        ],
+        "left_textures": [
+            {
+                "sheet": "ground",
+                "index": 14
+            }
+        ],
+        "right_textures": [
+            {
+                "sheet": "ground",
+                "index": 14
+            }
+        ],
+        "is_wall": true
     }
 ]
