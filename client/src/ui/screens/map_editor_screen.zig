@@ -1434,7 +1434,14 @@ pub const MapEditorScreen = struct {
             _ = map.removeEntity(ObjType, self.allocator, field.*);
             field.* = std.math.maxInt(u32);
         } else {
-            if (game_data.entity.from_id.get(data_id) == null) {
+            const data = switch (ObjType) {
+                Entity => game_data.entity,
+                Enemy => game_data.enemy,
+                Portal => game_data.portal,
+                Container => game_data.container,
+                else => @compileError("Invalid type"),
+            }.from_id.get(data_id);
+            if (data == null) {
                 std.log.err("Data not found for object with data id {}, setting at x={}, y={} cancelled", .{ data_id, x, y });
                 return;
             }
@@ -1457,6 +1464,9 @@ pub const MapEditorScreen = struct {
                 .map_id = next_map_id.*,
                 .data_id = data_id,
             };
+            const needs_lock = ObjType == Entity and data.?.is_wall;
+            if (needs_lock) lock.lock();
+            defer if (needs_lock) lock.unlock();
             obj.addToMap(self.allocator);
         }
     }

@@ -111,8 +111,8 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
     for (parsed_map.tiles, 0..) |tile, i| {
         const ux: u16 = @intCast(i % parsed_map.w);
         const uy: u16 = @intCast(@divFloor(i, parsed_map.w));
-        const fx: f32 = @as(f32, @floatFromInt(ux)) + 0.5;
-        const fy: f32 = @as(f32, @floatFromInt(uy)) + 0.5;
+        const fx: f32 = @floatFromInt(ux);
+        const fy: f32 = @floatFromInt(uy);
 
         if (tile.ground_name.len > 0) {
             const data = game_data.ground.from_name.getPtr(tile.ground_name) orelse @panic("Tile had no data attached");

@@ -76,7 +76,7 @@ pub fn screenToWorld(self: @This(), x_in: f32, y_in: f32) struct { x: f32, y: f3
     const x_div = (x_in - self.width / 2.0) / (px_per_tile * self.scale);
     const y_div = (y_in - self.height / 2.0) / (px_per_tile * self.scale);
     return .{
-        .x = self.x + x_div * cos + y_div * sin + 0.5,
-        .y = self.y + x_div * -sin + y_div * cos + 0.5,
+        .x = self.x + x_div * cos + y_div * sin,
+        .y = self.y + x_div * -sin + y_div * cos,
     };
 }

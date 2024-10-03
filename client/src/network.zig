@@ -733,8 +733,8 @@ pub const Server = struct {
         for (data.tiles) |tile| {
             var square: Square = .{
                 .data_id = tile.data_id,
-                .x = @as(f32, @floatFromInt(tile.x)) + 0.5,
-                .y = @as(f32, @floatFromInt(tile.y)) + 0.5,
+                .x = @floatFromInt(tile.x),
+                .y = @floatFromInt(tile.y),
             };
 
             square.addToMap();

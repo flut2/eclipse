@@ -7,6 +7,8 @@ const ui_systems = @import("../ui/systems.zig");
 const map = @import("map.zig");
 const main = @import("../main.zig");
 
+const Entity = @import("entity.zig").Entity;
+
 pub const Square = struct {
     pub const left_blend_idx = 0;
     pub const top_blend_idx = 1;
@@ -67,6 +69,40 @@ pub const Square = struct {
                         main.minimap_update.min_y = @min(main.minimap_update.min_y, floor_y);
                         main.minimap_update.max_y = @max(main.minimap_update.max_y, floor_y);
                     }
+                }
+            }
+        }
+
+        {
+            var lock = map.useLockForType(Entity);
+            lock.lock();
+            defer lock.unlock();
+
+            var add_lock = map.addLockForType(Entity);
+            add_lock.lock();
+            defer add_lock.unlock();
+            
+            if (map.getSquare(self.x, self.y - 1, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) wall.wall_side_behaviors.bottom = .normal;
+                }
+            }
+
+            if (map.getSquare(self.x, self.y + 1, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) wall.wall_side_behaviors.top = .normal;
+                }
+            }
+
+            if (map.getSquare(self.x - 1, self.y, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) wall.wall_side_behaviors.right = .normal;
+                }
+            }
+
+            if (map.getSquare(self.x + 1, self.y, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) wall.wall_side_behaviors.left = .normal;
                 }
             }
         }

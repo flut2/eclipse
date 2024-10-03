@@ -320,6 +320,23 @@ pub fn findObject(comptime T: type, map_id: u32, comptime constness: Constness) 
     return null;
 }
 
+// Using this is a bad idea if you don't know what you're doing
+pub fn findObjectWithAddList(comptime T: type, map_id: u32, comptime constness: Constness) if (constness == .con) ?T else ?*T {
+    std.debug.assert(!addLockForType(T).tryLock());
+    std.debug.assert(!useLockForType(T).tryLock());
+    switch (constness) {
+        .con => {
+            for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
+            for (addLockForType(T).items) |obj| if (obj.map_id == map_id) return obj;
+        },
+        .ref => {
+            for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
+            for (addListForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
+        },
+    }
+    return null;
+}
+
 pub fn localPlayer(comptime constness: Constness) if (constness == .con) ?Player else ?*Player {
     std.debug.assert(!useLockForType(Player).tryLock());
     if (info.player_map_id == std.math.maxInt(u32)) return null;
@@ -524,8 +541,8 @@ pub fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
         return null;
     }
 
-    const floor_x: u32 = @intFromFloat(@floor(x));
-    const floor_y: u32 = @intFromFloat(@floor(y));
+    const floor_x: u32 = @intFromFloat(x);
+    const floor_y: u32 = @intFromFloat(y);
     if (check_validity and !validPos(floor_x, floor_y)) {
         @branchHint(.unlikely);
         return null;

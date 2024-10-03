@@ -48,6 +48,13 @@ pub const Entity = struct {
     bottom_next_anim: i64 = -1,
     left_next_anim: i64 = -1,
     right_next_anim: i64 = -1,
+    wall_side_behaviors: packed struct {
+        const SideBehavior = enum(u2) { normal, cull, blackout };
+        top: SideBehavior = .normal,
+        bottom: SideBehavior = .normal,
+        left: SideBehavior = .normal,
+        right: SideBehavior = .normal,
+    } = .{},
 
     fn parseSide(self: *Entity, comptime side_name: []const u8) void {
         if (@field(self.data, side_name ++ "_textures")) |tex_list| {
@@ -110,6 +117,51 @@ pub const Entity = struct {
             }
         }
 
+        if (self.data.is_wall) {
+            self.x = @floor(self.x);
+            self.y = @floor(self.y);
+
+            var add_lock = map.addLockForType(Entity);
+            add_lock.lock();
+            defer add_lock.unlock();
+
+            if (map.getSquare(self.x, self.y - 1, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) {
+                        wall.wall_side_behaviors.bottom = .cull;
+                        self.wall_side_behaviors.top = .cull;
+                    }
+                }
+            } else self.wall_side_behaviors.top = .blackout;
+
+            if (map.getSquare(self.x, self.y + 1, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) {
+                        wall.wall_side_behaviors.top = .cull;
+                        self.wall_side_behaviors.bottom = .cull;
+                    }
+                }
+            } else self.wall_side_behaviors.bottom = .blackout;
+
+            if (map.getSquare(self.x - 1, self.y, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) {
+                        wall.wall_side_behaviors.right = .cull;
+                        self.wall_side_behaviors.left = .cull;
+                    }
+                }
+            } else self.wall_side_behaviors.left = .blackout;
+
+            if (map.getSquare(self.x + 1, self.y, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) {
+                        wall.wall_side_behaviors.left = .cull;
+                        self.wall_side_behaviors.right = .cull;
+                    }
+                }
+            } else self.wall_side_behaviors.right = .blackout;
+        }
+
         base.addToMap(self, Entity, allocator);
     }
 
@@ -123,12 +175,24 @@ pub const Entity = struct {
         }
     }
 
-    fn drawWallSide(render_type: render.RenderType, x: f32, y: f32, scale: f32, atlas_data: assets.AtlasData, rotation: f32, sort_extra: f32) void {
+    fn drawWallSide(
+        render_type: render.RenderType,
+        x: f32,
+        y: f32,
+        scale: f32,
+        atlas_data: assets.AtlasData,
+        rotation: f32,
+        sort_extra: f32,
+        color: u32,
+        color_intensity: f32,
+    ) void {
         const size = px_per_tile * scale;
         render.drawQuad(x, y, size, size, atlas_data, .{
             .rotation = rotation,
             .render_type_override = render_type,
             .sort_extra = sort_extra,
+            .color = color,
+            .color_intensity = color_intensity,
         });
     }
 
@@ -136,19 +200,40 @@ pub const Entity = struct {
         if (self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
 
         if (self.data.is_wall) {
-            const tile_pos = cam_data.worldToScreen(@floor(self.x) + 0.5, @floor(self.y) + 0.5);
-            drawWallSide(.wall_upper, tile_pos.x, tile_pos.y, cam_data.scale, self.atlas_data, cam_data.angle, -1.0);
+            const tile_pos = cam_data.worldToScreen(self.x, self.y);
+            const offset = px_per_tile * cam_data.scale / 2.0;
+            drawWallSide(.wall_upper, tile_pos.x, tile_pos.y, cam_data.scale, self.atlas_data, cam_data.angle, -offset * 3.0 - 2.0, 0, 0.1);
 
             const pi_div_2 = std.math.pi / 2.0;
             const bound_angle = utils.halfBound(cam_data.angle);
-            if (bound_angle <= pi_div_2 and bound_angle >= -pi_div_2)
-                drawWallSide(.wall_top_side, tile_pos.x, tile_pos.y, cam_data.scale, self.top_atlas_data, cam_data.angle, 0.0);
-            if (bound_angle >= pi_div_2 and bound_angle <= std.math.pi or bound_angle >= -std.math.pi and bound_angle <= -pi_div_2)
-                drawWallSide(.wall_bottom_side, tile_pos.x, tile_pos.y, cam_data.scale, self.bottom_atlas_data, cam_data.angle, 0.0);
-            if (bound_angle >= 0 and bound_angle <= std.math.pi)
-                drawWallSide(.wall_left_side, tile_pos.x, tile_pos.y, cam_data.scale, self.left_atlas_data, cam_data.angle, 0.0);
-            if (bound_angle <= 0 and bound_angle >= -std.math.pi)
-                drawWallSide(.wall_right_side, tile_pos.x, tile_pos.y, cam_data.scale, self.right_atlas_data, cam_data.angle, 0.0);
+
+            if (self.wall_side_behaviors.top != .cull and
+                (bound_angle >= pi_div_2 and bound_angle <= std.math.pi or bound_angle >= -std.math.pi and bound_angle <= -pi_div_2))
+            {
+                const atlas_data = if (self.wall_side_behaviors.top == .blackout) assets.generic_8x8 else self.top_atlas_data;
+                drawWallSide(.wall_top_side, tile_pos.x, tile_pos.y, cam_data.scale, atlas_data, cam_data.angle, -offset - 1.0, 0, 0.25);
+            }
+
+            if (self.wall_side_behaviors.bottom != .cull and
+                bound_angle <= pi_div_2 and bound_angle >= -pi_div_2)
+            {
+                const atlas_data = if (self.wall_side_behaviors.bottom == .blackout) assets.generic_8x8 else self.bottom_atlas_data;
+                drawWallSide(.wall_bottom_side, tile_pos.x, tile_pos.y, cam_data.scale, atlas_data, cam_data.angle, -offset - 1.0, 0, 0.25);
+            }
+
+            if (self.wall_side_behaviors.left != .cull and
+                bound_angle >= 0 and bound_angle <= std.math.pi)
+            {
+                const atlas_data = if (self.wall_side_behaviors.left == .blackout) assets.generic_8x8 else self.left_atlas_data;
+                drawWallSide(.wall_left_side, tile_pos.x, tile_pos.y, cam_data.scale, atlas_data, cam_data.angle, -offset - 1.0, 0, 0.25);
+            }
+
+            if (self.wall_side_behaviors.right != .cull and
+                bound_angle <= 0 and bound_angle >= -std.math.pi)
+            {
+                const atlas_data = if (self.wall_side_behaviors.right == .blackout) assets.generic_8x8 else self.right_atlas_data;
+                drawWallSide(.wall_right_side, tile_pos.x, tile_pos.y, cam_data.scale, atlas_data, cam_data.angle, -offset - 1.0, 0, 0.25);
+            }
             return;
         }
 
@@ -200,7 +285,7 @@ pub const Entity = struct {
         // flash
 
         if (main.settings.enable_lights) {
-            const tile_pos = cam_data.worldToScreen(@floor(self.x) + 0.5, @floor(self.y) + 0.5);
+            const tile_pos = cam_data.worldToScreen(@floor(self.x), @floor(self.y));
             render.drawLight(allocator, self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
         }
 

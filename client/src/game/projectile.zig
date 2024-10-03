@@ -257,7 +257,7 @@ pub const Projectile = struct {
             lock.lock();
             defer lock.unlock();
             if (map.findObject(Entity, square.entity_map_id, .con)) |e| {
-                if (e.data.occupy_square) {
+                if (e.data.occupy_square or e.data.full_occupy or e.data.is_wall) {
                     particles.HitEffect.addToMap(.{
                         .x = self.x,
                         .y = self.y,

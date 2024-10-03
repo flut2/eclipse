@@ -9,6 +9,10 @@
             .url = "git+https://github.com/libuv/libuv.git#27134547ff7754107e2c490e0c2f0ed18c05dae2",
             .hash = "122023c580b23f2c7e08dbcab26190ac4b503f1516f702013821475817289088b585",
         },
+        .box2d_c = .{
+            .url = "git+https://github.com/erincatto/box2d.git#b864f533c3d851d5c7b55fd6fb4bac00466ff854",
+            .hash = "122040ad13e9c5892ece21aafe898273cc40a59b4d2d186aa108d6c3b71187feba30",
+        },
     },
     .paths = .{
         "build.zig",
