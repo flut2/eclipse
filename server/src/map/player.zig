@@ -153,8 +153,8 @@ pub const Player = struct {
             std.log.err("Spawn point {} was not walkable for player with data id {}", .{ rand_point, self.data_id });
             return;
         }
-        self.x = @floatFromInt(rand_point.x);
-        self.y = @floatFromInt(rand_point.y);
+        self.x = @as(f32, @floatFromInt(rand_point.x)) + 0.5;
+        self.y = @as(f32, @floatFromInt(rand_point.y)) + 0.5;
     }
 
     pub fn applyCondition(self: *Player, condition: utils.ConditionEnum, duration: i64) !void {

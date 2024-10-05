@@ -964,8 +964,8 @@ pub const MapEditorScreen = struct {
             for (0..self.map_size) |y| {
                 for (0..self.map_size) |x| {
                     var square: Square = .{
-                        .x = @floatFromInt(x),
-                        .y = @floatFromInt(y),
+                        .x = @as(f32, @floatFromInt(x)) + 0.5,
+                        .y = @as(f32, @floatFromInt(y)) + 0.5,
                         .data_id = Square.editor_tile,
                     };
                     square.addToMap();
@@ -1363,8 +1363,8 @@ pub const MapEditorScreen = struct {
         map.square_lock.lock();
         defer map.square_lock.unlock();
         var square: Square = .{
-            .x = @floatFromInt(x),
-            .y = @floatFromInt(y),
+            .x = @as(f32, @floatFromInt(x)) + 0.5,
+            .y = @as(f32, @floatFromInt(y)) + 0.5,
             .data_id = data_id,
         };
         square.addToMap();
@@ -1398,8 +1398,8 @@ pub const MapEditorScreen = struct {
 
             const duped_name = self.allocator.dupe(u8, data.name) catch @panic("OOM");
             var indicator: Entity = .{
-                .x = @floatFromInt(x),
-                .y = @floatFromInt(y),
+                .x = @as(f32, @floatFromInt(x)) + 0.5,
+                .y = @as(f32, @floatFromInt(y)) + 0.5,
                 .map_id = next_map_id.*,
                 .data_id = 0xFFFE,
                 .name = duped_name,
@@ -1459,8 +1459,8 @@ pub const MapEditorScreen = struct {
             field.* = next_map_id.*;
 
             var obj: ObjType = .{
-                .x = @floatFromInt(x),
-                .y = @floatFromInt(y),
+                .x = @as(f32, @floatFromInt(x)) + 0.5,
+                .y = @as(f32, @floatFromInt(y)) + 0.5,
                 .map_id = next_map_id.*,
                 .data_id = data_id,
             };

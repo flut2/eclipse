@@ -5,8 +5,8 @@
         .shared = .{ .path = "../shared" },
         .hiredis = .{ .path = "libs/hiredis" },
         .httpz = .{
-            .url = "git+https://github.com/karlseguin/http.zig.git#074985fc31dc48dce7afc72e1b578db18569f832",
-            .hash = "1220205fd3902246e852ae75bf5ed0aa3007f29a1ddfab72f73cac25b142afd1730f",
+            .url = "git+https://github.com/karlseguin/http.zig.git#6e45041ef1e0ed8d3e36e15ccb459a3392571f7f",
+            .hash = "1220c47311099ba5705d906d11927bc222e9562830bcc32b6d638e10124371f4eeb6",
         },
     },
     .paths = .{

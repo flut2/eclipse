@@ -30,7 +30,7 @@ var server: httpz.Server(Handlers) = undefined;
 pub fn init(allocator: std.mem.Allocator) !void {
     server = try httpz.Server(Handlers).init(allocator, .{ .port = settings.login_port }, handlers);
 
-    var router = server.router();
+    var router = server.router(.{});
     router.post("/account/verify", handleAccountVerify, .{});
     router.post("/account/register", handleAccountRegister, .{});
     router.post("/char/list", handleCharList, .{});

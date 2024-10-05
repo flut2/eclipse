@@ -200,7 +200,7 @@ pub const Entity = struct {
         if (self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
 
         if (self.data.is_wall) {
-            const tile_pos = cam_data.worldToScreen(self.x, self.y);
+            const tile_pos = cam_data.worldToScreen(@floor(self.x) + 0.5, @floor(self.y) + 0.5);
             const offset = px_per_tile * cam_data.scale / 2.0;
             drawWallSide(.wall_upper, tile_pos.x, tile_pos.y, cam_data.scale, self.atlas_data, cam_data.angle, -offset * 3.0 - 2.0, 0, 0.1);
 
