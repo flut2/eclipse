@@ -579,7 +579,7 @@ pub const Player = struct {
             const walkable = !square.data.no_walk;
             const not_occupied = blk: {
                 const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk true;
-                break :blk !(e.data.occupy_square or e.data.is_wall);
+                break :blk !e.data.occupy_square;
             };
             return square.data_id != Square.editor_tile and square.data_id != Square.empty_tile and walkable and not_occupied;
         } else return false;
@@ -588,7 +588,7 @@ pub const Player = struct {
     fn isFullOccupy(x: f32, y: f32) bool {
         if (map.getSquare(x, y, true)) |square| {
             const e = map.findObject(Entity, square.entity_map_id, .con) orelse return false;
-            return e.data.full_occupy;
+            return e.data.full_occupy or e.data.is_wall;
         } else return true;
     }
 
