@@ -36,17 +36,6 @@ pub var use_lock: struct {
     particle_effect: std.Thread.Mutex = .{},
     purchasable: std.Thread.Mutex = .{},
 } = .{};
-pub var add_lock: struct {
-    player: std.Thread.Mutex = .{},
-    entity: std.Thread.Mutex = .{},
-    enemy: std.Thread.Mutex = .{},
-    container: std.Thread.Mutex = .{},
-    portal: std.Thread.Mutex = .{},
-    projectile: std.Thread.Mutex = .{},
-    particle: std.Thread.Mutex = .{},
-    particle_effect: std.Thread.Mutex = .{},
-    purchasable: std.Thread.Mutex = .{},
-} = .{};
 pub var list: struct {
     player: std.ArrayListUnmanaged(Player) = .empty,
     entity: std.ArrayListUnmanaged(Entity) = .empty,
@@ -106,21 +95,6 @@ pub fn useLockForType(comptime T: type) *std.Thread.Mutex {
         particles.Particle => &use_lock.particle,
         particles.ParticleEffect => &use_lock.particle_effect,
         Purchasable => &use_lock.purchasable,
-        else => @compileError("Invalid type"),
-    };
-}
-
-pub fn addLockForType(comptime T: type) *std.Thread.Mutex {
-    return switch (T) {
-        Entity => &add_lock.entity,
-        Enemy => &add_lock.enemy,
-        Player => &add_lock.player,
-        Portal => &add_lock.portal,
-        Container => &add_lock.container,
-        Projectile => &add_lock.projectile,
-        particles.Particle => &add_lock.particle,
-        particles.ParticleEffect => &add_lock.particle_effect,
-        Purchasable => &add_lock.purchasable,
         else => @compileError("Invalid type"),
     };
 }
@@ -191,9 +165,6 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     }
 
     inline for (@typeInfo(@TypeOf(add_list)).@"struct".fields) |field| {
-        var lock = &@field(add_lock, field.name);
-        lock.lock();
-        defer lock.unlock();
         var child_list = &@field(add_list, field.name);
         defer child_list.deinit(allocator);
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
@@ -208,8 +179,6 @@ pub fn deinit(allocator: std.mem.Allocator) void {
         allocator.free(squares);
     }
 
-    main.minimap_lock.lock();
-    defer main.minimap_lock.unlock();
     minimap.deinit();
     allocator.free(minimap_copy);
 }
@@ -234,9 +203,6 @@ pub fn dispose(allocator: std.mem.Allocator) void {
     }
 
     inline for (@typeInfo(@TypeOf(add_list)).@"struct".fields) |field| {
-        var lock = &@field(add_lock, field.name);
-        lock.lock();
-        defer lock.unlock();
         var child_list = &@field(add_list, field.name);
         defer child_list.clearRetainingCapacity();
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
@@ -252,8 +218,6 @@ pub fn dispose(allocator: std.mem.Allocator) void {
         @memset(squares, Square{});
     }
 
-    main.minimap_lock.lock();
-    defer main.minimap_lock.unlock();
     @memset(minimap.data, 0);
     main.need_force_update = true;
 
@@ -294,13 +258,9 @@ pub fn setMapInfo(data: network_data.MapInfo, allocator: std.mem.Allocator) void
     defer main.camera.lock.unlock();
     main.camera.minimap_zoom = @max(1, @min(max_zoom, main.camera.minimap_zoom));
 
-    main.minimap_lock.lock();
-    defer main.minimap_lock.unlock();
     @memset(minimap.data, 0);
     main.need_force_update = true;
 
-    // main.minimap_lock.lock();
-    // defer main.minimap_lock.unlock();
     // main.minimap_update = .{};
     // minimap.deinit();
     // minimap = zstbi.Image.createEmpty(data.width, data.height, 4, .{}) catch |e| {
@@ -322,12 +282,11 @@ pub fn findObject(comptime T: type, map_id: u32, comptime constness: Constness) 
 
 // Using this is a bad idea if you don't know what you're doing
 pub fn findObjectWithAddList(comptime T: type, map_id: u32, comptime constness: Constness) if (constness == .con) ?T else ?*T {
-    std.debug.assert(!addLockForType(T).tryLock());
     std.debug.assert(!useLockForType(T).tryLock());
     switch (constness) {
         .con => {
             for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
-            for (addLockForType(T).items) |obj| if (obj.map_id == map_id) return obj;
+            for (addListForType(T).items) |obj| if (obj.map_id == map_id) return obj;
         },
         .ref => {
             for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
@@ -381,14 +340,12 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
         }
     };
 
-    main.camera.lock.lock();
     const cam_x = main.camera.x;
     const cam_y = main.camera.y;
     const cam_min_x: f32 = @floatFromInt(main.camera.min_x);
     const cam_max_x: f32 = @floatFromInt(main.camera.max_x);
     const cam_min_y: f32 = @floatFromInt(main.camera.min_y);
     const cam_max_y: f32 = @floatFromInt(main.camera.max_y);
-    main.camera.lock.unlock();
 
     inline for (.{ Entity, Enemy, Player, Portal, Projectile, Container, particles.Particle, particles.ParticleEffect, Purchasable }) |ObjType| {
         var obj_lock = useLockForType(ObjType);
@@ -396,9 +353,6 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
         defer obj_lock.unlock();
         var obj_list = listForType(ObjType);
         {
-            var lock = addLockForType(ObjType);
-            lock.lock();
-            defer lock.unlock();
             var obj_add_list = addListForType(ObjType);
             defer obj_add_list.clearRetainingCapacity();
             obj_list.appendSlice(allocator, obj_add_list.items) catch @panic("Failed to add objects");
@@ -463,8 +417,6 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
                         main.camera.update(obj.x, obj.y, dt, input.rotate);
                         addMoveRecord(allocator, time, obj.x, obj.y);
                         if (input.attacking) {
-                            main.camera.lock.lock();
-                            defer main.camera.lock.unlock();
                             const shoot_angle = std.math.atan2(
                                 input.mouse_y - main.camera.height / 2.0,
                                 input.mouse_x - main.camera.width / 2.0,

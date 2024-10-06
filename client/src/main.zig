@@ -61,14 +61,13 @@ pub var account_arena_allocator: std.mem.Allocator = undefined;
 pub var current_account: ?AccountData = null;
 pub var character_list: ?network_data.CharacterListData = null;
 pub var current_time: i64 = 0;
+pub var win_freq: u64 = 0;
 pub var render_thread: std.Thread = undefined;
-pub var network_thread: ?std.Thread = null;
-pub var tick_render = true;
 pub var tick_frame = false;
+pub var tick_render = true;
 pub var editing_map = false;
 pub var need_minimap_update = false;
 pub var need_force_update = false;
-pub var minimap_lock: std.Thread.Mutex = .{};
 pub var need_swap_chain_update = false;
 pub var minimap_update: struct {
     min_x: u32 = std.math.maxInt(u32),
@@ -82,6 +81,7 @@ pub var start_time: i64 = 0;
 pub var server: network.Server = undefined;
 pub var camera: Camera = .{};
 pub var settings: Settings = .{};
+pub var main_loop: *uv.uv_loop_t = undefined;
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
     const float_w: f32 = @floatFromInt(w);
@@ -103,54 +103,40 @@ fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
     need_swap_chain_update = true;
 }
 
-fn networkCallback(ip: []const u8, port: u16, hello_data: network_data.C2SPacket) void {
-    defer network_thread = null;
-
-    if (build_options.enable_tracy) tracy.SetThreadName("Network");
-
-    rpmalloc.initThread() catch |e| {
-        std.log.err("Network thread initialization failed: {}", .{e});
-        return;
-    };
-    defer rpmalloc.deinitThread(true);
-
-    server = .{ .hello_data = hello_data };
-    defer server.deinit();
-
-    server.connect(ip, port) catch |e| {
-        std.log.err("Connection failed: {}", .{e});
-        return;
-    };
-}
-
 // lock ui_systems.ui_lock before calling (UI already does this implicitly)
 pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_data_id: u16) void {
-    if (network_thread != null or current_account == null)
+    if (current_account == null)
         return;
 
-    network_thread = std.Thread.spawn(.{ .allocator = allocator }, networkCallback, .{ selected_server.ip, selected_server.port, network_data.C2SPacket{ .hello = .{
+    // TODO: readd RLS when fixed
+    server.hello_data = network_data.C2SPacket{ .hello = .{
         .build_ver = build_options.version,
         .email = current_account.?.email,
         .token = current_account.?.token,
         .char_id = @intCast(char_id),
         .class_id = class_data_id,
-    } } }) catch |e| {
+    } };
+
+    server.connect(selected_server.ip, selected_server.port) catch |e| {
         std.log.err("Connection failed: {}", .{e});
         return;
     };
 }
 
 pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_map: []u8) void {
-    if (network_thread != null or current_account == null)
+    if (current_account == null)
         return;
 
-    network_thread = std.Thread.spawn(.{ .allocator = allocator }, networkCallback, .{ selected_server.ip, selected_server.port, network_data.C2SPacket{ .map_hello = .{
+    // TODO: readd RLS when fixed
+    server.hello_data = network_data.C2SPacket{ .map_hello = .{
         .build_ver = build_options.version,
         .email = current_account.?.email,
         .token = current_account.?.token,
         .char_id = char_id,
         .map = test_map,
-    } } }) catch |e| {
+    } };
+
+    server.connect(selected_server.ip, selected_server.port) catch |e| {
         std.log.err("Connection failed: {}", .{e});
         return;
     };
@@ -168,7 +154,7 @@ fn renderTick() !void {
     var last_vsync = settings.enable_vsync;
     var fps_time_start: i64 = 0;
     var frames: usize = 0;
-    while (tick_render) {
+    while (tick_render) : (std.atomic.spinLoopHint()) {
         if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
             ctx.swapchain.release();
             const framebuffer_size = ctx.window_provider.fn_getFramebufferSize(ctx.window_provider.window);
@@ -179,9 +165,6 @@ fn renderTick() !void {
             last_vsync = settings.enable_vsync;
             need_swap_chain_update = false;
         }
-
-        if (!tick_render)
-            return;
 
         defer frames += 1;
         const back_buffer = ctx.swapchain.getCurrentTextureView();
@@ -210,9 +193,6 @@ fn renderTick() !void {
         minimapUpdate: {
             if (!tick_frame or ui_systems.screen == .editor)
                 break :minimapUpdate;
-
-            minimap_lock.lock();
-            defer minimap_lock.unlock();
 
             if (need_minimap_update) {
                 const min_x = @min(map.minimap.width, minimap_update.min_x);
@@ -259,6 +239,28 @@ fn renderTick() !void {
     }
 }
 
+export fn gameTick(idle: [*c]uv.uv_idle_t) void {
+    var window: *glfw.Window = @ptrCast(@alignCast(idle.*.data));
+    if (window.shouldClose()) {
+        @branchHint(.unlikely);
+        uv.uv_stop(@ptrCast(main_loop));
+        return;
+    }
+
+    glfw.pollEvents();
+
+    const instant = std.time.Instant.now() catch unreachable;
+    const time = switch (builtin.os.tag) {
+        .windows => @as(i64, @intCast(@divFloor(instant.timestamp * std.time.us_per_s, win_freq))),
+        else => @divFloor(instant.timestamp.nsec, std.time.ns_per_us) + instant.timestamp.sec * std.time.us_per_s,
+    } - start_time;
+    const dt: f32 = @floatFromInt(if (current_time > 0) time - current_time else 0);
+    current_time = time;
+
+    if (tick_frame or editing_map) map.update(allocator, time, dt);
+    ui_systems.update(time, dt) catch @panic("todo");
+}
+
 pub fn disconnect(has_lock: bool) void {
     map.dispose(allocator);
     input.reset();
@@ -283,7 +285,7 @@ pub fn disconnect(has_lock: bool) void {
 pub fn main() !void {
     if (build_options.enable_tracy) tracy.SetThreadName("Main");
 
-    const win_freq = if (builtin.os.tag == .windows) std.os.windows.QueryPerformanceFrequency() else {};
+    win_freq = if (builtin.os.tag == .windows) std.os.windows.QueryPerformanceFrequency() else 0;
     const start_instant = std.time.Instant.now() catch unreachable;
     start_time = switch (builtin.os.tag) {
         .windows => @intCast(@divFloor(start_instant.timestamp * std.time.us_per_s, win_freq)),
@@ -344,48 +346,6 @@ pub fn main() !void {
     input.init(allocator);
     defer input.deinit();
 
-    if (current_account) |acc| {
-        const token_str = try std.fmt.allocPrint(account_arena_allocator, "{}", .{acc.token});
-        defer account_arena_allocator.free(token_str);
-
-        var data: std.StringHashMapUnmanaged([]const u8) = .empty;
-        try data.put(account_arena_allocator, "email", acc.email);
-        try data.put(account_arena_allocator, "token", token_str);
-        defer data.deinit(account_arena_allocator);
-
-        var needs_free = true;
-        const response = requests.sendRequest(build_options.login_server_uri ++ "char/list", data) catch |e| blk: {
-            switch (e) {
-                error.ConnectionRefused => {
-                    needs_free = false;
-                    break :blk "Connection Refused";
-                },
-                else => return e,
-            }
-        };
-        defer if (needs_free) requests.freeResponse(response);
-
-        enterGame: {
-            character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, account_arena_allocator, response, .{ .allocate = .alloc_always }) catch {
-                ui_systems.ui_lock.lock();
-                defer ui_systems.ui_lock.unlock();
-                ui_systems.switchScreen(.main_menu);
-                break :enterGame;
-            };
-            if (character_list.?.characters.len == 0) {
-                ui_systems.ui_lock.lock();
-                defer ui_systems.ui_lock.unlock();
-                ui_systems.switchScreen(.main_menu);
-                break :enterGame;
-            }
-            enterGame(character_list.?.servers[0], character_list.?.characters[0].char_id, std.math.maxInt(u16));
-        }
-    } else {
-        ui_systems.ui_lock.lock();
-        defer ui_systems.ui_lock.unlock();
-        ui_systems.switchScreen(.main_menu);
-    }
-
     glfw.windowHintTyped(.client_api, .no_api);
     const window = try glfw.Window.create(1280, 720, "Eclipse", null);
     defer window.destroy();
@@ -436,24 +396,76 @@ pub fn main() !void {
         render_thread.join();
     }
 
-    defer server.signalShutdown();
+    main_loop = try allocator.create(uv.uv_loop_t);
+    const loop_status = uv.uv_loop_init(@ptrCast(main_loop));
+    if (loop_status != 0) {
+        std.log.err("Loop creation error: {s}", .{uv.uv_strerror(loop_status)});
+        return error.NoLoop;
+    }
+    defer allocator.destroy(main_loop);
 
-    while (!window.shouldClose()) {
-        glfw.pollEvents();
+    try server.init();
+    defer server.deinit();
 
-        const instant = std.time.Instant.now() catch unreachable;
-        const time = switch (builtin.os.tag) {
-            .windows => @as(i64, @intCast(@divFloor(instant.timestamp * std.time.us_per_s, win_freq))),
-            else => @divFloor(instant.timestamp.nsec, std.time.ns_per_us) + instant.timestamp.sec * std.time.us_per_s,
-        } - start_time;
-        const dt: f32 = @floatFromInt(if (current_time > 0) time - current_time else 0);
-        current_time = time;
+    if (current_account) |acc| {
+        const token_str = try std.fmt.allocPrint(account_arena_allocator, "{}", .{acc.token});
+        defer account_arena_allocator.free(token_str);
 
-        if (tick_frame or editing_map) {
-            @branchHint(.likely);
-            map.update(allocator, time, dt);
+        var data: std.StringHashMapUnmanaged([]const u8) = .empty;
+        try data.put(account_arena_allocator, "email", acc.email);
+        try data.put(account_arena_allocator, "token", token_str);
+        defer data.deinit(account_arena_allocator);
+
+        var needs_free = true;
+        const response = requests.sendRequest(build_options.login_server_uri ++ "char/list", data) catch |e| blk: {
+            switch (e) {
+                error.ConnectionRefused => {
+                    needs_free = false;
+                    break :blk "Connection Refused";
+                },
+                else => return e,
+            }
+        };
+        defer if (needs_free) requests.freeResponse(response);
+
+        enterGame: {
+            character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, account_arena_allocator, response, .{ .allocate = .alloc_always }) catch {
+                ui_systems.ui_lock.lock();
+                defer ui_systems.ui_lock.unlock();
+                ui_systems.switchScreen(.main_menu);
+                break :enterGame;
+            };
+            if (character_list.?.characters.len == 0) {
+                ui_systems.ui_lock.lock();
+                defer ui_systems.ui_lock.unlock();
+                ui_systems.switchScreen(.main_menu);
+                break :enterGame;
+            }
+            enterGame(character_list.?.servers[0], character_list.?.characters[0].char_id, std.math.maxInt(u16));
         }
+    } else {
+        ui_systems.ui_lock.lock();
+        defer ui_systems.ui_lock.unlock();
+        ui_systems.switchScreen(.main_menu);
+    }
 
-        try ui_systems.update(time, dt);
+    var idler: uv.uv_idle_t = undefined;
+    const idle_init_status = uv.uv_idle_init(@ptrCast(main_loop), &idler);
+    if (idle_init_status != 0) {
+        std.log.err("Idle creation error: {s}", .{uv.uv_strerror(loop_status)});
+        return error.NoIdle;
+    }
+    idler.data = window;
+
+    const idle_start_status = uv.uv_idle_start(&idler, gameTick);
+    if (idle_start_status != 0) {
+        std.log.err("Idle start error: {s}", .{uv.uv_strerror(loop_status)});
+        return error.IdleStartFailed;
+    }
+
+    const run_status = uv.uv_run(@ptrCast(main_loop), uv.UV_RUN_DEFAULT);
+    if (run_status != 0 and run_status != 1) {
+        std.log.err("Run error: {s}", .{uv.uv_strerror(run_status)});
+        return error.RunFailed;
     }
 }

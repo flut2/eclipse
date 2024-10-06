@@ -27,9 +27,6 @@ pub const ThrowParticle = struct {
     last_update: i64 = 0,
 
     pub fn addToMap(part: ThrowParticle) void {
-        var lock = map.addLockForType(Particle);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(Particle).append(allocator, .{ .throw = part }) catch @panic("Adding ThrowParticle failed");
     }
 
@@ -81,9 +78,6 @@ pub const SparkerParticle = struct {
     last_update: i64 = 0,
 
     pub fn addToMap(part: SparkerParticle) void {
-        var lock = map.addLockForType(Particle);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(Particle).append(allocator, .{ .sparker = part }) catch @panic("Adding SparkerParticle failed");
     }
 
@@ -133,9 +127,6 @@ pub const SparkParticle = struct {
     dy: f32,
 
     pub fn addToMap(part: SparkParticle) void {
-        var lock = map.addLockForType(Particle);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(Particle).append(allocator, .{ .spark = part }) catch @panic("Adding SparkParticle failed");
     }
 
@@ -163,9 +154,6 @@ pub const TeleportParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: TeleportParticle) void {
-        var lock = map.addLockForType(Particle);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(Particle).append(allocator, .{ .teleport = part }) catch @panic("Adding TeleportParticle failed");
     }
 
@@ -195,9 +183,6 @@ pub const ExplosionParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: ExplosionParticle) void {
-        var lock = map.addLockForType(Particle);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(Particle).append(allocator, .{ .explosion = part }) catch @panic("Adding ExplosionParticle failed");
     }
 
@@ -229,9 +214,6 @@ pub const HitParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: HitParticle) void {
-        var lock = map.addLockForType(Particle);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(Particle).append(allocator, .{ .hit = part }) catch @panic("Adding HitParticle failed");
     }
 
@@ -264,9 +246,6 @@ pub const HealParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: HealParticle) void {
-        var lock = map.addLockForType(Particle);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(Particle).append(allocator, .{ .heal = part }) catch @panic("Adding HealParticle failed");
     }
 
@@ -347,9 +326,6 @@ pub const ThrowEffect = struct {
     duration: i64,
 
     pub fn addToMap(effect: ThrowEffect) void {
-        var lock = map.addLockForType(ParticleEffect);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(ParticleEffect).append(allocator, .{ .throw = effect }) catch @panic("Adding ThrowEffect failed");
     }
 
@@ -379,9 +355,6 @@ pub const AoeEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: AoeEffect) void {
-        var lock = map.addLockForType(ParticleEffect);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(ParticleEffect).append(allocator, .{ .aoe = effect }) catch @panic("Adding AoeEffect failed");
     }
 
@@ -416,9 +389,6 @@ pub const TeleportEffect = struct {
     y: f32,
 
     pub fn addToMap(effect: TeleportEffect) void {
-        var lock = map.addLockForType(ParticleEffect);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(ParticleEffect).append(allocator, .{ .teleport = effect }) catch @panic("Adding TeleportEffect failed");
     }
 
@@ -451,9 +421,6 @@ pub const LineEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: LineEffect) void {
-        var lock = map.addLockForType(ParticleEffect);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(ParticleEffect).append(allocator, .{ .line = effect }) catch @panic("Adding LineEffect failed");
     }
 
@@ -488,9 +455,6 @@ pub const ExplosionEffect = struct {
     amount: u32,
 
     pub fn addToMap(effect: ExplosionEffect) void {
-        var lock = map.addLockForType(ParticleEffect);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(ParticleEffect).append(allocator, .{ .explosion = effect }) catch @panic("Adding ExplosionEffect failed");
     }
 
@@ -529,9 +493,6 @@ pub const HitEffect = struct {
     amount: u32,
 
     pub fn addToMap(effect: HitEffect) void {
-        var lock = map.addLockForType(ParticleEffect);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(ParticleEffect).append(allocator, .{ .hit = effect }) catch @panic("Adding HitEffect failed");
     }
 
@@ -569,9 +530,6 @@ pub const HealEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: HealEffect) void {
-        var lock = map.addLockForType(ParticleEffect);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(ParticleEffect).append(allocator, .{ .heal = effect }) catch @panic("Adding HealEffect failed");
     }
 
@@ -622,9 +580,6 @@ pub const RingEffect = struct {
     last_activate: i64 = -1,
 
     pub fn addToMap(effect: RingEffect) void {
-        var lock = map.addLockForType(ParticleEffect);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(ParticleEffect).append(allocator, .{ .ring = effect }) catch @panic("Adding RingEffect failed");
     }
 

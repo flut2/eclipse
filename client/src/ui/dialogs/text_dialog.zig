@@ -3,9 +3,6 @@ const element = @import("../element.zig");
 const assets = @import("../../assets.zig");
 const dialog = @import("dialog.zig");
 
-const NineSlice = element.NineSliceImageData;
-const Interactable = element.InteractableImageData;
-
 const width = 300;
 const height = 200;
 const button_w = 100;
@@ -38,7 +35,7 @@ pub const TextDialog = struct {
             .x = 0,
             .y = 0,
             .image_data = .{
-                .nine_slice = NineSlice.fromAtlasData(base_data, width, height, 6, 6, 2, 2, 1.0),
+                .nine_slice = .fromAtlasData(base_data, width, height, 6, 6, 2, 2, 1.0),
             },
         });
 
@@ -60,7 +57,7 @@ pub const TextDialog = struct {
             .x = 0,
             .y = 0,
             .image_data = .{
-                .nine_slice = NineSlice.fromAtlasData(title_data, 0, 0, 6, 11, 2, 2, 1.0),
+                .nine_slice = .fromAtlasData(title_data, 0, 0, 6, 11, 2, 2, 1.0),
             },
         });
 
@@ -83,7 +80,7 @@ pub const TextDialog = struct {
         self.close_button = try self.root.createChild(element.Button{
             .x = (width - button_w) / 2.0,
             .y = height - button_h - 15,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_w, button_h, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_w, button_h, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Ok",
                 .size = 16,

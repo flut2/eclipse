@@ -90,9 +90,6 @@ pub const Entity = struct {
             const tex = self.data.textures[utils.rng.next() % self.data.textures.len];
             if (ui_systems.screen != .editor and self.data.static and self.data.occupy_square) {
                 if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
-                    main.minimap_lock.lock();
-                    defer main.minimap_lock.unlock();
-
                     const floor_y: u32 = @intFromFloat(@floor(self.y));
                     const floor_x: u32 = @intFromFloat(@floor(self.x));
 
@@ -120,10 +117,6 @@ pub const Entity = struct {
         if (self.data.is_wall) {
             self.x = @floor(self.x);
             self.y = @floor(self.y);
-
-            var add_lock = map.addLockForType(Entity);
-            add_lock.lock();
-            defer add_lock.unlock();
 
             if (map.getSquare(self.x, self.y - 1, true)) |square| {
                 if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {

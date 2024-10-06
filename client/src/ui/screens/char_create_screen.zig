@@ -5,8 +5,6 @@ const main = @import("../../main.zig");
 const game_data = @import("shared").game_data;
 const systems = @import("../systems.zig");
 
-const Interactable = element.InteractableImageData;
-
 pub const CharCreateScreen = struct {
     boxes: std.ArrayListUnmanaged(*element.CharacterBox) = .empty,
     allocator: std.mem.Allocator = undefined,
@@ -19,23 +17,17 @@ pub const CharCreateScreen = struct {
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
 
-        const cam_width = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk main.camera.width;
-        };
-
         // TODO: Check which classes are locked as it kicks you to character select if class is locked
         var class_iter = game_data.class.from_id.valueIterator();
         var i: usize = 0;
         while (class_iter.next()) |char| {
             defer i += 1;
             const box = element.create(allocator, element.CharacterBox{
-                .x = (cam_width - button_data_base.width()) / 2,
+                .x = (main.camera.width - button_data_base.width()) / 2,
                 .y = @floatFromInt(50 * i),
                 .id = 0,
                 .class_data_id = char.id,
-                .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 40, 26, 21, 3, 3, 1.0),
+                .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 40, 26, 21, 3, 3, 1.0),
                 .text_data = element.TextData{
                     .text = char.name[0..],
                     .size = 16,

@@ -7,6 +7,8 @@ const pad = @import("assets.zig").padding;
 pub const px_per_tile = 64;
 pub const size_mult = 6.0;
 
+/// This lock is for reading from the render thread (it does not, and should not write),
+/// and for writing from the main thread. Reading from the main thread can be lock free
 lock: std.Thread.Mutex = .{},
 minimap_zoom: f32 = 4.0,
 quake: bool = false,

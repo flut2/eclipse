@@ -57,9 +57,6 @@ pub const Square = struct {
 
                 if (ui_systems.screen != .editor) {
                     if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
-                        main.minimap_lock.lock();
-                        defer main.minimap_lock.unlock();
-
                         const color = color_data[tex.index];
                         const base_data_idx: usize = @intCast(floor_y * map.minimap.num_components * map.minimap.width + floor_x * map.minimap.num_components);
                         @memcpy(map.minimap.data[base_data_idx .. base_data_idx + 4], &@as([4]u8, @bitCast(color)));
@@ -78,10 +75,6 @@ pub const Square = struct {
             lock.lock();
             defer lock.unlock();
 
-            var add_lock = map.addLockForType(Entity);
-            add_lock.lock();
-            defer add_lock.unlock();
-            
             if (map.getSquare(self.x, self.y - 1, true)) |square| {
                 if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
                     if (wall.data.is_wall) wall.wall_side_behaviors.bottom = .normal;

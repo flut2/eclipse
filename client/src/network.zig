@@ -54,10 +54,8 @@ const WriteRequest = extern struct {
 };
 
 pub const Server = struct {
-    loop: *uv.uv_loop_t = undefined,
     socket: *uv.uv_tcp_t = undefined,
     shutdown_signal: *uv.uv_async_t = undefined,
-    write_lock: std.Thread.Mutex = .{},
     hello_data: network_data.C2SPacket = undefined,
     initialized: bool = false,
 
@@ -119,7 +117,7 @@ pub const Server = struct {
 
         if (status != 0) {
             std.log.err("Write error: {s}", .{uv.uv_strerror(status)});
-            server.sameThreadShutdown();
+            server.shutdown();
             dialog.showDialog(.text, .{
                 .title = "Connection Error",
                 .body = "Socket writing was interrupted",
@@ -164,7 +162,7 @@ pub const Server = struct {
             }
         } else if (bytes_read < 0) {
             std.log.err("Read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
-            server.sameThreadShutdown();
+            server.shutdown();
             dialog.showDialog(.text, .{
                 .title = "Connection Error",
                 .body = "Server closed the connection",
@@ -181,7 +179,7 @@ pub const Server = struct {
         if (status != 0) {
             std.log.err("Connection callback error: {s}", .{uv.uv_strerror(status)});
             main.disconnect(false);
-            server.sameThreadShutdown();
+            server.shutdown();
             dialog.showDialog(.text, .{
                 .title = "Connection Error",
                 .body = "Connection failed",
@@ -192,7 +190,7 @@ pub const Server = struct {
         const read_status = uv.uv_read_start(@ptrCast(server.socket), allocBuffer, readCallback);
         if (read_status != 0) {
             std.log.err("Read init error: {s}", .{uv.uv_strerror(read_status)});
-            server.sameThreadShutdown();
+            server.shutdown();
             dialog.showDialog(.text, .{
                 .title = "Connection Error",
                 .body = "Server inaccessible",
@@ -205,12 +203,13 @@ pub const Server = struct {
             defer ui_systems.ui_lock.unlock();
             ui_systems.switchScreen(.game);
         }
+
         server.sendPacket(server.hello_data);
     }
 
     export fn shutdownCallback(handle: [*c]uv.uv_async_t) void {
         const server: *Server = @ptrCast(@alignCast(handle.*.data));
-        server.sameThreadShutdown();
+        server.shutdown();
         dialog.showDialog(.none, {});
     }
 
@@ -221,7 +220,7 @@ pub const Server = struct {
         const write_status = uv.uv_write(@ptrCast(wr), @ptrCast(server.socket), @ptrCast(&wr.buffer), 1, writeCallback);
         if (write_status != 0) {
             std.log.err("Write send error: {s}", .{uv.uv_strerror(write_status)});
-            server.sameThreadShutdown();
+            server.shutdown();
             dialog.showDialog(.text, .{
                 .title = "Connection Error",
                 .body = "Socket writing failed",
@@ -230,18 +229,19 @@ pub const Server = struct {
         }
     }
 
+    pub fn init(self: *Server) !void {
+        self.socket = try main.allocator.create(uv.uv_tcp_t);
+        self.shutdown_signal = try main.allocator.create(uv.uv_async_t);
+    }
+
     pub fn deinit(self: *Server) void {
         main.disconnect(false);
         main.allocator.destroy(self.shutdown_signal);
-        main.allocator.destroy(self.loop);
         main.allocator.destroy(self.socket);
         self.initialized = false;
     }
 
     pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
-        self.write_lock.lock();
-        defer self.write_lock.unlock();
-
         const is_tick = packet == .move or packet == .pong;
         if (build_options.log_packets == .all or
             build_options.log_packets == .c2s or
@@ -277,7 +277,7 @@ pub const Server = struct {
                 while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
                 if (write_status < 0) {
                     std.log.err("Write send error: {s}", .{uv.uv_strerror(write_status)});
-                    self.signalShutdown();
+                    self.shutdown();
                     dialog.showDialog(.text, .{
                         .title = "Connection Error",
                         .body = "Socket writing failed",
@@ -291,24 +291,15 @@ pub const Server = struct {
     pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
         const addr = try std.net.Address.parseIp4(ip, port);
 
-        self.loop = try main.allocator.create(uv.uv_loop_t);
-        const loop_status = uv.uv_loop_init(@ptrCast(self.loop));
-        if (loop_status != 0) {
-            std.log.err("Loop creation error: {s}", .{uv.uv_strerror(loop_status)});
-            return error.NoLoop;
-        }
-
-        self.socket = try main.allocator.create(uv.uv_tcp_t);
         self.socket.data = self;
-        const tcp_status = uv.uv_tcp_init(@ptrCast(self.loop), @ptrCast(self.socket));
+        const tcp_status = uv.uv_tcp_init(@ptrCast(main.main_loop), @ptrCast(self.socket));
         if (tcp_status != 0) {
             std.log.err("Socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
             return error.NoSocket;
         }
 
-        self.shutdown_signal = try main.allocator.create(uv.uv_async_t);
         self.shutdown_signal.data = self;
-        const async_shutdown_status = uv.uv_async_init(@ptrCast(self.loop), @ptrCast(self.shutdown_signal), shutdownCallback);
+        const async_shutdown_status = uv.uv_async_init(@ptrCast(main.main_loop), @ptrCast(self.shutdown_signal), shutdownCallback);
         if (async_shutdown_status != 0) {
             std.log.err("Async shutdown initialization error: {s}", .{uv.uv_strerror(async_shutdown_status)});
             return error.AsyncShutdownInitFailed;
@@ -323,30 +314,16 @@ pub const Server = struct {
         }
 
         self.initialized = true;
-
-        const run_status = uv.uv_run(@ptrCast(self.loop), uv.UV_RUN_DEFAULT);
-        if (run_status != 0 and run_status != 1) {
-            std.log.err("Run error: {s}", .{uv.uv_strerror(run_status)});
-            return error.RunFailed;
-        }
     }
 
-    pub fn signalShutdown(self: *Server) void {
+    pub fn shutdown(self: *Server) void {
         if (!self.initialized)
             return;
 
-        const shutdown_status = uv.uv_async_send(@ptrCast(self.shutdown_signal));
-        if (shutdown_status != 0)
-            std.log.err("Shutdown error: {s}", .{uv.uv_strerror(shutdown_status)});
-    }
-
-    fn sameThreadShutdown(self: *Server) void {
-        if (!self.initialized)
-            return;
+        self.initialized = false;
 
         if (uv.uv_is_closing(@ptrCast(self.shutdown_signal)) == 0) uv.uv_close(@ptrCast(self.shutdown_signal), closeCallback);
         if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
-        uv.uv_stop(@ptrCast(self.loop));
     }
 
     export fn closeCallback(_: [*c]uv.uv_handle_t) void {}
@@ -383,8 +360,6 @@ pub const Server = struct {
             };
             proj.addToMap(main.allocator);
 
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
             const attack_period: i64 = @intFromFloat(1.0 / (Player.attack_frequency * item_data.?.fire_rate));
             player.attack_period = attack_period;
             player.attack_angle = data.angle - main.camera.angle;
@@ -423,7 +398,7 @@ pub const Server = struct {
     }
 
     fn handleDeath(self: *Server, data: PacketData(.death)) void {
-        self.sameThreadShutdown();
+        self.shutdown();
         dialog.showDialog(.none, {});
 
         if (logRead(.non_tick)) std.log.debug("Recv - Death: {}", .{data});
@@ -471,7 +446,7 @@ pub const Server = struct {
         if (logRead(.non_tick)) std.log.debug("Recv - Error: {}", .{data});
 
         if (data.type == .message_with_disconnect or data.type == .force_close_game) {
-            self.sameThreadShutdown();
+            self.shutdown();
             dialog.showDialog(.text, .{
                 .title = "Connection Error",
                 .body = main.allocator.dupe(u8, data.description) catch return,
@@ -740,11 +715,7 @@ pub const Server = struct {
             square.addToMap();
         }
 
-        {
-            main.minimap_lock.lock();
-            defer main.minimap_lock.unlock();
-            main.need_minimap_update = data.tiles.len > 0;
-        }
+        main.need_minimap_update = data.tiles.len > 0;
 
         inline for (.{
             .{ data.players, Player },
@@ -759,19 +730,11 @@ pub const Server = struct {
             defer lock.unlock();
             for (typed_list[0]) |obj| {
                 var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };
-                var add_lock = map.addLockForType(T);
-                var need_add_unlock = false;
-                defer if (need_add_unlock) add_lock.unlock();
                 const current_obj = map.findObject(T, obj.map_id, .ref) orelse findAddObj: {
-                    add_lock.lock();
                     for (map.addListForType(T).items) |*add_obj| {
-                        if (add_obj.map_id == obj.map_id) {
-                            need_add_unlock = true;
-                            break :findAddObj add_obj;
-                        }
+                        if (add_obj.map_id == obj.map_id) break :findAddObj add_obj;
                     }
 
-                    add_lock.unlock();
                     break :findAddObj null;
                 };
                 if (current_obj) |object| {

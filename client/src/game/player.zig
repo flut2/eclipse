@@ -130,9 +130,6 @@ pub const Player = struct {
             self.name_text_data.?.setText(if (self.name) |player_name| player_name else self.data.name, allocator);
         }
 
-        var lock = map.addLockForType(Player);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(Player).append(allocator, self.*) catch @panic("Adding player failed");
     }
 
@@ -230,8 +227,6 @@ pub const Player = struct {
     }
 
     pub fn weaponShoot(self: *Player, allocator: std.mem.Allocator, angle: f32, time: i64) void {
-        std.debug.assert(!main.camera.lock.tryLock());
-
         const item_data = game_data.item.from_id.getPtr(self.inventory[0]) orelse return;
         if (item_data.projectile == null)
             return;
@@ -395,8 +390,6 @@ pub const Player = struct {
         var float_period: f32 = 0.0;
         var action: assets.Action = .stand;
 
-        main.camera.lock.lock();
-        defer main.camera.lock.unlock();
         if (time < self.attack_start + self.attack_period) {
             const time_dt: f32 = @floatFromInt(time - self.attack_start);
             float_period = @floatFromInt(self.attack_period);

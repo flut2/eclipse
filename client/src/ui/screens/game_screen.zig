@@ -13,8 +13,6 @@ const systems = @import("../systems.zig");
 const Player = @import("../../game/player.zig").Player;
 const Container = @import("../../game/container.zig").Container;
 const Options = @import("options.zig").Options;
-const Interactable = element.InteractableImageData;
-const NineSlice = element.NineSliceImageData;
 
 pub const GameScreen = struct {
     pub const Slot = struct {
@@ -153,15 +151,9 @@ pub const GameScreen = struct {
         const inventory_data = assets.getUiData("player_inventory", 0);
         screen.parseItemRects();
 
-        const cam_width, const cam_height = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk .{ main.camera.width, main.camera.height };
-        };
-
         const minimap_data = assets.getUiData("minimap", 0);
         screen.minimap_decor = try element.create(allocator, element.Image{
-            .x = cam_width - minimap_data.width() + 10,
+            .x = main.camera.width - minimap_data.width() + 10,
             .y = -10,
             .image_data = .{ .normal = .{ .atlas_data = minimap_data } },
             .is_minimap_decor = true,
@@ -205,8 +197,8 @@ pub const GameScreen = struct {
         });
 
         screen.inventory_decor = try element.create(allocator, element.Image{
-            .x = cam_width - inventory_data.width() + 10,
-            .y = cam_height - inventory_data.height() + 10,
+            .x = main.camera.width - inventory_data.width() + 10,
+            .y = main.camera.height - inventory_data.height() + 10,
             .image_data = .{ .normal = .{ .atlas_data = inventory_data } },
         });
 
@@ -229,7 +221,7 @@ pub const GameScreen = struct {
         const container_data = assets.getUiData("container_view", 0);
         screen.container_decor = try element.create(allocator, element.Image{
             .x = screen.inventory_decor.x - container_data.width() + 10,
-            .y = cam_height - container_data.height() + 10,
+            .y = main.camera.height - container_data.height() + 10,
             .image_data = .{ .normal = .{ .atlas_data = container_data } },
             .visible = false,
         });
@@ -265,8 +257,8 @@ pub const GameScreen = struct {
 
         const bars_data = assets.getUiData("player_abilities_bars", 0);
         screen.bars_decor = try element.create(allocator, element.Image{
-            .x = (cam_width - bars_data.width()) / 2,
-            .y = cam_height - bars_data.height() + 10,
+            .x = (main.camera.width - bars_data.width()) / 2,
+            .y = main.camera.height - bars_data.height() + 10,
             .image_data = .{ .normal = .{ .atlas_data = bars_data } },
         });
 
@@ -353,7 +345,7 @@ pub const GameScreen = struct {
         const input_data = assets.getUiData("chatbox_input", 0);
         screen.chat_decor = try element.create(allocator, element.Image{
             .x = -10,
-            .y = cam_height - chat_data.height() - input_data.height() + 15,
+            .y = main.camera.height - chat_data.height() - input_data.height() + 15,
             .image_data = .{ .normal = .{ .atlas_data = chat_data } },
         });
 
@@ -393,9 +385,9 @@ pub const GameScreen = struct {
             .scroll_h = 240,
             .scroll_side_x = screen.chat_decor.x + 393,
             .scroll_side_y = screen.chat_decor.y + 24,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, 240, 0, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, 240, 0, 41, 6, 3, 1.0) },
+            .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, 240, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, 240, 0, 41, 6, 3, 1.0) },
             .start_value = 1.0,
         });
 
@@ -743,7 +735,7 @@ pub const GameScreen = struct {
         self.fps_text.text_data.setText(try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, fmt, .{ fps, mem }), self.allocator);
     }
 
-        fn parseItemRects(self: *GameScreen) void {
+    fn parseItemRects(self: *GameScreen) void {
         for (0..22) |i| {
             if (i < 4) {
                 const hori_idx: f32 = @floatFromInt(@mod(i, 4));

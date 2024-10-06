@@ -5,8 +5,6 @@ const game_data = @import("shared").game_data;
 const map = @import("../../game/map.zig");
 const tooltip = @import("tooltip.zig");
 
-const NineSlice = element.NineSliceImageData;
-
 pub const TextTooltip = struct {
     root: *element.Container = undefined,
     decor: *element.Image = undefined,
@@ -28,7 +26,7 @@ pub const TextTooltip = struct {
         self.decor = try self.root.createChild(element.Image{
             .x = 0,
             .y = 0,
-            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(tooltip_background_data, 0, 0, 34, 34, 1, 1, 1.0) },
+            .image_data = .{ .nine_slice = .fromAtlasData(tooltip_background_data, 0, 0, 34, 34, 1, 1, 1.0) },
         });
 
         self.text = try self.root.createChild(element.Text{

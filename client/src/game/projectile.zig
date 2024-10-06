@@ -61,9 +61,6 @@ pub const Projectile = struct {
             break :blk &.{};
         };
 
-        var lock = map.addLockForType(Projectile);
-        lock.lock();
-        defer lock.unlock();
         map.addListForType(Projectile).append(allocator, self.*) catch @panic("Adding projectile failed");
     }
 

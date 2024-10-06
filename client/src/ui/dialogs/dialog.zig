@@ -4,8 +4,6 @@ const game_data = @import("shared").game_data;
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
 
-const NineSlice = element.NineSliceImageData;
-
 const NoneDialog = @import("none_dialog.zig").NoneDialog;
 const TextDialog = @import("text_dialog.zig").TextDialog;
 
@@ -32,18 +30,12 @@ pub fn init(allocator: std.mem.Allocator) !void {
         if (map.capacity() > 0) map.rehash(dummy_dialog_ctx);
     }
 
-    const cam_width, const cam_height = blk: {
-        main.camera.lock.lock();
-        defer main.camera.lock.unlock();
-        break :blk .{ main.camera.width, main.camera.height };
-    };
-
     const background_data = assets.getUiData("options_background", 0);
     dialog_bg = try element.create(allocator, element.Image{
         .x = 0,
         .y = 0,
         .image_data = .{
-            .nine_slice = NineSlice.fromAtlasData(background_data, cam_width, cam_height, 0, 0, 8, 8, 1.0),
+            .nine_slice = .fromAtlasData(background_data, main.camera.width, main.camera.height, 0, 0, 8, 8, 1.0),
         },
         .visible = false,
         .layer = .dialog,
@@ -122,15 +114,9 @@ pub fn showDialog(comptime dialog_type: DialogType, params: std.meta.TagPayload(
         };
     }
 
-    const cam_width, const cam_height = blk: {
-        main.camera.lock.lock();
-        defer main.camera.lock.unlock();
-        break :blk .{ main.camera.width, main.camera.height };
-    };
-
     const field_name = comptime fieldName(std.meta.TagPayload(Dialog, dialog_type));
     @field(current, field_name).root.visible = true;
     @field(current, field_name).setValues(params);
-    @field(current, field_name).root.x = (cam_width - @field(current, field_name).root.width()) / 2.0;
-    @field(current, field_name).root.y = (cam_height - @field(current, field_name).root.height()) / 2.0;
+    @field(current, field_name).root.x = (main.camera.width - @field(current, field_name).root.width()) / 2.0;
+    @field(current, field_name).root.y = (main.camera.height - @field(current, field_name).root.height()) / 2.0;
 }

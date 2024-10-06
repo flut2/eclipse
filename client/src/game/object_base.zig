@@ -81,9 +81,6 @@ pub fn addToMap(self: anytype, comptime ObjType: type, allocator: std.mem.Alloca
         self.name_text_data.?.setText(if (self.name) |obj_name| obj_name else self.data.name, allocator);
     }
 
-    var lock = map.addLockForType(ObjType);
-    lock.lock();
-    defer lock.unlock();
     map.addListForType(ObjType).append(allocator, self.*) catch @panic("Adding " ++ type_name ++ " failed");
 }
 

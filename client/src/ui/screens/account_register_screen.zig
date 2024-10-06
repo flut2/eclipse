@@ -10,7 +10,6 @@ const build_options = @import("options");
 const ui_systems = @import("../systems.zig");
 const builtin = @import("builtin");
 
-const Interactable = element.InteractableImageData;
 
 pub const AccountRegisterScreen = struct {
     username_text: *element.Text = undefined,
@@ -37,14 +36,8 @@ pub const AccountRegisterScreen = struct {
         const input_data_hover = assets.getUiData("text_input_hover", 0);
         const input_data_press = assets.getUiData("text_input_press", 0);
 
-        const cam_width, const cam_height = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk .{ main.camera.width, main.camera.height };
-        };
-
-        const x_offset = (cam_width - input_w) / 2;
-        var y_offset: f32 = cam_height / 7.2;
+        const x_offset = (main.camera.width - input_w) / 2;
+        var y_offset: f32 = main.camera.height / 7.2;
 
         screen.username_text = try element.create(allocator, element.Text{
             .x = x_offset,
@@ -68,7 +61,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+            .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -103,7 +96,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+            .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -138,7 +131,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+            .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -174,7 +167,7 @@ pub const AccountRegisterScreen = struct {
             .y = y_offset,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+            .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -198,7 +191,7 @@ pub const AccountRegisterScreen = struct {
         screen.confirm_button = try element.create(allocator, element.Button{
             .x = x_offset + (input_w - (button_width * 2)) / 2 - 12.5,
             .y = y_offset,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Confirm",
                 .size = 16,
@@ -211,7 +204,7 @@ pub const AccountRegisterScreen = struct {
         screen.back_button = try element.create(allocator, element.Button{
             .x = screen.confirm_button.x + button_width + 25,
             .y = y_offset,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Back",
                 .size = 16,

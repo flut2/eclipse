@@ -5,8 +5,6 @@ const main = @import("../../main.zig");
 const input = @import("../../input.zig");
 
 const Settings = @import("../../Settings.zig");
-const NineSlice = element.NineSliceImageData;
-const Interactable = element.InteractableImageData;
 const systems = @import("../systems.zig");
 
 const button_width = 150;
@@ -34,12 +32,6 @@ pub const Options = struct {
         var screen = try allocator.create(Options);
         screen.* = .{ .allocator = allocator };
 
-        const cam_width, const cam_height = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk .{ main.camera.width, main.camera.height };
-        };
-
         screen.main = try element.create(allocator, element.Container{
             .x = 0,
             .y = 0,
@@ -48,7 +40,7 @@ pub const Options = struct {
 
         screen.buttons = try element.create(allocator, element.Container{
             .x = 0,
-            .y = cam_height - button_height - 50,
+            .y = main.camera.height - button_height - 50,
             .visible = screen.visible,
         });
 
@@ -78,7 +70,7 @@ pub const Options = struct {
 
         const options_background = assets.getUiData("options_background", 0);
         screen.options_bg = try screen.main.createChild(element.Image{ .x = 0, .y = 0, .image_data = .{
-            .nine_slice = NineSlice.fromAtlasData(options_background, cam_width, cam_height, 0, 0, 8, 8, 1.0),
+            .nine_slice = .fromAtlasData(options_background, main.camera.width, main.camera.height, 0, 0, 8, 8, 1.0),
         } });
 
         screen.options_text = try screen.main.createChild(element.Text{ .x = 0, .y = 25, .text_data = .{
@@ -86,15 +78,15 @@ pub const Options = struct {
             .size = 32,
             .text_type = .bold,
         } });
-        screen.options_text.x = (cam_width - screen.options_text.width()) / 2;
+        screen.options_text.x = (main.camera.width - screen.options_text.width()) / 2;
 
         const button_data_base = assets.getUiData("button_base", 0);
         const button_data_hover = assets.getUiData("button_hover", 0);
         const button_data_press = assets.getUiData("button_press", 0);
         screen.continue_button = try screen.buttons.createChild(element.Button{
-            .x = (cam_width - button_width) / 2,
+            .x = (main.camera.width - button_width) / 2,
             .y = button_height / 2 - 20,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Continue",
                 .size = 16,
@@ -105,9 +97,9 @@ pub const Options = struct {
         });
 
         screen.disconnect_button = try screen.buttons.createChild(element.Button{
-            .x = cam_width - button_width - 50,
+            .x = main.camera.width - button_width - 50,
             .y = button_height / 2 - 20,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Disconnect",
                 .size = 16,
@@ -120,7 +112,7 @@ pub const Options = struct {
         screen.defaults_button = try screen.buttons.createChild(element.Button{
             .x = 50,
             .y = button_height / 2 - 20,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Defaults",
                 .size = 16,
@@ -135,7 +127,7 @@ pub const Options = struct {
         _ = try screen.tabs.createChild(element.Button{
             .x = tabx_offset,
             .y = tab_y,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "General",
                 .size = 16,
@@ -150,7 +142,7 @@ pub const Options = struct {
         _ = try screen.tabs.createChild(element.Button{
             .x = tabx_offset,
             .y = tab_y,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Graphics",
                 .size = 16,
@@ -165,7 +157,7 @@ pub const Options = struct {
         _ = try screen.tabs.createChild(element.Button{
             .x = tabx_offset,
             .y = tab_y,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Misc",
                 .size = 16,
@@ -241,7 +233,7 @@ pub const Options = struct {
         _ = try target_tab.createChild(element.KeyMapper{
             .x = 0,
             .y = 0,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, w, h, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, w, h, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = title,
                 .size = 18,
@@ -270,8 +262,8 @@ pub const Options = struct {
         _ = try target_tab.createChild(element.Toggle{
             .x = 0,
             .y = 0,
-            .off_image_data = Interactable.fromImageData(toggle_data_base_off, toggle_data_hover_off, toggle_data_press_off),
-            .on_image_data = Interactable.fromImageData(toggle_data_base_on, toggle_data_hover_on, toggle_data_press_on),
+            .off_image_data = .fromImageData(toggle_data_base_off, toggle_data_hover_off, toggle_data_press_off),
+            .on_image_data = .fromImageData(toggle_data_base_on, toggle_data_hover_on, toggle_data_press_on),
             .text_data = .{
                 .text = title,
                 .size = 16,
@@ -303,8 +295,8 @@ pub const Options = struct {
             .h = h,
             .min_value = min_value,
             .max_value = max_value,
-            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, w, h, 6, 6, 1, 1, 1.0) },
-            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
+            .decor_image_data = .{ .nine_slice = .fromAtlasData(background_data, w, h, 6, 6, 1, 1, 1.0) },
+            .knob_image_data = .fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
             .title_text_data = .{
                 .text = title,
                 .size = 16,
@@ -327,18 +319,12 @@ pub const Options = struct {
     }
 
     fn positionElements(container: *element.Container) void {
-        const cam_width, const cam_height = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk .{ main.camera.width, main.camera.height };
-        };
-
         for (container.elements.items, 0..) |elem, i| {
             switch (elem) {
                 .scrollable_container, .container => {},
                 inline else => |inner| {
-                    inner.x = @as(f32, @floatFromInt(@divFloor(i, 6))) * (cam_width / 4.0);
-                    inner.y = @as(f32, @floatFromInt(@mod(i, 6))) * (cam_height / 9.0);
+                    inner.x = @as(f32, @floatFromInt(@divFloor(i, 6))) * (main.camera.width / 4.0);
+                    inner.y = @as(f32, @floatFromInt(@mod(i, 6))) * (main.camera.height / 9.0);
                 },
             }
         }
@@ -392,7 +378,8 @@ pub const Options = struct {
 
     fn disconnectCallback(ud: ?*anyopaque) void {
         closeCallback(ud);
-        main.server.signalShutdown();
+        main.server.shutdown();
+        main.disconnect(true);
     }
 
     fn trySave() void {

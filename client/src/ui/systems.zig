@@ -56,17 +56,11 @@ pub var allocator: std.mem.Allocator = undefined;
 pub fn init(ally: std.mem.Allocator) !void {
     allocator = ally;
 
-    const cam_width, const cam_height = blk: {
-        main.camera.lock.lock();
-        defer main.camera.lock.unlock();
-        break :blk .{ main.camera.width, main.camera.height };
-    };
-
     menu_background = try element.create(ally, element.MenuBackground{
         .x = 0,
         .y = 0,
-        .w = cam_width,
-        .h = cam_height,
+        .w = main.camera.width,
+        .h = main.camera.height,
     });
 
     screen = Screen{ .empty = EmptyScreen.init(ally) catch @panic("Initializing EmptyScreen failed") }; // TODO: re-add RLS when fixed

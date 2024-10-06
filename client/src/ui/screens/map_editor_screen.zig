@@ -22,9 +22,6 @@ const Portal = @import("../../game/portal.zig").Portal;
 const Container = @import("../../game/container.zig").Container;
 const Square = @import("../../game/square.zig").Square;
 
-const Interactable = element.InteractableImageData;
-const NineSlice = element.NineSliceImageData;
-
 const control_decor_w = 220;
 const control_decor_h = 400;
 
@@ -320,24 +317,24 @@ pub const MapEditorScreen = struct {
             .w = control_decor_w,
             .container_inlay_x = 8,
             .container_inlay_y = 2,
-            .button_data_collapsed = Interactable.fromImageData(collapsed_icon_base, collapsed_icon_hover, collapsed_icon_press),
-            .button_data_extended = Interactable.fromImageData(extended_icon_base, extended_icon_hover, extended_icon_press),
-            .main_background_data = Interactable.fromNineSlices(dropdown_main_color_base, dropdown_main_color_hover, dropdown_main_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
-            .alt_background_data = Interactable.fromNineSlices(dropdown_alt_color_base, dropdown_alt_color_hover, dropdown_alt_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
-            .title_data = .{ .nine_slice = NineSlice.fromAtlasData(title_background, dropdown_w, dropdown_h, 20, 20, 4, 4, 1.0) },
+            .button_data_collapsed = .fromImageData(collapsed_icon_base, collapsed_icon_hover, collapsed_icon_press),
+            .button_data_extended = .fromImageData(extended_icon_base, extended_icon_hover, extended_icon_press),
+            .main_background_data = .fromNineSlices(dropdown_main_color_base, dropdown_main_color_hover, dropdown_main_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
+            .alt_background_data = .fromNineSlices(dropdown_alt_color_base, dropdown_alt_color_hover, dropdown_alt_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
+            .title_data = .{ .nine_slice = .fromAtlasData(title_background, dropdown_w, dropdown_h, 20, 20, 4, 4, 1.0) },
             .title_text = .{
                 .text = "Map Size",
                 .size = 20,
                 .text_type = .bold_italic,
             },
-            .background_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, dropdown_w, dropdown_h, 20, 8, 4, 4, 1.0) },
+            .background_data = .{ .nine_slice = .fromAtlasData(background_data, dropdown_w, dropdown_h, 20, 8, 4, 4, 1.0) },
             .scroll_w = 4,
             .scroll_h = dropdown_h - 10,
             .scroll_side_x_rel = -6,
             .scroll_side_y_rel = 0,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, dropdown_h - 10, 0, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, dropdown_h - 10, 0, 41, 6, 3, 1.0) },
+            .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, dropdown_h - 10, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, dropdown_h - 10, 0, 41, 6, 3, 1.0) },
             .selected_index = 0,
         });
 
@@ -362,13 +359,13 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.Image{
             .x = 0,
             .y = 0,
-            .image_data = .{ .nine_slice = NineSlice.fromAtlasData(background_decor, control_decor_w, control_decor_h, 34, 34, 1, 1, 1.0) },
+            .image_data = .{ .nine_slice = .fromAtlasData(background_decor, control_decor_w, control_decor_h, 34, 34, 1, 1, 1.0) },
         });
 
         _ = try screen.controls_container.createChild(element.Button{
             .x = button_inset,
             .y = button_inset,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Open",
                 .size = 16,
@@ -381,7 +378,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.Button{
             .x = button_inset + button_pad_w + button_width,
             .y = button_inset,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Save",
                 .size = 16,
@@ -394,7 +391,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.Button{
             .x = button_inset,
             .y = button_inset + button_pad_h + button_height,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Test",
                 .size = 16,
@@ -407,7 +404,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.Button{
             .x = button_inset + button_pad_w + button_width,
             .y = button_inset + button_pad_h + button_height,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Exit",
                 .size = 16,
@@ -420,7 +417,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.KeyMapper{
             .x = button_inset,
             .y = button_inset + (button_pad_h + button_height) * 2,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Place",
                 .size = 12,
@@ -434,7 +431,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.KeyMapper{
             .x = button_inset + button_pad_w + button_width,
             .y = button_inset + (button_pad_h + button_height) * 2,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Sample",
                 .size = 12,
@@ -448,7 +445,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.KeyMapper{
             .x = button_inset,
             .y = button_inset + (button_pad_h + button_height) * 3,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Erase",
                 .size = 12,
@@ -462,7 +459,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.KeyMapper{
             .x = button_inset + button_pad_w + button_width,
             .y = button_inset + (button_pad_h + button_height) * 3,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Random",
                 .size = 12,
@@ -476,7 +473,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.KeyMapper{
             .x = button_inset,
             .y = button_inset + (button_pad_h + button_height) * 4,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Undo",
                 .size = 12,
@@ -490,7 +487,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.KeyMapper{
             .x = button_inset + button_pad_w + button_width,
             .y = button_inset + (button_pad_h + button_height) * 4,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Redo",
                 .size = 12,
@@ -505,7 +502,7 @@ pub const MapEditorScreen = struct {
         _ = try screen.controls_container.createChild(element.KeyMapper{
             .x = button_inset,
             .y = button_inset + (button_pad_h + button_height) * 5,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
             .title_text_data = .{
                 .text = "Fill",
                 .size = 12,
@@ -533,8 +530,8 @@ pub const MapEditorScreen = struct {
             .h = slider_h,
             .min_value = 0.5,
             .max_value = 9.9,
-            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(slider_background_data, slider_w, slider_h, 6, 6, 1, 1, 1.0) },
-            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
+            .decor_image_data = .{ .nine_slice = .fromAtlasData(slider_background_data, slider_w, slider_h, 6, 6, 1, 1, 1.0) },
+            .knob_image_data = .fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
             .target = &screen.brush_size,
             .title_text_data = .{
                 .text = "Brush Size",
@@ -556,8 +553,8 @@ pub const MapEditorScreen = struct {
             .h = slider_h,
             .min_value = 0.01,
             .max_value = 1.0,
-            .decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(slider_background_data, slider_w, slider_h, 6, 6, 1, 1, 1.0) },
-            .knob_image_data = Interactable.fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
+            .decor_image_data = .{ .nine_slice = .fromAtlasData(slider_background_data, slider_w, slider_h, 6, 6, 1, 1, 1.0) },
+            .knob_image_data = .fromNineSlices(knob_data_base, knob_data_hover, knob_data_press, knob_size, knob_size, 12, 12, 1, 1, 1.0),
             .target = &screen.random_chance,
             .title_text_data = .{
                 .text = "Random Chance",
@@ -572,13 +569,8 @@ pub const MapEditorScreen = struct {
             },
         });
 
-        const cam_width = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk main.camera.width;
-        };
         screen.palette_decor = try element.create(allocator, element.Image{
-            .x = cam_width - palette_decor_w - 5,
+            .x = main.camera.width - palette_decor_w - 5,
             .y = 5,
             .image_data = .{ .nine_slice = element.NineSliceImageData.fromAtlasData(background_decor, palette_decor_w, palette_decor_h, 34, 34, 1, 1, 1.0) },
         });
@@ -594,9 +586,9 @@ pub const MapEditorScreen = struct {
             .scroll_h = palette_decor_h - 17,
             .scroll_side_x = screen.palette_decor.x + palette_decor_w - 20 + 2 - 6,
             .scroll_side_y = screen.palette_decor.y + 9,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
+            .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
         });
 
         var tile_iter = game_data.ground.from_id.iterator();
@@ -719,9 +711,9 @@ pub const MapEditorScreen = struct {
             .scroll_h = palette_decor_h - 17,
             .scroll_side_x = screen.palette_decor.x + palette_decor_w - 20 + 2 - 6,
             .scroll_side_y = screen.palette_decor.y + 9,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
+            .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
             .visible = false,
         });
 
@@ -755,24 +747,24 @@ pub const MapEditorScreen = struct {
             .w = dropdown_w,
             .container_inlay_x = 8,
             .container_inlay_y = 2,
-            .button_data_collapsed = Interactable.fromImageData(collapsed_icon_base, collapsed_icon_hover, collapsed_icon_press),
-            .button_data_extended = Interactable.fromImageData(extended_icon_base, extended_icon_hover, extended_icon_press),
-            .main_background_data = Interactable.fromNineSlices(dropdown_main_color_base, dropdown_main_color_hover, dropdown_main_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
-            .alt_background_data = Interactable.fromNineSlices(dropdown_alt_color_base, dropdown_alt_color_hover, dropdown_alt_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
-            .title_data = .{ .nine_slice = NineSlice.fromAtlasData(title_background, dropdown_w, dropdown_h, 20, 20, 4, 4, 1.0) },
+            .button_data_collapsed = .fromImageData(collapsed_icon_base, collapsed_icon_hover, collapsed_icon_press),
+            .button_data_extended = .fromImageData(extended_icon_base, extended_icon_hover, extended_icon_press),
+            .main_background_data = .fromNineSlices(dropdown_main_color_base, dropdown_main_color_hover, dropdown_main_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
+            .alt_background_data = .fromNineSlices(dropdown_alt_color_base, dropdown_alt_color_hover, dropdown_alt_color_press, dropdown_w, 40, 0, 0, 2, 2, 1.0),
+            .title_data = .{ .nine_slice = .fromAtlasData(title_background, dropdown_w, dropdown_h, 20, 20, 4, 4, 1.0) },
             .title_text = .{
                 .text = "Layer",
                 .size = 20,
                 .text_type = .bold_italic,
             },
-            .background_data = .{ .nine_slice = NineSlice.fromAtlasData(background_data, dropdown_w, dropdown_h, 20, 8, 4, 4, 1.0) },
+            .background_data = .{ .nine_slice = .fromAtlasData(background_data, dropdown_w, dropdown_h, 20, 8, 4, 4, 1.0) },
             .scroll_w = 4,
             .scroll_h = dropdown_h - 10,
             .scroll_side_x_rel = -6,
             .scroll_side_y_rel = 0,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, dropdown_h - 10, 0, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, dropdown_h - 10, 0, 41, 6, 3, 1.0) },
+            .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, dropdown_h - 10, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, dropdown_h - 10, 0, 41, 6, 3, 1.0) },
             .selected_index = 0,
         });
 
@@ -825,9 +817,9 @@ pub const MapEditorScreen = struct {
             .scroll_h = palette_decor_h - 17,
             .scroll_side_x = px + palette_decor_w - 20 + 2 - 6,
             .scroll_side_y = py + 9,
-            .scroll_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
-            .scroll_knob_image_data = Interactable.fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-            .scroll_side_decor_image_data = .{ .nine_slice = NineSlice.fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
+            .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
+            .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+            .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
             .visible = false,
         });
 
@@ -1684,11 +1676,7 @@ pub const MapEditorScreen = struct {
         if (self.map_tile_data.len <= 0)
             return;
 
-        const world_point = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk main.camera.screenToWorld(input.mouse_x, input.mouse_y);
-        };
+        const world_point = main.camera.screenToWorld(input.mouse_x, input.mouse_y);
         const size: f32 = @floatFromInt(self.map_size - 1);
         const x = @floor(@max(0, @min(world_point.x, size)));
         const y = @floor(@max(0, @min(world_point.y, size)));

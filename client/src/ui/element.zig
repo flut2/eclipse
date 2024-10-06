@@ -616,17 +616,16 @@ pub const InteractableImageData = struct {
         slice_h: f32,
         alpha: f32,
     ) InteractableImageData {
-        const NineSlice = NineSliceImageData;
-        var ret = InteractableImageData{
-            .base = .{ .nine_slice = NineSlice.fromAtlasData(base, w, h, slice_x, slice_y, slice_w, slice_h, alpha) },
+        var ret: InteractableImageData = .{
+            .base = .{ .nine_slice = .fromAtlasData(base, w, h, slice_x, slice_y, slice_w, slice_h, alpha) },
         };
 
         if (hover) |hover_data| {
-            ret.hover = .{ .nine_slice = NineSlice.fromAtlasData(hover_data, w, h, slice_x, slice_y, slice_w, slice_h, alpha) };
+            ret.hover = .{ .nine_slice = .fromAtlasData(hover_data, w, h, slice_x, slice_y, slice_w, slice_h, alpha) };
         }
 
         if (press) |press_data| {
-            ret.press = .{ .nine_slice = NineSlice.fromAtlasData(press_data, w, h, slice_x, slice_y, slice_w, slice_h, alpha) };
+            ret.press = .{ .nine_slice = .fromAtlasData(press_data, w, h, slice_x, slice_y, slice_w, slice_h, alpha) };
         }
 
         return ret;
@@ -1855,12 +1854,6 @@ pub const Container = struct {
         if (!self.visible)
             return false;
 
-        const cam_width, const cam_height = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk .{ main.camera.width, main.camera.height };
-        };
-
         if (self.is_dragging) {
             if (!self.clamp_x) {
                 self.x = x + self.drag_offset_x;
@@ -1869,7 +1862,7 @@ pub const Container = struct {
                         self.x = 0;
 
                     const bottom_x = self.x + self.width();
-                    if (bottom_x < cam_width)
+                    if (bottom_x < main.camera.width)
                         self.x = self.width();
                 }
             }
@@ -1880,7 +1873,7 @@ pub const Container = struct {
                         self.y = 0;
 
                     const bottom_y = self.y + self.height();
-                    if (bottom_y < cam_height)
+                    if (bottom_y < main.camera.height)
                         self.y = bottom_y;
                 }
             }

@@ -10,9 +10,6 @@ const input = @import("../../input.zig");
 const dialog = @import("../dialogs/dialog.zig");
 const build_options = @import("options");
 
-const Interactable = element.InteractableImageData;
-const NineSlice = element.NineSliceImageData;
-
 pub const AccountLoginScreen = struct {
     allocator: std.mem.Allocator = undefined,
 
@@ -35,19 +32,13 @@ pub const AccountLoginScreen = struct {
         const input_data_hover = assets.getUiData("text_input_hover", 0);
         const input_data_press = assets.getUiData("text_input_press", 0);
 
-        const cam_width, const cam_height = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk .{ main.camera.width, main.camera.height };
-        };
-
         const cursor_data = assets.getUiData("chatbox_cursor", 0);
         screen.email_input = try element.create(allocator, element.Input{
-            .x = (cam_width - input_w) / 2,
-            .y = cam_height / 3.6,
+            .x = (main.camera.width - input_w) / 2,
+            .y = main.camera.height / 3.6,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+            .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -80,7 +71,7 @@ pub const AccountLoginScreen = struct {
             .y = screen.email_input.y + 150,
             .text_inlay_x = 9,
             .text_inlay_y = 8,
-            .image_data = Interactable.fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+            .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
             .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
             .text_data = .{
                 .text = "",
@@ -119,8 +110,8 @@ pub const AccountLoginScreen = struct {
         screen.remember_login_toggle = try element.create(allocator, element.Toggle{
             .x = screen.password_input.x + (input_w - text_w - check_box_base_on.width()) / 2,
             .y = screen.password_input.y + 75 - (100 - check_box_base_on.height()) / 2,
-            .off_image_data = Interactable.fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
-            .on_image_data = Interactable.fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
+            .off_image_data = .fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
+            .on_image_data = .fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
             .toggled = &main.settings.remember_login,
         });
 
@@ -145,7 +136,7 @@ pub const AccountLoginScreen = struct {
         screen.login_button = try element.create(allocator, element.Button{
             .x = screen.password_input.x + (input_w - 200) / 2 - 12,
             .y = screen.password_input.y + 150,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Login",
                 .size = 16,
@@ -158,7 +149,7 @@ pub const AccountLoginScreen = struct {
         screen.register_button = try element.create(allocator, element.Button{
             .x = screen.login_button.x + (input_w - 100) / 2 + 24,
             .y = screen.login_button.y,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Register",
                 .size = 16,

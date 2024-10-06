@@ -6,7 +6,6 @@ const ui_systems = @import("../systems.zig");
 const build_options = @import("options");
 const game_data = @import("shared").game_data;
 
-const Interactable = element.InteractableImageData;
 
 pub const CharSelectScreen = struct {
     boxes: std.ArrayListUnmanaged(*element.CharacterBox) = .empty,
@@ -26,12 +25,6 @@ pub const CharSelectScreen = struct {
         const button_width = 100;
         const button_height = 40;
 
-        const cam_width = blk: {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
-            break :blk main.camera.width;
-        };
-
         var counter: u32 = 0;
         if (main.character_list) |list| {
             for (list.characters, 0..) |char, i| {
@@ -39,11 +32,11 @@ pub const CharSelectScreen = struct {
 
                 if (game_data.class.from_id.get(char.class_id)) |class| {
                     const box = try element.create(allocator, element.CharacterBox{
-                        .x = (cam_width - button_data_base.width()) / 2,
+                        .x = (main.camera.width - button_data_base.width()) / 2,
                         .y = @floatFromInt(50 * i),
                         .id = char.char_id,
                         .class_data_id = char.class_id,
-                        .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+                        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
                         .text_data = .{
                             .text = class.name,
                             .size = 16,
@@ -57,10 +50,10 @@ pub const CharSelectScreen = struct {
         }
 
         screen.new_char_button = try element.create(allocator, element.Button{
-            .x = (cam_width - button_data_base.width()) / 2,
+            .x = (main.camera.width - button_data_base.width()) / 2,
             .y = @floatFromInt(50 * (counter + 1)),
             .visible = false,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "New Character",
                 .size = 16,
@@ -75,7 +68,7 @@ pub const CharSelectScreen = struct {
         screen.editor_button = try element.create(allocator, element.Button{
             .x = 100,
             .y = 100,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Editor",
                 .size = 16,
@@ -87,7 +80,7 @@ pub const CharSelectScreen = struct {
         screen.back_button = try element.create(allocator, element.Button{
             .x = 100,
             .y = 200,
-            .image_data = Interactable.fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 21, 3, 3, 1.0),
             .text_data = .{
                 .text = "Back to Login",
                 .size = 16,
