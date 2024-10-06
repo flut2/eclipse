@@ -494,10 +494,15 @@ pub const Player = struct {
                     }
                 }
 
-                const next_x = self.x + self.x_dir * dt;
-                const next_y = self.y + self.y_dir * dt;
+                const dx = self.x_dir * dt;
+                const dy = self.y_dir * dt;
 
-                modifyMove(self, next_x, next_y, &self.x, &self.y);
+                if (dx < move_threshold and dx > -move_threshold and dy < move_threshold and dy > -move_threshold) {
+                    modifyStep(self, self.x + dx, self.y + dy);
+                } else {
+                    const step_size = move_threshold / @max(@abs(dx), @abs(dy));
+                    for (0..@intFromFloat(1.0 / step_size)) |_| modifyStep(self, self.x + dx * step_size, self.y + dy * step_size);
+                }
 
                 if (!self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
                     if (map.getSquare(self.x, self.y, true)) |square| {
@@ -523,20 +528,22 @@ pub const Player = struct {
         }
     }
 
-    fn modifyMove(self: *Player, x: f32, y: f32, target_x: *f32, target_y: *f32) void {
-        const dx = x - self.x;
-        const dy = y - self.y;
+    fn isWalkable(x: f32, y: f32) bool {
+        if (map.getSquare(x, y, true)) |square| {
+            const walkable = !square.data.no_walk;
+            const not_occupied = blk: {
+                const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk true;
+                break :blk !e.data.occupy_square;
+            };
+            return square.data_id != Square.editor_tile and square.data_id != Square.empty_tile and walkable and not_occupied;
+        } else return false;
+    }
 
-        if (dx < move_threshold and dx > -move_threshold and dy < move_threshold and dy > -move_threshold) {
-            modifyStep(self, x, y, target_x, target_y);
-            return;
-        }
-
-        target_x.* = self.x;
-        target_y.* = self.y;
-
-        const step_size = move_threshold / @max(@abs(dx), @abs(dy));
-        for (0..@intFromFloat(1.0 / step_size)) |_| modifyStep(self, target_x.* + dx * step_size, target_y.* + dy * step_size, target_x, target_y);
+    fn isFullOccupy(x: f32, y: f32) bool {
+        if (map.getSquare(x, y, true)) |square| {
+            const e = map.findObject(Entity, square.entity_map_id, .con) orelse return false;
+            return e.data.full_occupy or e.data.is_wall;
+        } else return true;
     }
 
     fn isValidPosition(x: f32, y: f32) bool {
@@ -574,31 +581,13 @@ pub const Player = struct {
         return true;
     }
 
-    fn isWalkable(x: f32, y: f32) bool {
-        if (map.getSquare(x, y, true)) |square| {
-            const walkable = !square.data.no_walk;
-            const not_occupied = blk: {
-                const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk true;
-                break :blk !e.data.occupy_square;
-            };
-            return square.data_id != Square.editor_tile and square.data_id != Square.empty_tile and walkable and not_occupied;
-        } else return false;
-    }
-
-    fn isFullOccupy(x: f32, y: f32) bool {
-        if (map.getSquare(x, y, true)) |square| {
-            const e = map.findObject(Entity, square.entity_map_id, .con) orelse return false;
-            return e.data.full_occupy or e.data.is_wall;
-        } else return true;
-    }
-
-    fn modifyStep(self: *Player, x: f32, y: f32, target_x: *f32, target_y: *f32) void {
+    fn modifyStep(self: *Player, x: f32, y: f32) void {
         const x_cross = (@mod(self.x, 0.5) == 0 and x != self.x) or (@floor(self.x / 0.5) != @floor(x / 0.5));
         const y_cross = (@mod(self.y, 0.5) == 0 and y != self.y) or (@floor(self.y / 0.5) != @floor(y / 0.5));
 
         if (!x_cross and !y_cross or isValidPosition(x, y)) {
-            target_x.* = x;
-            target_y.* = y;
+            self.x = x;
+            self.y = y;
             return;
         }
 
@@ -607,13 +596,13 @@ pub const Player = struct {
         if (x_cross) {
             next_x_border = if (x > self.x) @floor(x * 2) / 2.0 else @floor(self.x * 2) / 2.0;
             if (@floor(next_x_border) > @floor(self.x))
-                next_x_border -= 0.01;
+                next_x_border -= 0.001;
         }
 
         if (y_cross) {
             next_y_border = if (y > self.y) @floor(y * 2) / 2.0 else @floor(self.y * 2) / 2.0;
             if (@floor(next_y_border) > @floor(self.y))
-                next_y_border -= 0.01;
+                next_y_border -= 0.001;
         }
 
         const x_border_dist = if (x > self.x) x - next_x_border else next_x_border - x;
@@ -621,31 +610,31 @@ pub const Player = struct {
 
         if (x_border_dist > y_border_dist) {
             if (isValidPosition(x, next_y_border)) {
-                target_x.* = x;
-                target_y.* = next_y_border;
+                self.x = x;
+                self.y = next_y_border;
                 return;
             }
 
             if (isValidPosition(next_x_border, y)) {
-                target_x.* = next_x_border;
-                target_y.* = y;
+                self.x = next_x_border;
+                self.y = y;
                 return;
             }
         } else {
             if (isValidPosition(next_x_border, y)) {
-                target_x.* = next_x_border;
-                target_y.* = y;
+                self.x = next_x_border;
+                self.y = y;
                 return;
             }
 
             if (isValidPosition(x, next_y_border)) {
-                target_x.* = x;
-                target_y.* = next_y_border;
+                self.x = x;
+                self.y = next_y_border;
                 return;
             }
         }
 
-        target_x.* = next_x_border;
-        target_y.* = next_y_border;
+        self.x = next_x_border;
+        self.y = next_y_border;
     }
 };
