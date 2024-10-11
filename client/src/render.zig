@@ -6,13 +6,11 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const zstbi = @import("zstbi");
-const element = @import("ui/element.zig");
+const element = @import("ui/elements/element.zig");
 const main = @import("main.zig");
-const systems = @import("ui/systems.zig");
+const ui_systems = @import("ui/systems.zig");
 const glfw = @import("zglfw");
 const px_per_tile = @import("Camera.zig").px_per_tile;
-
-const ui_render = @import("ui/render.zig");
 
 const Square = @import("game/square.zig").Square;
 const Particle = @import("game/particles.zig").Particle;
@@ -980,7 +978,12 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
 
     generics.clearRetainingCapacity();
 
-    ui_render.drawElements(cam_data, time);
+    {
+        ui_systems.ui_lock.lock();
+        defer ui_systems.ui_lock.unlock();
+        for (ui_systems.elements.items) |elem| elem.draw(cam_data, 0, 0, time);
+    }
+
     const ui_len: u32 = @min(generics.items.len, ui_size);
     if (ui_len > 0) {
         if (game_len == 0) {

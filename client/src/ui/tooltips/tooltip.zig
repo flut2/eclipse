@@ -1,11 +1,11 @@
 const std = @import("std");
-const element = @import("../element.zig");
+const element = @import("../elements/element.zig");
 const game_data = @import("shared").game_data;
 
-const NoneTooltip = @import("none_tooltip.zig").NoneTooltip;
-const ItemTooltip = @import("item_tooltip.zig").ItemTooltip;
-const TextTooltip = @import("text_tooltip.zig").TextTooltip;
-const AbilityTooltip = @import("ability_tooltip.zig").AbilityTooltip;
+const Container = @import("../elements/Container.zig");
+const ItemTooltip = @import("ItemTooltip.zig");
+const TextTooltip = @import("TextTooltip.zig");
+const AbilityTooltip = @import("AbilityTooltip.zig");
 
 pub const TooltipType = enum {
     none,
@@ -14,7 +14,7 @@ pub const TooltipType = enum {
     ability,
 };
 pub const Tooltip = union(TooltipType) {
-    none: NoneTooltip,
+    none: void,
     item: ItemTooltip,
     text: TextTooltip,
     ability: AbilityTooltip,
@@ -35,10 +35,19 @@ pub fn init(allocator: std.mem.Allocator) !void {
         if (map.capacity() > 0) map.rehash(dummy_tooltip_ctx);
     }
 
-    inline for (@typeInfo(Tooltip).@"union".fields) |field| {
+    inline for (@typeInfo(Tooltip).@"union".fields) |field| @"continue": {
         var tooltip = try allocator.create(Tooltip);
+        if (field.type == void) {
+            tooltip.* = @unionInit(Tooltip, field.name, {});
+            try map.put(allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
+                std.debug.panic("No enum type with name {s} found on TooltipType", .{field.name}), tooltip);
+            break :@"continue";
+        }
         tooltip.* = @unionInit(Tooltip, field.name, .{});
-        try @field(tooltip, field.name).init(allocator);
+        var tooltip_inner = &@field(tooltip, field.name);
+        tooltip_inner.* = .{ .allocator = allocator };
+        tooltip_inner.root = try element.create(allocator, Container, .{ .base = .{ .visible = false, .layer = .tooltip, .x = 0, .y = 0 } });
+        try tooltip_inner.init();
         try map.put(allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
             std.debug.panic("No enum type with name {s} found on TooltipType", .{field.name}), tooltip);
     }
@@ -50,9 +59,8 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     var iter = map.valueIterator();
     while (iter.next()) |value| {
         switch (value.*.*) {
-            inline else => |*tooltip| {
-                tooltip.deinit();
-            },
+            .none => {},
+            inline else => |*tooltip| tooltip.deinit(),
         }
 
         allocator.destroy(value.*);
@@ -62,18 +70,12 @@ pub fn deinit(allocator: std.mem.Allocator) void {
 }
 
 fn fieldName(comptime T: type) []const u8 {
-    if (!@inComptime())
-        @compileError("This function is comptime only");
-
+    if (!@inComptime()) @compileError("This function is comptime only");
     var field_name: []const u8 = "";
     for (@typeInfo(Tooltip).@"union".fields) |field| {
-        if (field.type == T)
-            field_name = field.name;
+        if (field.type == T) field_name = field.name;
     }
-
-    if (field_name.len <= 0)
-        @compileError("No params found");
-
+    if (field_name.len <= 0) @compileError("No params found");
     return field_name;
 }
 
@@ -82,13 +84,11 @@ pub fn ParamsFor(comptime T: type) type {
 }
 
 pub fn switchTooltip(comptime tooltip_type: TooltipType, params: std.meta.TagPayload(TooltipParams, tooltip_type)) void {
-    if (std.meta.activeTag(current.*) == tooltip_type)
-        return;
+    if (current.* == tooltip_type) return;
 
     switch (current.*) {
-        inline else => |tooltip| {
-            tooltip.root.visible = false;
-        },
+        .none => {},
+        inline else => |tooltip| tooltip.root.base.visible = false,
     }
 
     current = map.get(tooltip_type) orelse blk: {
@@ -97,7 +97,8 @@ pub fn switchTooltip(comptime tooltip_type: TooltipType, params: std.meta.TagPay
     };
 
     const T = std.meta.TagPayload(Tooltip, tooltip_type);
-    const field_name = comptime fieldName(T);
-    @field(current, field_name).root.visible = true;
-    @field(current, field_name).update(params);
+    if (T == void) return;
+    var tooltip = &@field(current, fieldName(T));
+    tooltip.root.base.visible = true;
+    tooltip.update(params);
 }

@@ -2,14 +2,15 @@ const glfw = @import("zglfw");
 const std = @import("std");
 const map = @import("game/map.zig");
 const main = @import("main.zig");
-const element = @import("ui/element.zig");
 const assets = @import("assets.zig");
 const network = @import("network.zig");
 const game_data = @import("shared").game_data;
 const ui_systems = @import("ui/systems.zig");
 
 const Player = @import("game/player.zig").Player;
-const GameScreen = @import("ui/screens/game_screen.zig").GameScreen;
+const GameScreen = @import("ui/screens/GameScreen.zig");
+const KeyMapper = @import("ui/elements/KeyMapper.zig");
+const Input = @import("ui/elements/Input.zig");
 
 var move_up: f32 = 0.0;
 var move_down: f32 = 0.0;
@@ -26,8 +27,8 @@ pub var move_angle: f32 = std.math.nan(f32);
 pub var mouse_x: f32 = 0.0;
 pub var mouse_y: f32 = 0.0;
 
-pub var selected_key_mapper: ?*element.KeyMapper = null;
-pub var selected_input_field: ?*element.Input = null;
+pub var selected_key_mapper: ?*KeyMapper = null;
+pub var selected_input_field: ?*Input = null;
 pub var input_history: std.ArrayListUnmanaged([]const u8) = .empty;
 pub var input_history_idx: u16 = 0;
 

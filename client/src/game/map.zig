@@ -6,7 +6,6 @@ const utils = shared.utils;
 const network_data = shared.network_data;
 const input = @import("../input.zig");
 const main = @import("../main.zig");
-const element = @import("../ui/element.zig");
 const zstbi = @import("zstbi");
 const particles = @import("particles.zig");
 const systems = @import("../ui/systems.zig");

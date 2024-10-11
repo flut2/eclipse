@@ -6,7 +6,6 @@ const network_data = shared.network_data;
 const uv = shared.uv;
 const main = @import("main.zig");
 const map = @import("game/map.zig");
-const element = @import("ui/element.zig");
 const assets = @import("assets.zig");
 const particles = @import("game/particles.zig");
 const ui_systems = @import("ui/systems.zig");

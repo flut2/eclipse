@@ -1,5 +1,5 @@
 const std = @import("std");
-const element = @import("../ui/element.zig");
+const element = @import("../ui/elements/element.zig");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
