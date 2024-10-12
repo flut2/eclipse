@@ -11,14 +11,15 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    var gen_file = try b.build_root.handle.createFile("src/_gen_behavior_file_dont_use.zig", .{});
+    {
+        var gen_file = try b.build_root.handle.createFile("src/_gen_behavior_file_dont_use.zig", .{});
+        try gen_file.writeAll("pub const behaviors = .{\n");
+        defer gen_file.writeAll("};\n") catch @panic("TODO");
 
-    const dir = try b.build_root.handle.openDir("src/logic/behaviors/", .{ .iterate = true });
-    var walker = try dir.walk(b.allocator);
-    var i: usize = 0;
-    while (try walker.next()) |entry| : (i += 1) {
-        if (std.mem.endsWith(u8, entry.path, ".zig"))
-            try gen_file.writeAll(try std.fmt.allocPrint(b.allocator, "pub const b{} = @import(\"logic/behaviors/{s}\");\n", .{ i, entry.path }));
+        const dir = try b.build_root.handle.openDir("src/logic/behaviors/", .{ .iterate = true });
+        var walker = try dir.walk(b.allocator);
+        while (try walker.next()) |entry| if (std.mem.endsWith(u8, entry.path, ".zig"))
+            try gen_file.writeAll(try std.fmt.allocPrint(b.allocator, "    @import(\"logic/behaviors/{s}\"),\n", .{ entry.path }));
     }
 
     inline for (.{ true, false }) |check| {
@@ -28,8 +29,8 @@ pub fn build(b: *std.Build) !void {
             .target = target,
             .optimize = optimize,
             .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
-            // .use_lld = check or optimize == .Debug,
-            // .use_llvm = check or optimize == .Debug,
+            // .use_lld = check or optimize != .Debug,
+            // .use_llvm = check or optimize != .Debug,
         });
 
         if (check) check_step.dependOn(&exe.step);
@@ -82,7 +83,6 @@ pub fn build(b: *std.Build) !void {
         var options = b.addOptions();
         options.addOption(bool, "enable_tracy", enable_tracy);
         options.addOption(bool, "use_dragonfly", use_dragonfly);
-        options.addOption(usize, "behavs_len", i);
         exe.root_module.addOptions("options", options);
 
         if (!check) {

@@ -390,7 +390,7 @@ pub fn main() !void {
     try render.init(ctx, allocator);
     defer render.deinit(allocator);
 
-    render_thread = try std.Thread.spawn(.{ .allocator = allocator }, renderTick, .{});
+    render_thread = try .spawn(.{ .allocator = allocator }, renderTick, .{});
     defer {
         tick_render = false;
         render_thread.join();

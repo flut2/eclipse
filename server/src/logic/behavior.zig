@@ -1,6 +1,5 @@
 const std = @import("std");
 const gen_behaviors = @import("../_gen_behavior_file_dont_use.zig");
-const behavs_len = @import("options").behavs_len;
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
@@ -15,27 +14,21 @@ pub const BehaviorMetadata = struct {
 };
 
 fn getMetadata(comptime T: type) BehaviorMetadata {
-    comptime {
-        var ret: BehaviorMetadata = undefined;
-        var found_metadata = false;
-        for (@typeInfo(T).@"struct".decls) |decl| {
-            const metadata = @field(T, decl.name);
-            const is_metadata = @TypeOf(metadata) == BehaviorMetadata;
-            if (!is_metadata)
-                continue;
+    if (!@inComptime()) @compileError("This function is comptime-only");
 
-            if (found_metadata)
-                @compileError("Duplicate behavior metadata");
-
-            ret = metadata;
-            found_metadata = true;
-        }
-
-        if (!found_metadata)
-            @compileError("No behavior metadata found");
-
-        return ret;
+    var ret: BehaviorMetadata = undefined;
+    var found_metadata = false;
+    for (@typeInfo(T).@"struct".decls) |decl| {
+        const metadata = @field(T, decl.name);
+        const is_metadata = @TypeOf(metadata) == BehaviorMetadata;
+        if (!is_metadata) continue;
+        if (found_metadata) @compileError("Duplicate behavior metadata");
+        ret = metadata;
+        found_metadata = true;
     }
+
+    if (!found_metadata) @compileError("No behavior metadata found");
+    return ret;
 }
 
 fn BehaviorVtable(comptime ChildType: type) type {
@@ -55,8 +48,7 @@ pub var entity_behavior_map: std.AutoHashMapUnmanaged(u16, EntityBehavior) = .em
 pub var enemy_behavior_map: std.AutoHashMapUnmanaged(u16, EnemyBehavior) = .empty;
 
 pub fn init(allocator: std.mem.Allocator) !void {
-    inline for (0..behavs_len) |i| {
-        const import = @field(gen_behaviors, std.fmt.comptimePrint("b{}", .{i}));
+    inline for (gen_behaviors.behaviors) |import| {
         inline for (@typeInfo(import).@"struct".decls) |d| @"continue": {
             const behav = @field(import, d.name);
             const metadata = comptime getMetadata(behav);

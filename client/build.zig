@@ -31,8 +31,8 @@ pub fn build(b: *std.Build) !void {
             .target = target,
             .optimize = optimize,
             .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
-            // .use_lld = check or optimize == .Debug,
-            // .use_llvm = check or optimize == .Debug,
+            // .use_lld = check or optimize != .Debug,
+            // .use_llvm = check or optimize != .Debug,
         });
 
         if (check) check_step.dependOn(&exe.step);
