@@ -15,7 +15,6 @@ quake: bool = false,
 quake_amount: f32 = 0.0,
 x: f32 = 0.0,
 y: f32 = 0.0,
-angle: f32 = 0.0,
 scale: f32 = 1.0,
 min_x: u32 = 0,
 min_y: u32 = 0,
@@ -27,7 +26,7 @@ clip_scale: [2]f32 = [2]f32{ 2.0 / 1280.0, 2.0 / 720.0 },
 clip_offset: [2]f32 = [2]f32{ -1280.0 / 2.0, -720.0 / 2.0 },
 cam_offset_px: [2]f32 = [2]f32{ 0.0, 0.0 },
 
-pub fn update(self: *@This(), target_x: f32, target_y: f32, dt: f32, rotate: i8) void {
+pub fn update(self: *@This(), target_x: f32, target_y: f32, dt: f32) void {
     const map_w = map.info.width;
     const map_h = map.info.height;
     if (map_w == 0 or map_h == 0) return;
@@ -48,16 +47,8 @@ pub fn update(self: *@This(), target_x: f32, target_y: f32, dt: f32, rotate: i8)
 
     self.x = tx;
     self.y = ty;
-
-    if (rotate != 0) {
-        const float_rotate: f32 = @floatFromInt(rotate);
-        self.angle = @mod(self.angle + dt * main.settings.rotate_speed * float_rotate, std.math.tau);
-    }
-
-    const cos = @cos(self.angle);
-    const sin = @sin(self.angle);
-    self.cam_offset_px[0] = (tx * cos + ty * sin) * px_per_tile * self.scale;
-    self.cam_offset_px[1] = (tx * -sin + ty * cos) * px_per_tile * self.scale;
+    self.cam_offset_px[0] = tx * px_per_tile * self.scale;
+    self.cam_offset_px[1] = ty * px_per_tile * self.scale;
 
     const w_half = self.width / (2 * px_per_tile * self.scale);
     const h_half = self.height / (2 * px_per_tile * self.scale);
@@ -73,12 +64,7 @@ pub fn update(self: *@This(), target_x: f32, target_y: f32, dt: f32, rotate: i8)
 }
 
 pub fn screenToWorld(self: @This(), x_in: f32, y_in: f32) struct { x: f32, y: f32 } {
-    const cos = @cos(-self.angle);
-    const sin = @sin(-self.angle);
     const x_div = (x_in - self.width / 2.0) / (px_per_tile * self.scale);
     const y_div = (y_in - self.height / 2.0) / (px_per_tile * self.scale);
-    return .{
-        .x = self.x + x_div * cos + y_div * sin,
-        .y = self.y + x_div * -sin + y_div * cos,
-    };
+    return .{ .x = self.x + x_div, .y = self.y + y_div };
 }

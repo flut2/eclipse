@@ -238,7 +238,7 @@ pub const Player = struct {
         assets.playSfx(item_data.sound);
 
         self.attack_period = attack_delay;
-        self.attack_angle = angle - main.camera.angle;
+        self.attack_angle = angle;
         self.attack_start = time;
 
         self.doShoot(allocator, self.attack_start, item_data, angle);
@@ -394,7 +394,7 @@ pub const Player = struct {
             const time_dt: f32 = @floatFromInt(time - self.attack_start);
             float_period = @floatFromInt(self.attack_period);
             float_period = @mod(time_dt, float_period) / float_period;
-            self.facing = self.attack_angle + main.camera.angle;
+            self.facing = self.attack_angle;
             action = .attack;
         } else if (map.info.player_map_id == self.map_id) {
             if (self.x_dir != 0.0 or self.y_dir != 0.0) {
@@ -416,10 +416,10 @@ pub const Player = struct {
         }
 
         const pi_div_4 = std.math.pi / 4.0;
-        const angle = if (std.math.isNan(self.facing))
-            utils.halfBound(main.camera.angle) / pi_div_4
+        const angle = if (!std.math.isNan(self.facing))
+            utils.halfBound(self.facing) / pi_div_4
         else
-            utils.halfBound(self.facing - main.camera.angle) / pi_div_4;
+            0;
 
         const dir: assets.Direction = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
             0, 7 => .left,
@@ -445,7 +445,7 @@ pub const Player = struct {
         if (self.map_id == map.info.player_map_id) {
             if (ui_systems.screen == .editor) {
                 if (!std.math.isNan(self.move_angle)) {
-                    const move_angle = main.camera.angle + self.move_angle;
+                    const move_angle = self.move_angle;
                     const move_speed = self.moveSpeedMultiplier();
                     const new_x = self.x + move_speed * @cos(move_angle) * dt;
                     const new_y = self.y + move_speed * @sin(move_angle) * dt;
@@ -457,7 +457,7 @@ pub const Player = struct {
                 if (map.getSquare(self.x, self.y, true)) |square| {
                     const slide_amount = square.data.slide_amount;
                     if (!std.math.isNan(self.move_angle)) {
-                        const move_angle = main.camera.angle + self.move_angle;
+                        const move_angle = self.move_angle;
                         const move_speed = self.moveSpeedMultiplier();
                         const vec_x = move_speed * @cos(move_angle);
                         const vec_y = move_speed * @sin(move_angle);

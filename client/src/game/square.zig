@@ -70,36 +70,6 @@ pub const Square = struct {
             }
         }
 
-        {
-            var lock = map.useLockForType(Entity);
-            lock.lock();
-            defer lock.unlock();
-
-            if (map.getSquare(self.x, self.y - 1, true)) |square| {
-                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
-                    if (wall.data.is_wall) wall.wall_side_behaviors.bottom = .normal;
-                }
-            }
-
-            if (map.getSquare(self.x, self.y + 1, true)) |square| {
-                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
-                    if (wall.data.is_wall) wall.wall_side_behaviors.top = .normal;
-                }
-            }
-
-            if (map.getSquare(self.x - 1, self.y, true)) |square| {
-                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
-                    if (wall.data.is_wall) wall.wall_side_behaviors.right = .normal;
-                }
-            }
-
-            if (map.getSquare(self.x + 1, self.y, true)) |square| {
-                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
-                    if (wall.data.is_wall) wall.wall_side_behaviors.left = .normal;
-                }
-            }
-        }
-
         self.updateBlends();
         map.squares[floor_y * map.info.width + floor_x] = self.*;
     }

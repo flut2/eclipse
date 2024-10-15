@@ -361,7 +361,7 @@ pub const Server = struct {
 
             const attack_period: i64 = @intFromFloat(1.0 / (Player.attack_frequency * item_data.?.fire_rate));
             player.attack_period = attack_period;
-            player.attack_angle = data.angle - main.camera.angle;
+            player.attack_angle = data.angle;
             player.attack_start = main.current_time;
         }
     }

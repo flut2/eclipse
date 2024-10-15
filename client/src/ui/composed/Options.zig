@@ -186,14 +186,14 @@ pub fn create(allocator: std.mem.Allocator) !*Options {
     try addKeyMap(options.general_tab, &main.settings.move_down, "Move Down", "");
     try addKeyMap(options.general_tab, &main.settings.move_right, "Move Right", "");
     try addKeyMap(options.general_tab, &main.settings.move_left, "Move Left", "");
-    try addKeyMap(options.general_tab, &main.settings.rotate_left, "Rotate Left", "");
-    try addKeyMap(options.general_tab, &main.settings.rotate_right, "Rotate Right", "");
+    try addKeyMap(options.general_tab, &main.settings.ability_1, "Cast Basic Ability 1", "");
+    try addKeyMap(options.general_tab, &main.settings.ability_2, "Cast Basic Ability 2", "");
+    try addKeyMap(options.general_tab, &main.settings.ability_3, "Cast Basic Ability 3", "");
+    try addKeyMap(options.general_tab, &main.settings.ability_4, "Cast Ultimate Ability", "");
     try addKeyMap(options.general_tab, &main.settings.escape, "Return to the Retrieve", "");
     try addKeyMap(options.general_tab, &main.settings.interact, "Interact", "");
     try addKeyMap(options.general_tab, &main.settings.shoot, "Shoot", "");
-    try addKeyMap(options.general_tab, &main.settings.ability, "Use Ability", "");
     try addKeyMap(options.general_tab, &main.settings.walk, "Walk", "Allows you to move slowly");
-    try addKeyMap(options.general_tab, &main.settings.reset_camera, "Reset Camera", "This resets the camera's angle to the default of 0");
     try addKeyMap(options.general_tab, &main.settings.toggle_stats, "Toggle Stats", "This toggles whether to show the stats view");
     try addKeyMap(options.general_tab, &main.settings.toggle_perf_stats, "Toggle Performance Counter", "This toggles whether to show the performance counter");
 

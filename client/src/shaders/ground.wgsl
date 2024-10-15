@@ -26,7 +26,7 @@ const scaled_size: vec2<f32> = vec2<f32>(64.0, 64.0); // screen px per tile
 const invert_y: vec2<f32> = vec2<f32>(1.0, -1.0);
 
 struct Uniforms {
-    rotation: f32,
+    padding: f32,
     scale: f32,
     left_mask_uv: vec2<f32>,
     top_mask_uv: vec2<f32>,
@@ -60,15 +60,12 @@ struct FragmentData {
 
 @vertex
 fn vertexMain(vertex: VertexData) -> FragmentData {
-    let cos = cos(uniforms.rotation);
-    let sin = sin(uniforms.rotation);
-    let rot_mat = mat2x2<f32>(cos, sin, -sin, cos);
     let instance_id = vertex.vert_id / 6;
     let sub_vert_id = vertex.vert_id % 6;
     let instance = instances[instance_id];
 
     var out: FragmentData;
-    out.position = vec4((pos[sub_vert_id] * rot_mat * scaled_size * uniforms.scale + instance.pos + uniforms.clip_offset) 
+    out.position = vec4((pos[sub_vert_id] * scaled_size * uniforms.scale + instance.pos + uniforms.clip_offset) 
         * uniforms.clip_scale * invert_y, 0.0, 1.0);
     out.uv_offset = uv[sub_vert_id] / uniforms.atlas_size * base_size;
     out.instance_id = instance_id;

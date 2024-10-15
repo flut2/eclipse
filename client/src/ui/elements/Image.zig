@@ -90,7 +90,7 @@ pub fn draw(self: Image, cam_data: render.CameraData, x_offset: f32, y_offset: f
             player_icon_w,
             player_icon_h,
             player_icon,
-            .{ .shadow_texel_mult = 0.5, .rotation = -cam_data.angle },
+            .{ .shadow_texel_mult = 0.5 },
         );
     }
 }

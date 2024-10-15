@@ -201,7 +201,7 @@ pub const Projectile = struct {
         const rotation = self.data.rotation;
         const angle_correction = @as(f32, @floatFromInt(self.data.angle_correction)) * std.math.degreesToRadians(45);
         const angle = -(self.visual_angle + angle_correction +
-            (if (rotation == 0.0) 0.0 else float_time_ms / rotation) - cam_data.angle);
+            (if (rotation == 0.0) 0.0 else float_time_ms / rotation));
 
         if (main.settings.enable_lights) {
             const tile_pos = cam_data.worldToScreen(self.x, self.y);

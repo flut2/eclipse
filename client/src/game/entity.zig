@@ -32,10 +32,6 @@ pub const Entity = struct {
     render_color_override: u32 = std.math.maxInt(u32),
     condition: utils.Condition = .{},
     atlas_data: assets.AtlasData = .default,
-    top_atlas_data: assets.AtlasData = .default,
-    bottom_atlas_data: assets.AtlasData = .default,
-    left_atlas_data: assets.AtlasData = .default,
-    right_atlas_data: assets.AtlasData = .default,
     data: *const game_data.EntityData = undefined,
     colors: []u32 = &.{},
     anim_idx: u8 = 0,
@@ -48,32 +44,6 @@ pub const Entity = struct {
     bottom_next_anim: i64 = -1,
     left_next_anim: i64 = -1,
     right_next_anim: i64 = -1,
-    wall_side_behaviors: packed struct {
-        const SideBehavior = enum(u2) { normal, cull, blackout };
-        top: SideBehavior = .normal,
-        bottom: SideBehavior = .normal,
-        left: SideBehavior = .normal,
-        right: SideBehavior = .normal,
-    } = .{},
-
-    fn parseSide(self: *Entity, comptime side_name: []const u8) void {
-        if (@field(self.data, side_name ++ "_textures")) |tex_list| {
-            if (tex_list.len == 0) {
-                std.log.err("Wall with data id {} has an empty " ++ side_name ++ " side texture list, parsing failed", .{self.data_id});
-                return;
-            }
-
-            const tex = tex_list[utils.rng.next() % tex_list.len];
-            if (assets.atlas_data.get(tex.sheet)) |data| {
-                var side_data = data[tex.index];
-                side_data.removePadding();
-                @field(self, side_name ++ "_atlas_data") = side_data;
-            } else {
-                std.log.err("Could not find " ++ side_name ++ " side sheet {s} for wall with data id {}. Using error texture", .{ tex.sheet, self.data_id });
-                @field(self, side_name ++ "_atlas_data") = assets.error_data;
-            }
-        }
-    }
 
     pub fn addToMap(self: *Entity, allocator: std.mem.Allocator) void {
         self.data = game_data.entity.from_id.getPtr(self.data_id) orelse {
@@ -105,8 +75,6 @@ pub const Entity = struct {
             }
         }
 
-        inline for (.{ "top", "bottom", "left", "right" }) |side| self.parseSide(side);
-
         collision: {
             if (self.x >= 0 and self.y >= 0 and (self.data.occupy_square or self.data.full_occupy or self.data.is_wall)) {
                 const square = map.getSquarePtr(self.x, self.y, true) orelse break :collision;
@@ -117,42 +85,6 @@ pub const Entity = struct {
         if (self.data.is_wall) {
             self.x = @floor(self.x);
             self.y = @floor(self.y);
-
-            if (map.getSquare(self.x, self.y - 1, true)) |square| {
-                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
-                    if (wall.data.is_wall) {
-                        wall.wall_side_behaviors.bottom = .cull;
-                        self.wall_side_behaviors.top = .cull;
-                    }
-                }
-            } else self.wall_side_behaviors.top = .blackout;
-
-            if (map.getSquare(self.x, self.y + 1, true)) |square| {
-                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
-                    if (wall.data.is_wall) {
-                        wall.wall_side_behaviors.top = .cull;
-                        self.wall_side_behaviors.bottom = .cull;
-                    }
-                }
-            } else self.wall_side_behaviors.bottom = .blackout;
-
-            if (map.getSquare(self.x - 1, self.y, true)) |square| {
-                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
-                    if (wall.data.is_wall) {
-                        wall.wall_side_behaviors.right = .cull;
-                        self.wall_side_behaviors.left = .cull;
-                    }
-                }
-            } else self.wall_side_behaviors.left = .blackout;
-
-            if (map.getSquare(self.x + 1, self.y, true)) |square| {
-                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
-                    if (wall.data.is_wall) {
-                        wall.wall_side_behaviors.left = .cull;
-                        self.wall_side_behaviors.right = .cull;
-                    }
-                }
-            } else self.wall_side_behaviors.right = .blackout;
         }
 
         base.addToMap(self, Entity, allocator);
@@ -168,67 +100,8 @@ pub const Entity = struct {
         }
     }
 
-    fn drawWallSide(
-        render_type: render.RenderType,
-        x: f32,
-        y: f32,
-        scale: f32,
-        atlas_data: assets.AtlasData,
-        rotation: f32,
-        sort_extra: f32,
-        color: u32,
-        color_intensity: f32,
-    ) void {
-        const size = px_per_tile * scale;
-        render.drawQuad(x, y, size, size, atlas_data, .{
-            .rotation = rotation,
-            .render_type_override = render_type,
-            .sort_extra = sort_extra,
-            .color = color,
-            .color_intensity = color_intensity,
-        });
-    }
-
     pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator) void {
         if (self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
-
-        if (self.data.is_wall) {
-            const tile_pos = cam_data.worldToScreen(@floor(self.x) + 0.5, @floor(self.y) + 0.5);
-            const offset = px_per_tile * cam_data.scale / 2.0;
-            drawWallSide(.wall_upper, tile_pos.x, tile_pos.y, cam_data.scale, self.atlas_data, cam_data.angle, -offset * 3.0 - 2.0, 0, 0.1);
-
-            const pi_div_2 = std.math.pi / 2.0;
-            const bound_angle = utils.halfBound(cam_data.angle);
-
-            if (self.wall_side_behaviors.top != .cull and
-                (bound_angle >= pi_div_2 and bound_angle <= std.math.pi or bound_angle >= -std.math.pi and bound_angle <= -pi_div_2))
-            {
-                const atlas_data = if (self.wall_side_behaviors.top == .blackout) assets.generic_8x8 else self.top_atlas_data;
-                drawWallSide(.wall_top_side, tile_pos.x, tile_pos.y, cam_data.scale, atlas_data, cam_data.angle, -offset - 1.0, 0, 0.25);
-            }
-
-            if (self.wall_side_behaviors.bottom != .cull and
-                bound_angle <= pi_div_2 and bound_angle >= -pi_div_2)
-            {
-                const atlas_data = if (self.wall_side_behaviors.bottom == .blackout) assets.generic_8x8 else self.bottom_atlas_data;
-                drawWallSide(.wall_bottom_side, tile_pos.x, tile_pos.y, cam_data.scale, atlas_data, cam_data.angle, -offset - 1.0, 0, 0.25);
-            }
-
-            if (self.wall_side_behaviors.left != .cull and
-                bound_angle >= 0 and bound_angle <= std.math.pi)
-            {
-                const atlas_data = if (self.wall_side_behaviors.left == .blackout) assets.generic_8x8 else self.left_atlas_data;
-                drawWallSide(.wall_left_side, tile_pos.x, tile_pos.y, cam_data.scale, atlas_data, cam_data.angle, -offset - 1.0, 0, 0.25);
-            }
-
-            if (self.wall_side_behaviors.right != .cull and
-                bound_angle <= 0 and bound_angle >= -std.math.pi)
-            {
-                const atlas_data = if (self.wall_side_behaviors.right == .blackout) assets.generic_8x8 else self.right_atlas_data;
-                drawWallSide(.wall_right_side, tile_pos.x, tile_pos.y, cam_data.scale, atlas_data, cam_data.angle, -offset - 1.0, 0, 0.25);
-            }
-            return;
-        }
 
         var screen_pos = cam_data.worldToScreen(self.x, self.y);
         const size = size_mult * cam_data.scale * self.size_mult;
@@ -243,7 +116,7 @@ pub const Entity = struct {
                 tile_size,
                 tile_size,
                 self.atlas_data,
-                .{ .rotation = cam_data.angle, .alpha_mult = self.alpha, .sort_extra = -4096 },
+                .{ .alpha_mult = self.alpha, .sort_extra = -4096 },
             );
 
             if (self.name_text_data) |*data| render.drawText(
@@ -343,45 +216,5 @@ pub const Entity = struct {
 
     pub fn update(self: *Entity, time: i64) void {
         base.update(self, Entity, time);
-        base.updateAnimation(
-            "entity",
-            time,
-            self.data.top_animation,
-            self.data_id,
-            self.data.draw_on_ground,
-            &self.top_atlas_data,
-            &self.top_next_anim,
-            &self.top_anim_idx,
-        );
-        base.updateAnimation(
-            "entity",
-            time,
-            self.data.bottom_animation,
-            self.data_id,
-            self.data.draw_on_ground,
-            &self.bottom_atlas_data,
-            &self.bottom_next_anim,
-            &self.bottom_anim_idx,
-        );
-        base.updateAnimation(
-            "entity",
-            time,
-            self.data.left_animation,
-            self.data_id,
-            self.data.draw_on_ground,
-            &self.left_atlas_data,
-            &self.left_next_anim,
-            &self.left_anim_idx,
-        );
-        base.updateAnimation(
-            "entity",
-            time,
-            self.data.right_animation,
-            self.data_id,
-            self.data.draw_on_ground,
-            &self.right_atlas_data,
-            &self.right_next_anim,
-            &self.right_anim_idx,
-        );
     }
 };

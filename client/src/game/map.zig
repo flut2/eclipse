@@ -413,13 +413,10 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
                     obj.move_angle = input.move_angle;
                     obj.update(time, dt, allocator);
                     if (is_self) {
-                        main.camera.update(obj.x, obj.y, dt, input.rotate);
+                        main.camera.update(obj.x, obj.y, dt);
                         addMoveRecord(allocator, time, obj.x, obj.y);
                         if (input.attacking) {
-                            const shoot_angle = std.math.atan2(
-                                input.mouse_y - main.camera.height / 2.0,
-                                input.mouse_x - main.camera.width / 2.0,
-                            ) + main.camera.angle;
+                            const shoot_angle = std.math.atan2(input.mouse_y - main.camera.height / 2.0, input.mouse_x - main.camera.width / 2.0);
                             obj.weaponShoot(allocator, shoot_angle, time);
                         }
                     }

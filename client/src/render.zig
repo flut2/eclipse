@@ -23,7 +23,6 @@ const Projectile = @import("game/projectile.zig").Projectile;
 
 pub const CameraData = struct {
     minimap_zoom: f32,
-    angle: f32,
     scale: f32,
     x: f32,
     y: f32,
@@ -38,11 +37,9 @@ pub const CameraData = struct {
     cam_offset_px: [2]f32,
 
     pub fn worldToScreen(self: CameraData, x_in: f32, y_in: f32) struct { x: f32, y: f32 } {
-        const cos = @cos(self.angle);
-        const sin = @sin(self.angle);
         return .{
-            .x = (x_in * cos + y_in * sin) * px_per_tile * self.scale - self.cam_offset_px[0] - self.clip_offset[0],
-            .y = (x_in * -sin + y_in * cos) * px_per_tile * self.scale - self.cam_offset_px[1] - self.clip_offset[1],
+            .x = x_in * px_per_tile * self.scale - self.cam_offset_px[0] - self.clip_offset[0],
+            .y = y_in * px_per_tile * self.scale - self.cam_offset_px[1] - self.clip_offset[1],
         };
     }
 
@@ -91,11 +88,6 @@ pub const RenderType = enum(u32) {
     text_drop_shadow = 5,
     text_normal_subpixel_off = 6,
     text_drop_shadow_subpixel_off = 7,
-    wall_upper = 8,
-    wall_top_side = 9,
-    wall_bottom_side = 10,
-    wall_left_side = 11,
-    wall_right_side = 12,
 };
 
 pub const GenericData = extern struct {
@@ -134,7 +126,7 @@ pub const GenericUniformData = extern struct {
 };
 
 pub const GroundUniformData = extern struct {
-    rotation: f32,
+    padding: f32 = 0,
     scale: f32,
     left_mask_uv: [2]f32,
     top_mask_uv: [2]f32,
@@ -931,7 +923,6 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
     const ground_len: u32 = @min(grounds.items.len, ground_size);
     if (ground_len > 0) {
         queue.writeBuffer(ground_uniforms, 0, GroundUniformData, &.{.{
-            .rotation = cam_data.angle,
             .scale = cam_data.scale,
             .left_mask_uv = assets.left_mask_uv,
             .top_mask_uv = assets.top_mask_uv,

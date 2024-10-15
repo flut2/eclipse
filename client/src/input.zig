@@ -16,13 +16,10 @@ var move_up: f32 = 0.0;
 var move_down: f32 = 0.0;
 var move_left: f32 = 0.0;
 var move_right: f32 = 0.0;
-var rotate_left: i8 = 0;
-var rotate_right: i8 = 0;
 pub var allocator: std.mem.Allocator = undefined;
 
 pub var attacking: bool = false;
 pub var walking_speed_multiplier: f32 = 1.0;
-pub var rotate: i8 = 0;
 pub var move_angle: f32 = std.math.nan(f32);
 pub var mouse_x: f32 = 0.0;
 pub var mouse_y: f32 = 0.0;
@@ -39,9 +36,6 @@ pub fn reset() void {
     move_down = 0.0;
     move_left = 0.0;
     move_right = 0.0;
-    rotate_left = 0;
-    rotate_right = 0;
-    rotate = 0;
     attacking = false;
 }
 
@@ -71,25 +65,12 @@ fn keyPress(window: *glfw.Window, key: glfw.Key) void {
         move_left = 1.0;
     } else if (key == main.settings.move_right.getKey()) {
         move_right = 1.0;
-    } else if (key == main.settings.rotate_left.getKey()) {
-        rotate_left = 1;
-    } else if (key == main.settings.rotate_right.getKey()) {
-        rotate_right = 1;
     } else if (key == main.settings.walk.getKey()) {
         walking_speed_multiplier = 0.5;
-    } else if (key == main.settings.reset_camera.getKey()) {
-        main.camera.lock.lock();
-        defer main.camera.lock.unlock();
-        main.camera.angle = 0;
     } else if (key == main.settings.shoot.getKey()) {
         if (ui_systems.screen == .game) {
             attacking = true;
         }
-    } else if (key == main.settings.ability.getKey()) {
-        var lock = map.useLockForType(Player);
-        lock.lock();
-        defer lock.unlock();
-        if (map.localPlayer(.ref)) |player| player.useAbility();
     } else if (key == main.settings.options.getKey()) {
         openOptions();
     } else if (key == main.settings.escape.getKey()) {
@@ -133,10 +114,6 @@ fn keyRelease(key: glfw.Key) void {
         move_left = 0.0;
     } else if (key == main.settings.move_right.getKey()) {
         move_right = 0.0;
-    } else if (key == main.settings.rotate_left.getKey()) {
-        rotate_left = 0;
-    } else if (key == main.settings.rotate_right.getKey()) {
-        rotate_right = 0;
     } else if (key == main.settings.walk.getKey()) {
         walking_speed_multiplier = 1.0;
     } else if (key == main.settings.shoot.getKey()) {
@@ -161,25 +138,12 @@ fn mousePress(window: *glfw.Window, button: glfw.MouseButton) void {
         move_left = 1.0;
     } else if (button == main.settings.move_right.getMouse()) {
         move_right = 1.0;
-    } else if (button == main.settings.rotate_left.getMouse()) {
-        rotate_left = 1;
-    } else if (button == main.settings.rotate_right.getMouse()) {
-        rotate_right = 1;
     } else if (button == main.settings.walk.getMouse()) {
         walking_speed_multiplier = 0.5;
-    } else if (button == main.settings.reset_camera.getMouse()) {
-        main.camera.lock.lock();
-        defer main.camera.lock.unlock();
-        main.camera.angle = 0;
     } else if (button == main.settings.shoot.getMouse()) {
         if (ui_systems.screen == .game) {
             attacking = true;
         }
-    } else if (button == main.settings.ability.getMouse()) {
-        var lock = map.useLockForType(Player);
-        lock.lock();
-        defer lock.unlock();
-        if (map.localPlayer(.ref)) |player| player.useAbility();
     } else if (button == main.settings.options.getMouse()) {
         openOptions();
     } else if (button == main.settings.escape.getMouse()) {
@@ -227,10 +191,6 @@ fn mouseRelease(button: glfw.MouseButton) void {
         move_left = 0.0;
     } else if (button == main.settings.move_right.getMouse()) {
         move_right = 0.0;
-    } else if (button == main.settings.rotate_left.getMouse()) {
-        rotate_left = 0;
-    } else if (button == main.settings.rotate_right.getMouse()) {
-        rotate_right = 0;
     } else if (button == main.settings.walk.getMouse()) {
         walking_speed_multiplier = 1.0;
     } else if (button == main.settings.shoot.getMouse()) {
@@ -416,7 +376,6 @@ pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.A
 }
 
 pub fn updateState() void {
-    rotate = rotate_right - rotate_left;
     const y_dt = move_down - move_up;
     const x_dt = move_right - move_left;
     move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);

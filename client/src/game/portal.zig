@@ -57,7 +57,7 @@ pub const Portal = struct {
                 tile_size * cam_data.scale,
                 tile_size * cam_data.scale,
                 self.atlas_data,
-                .{ .rotation = cam_data.angle, .alpha_mult = self.alpha, .sort_extra = -4096 },
+                .{ .alpha_mult = self.alpha, .sort_extra = -4096 },
             );
 
             if (self.name_text_data) |*data| render.drawText(

@@ -44,11 +44,6 @@ const text_normal_render_type = 4;
 const text_drop_shadow_render_type = 5;
 const text_normal_subpixel_off_render_type = 6;
 const text_drop_shadow_subpixel_off_render_type = 7;
-const wall_upper_render_type = 8;
-const wall_top_side_render_type = 9;
-const wall_bottom_side_render_type = 10;
-const wall_left_side_render_type = 11;
-const wall_right_side_render_type = 12;
 
 struct Uniforms {
     clip_scale: vec2<f32>,
@@ -93,122 +88,9 @@ fn vertexMain(vertex: VertexData) -> FragmentData {
     let sin = sin(instance.rotation);
     let rot_mat = mat2x2<f32>(cos, sin, -sin, cos);
 
+    let center_pos = instance.pos + instance.size / vec2<f32>(2.0, 2.0);
     var out: FragmentData;
-    switch instance.render_type {
-        default {
-            let center_pos = instance.pos + instance.size / vec2<f32>(2.0, 2.0);
-            out.position = vec4((pos[sub_vert_id] * rot_mat * instance.size + center_pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y, 0.0, 1.0);
-        }
-
-        case wall_upper_render_type {
-            let upper_quad = (pos[sub_vert_id] * rot_mat * instance.size - vec2(0.0, instance.size.y) + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-            out.position = vec4(upper_quad, 0.0, 1.0);
-        }
-
-        case wall_bottom_side_render_type {
-            switch sub_vert_id {
-                default {}
-
-                case 0 {
-                    let upper_quad = (pos[0] * rot_mat * instance.size - vec2(0.0, instance.size.y) + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(upper_quad, 0.0, 1.0);
-                }
-
-                case 1, 4 {
-                    let upper_quad = (pos[1] * rot_mat * instance.size - vec2(0.0, instance.size.y) + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(upper_quad, 0.0, 1.0);
-                }
-
-                case 2, 3 {
-                    let lower_quad = (pos[0] * rot_mat * instance.size + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(lower_quad, 0.0, 1.0);
-                }
-
-                case 5 {
-                    let lower_quad = (pos[1] * rot_mat * instance.size + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(lower_quad, 0.0, 1.0);
-                }
-            }
-        }
-
-        case wall_top_side_render_type {
-            switch sub_vert_id {
-                default {}
-
-                case 0 {
-                    let upper_quad = (pos[3] * rot_mat * instance.size - vec2(0.0, instance.size.y) + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(upper_quad, 0.0, 1.0);
-                }
-
-                case 1, 4 {
-                    let upper_quad = (pos[5] * rot_mat * instance.size - vec2(0.0, instance.size.y) + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(upper_quad, 0.0, 1.0);
-                }
-
-                case 2, 3 {
-                    let lower_quad = (pos[3] * rot_mat * instance.size + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(lower_quad, 0.0, 1.0);
-                }
-
-                case 5 {
-                    let lower_quad = (pos[5] * rot_mat * instance.size + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(lower_quad, 0.0, 1.0);
-                }
-            }
-        }
-
-        case wall_left_side_render_type {
-            switch sub_vert_id {
-                default {}
-
-                case 0 {
-                    let upper_quad = (pos[0] * rot_mat * instance.size - vec2(0.0, instance.size.y) + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(upper_quad, 0.0, 1.0);
-                }
-
-                case 1, 4 {
-                    let upper_quad = (pos[3] * rot_mat * instance.size - vec2(0.0, instance.size.y) + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(upper_quad, 0.0, 1.0);
-                }
-
-                case 2, 3 {
-                    let lower_quad = (pos[0] * rot_mat * instance.size + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(lower_quad, 0.0, 1.0);
-                }
-
-                case 5 {
-                    let lower_quad = (pos[3] * rot_mat * instance.size + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(lower_quad, 0.0, 1.0);
-                }
-            }
-        }
-
-        case wall_right_side_render_type {
-            switch sub_vert_id {
-                default {}
-                
-                case 0 {
-                    let upper_quad = (pos[1] * rot_mat * instance.size - vec2(0.0, instance.size.y) + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(upper_quad, 0.0, 1.0);
-                }
-
-                case 1, 4 {
-                    let upper_quad = (pos[5] * rot_mat * instance.size - vec2(0.0, instance.size.y) + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(upper_quad, 0.0, 1.0);
-                }
-
-                case 2, 3 {
-                    let lower_quad = (pos[1] * rot_mat * instance.size + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(lower_quad, 0.0, 1.0);
-                }
-
-                case 5 {
-                    let lower_quad = (pos[5] * rot_mat * instance.size + instance.pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y;
-                    out.position = vec4(lower_quad, 0.0, 1.0);
-                }
-            }
-        }
-    }
+    out.position = vec4((pos[sub_vert_id] * rot_mat * instance.size + center_pos + uniforms.clip_offset) * uniforms.clip_scale * invert_y, 0.0, 1.0);
     out.uv = uv[sub_vert_id] * instance.uv_size + instance.uv;
     out.instance_id = instance_id;
     return out;
@@ -230,12 +112,7 @@ fn fragmentMain(fragment: FragmentData) -> @location(0) vec4<f32> {
             return vec4(0.0, 0.0, 0.0, 1.0);
         }
 
-        case quad_render_type, 
-            wall_upper_render_type, 
-            wall_top_side_render_type, 
-            wall_bottom_side_render_type, 
-            wall_left_side_render_type, 
-            wall_right_side_render_type {
+        case quad_render_type {
             let pixel = textureSampleGrad(game_tex, default_sampler, fragment.uv, dx, dy);
             return vec4(mix(pixel.rgb, unpackColor(instance.base_color), instance.color_intensity), pixel.a * instance.alpha_mult);
         }
