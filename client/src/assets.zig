@@ -1000,7 +1000,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try addImage("error_texture", "error_texture.png", 8, 8, false, &ctx, allocator);
     try addImage("invisible", "invisible.png", 8, 8, true, &ctx, allocator);
     try addImage("ground", "ground.png", 9, 9, true, &ctx, allocator);
-    try addImage("ground_masks", "ground_masks.png", 8, 8, true, &ctx, allocator);
+    try addImage("ground_masks", "ground_masks.png", 9, 9, true, &ctx, allocator);
     try addImage("items", "items.png", 10, 10, false, &ctx, allocator);
     try addImage("misc", "misc.png", 10, 10, false, &ctx, allocator);
     try addImage("misc_big", "misc_big.png", 18, 18, false, &ctx, allocator);
