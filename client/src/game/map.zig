@@ -497,7 +497,7 @@ pub fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
     }
 
     const square = squares[floor_y * info.width + floor_x];
-    if (check_validity and (square.data_id == Square.empty_tile or square.data_id == Square.editor_tile))
+    if (check_validity and square.data_id == Square.empty_tile)
         return null;
 
     return square;
@@ -517,7 +517,7 @@ pub fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Square {
     }
 
     const square = &squares[floor_y * info.width + floor_x];
-    if (check_validity and (square.data_id == Square.empty_tile or square.data_id == Square.editor_tile))
+    if (check_validity and square.data_id == Square.empty_tile)
         return null;
 
     return square;

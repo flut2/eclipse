@@ -412,7 +412,7 @@ pub const ContainerData = struct {
     name: []const u8,
     textures: []const TextureData,
     size_mult: f32 = 1.0,
-    item_types: []const ItemType = &[_]ItemType{.any} ** 8,
+    item_types: [8]ItemType = @splat(.any),
     light: LightData = .{},
     show_name: bool = false,
     draw_on_ground: bool = false,

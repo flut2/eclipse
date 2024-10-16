@@ -371,7 +371,7 @@ pub const Client = struct {
             try player.char_data.set(.{ .hp = class_data.stats.health });
             try player.char_data.set(.{ .mp = class_data.stats.mana });
             try player.char_data.set(.{ .stats = stats });
-            var starting_items: [22]u16 = [_]u16{std.math.maxInt(u16)} ** 22;
+            var starting_items: [22]u16 = @splat(std.math.maxInt(u16));
             for (class_data.default_items, 0..) |item, i| starting_items[i] = item;
             try player.char_data.set(.{ .items = starting_items });
         } else return error.InvalidCharId;

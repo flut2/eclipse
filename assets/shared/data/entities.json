@@ -190,11 +190,11 @@
     },
     {
         "id": 11,
-        "name": "Sandstone Wall",
+        "name": "Wall Test",
         "textures": [
             {
-                "sheet": "ground",
-                "index": 15
+                "sheet": "walls",
+                "index": 0
             }
         ],
         "is_wall": true

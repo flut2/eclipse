@@ -55,15 +55,28 @@ pub fn addToMap(self: anytype, comptime ObjType: type, allocator: std.mem.Alloca
 
             const tex = self.data.textures[utils.rng.next() % self.data.textures.len];
 
-            if (assets.atlas_data.get(tex.sheet)) |data| {
-                self.atlas_data = data[tex.index];
+            if (@hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall) {
+                if (assets.walls.get(tex.sheet)) |data| {
+                    self.wall_data = data[tex.index];
+                } else {
+                    std.log.err("Could not find sheet {s} for wall with data id {}. Using error texture", .{ tex.sheet, self.data_id });
+                    self.wall_data = assets.error_data_wall;
+                }
             } else {
-                std.log.err("Could not find sheet {s} for {s} with data id {}. Using error texture", .{ tex.sheet, type_name, self.data_id });
-                self.atlas_data = assets.error_data;
+                if (assets.atlas_data.get(tex.sheet)) |data| {
+                    self.atlas_data = data[tex.index];
+                } else {
+                    std.log.err("Could not find sheet {s} for {s} with data id {}. Using error texture", .{ tex.sheet, type_name, self.data_id });
+                    self.atlas_data = assets.error_data;
+                }
             }
         }
 
-        if (@hasField(T, "colors")) self.colors = assets.atlas_to_color_data.get(@bitCast(self.atlas_data)) orelse blk: {
+        if (@hasField(T, "colors")) self.colors = assets.atlas_to_color_data.get(
+            if (@hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall) 
+                @bitCast(self.wall_data.base) 
+            else
+                @bitCast(self.atlas_data)) orelse blk: {
             std.log.err("Could not parse color data for {s} with data id {}. Setting it to empty", .{ type_name, self.data_id });
             break :blk &.{};
         };

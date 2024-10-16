@@ -8,7 +8,7 @@ const stat_util = @import("stat_util.zig");
 const World = @import("../world.zig").World;
 
 pub const Container = struct {
-    const inv_default = [_]u16{std.math.maxInt(u16)} ** 8;
+    const inv_default: [8]u16 = @splat(std.math.maxInt(u16));
 
     map_id: u32 = std.math.maxInt(u32),
     data_id: u16 = std.math.maxInt(u16),

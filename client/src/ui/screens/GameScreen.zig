@@ -821,7 +821,7 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
                         self.swapError(start_slot, start_item);
                         return;
                     };
-                    break :blk container.data.item_types;
+                    break :blk &container.data.item_types;
                 } else break :blk local_player.data.item_types;
             };
 

@@ -4,7 +4,7 @@ const map = @import("game/map.zig");
 const utils = @import("shared").utils;
 const pad = @import("assets.zig").padding;
 
-pub const px_per_tile = 64;
+pub const px_per_tile = 63;
 pub const size_mult = 6.0;
 
 /// This lock is for reading from the render thread (it does not, and should not write),

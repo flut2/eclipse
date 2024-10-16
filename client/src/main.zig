@@ -328,8 +328,8 @@ pub fn main() !void {
     settings = try Settings.init(allocator);
     defer settings.deinit();
 
-    try assets.init(allocator);
-    defer assets.deinit(allocator);
+    try assets.init();
+    defer assets.deinit();
 
     try game_data.init(allocator);
     defer game_data.deinit();

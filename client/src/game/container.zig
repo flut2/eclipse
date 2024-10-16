@@ -25,7 +25,7 @@ pub const Container = struct {
     size_mult: f32 = 0,
     atlas_data: assets.AtlasData = .default,
     data: *const game_data.ContainerData = undefined,
-    inventory: [9]u16 = [_]u16{std.math.maxInt(u16)} ** 9,
+    inventory: [9]u16 = @splat(std.math.maxInt(u16)),
     anim_idx: u8 = 0,
     next_anim: i64 = -1,
 

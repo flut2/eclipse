@@ -838,9 +838,19 @@ fn addObjectContainer(
                 }
 
                 break :blk atlas_data[tex.index];
+            } else if (assets.walls.get(tex.sheet)) |wall_data| {
+                if (tex.index >= wall_data.len) {
+                    std.log.err("Could not find index {} for wall with data id {}. Using error texture", .{ tex.index, entry.key_ptr.* });
+                    break :blk assets.error_data_wall.base;
+                }
+
+                break :blk wall_data[tex.index].base;
             } else {
                 std.log.err("Could not find sheet {s} for object with data id {}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
-                break :blk assets.error_data;
+                break :blk if (@hasField(@TypeOf(entry.value_ptr.*), "is_wall") and entry.value_ptr.is_wall)
+                    assets.error_data_wall.base
+                else
+                    assets.error_data;
             }
         };
 

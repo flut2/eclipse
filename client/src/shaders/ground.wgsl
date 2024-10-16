@@ -21,8 +21,8 @@ const uv: array<vec2<f32>, 6> = array<vec2<f32>, 6>(
     vec2<f32>(1.0, 0.0),
 );
 
-const base_size: vec2<f32> = vec2<f32>(8.0, 8.0); // atlas px per tile
-const scaled_size: vec2<f32> = vec2<f32>(64.0, 64.0); // screen px per tile
+const base_size: vec2<f32> = vec2<f32>(9.0, 9.0); // atlas px per tile
+const scaled_size: vec2<f32> = vec2<f32>(63.0, 63.0); // screen px per tile
 const invert_y: vec2<f32> = vec2<f32>(1.0, -1.0);
 
 struct Uniforms {

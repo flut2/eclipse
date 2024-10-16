@@ -24,7 +24,7 @@ pub const Square = struct {
     x: f32 = 0.0,
     y: f32 = 0.0,
     atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
-    blends: [4]Blend = [_]Blend{.{ .u = -1.0, .v = -1.0 }} ** 4,
+    blends: [4]Blend = @splat(.{ .u = -1.0, .v = -1.0 }),
     data: *const game_data.GroundData = undefined,
     entity_map_id: u32 = std.math.maxInt(u32),
 

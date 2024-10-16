@@ -32,18 +32,17 @@ pub const Entity = struct {
     render_color_override: u32 = std.math.maxInt(u32),
     condition: utils.Condition = .{},
     atlas_data: assets.AtlasData = .default,
+    wall_data: assets.WallData = .default,
     data: *const game_data.EntityData = undefined,
     colors: []u32 = &.{},
     anim_idx: u8 = 0,
-    top_anim_idx: u8 = 0,
-    bottom_anim_idx: u8 = 0,
-    left_anim_idx: u8 = 0,
-    right_anim_idx: u8 = 0,
     next_anim: i64 = -1,
-    top_next_anim: i64 = -1,
-    bottom_next_anim: i64 = -1,
-    left_next_anim: i64 = -1,
-    right_next_anim: i64 = -1,
+    wall_outline_cull: packed struct {
+        top: bool = false,
+        bottom: bool = false,
+        left: bool = false,
+        right: bool = false,
+    } = .{},
 
     pub fn addToMap(self: *Entity, allocator: std.mem.Allocator) void {
         self.data = game_data.entity.from_id.getPtr(self.data_id) orelse {
@@ -83,8 +82,41 @@ pub const Entity = struct {
         }
 
         if (self.data.is_wall) {
-            self.x = @floor(self.x);
-            self.y = @floor(self.y);
+            if (map.getSquare(self.x, self.y - 1, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) {
+                        wall.wall_outline_cull.bottom = true;
+                        self.wall_outline_cull.top = true;
+                    }
+                }
+            }
+
+            if (map.getSquare(self.x, self.y + 1, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) {
+                        wall.wall_outline_cull.top = true;
+                        self.wall_outline_cull.bottom = true;
+                    }
+                }
+            }
+
+            if (map.getSquare(self.x - 1, self.y, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) {
+                        wall.wall_outline_cull.right = true;
+                        self.wall_outline_cull.left = true;
+                    }
+                }
+            }
+
+            if (map.getSquare(self.x + 1, self.y, true)) |square| {
+                if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+                    if (wall.data.is_wall) {
+                        wall.wall_outline_cull.left = true;
+                        self.wall_outline_cull.right = true;
+                    }
+                }
+            }
         }
 
         base.addToMap(self, Entity, allocator);
@@ -105,6 +137,61 @@ pub const Entity = struct {
 
         var screen_pos = cam_data.worldToScreen(self.x, self.y);
         const size = size_mult * cam_data.scale * self.size_mult;
+
+        if (self.data.is_wall) {
+            const wall_size_mult = Camera.px_per_tile / 9.0 * cam_data.scale * self.size_mult;
+            const base_w = self.wall_data.base.texWRaw() * wall_size_mult;
+            const base_h = self.wall_data.base.texHRaw() * wall_size_mult;
+            render.drawQuad(screen_pos.x, screen_pos.y, base_w, base_h, self.wall_data.base, .{});
+
+            if (!self.wall_outline_cull.left) {
+                const left_outline_w = self.wall_data.left_outline.texWRaw() * wall_size_mult;
+                render.drawQuad(
+                    screen_pos.x - left_outline_w,
+                    screen_pos.y,
+                    left_outline_w,
+                    self.wall_data.left_outline.texHRaw() * wall_size_mult,
+                    self.wall_data.left_outline,
+                    .{},
+                );
+            }
+
+            if (!self.wall_outline_cull.right) {
+                render.drawQuad(
+                    screen_pos.x + base_w,
+                    screen_pos.y,
+                    self.wall_data.right_outline.texWRaw() * wall_size_mult,
+                    self.wall_data.right_outline.texHRaw() * wall_size_mult,
+                    self.wall_data.right_outline,
+                    .{},
+                );
+            }
+
+            if (!self.wall_outline_cull.top) {
+                const top_outline_h = self.wall_data.top_outline.texHRaw() * wall_size_mult;
+                render.drawQuad(
+                    screen_pos.x,
+                    screen_pos.y - top_outline_h,
+                    self.wall_data.top_outline.texWRaw() * wall_size_mult,
+                    top_outline_h,
+                    self.wall_data.top_outline,
+                    .{},
+                );
+            }
+
+            if (!self.wall_outline_cull.bottom) {
+                render.drawQuad(
+                    screen_pos.x,
+                    screen_pos.y + base_h,
+                    self.wall_data.bottom_outline.texWRaw() * wall_size_mult,
+                    self.wall_data.bottom_outline.texHRaw() * wall_size_mult,
+                    self.wall_data.bottom_outline,
+                    .{},
+                );
+            }
+
+            return;
+        }
 
         if (self.data.draw_on_ground) {
             const tile_size = @as(f32, px_per_tile) * cam_data.scale;
