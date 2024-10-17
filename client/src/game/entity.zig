@@ -142,13 +142,15 @@ pub const Entity = struct {
             const wall_size_mult = Camera.px_per_tile / 9.0 * cam_data.scale * self.size_mult;
             const base_w = self.wall_data.base.texWRaw() * wall_size_mult;
             const base_h = self.wall_data.base.texHRaw() * wall_size_mult;
-            render.drawQuad(screen_pos.x, screen_pos.y, base_w, base_h, self.wall_data.base, .{});
+            const base_x = screen_pos.x - base_w / 2.0;
+            const base_y = screen_pos.y - @max(base_h / 2.0, (self.wall_data.base.texHRaw() - 9.0 / 2.0) * wall_size_mult);
+            render.drawQuad(base_x, base_y, base_w, base_h, self.wall_data.base, .{});
 
             if (!self.wall_outline_cull.left) {
                 const left_outline_w = self.wall_data.left_outline.texWRaw() * wall_size_mult;
                 render.drawQuad(
-                    screen_pos.x - left_outline_w,
-                    screen_pos.y,
+                    base_x - left_outline_w,
+                    base_y,
                     left_outline_w,
                     self.wall_data.left_outline.texHRaw() * wall_size_mult,
                     self.wall_data.left_outline,
@@ -158,8 +160,8 @@ pub const Entity = struct {
 
             if (!self.wall_outline_cull.right) {
                 render.drawQuad(
-                    screen_pos.x + base_w,
-                    screen_pos.y,
+                    base_x + base_w,
+                    base_y,
                     self.wall_data.right_outline.texWRaw() * wall_size_mult,
                     self.wall_data.right_outline.texHRaw() * wall_size_mult,
                     self.wall_data.right_outline,
@@ -170,8 +172,8 @@ pub const Entity = struct {
             if (!self.wall_outline_cull.top) {
                 const top_outline_h = self.wall_data.top_outline.texHRaw() * wall_size_mult;
                 render.drawQuad(
-                    screen_pos.x,
-                    screen_pos.y - top_outline_h,
+                    base_x,
+                    base_y - top_outline_h,
                     self.wall_data.top_outline.texWRaw() * wall_size_mult,
                     top_outline_h,
                     self.wall_data.top_outline,
@@ -181,8 +183,8 @@ pub const Entity = struct {
 
             if (!self.wall_outline_cull.bottom) {
                 render.drawQuad(
-                    screen_pos.x,
-                    screen_pos.y + base_h,
+                    base_x,
+                    base_y + base_h,
                     self.wall_data.bottom_outline.texWRaw() * wall_size_mult,
                     self.wall_data.bottom_outline.texHRaw() * wall_size_mult,
                     self.wall_data.bottom_outline,
