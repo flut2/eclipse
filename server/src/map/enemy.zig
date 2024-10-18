@@ -26,16 +26,18 @@ pub const Enemy = struct {
     condition: utils.Condition = .{},
     damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
     data: *const game_data.EnemyData = undefined,
-    behavior: ?behavior.EnemyBehavior = null,
+    behavior: ?*behavior.EnemyBehavior = null,
     world: *World = undefined,
     spawned: bool = false,
     storages: behavior_logic.EnemyStorages = .{},
 
     pub fn init(self: *Enemy, allocator: std.mem.Allocator) !void {
-        self.behavior = behavior.enemy_behavior_map.get(self.data_id);
-        if (self.behavior) |behav| {
-            if (behav.spawn) |spawn| try spawn(self);
-            if (behav.entry) |entry| try entry(self);
+        if (behavior.enemy_behavior_map.get(self.data_id)) |behav| {
+            self.behavior = try allocator.create(behavior.EnemyBehavior);
+            self.behavior.?.* = behav;
+            switch (self.behavior.?.*) {
+                inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "spawn")) try b.spawn(self),
+            }
         }
 
         self.stats_writer.list = try .initCapacity(allocator, 32);
@@ -52,8 +54,11 @@ pub const Enemy = struct {
         const allocator = self.world.allocator;
 
         if (self.behavior) |behav| {
-            if (behav.death) |death| try death(self);
-            if (behav.exit) |exit| try exit(self);
+            switch (behav.*) {
+                inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "death")) try b.death(self),
+            }
+
+            allocator.destroy(behav);
         }
 
         self.storages.deinit();
@@ -83,15 +88,16 @@ pub const Enemy = struct {
 
     pub fn tick(self: *Enemy, time: i64, dt: i64) !void {
         if (self.data.health > 0 and self.hp <= 0) try self.delete();
-        if (self.behavior) |behav| if (behav.tick) |behav_tick| try behav_tick(self, time, dt);
+        if (self.behavior) |behav| switch (behav.*) {
+            inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "tick")) try b.tick(self, time, dt),
+        };
     }
 
     pub fn damage(self: *Enemy, owner_id: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
-        if (self.data.health == 0)
-            return;
+        if (self.data.health == 0) return;
 
-        const dmg = game_data.physDamage(phys_dmg, self.data.defense, self.condition) + 
-            game_data.magicDamage(magic_dmg, self.data.resistance, self.condition) + 
+        const dmg = game_data.physDamage(phys_dmg, self.data.defense, self.condition) +
+            game_data.magicDamage(magic_dmg, self.data.resistance, self.condition) +
             true_dmg;
         self.hp -= dmg;
         if (self.hp <= 0) {

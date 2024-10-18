@@ -193,7 +193,7 @@ pub const Condition = packed struct {
 
 pub const Rect = struct { x: f32, y: f32, w: f32, h: f32, w_pad: f32, h_pad: f32 };
 
-pub var rng = std.Random.DefaultPrng.init(0);
+pub var rng: std.Random.DefaultPrng = .init(0);
 
 var last_memory_access: i64 = -1;
 var last_memory_value: f32 = -1.0;

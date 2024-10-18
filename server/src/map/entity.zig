@@ -19,15 +19,17 @@ pub const Entity = struct {
     data: *const game_data.EntityData = undefined,
     world: *World = undefined,
     spawned: bool = false,
-    behavior: ?behavior.EntityBehavior = null,
-    behavior_data: ?*anyopaque = null,
+    behavior: ?*behavior.EntityBehavior = null,
+    behavior_data: ?*anyopaque = undefined,
     storages: behavior_logic.EntityStorages = .{},
 
     pub fn init(self: *Entity, allocator: std.mem.Allocator) !void {
-        self.behavior = behavior.entity_behavior_map.get(self.data_id);
-        if (self.behavior) |behav| {
-            if (behav.spawn) |spawn| try spawn(self);
-            if (behav.entry) |entry| try entry(self);
+        if (behavior.entity_behavior_map.get(self.data_id)) |behav| {
+            self.behavior = try allocator.create(behavior.EntityBehavior);
+            self.behavior.?.* = behav;
+            switch (self.behavior.?.*) {
+                inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "spawn")) try b.spawn(self),
+            }
         }
 
         self.stats_writer.list = try .initCapacity(allocator, 32);
@@ -48,8 +50,11 @@ pub const Entity = struct {
 
     pub fn deinit(self: *Entity) !void {
         if (self.behavior) |behav| {
-            if (behav.death) |death| try death(self);
-            if (behav.exit) |exit| try exit(self);
+            switch (behav.*) {
+                inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "death")) try b.death(self),
+            }
+
+            self.world.allocator.destroy(behav);
         }
 
         if (self.data.occupy_square or self.data.full_occupy) {
@@ -63,9 +68,9 @@ pub const Entity = struct {
 
     pub fn tick(self: *Entity, time: i64, dt: i64) !void {
         if (self.data.health > 0 and self.hp <= 0) try self.world.remove(Entity, self);
-        if (self.behavior) |behav| {
-            if (behav.tick) |behav_tick| try behav_tick(self, time, dt);
-        }
+        if (self.behavior) |behav| switch (behav.*) {
+            inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "tick")) try b.tick(self, time, dt),
+        };
     }
 
     pub fn exportStats(self: *Entity, cache: *[@typeInfo(network_data.EntityStat).@"union".fields.len]?network_data.EntityStat) ![]u8 {

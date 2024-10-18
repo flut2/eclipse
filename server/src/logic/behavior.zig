@@ -18,10 +18,10 @@ fn getMetadata(comptime T: type) BehaviorMetadata {
 
     var ret: BehaviorMetadata = undefined;
     var found_metadata = false;
-    for (@typeInfo(T).@"struct".decls) |decl| {
+    for (@typeInfo(T).@"struct".decls) |decl| @"continue": {
+        if (!std.mem.eql(u8, decl.name, "data")) break :@"continue";
         const metadata = @field(T, decl.name);
-        const is_metadata = @TypeOf(metadata) == BehaviorMetadata;
-        if (!is_metadata) continue;
+        if (@TypeOf(metadata) != BehaviorMetadata) continue;
         if (found_metadata) @compileError("Duplicate behavior metadata");
         ret = metadata;
         found_metadata = true;
@@ -31,18 +31,53 @@ fn getMetadata(comptime T: type) BehaviorMetadata {
     return ret;
 }
 
-fn BehaviorVtable(comptime ChildType: type) type {
-    return struct {
-        spawn: ?*const fn (self: *ChildType) anyerror!void = null,
-        death: ?*const fn (self: *ChildType) anyerror!void = null,
-        entry: ?*const fn (self: *ChildType) anyerror!void = null,
-        exit: ?*const fn (self: *ChildType) anyerror!void = null,
-        tick: ?*const fn (self: *ChildType, time: i64, dt: i64) anyerror!void = null,
-    };
+fn Behavior(comptime behav_type: BehaviorType) type {
+    if (!@inComptime()) @compileError("This function is comptime-only");
+
+    const EnumField = std.builtin.Type.EnumField;
+    const UnionField = std.builtin.Type.UnionField;
+
+    var union_fields: []const UnionField = &[_]UnionField{};
+    var enum_fields: []const EnumField = &[_]EnumField{};
+
+    var enum_index: u32 = 0;
+    for (gen_behaviors.behaviors) |import| {
+        for (@typeInfo(import).@"struct".decls) |d| @"continue": {
+            const behav = @field(import, d.name);
+            if (getMetadata(behav).type != behav_type) break :@"continue";
+            const name = std.fmt.comptimePrint("{d}", .{utils.typeId(behav)});
+
+            enum_fields = enum_fields ++ &[_]EnumField{.{
+                .name = name,
+                .value = enum_index,
+            }};
+            enum_index += 1;
+
+            union_fields = union_fields ++ &[_]UnionField{.{
+                .name = name,
+                .type = behav,
+                .alignment = @alignOf(behav),
+            }};
+        }
+    }
+
+    const Enum = @Type(.{ .@"enum" = .{
+        .tag_type = u32,
+        .fields = enum_fields,
+        .decls = &.{},
+        .is_exhaustive = true,
+    } });
+
+    return @Type(.{ .@"union" = .{
+        .layout = .auto,
+        .fields = union_fields,
+        .decls = &.{},
+        .tag_type = Enum,
+    } });
 }
 
-pub const EntityBehavior = BehaviorVtable(Entity);
-pub const EnemyBehavior = BehaviorVtable(Enemy);
+pub const EntityBehavior = Behavior(.entity);
+pub const EnemyBehavior = Behavior(.enemy);
 
 pub var entity_behavior_map: std.AutoHashMapUnmanaged(u16, EntityBehavior) = .empty;
 pub var enemy_behavior_map: std.AutoHashMapUnmanaged(u16, EnemyBehavior) = .empty;
@@ -67,13 +102,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
             if (res.found_existing)
                 std.log.err("The struct \"{s}\" overwrote the behavior for the object \"{s}\"", .{ @typeName(behav), metadata.name });
 
-            res.value_ptr.* = .{
-                .spawn = if (std.meta.hasFn(behav, "spawn")) behav.spawn else null,
-                .death = if (std.meta.hasFn(behav, "death")) behav.death else null,
-                .entry = if (std.meta.hasFn(behav, "entry")) behav.entry else null,
-                .exit = if (std.meta.hasFn(behav, "exit")) behav.exit else null,
-                .tick = if (std.meta.hasFn(behav, "tick")) behav.tick else null,
-            };
+            res.value_ptr.* = @unionInit(switch (metadata.type) {
+                .entity => EntityBehavior,
+                .enemy => EnemyBehavior,
+            }, std.fmt.comptimePrint("{d}", .{utils.typeId(behav)}), .{});
         }
     }
 }

@@ -10,18 +10,11 @@ pub const HealthShrine = struct {
         .name = "Health Shrine",
     };
 
-    pub fn exit(host: *Entity) !void {
-        const last_healed: *i64 = @ptrCast(@alignCast(host.behavior_data.?));
-        host.world.allocator.destroy(last_healed);
-    }
+    last_healed: i64 = -1,
 
-    pub fn tick(host: *Entity, time: i64, _: i64) !void {
-        if (host.behavior_data == null)
-            host.behavior_data = try host.world.allocator.create(i64);
-
-        const last_healed: *i64 = @ptrCast(@alignCast(host.behavior_data.?));
-        if (time - last_healed.* >= 1.5 * std.time.us_per_s) {
-            defer last_healed.* = time;
+    pub fn tick(self: *HealthShrine, host: *Entity, time: i64, _: i64) !void {
+        if (time - self.last_healed >= 1.5 * std.time.us_per_s) {
+            defer self.last_healed = time;
 
             const player = host.world.getNearestPlayerWithin(host.x, host.y, 4.0 * 4.0) orelse return;
             const pre_hp = player.hp;
@@ -58,18 +51,11 @@ pub const MagicShrine = struct {
         .name = "Magic Shrine",
     };
 
-    pub fn exit(host: *Entity) !void {
-        const last_healed: *i64 = @ptrCast(@alignCast(host.behavior_data.?));
-        host.world.allocator.destroy(last_healed);
-    }
+    last_healed: i64 = -1,
 
-    pub fn tick(host: *Entity, time: i64, _: i64) !void {
-        if (host.behavior_data == null)
-            host.behavior_data = try host.world.allocator.create(i64);
-
-        const last_healed: *i64 = @ptrCast(@alignCast(host.behavior_data.?));
-        if (time - last_healed.* >= 1.5 * std.time.us_per_s) {
-            defer last_healed.* = time;
+    pub fn tick(self: *MagicShrine, host: *Entity, time: i64, _: i64) !void {
+        if (time - self.last_healed >= 1.5 * std.time.us_per_s) {
+            defer self.last_healed = time;
 
             const player = host.world.getNearestPlayerWithin(host.x, host.y, 4.0 * 4.0) orelse return;
             const pre_mp = player.mp;

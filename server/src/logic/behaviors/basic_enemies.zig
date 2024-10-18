@@ -12,11 +12,11 @@ pub const Crocodile = struct {
         .name = "Crocodile",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *Crocodile, host: *Enemy) !void {
         loot.dropPortal(host, "Crown Cove", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *Crocodile, host: *Enemy, time: i64, dt: i64) !void {
         if (!logic.follow(@src(), host, dt, .{
             .speed = 3.0,
             .acquire_range = 9.0,
@@ -48,11 +48,11 @@ pub const SpikeBall = struct {
         .name = "Spike Ball",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *SpikeBall, host: *Enemy) !void {
         loot.dropPortal(host, "Crown Cove", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *SpikeBall, host: *Enemy, time: i64, dt: i64) !void {
         logic.wander(@src(), host, dt, 2.5);
         logic.shoot(@src(), host, time, dt, .{
             .shoot_angle = 36.0,
@@ -70,11 +70,11 @@ pub const GoblinGrunt = struct {
         .name = "Goblin Grunt",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *GoblinGrunt, host: *Enemy) !void {
         loot.dropPortal(host, "Crown Cove", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *GoblinGrunt, host: *Enemy, time: i64, dt: i64) !void {
         if (!logic.charge(@src(), host, dt, .{
             .speed = 6.0,
             .range = 9.0,
@@ -97,11 +97,11 @@ pub const GoblinGuard = struct {
         .name = "Goblin Guard",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *GoblinGuard, host: *Enemy) !void {
         loot.dropPortal(host, "Crown Cove", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *GoblinGuard, host: *Enemy, time: i64, dt: i64) !void {
         if (!(logic.orbit(host, dt, .{
             .speed = 3.0,
             .radius = 2.0,
@@ -130,7 +130,7 @@ pub const ForestFirefly = struct {
         .name = "Forest Firefly",
     };
 
-    pub fn tick(host: *Enemy, _: i64, dt: i64) !void {
+    pub fn tick(_: *ForestFirefly, host: *Enemy, _: i64, dt: i64) !void {
         logic.wander(@src(), host, dt, 2.5);
     }
 };
@@ -141,11 +141,11 @@ pub const Imp = struct {
         .name = "Imp",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *Imp, host: *Enemy) !void {
         loot.dropPortal(host, "Crimson Chasm", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *Imp, host: *Enemy, time: i64, dt: i64) !void {
         if (!logic.charge(@src(), host, dt, .{
             .speed = 6.0,
             .range = 13.0,
@@ -168,11 +168,11 @@ pub const LivingFlame = struct {
         .name = "Living Flame",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *LivingFlame, host: *Enemy) !void {
         loot.dropPortal(host, "Crimson Chasm", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *LivingFlame, host: *Enemy, time: i64, dt: i64) !void {
         logic.wander(@src(), host, dt, 2.2);
 
         logic.shoot(@src(), host, time, dt, .{
@@ -199,11 +199,11 @@ pub const DemonMage = struct {
         .name = "Demon Mage",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *DemonMage, host: *Enemy) !void {
         loot.dropPortal(host, "Crimson Chasm", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *DemonMage, host: *Enemy, time: i64, dt: i64) !void {
         if (!logic.orbit(host, dt, .{
             .speed = 3.85,
             .radius = 1.0,
@@ -227,11 +227,11 @@ pub const DemonArcher = struct {
         .name = "Demon Archer",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *DemonArcher, host: *Enemy) !void {
         loot.dropPortal(host, "Crimson Chasm", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *DemonArcher, host: *Enemy, time: i64, dt: i64) !void {
         if (!logic.orbit(host, dt, .{
             .speed = 3.85,
             .radius = 1.0,
@@ -255,11 +255,11 @@ pub const JackalWarrior = struct {
         .name = "Jackal Warrior",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *JackalWarrior, host: *Enemy) !void {
         loot.dropPortal(host, "Dusty Dune", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *JackalWarrior, host: *Enemy, time: i64, dt: i64) !void {
         if (!logic.charge(@src(), host, dt, .{
             .speed = 6.0,
             .range = 13.0,
@@ -282,11 +282,11 @@ pub const JackalPriest = struct {
         .name = "Jackal Priest",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *JackalPriest, host: *Enemy) !void {
         loot.dropPortal(host, "Dusty Dune", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *JackalPriest, host: *Enemy, time: i64, dt: i64) !void {
         if (!logic.orbit(host, dt, .{
             .speed = 3.85,
             .radius = 1.0,
@@ -327,11 +327,11 @@ pub const JackalArcher = struct {
         .name = "Jackal Archer",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *JackalArcher, host: *Enemy) !void {
         loot.dropPortal(host, "Dusty Dune", 0.01);
     }
 
-    pub fn tick(host: *Enemy, time: i64, dt: i64) !void {
+    pub fn tick(_: *JackalArcher, host: *Enemy, time: i64, dt: i64) !void {
         if (!logic.follow(@src(), host, dt, .{
             .speed = 3.0,
             .acquire_range = 9.0,
@@ -355,11 +355,11 @@ pub const RegalMummy = struct {
         .name = "Regal Mummy",
     };
 
-    pub fn death(host: *Enemy) !void {
+    pub fn death(_: *RegalMummy, host: *Enemy) !void {
         loot.dropPortal(host, "Dusty Dune", 0.01);
     }
 
-    pub fn tick(host: *Enemy, _: i64, dt: i64) !void {
+    pub fn tick(_: *RegalMummy, host: *Enemy, _: i64, dt: i64) !void {
         if (!logic.follow(@src(), host, dt, .{
             .speed = 3.0,
             .acquire_range = 9.0,
