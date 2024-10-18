@@ -189,7 +189,7 @@ const AudioState = struct {
     device: *zaudio.Device,
     engine: *zaudio.Engine,
 
-    export fn audioCallback(device: *zaudio.Device, output: ?*anyopaque, _: ?*const anyopaque, num_frames: u32) void {
+    fn audioCallback(device: *zaudio.Device, output: ?*anyopaque, _: ?*const anyopaque, num_frames: u32) callconv (.C) void {
         const audio: *AudioState = @ptrCast(@alignCast(device.getUserData()));
         audio.engine.readPcmFrames(output.?, num_frames, null) catch {};
     }

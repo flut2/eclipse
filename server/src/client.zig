@@ -59,7 +59,7 @@ pub const Client = struct {
         };
     }
 
-    pub export fn allocBuffer(socket: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) void {
+    pub fn allocBuffer(socket: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv (.C) void {
         const client: *Client = @ptrCast(@alignCast(socket.*.data));
         buf.*.base = @ptrCast(client.arena.allocator().alloc(u8, suggested_size) catch {
             client.sameThreadShutdown(); // no failure, if we can't alloc it wouldn't go through anyway
@@ -68,7 +68,7 @@ pub const Client = struct {
         buf.*.len = @intCast(suggested_size);
     }
 
-    export fn closeCallback(socket: [*c]uv.uv_handle_t) void {
+    fn closeCallback(socket: [*c]uv.uv_handle_t) callconv (.C) void {
         const client: *Client = @ptrCast(@alignCast(socket.*.data));
 
         removePlayer: {
@@ -81,7 +81,7 @@ pub const Client = struct {
         main.client_pool.destroy(client);
     }
 
-    export fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) void {
+    fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv (.C) void {
         const wr: *WriteRequest = @ptrCast(ud);
         const client: *Client = @ptrCast(@alignCast(wr.request.data));
 
@@ -95,7 +95,7 @@ pub const Client = struct {
         arena_allocator.destroy(wr);
     }
 
-    pub export fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) void {
+    pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv (.C) void {
         const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
         const client: *Client = @ptrCast(@alignCast(socket.data));
         // if (client.ip.len == 0) {
@@ -155,9 +155,9 @@ pub const Client = struct {
         arena_allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
     }
 
-    export fn asyncCloseCallback(_: [*c]uv.uv_handle_t) void {}
+    fn asyncCloseCallback(_: [*c]uv.uv_handle_t) callconv (.C) void {}
 
-    pub export fn shutdownCallback(handle: [*c]uv.uv_async_t) void {
+    pub fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv (.C) void {
         const client: *Client = @ptrCast(@alignCast(handle.*.data));
         client.sameThreadShutdown();
     }

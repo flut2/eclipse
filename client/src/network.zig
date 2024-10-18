@@ -103,12 +103,12 @@ pub const Server = struct {
         };
     }
 
-    pub export fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) void {
+    pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv (.C) void {
         buf.*.base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch unreachable);
         buf.*.len = @intCast(suggested_size);
     }
 
-    export fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) void {
+    fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv (.C) void {
         const wr: *WriteRequest = @ptrCast(@alignCast(ud));
         const server: *Server = @ptrCast(@alignCast(wr.request.data));
         main.allocator.free(wr.buffer.base[0..wr.buffer.len]);
@@ -125,7 +125,7 @@ pub const Server = struct {
         }
     }
 
-    pub export fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) void {
+    pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv (.C) void {
         const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
         const server: *Server = @ptrCast(@alignCast(socket.data));
         var child_arena = std.heap.ArenaAllocator.init(main.allocator);
@@ -171,7 +171,7 @@ pub const Server = struct {
         if (buf.*.base != null) main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
     }
 
-    export fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) void {
+    fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv (.C) void {
         const server: *Server = @ptrCast(@alignCast(conn.*.data));
         defer main.allocator.destroy(@as(*uv.uv_connect_t, @ptrCast(conn)));
 
@@ -206,13 +206,13 @@ pub const Server = struct {
         server.sendPacket(server.hello_data);
     }
 
-    export fn shutdownCallback(handle: [*c]uv.uv_async_t) void {
+    fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv (.C) void {
         const server: *Server = @ptrCast(@alignCast(handle.*.data));
         server.shutdown();
         dialog.showDialog(.none, {});
     }
 
-    export fn asyncWriteCallback(async_handle: [*c]uv.uv_async_t) void {
+    fn asyncWriteCallback(async_handle: [*c]uv.uv_async_t) callconv (.C) void {
         const wr: *WriteRequest = @ptrCast(@alignCast(async_handle.*.data));
         const server: *Server = @ptrCast(@alignCast(wr.request.data));
 
@@ -325,7 +325,7 @@ pub const Server = struct {
         if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
     }
 
-    export fn closeCallback(_: [*c]uv.uv_handle_t) void {}
+    fn closeCallback(_: [*c]uv.uv_handle_t) callconv (.C) void {}
 
     fn logRead(comptime tick: enum { non_tick, tick }) bool {
         return if (tick == .non_tick)

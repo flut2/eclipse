@@ -239,7 +239,7 @@ fn renderTick() !void {
     }
 }
 
-export fn gameTick(idle: [*c]uv.uv_idle_t) void {
+fn gameTick(idle: [*c]uv.uv_idle_t) callconv (.C) void {
     var window: *glfw.Window = @ptrCast(@alignCast(idle.*.data));
     if (window.shouldClose()) {
         @branchHint(.unlikely);
