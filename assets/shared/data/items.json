@@ -53,7 +53,8 @@
             "frequency": 4,
             "accel": -0.9,
             "accel_delay": 0.2,
-            "speed_clamp": 0.7
+            "speed_clamp": 0.7,
+            "angle_correction": 1
         },
         "sound": "items/swish_light.mp3"
     },

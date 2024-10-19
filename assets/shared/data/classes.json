@@ -78,21 +78,21 @@
     },
     {
         "id": 1,
-        "name": "Dryad",
+        "name": "Golem",
         "description": "placeholder",
         "texture": {
             "sheet": "players",
             "index": 1
         },
         "item_types": [
-            "staff",
-            "robe",
+            "bow",
+            "plate",
             "boots",
             "artifact"
         ],
         "default_items": [
-            "Starter Staff",
-            "Starter Robe",
+            "Starter Bow",
+            "Starter Plate",
             "Starter Boots",
             "Starter Artifact"
         ],
@@ -155,165 +155,11 @@
     },
     {
         "id": 2,
-        "name": "Golem",
-        "description": "placeholder",
-        "texture": {
-            "sheet": "players",
-            "index": 2
-        },
-        "item_types": [
-            "bow",
-            "plate",
-            "boots",
-            "artifact"
-        ],
-        "default_items": [
-            "Starter Bow",
-            "Starter Leather",
-            "Starter Boots",
-            "Starter Artifact"
-        ],
-        "stats": {
-            "health": 800,
-            "mana": 800,
-            "strength": 50,
-            "wit": 50,
-            "defense": 50,
-            "resistance": 50,
-            "speed": 50,
-            "stamina": 50,
-            "intelligence": 50,
-            "penetration": 50,
-            "piercing": 50,
-            "haste": 50,
-            "tenacity": 50
-        },
-        "abilities": [
-            {
-                "name": "Anomalous Burst",
-                "description": "Shoot a flurry of &type=\"bold_it\"col=\"C45860\"6 (+1 per 30 &img=\"misc_big,34\") heat seeking void blasts&reset, dealing &type=\"bold_it\"&col=\"FF6C32\"750 (+75%&space&img=\"misc_big,32\") Physical Damage.",
-                "mana_cost": 35,
-                "cooldown": 5.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 0
-                }
-            },
-            {
-                "name": "Paradoxical Shift",
-                "description": "Become a &type=\"med_it\"Phantom&reset for the next 3 seconds, becoming Invisible to enemies and gaining &type=\"bold_it\"&col=\"C45860\"+25% &img=\"misc_big,34\".",
-                "mana_cost": 75,
-                "cooldown": 10.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 1
-                }
-            },
-            {
-                "name": "Swarm",
-                "description": "&type=\"bold\"&col=\"7A6D6A\"PASSIVE:&reset Enemies killed near the Enigma leave behind a &type=\"med_it\"Soul Fragment&reset for 5 seconds.\n&type=\"bold\"&col=\"7A6D6A\"ACTIVE:&reset Convert all &type=\"med_it\"Soul Fragments&reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &type=\"bold_it\"&col=\"A15AFF\"250 (+150% &img=\"misc_big,35\") damage.&reset\nVoidlings have &type=\"bold_it\"&col=\"20AC20\"600 (+25% &img=\"misc_big,40\") Maximum Health&reset, and lose 75 health every second.\n&type=\"med_it\"&size=\"10\"&col=\"736562\"Soul Fragments are shared between all Enigmas in the same instance.",
-                "mana_cost": 100,
-                "cooldown": 25.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 2
-                }
-            },
-            {
-                "name": "Shapeshift",
-                "description": "Transform into another chosen class, granting access to their abilities.",
-                "cooldown": 30.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 3
-                }
-            }
-        ]
-    },
-    {
-        "id": 3,
-        "name": "Dragon",
-        "description": "placeholder",
-        "texture": {
-            "sheet": "players",
-            "index": 3
-        },
-        "item_types": [
-            "staff",
-            "robe",
-            "boots",
-            "artifact"
-        ],
-        "default_items": [
-            "Starter Staff",
-            "Starter Robe",
-            "Starter Boots",
-            "Starter Artifact"
-        ],
-        "stats": {
-            "health": 800,
-            "mana": 800,
-            "strength": 50,
-            "wit": 50,
-            "defense": 50,
-            "resistance": 50,
-            "speed": 50,
-            "stamina": 50,
-            "intelligence": 50,
-            "penetration": 50,
-            "piercing": 50,
-            "haste": 50,
-            "tenacity": 50
-        },
-        "abilities": [
-            {
-                "name": "Anomalous Burst",
-                "description": "Shoot a flurry of &type=\"bold_it\"col=\"C45860\"6 (+1 per 30 &img=\"misc_big,34\") heat seeking void blasts&reset, dealing &type=\"bold_it\"&col=\"FF6C32\"750 (+75%&space&img=\"misc_big,32\") Physical Damage.",
-                "mana_cost": 35,
-                "cooldown": 5.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 0
-                }
-            },
-            {
-                "name": "Paradoxical Shift",
-                "description": "Become a &type=\"med_it\"Phantom&reset for the next 3 seconds, becoming Invisible to enemies and gaining &type=\"bold_it\"&col=\"C45860\"+25% &img=\"misc_big,34\".",
-                "mana_cost": 75,
-                "cooldown": 10.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 1
-                }
-            },
-            {
-                "name": "Swarm",
-                "description": "&type=\"bold\"&col=\"7A6D6A\"PASSIVE:&reset Enemies killed near the Enigma leave behind a &type=\"med_it\"Soul Fragment&reset for 5 seconds.\n&type=\"bold\"&col=\"7A6D6A\"ACTIVE:&reset Convert all &type=\"med_it\"Soul Fragments&reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &type=\"bold_it\"&col=\"A15AFF\"250 (+150% &img=\"misc_big,35\") damage.&reset\nVoidlings have &type=\"bold_it\"&col=\"20AC20\"600 (+25% &img=\"misc_big,40\") Maximum Health&reset, and lose 75 health every second.\n&type=\"med_it\"&size=\"10\"&col=\"736562\"Soul Fragments are shared between all Enigmas in the same instance.",
-                "mana_cost": 100,
-                "cooldown": 25.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 2
-                }
-            },
-            {
-                "name": "Shapeshift",
-                "description": "Transform into another chosen class, granting access to their abilities.",
-                "cooldown": 30.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 3
-                }
-            }
-        ]
-    },
-    {
-        "id": 5,
         "name": "Chronomancer",
         "description": "placeholder",
         "texture": {
             "sheet": "players",
-            "index": 6
+            "index": 2
         },
         "item_types": [
             "staff",
@@ -386,89 +232,12 @@
         ]
     },
     {
-        "id": 6,
-        "name": "Alchemist",
-        "description": "placeholder",
-        "texture": {
-            "sheet": "players",
-            "index": 6
-        },
-        "item_types": [
-            "staff",
-            "leather",
-            "boots",
-            "artifact"
-        ],
-        "default_items": [
-            "Starter Staff",
-            "Starter Leather",
-            "Starter Boots",
-            "Starter Artifact"
-        ],
-        "stats": {
-            "health": 800,
-            "mana": 800,
-            "strength": 50,
-            "wit": 50,
-            "defense": 50,
-            "resistance": 50,
-            "speed": 50,
-            "stamina": 50,
-            "intelligence": 50,
-            "penetration": 50,
-            "piercing": 50,
-            "haste": 50,
-            "tenacity": 50
-        },
-        "abilities": [
-            {
-                "name": "Anomalous Burst",
-                "description": "Shoot a flurry of &type=\"bold_it\"col=\"C45860\"6 (+1 per 30 &img=\"misc_big,34\") heat seeking void blasts&reset, dealing &type=\"bold_it\"&col=\"FF6C32\"750 (+75%&space&img=\"misc_big,32\") Physical Damage.",
-                "mana_cost": 35,
-                "cooldown": 5.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 0
-                }
-            },
-            {
-                "name": "Paradoxical Shift",
-                "description": "Become a &type=\"med_it\"Phantom&reset for the next 3 seconds, becoming Invisible to enemies and gaining &type=\"bold_it\"&col=\"C45860\"+25% &img=\"misc_big,34\".",
-                "mana_cost": 75,
-                "cooldown": 10.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 1
-                }
-            },
-            {
-                "name": "Swarm",
-                "description": "&type=\"bold\"&col=\"7A6D6A\"PASSIVE:&reset Enemies killed near the Enigma leave behind a &type=\"med_it\"Soul Fragment&reset for 5 seconds.\n&type=\"bold\"&col=\"7A6D6A\"ACTIVE:&reset Convert all &type=\"med_it\"Soul Fragments&reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &type=\"bold_it\"&col=\"A15AFF\"250 (+150% &img=\"misc_big,35\") damage.&reset\nVoidlings have &type=\"bold_it\"&col=\"20AC20\"600 (+25% &img=\"misc_big,40\") Maximum Health&reset, and lose 75 health every second.\n&type=\"med_it\"&size=\"10\"&col=\"736562\"Soul Fragments are shared between all Enigmas in the same instance.",
-                "mana_cost": 100,
-                "cooldown": 25.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 2
-                }
-            },
-            {
-                "name": "Shapeshift",
-                "description": "Transform into another chosen class, granting access to their abilities.",
-                "cooldown": 30.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 3
-                }
-            }
-        ]
-    },
-    {
-        "id": 7,
+        "id": 3,
         "name": "Genie",
         "description": "placeholder",
         "texture": {
             "sheet": "players",
-            "index": 7
+            "index": 3
         },
         "item_types": [
             "sword",
@@ -539,93 +308,16 @@
         ]
     },
     {
-        "id": 8,
+        "id": 4,
         "name": "Pixie",
         "description": "placeholder",
         "texture": {
             "sheet": "players",
-            "index": 8
+            "index": 4
         },
         "item_types": [
             "staff",
             "robe",
-            "boots",
-            "artifact"
-        ],
-        "default_items": [
-            "Starter Staff",
-            "Starter Robe",
-            "Starter Boots",
-            "Starter Artifact"
-        ],
-        "stats": {
-            "health": 800,
-            "mana": 800,
-            "strength": 50,
-            "wit": 50,
-            "defense": 50,
-            "resistance": 50,
-            "speed": 50,
-            "stamina": 50,
-            "intelligence": 50,
-            "penetration": 50,
-            "piercing": 50,
-            "haste": 50,
-            "tenacity": 50
-        },
-        "abilities": [
-            {
-                "name": "Anomalous Burst",
-                "description": "Shoot a flurry of &type=\"bold_it\"col=\"C45860\"6 (+1 per 30 &img=\"misc_big,34\") heat seeking void blasts&reset, dealing &type=\"bold_it\"&col=\"FF6C32\"750 (+75%&space&img=\"misc_big,32\") Physical Damage.",
-                "mana_cost": 35,
-                "cooldown": 5.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 0
-                }
-            },
-            {
-                "name": "Paradoxical Shift",
-                "description": "Become a &type=\"med_it\"Phantom&reset for the next 3 seconds, becoming Invisible to enemies and gaining &type=\"bold_it\"&col=\"C45860\"+25% &img=\"misc_big,34\".",
-                "mana_cost": 75,
-                "cooldown": 10.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 1
-                }
-            },
-            {
-                "name": "Swarm",
-                "description": "&type=\"bold\"&col=\"7A6D6A\"PASSIVE:&reset Enemies killed near the Enigma leave behind a &type=\"med_it\"Soul Fragment&reset for 5 seconds.\n&type=\"bold\"&col=\"7A6D6A\"ACTIVE:&reset Convert all &type=\"med_it\"Soul Fragments&reset within 2 tiles of your cursor into Voidlings. Voidlings chase the closest enemy, attacking them for &type=\"bold_it\"&col=\"A15AFF\"250 (+150% &img=\"misc_big,35\") damage.&reset\nVoidlings have &type=\"bold_it\"&col=\"20AC20\"600 (+25% &img=\"misc_big,40\") Maximum Health&reset, and lose 75 health every second.\n&type=\"med_it\"&size=\"10\"&col=\"736562\"Soul Fragments are shared between all Enigmas in the same instance.",
-                "mana_cost": 100,
-                "cooldown": 25.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 2
-                }
-            },
-            {
-                "name": "Shapeshift",
-                "description": "Transform into another chosen class, granting access to their abilities.",
-                "cooldown": 30.0,
-                "icon": {
-                    "sheet": "ability_icons",
-                    "index": 3
-                }
-            }
-        ]
-    },
-    {
-        "id": 9,
-        "name": "Enigma",
-        "description": "placeholder",
-        "texture": {
-            "sheet": "players",
-            "index": 8
-        },
-        "item_types": [
-            "any_weapon",
-            "any_armor",
             "boots",
             "artifact"
         ],
