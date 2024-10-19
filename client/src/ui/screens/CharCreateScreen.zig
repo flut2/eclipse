@@ -8,8 +8,6 @@ const systems = @import("../systems.zig");
 const CharCreateScreen = @This();
 const CharacterBox = @import("../elements/CharacterBox.zig");
 
-allocator: std.mem.Allocator = undefined,
-
 boxes: std.ArrayListUnmanaged(*CharacterBox) = .empty,
 
 pub fn init(self: *CharCreateScreen) !void {
@@ -22,7 +20,7 @@ pub fn init(self: *CharCreateScreen) !void {
     var i: usize = 0;
     while (class_iter.next()) |char| {
         defer i += 1;
-        const box = element.create(self.allocator, CharacterBox, .{
+        const box = element.create(CharacterBox, .{
             .base = .{
                 .x = (main.camera.width - button_data_base.width()) / 2,
                 .y = @floatFromInt(50 * i),
@@ -37,14 +35,14 @@ pub fn init(self: *CharCreateScreen) !void {
             },
             .press_callback = boxClickCallback,
         }) catch return;
-        self.boxes.append(self.allocator, box) catch return;
+        self.boxes.append(main.allocator, box) catch return;
     }
 }
 
 pub fn deinit(self: *CharCreateScreen) void {
     for (self.boxes.items) |box| element.destroy(box);
-    self.boxes.clearAndFree(self.allocator);
-    self.allocator.destroy(self);
+    self.boxes.clearAndFree(main.allocator);
+    main.allocator.destroy(self);
 }
 
 fn boxClickCallback(box: *CharacterBox) void {

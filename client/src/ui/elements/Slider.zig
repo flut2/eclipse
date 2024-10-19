@@ -195,10 +195,10 @@ pub fn init(self: *Slider) void {
         {
             text_data.lock.lock();
             defer text_data.lock.unlock();
-            text_data.recalculateAttributes(self.base.allocator);
+            text_data.recalculateAttributes();
         }
 
-        text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00", self.base.allocator);
+        text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00");
     }
 
     if (self.title_text_data) |*text_data| {
@@ -208,22 +208,22 @@ pub fn init(self: *Slider) void {
         text_data.max_height = self.title_offset;
         text_data.lock.lock();
         defer text_data.lock.unlock();
-        text_data.recalculateAttributes(self.base.allocator);
+        text_data.recalculateAttributes();
     }
 
     if (self.tooltip_text) |*text_data| {
         text_data.lock.lock();
         defer text_data.lock.unlock();
-        text_data.recalculateAttributes(self.base.allocator);
+        text_data.recalculateAttributes();
     }
 
     self.setValue(self.current_value);
 }
 
 pub fn deinit(self: *Slider) void {
-    if (self.value_text_data) |*text_data| text_data.deinit(self.base.allocator);
-    if (self.title_text_data) |*text_data| text_data.deinit(self.base.allocator);
-    if (self.tooltip_text) |*text_data| text_data.deinit(self.base.allocator);
+    if (self.value_text_data) |*text_data| text_data.deinit();
+    if (self.title_text_data) |*text_data| text_data.deinit();
+    if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
 pub fn draw(self: *Slider, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
@@ -325,7 +325,7 @@ fn pressed(self: *Slider, x: f32, y: f32, knob_h: f32, knob_w: f32) void {
 
     if (self.current_value != prev_value) {
         if (self.value_text_data) |*text_data| {
-            text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00", self.base.allocator);
+            text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00");
         }
 
         if (self.continous_event_fire) {
@@ -358,7 +358,7 @@ pub fn setValue(self: *Slider, value: f32) void {
 
     if (self.current_value != prev_value) {
         if (self.value_text_data) |*text_data| {
-            text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00", self.base.allocator);
+            text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00");
         }
 
         if (self.continous_event_fire) {

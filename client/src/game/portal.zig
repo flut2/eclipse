@@ -28,15 +28,15 @@ pub const Portal = struct {
     anim_idx: u8 = 0,
     next_anim: i64 = -1,
 
-    pub fn addToMap(self: *Portal, allocator: std.mem.Allocator) void {
-        base.addToMap(self, Portal, allocator);
+    pub fn addToMap(self: *Portal) void {
+        base.addToMap(self, Portal);
     }
 
-    pub fn deinit(self: *Portal, allocator: std.mem.Allocator) void {
-        base.deinit(self, allocator);
+    pub fn deinit(self: *Portal) void {
+        base.deinit(self);
     }
 
-    pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator, int_id: u32) void {
+    pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_id: u32) void {
         if (!cam_data.visibleInCamera(self.x, self.y)) return;
 
         var screen_pos = cam_data.worldToScreen(self.x, self.y);
@@ -44,7 +44,7 @@ pub const Portal = struct {
 
         if (main.settings.enable_lights) {
             const tile_pos = cam_data.worldToScreen(self.x, self.y);
-            render.drawLight(allocator, self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+            render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
         }
 
         if (self.data.draw_on_ground) {

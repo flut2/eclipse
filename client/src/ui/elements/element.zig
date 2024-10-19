@@ -3,6 +3,7 @@ const utils = @import("shared").utils;
 const assets = @import("../../assets.zig");
 const systems = @import("../systems.zig");
 const render = @import("../../render.zig");
+const main = @import("../../main.zig");
 
 const Settings = @import("../../Settings.zig");
 const Bar = @import("Bar.zig");
@@ -53,7 +54,6 @@ pub const ElementBase = struct {
     scissor: ScissorRect = .{},
     visible: bool = true,
     event_policy: EventPolicy = .{},
-    allocator: std.mem.Allocator = undefined,
 };
 
 pub const Layer = enum {
@@ -120,19 +120,19 @@ pub const TextData = struct {
     line_widths: ?std.ArrayListUnmanaged(f32) = null,
     break_indices: ?std.ArrayListUnmanaged(usize) = null,
 
-    pub fn setText(self: *TextData, text: []const u8, allocator: std.mem.Allocator) void {
+    pub fn setText(self: *TextData, text: []const u8) void {
         self.lock.lock();
         defer self.lock.unlock();
 
         self.text = text;
-        self.recalculateAttributes(allocator);
+        self.recalculateAttributes();
     }
 
-    pub fn recalculateAttributes(self: *TextData, allocator: std.mem.Allocator) void {
+    pub fn recalculateAttributes(self: *TextData) void {
         std.debug.assert(!self.lock.tryLock());
 
         if (self.backing_buffer.len == 0 and self.max_chars > 0)
-            self.backing_buffer = allocator.alloc(u8, self.max_chars) catch @panic("OOM");
+            self.backing_buffer = main.allocator.alloc(u8, self.max_chars) catch @panic("OOM");
 
         if (self.line_widths) |*line_widths| {
             line_widths.clearRetainingCapacity();
@@ -164,7 +164,7 @@ pub const TextData = struct {
             const offset_i = i + index_offset;
             if (offset_i >= self.text.len) {
                 self.width = @max(x_max, x_pointer);
-                self.line_widths.?.append(allocator, x_pointer) catch |e| {
+                self.line_widths.?.append(main.allocator, x_pointer) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
@@ -259,11 +259,11 @@ pub const TextData = struct {
                                 x_pointer += current_size * assets.CharacterData.size;
                                 if (x_pointer > self.max_width) {
                                     self.width = @max(x_max, last_word_end_pointer);
-                                    self.line_widths.?.append(allocator, last_word_end_pointer) catch |e| {
+                                    self.line_widths.?.append(main.allocator, last_word_end_pointer) catch |e| {
                                         std.log.err("Attribute recalculation for text data failed: {}", .{e});
                                         return;
                                     };
-                                    self.break_indices.?.append(allocator, word_start) catch |e| {
+                                    self.break_indices.?.append(main.allocator, word_start) catch |e| {
                                         std.log.err("Attribute recalculation for text data failed: {}", .{e});
                                         return;
                                     };
@@ -303,11 +303,11 @@ pub const TextData = struct {
             if (char == '\n' or next_x_pointer > self.max_width) {
                 const next_pointer = if (char == '\n') next_x_pointer else last_word_end_pointer;
                 self.width = @max(x_max, next_pointer);
-                self.line_widths.?.append(allocator, next_pointer) catch |e| {
+                self.line_widths.?.append(main.allocator, next_pointer) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
-                self.break_indices.?.append(allocator, if (char == '\n') i else word_start) catch |e| {
+                self.break_indices.?.append(main.allocator, if (char == '\n') i else word_start) catch |e| {
                     std.log.err("Attribute recalculation for text data failed: {}", .{e});
                     return;
                 };
@@ -322,26 +322,26 @@ pub const TextData = struct {
         }
 
         self.width = @max(x_max, x_pointer);
-        self.line_widths.?.append(allocator, x_pointer) catch |e| {
+        self.line_widths.?.append(main.allocator, x_pointer) catch |e| {
             std.log.err("Attribute recalculation for text data failed: {}", .{e});
             return;
         };
         self.height = y_pointer;
     }
 
-    pub fn deinit(self: *TextData, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *TextData) void {
         self.lock.lock();
         defer self.lock.unlock();
 
-        allocator.free(self.backing_buffer);
+        main.allocator.free(self.backing_buffer);
 
         if (self.line_widths) |*line_widths| {
-            line_widths.deinit(allocator);
+            line_widths.deinit(main.allocator);
             self.line_widths = null;
         }
 
         if (self.break_indices) |*break_indices| {
-            break_indices.deinit(allocator);
+            break_indices.deinit(main.allocator);
             self.break_indices = null;
         }
     }
@@ -770,10 +770,9 @@ pub const ScissorRect = extern struct {
     }
 };
 
-pub fn create(allocator: std.mem.Allocator, comptime T: type, data: T) !*@TypeOf(data) {
-    var elem = try allocator.create(T);
+pub fn create(comptime T: type, data: T) !*@TypeOf(data) {
+    var elem = try main.allocator.create(T);
     elem.* = data;
-    elem.base.allocator = allocator;
     if (std.meta.hasFn(T, "init")) elem.init();
 
     comptime var field_name: []const u8 = "";
@@ -786,7 +785,7 @@ pub fn create(allocator: std.mem.Allocator, comptime T: type, data: T) !*@TypeOf
 
     if (field_name.len == 0) @compileError("Could not find field name");
 
-    try systems.elements_to_add.append(allocator, @unionInit(UiElement, field_name, elem));
+    try systems.elements_to_add.append(main.allocator, @unionInit(UiElement, field_name, elem));
     return elem;
 }
 
@@ -820,7 +819,7 @@ pub fn destroy(self: anytype) void {
     }
 
     if (std.meta.hasFn(@typeInfo(@TypeOf(self)).pointer.child, "deinit")) self.deinit();
-    self.base.allocator.destroy(self);
+    main.allocator.destroy(self);
 }
 
 pub fn intersects(self: anytype, x: f32, y: f32) bool {

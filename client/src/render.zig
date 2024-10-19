@@ -343,14 +343,14 @@ fn createPipelines(ctx: *gpu.GraphicsContext) void {
     ground_pipeline = ctx.device.createRenderPipeline(ground_pipeline_descriptor);
 }
 
-pub fn deinit(allocator: std.mem.Allocator) void {
-    for (condition_rects) |rects| allocator.free(rects);
+pub fn deinit() void {
+    for (condition_rects) |rects| main.allocator.free(rects);
 
-    enter_text_data.deinit(allocator);
-    sort_extras.deinit(allocator);
-    generics.deinit(allocator);
-    grounds.deinit(allocator);
-    lights.deinit(allocator);
+    enter_text_data.deinit();
+    sort_extras.deinit(main.allocator);
+    generics.deinit(main.allocator);
+    grounds.deinit(main.allocator);
+    lights.deinit(main.allocator);
 
     generic_pipeline.release();
     generic_bind_group.release();
@@ -375,7 +375,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     linear_sampler.release();
 }
 
-pub fn init(ctx: *gpu.GraphicsContext, allocator: std.mem.Allocator) !void {
+pub fn init(ctx: *gpu.GraphicsContext) !void {
     for (0..@bitSizeOf(utils.Condition)) |i| {
         const sheet_name = "conditions";
         const sheet_indices: []const u16 = switch (std.meta.intToEnum(utils.ConditionEnum, i) catch continue) {
@@ -399,7 +399,7 @@ pub fn init(ctx: *gpu.GraphicsContext, allocator: std.mem.Allocator) !void {
             continue;
         }
 
-        var rects = allocator.alloc(assets.AtlasData, indices_len) catch continue;
+        var rects = main.allocator.alloc(assets.AtlasData, indices_len) catch continue;
         for (0..indices_len) |j| {
             rects[j] = (assets.atlas_data.get(sheet_name) orelse std.debug.panic("Could not find sheet {s} for cond parsing", .{sheet_name}))[sheet_indices[j]];
         }
@@ -412,7 +412,7 @@ pub fn init(ctx: *gpu.GraphicsContext, allocator: std.mem.Allocator) !void {
         .text_type = .bold,
         .size = 12,
     };
-    enter_text_data.setText("Enter", main.allocator);
+    enter_text_data.setText("Enter");
 
     generic_buffer = ctx.device.createBuffer(.{
         .usage = .{ .copy_dst = true, .storage = true },
@@ -802,11 +802,11 @@ pub fn drawText(
     }
 }
 
-pub fn drawLight(allocator: std.mem.Allocator, data: game_data.LightData, tile_cx: f32, tile_cy: f32, scale: f32, float_time_ms: f32) void {
+pub fn drawLight(data: game_data.LightData, tile_cx: f32, tile_cy: f32, scale: f32, float_time_ms: f32) void {
     if (data.color == std.math.maxInt(u32)) return;
     
     const size = px_per_tile * (data.radius + data.pulse * @sin(float_time_ms / 1000.0 * data.pulse_speed)) * scale * 4;
-    lights.append(allocator, .{
+    lights.append(main.allocator, .{
         .x = tile_cx - size / 2.0,
         .y = tile_cy - size / 2.0,
         .w = size,
@@ -816,7 +816,7 @@ pub fn drawLight(allocator: std.mem.Allocator, data: game_data.LightData, tile_c
     }) catch @panic("OOM");
 }
 
-pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.CommandEncoder, allocator: std.mem.Allocator) void {
+pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.CommandEncoder) void {
     main.camera.lock.lock();
     var cam_data: CameraData = undefined;
     inline for (@typeInfo(CameraData).@"struct".fields) |field| @field(cam_data, field.name) = @field(main.camera, field.name);
@@ -860,7 +860,7 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
 
                     const screen_pos = cam_data.worldToScreen(square.x, square.y);
 
-                    if (main.settings.enable_lights) drawLight(allocator, square.data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
+                    if (main.settings.enable_lights) drawLight(square.data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
 
                     const time_sec = float_time_ms / std.time.ms_per_s;
                     const u_offset, const v_offset = switch (square.data.animation.type) {
@@ -892,7 +892,7 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
             var lock = map.useLockForType(T);
             lock.lock();
             defer lock.unlock();
-            for (map.listForType(T).items) |*obj| obj.draw(cam_data, float_time_ms, allocator);
+            for (map.listForType(T).items) |*obj| obj.draw(cam_data, float_time_ms);
         }
 
         {
@@ -900,14 +900,14 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
             var lock = map.useLockForType(Portal);
             lock.lock();
             defer lock.unlock();
-            for (map.listForType(Portal).items) |*portal| portal.draw(cam_data, float_time_ms, allocator, int_id);
+            for (map.listForType(Portal).items) |*portal| portal.draw(cam_data, float_time_ms, int_id);
         }
 
         {
             var lock = map.useLockForType(Projectile);
             lock.lock();
             defer lock.unlock();
-            for (map.listForType(Projectile).items) |p| p.draw(cam_data, float_time_ms, allocator);
+            for (map.listForType(Projectile).items) |p| p.draw(cam_data, float_time_ms);
         }
 
         {

@@ -11,7 +11,6 @@ const Image = @import("../elements/Image.zig");
 const Text = @import("../elements/Text.zig");
 
 root: *Container = undefined,
-allocator: std.mem.Allocator = undefined,
 
 decor: *Image = undefined,
 image: *Image = undefined,
@@ -88,7 +87,7 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
             self.image.image_data.normal.atlas_data = data[params.props.icon.index];
         }
 
-        self.title.text_data.setText(params.props.name, self.allocator);
+        self.title.text_data.setText(params.props.name);
 
         const cooldown_icon = "&img=\"misc_big,69\"";
         const has_mana_cost = params.props.mana_cost > 0;
@@ -132,7 +131,7 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
             }
         }
 
-        self.description.text_data.setText(params.props.description, self.allocator);
+        self.description.text_data.setText(params.props.description);
 
         self.line_break.base.y = self.image.base.y + self.image.height() + 10;
         self.description.base.y = self.line_break.base.y + 10;

@@ -21,7 +21,6 @@ const button_height = 50;
 pub const TabType = enum { general, graphics, misc };
 
 visible: bool = false,
-allocator: std.mem.Allocator = undefined,
 
 selected_tab: TabType = .general,
 main_container: *Container = undefined,
@@ -36,41 +35,40 @@ continue_button: *Button = undefined,
 disconnect_button: *Button = undefined,
 defaults_button: *Button = undefined,
 
-pub fn create(allocator: std.mem.Allocator) !*Options {
-    var options = try allocator.create(Options);
-    options.* = .{ .allocator = allocator };
+pub fn create() !*Options {
+    var options = try main.allocator.create(Options);
 
-    options.main_container = try element.create(allocator, Container, .{ .base = .{
+    options.main_container = try element.create(Container, .{ .base = .{
         .x = 0,
         .y = 0,
         .visible = options.visible,
     } });
 
-    options.buttons = try element.create(allocator, Container, .{ .base = .{
+    options.buttons = try element.create(Container, .{ .base = .{
         .x = 0,
         .y = main.camera.height - button_height - 50,
         .visible = options.visible,
     } });
 
-    options.tabs = try element.create(allocator, Container, .{ .base = .{
+    options.tabs = try element.create(Container, .{ .base = .{
         .x = 0,
         .y = 25,
         .visible = options.visible,
     } });
 
-    options.general_tab = try element.create(allocator, Container, .{ .base = .{
+    options.general_tab = try element.create(Container, .{ .base = .{
         .x = 100,
         .y = 150,
         .visible = options.visible and options.selected_tab == .general,
     } });
 
-    options.graphics_tab = try element.create(allocator, Container, .{ .base = .{
+    options.graphics_tab = try element.create(Container, .{ .base = .{
         .x = 100,
         .y = 150,
         .visible = options.visible and options.selected_tab == .graphics,
     } });
 
-    options.misc_tab = try element.create(allocator, Container, .{ .base = .{
+    options.misc_tab = try element.create(Container, .{ .base = .{
         .x = 100,
         .y = 150,
         .visible = options.visible and options.selected_tab == .misc,
@@ -220,7 +218,7 @@ pub fn deinit(self: *Options) void {
     element.destroy(self.graphics_tab);
     element.destroy(self.misc_tab);
 
-    self.allocator.destroy(self);
+    main.allocator.destroy(self);
 }
 
 pub fn resize(self: *Options, w: f32, h: f32) void {

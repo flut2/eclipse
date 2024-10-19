@@ -101,7 +101,7 @@ pub const Player = struct {
     facing: f32 = std.math.nan(f32),
     direction: assets.Direction = .right,
 
-    pub fn addToMap(self: *Player, allocator: std.mem.Allocator) void {
+    pub fn addToMap(self: *Player) void {
         self.data = game_data.class.from_id.getPtr(self.data_id) orelse {
             std.log.err("Player with data id {} has no class data, can't add", .{self.data_id});
             return;
@@ -127,14 +127,14 @@ pub const Player = struct {
                 .color = 0xFCDF00,
                 .max_width = 200,
             };
-            self.name_text_data.?.setText(if (self.name) |player_name| player_name else self.data.name, allocator);
+            self.name_text_data.?.setText(if (self.name) |player_name| player_name else self.data.name);
         }
 
-        map.addListForType(Player).append(allocator, self.*) catch @panic("Adding player failed");
+        map.addListForType(Player).append(main.allocator, self.*) catch @panic("Adding player failed");
     }
 
-    pub fn deinit(self: *Player, allocator: std.mem.Allocator) void {
-        base.deinit(self, allocator);
+    pub fn deinit(self: *Player) void {
+        base.deinit(self);
     }
 
     pub fn onMove(self: *Player) void {
@@ -186,7 +186,6 @@ pub const Player = struct {
 
     pub fn doShoot(
         self: *Player,
-        allocator: std.mem.Allocator,
         time: i64,
         item_props: *game_data.ItemData,
         attack_angle: f32,
@@ -212,7 +211,7 @@ pub const Player = struct {
                 .owner_map_id = self.map_id,
                 .phys_dmg = @intFromFloat(@as(f32, @floatFromInt(proj_data.phys_dmg)) * self.strengthMult()),
             };
-            proj.addToMap(allocator);
+            proj.addToMap();
 
             main.server.sendPacket(.{ .player_projectile = .{
                 .time = time,
@@ -226,14 +225,12 @@ pub const Player = struct {
         }
     }
 
-    pub fn weaponShoot(self: *Player, allocator: std.mem.Allocator, angle: f32, time: i64) void {
+    pub fn weaponShoot(self: *Player, angle: f32, time: i64) void {
         const item_data = game_data.item.from_id.getPtr(self.inventory[0]) orelse return;
-        if (item_data.projectile == null)
-            return;
+        if (item_data.projectile == null) return;
 
         const attack_delay: i64 = @intFromFloat(1.0 / (item_data.fire_rate * attack_frequency));
-        if (time < self.attack_start + attack_delay)
-            return;
+        if (time < self.attack_start + attack_delay) return;
 
         assets.playSfx(item_data.sound);
 
@@ -241,10 +238,10 @@ pub const Player = struct {
         self.attack_angle = angle;
         self.attack_start = time;
 
-        self.doShoot(allocator, self.attack_start, item_data, angle);
+        self.doShoot(self.attack_start, item_data, angle);
     }
 
-    pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator) void {
+    pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void {
         if (ui_systems.screen == .editor or self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
 
         const size = size_mult * cam_data.scale * self.size_mult;
@@ -277,7 +274,7 @@ pub const Player = struct {
 
         if (main.settings.enable_lights) {
             const tile_pos = cam_data.worldToScreen(self.x, self.y);
-            render.drawLight(allocator, self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+            render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
         }
 
         if (self.name_text_data) |*data| {
@@ -386,7 +383,7 @@ pub const Player = struct {
         }
     }
 
-    pub fn update(self: *Player, time: i64, dt: f32, allocator: std.mem.Allocator) void {
+    pub fn update(self: *Player, time: i64, dt: f32) void {
         var float_period: f32 = 0.0;
         var action: assets.Action = .stand;
 
@@ -512,7 +509,7 @@ pub const Player = struct {
                         };
                         if (square.data.damage > 0 and !protect) {
                             main.server.sendPacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
-                            map.takeDamage(self, square.data.damage, .true, .{}, self.colors, allocator);
+                            map.takeDamage(self, square.data.damage, .true, .{}, self.colors);
                             self.last_ground_damage_time = time;
                         }
                     }

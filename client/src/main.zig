@@ -58,6 +58,7 @@ pub export var AmdPowerXpressRequestHighPerformance: c_int = 1;
 
 pub var ctx: *gpu.GraphicsContext = undefined;
 pub var account_arena_allocator: std.mem.Allocator = undefined;
+pub var asset_arena_allocator: std.mem.Allocator = undefined;
 pub var current_account: ?AccountData = null;
 pub var character_list: ?network_data.CharacterListData = null;
 pub var current_time: i64 = 0;
@@ -170,7 +171,7 @@ fn renderTick() !void {
         const back_buffer = ctx.swapchain.getCurrentTextureView();
         const encoder = ctx.device.createCommandEncoder(null);
 
-        render.draw(current_time, back_buffer, encoder, allocator);
+        render.draw(current_time, back_buffer, encoder);
 
         const commands = encoder.finish(null);
         encoder.release();
@@ -257,12 +258,12 @@ fn gameTick(idle: [*c]uv.uv_idle_t) callconv (.C) void {
     const dt: f32 = @floatFromInt(if (current_time > 0) time - current_time else 0);
     current_time = time;
 
-    if (tick_frame or editing_map) map.update(allocator, time, dt);
+    if (tick_frame or editing_map) map.update(time, dt);
     ui_systems.update(time, dt) catch @panic("todo");
 }
 
 pub fn disconnect(has_lock: bool) void {
-    map.dispose(allocator);
+    map.dispose();
     input.reset();
     {
         if (!has_lock) ui_systems.ui_lock.lock();
@@ -309,9 +310,13 @@ pub fn main() !void {
         break :blk tracy_alloc.allocator();
     } else child_allocator;
 
-    var account_arena = std.heap.ArenaAllocator.init(allocator);
+    var account_arena: std.heap.ArenaAllocator = .init(allocator);
     account_arena_allocator = account_arena.allocator();
     defer account_arena.deinit();
+
+    var asset_arena: std.heap.ArenaAllocator = .init(allocator);
+    asset_arena_allocator = asset_arena.allocator();
+    defer asset_arena.deinit();
 
     current_account = AccountData.load() catch null;
     defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
@@ -325,7 +330,7 @@ pub fn main() !void {
     zaudio.init(allocator);
     defer zaudio.deinit();
 
-    settings = try Settings.init(allocator);
+    settings = try .init(allocator);
     defer settings.deinit();
 
     try assets.init();
@@ -337,13 +342,12 @@ pub fn main() !void {
     requests.init(allocator);
     defer requests.deinit();
 
-    try map.init(allocator);
-    defer map.deinit(allocator);
+    try map.init();
+    defer map.deinit();
 
-    try ui_systems.init(allocator);
+    try ui_systems.init();
     defer ui_systems.deinit();
 
-    input.init(allocator);
     defer input.deinit();
 
     glfw.windowHintTyped(.client_api, .no_api);
@@ -387,8 +391,8 @@ pub fn main() !void {
     _ = window.setScrollCallback(input.scrollEvent);
     _ = window.setFramebufferSizeCallback(onResize);
 
-    try render.init(ctx, allocator);
-    defer render.deinit(allocator);
+    try render.init(ctx);
+    defer render.deinit();
 
     render_thread = try .spawn(.{ .allocator = allocator }, renderTick, .{});
     defer {

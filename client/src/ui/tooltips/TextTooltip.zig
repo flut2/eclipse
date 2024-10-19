@@ -11,7 +11,6 @@ const Image = @import("../elements/Image.zig");
 const Text = @import("../elements/Text.zig");
 
 root: *Container = undefined,
-allocator: std.mem.Allocator = undefined,
 
 decor: *Image = undefined,
 text: *Text = undefined,
@@ -36,7 +35,7 @@ pub fn init(self: *TextTooltip) !void {
 
     self.text.text_data.lock.lock();
     defer self.text.text_data.lock.unlock();
-    self.text.text_data.recalculateAttributes(self.allocator);
+    self.text.text_data.recalculateAttributes();
 }
 
 pub fn deinit(self: *TextTooltip) void {
@@ -56,7 +55,7 @@ pub fn update(self: *TextTooltip, params: tooltip.ParamsFor(TextTooltip)) void {
     {
         self.text.text_data.lock.lock();
         defer self.text.text_data.lock.unlock();
-        self.text.text_data.recalculateAttributes(self.allocator);
+        self.text.text_data.recalculateAttributes();
     }
 
     switch (self.decor.image_data) {

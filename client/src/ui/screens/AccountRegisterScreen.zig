@@ -15,8 +15,6 @@ const Text = @import("../elements/Text.zig");
 const Input = @import("../elements/Input.zig");
 const Button = @import("../elements/Button.zig");
 
-allocator: std.mem.Allocator = undefined,
-
 username_text: *Text = undefined,
 username_input: *Input = undefined,
 email_text: *Text = undefined,
@@ -39,7 +37,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
     const x_offset = (main.camera.width - input_w) / 2;
     var y_offset: f32 = main.camera.height / 7.2;
 
-    self.username_text = try element.create(self.allocator, Text, .{
+    self.username_text = try element.create(Text, .{
         .base = .{
             .x = x_offset,
             .y = y_offset,
@@ -58,11 +56,10 @@ pub fn init(self: *AccountRegisterScreen) !void {
     y_offset += 50;
 
     const cursor_data = assets.getUiData("chatbox_cursor", 0);
-    self.username_input = try element.create(self.allocator, Input, .{
+    self.username_input = try element.create(Input, .{
         .base = .{
             .x = x_offset,
             .y = y_offset,
-            .allocator = self.allocator,
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
@@ -79,7 +76,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
 
     y_offset += 50;
 
-    self.email_text = try element.create(self.allocator, Text, .{
+    self.email_text = try element.create(Text, .{
         .base = .{
             .x = x_offset,
             .y = y_offset,
@@ -97,11 +94,10 @@ pub fn init(self: *AccountRegisterScreen) !void {
 
     y_offset += 50;
 
-    self.email_input = try element.create(self.allocator, Input, .{
+    self.email_input = try element.create(Input, .{
         .base = .{
             .x = x_offset,
             .y = y_offset,
-            .allocator = self.allocator,
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
@@ -118,7 +114,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
 
     y_offset += 50;
 
-    self.password_text = try element.create(self.allocator, Text, .{
+    self.password_text = try element.create(Text, .{
         .base = .{
             .x = x_offset,
             .y = y_offset,
@@ -136,11 +132,10 @@ pub fn init(self: *AccountRegisterScreen) !void {
 
     y_offset += 50;
 
-    self.password_input = try element.create(self.allocator, Input, .{
+    self.password_input = try element.create(Input, .{
         .base = .{
             .x = x_offset,
             .y = y_offset,
-            .allocator = self.allocator,
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
@@ -158,7 +153,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
 
     y_offset += 50;
 
-    self.password_repeat_text = try element.create(self.allocator, Text, .{
+    self.password_repeat_text = try element.create(Text, .{
         .base = .{
             .x = x_offset,
             .y = y_offset,
@@ -176,11 +171,10 @@ pub fn init(self: *AccountRegisterScreen) !void {
 
     y_offset += 50;
 
-    self.password_repeat_input = try element.create(self.allocator, Input, .{
+    self.password_repeat_input = try element.create(Input, .{
         .base = .{
             .x = x_offset,
             .y = y_offset,
-            .allocator = self.allocator,
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
@@ -204,7 +198,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
     const button_width = 100;
     const button_height = 35;
 
-    self.confirm_button = try element.create(self.allocator, Button, .{
+    self.confirm_button = try element.create(Button, .{
         .base = .{
             .x = x_offset + (input_w - (button_width * 2)) / 2 - 12.5,
             .y = y_offset,
@@ -219,7 +213,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
         .press_callback = registerCallback,
     });
 
-    self.back_button = try element.create(self.allocator, Button, .{
+    self.back_button = try element.create(Button, .{
         .base = .{
             .x = self.confirm_button.base.x + button_width + 25,
             .y = y_offset,
@@ -246,7 +240,7 @@ pub fn deinit(self: *AccountRegisterScreen) void {
     element.destroy(self.confirm_button);
     element.destroy(self.back_button);
 
-    self.allocator.destroy(self);
+    main.allocator.destroy(self);
 }
 
 pub fn resize(self: *AccountRegisterScreen, w: f32, h: f32) void {
@@ -339,15 +333,15 @@ fn getHwid(allocator: std.mem.Allocator) ![]const u8 {
     };
 }
 
-fn register(allocator: std.mem.Allocator, email: []const u8, password: []const u8, name: []const u8) !bool {
-    const hwid = try getHwid(allocator);
-    defer if (builtin.os.tag == .windows or builtin.os.tag == .macos) allocator.free(hwid);
+fn register(email: []const u8, password: []const u8, name: []const u8) !bool {
+    const hwid = try getHwid(main.account_arena_allocator);
+    defer if (builtin.os.tag == .windows or builtin.os.tag == .macos) main.account_arena_allocator.free(hwid);
     var data: std.StringHashMapUnmanaged([]const u8) = .empty;
-    try data.put(allocator, "name", name);
-    try data.put(allocator, "hwid", hwid);
-    try data.put(allocator, "email", email);
-    try data.put(allocator, "password", password);
-    defer data.deinit(allocator);
+    try data.put(main.account_arena_allocator, "name", name);
+    try data.put(main.account_arena_allocator, "hwid", hwid);
+    try data.put(main.account_arena_allocator, "email", email);
+    try data.put(main.account_arena_allocator, "password", password);
+    defer data.deinit(main.account_arena_allocator);
 
     var needs_free = true;
     const response = requests.sendRequest(build_options.login_server_uri ++ "account/register", data) catch |e| blk: {
@@ -361,15 +355,15 @@ fn register(allocator: std.mem.Allocator, email: []const u8, password: []const u
     };
     defer if (needs_free) requests.freeResponse(response);
 
-    main.character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, allocator, response, .{ .allocate = .alloc_always }) catch {
+    main.character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, main.account_arena_allocator, response, .{ .allocate = .alloc_always }) catch {
         dialog.showDialog(.text, .{
             .title = "Login Failed",
-            .body = try std.fmt.allocPrint(allocator, "Error: {s}", .{response}),
+            .body = try std.fmt.allocPrint(main.account_arena_allocator, "Error: {s}", .{response}),
         });
         return false;
     };
     main.current_account = .{
-        .email = try allocator.dupe(u8, email),
+        .email = try main.account_arena_allocator.dupe(u8, email),
         .token = main.character_list.?.token,
     };
 
@@ -383,7 +377,6 @@ fn register(allocator: std.mem.Allocator, email: []const u8, password: []const u
 fn registerCallback(ud: ?*anyopaque) void {
     const current_screen: *AccountRegisterScreen = @alignCast(@ptrCast(ud.?));
     _ = register(
-        main.account_arena_allocator,
         current_screen.email_input.text_data.text,
         current_screen.password_input.text_data.text,
         current_screen.username_input.text_data.text,

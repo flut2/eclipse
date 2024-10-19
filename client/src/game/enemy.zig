@@ -44,15 +44,15 @@ pub const Enemy = struct {
     facing: f32 = std.math.nan(f32),
     next_anim: i64 = -1,
 
-    pub fn addToMap(self: *Enemy, allocator: std.mem.Allocator) void {
-        base.addToMap(self, Enemy, allocator);
+    pub fn addToMap(self: *Enemy) void {
+        base.addToMap(self, Enemy);
     }
 
-    pub fn deinit(self: *Enemy, allocator: std.mem.Allocator) void {
-        base.deinit(self, allocator);
+    pub fn deinit(self: *Enemy) void {
+        base.deinit(self);
     }
 
-    pub fn draw(self: *Enemy, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator) void {
+    pub fn draw(self: *Enemy, cam_data: render.CameraData, float_time_ms: f32) void {
         if (self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
 
         var screen_pos = cam_data.worldToScreen(self.x, self.y);
@@ -85,7 +85,7 @@ pub const Enemy = struct {
 
        if (main.settings.enable_lights) {
             const tile_pos = cam_data.worldToScreen(self.x, self.y);
-            render.drawLight(allocator, self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+            render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
         }
 
         if (self.data.show_name) {

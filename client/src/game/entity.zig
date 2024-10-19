@@ -44,7 +44,7 @@ pub const Entity = struct {
         right: bool = false,
     } = .{},
 
-    pub fn addToMap(self: *Entity, allocator: std.mem.Allocator) void {
+    pub fn addToMap(self: *Entity) void {
         self.data = game_data.entity.from_id.getPtr(self.data_id) orelse {
             std.log.err("Could not find data for entity with data id {}, returning", .{self.data_id});
             return;
@@ -119,11 +119,11 @@ pub const Entity = struct {
             }
         }
 
-        base.addToMap(self, Entity, allocator);
+        base.addToMap(self, Entity);
     }
 
-    pub fn deinit(self: *Entity, allocator: std.mem.Allocator) void {
-        base.deinit(self, allocator);
+    pub fn deinit(self: *Entity) void {
+        base.deinit(self);
 
         if (self.data.occupy_square or self.data.full_occupy) {
             if (map.getSquarePtr(self.x, self.y, true)) |square| {
@@ -132,7 +132,7 @@ pub const Entity = struct {
         }
     }
 
-    pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator) void {
+    pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void {
         if (self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
 
         var screen_pos = cam_data.worldToScreen(self.x, self.y);
@@ -241,7 +241,7 @@ pub const Entity = struct {
 
         if (main.settings.enable_lights) {
             const tile_pos = cam_data.worldToScreen(@floor(self.x), @floor(self.y));
-            render.drawLight(allocator, self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+            render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
         }
 
         if (self.data.show_name) {

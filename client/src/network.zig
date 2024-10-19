@@ -92,7 +92,7 @@ pub const Server = struct {
         };
     }
 
-    fn ObjEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnumToType(obj_type), ObjEnumToStatType(obj_type), std.mem.Allocator) void {
+    fn ObjEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnumToType(obj_type), ObjEnumToStatType(obj_type)) void {
         return switch (obj_type) {
             .player => parsePlayerStat,
             .entity => parseEntityStat,
@@ -316,11 +316,8 @@ pub const Server = struct {
     }
 
     pub fn shutdown(self: *Server) void {
-        if (!self.initialized)
-            return;
-
+        if (!self.initialized) return;
         self.initialized = false;
-
         if (uv.uv_is_closing(@ptrCast(self.shutdown_signal)) == 0) uv.uv_close(@ptrCast(self.shutdown_signal), closeCallback);
         if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
     }
@@ -357,7 +354,7 @@ pub const Server = struct {
                 .index = @intCast(data.proj_index),
                 .owner_map_id = player.map_id,
             };
-            proj.addToMap(main.allocator);
+            proj.addToMap();
 
             const attack_period: i64 = @intFromFloat(1.0 / (Player.attack_frequency * item_data.?.fire_rate));
             player.attack_period = attack_period;
@@ -389,7 +386,6 @@ pub const Server = struct {
                 data.damage_type,
                 data.effects,
                 player.colors,
-                main.allocator,
             );
         }
 
@@ -432,7 +428,7 @@ pub const Server = struct {
                 .owner_map_id = data.enemy_map_id,
                 .damage_players = true,
             };
-            proj.addToMap(main.allocator);
+            proj.addToMap();
 
             current_angle += data.angle_incr;
         }
@@ -461,7 +457,7 @@ pub const Server = struct {
     fn handleMapInfo(_: *Server, data: PacketData(.map_info)) void {
         if (logRead(.non_tick)) std.log.debug("Recv - MapInfo: {}", .{data});
 
-        map.dispose(main.allocator);
+        map.dispose();
 
         {
             main.camera.lock.lock();
@@ -469,7 +465,7 @@ pub const Server = struct {
             main.camera.quake = false;
         }
 
-        map.setMapInfo(data, main.allocator);
+        map.setMapInfo(data);
         map.info.name = data.name;
 
         main.tick_frame = true;
@@ -491,7 +487,7 @@ pub const Server = struct {
             var lock = map.useLockForType(T);
             lock.lock();
             defer lock.unlock();
-            for (list) |map_id| _ = map.removeEntity(T, main.allocator, map_id);
+            for (list) |map_id| _ = map.removeEntity(T, map_id);
         }
     }
 
@@ -746,23 +742,20 @@ pub const Server = struct {
                         else => 0.0,
                     };
 
-                    parseObjectStat(typeToObjEnum(T), &stat_reader, main.allocator, object);
+                    parseObjectStat(typeToObjEnum(T), &stat_reader, object);
 
                     switch (T) {
                         Player => {
-                            if (object.map_id != map.info.player_map_id)
-                                updateMove(object, pre_x, pre_y, tick_time);
-
-                            if (object.map_id == map.info.player_map_id and ui_systems.screen == .game)
-                                ui_systems.screen.game.updateStats();
+                            if (object.map_id != map.info.player_map_id) updateMove(object, pre_x, pre_y, tick_time);
+                            if (object.map_id == map.info.player_map_id and ui_systems.screen == .game) ui_systems.screen.game.updateStats();
                         },
                         Enemy => updateMove(object, pre_x, pre_y, tick_time),
                         else => {},
                     }
                 } else {
                     var new_obj: T = .{ .map_id = obj.map_id, .data_id = obj.data_id };
-                    parseObjectStat(typeToObjEnum(T), &stat_reader, main.allocator, &new_obj);
-                    new_obj.addToMap(main.allocator);
+                    parseObjectStat(typeToObjEnum(T), &stat_reader, &new_obj);
+                    new_obj.addToMap();
                 }
             }
         }
@@ -787,33 +780,31 @@ pub const Server = struct {
     fn parseObjectStat(
         comptime obj_type: network_data.ObjectType,
         stat_reader: *utils.PacketReader,
-        allocator: std.mem.Allocator,
         object: *ObjEnumToType(obj_type),
     ) void {
         while (stat_reader.index < stat_reader.buffer.len) {
             const StatType = ObjEnumToStatType(obj_type);
             const type_info = @typeInfo(StatType).@"union";
             const TagType = type_info.tag_type.?;
-            const stat_id: usize = @intFromEnum(stat_reader.read(TagType, allocator));
+            const stat_id: usize = @intFromEnum(stat_reader.read(TagType, main.allocator));
             inline for (type_info.fields, 0..) |field, i| @"continue": {
                 if (i != stat_id) break :@"continue";
 
-                const stat = @unionInit(StatType, field.name, stat_reader.read(field.type, allocator));
-                ObjEnumToStatHandler(obj_type)(object, stat, allocator);
+                const stat = @unionInit(StatType, field.name, stat_reader.read(field.type, main.allocator));
+                ObjEnumToStatHandler(obj_type)(object, stat);
             }
         }
     }
 
-    fn parseNameStat(object: anytype, allocator: std.mem.Allocator, name: []const u8) void {
-        if (name.len <= 0)
-            return;
+    fn parseNameStat(object: anytype, name: []const u8) void {
+        if (name.len <= 0) return;
 
-        if (object.name) |obj_name| allocator.free(obj_name);
+        if (object.name) |obj_name| main.allocator.free(obj_name);
 
         object.name = name;
 
         if (object.name_text_data) |*data| {
-            data.setText(object.name.?, allocator);
+            data.setText(object.name.?);
         } else {
             object.name_text_data = .{
                 .text = undefined,
@@ -825,11 +816,11 @@ pub const Server = struct {
                 object.name_text_data.max_width = 200;
             }
 
-            object.name_text_data.?.setText(object.name.?, allocator);
+            object.name_text_data.?.setText(object.name.?);
         }
     }
 
-    fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat, allocator: std.mem.Allocator) void {
+    fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         const is_self = player.map_id == map.info.player_map_id;
         switch (stat) {
             .x => |val| player.x = val,
@@ -904,11 +895,11 @@ pub const Server = struct {
                 if (is_self and ui_systems.screen == .game)
                     ui_systems.screen.game.setInvItem(val, inv_idx);
             },
-            .name => |val| parseNameStat(player, allocator, val),
+            .name => |val| parseNameStat(player, val),
         }
     }
 
-    fn parseEnemyStat(enemy: *Enemy, stat: network_data.EnemyStat, allocator: std.mem.Allocator) void {
+    fn parseEnemyStat(enemy: *Enemy, stat: network_data.EnemyStat) void {
         switch (stat) {
             .x => |val| enemy.x = val,
             .y => |val| enemy.y = val,
@@ -919,11 +910,11 @@ pub const Server = struct {
             },
             .size_mult => |val| enemy.size_mult = val,
             .condition => |val| enemy.condition = val,
-            .name => |val| parseNameStat(enemy, allocator, val),
+            .name => |val| parseNameStat(enemy, val),
         }
     }
 
-    fn parseEntityStat(entity: *Entity, stat: network_data.EntityStat, allocator: std.mem.Allocator) void {
+    fn parseEntityStat(entity: *Entity, stat: network_data.EntityStat) void {
         switch (stat) {
             .x => |val| entity.x = val,
             .y => |val| entity.y = val,
@@ -932,11 +923,11 @@ pub const Server = struct {
                 if (val > 0) entity.dead = false;
             },
             .size_mult => |val| entity.size_mult = val,
-            .name => |val| parseNameStat(entity, allocator, val),
+            .name => |val| parseNameStat(entity, val),
         }
     }
 
-    fn parseContainerStat(container: *Container, stat: network_data.ContainerStat, allocator: std.mem.Allocator) void {
+    fn parseContainerStat(container: *Container, stat: network_data.ContainerStat) void {
         switch (stat) {
             .x => |val| container.x = val,
             .y => |val| container.y = val,
@@ -952,29 +943,29 @@ pub const Server = struct {
             .name => |val| {
                 const int_id = map.interactive.map_id.load(.acquire);
                 if (container.map_id == int_id and ui_systems.screen == .game)
-                    ui_systems.screen.game.container_name.text_data.setText(val, ui_systems.screen.game.allocator);
-                parseNameStat(container, allocator, val);
+                    ui_systems.screen.game.container_name.text_data.setText(val);
+                parseNameStat(container, val);
             },
         }
     }
 
-    fn parsePortalStat(portal: *Portal, stat: network_data.PortalStat, allocator: std.mem.Allocator) void {
+    fn parsePortalStat(portal: *Portal, stat: network_data.PortalStat) void {
         switch (stat) {
             .x => |val| portal.x = val,
             .y => |val| portal.y = val,
             .size_mult => |val| portal.size_mult = val,
-            .name => |val| parseNameStat(portal, allocator, val),
+            .name => |val| parseNameStat(portal, val),
         }
     }
 
-    fn parsePurchasableStat(purchasable: *Purchasable, stat: network_data.PurchasableStat, allocator: std.mem.Allocator) void {
+    fn parsePurchasableStat(purchasable: *Purchasable, stat: network_data.PurchasableStat) void {
         switch (stat) {
             .x => |val| purchasable.x = val,
             .y => |val| purchasable.y = val,
             .size_mult => |val| purchasable.size_mult = val,
             .cost => |val| purchasable.cost = val,
             .currency => |val| purchasable.currency = val,
-            .name => |val| parseNameStat(purchasable, allocator, val),
+            .name => |val| parseNameStat(purchasable, val),
         }
     }
 };

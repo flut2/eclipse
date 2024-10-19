@@ -12,7 +12,6 @@ const Text = @import("../elements/Text.zig");
 const Player = @import("../../game/player.zig").Player;
 
 root: *Container = undefined,
-allocator: std.mem.Allocator = undefined,
 
 decor: *Image = undefined,
 image: *Image = undefined,
@@ -200,7 +199,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
             self.rarity.text_data.backing_buffer,
             "{s} {s}",
             .{ data.rarity, data.item_type.toString() },
-        ) catch self.rarity.text_data.text, self.allocator);
+        ) catch self.rarity.text_data.text);
         self.rarity.text_data.color = rarity_text_color;
 
         if (assets.atlas_data.get(data.texture.sheet)) |tex_data| {
@@ -211,7 +210,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
             self.image.base.y = 18 - assets.padding * 4 + (8 * scale_y - self.image.height()) / 2;
         }
 
-        self.item_name.text_data.setText(data.name, self.allocator);
+        self.item_name.text_data.setText(data.name);
 
         self.line_break_one.base.y = self.image.base.y + 40 + 10;
         self.main_text.base.y = self.line_break_one.base.y - 10;
@@ -339,7 +338,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         if (data.activations != null and data.cooldown > 0.0)
             text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Cooldown: " ++ float_fmt ++ " seconds", .{ text, data.cooldown }) catch text;
 
-        self.main_text.text_data.setText(text, self.allocator);
+        self.main_text.text_data.setText(text);
 
         self.line_break_two.base.y = self.main_text.base.y + self.main_text.text_data.height + 5;
         self.footer.base.y = self.line_break_two.base.y - 10;
@@ -405,7 +404,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         if (data.consumable)
             footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Consumed on use", .{footer_text}) catch footer_text;
 
-        self.footer.text_data.setText(footer_text, self.allocator);
+        self.footer.text_data.setText(footer_text);
 
         if (footer_text.len == 0) {
             self.line_break_two.base.visible = false;

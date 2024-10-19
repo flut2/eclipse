@@ -25,39 +25,38 @@ pub var map: std.AutoHashMapUnmanaged(DialogType, *Dialog) = .empty;
 pub var dialog_bg: *Image = undefined;
 pub var current: *Dialog = undefined;
 
-pub fn init(allocator: std.mem.Allocator) !void {
+pub fn init() !void {
     defer {
         const dummy_dialog_ctx: std.hash_map.AutoContext(DialogType) = undefined;
         if (map.capacity() > 0) map.rehash(dummy_dialog_ctx);
     }
 
     const background_data = assets.getUiData("options_background", 0);
-    dialog_bg = try element.create(allocator, Image, .{
+    dialog_bg = try element.create(Image, .{
         .base = .{ .x = 0, .y = 0, .visible = false, .layer = .dialog },
         .image_data = .{ .nine_slice = .fromAtlasData(background_data, main.camera.width, main.camera.height, 0, 0, 8, 8, 1.0) },
     });
 
     inline for (@typeInfo(Dialog).@"union".fields) |field| @"continue": {
-        var dialog = try allocator.create(Dialog);
+        var dialog = try main.allocator.create(Dialog);
         if (field.type == void) {
             dialog.* = @unionInit(Dialog, field.name, {});
-            try map.put(allocator, std.meta.stringToEnum(DialogType, field.name) orelse
+            try map.put(main.allocator, std.meta.stringToEnum(DialogType, field.name) orelse
                 std.debug.panic("No enum type with name {s} found on DialogType", .{field.name}), dialog);
             break :@"continue";
         }
         dialog.* = @unionInit(Dialog, field.name, .{});
         var dialog_inner = &@field(dialog, field.name);
-        dialog_inner.* = .{ .allocator = allocator };
-        dialog_inner.root = try element.create(allocator, Container, .{ .base = .{ .visible = false, .layer = .dialog, .x = 0, .y = 0 } });
+        dialog_inner.root = try element.create(Container, .{ .base = .{ .visible = false, .layer = .dialog, .x = 0, .y = 0 } });
         try dialog_inner.init();
-        try map.put(allocator, std.meta.stringToEnum(DialogType, field.name) orelse
+        try map.put(main.allocator, std.meta.stringToEnum(DialogType, field.name) orelse
             std.debug.panic("No enum type with name {s} found on DialogType", .{field.name}), dialog);
     }
 
     current = map.get(.none).?;
 }
 
-pub fn deinit(allocator: std.mem.Allocator) void {
+pub fn deinit() void {
     var iter = map.valueIterator();
     while (iter.next()) |value| {
         switch (value.*.*) {
@@ -65,10 +64,10 @@ pub fn deinit(allocator: std.mem.Allocator) void {
             inline else => |*dialog| dialog.deinit(),
         }
 
-        allocator.destroy(value.*);
+        main.allocator.destroy(value.*);
     }
 
-    map.deinit(allocator);
+    map.deinit(main.allocator);
 
     element.destroy(dialog_bg);
 }

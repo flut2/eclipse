@@ -42,7 +42,7 @@ pub const Projectile = struct {
     heat_seek_fired: bool = false,
     last_hit_check: i64 = 0,
 
-    pub fn addToMap(self: *Projectile, allocator: std.mem.Allocator) void {
+    pub fn addToMap(self: *Projectile) void {
         self.start_time = main.current_time;
         self.start_x = self.x;
         self.start_y = self.y;
@@ -61,11 +61,11 @@ pub const Projectile = struct {
             break :blk &.{};
         };
 
-        map.addListForType(Projectile).append(allocator, self.*) catch @panic("Adding projectile failed");
+        map.addListForType(Projectile).append(main.allocator, self.*) catch @panic("Adding projectile failed");
     }
 
-    pub fn deinit(self: *Projectile, allocator: std.mem.Allocator) void {
-        self.hit_list.deinit(allocator);
+    pub fn deinit(self: *Projectile) void {
+        self.hit_list.deinit(main.allocator);
     }
 
     fn findTargetPlayer(x: f32, y: f32, radius: f32) ?*Player {
@@ -190,7 +190,7 @@ pub const Projectile = struct {
         }
     }
 
-    pub fn draw(self: Projectile, cam_data: render.CameraData, float_time_ms: f32, allocator: std.mem.Allocator) void {
+    pub fn draw(self: Projectile, cam_data: render.CameraData, float_time_ms: f32) void {
         if (!cam_data.visibleInCamera(self.x, self.y)) return;
 
         const size = size_mult * cam_data.scale * self.data.size_mult;
@@ -205,7 +205,7 @@ pub const Projectile = struct {
 
         if (main.settings.enable_lights) {
             const tile_pos = cam_data.worldToScreen(self.x, self.y);
-            render.drawLight(allocator, self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+            render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
         }
 
         render.drawQuad(
@@ -218,11 +218,10 @@ pub const Projectile = struct {
         );
     }
 
-    pub fn update(self: *Projectile, time: i64, dt: f32, allocator: std.mem.Allocator) bool {
+    pub fn update(self: *Projectile, time: i64, dt: f32) bool {
         const elapsed_sec = @as(f32, @floatFromInt(time - self.start_time)) / std.time.us_per_s;
         const dt_sec = dt / std.time.us_per_s;
-        if (elapsed_sec >= self.data.duration)
-            return false;
+        if (elapsed_sec >= self.data.duration) return false;
 
         const last_x = self.x;
         const last_y = self.y;
@@ -270,15 +269,14 @@ pub const Projectile = struct {
         }
 
         if (self.damage_players) {
-            if (findTargetPlayer(self.x, self.y, 0.6)) |player| return self.hit(Player, player, time, allocator);
-        } else if (findTargetEnemy(self.x, self.y, 0.6)) |enemy| return self.hit(Enemy, enemy, time, allocator);
+            if (findTargetPlayer(self.x, self.y, 0.6)) |player| return self.hit(Player, player, time);
+        } else if (findTargetEnemy(self.x, self.y, 0.6)) |enemy| return self.hit(Enemy, enemy, time);
 
         return true;
     }
 
-    fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64, allocator: std.mem.Allocator) bool {
-        if (self.hit_list.contains(obj.map_id))
-            return true;
+    fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
+        if (self.hit_list.contains(obj.map_id)) return true;
 
         if (obj.condition.invulnerable) {
             assets.playSfx(obj.data.hit_sound);
@@ -318,13 +316,13 @@ pub const Projectile = struct {
 
         if (!self.damage_players or is_self) {
             const cond = utils.Condition.fromCondSlice(self.data.conditions);
-            if (phys_dmg > 0) map.takeDamage(obj, phys_dmg, .physical, cond, self.colors, allocator);
-            if (magic_dmg > 0) map.takeDamage(obj, magic_dmg, .magic, cond, self.colors, allocator);
-            if (true_dmg > 0) map.takeDamage(obj, true_dmg, .true, cond, self.colors, allocator);
+            if (phys_dmg > 0) map.takeDamage(obj, phys_dmg, .physical, cond, self.colors);
+            if (magic_dmg > 0) map.takeDamage(obj, magic_dmg, .magic, cond, self.colors);
+            if (true_dmg > 0) map.takeDamage(obj, true_dmg, .true, cond, self.colors);
         }
 
         if (!self.data.piercing) return false;
-        self.hit_list.put(allocator, obj.map_id, {}) catch @panic("OOM");
+        self.hit_list.put(main.allocator, obj.map_id, {}) catch @panic("OOM");
 
         return true;
     }

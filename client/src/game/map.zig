@@ -143,46 +143,45 @@ pub fn removeListForType(comptime T: type) *std.ArrayListUnmanaged(usize) {
     };
 }
 
-pub fn init(allocator: std.mem.Allocator) !void {
-    particles.allocator = allocator;
+pub fn init() !void {
     minimap = try zstbi.Image.createEmpty(1024, 1024, 4, .{});
-    minimap_copy = try allocator.alloc(u8, 1024 * 1024 * 4);
+    minimap_copy = try main.allocator.alloc(u8, 1024 * 1024 * 4);
 }
 
-pub fn deinit(allocator: std.mem.Allocator) void {
+pub fn deinit() void {
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
         var lock = &@field(use_lock, field.name);
         lock.lock();
         defer lock.unlock();
 
-        @field(remove_list, field.name).deinit(allocator);
+        @field(remove_list, field.name).deinit(main.allocator);
 
         var child_list = &@field(list, field.name);
-        defer child_list.deinit(allocator);
+        defer child_list.deinit(main.allocator);
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
-            for (child_list.items) |*obj| obj.deinit(allocator);
+            for (child_list.items) |*obj| obj.deinit();
     }
 
     inline for (@typeInfo(@TypeOf(add_list)).@"struct".fields) |field| {
         var child_list = &@field(add_list, field.name);
-        defer child_list.deinit(allocator);
+        defer child_list.deinit(main.allocator);
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
-            for (child_list.items) |*obj| obj.deinit(allocator);
+            for (child_list.items) |*obj| obj.deinit();
     }
 
-    move_records.deinit(allocator);
-    allocator.free(info.name);
+    move_records.deinit(main.allocator);
+    main.allocator.free(info.name);
     {
         square_lock.lock();
         defer square_lock.unlock();
-        allocator.free(squares);
+        main.allocator.free(squares);
     }
 
     minimap.deinit();
-    allocator.free(minimap_copy);
+    main.allocator.free(minimap_copy);
 }
 
-pub fn dispose(allocator: std.mem.Allocator) void {
+pub fn dispose() void {
     interactive.map_id.store(std.math.maxInt(u32), .release);
     interactive.type.store(.unset, .release);
 
@@ -198,18 +197,18 @@ pub fn dispose(allocator: std.mem.Allocator) void {
         var child_list = &@field(list, field.name);
         defer child_list.clearRetainingCapacity();
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
-            for (child_list.items) |*obj| obj.deinit(allocator);
+            for (child_list.items) |*obj| obj.deinit();
     }
 
     inline for (@typeInfo(@TypeOf(add_list)).@"struct".fields) |field| {
         var child_list = &@field(add_list, field.name);
         defer child_list.clearRetainingCapacity();
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
-            for (child_list.items) |*obj| obj.deinit(allocator);
+            for (child_list.items) |*obj| obj.deinit();
     }
 
     move_records.clearRetainingCapacity();
-    allocator.free(info.name);
+    main.allocator.free(info.name);
     info.name = "";
     {
         square_lock.lock();
@@ -237,16 +236,16 @@ pub fn getLightIntensity(time: i64) f32 {
         return info.day_intensity - intensity_delta * ((server_time_clamped - day_cycle_half) / day_cycle_half);
 }
 
-pub fn setMapInfo(data: network_data.MapInfo, allocator: std.mem.Allocator) void {
+pub fn setMapInfo(data: network_data.MapInfo) void {
     info = data;
 
     {
         square_lock.lock();
         defer square_lock.unlock();
         squares = if (squares.len == 0)
-            allocator.alloc(Square, @as(u32, data.width) * @as(u32, data.height)) catch return
+            main.allocator.alloc(Square, @as(u32, data.width) * @as(u32, data.height)) catch return
         else
-            allocator.realloc(squares, @as(u32, data.width) * @as(u32, data.height)) catch return;
+            main.allocator.realloc(squares, @as(u32, data.width) * @as(u32, data.height)) catch return;
 
         @memset(squares, Square{});
     }
@@ -302,11 +301,11 @@ pub fn localPlayer(comptime constness: Constness) if (constness == .con) ?Player
     return null;
 }
 
-pub fn removeEntity(comptime T: type, allocator: std.mem.Allocator, map_id: u32) bool {
+pub fn removeEntity(comptime T: type, map_id: u32) bool {
     std.debug.assert(!useLockForType(T).tryLock());
     var obj_list = listForType(T);
     for (obj_list.items, 0..) |*obj, i| if (obj.map_id == map_id) {
-        obj.deinit(allocator);
+        obj.deinit();
         _ = obj_list.orderedRemove(i);
         return true;
     };
@@ -314,7 +313,7 @@ pub fn removeEntity(comptime T: type, allocator: std.mem.Allocator, map_id: u32)
     return false;
 }
 
-pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
+pub fn update(time: i64, dt: f32) void {
     if (info.player_map_id == std.math.maxInt(u32)) return;
 
     var should_unset_interactive = true;
@@ -331,7 +330,7 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
             const screen = systems.screen.game;
             if (screen.container_id != -1) {
                 inline for (0..8) |idx| screen.setContainerItem(std.math.maxInt(u16), idx);
-                screen.container_name.text_data.setText("", screen.allocator);
+                screen.container_name.text_data.setText("");
             }
 
             screen.container_id = std.math.maxInt(u32);
@@ -354,7 +353,7 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
         {
             var obj_add_list = addListForType(ObjType);
             defer obj_add_list.clearRetainingCapacity();
-            obj_list.appendSlice(allocator, obj_add_list.items) catch @panic("Failed to add objects");
+            obj_list.appendSlice(main.allocator, obj_add_list.items) catch @panic("Failed to add objects");
         }
 
         var obj_remove_list = removeListForType(ObjType);
@@ -392,7 +391,7 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
 
                                 if (screen.container_id != obj.map_id) {
                                     inline for (0..8) |idx| screen.setContainerItem(obj.inventory[idx], idx);
-                                    if (obj.name) |name| screen.container_name.text_data.setText(name, screen.allocator);
+                                    if (obj.name) |name| screen.container_name.text_data.setText(name);
                                 }
 
                                 screen.container_id = obj.map_id;
@@ -411,13 +410,13 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
                     defer if (is_self) useLockForType(Entity).unlock();
                     obj.walk_speed_multiplier = input.walking_speed_multiplier;
                     obj.move_angle = input.move_angle;
-                    obj.update(time, dt, allocator);
+                    obj.update(time, dt);
                     if (is_self) {
                         main.camera.update(obj.x, obj.y, dt);
-                        addMoveRecord(allocator, time, obj.x, obj.y);
+                        addMoveRecord(time, obj.x, obj.y);
                         if (input.attacking) {
                             const shoot_angle = std.math.atan2(input.mouse_y - main.camera.height / 2.0, input.mouse_x - main.camera.width / 2.0);
-                            obj.weaponShoot(allocator, shoot_angle, time);
+                            obj.weaponShoot(shoot_angle, time);
                         }
                     }
                 },
@@ -456,12 +455,12 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
 
                     obj.update(time);
                 },
-                Projectile => if (!obj.update(time, dt, allocator))
-                    obj_remove_list.append(allocator, i) catch @panic("Removing projectile failed"),
+                Projectile => if (!obj.update(time, dt))
+                    obj_remove_list.append(main.allocator, i) catch @panic("Removing projectile failed"),
                 particles.Particle => if (!obj.update(time, dt))
-                    obj_remove_list.append(allocator, i) catch @panic("Removing particle failed"),
+                    obj_remove_list.append(main.allocator, i) catch @panic("Removing particle failed"),
                 particles.ParticleEffect => if (!obj.update(time, dt))
-                    obj_remove_list.append(allocator, i) catch @panic("Removing particle effect failed"),
+                    obj_remove_list.append(main.allocator, i) catch @panic("Removing particle effect failed"),
                 Entity => obj.update(time),
                 Enemy => obj.update(time, dt),
                 else => @compileError("Invalid type"),
@@ -470,7 +469,7 @@ pub fn update(allocator: std.mem.Allocator, time: i64, dt: f32) void {
 
         var iter = std.mem.reverseIterator(obj_remove_list.items);
         while (iter.next()) |i| {
-            if (@hasField(@TypeOf(obj_list.items[i]), "deinit")) obj_list.items[i].deinit(allocator);
+            if (@hasField(@TypeOf(obj_list.items[i]), "deinit")) obj_list.items[i].deinit();
             _ = obj_list.orderedRemove(i);
         }
     }
@@ -523,7 +522,7 @@ pub fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Square {
     return square;
 }
 
-pub fn addMoveRecord(allocator: std.mem.Allocator, time: i64, x: f32, y: f32) void {
+pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
     if (last_records_clear_time < 0)
         return;
 
@@ -532,7 +531,7 @@ pub fn addMoveRecord(allocator: std.mem.Allocator, time: i64, x: f32, y: f32) vo
         return;
 
     if (move_records.items.len == 0) {
-        move_records.append(allocator, .{ .time = time, .x = x, .y = y }) catch |e| std.log.err("Adding move record failed: {}", .{e});
+        move_records.append(main.allocator, .{ .time = time, .x = x, .y = y }) catch |e| std.log.err("Adding move record failed: {}", .{e});
         return;
     }
 
@@ -540,7 +539,7 @@ pub fn addMoveRecord(allocator: std.mem.Allocator, time: i64, x: f32, y: f32) vo
     const curr_record = move_records.items[record_idx];
     const curr_id = getId(curr_record.time);
     if (id != curr_id) {
-        move_records.append(allocator, .{ .time = time, .x = x, .y = y }) catch |e| std.log.err("Adding move record failed: {}", .{e});
+        move_records.append(main.allocator, .{ .time = time, .x = x, .y = y }) catch |e| std.log.err("Adding move record failed: {}", .{e});
         return;
     }
 
@@ -572,7 +571,6 @@ pub fn takeDamage(
     damage_type: network_data.DamageType,
     conditions: utils.Condition,
     proj_colors: []const u32,
-    allocator: std.mem.Allocator,
 ) void {
     if (self.dead)
         return;
@@ -610,7 +608,6 @@ pub fn takeDamage(
 
                 self.condition.set(eff, true);
 
-                _ = allocator;
                 // element.StatusText.add(.{
                 //     .obj_type = switch (@TypeOf(self.*)) {
                 //         Entity => .entity,

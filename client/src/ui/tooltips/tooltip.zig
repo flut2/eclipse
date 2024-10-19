@@ -1,6 +1,7 @@
 const std = @import("std");
 const element = @import("../elements/element.zig");
 const game_data = @import("shared").game_data;
+const main = @import("../../main.zig");
 
 const Container = @import("../elements/Container.zig");
 const ItemTooltip = @import("ItemTooltip.zig");
@@ -29,33 +30,32 @@ pub const TooltipParams = union(TooltipType) {
 pub var map: std.AutoHashMapUnmanaged(TooltipType, *Tooltip) = .empty;
 pub var current: *Tooltip = undefined;
 
-pub fn init(allocator: std.mem.Allocator) !void {
+pub fn init() !void {
     defer {
         const dummy_tooltip_ctx: std.hash_map.AutoContext(TooltipType) = undefined;
         if (map.capacity() > 0) map.rehash(dummy_tooltip_ctx);
     }
 
     inline for (@typeInfo(Tooltip).@"union".fields) |field| @"continue": {
-        var tooltip = try allocator.create(Tooltip);
+        var tooltip = try main.allocator.create(Tooltip);
         if (field.type == void) {
             tooltip.* = @unionInit(Tooltip, field.name, {});
-            try map.put(allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
+            try map.put(main.allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
                 std.debug.panic("No enum type with name {s} found on TooltipType", .{field.name}), tooltip);
             break :@"continue";
         }
         tooltip.* = @unionInit(Tooltip, field.name, .{});
         var tooltip_inner = &@field(tooltip, field.name);
-        tooltip_inner.* = .{ .allocator = allocator };
-        tooltip_inner.root = try element.create(allocator, Container, .{ .base = .{ .visible = false, .layer = .tooltip, .x = 0, .y = 0 } });
+        tooltip_inner.root = try element.create(Container, .{ .base = .{ .visible = false, .layer = .tooltip, .x = 0, .y = 0 } });
         try tooltip_inner.init();
-        try map.put(allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
+        try map.put(main.allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
             std.debug.panic("No enum type with name {s} found on TooltipType", .{field.name}), tooltip);
     }
 
     current = map.get(.none).?;
 }
 
-pub fn deinit(allocator: std.mem.Allocator) void {
+pub fn deinit() void {
     var iter = map.valueIterator();
     while (iter.next()) |value| {
         switch (value.*.*) {
@@ -63,10 +63,10 @@ pub fn deinit(allocator: std.mem.Allocator) void {
             inline else => |*tooltip| tooltip.deinit(),
         }
 
-        allocator.destroy(value.*);
+        main.allocator.destroy(value.*);
     }
 
-    map.deinit(allocator);
+    map.deinit(main.allocator);
 }
 
 fn fieldName(comptime T: type) []const u8 {

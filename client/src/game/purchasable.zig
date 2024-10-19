@@ -25,12 +25,12 @@ pub const Purchasable = struct {
     atlas_data: assets.AtlasData = .default,
     data: *const game_data.PurchasableData = undefined,
 
-    pub fn addToMap(self: *Purchasable, allocator: std.mem.Allocator) void {
-        base.addToMap(self, Purchasable, allocator);
+    pub fn addToMap(self: *Purchasable) void {
+        base.addToMap(self, Purchasable);
     }
 
-    pub fn deinit(self: *Purchasable, allocator: std.mem.Allocator) void {
-        base.deinit(self, allocator);
+    pub fn deinit(self: *Purchasable) void {
+        base.deinit(self);
     }
 
     pub fn update(_: *Purchasable, _: i64) void {}

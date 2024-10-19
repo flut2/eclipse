@@ -16,8 +16,6 @@ const Input = @import("../elements/Input.zig");
 const Button = @import("../elements/Button.zig");
 const Toggle = @import("../elements/Toggle.zig");
 
-allocator: std.mem.Allocator = undefined,
-
 email_text: *Text = undefined,
 email_input: *Input = undefined,
 password_text: *Text = undefined,
@@ -35,11 +33,10 @@ pub fn init(self: *AccountLoginScreen) !void {
     const input_data_press = assets.getUiData("text_input_press", 0);
 
     const cursor_data = assets.getUiData("chatbox_cursor", 0);
-    self.email_input = try element.create(self.allocator, Input, .{
+    self.email_input = try element.create(Input, .{
         .base = .{
             .x = (main.camera.width - input_w) / 2,
             .y = main.camera.height / 3.6,
-            .allocator = self.allocator,
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
@@ -56,7 +53,7 @@ pub fn init(self: *AccountLoginScreen) !void {
 
     input.selected_input_field = self.email_input;
 
-    self.email_text = try element.create(self.allocator, Text, .{
+    self.email_text = try element.create(Text, .{
         .base = .{
             .x = self.email_input.base.x,
             .y = self.email_input.base.y - 50,
@@ -72,11 +69,10 @@ pub fn init(self: *AccountLoginScreen) !void {
         },
     });
 
-    self.password_input = try element.create(self.allocator, Input, .{
+    self.password_input = try element.create(Input, .{
         .base = .{
             .x = self.email_input.base.x,
             .y = self.email_input.base.y + 150,
-            .allocator = self.allocator,
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
@@ -92,7 +88,7 @@ pub fn init(self: *AccountLoginScreen) !void {
         },
     });
 
-    self.password_text = try element.create(self.allocator, Text, .{
+    self.password_text = try element.create(Text, .{
         .base = .{
             .x = self.password_input.base.x,
             .y = self.password_input.base.y - 50,
@@ -117,7 +113,7 @@ pub fn init(self: *AccountLoginScreen) !void {
 
     const text_w = 150;
 
-    self.remember_login_toggle = try element.create(self.allocator, Toggle, .{
+    self.remember_login_toggle = try element.create(Toggle, .{
         .base = .{
             .x = self.password_input.base.x + (input_w - text_w - check_box_base_on.width()) / 2,
             .y = self.password_input.base.y + 75 - (100 - check_box_base_on.height()) / 2,
@@ -127,7 +123,7 @@ pub fn init(self: *AccountLoginScreen) !void {
         .toggled = &main.settings.remember_login,
     });
 
-    self.remember_login_text = try element.create(self.allocator, Text, .{
+    self.remember_login_text = try element.create(Text, .{
         .base = .{
             .x = self.remember_login_toggle.base.x + check_box_base_on.width(),
             .y = self.remember_login_toggle.base.y,
@@ -147,7 +143,7 @@ pub fn init(self: *AccountLoginScreen) !void {
     const button_data_hover = assets.getUiData("button_hover", 0);
     const button_data_press = assets.getUiData("button_press", 0);
 
-    self.login_button = try element.create(self.allocator, Button, .{
+    self.login_button = try element.create(Button, .{
         .base = .{
             .x = self.password_input.base.x + (input_w - 200) / 2 - 12,
             .y = self.password_input.base.y + 150,
@@ -162,7 +158,7 @@ pub fn init(self: *AccountLoginScreen) !void {
         .press_callback = loginCallback,
     });
 
-    self.register_button = try element.create(self.allocator, Button, .{
+    self.register_button = try element.create(Button, .{
         .base = .{
             .x = self.login_button.base.x + (input_w - 100) / 2 + 24,
             .y = self.login_button.base.y,
@@ -187,7 +183,7 @@ pub fn deinit(self: *AccountLoginScreen) void {
     element.destroy(self.remember_login_text);
     element.destroy(self.remember_login_toggle);
 
-    self.allocator.destroy(self);
+    main.allocator.destroy(self);
 }
 
 pub fn resize(self: *AccountLoginScreen, w: f32, h: f32) void {
@@ -213,11 +209,7 @@ pub fn update(_: *AccountLoginScreen, _: i64, _: f32) !void {}
 
 fn loginCallback(ud: ?*anyopaque) void {
     const current_screen: *AccountLoginScreen = @alignCast(@ptrCast(ud.?));
-    _ = login(
-        main.account_arena_allocator,
-        current_screen.email_input.text_data.text,
-        current_screen.password_input.text_data.text,
-    ) catch |e| {
+    _ = login(current_screen.email_input.text_data.text, current_screen.password_input.text_data.text) catch |e| {
         std.log.err("Login failed: {}", .{e});
     };
 }
@@ -226,11 +218,11 @@ fn registerCallback(_: ?*anyopaque) void {
     ui_systems.switchScreen(.register);
 }
 
-fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) !bool {
+fn login(email: []const u8, password: []const u8) !bool {
     var data: std.StringHashMapUnmanaged([]const u8) = .empty;
-    try data.put(allocator, "email", email);
-    try data.put(allocator, "password", password);
-    defer data.deinit(allocator);
+    try data.put(main.account_arena_allocator, "email", email);
+    try data.put(main.account_arena_allocator, "password", password);
+    defer data.deinit(main.account_arena_allocator);
 
     var needs_free = true;
     const response = requests.sendRequest(build_options.login_server_uri ++ "account/verify", data) catch |e| blk: {
@@ -244,16 +236,16 @@ fn login(allocator: std.mem.Allocator, email: []const u8, password: []const u8) 
     };
     defer if (needs_free) requests.freeResponse(response);
 
-    main.character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, allocator, response, .{ .allocate = .alloc_always }) catch {
+    main.character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, main.account_arena_allocator, response, .{ .allocate = .alloc_always }) catch {
         dialog.showDialog(.text, .{
             .title = "Login Failed",
-            .body = try std.fmt.allocPrint(allocator, "Error: {s}", .{response}),
+            .body = try std.fmt.allocPrint(main.account_arena_allocator, "Error: {s}", .{response}),
         });
         return false;
     };
 
     main.current_account = .{
-        .email = try allocator.dupe(u8, email),
+        .email = try main.account_arena_allocator.dupe(u8, email),
         .token = main.character_list.?.token,
     };
 

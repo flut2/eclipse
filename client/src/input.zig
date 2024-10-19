@@ -16,7 +16,6 @@ var move_up: f32 = 0.0;
 var move_down: f32 = 0.0;
 var move_left: f32 = 0.0;
 var move_right: f32 = 0.0;
-pub var allocator: std.mem.Allocator = undefined;
 
 pub var attacking: bool = false;
 pub var walking_speed_multiplier: f32 = 1.0;
@@ -39,23 +38,13 @@ pub fn reset() void {
     attacking = false;
 }
 
-pub fn init(ally: std.mem.Allocator) void {
-    allocator = ally;
-}
-
 pub fn deinit() void {
-    for (input_history.items) |msg| {
-        allocator.free(msg);
-    }
-    input_history.deinit(allocator);
+    for (input_history.items) |msg| main.allocator.free(msg);
+    input_history.deinit(main.allocator);
 }
 
 fn keyPress(window: *glfw.Window, key: glfw.Key) void {
-    if (ui_systems.screen != .game and ui_systems.screen != .editor)
-        return;
-
-    if (disable_input)
-        return;
+    if (ui_systems.screen != .game and ui_systems.screen != .editor or disable_input) return;
 
     if (key == main.settings.move_up.getKey()) {
         move_up = 1.0;
@@ -100,11 +89,7 @@ fn keyPress(window: *glfw.Window, key: glfw.Key) void {
 }
 
 fn keyRelease(key: glfw.Key) void {
-    if (ui_systems.screen != .game and ui_systems.screen != .editor)
-        return;
-
-    if (disable_input)
-        return;
+    if (ui_systems.screen != .game and ui_systems.screen != .editor or disable_input) return;
 
     if (key == main.settings.move_up.getKey()) {
         move_up = 0.0;
@@ -124,11 +109,7 @@ fn keyRelease(key: glfw.Key) void {
 }
 
 fn mousePress(window: *glfw.Window, button: glfw.MouseButton) void {
-    if (ui_systems.screen != .game and ui_systems.screen != .editor)
-        return;
-
-    if (disable_input)
-        return;
+    if (ui_systems.screen != .game and ui_systems.screen != .editor or disable_input) return;
 
     if (button == main.settings.move_up.getMouse()) {
         move_up = 1.0;
@@ -177,11 +158,7 @@ fn mousePress(window: *glfw.Window, button: glfw.MouseButton) void {
 }
 
 fn mouseRelease(button: glfw.MouseButton) void {
-    if (ui_systems.screen != .game and ui_systems.screen != .editor)
-        return;
-
-    if (disable_input)
-        return;
+    if (ui_systems.screen != .game and ui_systems.screen != .editor or disable_input) return;
 
     if (button == main.settings.move_up.getMouse()) {
         move_up = 0.0;
@@ -202,13 +179,10 @@ fn mouseRelease(button: glfw.MouseButton) void {
 
 pub fn charEvent(_: *glfw.Window, char: u32) callconv(.C) void {
     if (selected_input_field) |input_field| {
-        if (char > std.math.maxInt(u8) or char < std.math.minInt(u8)) {
-            return;
-        }
+        if (char > std.math.maxInt(u8) or char < std.math.minInt(u8)) return;
 
         const byte_code: u8 = @intCast(char);
-        if (!std.ascii.isASCII(byte_code) or input_field.index >= 256)
-            return;
+        if (!std.ascii.isASCII(byte_code) or input_field.index >= 256) return;
 
         input_field.text_data.backing_buffer[input_field.index] = byte_code;
         input_field.index += 1;
@@ -320,14 +294,10 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
 
     if (action == .press) {
         keyPress(window, key);
-        if (ui_systems.screen == .editor) {
-            ui_systems.screen.editor.onKeyPress(key);
-        }
+        if (ui_systems.screen == .editor) ui_systems.screen.editor.onKeyPress(key);
     } else if (action == .release) {
         keyRelease(key);
-        if (ui_systems.screen == .editor) {
-            ui_systems.screen.editor.onKeyRelease(key);
-        }
+        if (ui_systems.screen == .editor) ui_systems.screen.editor.onKeyRelease(key);
     }
 
     updateState();

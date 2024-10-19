@@ -71,7 +71,7 @@ pub fn init(self: *Input) void {
     {
         self.text_data.lock.lock();
         defer self.text_data.lock.unlock();
-        self.text_data.recalculateAttributes(self.base.allocator);
+        self.text_data.recalculateAttributes();
     }
 
     switch (self.cursor_image_data) {
@@ -82,7 +82,7 @@ pub fn init(self: *Input) void {
 
 pub fn deinit(self: *Input) void {
     if (self == input.selected_input_field) input.selected_input_field = null;
-    self.text_data.deinit(self.base.allocator);
+    self.text_data.deinit();
 }
 
 pub fn draw(self: *Input, _: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
@@ -130,7 +130,7 @@ pub fn texHRaw(self: Input) f32 {
 }
 
 pub fn clear(self: *Input) void {
-    self.text_data.setText("", self.base.allocator);
+    self.text_data.setText("");
     self.index = 0;
     self.inputUpdate();
 }
@@ -141,7 +141,7 @@ pub fn inputUpdate(self: *Input) void {
     {
         self.text_data.lock.lock();
         defer self.text_data.lock.unlock();
-        self.text_data.recalculateAttributes(self.base.allocator);
+        self.text_data.recalculateAttributes();
     }
 
     const cursor_width = switch (self.cursor_image_data) {

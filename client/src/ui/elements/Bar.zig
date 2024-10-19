@@ -11,11 +11,11 @@ text_data: element.TextData,
 pub fn init(self: *Bar) void {
     self.text_data.lock.lock();
     defer self.text_data.lock.unlock();
-    self.text_data.recalculateAttributes(self.base.allocator);
+    self.text_data.recalculateAttributes();
 }
 
 pub fn deinit(self: *Bar) void {
-    self.text_data.deinit(self.base.allocator);
+    self.text_data.deinit();
 }
 
 pub fn draw(self: *Bar, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {

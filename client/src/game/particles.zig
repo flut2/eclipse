@@ -7,8 +7,7 @@ const map = @import("map.zig");
 const network = @import("../network.zig");
 const render = @import("../render.zig");
 const px_per_tile = @import("../Camera.zig").px_per_tile;
-
-pub var allocator: std.mem.Allocator = undefined;
+const main = @import("../main.zig");
 
 pub const ThrowParticle = struct {
     x: f32 = 0.0,
@@ -27,7 +26,7 @@ pub const ThrowParticle = struct {
     last_update: i64 = 0,
 
     pub fn addToMap(part: ThrowParticle) void {
-        map.addListForType(Particle).append(allocator, .{ .throw = part }) catch @panic("Adding ThrowParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .throw = part }) catch @panic("Adding ThrowParticle failed");
     }
 
     pub fn update(self: *ThrowParticle, time: i64, dt: f32) bool {
@@ -78,7 +77,7 @@ pub const SparkerParticle = struct {
     last_update: i64 = 0,
 
     pub fn addToMap(part: SparkerParticle) void {
-        map.addListForType(Particle).append(allocator, .{ .sparker = part }) catch @panic("Adding SparkerParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .sparker = part }) catch @panic("Adding SparkerParticle failed");
     }
 
     pub fn update(self: *SparkerParticle, time: i64, dt: f32) bool {
@@ -127,7 +126,7 @@ pub const SparkParticle = struct {
     dy: f32,
 
     pub fn addToMap(part: SparkParticle) void {
-        map.addListForType(Particle).append(allocator, .{ .spark = part }) catch @panic("Adding SparkParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .spark = part }) catch @panic("Adding SparkParticle failed");
     }
 
     pub fn update(self: *SparkParticle, _: i64, dt: f32) bool {
@@ -154,7 +153,7 @@ pub const TeleportParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: TeleportParticle) void {
-        map.addListForType(Particle).append(allocator, .{ .teleport = part }) catch @panic("Adding TeleportParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .teleport = part }) catch @panic("Adding TeleportParticle failed");
     }
 
     pub fn update(self: *TeleportParticle, _: i64, dt: f32) bool {
@@ -183,7 +182,7 @@ pub const ExplosionParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: ExplosionParticle) void {
-        map.addListForType(Particle).append(allocator, .{ .explosion = part }) catch @panic("Adding ExplosionParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .explosion = part }) catch @panic("Adding ExplosionParticle failed");
     }
 
     pub fn update(self: *ExplosionParticle, _: i64, dt: f32) bool {
@@ -214,7 +213,7 @@ pub const HitParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: HitParticle) void {
-        map.addListForType(Particle).append(allocator, .{ .hit = part }) catch @panic("Adding HitParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .hit = part }) catch @panic("Adding HitParticle failed");
     }
 
     pub fn update(self: *HitParticle, _: i64, dt: f32) bool {
@@ -246,7 +245,7 @@ pub const HealParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: HealParticle) void {
-        map.addListForType(Particle).append(allocator, .{ .heal = part }) catch @panic("Adding HealParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .heal = part }) catch @panic("Adding HealParticle failed");
     }
 
     pub fn update(self: *HealParticle, _: i64, dt: f32) bool {
@@ -326,7 +325,7 @@ pub const ThrowEffect = struct {
     duration: i64,
 
     pub fn addToMap(effect: ThrowEffect) void {
-        map.addListForType(ParticleEffect).append(allocator, .{ .throw = effect }) catch @panic("Adding ThrowEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .throw = effect }) catch @panic("Adding ThrowEffect failed");
     }
 
     pub fn update(self: *ThrowEffect, _: i64, _: f32) bool {
@@ -355,7 +354,7 @@ pub const AoeEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: AoeEffect) void {
-        map.addListForType(ParticleEffect).append(allocator, .{ .aoe = effect }) catch @panic("Adding AoeEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .aoe = effect }) catch @panic("Adding AoeEffect failed");
     }
 
     pub fn update(self: *AoeEffect, _: i64, _: f32) bool {
@@ -389,7 +388,7 @@ pub const TeleportEffect = struct {
     y: f32,
 
     pub fn addToMap(effect: TeleportEffect) void {
-        map.addListForType(ParticleEffect).append(allocator, .{ .teleport = effect }) catch @panic("Adding TeleportEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .teleport = effect }) catch @panic("Adding TeleportEffect failed");
     }
 
     pub fn update(self: *TeleportEffect, _: i64, _: f32) bool {
@@ -421,7 +420,7 @@ pub const LineEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: LineEffect) void {
-        map.addListForType(ParticleEffect).append(allocator, .{ .line = effect }) catch @panic("Adding LineEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .line = effect }) catch @panic("Adding LineEffect failed");
     }
 
     pub fn update(self: *LineEffect, _: i64, _: f32) bool {
@@ -455,7 +454,7 @@ pub const ExplosionEffect = struct {
     amount: u32,
 
     pub fn addToMap(effect: ExplosionEffect) void {
-        map.addListForType(ParticleEffect).append(allocator, .{ .explosion = effect }) catch @panic("Adding ExplosionEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .explosion = effect }) catch @panic("Adding ExplosionEffect failed");
     }
 
     pub fn update(self: *ExplosionEffect, _: i64, _: f32) bool {
@@ -493,7 +492,7 @@ pub const HitEffect = struct {
     amount: u32,
 
     pub fn addToMap(effect: HitEffect) void {
-        map.addListForType(ParticleEffect).append(allocator, .{ .hit = effect }) catch @panic("Adding HitEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .hit = effect }) catch @panic("Adding HitEffect failed");
     }
 
     pub fn update(self: *HitEffect, _: i64, _: f32) bool {
@@ -530,7 +529,7 @@ pub const HealEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: HealEffect) void {
-        map.addListForType(ParticleEffect).append(allocator, .{ .heal = effect }) catch @panic("Adding HealEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .heal = effect }) catch @panic("Adding HealEffect failed");
     }
 
     pub fn update(self: *HealEffect, _: i64, _: f32) bool {
@@ -580,7 +579,7 @@ pub const RingEffect = struct {
     last_activate: i64 = -1,
 
     pub fn addToMap(effect: RingEffect) void {
-        map.addListForType(ParticleEffect).append(allocator, .{ .ring = effect }) catch @panic("Adding RingEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .ring = effect }) catch @panic("Adding RingEffect failed");
     }
 
     pub fn update(self: *RingEffect, time: i64, _: f32) bool {

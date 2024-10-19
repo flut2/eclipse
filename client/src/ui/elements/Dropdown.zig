@@ -4,6 +4,7 @@ const systems = @import("../systems.zig");
 const utils = @import("shared").utils;
 const assets = @import("../../assets.zig");
 const render = @import("../../render.zig");
+const main = @import("../../main.zig");
 const glfw = @import("zglfw");
 
 const Dropdown = @This();
@@ -119,7 +120,7 @@ pub fn init(self: *Dropdown) void {
     {
         self.title_text.lock.lock();
         defer self.title_text.lock.unlock();
-        self.title_text.recalculateAttributes(self.base.allocator);
+        self.title_text.recalculateAttributes();
     }
 
     const w_base = self.w - self.container_inlay_x * 2;
@@ -132,13 +133,12 @@ pub fn init(self: *Dropdown) void {
 
     const scroll_x_base = self.base.x + self.container_inlay_x + scissor_w + 2;
     const scroll_y_base = self.base.y + self.container_inlay_y + self.title_data.height();
-    self.container = self.base.allocator.create(ScrollableContainer) catch @panic("Dropdown child container alloc failed");
+    self.container = main.allocator.create(ScrollableContainer) catch @panic("Dropdown child container alloc failed");
     self.container.* = .{
         .base = .{
             .x = self.base.x + self.container_inlay_x,
             .y = self.base.y + self.container_inlay_y + self.title_data.height(),
             .layer = self.base.layer,
-            .allocator = self.base.allocator,
         },
         .scissor_w = scissor_w,
         .scissor_h = self.background_data.height() - self.container_inlay_y * 2 - 6,
@@ -156,10 +156,10 @@ pub fn init(self: *Dropdown) void {
 }
 
 pub fn deinit(self: *Dropdown) void {
-    self.title_text.deinit(self.base.allocator);
+    self.title_text.deinit();
     self.container.deinit();
-    self.children.deinit(self.base.allocator);
-    self.base.allocator.destroy(self.container);
+    self.children.deinit(main.allocator);
+    main.allocator.destroy(self.container);
 }
 
 pub fn draw(self: *Dropdown, cam_data: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
@@ -223,7 +223,6 @@ pub fn createChild(self: *Dropdown, pressCallback: *const fn (*DropdownContainer
         .container = .{ .base = .{
             .x = 0,
             .y = 0,
-            .allocator = self.base.allocator,
             .visible = self.base.visible,
         } },
         .pressCallback = pressCallback,
@@ -231,7 +230,7 @@ pub fn createChild(self: *Dropdown, pressCallback: *const fn (*DropdownContainer
         .background_data = if (@mod(self.next_index, 2) == 0) self.main_background_data else self.alt_background_data,
     });
     self.next_index += 1;
-    try self.children.append(self.base.allocator, ret);
+    try self.children.append(main.allocator, ret);
 
     if (self.container.scroll_bar.base.visible and !scroll_vis_pre) {
         self.main_background_data.scaleWidth(self.container.scissor_w);

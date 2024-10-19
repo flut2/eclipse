@@ -1,6 +1,7 @@
 const std = @import("std");
 const element = @import("element.zig");
 const render = @import("../../render.zig");
+const main = @import("../../main.zig");
 const glfw = @import("zglfw");
 
 const ScrollableContainer = @This();
@@ -71,7 +72,7 @@ pub fn init(self: *ScrollableContainer) void {
 
     self.base_y = self.base.y;
 
-    self.container = self.base.allocator.create(Container) catch @panic("OOM");
+    self.container = main.allocator.create(Container) catch @panic("OOM");
     self.container.* = .{ .base = .{
         .x = self.base.x,
         .y = self.base.y,
@@ -82,15 +83,13 @@ pub fn init(self: *ScrollableContainer) void {
             .max_y = self.scissor_h,
         },
         .layer = self.base.layer,
-        .allocator = self.base.allocator,
     } };
 
-    self.scroll_bar = self.base.allocator.create(Slider) catch @panic("ScrollableContainer scroll bar alloc failed");
+    self.scroll_bar = main.allocator.create(Slider) catch @panic("ScrollableContainer scroll bar alloc failed");
     self.scroll_bar.* = .{
         .base = .{
             .x = self.scroll_x,
             .y = self.scroll_y,
-            .allocator = self.base.allocator,
             .layer = self.base.layer,
             .visible = false,
         },
@@ -109,13 +108,12 @@ pub fn init(self: *ScrollableContainer) void {
     self.scroll_bar.init();
 
     if (self.hasScrollDecor()) {
-        self.scroll_bar_decor = self.base.allocator.create(Image) catch @panic("ScrollableContainer scroll bar decor alloc failed");
+        self.scroll_bar_decor = main.allocator.create(Image) catch @panic("ScrollableContainer scroll bar decor alloc failed");
         self.scroll_bar_decor.* = .{
             .base = .{
                 .x = self.scroll_side_x,
                 .y = self.scroll_side_y,
                 .scissor = .{ .min_x = 0, .min_y = 0, .max_x = self.scissor_w, .max_y = self.scissor_h },
-                .allocator = self.base.allocator,
                 .visible = false,
                 .layer = self.base.layer,
                 .event_policy = .{
@@ -133,14 +131,14 @@ pub fn init(self: *ScrollableContainer) void {
 
 pub fn deinit(self: *ScrollableContainer) void {
     self.container.deinit();
-    self.base.allocator.destroy(self.container);
+    main.allocator.destroy(self.container);
 
     self.scroll_bar.deinit();
-    self.base.allocator.destroy(self.scroll_bar);
+    main.allocator.destroy(self.scroll_bar);
 
     if (self.hasScrollDecor()) {
         self.scroll_bar_decor.deinit();
-        self.base.allocator.destroy(self.scroll_bar_decor);
+        main.allocator.destroy(self.scroll_bar_decor);
     }
 }
 

@@ -74,19 +74,19 @@ pub fn init(self: *KeyMapper) void {
     if (self.title_text_data) |*text_data| {
         text_data.lock.lock();
         defer text_data.lock.unlock();
-        text_data.recalculateAttributes(self.base.allocator);
+        text_data.recalculateAttributes();
     }
 
     if (self.tooltip_text) |*text_data| {
         text_data.lock.lock();
         defer text_data.lock.unlock();
-        text_data.recalculateAttributes(self.base.allocator);
+        text_data.recalculateAttributes();
     }
 }
 
 pub fn deinit(self: *KeyMapper) void {
-    if (self.title_text_data) |*text_data| text_data.deinit(self.base.allocator);
-    if (self.tooltip_text) |*text_data| text_data.deinit(self.base.allocator);
+    if (self.title_text_data) |*text_data| text_data.deinit();
+    if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
 pub fn draw(self: *KeyMapper, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {

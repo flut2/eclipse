@@ -51,32 +51,26 @@ pub var last_map_data: ?[]u8 = null;
 pub var is_testing: bool = false;
 
 var last_element_update: i64 = 0;
-pub var allocator: std.mem.Allocator = undefined;
 
-pub fn init(ally: std.mem.Allocator) !void {
-    allocator = ally;
-
-    menu_background = try element.create(ally, MenuBackground, .{
-        .base = .{
-            .x = 0,
-            .y = 0,
-        },
+pub fn init() !void {
+    menu_background = try element.create(MenuBackground, .{
+        .base = .{ .x = 0, .y = 0 },
         .w = main.camera.width,
         .h = main.camera.height,
     });
 
     screen = Screen{ .empty = {} }; // TODO: re-add RLS when fixed
 
-    try tooltip.init(ally);
-    try dialog.init(ally);
+    try tooltip.init();
+    try dialog.init();
 }
 
 pub fn deinit() void {
     ui_lock.lock();
     defer ui_lock.unlock();
 
-    tooltip.deinit(allocator);
-    dialog.deinit(allocator);
+    tooltip.deinit();
+    dialog.deinit();
 
     switch (screen) {
         .empty => {},
@@ -85,10 +79,10 @@ pub fn deinit() void {
 
     element.destroy(menu_background);
 
-    elements_to_add.deinit(allocator);
-    elements.deinit(allocator);
+    elements_to_add.deinit(main.allocator);
+    elements.deinit(main.allocator);
 
-    if (last_map_data) |data| allocator.free(data);
+    if (last_map_data) |data| main.allocator.free(data);
 }
 
 pub fn switchScreen(comptime screen_type: ScreenType) void {
@@ -112,8 +106,7 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
         inline else => |inner_screen| inner_screen.deinit(),
     }
 
-    var screen_inner = allocator.create(@typeInfo(T).pointer.child) catch @panic("OOM");
-    screen_inner.* = .{ .allocator = allocator };
+    var screen_inner = main.allocator.create(@typeInfo(T).pointer.child) catch @panic("OOM");
     screen_inner.init() catch |e| std.debug.panic("Screen init failed: {}", .{e});
     screen = @unionInit(Screen, @tagName(screen_type), screen_inner);
 }
@@ -238,7 +231,7 @@ pub fn update(time: i64, dt: f32) !void {
     ui_lock.lock();
     defer ui_lock.unlock();
 
-    elements.appendSlice(allocator, elements_to_add.items) catch |e| {
+    elements.appendSlice(main.allocator, elements_to_add.items) catch |e| {
         @branchHint(.cold);
         std.log.err("Adding new elements failed: {}, returning", .{e});
         return;

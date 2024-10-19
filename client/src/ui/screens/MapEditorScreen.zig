@@ -96,11 +96,6 @@ const MultiPlace = struct {
 const CommandQueue = struct {
     command_list: std.ArrayListUnmanaged(EditorCommand) = .empty,
     current_position: usize = 0,
-    allocator: std.mem.Allocator = undefined,
-
-    pub fn init(self: *CommandQueue, allocator: std.mem.Allocator) void {
-        self.allocator = allocator;
-    }
 
     pub fn clear(self: *CommandQueue) void {
         self.command_list.clearRetainingCapacity();
@@ -108,11 +103,8 @@ const CommandQueue = struct {
     }
 
     pub fn deinit(self: *CommandQueue) void {
-        for (self.command_list.items) |cmd| {
-            if (cmd == .multi_place)
-                self.allocator.free(cmd.multi_place.places);
-        }
-        self.command_list.deinit(self.allocator);
+        for (self.command_list.items) |cmd| if (cmd == .multi_place) main.allocator.free(cmd.multi_place.places);
+        self.command_list.deinit(main.allocator);
     }
 
     pub fn addCommand(self: *CommandQueue, command: EditorCommand) void {
@@ -125,13 +117,12 @@ const CommandQueue = struct {
             inline else => |c| c.execute(),
         }
 
-        self.command_list.append(self.allocator, command) catch return;
+        self.command_list.append(main.allocator, command) catch return;
         self.current_position += 1;
     }
 
     pub fn undo(self: *CommandQueue) void {
-        if (self.current_position == 0)
-            return;
+        if (self.current_position == 0) return;
 
         self.current_position -= 1;
 
@@ -142,8 +133,7 @@ const CommandQueue = struct {
     }
 
     pub fn redo(self: *CommandQueue) void {
-        if (self.current_position == self.command_list.items.len)
-            return;
+        if (self.current_position == self.command_list.items.len) return;
 
         const command = self.command_list.items[self.current_position];
         switch (command) {
@@ -187,8 +177,6 @@ const palette_decor_h = 400;
 
 const dropdown_w = 200;
 const dropdown_h = 130;
-
-allocator: std.mem.Allocator,
 
 next_map_ids: struct {
     entity: u32 = 0,
@@ -253,8 +241,6 @@ pub fn nextMapIdForType(self: *MapEditorScreen, comptime T: type) *u32 {
 }
 
 pub fn init(self: *MapEditorScreen) !void {
-    self.command_queue.init(self.allocator);
-
     const button_data_base = assets.getUiData("button_base", 0);
     const button_data_hover = assets.getUiData("button_hover", 0);
     const button_data_press = assets.getUiData("button_press", 0);
@@ -281,15 +267,15 @@ pub fn init(self: *MapEditorScreen) !void {
     {
         fps_text_data.lock.lock();
         defer fps_text_data.lock.unlock();
-        fps_text_data.recalculateAttributes(self.allocator);
+        fps_text_data.recalculateAttributes();
     }
 
-    self.fps_text = try element.create(self.allocator, Text, .{
+    self.fps_text = try element.create(Text, .{
         .base = .{ .x = 5 + control_decor_w + 5, .y = 5 },
         .text_data = fps_text_data,
     });
 
-    self.controls_container = try element.create(self.allocator, UiContainer, .{
+    self.controls_container = try element.create(UiContainer, .{
         .base = .{ .x = 5, .y = 5 },
     });
 
@@ -314,7 +300,7 @@ pub fn init(self: *MapEditorScreen) !void {
     const scroll_knob_press = assets.getUiData("scroll_wheel_press", 0);
     const scroll_decor_data = assets.getUiData("scrollbar_decor", 0);
 
-    self.map_size_dropdown = try element.create(self.allocator, Dropdown, .{
+    self.map_size_dropdown = try element.create(Dropdown, .{
         .base = .{ .x = 5, .y = 5 + control_decor_h + 5 },
         .w = control_decor_w,
         .container_inlay_x = 8,
@@ -556,12 +542,12 @@ pub fn init(self: *MapEditorScreen) !void {
         },
     });
 
-    self.palette_decor = try element.create(self.allocator, Image, .{
+    self.palette_decor = try element.create(Image, .{
         .base = .{ .x = main.camera.width - palette_decor_w - 5, .y = 5 },
         .image_data = .{ .nine_slice = .fromAtlasData(background_decor, palette_decor_w, palette_decor_h, 34, 34, 1, 1, 1.0) },
     });
 
-    self.palette_containers.ground = try element.create(self.allocator, ScrollableContainer, .{
+    self.palette_containers.ground = try element.create(ScrollableContainer, .{
         .base = .{ .x = self.palette_decor.base.x + 8, .y = self.palette_decor.base.y + 9 },
         .scissor_w = palette_decor_w - 20 - 6,
         .scissor_h = palette_decor_h - 17,
@@ -632,7 +618,6 @@ pub fn init(self: *MapEditorScreen) !void {
 
     try addObjectContainer(
         &self.palette_containers.entity,
-        self.allocator,
         self.palette_decor.base.x,
         self.palette_decor.base.y,
         scroll_background_data,
@@ -646,7 +631,6 @@ pub fn init(self: *MapEditorScreen) !void {
     );
     try addObjectContainer(
         &self.palette_containers.enemy,
-        self.allocator,
         self.palette_decor.base.x,
         self.palette_decor.base.y,
         scroll_background_data,
@@ -660,7 +644,6 @@ pub fn init(self: *MapEditorScreen) !void {
     );
     try addObjectContainer(
         &self.palette_containers.portal,
-        self.allocator,
         self.palette_decor.base.x,
         self.palette_decor.base.y,
         scroll_background_data,
@@ -674,7 +657,6 @@ pub fn init(self: *MapEditorScreen) !void {
     );
     try addObjectContainer(
         &self.palette_containers.container,
-        self.allocator,
         self.palette_decor.base.x,
         self.palette_decor.base.y,
         scroll_background_data,
@@ -687,7 +669,7 @@ pub fn init(self: *MapEditorScreen) !void {
         containerClicked,
     );
 
-    self.palette_containers.region = try element.create(self.allocator, ScrollableContainer, .{
+    self.palette_containers.region = try element.create(ScrollableContainer, .{
         .base = .{ .x = self.palette_decor.base.x + 8, .y = self.palette_decor.base.y + 9, .visible = false },
         .scissor_w = palette_decor_w - 20 - 6,
         .scissor_h = palette_decor_h - 17,
@@ -725,7 +707,7 @@ pub fn init(self: *MapEditorScreen) !void {
         });
     }
 
-    self.layer_dropdown = try element.create(self.allocator, Dropdown, .{
+    self.layer_dropdown = try element.create(Dropdown, .{
         .base = .{ .x = self.palette_decor.base.x, .y = self.palette_decor.base.y + self.palette_decor.height() + 5 },
         .w = dropdown_w,
         .container_inlay_x = 8,
@@ -775,7 +757,6 @@ pub fn init(self: *MapEditorScreen) !void {
 
 fn addObjectContainer(
     container: **ScrollableContainer,
-    allocator: std.mem.Allocator,
     px: f32,
     py: f32,
     scroll_background_data: assets.AtlasData,
@@ -787,7 +768,7 @@ fn addObjectContainer(
     data: game_data.Maps(T),
     callback: *const fn (?*anyopaque) void,
 ) !void {
-    container.* = try element.create(allocator, ScrollableContainer, .{
+    container.* = try element.create(ScrollableContainer, .{
         .base = .{ .x = px + 8, .y = py + 9, .visible = false },
         .scissor_w = palette_decor_w - 20 - 6,
         .scissor_h = palette_decor_h - 17,
@@ -923,19 +904,14 @@ fn layerCallback(dc: *DropdownContainer) void {
 fn noAction(_: *KeyMapper) void {}
 
 fn initialize(self: *MapEditorScreen) void {
-    map.dispose(self.allocator);
-    map.setMapInfo(.{
-        .width = self.map_size,
-        .height = self.map_size,
-        .bg_color = 0,
-        .bg_intensity = 0.15,
-    }, self.allocator);
+    map.dispose();
+    map.setMapInfo(.{ .width = self.map_size, .height = self.map_size, .bg_color = 0, .bg_intensity = 0.15 });
     self.command_queue.clear();
 
     self.map_tile_data = if (self.map_tile_data.len == 0)
-        self.allocator.alloc(MapEditorTile, @as(u32, self.map_size) * @as(u32, self.map_size)) catch return
+        main.allocator.alloc(MapEditorTile, @as(u32, self.map_size) * @as(u32, self.map_size)) catch return
     else
-        self.allocator.realloc(self.map_tile_data, @as(u32, self.map_size) * @as(u32, self.map_size)) catch return;
+        main.allocator.realloc(self.map_tile_data, @as(u32, self.map_size) * @as(u32, self.map_size)) catch return;
 
     @memset(self.map_tile_data, MapEditorTile{});
 
@@ -964,7 +940,7 @@ fn initialize(self: *MapEditorScreen) void {
         .data_id = 0,
         .speed = 300,
     };
-    player.addToMap(self.allocator);
+    player.addToMap();
 
     main.editing_map = true;
     self.start_x_override = std.math.maxInt(u16);
@@ -972,7 +948,7 @@ fn initialize(self: *MapEditorScreen) void {
 }
 
 fn loadMap(screen: *MapEditorScreen, data_reader: anytype) !void {
-    var arena: std.heap.ArenaAllocator = .init(screen.allocator);
+    var arena: std.heap.ArenaAllocator = .init(main.allocator);
     defer arena.deinit();
     const parsed_map = try map_data.parseMap(data_reader, &arena);
     screen.start_x_override = parsed_map.x + @divFloor(parsed_map.w, 2);
@@ -1057,13 +1033,13 @@ pub fn indexOfTile(tiles: []const map_data.Tile, value: map_data.Tile) ?usize {
 
 fn mapData(screen: *MapEditorScreen) ![]u8 {
     var data: std.ArrayListUnmanaged(u8) = .empty;
-    defer data.deinit(screen.allocator);
+    defer data.deinit(main.allocator);
 
     const bounds = tileBounds(screen.map_tile_data);
     if (bounds.min_x >= bounds.max_x or bounds.min_y >= bounds.max_y)
         return error.InvalidMap;
 
-    var writer = data.writer(screen.allocator);
+    var writer = data.writer(main.allocator);
     try writer.writeInt(u8, 0, .little); // version
     try writer.writeInt(u16, bounds.min_x, .little);
     try writer.writeInt(u16, bounds.min_y, .little);
@@ -1071,7 +1047,7 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
     try writer.writeInt(u16, bounds.max_y - bounds.min_y, .little);
 
     var tiles: std.ArrayListUnmanaged(map_data.Tile) = .empty;
-    defer tiles.deinit(screen.allocator);
+    defer tiles.deinit(main.allocator);
 
     for (bounds.min_y..bounds.max_y) |y| {
         for (bounds.min_x..bounds.max_x) |x| {
@@ -1106,7 +1082,7 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
             };
 
             if (indexOfTile(tiles.items, tile) == null)
-                try tiles.append(screen.allocator, tile);
+                try tiles.append(main.allocator, tile);
         }
     }
 
@@ -1163,8 +1139,8 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
 
     var compressed_data: std.ArrayListUnmanaged(u8) = .empty;
     var fbs = std.io.fixedBufferStream(data.items);
-    try std.compress.zlib.compress(fbs.reader(), compressed_data.writer(screen.allocator), .{});
-    return try compressed_data.toOwnedSlice(screen.allocator);
+    try std.compress.zlib.compress(fbs.reader(), compressed_data.writer(main.allocator), .{});
+    return try compressed_data.toOwnedSlice(main.allocator);
 }
 
 fn saveInner(screen: *MapEditorScreen) !void {
@@ -1181,7 +1157,7 @@ fn saveInner(screen: *MapEditorScreen) !void {
             });
             return;
         };
-        defer screen.allocator.free(data);
+        defer main.allocator.free(data);
 
         const file = try std.fs.createFileAbsolute(path, .{});
         defer file.close();
@@ -1203,7 +1179,7 @@ fn exitCallback(ud: ?*anyopaque) void {
         if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
         return;
     };
-    if (ui_systems.last_map_data) |last_map_data| screen.allocator.free(last_map_data);
+    if (ui_systems.last_map_data) |last_map_data| main.allocator.free(last_map_data);
     ui_systems.last_map_data = data;
 
     if (main.character_list == null)
@@ -1224,7 +1200,7 @@ fn testCallback(ud: ?*anyopaque) void {
                 if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
                 return;
             };
-            if (ui_systems.last_map_data) |last_map_data| screen.allocator.free(last_map_data);
+            if (ui_systems.last_map_data) |last_map_data| main.allocator.free(last_map_data);
             ui_systems.last_map_data = data;
             ui_systems.is_testing = true;
 
@@ -1246,12 +1222,12 @@ pub fn deinit(self: *MapEditorScreen) void {
     element.destroy(self.controls_container);
     element.destroy(self.map_size_dropdown);
 
-    self.allocator.free(self.map_tile_data);
+    main.allocator.free(self.map_tile_data);
 
     main.editing_map = false;
-    map.dispose(self.allocator);
+    map.dispose();
 
-    self.allocator.destroy(self);
+    main.allocator.destroy(self);
 }
 
 pub fn resize(self: *MapEditorScreen, w: f32, _: f32) void {
@@ -1360,7 +1336,7 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
     if (data_id == std.math.maxInt(u16)) {
         lock.lock();
         defer lock.unlock();
-        _ = map.removeEntity(Entity, self.allocator, tile.region_map_id);
+        _ = map.removeEntity(Entity, tile.region_map_id);
         tile.region_map_id = std.math.maxInt(u32);
     } else {
         const data = game_data.region.from_id.get(data_id) orelse {
@@ -1372,14 +1348,14 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
             lock.lock();
             defer lock.unlock();
             if (map.findObject(Entity, tile.region_map_id, .con)) |obj| if (std.mem.eql(u8, obj.name orelse "", data.name)) return;
-            _ = map.removeEntity(Entity, self.allocator, tile.region_map_id);
+            _ = map.removeEntity(Entity, tile.region_map_id);
         }
 
         const next_map_id = self.nextMapIdForType(Entity);
         defer next_map_id.* += 1;
         tile.region_map_id = next_map_id.*;
 
-        const duped_name = self.allocator.dupe(u8, data.name) catch @panic("OOM");
+        const duped_name = main.allocator.dupe(u8, data.name) catch @panic("OOM");
         var indicator: Entity = .{
             .x = @as(f32, @floatFromInt(x)) + 0.5,
             .y = @as(f32, @floatFromInt(y)) + 0.5,
@@ -1388,13 +1364,13 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
             .name = duped_name,
             .render_color_override = data.color,
         };
-        indicator.addToMap(self.allocator);
+        indicator.addToMap();
         indicator.name_text_data = .{
             .text = undefined,
             .text_type = .bold,
             .size = 12,
         };
-        indicator.name_text_data.?.setText(duped_name, self.allocator);
+        indicator.name_text_data.?.setText(duped_name);
 
         tile.region = data_id;
     }
@@ -1414,7 +1390,7 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
     if (data_id == std.math.maxInt(u16)) {
         lock.lock();
         defer lock.unlock();
-        _ = map.removeEntity(ObjType, self.allocator, field.*);
+        _ = map.removeEntity(ObjType, field.*);
         field.* = std.math.maxInt(u32);
     } else {
         const data = switch (ObjType) {
@@ -1433,7 +1409,7 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
             lock.lock();
             defer lock.unlock();
             if (map.findObject(ObjType, field.*, .con)) |obj| if (obj.data_id == data_id) return;
-            _ = map.removeEntity(ObjType, self.allocator, field.*);
+            _ = map.removeEntity(ObjType, field.*);
         }
 
         const next_map_id = self.nextMapIdForType(ObjType);
@@ -1450,7 +1426,7 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
         const needs_lock = ObjType == Entity and data.?.is_wall;
         if (needs_lock) lock.lock();
         defer if (needs_lock) lock.unlock();
-        obj.addToMap(self.allocator);
+        obj.addToMap();
     }
 }
 
@@ -1479,7 +1455,7 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
                 if (place_type == .random and utils.rng.random().float(f32) > self.random_chance)
                     continue;
 
-                try places.append(self.allocator, .{
+                try places.append(main.allocator, .{
                     .x = @intCast(x),
                     .y = @intCast(y),
                     .new_id = sel_type,
@@ -1524,9 +1500,9 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
 
     if (places.items.len <= 1) {
         if (places.items.len == 1) self.command_queue.addCommand(.{ .place = places.items[0] });
-        places.deinit(self.allocator);
+        places.deinit(main.allocator);
     } else {
-        self.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice(self.allocator) } });
+        self.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice(main.allocator) } });
     }
 }
 
@@ -1604,10 +1580,10 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
         return;
 
     var stack: std.ArrayListUnmanaged(FillData) = .empty;
-    defer stack.deinit(screen.allocator);
+    defer stack.deinit(main.allocator);
 
-    try stack.append(screen.allocator, .{ .x1 = x, .x2 = x, .y = y, .dy = 1 });
-    try stack.append(screen.allocator, .{ .x1 = x, .x2 = x, .y = y - 1, .dy = -1 });
+    try stack.append(main.allocator, .{ .x1 = x, .x2 = x, .y = y, .dy = 1 });
+    try stack.append(main.allocator, .{ .x1 = x, .x2 = x, .y = y - 1, .dy = -1 });
 
     while (stack.items.len > 0) {
         const pop = stack.pop();
@@ -1615,7 +1591,7 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
 
         if (inside(screen, places.items, px, pop.y, layer, current_id)) {
             while (inside(screen, places.items, px - 1, pop.y, layer, current_id)) {
-                try places.append(screen.allocator, .{
+                try places.append(main.allocator, .{
                     .x = @intCast(px - 1),
                     .y = @intCast(pop.y),
                     .new_id = target_id,
@@ -1626,13 +1602,13 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
             }
 
             if (px < pop.x1)
-                try stack.append(screen.allocator, .{ .x1 = px, .x2 = pop.x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
+                try stack.append(main.allocator, .{ .x1 = px, .x2 = pop.x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
         }
 
         var x1 = pop.x1;
         while (x1 <= pop.x2) {
             while (inside(screen, places.items, x1, pop.y, layer, current_id)) {
-                try places.append(screen.allocator, .{
+                try places.append(main.allocator, .{
                     .x = @intCast(x1),
                     .y = @intCast(pop.y),
                     .old_id = current_id,
@@ -1643,10 +1619,10 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
             }
 
             if (x1 > px)
-                try stack.append(screen.allocator, .{ .x1 = px, .x2 = x1 - 1, .y = pop.y + pop.dy, .dy = pop.dy });
+                try stack.append(main.allocator, .{ .x1 = px, .x2 = x1 - 1, .y = pop.y + pop.dy, .dy = pop.dy });
 
             if (x1 - 1 > pop.x2)
-                try stack.append(screen.allocator, .{ .x1 = pop.x2 + 1, .x2 = x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
+                try stack.append(main.allocator, .{ .x1 = pop.x2 + 1, .x2 = x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
 
             x1 += 1;
             while (x1 < pop.x2 and !inside(screen, places.items, x1, pop.y, layer, current_id))
@@ -1657,9 +1633,9 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
 
     if (places.items.len <= 1) {
         if (places.items.len == 1) screen.command_queue.addCommand(.{ .place = places.items[0] });
-        places.deinit(screen.allocator);
+        places.deinit(main.allocator);
     } else {
-        screen.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice(screen.allocator) } });
+        screen.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice(main.allocator) } });
     }
 }
 
@@ -1715,8 +1691,5 @@ pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
 }
 
 pub fn updateFpsText(self: *MapEditorScreen, fps: usize, mem: f32) !void {
-    self.fps_text.text_data.setText(
-        try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, "FPS: {}\nMemory: {d:.1} MB", .{ fps, mem }),
-        self.allocator,
-    );
+    self.fps_text.text_data.setText(try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, "FPS: {}\nMemory: {d:.1} MB", .{ fps, mem }));
 }

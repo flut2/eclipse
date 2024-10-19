@@ -122,10 +122,10 @@ pub fn deinit(self: *Container) void {
                 systems.hover_target = null;
 
             if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "deinit")) inner_elem.deinit();
-            self.base.allocator.destroy(inner_elem);
+            main.allocator.destroy(inner_elem);
         },
     };
-    self.elements.deinit(self.base.allocator);
+    self.elements.deinit(main.allocator);
 }
 
 pub fn draw(self: Container, cam_data: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
@@ -198,9 +198,8 @@ pub fn texHRaw(self: *Container) f32 {
 }
 
 pub fn createChild(self: *Container, comptime T: type, data: T) !*T {
-    var elem = try self.base.allocator.create(T);
+    var elem = try main.allocator.create(T);
     elem.* = data;
-    elem.base.allocator = self.base.allocator;
     if (std.meta.hasFn(T, "init")) elem.init();
     const ScissorRect = element.ScissorRect;
     elem.base.scissor = .{
@@ -231,7 +230,7 @@ pub fn createChild(self: *Container, comptime T: type, data: T) !*T {
     }
 
     if (field_name.len == 0) @compileError("Could not find field name");
-    try self.elements.append(self.base.allocator, @unionInit(element.UiElement, field_name, elem));
+    try self.elements.append(main.allocator, @unionInit(element.UiElement, field_name, elem));
     return elem;
 }
 

@@ -195,7 +195,7 @@ const AudioState = struct {
     }
 
     fn create() !*AudioState {
-        const audio = try main.allocator.create(AudioState);
+        const audio = try main.asset_arena_allocator.create(AudioState);
 
         var device_config = zaudio.Device.Config.init(.playback);
         device_config.data_callback = audioCallback;
@@ -219,7 +219,6 @@ const AudioState = struct {
     fn destroy(audio: *AudioState) void {
         audio.engine.destroy();
         audio.device.destroy();
-        main.allocator.destroy(audio);
     }
 };
 
@@ -343,8 +342,8 @@ fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, compti
         const cur_src_x = (i * cut_width) % img.width;
         const cur_src_y = @divFloor(i * cut_width, img.width) * cut_height;
 
-        var temp = try main.allocator.alloc(u8, img_size * 4);
-        defer main.allocator.free(temp);
+        var temp = try main.asset_arena_allocator.alloc(u8, img_size * 4);
+        defer main.asset_arena_allocator.free(temp);
 
         for (0..img_size) |j| {
             const row_count = @divFloor(j, cut_width);
@@ -404,11 +403,11 @@ fn addWall(
         full_cut_height,
     });
 
-    var current_rects = try main.allocator.alloc(pack.IdRect, len);
-    defer main.allocator.free(current_rects);
+    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
+    defer main.asset_arena_allocator.free(current_rects);
 
-    var current_positions = try main.allocator.alloc(Position, len);
-    defer main.allocator.free(current_positions);
+    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
+    defer main.asset_arena_allocator.free(current_positions);
 
     for (0..len) |i| {
         const cur_src_x = (i * full_cut_width) % img.width;
@@ -423,13 +422,13 @@ fn addWall(
 
     try pack.pack(pack.IdRect, ctx, current_rects, .{ .assume_capacity = true, .sortLessThanFn = packSort });
 
-    var data = try main.allocator.alloc(WallData, len);
+    var data = try main.asset_arena_allocator.alloc(WallData, len);
 
-    var dominant_colors = try main.allocator.alloc(RGBA, len);
+    var dominant_colors = try main.asset_arena_allocator.alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
     var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
-    defer color_counts.deinit(main.allocator);
+    defer color_counts.deinit(main.asset_arena_allocator);
 
     for (0..len) |i| {
         const id_rect = current_rects[i];
@@ -469,21 +468,21 @@ fn addWall(
                         .a = 255,
                     };
                     if (color_counts.get(rgba)) |count| {
-                        try color_counts.put(main.allocator, rgba, count + 1);
+                        try color_counts.put(main.asset_arena_allocator, rgba, count + 1);
                     } else {
-                        try color_counts.put(main.allocator, rgba, 1);
+                        try color_counts.put(main.asset_arena_allocator, rgba, 1);
                     }
                 }
             }
         }
 
         var colors: std.ArrayListUnmanaged(u32) = .empty;
-        defer colors.deinit(main.allocator);
+        defer colors.deinit(main.asset_arena_allocator);
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(main.allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
+            try colors.append(main.asset_arena_allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
                 @as(u32, @intCast(entry.key_ptr.g)) << 8 |
                 @as(u32, @intCast(entry.key_ptr.b)));
 
@@ -507,11 +506,11 @@ fn addWall(
             .top_outline = .fromRawF32(fx + x_off, fy, base_w, y_off, .base),
             .bottom_outline = .fromRawF32(fx + x_off, fy + y_off + base_h, base_w, y_off, .base),
         };
-        try atlas_to_color_data.put(main.allocator, @bitCast(base_atlas_data), try main.allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(main.asset_arena_allocator, @bitCast(base_atlas_data), try main.asset_arena_allocator.dupe(u32, colors.items));
     }
 
-    try walls.put(main.allocator, sheet_name, data);
-    try dominant_color_data.put(main.allocator, sheet_name, dominant_colors);
+    try walls.put(main.asset_arena_allocator, sheet_name, data);
+    try dominant_color_data.put(main.asset_arena_allocator, sheet_name, dominant_colors);
 }
 
 fn addImage(
@@ -528,11 +527,11 @@ fn addImage(
     const len = std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
         std.debug.panic("Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{ img.width, img.height, cut_width, cut_height });
 
-    var current_rects = try main.allocator.alloc(pack.IdRect, len);
-    defer main.allocator.free(current_rects);
+    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
+    defer main.asset_arena_allocator.free(current_rects);
 
-    var current_positions = try main.allocator.alloc(Position, len);
-    defer main.allocator.free(current_positions);
+    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
+    defer main.asset_arena_allocator.free(current_positions);
 
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
@@ -560,13 +559,13 @@ fn addImage(
 
     try pack.pack(pack.IdRect, ctx, current_rects, .{ .assume_capacity = true, .sortLessThanFn = packSort });
 
-    var data = try main.allocator.alloc(AtlasData, len);
+    var data = try main.asset_arena_allocator.alloc(AtlasData, len);
 
-    var dominant_colors = try main.allocator.alloc(RGBA, len);
+    var dominant_colors = try main.asset_arena_allocator.alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
     var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
-    defer color_counts.deinit(main.allocator);
+    defer color_counts.deinit(main.asset_arena_allocator);
 
     for (0..len) |i| {
         const id_rect = current_rects[i];
@@ -600,21 +599,21 @@ fn addImage(
                         .a = 255,
                     };
                     if (color_counts.get(rgba)) |count| {
-                        try color_counts.put(main.allocator, rgba, count + 1);
+                        try color_counts.put(main.asset_arena_allocator, rgba, count + 1);
                     } else {
-                        try color_counts.put(main.allocator, rgba, 1);
+                        try color_counts.put(main.asset_arena_allocator, rgba, 1);
                     }
                 }
             }
         }
 
         var colors: std.ArrayListUnmanaged(u32) = .empty;
-        defer colors.deinit(main.allocator);
+        defer colors.deinit(main.asset_arena_allocator);
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(main.allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
+            try colors.append(main.asset_arena_allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
                 @as(u32, @intCast(entry.key_ptr.g)) << 8 |
                 @as(u32, @intCast(entry.key_ptr.b)));
 
@@ -625,11 +624,11 @@ fn addImage(
         }
 
         data[idx] = .fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
-        try atlas_to_color_data.put(main.allocator, @bitCast(data[idx]), try main.allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(main.asset_arena_allocator, @bitCast(data[idx]), try main.asset_arena_allocator.dupe(u32, colors.items));
     }
 
-    try atlas_data.put(main.allocator, sheet_name, data);
-    try dominant_color_data.put(main.allocator, sheet_name, dominant_colors);
+    try atlas_data.put(main.asset_arena_allocator, sheet_name, data);
+    try dominant_color_data.put(main.asset_arena_allocator, sheet_name, dominant_colors);
 }
 
 fn addUiImage(
@@ -649,13 +648,13 @@ fn addUiImage(
     const len = std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
         std.debug.panic("Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{ img.width, img.height, cut_width, cut_height });
 
-    var current_rects = try main.allocator.alloc(pack.IdRect, len);
-    defer main.allocator.free(current_rects);
+    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
+    defer main.asset_arena_allocator.free(current_rects);
 
-    var current_positions = try main.allocator.alloc(Position, len);
-    defer main.allocator.free(current_positions);
+    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
+    defer main.asset_arena_allocator.free(current_positions);
 
-    var data = try main.allocator.alloc(AtlasData, len);
+    var data = try main.asset_arena_allocator.alloc(AtlasData, len);
 
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
@@ -693,7 +692,7 @@ fn addUiImage(
         data[idx] = .fromRaw(rect.x, rect.y, rect.w, rect.h, .ui);
     }
 
-    try ui_atlas_data.put(main.allocator, sheet_name, data);
+    try ui_atlas_data.put(main.asset_arena_allocator, sheet_name, data);
 }
 
 fn addAnimEnemy(
@@ -712,11 +711,11 @@ fn addAnimEnemy(
         .{ img.width, img.height, cut_width, cut_height },
     ), 6) * 5 * AnimEnemyData.directions;
 
-    var current_rects = try main.allocator.alloc(pack.IdRect, len);
-    defer main.allocator.free(current_rects);
+    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
+    defer main.asset_arena_allocator.free(current_rects);
 
-    var current_positions = try main.allocator.alloc(Position, len);
-    defer main.allocator.free(current_positions);
+    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
+    defer main.asset_arena_allocator.free(current_positions);
 
     var left_sub: u32 = 0;
     for (0..len) |i| {
@@ -739,13 +738,13 @@ fn addAnimEnemy(
 
     try pack.pack(pack.IdRect, ctx, current_rects, .{ .assume_capacity = true, .sortLessThanFn = packSort });
 
-    const enemy_data = try main.allocator.alloc(AnimEnemyData, @divFloor(len, 5));
+    const enemy_data = try main.asset_arena_allocator.alloc(AnimEnemyData, @divFloor(len, 5));
 
-    var dominant_colors = try main.allocator.alloc(RGBA, len);
+    var dominant_colors = try main.asset_arena_allocator.alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
     var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
-    defer color_counts.deinit(main.allocator);
+    defer color_counts.deinit(main.asset_arena_allocator);
 
     for (0..len) |i| {
         const id_rect = current_rects[i];
@@ -794,20 +793,20 @@ fn addAnimEnemy(
                     .a = 255,
                 };
                 if (color_counts.get(rgba)) |count| {
-                    try color_counts.put(main.allocator, rgba, count + 1);
+                    try color_counts.put(main.asset_arena_allocator, rgba, count + 1);
                 } else {
-                    try color_counts.put(main.allocator, rgba, 1);
+                    try color_counts.put(main.asset_arena_allocator, rgba, 1);
                 }
             }
         }
 
         var colors: std.ArrayListUnmanaged(u32) = .empty;
-        defer colors.deinit(main.allocator);
+        defer colors.deinit(main.asset_arena_allocator);
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(main.allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
+            try colors.append(main.asset_arena_allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
                 @as(u32, @intCast(entry.key_ptr.g)) << 8 |
                 @as(u32, @intCast(entry.key_ptr.b)));
 
@@ -817,11 +816,11 @@ fn addAnimEnemy(
             }
         }
 
-        try atlas_to_color_data.put(main.allocator, @bitCast(data), try main.allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(main.asset_arena_allocator, @bitCast(data), try main.asset_arena_allocator.dupe(u32, colors.items));
     }
 
-    try anim_enemies.put(main.allocator, sheet_name, enemy_data);
-    try dominant_color_data.put(main.allocator, sheet_name, dominant_colors);
+    try anim_enemies.put(main.asset_arena_allocator, sheet_name, enemy_data);
+    try dominant_color_data.put(main.asset_arena_allocator, sheet_name, dominant_colors);
 }
 
 fn addAnimPlayer(
@@ -841,11 +840,11 @@ fn addAnimPlayer(
     ), 6) * 5;
     len += @divFloor(len, 3); // for the "missing" left side
 
-    var current_rects = try main.allocator.alloc(pack.IdRect, len);
-    defer main.allocator.free(current_rects);
+    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
+    defer main.asset_arena_allocator.free(current_rects);
 
-    var current_positions = try main.allocator.alloc(Position, len);
-    defer main.allocator.free(current_positions);
+    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
+    defer main.asset_arena_allocator.free(current_positions);
 
     var left_sub: u32 = 0;
     for (0..len) |i| {
@@ -870,13 +869,13 @@ fn addAnimPlayer(
 
     left_sub = 0;
 
-    const player_data = try main.allocator.alloc(AnimPlayerData, @divFloor(len, 5 * 4));
+    const player_data = try main.asset_arena_allocator.alloc(AnimPlayerData, @divFloor(len, 5 * 4));
 
-    var dominant_colors = try main.allocator.alloc(RGBA, len);
+    var dominant_colors = try main.asset_arena_allocator.alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
     var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
-    defer color_counts.deinit(main.allocator);
+    defer color_counts.deinit(main.asset_arena_allocator);
 
     for (0..len) |j| {
         const id_rect = current_rects[j];
@@ -929,20 +928,20 @@ fn addAnimPlayer(
                     .a = 255,
                 };
                 if (color_counts.get(rgba)) |count| {
-                    try color_counts.put(main.allocator, rgba, count + 1);
+                    try color_counts.put(main.asset_arena_allocator, rgba, count + 1);
                 } else {
-                    try color_counts.put(main.allocator, rgba, 1);
+                    try color_counts.put(main.asset_arena_allocator, rgba, 1);
                 }
             }
         }
 
         var colors: std.ArrayListUnmanaged(u32) = .empty;
-        defer colors.deinit(main.allocator);
+        defer colors.deinit(main.asset_arena_allocator);
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(main.allocator, @as(u32, entry.key_ptr.r) << 16 |
+            try colors.append(main.asset_arena_allocator, @as(u32, entry.key_ptr.r) << 16 |
                 @as(u32, entry.key_ptr.g) << 8 |
                 @as(u32, entry.key_ptr.b));
 
@@ -952,19 +951,19 @@ fn addAnimPlayer(
             }
         }
 
-        try atlas_to_color_data.put(main.allocator, @bitCast(data), try main.allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(main.asset_arena_allocator, @bitCast(data), try main.asset_arena_allocator.dupe(u32, colors.items));
     }
 
-    try anim_players.put(main.allocator, sheet_name, player_data);
-    try dominant_color_data.put(main.allocator, sheet_name, dominant_colors);
+    try anim_players.put(main.asset_arena_allocator, sheet_name, player_data);
+    try dominant_color_data.put(main.asset_arena_allocator, sheet_name, dominant_colors);
 }
 
 fn parseFontData(comptime atlas_w: f32, comptime atlas_h: f32, comptime path: []const u8, chars: *[256]CharacterData) !void {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    const data = try file.readToEndAlloc(main.allocator, std.math.maxInt(u16));
-    defer main.allocator.free(data);
+    const data = try file.readToEndAlloc(main.asset_arena_allocator, std.math.maxInt(u16));
+    defer main.asset_arena_allocator.free(data);
 
     var iter = std.mem.splitSequence(u8, data, if (std.mem.indexOf(u8, data, "\r\n") != null) "\r\n" else "\n");
     while (iter.next()) |line| {
@@ -1003,8 +1002,8 @@ pub fn playSfx(name: []const u8) void {
         var new_copy_audio = audio_state.engine.createSoundCopy(audio, .{}, null) catch return;
         new_copy_audio.setVolume(main.settings.sfx_volume);
         new_copy_audio.start() catch return;
-        audio_copies.?.append(main.allocator, new_copy_audio) catch return;
-        sfx_copy_map.put(main.allocator, audio, audio_copies.?) catch return;
+        audio_copies.?.append(main.asset_arena_allocator, new_copy_audio) catch return;
+        sfx_copy_map.put(main.asset_arena_allocator, audio, audio_copies.?) catch return;
         return;
     }
 
@@ -1015,7 +1014,7 @@ pub fn playSfx(name: []const u8) void {
         audio.setVolume(main.settings.sfx_volume);
         audio.start() catch return;
 
-        sfx_map.put(main.allocator, name, audio) catch return;
+        sfx_map.put(main.asset_arena_allocator, name, audio) catch return;
     } else |_| {
         if (!std.mem.eql(u8, name, "Unknown"))
             std.log.err("Could not find sound effect for \"{s}\"", .{name});
@@ -1026,19 +1025,11 @@ pub fn deinit() void {
     main_music.destroy();
 
     var copy_audio_iter = sfx_copy_map.valueIterator();
-    while (copy_audio_iter.next()) |copy_audio_list| {
-        for (copy_audio_list.items) |copy_audio| {
-            copy_audio.*.destroy();
-        }
-        copy_audio_list.deinit(main.allocator);
-    }
-    sfx_copy_map.deinit(main.allocator);
+    while (copy_audio_iter.next()) |copy_audio_list| for (copy_audio_list.items) |copy_audio| copy_audio.*.destroy();
 
     var audio_iter = sfx_map.valueIterator();
-    while (audio_iter.next()) |audio| {
-        audio.*.destroy();
-    }
-    sfx_map.deinit(main.allocator);
+    while (audio_iter.next()) |audio| audio.*.destroy();
+
     audio_state.destroy();
 
     default_cursor_pressed.destroy();
@@ -1055,50 +1046,6 @@ pub fn deinit() void {
     target_enemy_cursor.destroy();
     target_ally_cursor_pressed.destroy();
     target_ally_cursor.destroy();
-
-    var colors_iter = atlas_to_color_data.valueIterator();
-    while (colors_iter.next()) |colors| {
-        main.allocator.free(colors.*);
-    }
-
-    var dominant_colors_iter = dominant_color_data.valueIterator();
-    while (dominant_colors_iter.next()) |color_data| {
-        main.allocator.free(color_data.*);
-    }
-
-    var rects_iter = atlas_data.valueIterator();
-    while (rects_iter.next()) |sheet_rects| {
-        main.allocator.free(sheet_rects.*);
-    }
-
-    var ui_rects_iter = ui_atlas_data.valueIterator();
-    while (ui_rects_iter.next()) |sheet_rects| {
-        main.allocator.free(sheet_rects.*);
-    }
-
-    var anim_enemy_iter = anim_enemies.valueIterator();
-    while (anim_enemy_iter.next()) |enemy_data| {
-        main.allocator.free(enemy_data.*);
-    }
-
-    var anim_player_iter = anim_players.valueIterator();
-    while (anim_player_iter.next()) |player_data| {
-        main.allocator.free(player_data.*);
-    }
-
-    var walls_iter = walls.valueIterator();
-    while (walls_iter.next()) |wall_data| {
-        main.allocator.free(wall_data.*);
-    }
-
-    dominant_color_data.deinit(main.allocator);
-    atlas_to_color_data.deinit(main.allocator);
-    atlas_data.deinit(main.allocator);
-    ui_atlas_data.deinit(main.allocator);
-    anim_enemies.deinit(main.allocator);
-    anim_players.deinit(main.allocator);
-    walls.deinit(main.allocator);
-    key_tex_map.deinit(main.allocator);
 }
 
 pub fn init() !void {
@@ -1340,109 +1287,109 @@ pub fn init() !void {
 }
 
 fn populateKeyMap() !void {
-    try key_tex_map.put(main.allocator, .{ .mouse = .left }, 46);
-    try key_tex_map.put(main.allocator, .{ .mouse = .right }, 59);
-    try key_tex_map.put(main.allocator, .{ .mouse = .middle }, 58);
-    try key_tex_map.put(main.allocator, .{ .mouse = .four }, 108);
-    try key_tex_map.put(main.allocator, .{ .mouse = .five }, 109);
-    try key_tex_map.put(main.allocator, .{ .key = .zero }, 0);
-    try key_tex_map.put(main.allocator, .{ .key = .one }, 4);
-    try key_tex_map.put(main.allocator, .{ .key = .two }, 5);
-    try key_tex_map.put(main.allocator, .{ .key = .three }, 6);
-    try key_tex_map.put(main.allocator, .{ .key = .four }, 7);
-    try key_tex_map.put(main.allocator, .{ .key = .five }, 8);
-    try key_tex_map.put(main.allocator, .{ .key = .six }, 16);
-    try key_tex_map.put(main.allocator, .{ .key = .seven }, 17);
-    try key_tex_map.put(main.allocator, .{ .key = .eight }, 18);
-    try key_tex_map.put(main.allocator, .{ .key = .nine }, 19);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_0 }, 91);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_1 }, 92);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_2 }, 93);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_3 }, 94);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_4 }, 95);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_5 }, 96);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_6 }, 97);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_7 }, 98);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_8 }, 99);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_9 }, 100);
-    try key_tex_map.put(main.allocator, .{ .key = .F1 }, 68);
-    try key_tex_map.put(main.allocator, .{ .key = .F2 }, 69);
-    try key_tex_map.put(main.allocator, .{ .key = .F3 }, 70);
-    try key_tex_map.put(main.allocator, .{ .key = .F4 }, 71);
-    try key_tex_map.put(main.allocator, .{ .key = .F5 }, 72);
-    try key_tex_map.put(main.allocator, .{ .key = .F6 }, 73);
-    try key_tex_map.put(main.allocator, .{ .key = .F7 }, 74);
-    try key_tex_map.put(main.allocator, .{ .key = .F8 }, 75);
-    try key_tex_map.put(main.allocator, .{ .key = .F9 }, 76);
-    try key_tex_map.put(main.allocator, .{ .key = .F10 }, 1);
-    try key_tex_map.put(main.allocator, .{ .key = .F11 }, 2);
-    try key_tex_map.put(main.allocator, .{ .key = .F12 }, 3);
-    try key_tex_map.put(main.allocator, .{ .key = .a }, 20);
-    try key_tex_map.put(main.allocator, .{ .key = .b }, 34);
-    try key_tex_map.put(main.allocator, .{ .key = .c }, 39);
-    try key_tex_map.put(main.allocator, .{ .key = .d }, 50);
-    try key_tex_map.put(main.allocator, .{ .key = .e }, 52);
-    try key_tex_map.put(main.allocator, .{ .key = .f }, 84);
-    try key_tex_map.put(main.allocator, .{ .key = .g }, 85);
-    try key_tex_map.put(main.allocator, .{ .key = .h }, 86);
-    try key_tex_map.put(main.allocator, .{ .key = .i }, 88);
-    try key_tex_map.put(main.allocator, .{ .key = .j }, 63);
-    try key_tex_map.put(main.allocator, .{ .key = .k }, 74);
-    try key_tex_map.put(main.allocator, .{ .key = .l }, 75);
-    try key_tex_map.put(main.allocator, .{ .key = .m }, 76);
-    try key_tex_map.put(main.allocator, .{ .key = .n }, 61);
-    try key_tex_map.put(main.allocator, .{ .key = .o }, 65);
-    try key_tex_map.put(main.allocator, .{ .key = .p }, 66);
-    try key_tex_map.put(main.allocator, .{ .key = .q }, 25);
-    try key_tex_map.put(main.allocator, .{ .key = .r }, 28);
-    try key_tex_map.put(main.allocator, .{ .key = .s }, 29);
-    try key_tex_map.put(main.allocator, .{ .key = .t }, 73);
-    try key_tex_map.put(main.allocator, .{ .key = .u }, 67);
-    try key_tex_map.put(main.allocator, .{ .key = .v }, 31);
-    try key_tex_map.put(main.allocator, .{ .key = .w }, 10);
-    try key_tex_map.put(main.allocator, .{ .key = .x }, 12);
-    try key_tex_map.put(main.allocator, .{ .key = .y }, 13);
-    try key_tex_map.put(main.allocator, .{ .key = .z }, 14);
-    try key_tex_map.put(main.allocator, .{ .key = .up }, 32);
-    try key_tex_map.put(main.allocator, .{ .key = .down }, 22);
-    try key_tex_map.put(main.allocator, .{ .key = .left }, 23);
-    try key_tex_map.put(main.allocator, .{ .key = .right }, 24);
-    try key_tex_map.put(main.allocator, .{ .key = .left_shift }, 15);
-    try key_tex_map.put(main.allocator, .{ .key = .right_shift }, 9);
-    try key_tex_map.put(main.allocator, .{ .key = .left_bracket }, 37);
-    try key_tex_map.put(main.allocator, .{ .key = .right_bracket }, 38);
-    try key_tex_map.put(main.allocator, .{ .key = .left_control }, 49);
-    try key_tex_map.put(main.allocator, .{ .key = .right_control }, 49);
-    try key_tex_map.put(main.allocator, .{ .key = .left_alt }, 21);
-    try key_tex_map.put(main.allocator, .{ .key = .right_alt }, 21);
-    try key_tex_map.put(main.allocator, .{ .key = .comma }, 101);
-    try key_tex_map.put(main.allocator, .{ .key = .period }, 102);
-    try key_tex_map.put(main.allocator, .{ .key = .slash }, 103);
-    try key_tex_map.put(main.allocator, .{ .key = .backslash }, 41);
-    try key_tex_map.put(main.allocator, .{ .key = .semicolon }, 30);
-    try key_tex_map.put(main.allocator, .{ .key = .minus }, 45);
-    try key_tex_map.put(main.allocator, .{ .key = .equal }, 42);
-    try key_tex_map.put(main.allocator, .{ .key = .tab }, 79);
-    try key_tex_map.put(main.allocator, .{ .key = .space }, 57);
-    try key_tex_map.put(main.allocator, .{ .key = .backspace }, 35);
-    try key_tex_map.put(main.allocator, .{ .key = .enter }, 54);
-    try key_tex_map.put(main.allocator, .{ .key = .delete }, 51);
-    try key_tex_map.put(main.allocator, .{ .key = .end }, 53);
-    try key_tex_map.put(main.allocator, .{ .key = .print_screen }, 44);
-    try key_tex_map.put(main.allocator, .{ .key = .insert }, 62);
-    try key_tex_map.put(main.allocator, .{ .key = .escape }, 64);
-    try key_tex_map.put(main.allocator, .{ .key = .home }, 87);
-    try key_tex_map.put(main.allocator, .{ .key = .page_up }, 89);
-    try key_tex_map.put(main.allocator, .{ .key = .page_down }, 90);
-    try key_tex_map.put(main.allocator, .{ .key = .caps_lock }, 40);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_add }, 43);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_subtract }, 107);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_multiply }, 33);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_divide }, 106);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_decimal }, 105);
-    try key_tex_map.put(main.allocator, .{ .key = .kp_enter }, 56);
-    try key_tex_map.put(main.allocator, .{ .key = .left_super }, if (builtin.os.tag == .windows) 11 else 48);
-    try key_tex_map.put(main.allocator, .{ .key = .right_super }, if (builtin.os.tag == .windows) 11 else 48);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .left }, 46);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .right }, 59);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .middle }, 58);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .four }, 108);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .five }, 109);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .zero }, 0);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .one }, 4);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .two }, 5);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .three }, 6);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .four }, 7);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .five }, 8);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .six }, 16);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .seven }, 17);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .eight }, 18);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .nine }, 19);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_0 }, 91);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_1 }, 92);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_2 }, 93);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_3 }, 94);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_4 }, 95);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_5 }, 96);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_6 }, 97);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_7 }, 98);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_8 }, 99);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_9 }, 100);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F1 }, 68);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F2 }, 69);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F3 }, 70);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F4 }, 71);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F5 }, 72);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F6 }, 73);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F7 }, 74);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F8 }, 75);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F9 }, 76);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F10 }, 1);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F11 }, 2);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F12 }, 3);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .a }, 20);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .b }, 34);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .c }, 39);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .d }, 50);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .e }, 52);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .f }, 84);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .g }, 85);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .h }, 86);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .i }, 88);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .j }, 63);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .k }, 74);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .l }, 75);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .m }, 76);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .n }, 61);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .o }, 65);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .p }, 66);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .q }, 25);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .r }, 28);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .s }, 29);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .t }, 73);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .u }, 67);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .v }, 31);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .w }, 10);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .x }, 12);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .y }, 13);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .z }, 14);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .up }, 32);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .down }, 22);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left }, 23);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right }, 24);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_shift }, 15);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_shift }, 9);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_bracket }, 37);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_bracket }, 38);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_control }, 49);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_control }, 49);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_alt }, 21);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_alt }, 21);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .comma }, 101);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .period }, 102);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .slash }, 103);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .backslash }, 41);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .semicolon }, 30);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .minus }, 45);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .equal }, 42);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .tab }, 79);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .space }, 57);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .backspace }, 35);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .enter }, 54);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .delete }, 51);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .end }, 53);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .print_screen }, 44);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .insert }, 62);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .escape }, 64);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .home }, 87);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .page_up }, 89);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .page_down }, 90);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .caps_lock }, 40);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_add }, 43);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_subtract }, 107);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_multiply }, 33);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_divide }, 106);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_decimal }, 105);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_enter }, 56);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_super }, if (builtin.os.tag == .windows) 11 else 48);
+    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_super }, if (builtin.os.tag == .windows) 11 else 48);
 }
 
 pub fn getKeyTexture(button: Settings.Button) AtlasData {

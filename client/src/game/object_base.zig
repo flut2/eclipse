@@ -19,7 +19,7 @@ const Portal = @import("portal.zig").Portal;
 const Container = @import("container.zig").Container;
 const Purchasable = @import("purchasable.zig").Purchasable;
 
-pub fn addToMap(self: anytype, comptime ObjType: type, allocator: std.mem.Allocator) void {
+pub fn addToMap(self: anytype, comptime ObjType: type) void {
     const type_name = switch (ObjType) {
         Player => "player",
         Entity => "entity",
@@ -91,18 +91,15 @@ pub fn addToMap(self: anytype, comptime ObjType: type, allocator: std.mem.Alloca
             .text_type = .bold,
             .size = 12,
         };
-        self.name_text_data.?.setText(if (self.name) |obj_name| obj_name else self.data.name, allocator);
+        self.name_text_data.?.setText(if (self.name) |obj_name| obj_name else self.data.name);
     }
 
-    map.addListForType(ObjType).append(allocator, self.*) catch @panic("Adding " ++ type_name ++ " failed");
+    map.addListForType(ObjType).append(main.allocator, self.*) catch @panic("Adding " ++ type_name ++ " failed");
 }
 
-pub fn deinit(self: anytype, allocator: std.mem.Allocator) void {
-    if (self.name_text_data) |*data|
-        data.deinit(allocator);
-
-    if (self.name) |en_name|
-        allocator.free(en_name);
+pub fn deinit(self: anytype) void {
+    if (self.name_text_data) |*data| data.deinit();
+    if (self.name) |en_name| main.allocator.free(en_name);
 }
 
 pub fn updateAnimation(

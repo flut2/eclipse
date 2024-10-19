@@ -2,6 +2,7 @@ const std = @import("std");
 const element = @import("../elements/element.zig");
 const assets = @import("../../assets.zig");
 const dialog = @import("dialog.zig");
+const main = @import("../../main.zig");
 
 const TextDialog = @This();
 const Container = @import("../elements/Container.zig");
@@ -15,7 +16,6 @@ const button_width = 100;
 const button_height = 30;
 
 root: *Container = undefined,
-allocator: std.mem.Allocator = undefined,
 
 title_decor: *Image = undefined,
 title_text: *Text = undefined,
@@ -84,17 +84,17 @@ fn closeDialog(_: ?*anyopaque) void {
 }
 
 pub fn deinit(self: *TextDialog) void {
-    if (self.dispose_body) self.allocator.free(self.base_text.text_data.text);
-    if (self.dispose_title) self.allocator.free(self.title_text.text_data.text);
+    if (self.dispose_body) main.allocator.free(self.base_text.text_data.text);
+    if (self.dispose_title) main.allocator.free(self.title_text.text_data.text);
     element.destroy(self.root);
 }
 
 pub fn setValues(self: *TextDialog, params: dialog.ParamsFor(TextDialog)) void {
-    if (self.dispose_body) self.allocator.free(self.base_text.text_data.text);
-    if (self.dispose_title) self.allocator.free(self.title_text.text_data.text);
+    if (self.dispose_body) main.allocator.free(self.base_text.text_data.text);
+    if (self.dispose_title) main.allocator.free(self.title_text.text_data.text);
 
     if (params.title) |title| {
-        self.title_text.text_data.setText(title, self.allocator);
+        self.title_text.text_data.setText(title);
         switch (self.title_decor.image_data) {
             .nine_slice => |*nine_slice| {
                 nine_slice.w = self.title_text.width() + 25 * 2;
@@ -114,7 +114,7 @@ pub fn setValues(self: *TextDialog, params: dialog.ParamsFor(TextDialog)) void {
         self.title_text.text_data.max_height = self.title_decor.height();
     }
 
-    self.base_text.text_data.setText(params.body, self.allocator);
+    self.base_text.text_data.setText(params.body);
 
     self.dispose_title = params.title != null and params.dispose_title;
     self.dispose_body = params.dispose_body;
