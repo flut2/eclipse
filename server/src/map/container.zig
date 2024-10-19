@@ -1,5 +1,6 @@
 const std = @import("std");
 const shared = @import("shared");
+const main = @import("../main.zig");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
@@ -23,17 +24,17 @@ pub const Container = struct {
     world: *World = undefined,
     spawned: bool = false,
 
-    pub fn init(self: *Container, allocator: std.mem.Allocator) !void {
-        self.stats_writer.list = try .initCapacity(allocator, 32);
+    pub fn init(self: *Container) !void {
+        self.stats_writer.list = try .initCapacity(main.allocator, 32);
         self.data = game_data.container.from_id.getPtr(self.data_id) orelse {
             std.log.err("Could not find data for container with data id {}", .{self.data_id});
             return;
         };
-        self.disappear_time = @import("../main.zig").current_time + 30 * std.time.us_per_s;
+        self.disappear_time = main.current_time + 30 * std.time.us_per_s;
     }
 
     pub fn deinit(self: *Container) !void {
-        self.stats_writer.list.deinit(self.world.allocator);
+        self.stats_writer.list.deinit(main.allocator);
     }
 
     pub fn tick(self: *Container, time: i64, _: i64) !void {
@@ -47,19 +48,19 @@ pub const Container = struct {
         const writer = &self.stats_writer;
         writer.list.clearRetainingCapacity();
 
-        const allocator = self.world.allocator;
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .x = self.x });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .y = self.y });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .size_mult = self.size_mult });
-        if (self.name) |name| stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .name = name });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .inv_0 = self.inventory[0] });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .inv_1 = self.inventory[1] });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .inv_2 = self.inventory[2] });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .inv_3 = self.inventory[3] });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .inv_4 = self.inventory[4] });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .inv_5 = self.inventory[5] });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .inv_6 = self.inventory[6] });
-        stat_util.write(network_data.ContainerStat, allocator, writer, cache, .{ .inv_7 = self.inventory[7] });
+        const T = network_data.ContainerStat;
+        stat_util.write(T, writer, cache, .{ .x = self.x });
+        stat_util.write(T, writer, cache, .{ .y = self.y });
+        stat_util.write(T, writer, cache, .{ .size_mult = self.size_mult });
+        if (self.name) |name| stat_util.write(T, writer, cache, .{ .name = name });
+        stat_util.write(T, writer, cache, .{ .inv_0 = self.inventory[0] });
+        stat_util.write(T, writer, cache, .{ .inv_1 = self.inventory[1] });
+        stat_util.write(T, writer, cache, .{ .inv_2 = self.inventory[2] });
+        stat_util.write(T, writer, cache, .{ .inv_3 = self.inventory[3] });
+        stat_util.write(T, writer, cache, .{ .inv_4 = self.inventory[4] });
+        stat_util.write(T, writer, cache, .{ .inv_5 = self.inventory[5] });
+        stat_util.write(T, writer, cache, .{ .inv_6 = self.inventory[6] });
+        stat_util.write(T, writer, cache, .{ .inv_7 = self.inventory[7] });
 
         return writer.list.items;
     }

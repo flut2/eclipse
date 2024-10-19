@@ -133,8 +133,7 @@ fn handleClearSpawn(player: *Player) void {
 fn handleBan(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     var response_buf: [256]u8 = undefined;
 
-    const allocator = player.world.allocator;
-    var names = db.Names.init(allocator);
+    var names: db.Names = .{};
     defer names.deinit();
 
     const player_name = iter.next() orelse {
@@ -146,7 +145,7 @@ fn handleBan(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         return;
     };
 
-    var acc_data = db.AccountData.init(allocator, acc_id);
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
     defer acc_data.deinit();
 
     const expiry_str = iter.next();
@@ -154,7 +153,7 @@ fn handleBan(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
 
     banHwid: {
         const hwid = acc_data.get(.hwid) catch break :banHwid;
-        var banned_hwids = db.BannedHwids.init(allocator);
+        var banned_hwids: db.BannedHwids = .{};
         defer banned_hwids.deinit();
         banned_hwids.add(hwid, expiry) catch break :banHwid;
     }
@@ -170,8 +169,7 @@ fn handleBan(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
 fn handleUnban(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     var response_buf: [256]u8 = undefined;
 
-    const allocator = player.world.allocator;
-    var names = db.Names.init(allocator);
+    var names: db.Names = .{};
     defer names.deinit();
 
     const player_name = iter.next() orelse {
@@ -183,12 +181,12 @@ fn handleUnban(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
         return;
     };
 
-    var acc_data = db.AccountData.init(allocator, acc_id);
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
     defer acc_data.deinit();
 
     unbanHwid: {
         const hwid = acc_data.get(.hwid) catch break :unbanHwid;
-        var banned_hwids = db.BannedHwids.init(allocator);
+        var banned_hwids: db.BannedHwids = .{};
         defer banned_hwids.deinit();
         banned_hwids.remove(hwid) catch break :unbanHwid;
     }
@@ -204,8 +202,7 @@ fn handleUnban(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
 fn handleMute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     var response_buf: [256]u8 = undefined;
 
-    const allocator = player.world.allocator;
-    var names = db.Names.init(allocator);
+    var names: db.Names = .{};
     defer names.deinit();
 
     const player_name = iter.next() orelse {
@@ -217,7 +214,7 @@ fn handleMute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         return;
     };
 
-    var acc_data = db.AccountData.init(allocator, acc_id);
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
     defer acc_data.deinit();
 
     const expiry_str = iter.next();
@@ -225,7 +222,7 @@ fn handleMute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
 
     muteHwid: {
         const hwid = acc_data.get(.hwid) catch break :muteHwid;
-        var muted_hwids = db.MutedHwids.init(allocator);
+        var muted_hwids: db.MutedHwids = .{};
         defer muted_hwids.deinit();
         muted_hwids.add(hwid, expiry) catch break :muteHwid;
     }
@@ -241,8 +238,7 @@ fn handleMute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
 fn handleUnmute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     var response_buf: [256]u8 = undefined;
 
-    const allocator = player.world.allocator;
-    var names = db.Names.init(allocator);
+    var names: db.Names = .{};
     defer names.deinit();
 
     const player_name = iter.next() orelse {
@@ -254,12 +250,12 @@ fn handleUnmute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void
         return;
     };
 
-    var acc_data = db.AccountData.init(allocator, acc_id);
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
     defer acc_data.deinit();
 
     unmuteHwid: {
         const hwid = acc_data.get(.hwid) catch break :unmuteHwid;
-        var muted_hwids = db.MutedHwids.init(allocator);
+        var muted_hwids: db.MutedHwids = .{};
         defer muted_hwids.deinit();
         muted_hwids.remove(hwid) catch break :unmuteHwid;
     }

@@ -107,6 +107,7 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
     }
 
     var screen_inner = main.allocator.create(@typeInfo(T).pointer.child) catch @panic("OOM");
+    screen_inner.* = .{};
     screen_inner.init() catch |e| std.debug.panic("Screen init failed: {}", .{e});
     screen = @unionInit(Screen, @tagName(screen_type), screen_inner);
 }

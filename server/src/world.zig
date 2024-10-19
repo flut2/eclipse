@@ -1,4 +1,5 @@
 const std = @import("std");
+const main = @import("main.zig");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
@@ -49,7 +50,6 @@ pub const World = struct {
         container: std.ArrayListUnmanaged(Container) = .empty,
         projectile: std.ArrayListUnmanaged(Projectile) = .empty,
     } = .{},
-    allocator: std.mem.Allocator = undefined,
 
     pub fn listForType(self: *World, comptime T: type) *std.ArrayListUnmanaged(T) {
         return switch (T) {
@@ -100,14 +100,13 @@ pub const World = struct {
         for (map.containers) |c| _ = try self.add(Container, .{ .x = c.x, .y = c.y, .data_id = c.data_id });
     }
 
-    pub fn create(allocator: std.mem.Allocator, w: u16, h: u16, id: i32) !World {
+    pub fn create(w: u16, h: u16, id: i32) !World {
         return .{
             .id = id,
             .w = w,
             .h = h,
-            .tiles = try allocator.alloc(Tile, @as(u32, w) * @as(u32, h)),
-            .allocator = allocator,
-            .time_added = @import("main.zig").current_time,
+            .tiles = try main.allocator.alloc(Tile, @as(u32, w) * @as(u32, h)),
+            .time_added = main.current_time,
         };
     }
 
@@ -115,9 +114,9 @@ pub const World = struct {
         std.log.info("World \"{s}\" (id {}) removed", .{ self.name, self.id });
 
         inline for (.{ &self.lists, &self.drops }) |list| {
-            inline for (@typeInfo(@TypeOf(list.*)).@"struct".fields) |field| @field(list, field.name).deinit(self.allocator);
+            inline for (@typeInfo(@TypeOf(list.*)).@"struct".fields) |field| @field(list, field.name).deinit(main.allocator);
         }
-        self.allocator.free(self.tiles);
+        main.allocator.free(self.tiles);
         _ = maps.worlds.swapRemove(self.id);
     }
 
@@ -128,10 +127,8 @@ pub const World = struct {
 
         obj.world = self;
 
-        if (std.meta.hasFn(T, "init"))
-            try obj.init(self.allocator);
-
-        try self.listForType(T).append(self.allocator, obj.*);
+        if (std.meta.hasFn(T, "init")) try obj.init();
+        try self.listForType(T).append(main.allocator, obj.*);
 
         return obj.map_id;
     }
@@ -147,19 +144,16 @@ pub const World = struct {
 
         obj.world = self;
 
-        if (std.meta.hasFn(T, "init"))
-            try obj.init(self.allocator);
-
-        try self.listForType(T).append(self.allocator, obj);
+        if (std.meta.hasFn(T, "init")) try obj.init();
+        try self.listForType(T).append(main.allocator, obj);
 
         return obj.map_id;
     }
 
     pub fn remove(self: *World, comptime T: type, value: *T) !void {
-        if (std.meta.hasFn(T, "deinit"))
-            try value.deinit();
+        if (std.meta.hasFn(T, "deinit")) try value.deinit();
 
-        if (T != Projectile) try self.dropsForType(T).append(self.allocator, value.map_id);
+        if (T != Projectile) try self.dropsForType(T).append(main.allocator, value.map_id);
 
         var list = self.listForType(T);
         for (list.items, 0..) |item, i| {

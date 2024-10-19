@@ -398,10 +398,9 @@ pub const Client = struct {
         };
         self.acc_id = acc_id;
 
-        const arena_allocator = self.arena.allocator();
         var player: Player = .{
-            .acc_data = db.AccountData.init(arena_allocator, acc_id),
-            .char_data = db.CharacterData.init(arena_allocator, acc_id, data.char_id),
+            .acc_data = .{ .acc_id = acc_id },
+            .char_data = .{ .acc_id = acc_id, .char_id = data.char_id },
             .client = self,
         };
 
@@ -457,7 +456,7 @@ pub const Client = struct {
             .x = player.x,
             .y = player.y,
             .data_id = game_data.container.from_name.get("Brown Bag").?.id,
-            .name = self.world.allocator.dupe(u8, player.name) catch {
+            .name = main.allocator.dupe(u8, player.name) catch {
                 self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Bag name creation failed" } });
                 return;
             },
@@ -506,10 +505,9 @@ pub const Client = struct {
 
         self.world = new_world;
 
-        const arena_allocator = self.arena.allocator();
         var new_player: Player = .{
-            .acc_data = db.AccountData.init(arena_allocator, self.acc_id),
-            .char_data = db.CharacterData.init(arena_allocator, self.acc_id, self.char_id),
+            .acc_data = .{ .acc_id = self.acc_id },
+            .char_data = .{ .acc_id = self.acc_id, .char_id = self.char_id },
             .client = self,
         };
         self.player_map_id = self.world.addExisting(Player, &new_player) catch {
@@ -561,7 +559,7 @@ pub const Client = struct {
         if (proj.hit_list.contains(self.player_map_id)) return;
         const player = self.world.findRef(Player, self.player_map_id) orelse return;
         player.damage(enemy.data.name, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
-        proj.hit_list.put(self.world.allocator, self.player_map_id, {}) catch return;
+        proj.hit_list.put(main.allocator, self.player_map_id, {}) catch return;
     }
 
     fn handleEnemyHit(self: *Client, data: PacketData(.enemy_hit)) void {
@@ -594,10 +592,9 @@ pub const Client = struct {
             return;
         };
 
-        const arena_allocator = self.arena.allocator();
         var new_player: Player = .{
-            .acc_data = db.AccountData.init(arena_allocator, self.acc_id),
-            .char_data = db.CharacterData.init(arena_allocator, self.acc_id, self.char_id),
+            .acc_data = .{ .acc_id = self.acc_id },
+            .char_data = .{ .acc_id = self.acc_id, .char_id = self.char_id },
             .client = self,
         };
 
@@ -640,10 +637,9 @@ pub const Client = struct {
         };
         self.acc_id = acc_id;
 
-        const arena_allocator = self.arena.allocator();
         var player: Player = .{
-            .acc_data = db.AccountData.init(arena_allocator, acc_id),
-            .char_data = db.CharacterData.init(arena_allocator, acc_id, data.char_id),
+            .acc_data = .{ .acc_id = acc_id },
+            .char_data = .{ .acc_id = acc_id, .char_id = data.char_id },
             .client = self,
         };
 

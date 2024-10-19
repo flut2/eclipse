@@ -20,8 +20,8 @@ pub const LightData = struct {
     day_intensity: f32 = 0.0,
     night_intensity: f32 = 0.0,
 
-    pub fn jsonParse(ally: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!@This() {
-        return game_data.jsonParseWithHex(@This(), ally, source, options);
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!@This() {
+        return game_data.jsonParseWithHex(@This(), allocator, source, options);
     }
 
     pub const jsonStringify = @compileError("Not supported");
@@ -60,14 +60,14 @@ pub const MapData = struct {
     containers: []const Container,
     regions: std.AutoHashMapUnmanaged(u16, []world.WorldPoint),
 
-    pub fn deinit(self: *MapData, ally: std.mem.Allocator) void {
+    pub fn deinit(self: *MapData) void {
         var regions_iter = self.regions.valueIterator();
-        while (regions_iter.next()) |points| ally.free(points.*);
-        ally.free(self.tiles);
-        ally.free(self.entities);
-        ally.free(self.enemies);
-        ally.free(self.portals);
-        ally.free(self.containers);
+        while (regions_iter.next()) |points| main.allocator.free(points.*);
+        main.allocator.free(self.tiles);
+        main.allocator.free(self.entities);
+        main.allocator.free(self.enemies);
+        main.allocator.free(self.portals);
+        main.allocator.free(self.containers);
     }
 };
 
@@ -75,8 +75,6 @@ pub var setpieces: std.StringHashMapUnmanaged(MapData) = .{};
 pub var maps: std.AutoHashMapUnmanaged(u16, MapData) = .{};
 pub var worlds: std.AutoArrayHashMapUnmanaged(i32, World) = .{};
 pub var next_world_id: i32 = 0;
-pub var allocator: std.mem.Allocator = undefined;
-var arena: std.heap.ArenaAllocator = undefined;
 
 pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
     var tiles: std.ArrayListUnmanaged(Tile) = .empty;
@@ -86,17 +84,17 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
     var containers: std.ArrayListUnmanaged(Container) = .empty;
     var regions: std.AutoHashMapUnmanaged(u16, std.ArrayListUnmanaged(world.WorldPoint)) = .empty;
     defer {
-        tiles.deinit(allocator);
-        entities.deinit(allocator);
-        enemies.deinit(allocator);
-        portals.deinit(allocator);
-        containers.deinit(allocator);
-        regions.deinit(allocator);
+        tiles.deinit(main.allocator);
+        entities.deinit(main.allocator);
+        enemies.deinit(main.allocator);
+        portals.deinit(main.allocator);
+        containers.deinit(main.allocator);
+        regions.deinit(main.allocator);
     }
 
     var map: MapData = undefined;
     map.details = details;
-    map.details.name = try allocator.dupe(u8, details.name);
+    map.details.name = try main.allocator.dupe(u8, details.name);
 
     tiles.clearRetainingCapacity();
     entities.clearRetainingCapacity();
@@ -105,7 +103,7 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
     containers.clearRetainingCapacity();
     regions.clearRetainingCapacity();
 
-    var map_arena: std.heap.ArenaAllocator = .init(allocator);
+    var map_arena: std.heap.ArenaAllocator = .init(main.allocator);
     defer map_arena.deinit();
     const parsed_map = try map_data.parseMap(reader, &map_arena);
     for (parsed_map.tiles, 0..) |tile, i| {
@@ -116,72 +114,69 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
 
         if (tile.ground_name.len > 0) {
             const data = game_data.ground.from_name.getPtr(tile.ground_name) orelse @panic("Tile had no data attached");
-            try tiles.append(allocator, .{ .x = ux, .y = uy, .data_id = data.id, .data = data });
-        } else try tiles.append(allocator, .{ .x = ux, .y = uy, .data_id = std.math.maxInt(u16) });
+            try tiles.append(main.allocator, .{ .x = ux, .y = uy, .data_id = data.id, .data = data });
+        } else try tiles.append(main.allocator, .{ .x = ux, .y = uy, .data_id = std.math.maxInt(u16) });
 
         if (tile.region_name.len > 0) {
             const data = game_data.region.from_name.get(tile.region_name) orelse @panic("Region had no data attached");
 
             if (regions.getPtr(data.id)) |list| {
-                try list.append(allocator, .{ .x = ux, .y = uy });
+                try list.append(main.allocator, .{ .x = ux, .y = uy });
             } else {
                 var list: std.ArrayListUnmanaged(world.WorldPoint) = .empty;
-                try list.append(allocator, .{ .x = ux, .y = uy });
-                try regions.put(allocator, data.id, list);
+                try list.append(main.allocator, .{ .x = ux, .y = uy });
+                try regions.put(main.allocator, data.id, list);
             }
         }
 
         if (tile.entity_name.len > 0) {
             const data = game_data.entity.from_name.getPtr(tile.entity_name) orelse @panic("Entity had no data attached");
-            try entities.append(allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
+            try entities.append(main.allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
         }
 
         if (tile.enemy_name.len > 0) {
             const data = game_data.enemy.from_name.getPtr(tile.enemy_name) orelse @panic("Enemy had no data attached");
-            try enemies.append(allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
+            try enemies.append(main.allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
         }
 
         if (tile.portal_name.len > 0) {
             const data = game_data.portal.from_name.getPtr(tile.portal_name) orelse @panic("Portal had no data attached");
-            try portals.append(allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
+            try portals.append(main.allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
         }
 
         if (tile.container_name.len > 0) {
             const data = game_data.container.from_name.getPtr(tile.container_name) orelse @panic("Container had no data attached");
-            try containers.append(allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
+            try containers.append(main.allocator, .{ .x = fx, .y = fy, .data_id = data.id, .data = data });
         }
     }
 
     map.w = parsed_map.w;
     map.h = parsed_map.h;
-    map.tiles = try allocator.dupe(Tile, tiles.items);
-    map.entities = try allocator.dupe(Entity, entities.items);
-    map.enemies = try allocator.dupe(Enemy, enemies.items);
-    map.portals = try allocator.dupe(Portal, portals.items);
-    map.containers = try allocator.dupe(Container, containers.items);
+    map.tiles = try main.allocator.dupe(Tile, tiles.items);
+    map.entities = try main.allocator.dupe(Entity, entities.items);
+    map.enemies = try main.allocator.dupe(Enemy, enemies.items);
+    map.portals = try main.allocator.dupe(Portal, portals.items);
+    map.containers = try main.allocator.dupe(Container, containers.items);
 
     map.regions = .{};
     var region_iter = regions.iterator();
     while (region_iter.next()) |entry| {
-        try map.regions.put(allocator, entry.key_ptr.*, try allocator.dupe(world.WorldPoint, entry.value_ptr.*.items));
+        try map.regions.put(main.allocator, entry.key_ptr.*, try main.allocator.dupe(world.WorldPoint, entry.value_ptr.*.items));
     }
 
     return map;
 }
 
-pub fn init(ally: std.mem.Allocator) !void {
-    arena = std.heap.ArenaAllocator.init(ally);
-    allocator = arena.allocator();
-
+pub fn init() !void {
     const file = try std.fs.cwd().openFile("./assets/worlds/maps.json", .{});
     defer file.close();
 
-    const file_data = try file.readToEndAlloc(allocator, std.math.maxInt(u32));
-    defer allocator.free(file_data);
+    const file_data = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
+    defer main.allocator.free(file_data);
 
-    for (try std.json.parseFromSliceLeaky([]MapDetails, allocator, file_data, .{})) |details| {
-        const path = try std.fmt.allocPrint(allocator, "./assets/worlds/{s}", .{details.file});
-        defer allocator.free(path);
+    for (try std.json.parseFromSliceLeaky([]MapDetails, main.allocator, file_data, .{})) |details| {
+        const path = try std.fmt.allocPrint(main.allocator, "./assets/worlds/{s}", .{details.file});
+        defer main.allocator.free(path);
 
         const map_file = try std.fs.cwd().openFile(path, .{});
         defer map_file.close();
@@ -193,26 +188,35 @@ pub fn init(ally: std.mem.Allocator) !void {
         else
             std.math.maxInt(u16);
         if (portal_id == std.math.maxInt(u16) and details.id >= 0) {
-            map.deinit(allocator);
+            map.deinit();
             continue;
         }
 
         if (details.id < 0) {
-            try worlds.put(allocator, details.id, try World.create(allocator, map.w, map.h, details.id));
+            try worlds.put(main.allocator, details.id, try .create(map.w, map.h, details.id));
             var new_world = worlds.getPtr(details.id).?;
             try new_world.appendMap(map);
             std.log.info("Added persistent world \"{s}\" (id {})", .{ details.name, details.id });
         }
 
         if (portal_id != std.math.maxInt(u16))
-            try maps.put(allocator, portal_id, map);
+            try maps.put(main.allocator, portal_id, map);
 
         std.log.info("Parsed world \"{s}\"", .{details.name});
     }
 }
 
 pub fn deinit() void {
-    arena.deinit();
+    var setpiece_iter = setpieces.valueIterator();
+    while (setpiece_iter.next()) |setpiece| setpiece.deinit();
+    setpieces.deinit(main.allocator);
+
+    var map_iter = maps.valueIterator();
+    while (map_iter.next()) |map| map.deinit();
+    maps.deinit(main.allocator);
+
+    for (worlds.values()) |*w| w.deinit();
+    worlds.deinit(main.allocator);
 }
 
 pub fn portalWorld(portal_type: u16, portal_map_id: u32) !?*World {
@@ -222,7 +226,7 @@ pub fn portalWorld(portal_type: u16, portal_map_id: u32) !?*World {
     if (maps.get(portal_type)) |map| {
         if (map.details.id < 0) return worlds.getPtr(map.details.id);
 
-        try worlds.put(allocator, next_world_id, try World.create(allocator, map.w, map.h, next_world_id));
+        try worlds.put(main.allocator, next_world_id, try .create(map.w, map.h, next_world_id));
         defer next_world_id += 1;
 
         std.log.info("Added world \"{s}\" (id {})", .{ map.details.name, next_world_id });
@@ -238,7 +242,7 @@ pub fn testWorld(data: []const u8) !*World {
     var fbs = std.io.fixedBufferStream(data);
     const map = try parseMap(fbs.reader(), .test_details);
 
-    try worlds.put(allocator, next_world_id, try World.create(allocator, map.w, map.h, next_world_id));
+    try worlds.put(main.allocator, next_world_id, try .create(map.w, map.h, next_world_id));
     defer next_world_id += 1;
 
     std.log.info("Added test world (id {})", .{ next_world_id });

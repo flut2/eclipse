@@ -44,23 +44,16 @@ inline fn bytesToAny(comptime T: type, bytes: []const u8) T {
 
 pub const BannedHwids = struct {
     reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
-    allocator: std.mem.Allocator = undefined,
-
-    pub fn init(ally: std.mem.Allocator) BannedHwids {
-        return .{ .allocator = ally };
-    }
 
     pub fn deinit(self: *BannedHwids) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
-        self.reply_list.deinit(self.allocator);
+        self.reply_list.deinit(main.allocator);
     }
 
     pub fn exists(self: *BannedHwids, hwid: []const u8) !bool {
         if (redisCommand(context, "SISMEMBER banned_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
-            if (reply.len <= 0)
-                return false;
-
+            try self.reply_list.append(main.allocator, reply);
+            if (reply.len <= 0) return false;
             return bytesToAny(bool, reply.str[0..reply.len]);
         } else return false;
     }
@@ -68,41 +61,34 @@ pub const BannedHwids = struct {
     pub fn add(self: *BannedHwids, hwid: []const u8, expiry_sec: u32) !void {
         if (use_dragonfly) {
             if (redisCommand(context, "SADDEX banned_hwids %d %b", .{ expiry_sec, hwid.ptr, hwid.len })) |reply| {
-                try self.reply_list.append(self.allocator, reply);
+                try self.reply_list.append(main.allocator, reply);
             } else return error.NoData;
         } else {
             if (redisCommand(context, "SADD banned_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
-                try self.reply_list.append(self.allocator, reply);
+                try self.reply_list.append(main.allocator, reply);
             } else return error.NoData;
         }
     }
 
     pub fn remove(self: *BannedHwids, hwid: []const u8) !void {
         if (redisCommand(context, "SREM banned_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
+            try self.reply_list.append(main.allocator, reply);
         } else return error.NoData;
     }
 };
 
 pub const MutedHwids = struct {
     reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
-    allocator: std.mem.Allocator = undefined,
-
-    pub fn init(ally: std.mem.Allocator) MutedHwids {
-        return .{ .allocator = ally };
-    }
 
     pub fn deinit(self: *MutedHwids) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
-        self.reply_list.deinit(self.allocator);
+        self.reply_list.deinit(main.allocator);
     }
 
     pub fn exists(self: *MutedHwids, hwid: []const u8) !bool {
         if (redisCommand(context, "SISMEMBER muted_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
-            if (reply.len <= 0)
-                return false;
-
+            try self.reply_list.append(main.allocator, reply);
+            if (reply.len <= 0) return false;
             return bytesToAny(bool, reply.str[0..reply.len]);
         } else return false;
     }
@@ -110,18 +96,18 @@ pub const MutedHwids = struct {
     pub fn add(self: *MutedHwids, hwid: []const u8, expiry_sec: u32) !void {
         if (use_dragonfly) {
             if (redisCommand(context, "SADDEX muted_hwids %d %b", .{ expiry_sec, hwid.ptr, hwid.len })) |reply| {
-                try self.reply_list.append(self.allocator, reply);
+                try self.reply_list.append(main.allocator, reply);
             } else return error.NoData;
         } else {
             if (redisCommand(context, "SADD muted_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
-                try self.reply_list.append(self.allocator, reply);
+                try self.reply_list.append(main.allocator, reply);
             } else return error.NoData;
         }
     }
 
     pub fn remove(self: *MutedHwids, hwid: []const u8) !void {
         if (redisCommand(context, "SREM muted_hwids %b", .{ hwid.ptr, hwid.len })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
+            try self.reply_list.append(main.allocator, reply);
         } else return error.NoData;
     }
 
@@ -129,7 +115,7 @@ pub const MutedHwids = struct {
         switch (builtin.os.tag) {
             .linux => {
                 if (redisCommand(context, "FIELDTTL muted_hwids %b", .{ ip.ptr, ip.len })) |reply| {
-                    try self.reply_list.append(self.allocator, reply);
+                    try self.reply_list.append(main.allocator, reply);
                     if (reply.len <= 0)
                         return error.NoData;
 
@@ -149,30 +135,23 @@ pub const MutedHwids = struct {
 
 pub const Names = struct {
     reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
-    allocator: std.mem.Allocator = undefined,
-
-    pub fn init(ally: std.mem.Allocator) Names {
-        return .{ .allocator = ally };
-    }
 
     pub fn deinit(self: *Names) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
-        self.reply_list.deinit(self.allocator);
+        self.reply_list.deinit(main.allocator);
     }
 
     pub fn get(self: *Names, name: []const u8) !u32 {
         if (redisCommand(context, "HGET names %b", .{ name.ptr, name.len })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
-            if (reply.len <= 0)
-                return error.NoData;
-
+            try self.reply_list.append(main.allocator, reply);
+            if (reply.len <= 0) return error.NoData;
             return bytesToAny(u32, reply.str[0..reply.len]);
         } else return error.NoData;
     }
 
     pub fn set(self: *Names, name: []const u8, acc_id: u32) !void {
         if (redisCommand(context, "HSET names %b %d", .{ name.ptr, name.len, acc_id })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
+            try self.reply_list.append(main.allocator, reply);
         } else return error.NoData;
     }
 };
@@ -186,15 +165,10 @@ pub const LoginData = struct {
 
     email: []const u8,
     reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
-    allocator: std.mem.Allocator = undefined,
-
-    pub fn init(ally: std.mem.Allocator, email: []const u8) LoginData {
-        return .{ .email = email, .allocator = ally };
-    }
 
     pub fn deinit(self: *LoginData) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
-        self.reply_list.deinit(self.allocator);
+        self.reply_list.deinit(main.allocator);
     }
 
     pub fn get(self: *LoginData, comptime id: @typeInfo(Data).@"union".tag_type.?) !(@typeInfo(Data).@"union".fields[@intFromEnum(id)].type) {
@@ -207,10 +181,8 @@ pub const LoginData = struct {
             tag_name.ptr,
             tag_name.len,
         })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
-            if (reply.len <= 0)
-                return error.NoData;
-
+            try self.reply_list.append(main.allocator, reply);
+            if (reply.len <= 0) return error.NoData;
             return bytesToAny(T, reply.str[0..reply.len]);
         } else return error.NoData;
     }
@@ -241,7 +213,7 @@ pub const LoginData = struct {
             value_bytes.ptr,
             value_bytes.len,
         })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
+            try self.reply_list.append(main.allocator, reply);
         } else return error.NoData;
     }
 };
@@ -265,15 +237,10 @@ pub const AccountData = struct {
 
     acc_id: u32,
     reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
-    allocator: std.mem.Allocator = undefined,
-
-    pub fn init(ally: std.mem.Allocator, acc_id: u32) AccountData {
-        return .{ .acc_id = acc_id, .allocator = ally };
-    }
 
     pub fn deinit(self: *AccountData) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
-        self.reply_list.deinit(self.allocator);
+        self.reply_list.deinit(main.allocator);
     }
 
     pub fn get(self: *AccountData, comptime id: @typeInfo(Data).@"union".tag_type.?) !(@typeInfo(Data).@"union".fields[@intFromEnum(id)].type) {
@@ -285,10 +252,8 @@ pub const AccountData = struct {
             tag_name.ptr,
             tag_name.len,
         })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
-            if (reply.len <= 0)
-                return error.NoData;
-
+            try self.reply_list.append(main.allocator, reply);
+            if (reply.len <= 0) return error.NoData;
             return bytesToAny(T, reply.str[0..reply.len]);
         } else return error.NoData;
     }
@@ -318,7 +283,7 @@ pub const AccountData = struct {
             value_bytes.ptr,
             value_bytes.len,
         })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
+            try self.reply_list.append(main.allocator, reply);
         } else return error.NoData;
     }
 };
@@ -339,15 +304,10 @@ pub const CharacterData = struct {
     acc_id: u32,
     char_id: u32,
     reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
-    allocator: std.mem.Allocator = undefined,
-
-    pub fn init(ally: std.mem.Allocator, acc_id: u32, char_id: u32) CharacterData {
-        return .{ .acc_id = acc_id, .char_id = char_id, .allocator = ally };
-    }
 
     pub fn deinit(self: *CharacterData) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
-        self.reply_list.deinit(self.allocator);
+        self.reply_list.deinit(main.allocator);
     }
 
     pub fn get(self: *CharacterData, comptime id: @typeInfo(Data).@"union".tag_type.?) !(@typeInfo(Data).@"union".fields[@intFromEnum(id)].type) {
@@ -360,10 +320,8 @@ pub const CharacterData = struct {
             tag_name.ptr,
             tag_name.len,
         })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
-            if (reply.len <= 0)
-                return error.NoData;
-
+            try self.reply_list.append(main.allocator, reply);
+            if (reply.len <= 0) return error.NoData;
             return bytesToAny(T, reply.str[0..reply.len]);
         } else return error.NoData;
     }
@@ -394,12 +352,11 @@ pub const CharacterData = struct {
             value_bytes.ptr,
             value_bytes.len,
         })) |reply| {
-            try self.reply_list.append(self.allocator, reply);
+            try self.reply_list.append(main.allocator, reply);
         } else return error.NoData;
     }
 };
 
-var allocator: std.mem.Allocator = undefined;
 var context: *c.redisContext = undefined;
 
 fn redisCommand(ctx: [*c]c.redisContext, format: [*c]const u8, args: anytype) ?*c.redisReply {
@@ -408,8 +365,7 @@ fn redisCommand(ctx: [*c]c.redisContext, format: [*c]const u8, args: anytype) ?*
     } else return null;
 }
 
-pub fn init(ally: std.mem.Allocator) !void {
-    allocator = ally;
+pub fn init() !void {
     context = c.redisConnect(settings.redis_ip, settings.redis_port) orelse return error.OutOfMemory;
     if (context.err != 0) {
         std.log.err("Redis connection error: {s}", .{context.errstr});
@@ -444,7 +400,7 @@ pub fn nextAccId() !u32 {
 }
 
 pub fn isBanned(hwid: []const u8) !bool {
-    var banned_hwids = BannedHwids.init(allocator);
+    var banned_hwids: BannedHwids = .{};
     defer banned_hwids.deinit();
     if (try banned_hwids.exists(hwid)) return true;
     return false;
@@ -457,7 +413,7 @@ pub fn accountBanned(acc_data: *AccountData) !bool {
 }
 
 pub fn login(email: []const u8, token: u128) !u32 {
-    var login_data = LoginData.init(allocator, email);
+    var login_data: LoginData = .{ .email = email };
     defer login_data.deinit();
     return if (try login_data.get(.token) == token)
         try login_data.get(.account_id)

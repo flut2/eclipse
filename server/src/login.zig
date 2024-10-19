@@ -27,8 +27,8 @@ const Handlers = struct {
 var handlers: Handlers = .{};
 var server: httpz.Server(Handlers) = undefined;
 
-pub fn init(allocator: std.mem.Allocator) !void {
-    server = try httpz.Server(Handlers).init(allocator, .{ .port = settings.login_port }, handlers);
+pub fn init() !void {
+    server = try .init(main.allocator, .{ .port = settings.login_port }, handlers);
 
     var router = server.router(.{});
     router.post("/account/verify", handleAccountVerify, .{});
@@ -82,7 +82,7 @@ fn handleAccountRegister(_: Handlers, req: *httpz.Request, res: *httpz.Response)
         return;
     }
 
-    var login_data = db.LoginData.init(res.arena, email);
+    var login_data: db.LoginData = .{ .email = email };
     defer login_data.deinit();
 
     email_exists: {
@@ -91,7 +91,7 @@ fn handleAccountRegister(_: Handlers, req: *httpz.Request, res: *httpz.Response)
         return;
     }
 
-    var names = db.Names.init(res.arena);
+    var names: db.Names = .{};
     defer names.deinit();
 
     name_exists: {
@@ -118,7 +118,7 @@ fn handleAccountRegister(_: Handlers, req: *httpz.Request, res: *httpz.Response)
     const token = db.csprng.random().int(u128);
     try login_data.set(.{ .token = token });
 
-    var acc_data = db.AccountData.init(res.arena, acc_id);
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
     defer acc_data.deinit();
 
     const timestamp = std.time.milliTimestamp();
@@ -173,7 +173,7 @@ fn handleAccountVerify(_: Handlers, req: *httpz.Request, res: *httpz.Response) !
         return;
     };
 
-    var login_data = db.LoginData.init(res.arena, email);
+    var login_data: db.LoginData = .{ .email = email };
     defer login_data.deinit();
     const hashed_pw = login_data.get(.hashed_password) catch |e| {
         res.body = if (e == error.NoData)
@@ -193,7 +193,7 @@ fn handleAccountVerify(_: Handlers, req: *httpz.Request, res: *httpz.Response) !
     const token = db.csprng.random().int(u128);
     try login_data.set(.{ .token = token });
 
-    var acc_data = db.AccountData.init(res.arena, acc_id);
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
     defer acc_data.deinit();
 
     if (try db.accountBanned(&acc_data)) {
@@ -204,7 +204,7 @@ fn handleAccountVerify(_: Handlers, req: *httpz.Request, res: *httpz.Response) !
     var char_list: std.ArrayListUnmanaged(network_data.CharacterData) = .empty;
     buildList: {
         for (acc_data.get(.alive_char_ids) catch break :buildList) |char_id| {
-            var char_data = db.CharacterData.init(res.arena, acc_id, char_id);
+            var char_data: db.CharacterData = .{ .acc_id = acc_id, .char_id = char_id };
             defer char_data.deinit();
 
             const stats = try char_data.get(.stats);
@@ -272,7 +272,7 @@ fn handleCharList(_: Handlers, req: *httpz.Request, res: *httpz.Response) !void 
         return;
     };
 
-    var acc_data = db.AccountData.init(res.arena, acc_id);
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
     defer acc_data.deinit();
 
     if (try db.accountBanned(&acc_data)) {
@@ -283,7 +283,7 @@ fn handleCharList(_: Handlers, req: *httpz.Request, res: *httpz.Response) !void 
     var char_list: std.ArrayListUnmanaged(network_data.CharacterData) = .empty;
     buildList: {
         for (acc_data.get(.alive_char_ids) catch break :buildList) |char_id| {
-            var char_data = db.CharacterData.init(res.arena, acc_id, char_id);
+            var char_data: db.CharacterData = .{ .acc_id = acc_id, .char_id = char_id };
             defer char_data.deinit();
 
             const stats = try char_data.get(.stats);

@@ -1,4 +1,5 @@
 const std = @import("std");
+const main = @import("../main.zig");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
@@ -23,16 +24,16 @@ pub const Entity = struct {
     behavior_data: ?*anyopaque = undefined,
     storages: behavior_logic.EntityStorages = .{},
 
-    pub fn init(self: *Entity, allocator: std.mem.Allocator) !void {
+    pub fn init(self: *Entity) !void {
         if (behavior.entity_behavior_map.get(self.data_id)) |behav| {
-            self.behavior = try allocator.create(behavior.EntityBehavior);
+            self.behavior = try main.allocator.create(behavior.EntityBehavior);
             self.behavior.?.* = behav;
             switch (self.behavior.?.*) {
                 inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "spawn")) try b.spawn(self),
             }
         }
 
-        self.stats_writer.list = try .initCapacity(allocator, 32);
+        self.stats_writer.list = try .initCapacity(main.allocator, 32);
 
         self.data = game_data.entity.from_id.getPtr(self.data_id) orelse {
             std.log.err("Could not find data for entity with data id {}", .{self.data_id});
@@ -54,7 +55,7 @@ pub const Entity = struct {
                 inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "death")) try b.death(self),
             }
 
-            self.world.allocator.destroy(behav);
+            main.allocator.destroy(behav);
         }
 
         if (self.data.occupy_square or self.data.full_occupy) {
@@ -63,7 +64,7 @@ pub const Entity = struct {
             self.world.tiles[uy * self.world.w + ux].occupied = false;
         }
 
-        self.stats_writer.list.deinit(self.world.allocator);
+        self.stats_writer.list.deinit(main.allocator);
     }
 
     pub fn tick(self: *Entity, time: i64, dt: i64) !void {
@@ -77,10 +78,10 @@ pub const Entity = struct {
         const writer = &self.stats_writer;
         writer.list.clearRetainingCapacity();
 
-        const allocator = self.world.allocator;
-        stat_util.write(network_data.EntityStat, allocator, writer, cache, .{ .x = self.x });
-        stat_util.write(network_data.EntityStat, allocator, writer, cache, .{ .y = self.y });
-        if (self.data.health > 0) stat_util.write(network_data.EntityStat, allocator, writer, cache, .{ .hp = self.hp });
+        const T = network_data.EntityStat;
+        stat_util.write(T, writer, cache, .{ .x = self.x });
+        stat_util.write(T, writer, cache, .{ .y = self.y });
+        if (self.data.health > 0) stat_util.write(T, writer, cache, .{ .hp = self.hp });
 
         return writer.list.items;
     }

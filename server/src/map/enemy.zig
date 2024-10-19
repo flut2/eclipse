@@ -31,16 +31,16 @@ pub const Enemy = struct {
     spawned: bool = false,
     storages: behavior_logic.EnemyStorages = .{},
 
-    pub fn init(self: *Enemy, allocator: std.mem.Allocator) !void {
+    pub fn init(self: *Enemy) !void {
         if (behavior.enemy_behavior_map.get(self.data_id)) |behav| {
-            self.behavior = try allocator.create(behavior.EnemyBehavior);
+            self.behavior = try main.allocator.create(behavior.EnemyBehavior);
             self.behavior.?.* = behav;
             switch (self.behavior.?.*) {
                 inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "spawn")) try b.spawn(self),
             }
         }
 
-        self.stats_writer.list = try .initCapacity(allocator, 32);
+        self.stats_writer.list = try .initCapacity(main.allocator, 32);
 
         self.data = game_data.enemy.from_id.getPtr(self.data_id) orelse {
             std.log.err("Could not find data for enemy with data id {}", .{self.data_id});
@@ -51,29 +51,25 @@ pub const Enemy = struct {
     }
 
     pub fn deinit(self: *Enemy) !void {
-        const allocator = self.world.allocator;
-
         if (self.behavior) |behav| {
             switch (behav.*) {
                 inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "death")) try b.death(self),
             }
 
-            allocator.destroy(behav);
+            main.allocator.destroy(behav);
         }
 
         self.storages.deinit();
-        self.damages_dealt.deinit(allocator);
-        self.stats_writer.list.deinit(allocator);
+        self.damages_dealt.deinit(main.allocator);
+        self.stats_writer.list.deinit(main.allocator);
     }
 
     pub fn move(self: *Enemy, x: f32, y: f32) void {
-        if (x < 0.0 or y < 0.0)
-            return;
+        if (x < 0.0 or y < 0.0) return;
 
         const ux: u32 = @intFromFloat(x);
         const uy: u32 = @intFromFloat(y);
-        if (ux >= self.world.w or uy >= self.world.h)
-            return;
+        if (ux >= self.world.w or uy >= self.world.h) return;
 
         const tile = self.world.tiles[uy * self.world.w + ux];
         if (tile.data_id != std.math.maxInt(u16) and !tile.data.no_walk and !tile.occupied) {
@@ -105,7 +101,7 @@ pub const Enemy = struct {
             return;
         }
 
-        const res = self.damages_dealt.getOrPut(self.world.allocator, owner_id) catch return;
+        const res = self.damages_dealt.getOrPut(main.allocator, owner_id) catch return;
         if (res.found_existing) res.value_ptr.* += dmg else res.value_ptr.* = dmg;
     }
 
@@ -113,14 +109,14 @@ pub const Enemy = struct {
         const writer = &self.stats_writer;
         writer.list.clearRetainingCapacity();
 
-        const allocator = self.world.allocator;
-        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .x = self.x });
-        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .y = self.y });
-        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .size_mult = self.size_mult });
-        if (self.name) |name| stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .name = name });
-        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .hp = self.hp });
-        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .max_hp = self.max_hp });
-        stat_util.write(network_data.EnemyStat, allocator, writer, cache, .{ .condition = self.condition });
+        const T = network_data.EnemyStat;
+        stat_util.write(T, writer, cache, .{ .x = self.x });
+        stat_util.write(T, writer, cache, .{ .y = self.y });
+        stat_util.write(T, writer, cache, .{ .size_mult = self.size_mult });
+        if (self.name) |name| stat_util.write(T, writer, cache, .{ .name = name });
+        stat_util.write(T, writer, cache, .{ .hp = self.hp });
+        stat_util.write(T, writer, cache, .{ .max_hp = self.max_hp });
+        stat_util.write(T, writer, cache, .{ .condition = self.condition });
 
         return writer.list.items;
     }

@@ -1,4 +1,5 @@
 const std = @import("std");
+const main = @import("../main.zig");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
@@ -23,14 +24,11 @@ pub const Projectile = struct {
     world: *World = undefined,
 
     pub fn deinit(self: *Projectile) !void {
-        self.hit_list.deinit(self.world.allocator);
+        self.hit_list.deinit(main.allocator);
     }
 
     pub fn delete(self: *Projectile) !void {
-        if (self.world.findRef(Player, self.owner_map_id)) |player| {
-            player.projectiles[self.index] = null;
-        }
-
+        if (self.world.findRef(Player, self.owner_map_id)) |player| player.projectiles[self.index] = null;
         try self.world.remove(Projectile, self);
     }
 

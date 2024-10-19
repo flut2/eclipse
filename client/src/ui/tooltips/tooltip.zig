@@ -46,7 +46,7 @@ pub fn init() !void {
         }
         tooltip.* = @unionInit(Tooltip, field.name, .{});
         var tooltip_inner = &@field(tooltip, field.name);
-        tooltip_inner.root = try element.create(Container, .{ .base = .{ .visible = false, .layer = .tooltip, .x = 0, .y = 0 } });
+        tooltip_inner.* = .{ .root = try element.create(Container, .{ .base = .{ .visible = false, .layer = .tooltip, .x = 0, .y = 0 } }) };
         try tooltip_inner.init();
         try map.put(main.allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
             std.debug.panic("No enum type with name {s} found on TooltipType", .{field.name}), tooltip);

@@ -1,4 +1,5 @@
 const std = @import("std");
+const main = @import("../main.zig");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
@@ -25,7 +26,7 @@ pub const EnemyStorages = struct {
 
     pub fn deinit(self: *EnemyStorages) void {
         inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
-            @field(self.*, field.name).deinit(allocator);
+            @field(self.*, field.name).deinit(main.allocator);
         }
     }
 };
@@ -42,12 +43,10 @@ pub const EntityStorages = struct {
 
     pub fn deinit(self: *EntityStorages) void {
         inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
-            @field(self.*, field.name).deinit(allocator);
+            @field(self.*, field.name).deinit(main.allocator);
         }
     }
 };
-
-pub var allocator: std.mem.Allocator = undefined;
 
 fn getStorageId(comptime src_loc: std.builtin.SourceLocation) u64 {
     return @as(u64, std.hash.XxHash32.hash(0, src_loc.file)) << 32 | @as(u64, @intCast(src_loc.line));
@@ -71,7 +70,7 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
 
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.heal.getPtr(storage_id) orelse blk: {
-        host.storages.heal.put(allocator, storage_id, .{}) catch return false;
+        host.storages.heal.put(main.allocator, storage_id, .{}) catch return false;
         break :blk host.storages.heal.getPtr(storage_id).?;
     };
     storage.time -= dt;
@@ -128,7 +127,7 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i6
 }) bool {
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.charge.getPtr(storage_id) orelse blk: {
-        host.storages.charge.put(allocator, storage_id, .{}) catch return false;
+        host.storages.charge.put(main.allocator, storage_id, .{}) catch return false;
         break :blk host.storages.charge.getPtr(storage_id).?;
     };
 
@@ -198,7 +197,7 @@ pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64,
 
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.aoe.getPtr(storage_id) orelse blk: {
-        host.storages.aoe.put(allocator, storage_id, .{}) catch return;
+        host.storages.aoe.put(main.allocator, storage_id, .{}) catch return;
         break :blk host.storages.aoe.getPtr(storage_id).?;
     };
 
@@ -226,7 +225,7 @@ pub fn follow(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i6
 }) bool {
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.follow.getPtr(storage_id) orelse blk: {
-        host.storages.follow.put(allocator, storage_id, .{}) catch return false;
+        host.storages.follow.put(main.allocator, storage_id, .{}) catch return false;
         break :blk host.storages.follow.getPtr(storage_id).?;
     };
 
@@ -247,7 +246,7 @@ const WanderStorage = struct { move_cos: f32 = 0.0, move_sin: f32 = 0.0, rem_dis
 pub fn wander(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i64, speed: f32) void {
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.wander.getPtr(storage_id) orelse blk: {
-        host.storages.wander.put(allocator, storage_id, .{}) catch return;
+        host.storages.wander.put(main.allocator, storage_id, .{}) catch return;
         break :blk host.storages.wander.getPtr(storage_id).?;
     };
 
@@ -279,7 +278,7 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
 }) void {
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.shoot.getPtr(storage_id) orelse blk: {
-        host.storages.shoot.put(allocator, storage_id, .{}) catch return;
+        host.storages.shoot.put(main.allocator, storage_id, .{}) catch return;
         break :blk host.storages.shoot.getPtr(storage_id).?;
     };
 

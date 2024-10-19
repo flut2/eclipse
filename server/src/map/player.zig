@@ -34,8 +34,8 @@ pub const Player = struct {
     map_id: u32 = std.math.maxInt(u32),
     data_id: u16 = std.math.maxInt(u16),
 
-    acc_data: db.AccountData = undefined,
-    char_data: db.CharacterData = undefined,
+    acc_data: db.AccountData,
+    char_data: db.CharacterData,
 
     x: f32 = -1.0,
     y: f32 = -1.0,
@@ -83,10 +83,10 @@ pub const Player = struct {
     client: *Client = undefined,
     world: *World = undefined,
 
-    pub fn init(self: *Player, allocator: std.mem.Allocator) !void {
-        self.stats_writer.list = try .initCapacity(allocator, 256);
+    pub fn init(self: *Player) !void {
+        self.stats_writer.list = try .initCapacity(main.allocator, 256);
 
-        self.name = try allocator.dupe(u8, try self.acc_data.get(.name));
+        self.name = try main.allocator.dupe(u8, try self.acc_data.get(.name));
         self.data_id = try self.char_data.get(.class_id);
         self.data = game_data.class.from_id.getPtr(self.data_id) orelse {
             std.log.err("Could not find class data for player with data id {}", .{self.data_id});
@@ -95,7 +95,7 @@ pub const Player = struct {
 
         const hwid_mute_expiry = blk: {
             const hwid = self.acc_data.get(.hwid) catch break :blk 0;
-            var muted_hwids = db.MutedHwids.init(allocator);
+            var muted_hwids: db.MutedHwids = .{};
             defer muted_hwids.deinit();
             break :blk main.current_time + (muted_hwids.ttl(hwid) catch break :blk 0);
         };
@@ -124,20 +124,19 @@ pub const Player = struct {
         self.char_data.deinit();
         self.acc_data.deinit();
 
-        const allocator = self.world.allocator;
-        self.tiles.deinit(allocator);
-        self.tiles_seen.deinit(allocator);
+        self.tiles.deinit(main.allocator);
+        self.tiles_seen.deinit(main.allocator);
 
         inline for (@typeInfo(@TypeOf(self.objs)).@"struct".fields) |field| {
-            @field(self.objs, field.name).deinit(allocator);
+            @field(self.objs, field.name).deinit(main.allocator);
         }
 
         inline for (@typeInfo(@TypeOf(self.caches)).@"struct".fields) |field| {
-            @field(self.caches, field.name).deinit(allocator);
+            @field(self.caches, field.name).deinit(main.allocator);
         }
 
-        allocator.free(self.name);
-        self.stats_writer.list.deinit(allocator);
+        main.allocator.free(self.name);
+        self.stats_writer.list.deinit(main.allocator);
     }
 
     pub fn moveToSpawn(self: *Player) void {
@@ -161,7 +160,7 @@ pub const Player = struct {
         if (self.conditions_active.getPtr(condition)) |current_duration| {
             if (duration > current_duration.*)
                 current_duration.* = duration;
-        } else try self.conditions_active.put(self.world.allocator, condition, duration);
+        } else try self.conditions_active.put(main.allocator, condition, duration);
         self.condition.set(condition, true);
     }
 
@@ -219,7 +218,7 @@ pub const Player = struct {
         return cache;
     }
 
-    fn exportObject(self: *Player, comptime T: type, allocator: std.mem.Allocator) !void {
+    fn exportObject(self: *Player, comptime T: type) !void {
         for (self.world.listForType(T).items) |*object| {
             const x_dt = object.x - self.x;
             const y_dt = object.y - self.y;
@@ -241,19 +240,19 @@ pub const Player = struct {
                 if (caches.getPtr(object.map_id)) |cache| {
                     const stats = try object.exportStats(cache);
                     if (stats.len > 0)
-                        try @field(self.objs, @tagName(obj_type)).append(allocator, .{
+                        try @field(self.objs, @tagName(obj_type)).append(main.allocator, .{
                             .data_id = object.data_id,
                             .map_id = object.map_id,
                             .stats = stats,
                         });
                 } else {
                     var cache = defaultCache(T);
-                    try @field(self.objs, @tagName(obj_type)).append(allocator, .{
+                    try @field(self.objs, @tagName(obj_type)).append(main.allocator, .{
                         .data_id = object.data_id,
                         .map_id = object.map_id,
                         .stats = try object.exportStats(&cache),
                     });
-                    try caches.put(allocator, object.map_id, cache);
+                    try caches.put(main.allocator, object.map_id, cache);
                 }
             }
         }
@@ -279,12 +278,10 @@ pub const Player = struct {
 
         if (self.hp <= 0) try self.death("Unknown");
 
-        const allocator = self.world.allocator;
-
         self.conditions_to_remove.clearRetainingCapacity();
         for (self.conditions_active.values(), self.conditions_active.keys()) |*d, k| {
             if (d.* <= dt) {
-                try self.conditions_to_remove.append(allocator, k);
+                try self.conditions_to_remove.append(main.allocator, k);
                 continue;
             }
 
@@ -310,13 +307,10 @@ pub const Player = struct {
             const y_dt = @as(i64, tile.y) - iuy;
             if (x_dt * x_dt + y_dt * y_dt <= 16 * 16) {
                 const hash = @as(u32, tile.x) << 16 | @as(u32, tile.y);
-                if (self.tiles_seen.get(hash)) |update_count| {
-                    if (update_count == tile.update_count)
-                        continue;
-                }
+                if (self.tiles_seen.get(hash)) |update_count| if (update_count == tile.update_count) continue;
 
-                try self.tiles_seen.put(allocator, hash, tile.update_count);
-                try self.tiles.append(allocator, .{
+                try self.tiles_seen.put(main.allocator, hash, tile.update_count);
+                try self.tiles.append(main.allocator, .{
                     .data_id = tile.data_id,
                     .x = tile.x,
                     .y = tile.y,
@@ -329,7 +323,7 @@ pub const Player = struct {
             for (@field(self.world.drops, field.name).items) |id| {
                 if (@field(self.caches, field.name).contains(id)) {
                     _ = @field(self.caches, field.name).remove(id);
-                    try @field(self.drops, field.name).append(allocator, id);
+                    try @field(self.drops, field.name).append(main.allocator, id);
                 }
             }
         }
@@ -339,7 +333,7 @@ pub const Player = struct {
         }
 
         inline for (.{ Entity, Enemy, Portal, Container }) |ObjType| {
-            try self.exportObject(ObjType, allocator);
+            try self.exportObject(ObjType);
         }
 
         for (self.world.listForType(Player).items) |*player| {
@@ -349,19 +343,19 @@ pub const Player = struct {
                 if (self.caches.player.getPtr(player.map_id)) |cache| {
                     const stats = try player.exportStats(cache, player.map_id == self.map_id, false);
                     if (stats.len > 0)
-                        try self.objs.player.append(allocator, .{
+                        try self.objs.player.append(main.allocator, .{
                             .data_id = player.data_id,
                             .map_id = player.map_id,
                             .stats = stats,
                         });
                 } else {
                     var cache = defaultCache(Player);
-                    try self.objs.player.append(allocator, .{
+                    try self.objs.player.append(main.allocator, .{
                         .data_id = player.data_id,
                         .map_id = player.map_id,
                         .stats = try player.exportStats(&cache, player.map_id == self.map_id, true),
                     });
-                    try self.caches.player.put(allocator, player.map_id, cache);
+                    try self.caches.player.put(main.allocator, player.map_id, cache);
                 }
             }
         }
@@ -434,61 +428,54 @@ pub const Player = struct {
         const writer = &self.stats_writer;
         writer.list.clearRetainingCapacity();
 
-        const allocator = self.world.allocator;
-
+        const T = network_data.PlayerStat;
         if (force_export_pos or !is_self) {
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .x = self.x });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .y = self.y });
+            stat_util.write(T, writer, cache, .{ .x = self.x });
+            stat_util.write(T, writer, cache, .{ .y = self.y });
         }
 
-        stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .name = self.name });
-        stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .aether = self.aether });
-        stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .max_hp = self.stats[health_stat] });
-        stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .max_hp_bonus = self.stat_boosts[health_stat] });
-        stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .hp = self.hp });
-        stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .max_mp = self.stats[mana_stat] });
-        stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .max_mp_bonus = self.stat_boosts[mana_stat] });
-        stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .mp = self.mp });
-        stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .condition = self.condition });
+        stat_util.write(T, writer, cache, .{ .name = self.name });
+        stat_util.write(T, writer, cache, .{ .aether = self.aether });
+        stat_util.write(T, writer, cache, .{ .max_hp = self.stats[health_stat] });
+        stat_util.write(T, writer, cache, .{ .max_hp_bonus = self.stat_boosts[health_stat] });
+        stat_util.write(T, writer, cache, .{ .hp = self.hp });
+        stat_util.write(T, writer, cache, .{ .max_mp = self.stats[mana_stat] });
+        stat_util.write(T, writer, cache, .{ .max_mp_bonus = self.stat_boosts[mana_stat] });
+        stat_util.write(T, writer, cache, .{ .mp = self.mp });
+        stat_util.write(T, writer, cache, .{ .condition = self.condition });
 
         if (is_self) {
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .spirits_communed = self.spirits_communed });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .muted_until = self.muted_until });
+            stat_util.write(T, writer, cache, .{ .spirits_communed = self.spirits_communed });
+            stat_util.write(T, writer, cache, .{ .muted_until = self.muted_until });
 
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .strength = @intCast(self.stats[strength_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .wit = @intCast(self.stats[wit_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .defense = @intCast(self.stats[defense_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .resistance = @intCast(self.stats[resistance_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .speed = @intCast(self.stats[speed_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .stamina = @intCast(self.stats[stamina_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .intelligence = @intCast(self.stats[intelligence_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .penetration = @intCast(self.stats[penetration_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .piercing = @intCast(self.stats[piercing_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .haste = @intCast(self.stats[haste_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .tenacity = @intCast(self.stats[tenacity_stat]) });
+            stat_util.write(T, writer, cache, .{ .strength = @intCast(self.stats[strength_stat]) });
+            stat_util.write(T, writer, cache, .{ .wit = @intCast(self.stats[wit_stat]) });
+            stat_util.write(T, writer, cache, .{ .defense = @intCast(self.stats[defense_stat]) });
+            stat_util.write(T, writer, cache, .{ .resistance = @intCast(self.stats[resistance_stat]) });
+            stat_util.write(T, writer, cache, .{ .speed = @intCast(self.stats[speed_stat]) });
+            stat_util.write(T, writer, cache, .{ .stamina = @intCast(self.stats[stamina_stat]) });
+            stat_util.write(T, writer, cache, .{ .intelligence = @intCast(self.stats[intelligence_stat]) });
+            stat_util.write(T, writer, cache, .{ .penetration = @intCast(self.stats[penetration_stat]) });
+            stat_util.write(T, writer, cache, .{ .piercing = @intCast(self.stats[piercing_stat]) });
+            stat_util.write(T, writer, cache, .{ .haste = @intCast(self.stats[haste_stat]) });
+            stat_util.write(T, writer, cache, .{ .tenacity = @intCast(self.stats[tenacity_stat]) });
 
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .strength_bonus = @intCast(self.stat_boosts[strength_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .wit_bonus = @intCast(self.stat_boosts[wit_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .defense_bonus = @intCast(self.stat_boosts[defense_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .resistance_bonus = @intCast(self.stat_boosts[resistance_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .speed_bonus = @intCast(self.stat_boosts[speed_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .stamina_bonus = @intCast(self.stat_boosts[stamina_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .intelligence_bonus = @intCast(self.stat_boosts[intelligence_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .penetration_bonus = @intCast(self.stat_boosts[penetration_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .piercing_bonus = @intCast(self.stat_boosts[piercing_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .haste_bonus = @intCast(self.stat_boosts[haste_stat]) });
-            stat_util.write(network_data.PlayerStat, allocator, writer, cache, .{ .tenacity_bonus = @intCast(self.stat_boosts[tenacity_stat]) });
+            stat_util.write(T, writer, cache, .{ .strength_bonus = @intCast(self.stat_boosts[strength_stat]) });
+            stat_util.write(T, writer, cache, .{ .wit_bonus = @intCast(self.stat_boosts[wit_stat]) });
+            stat_util.write(T, writer, cache, .{ .defense_bonus = @intCast(self.stat_boosts[defense_stat]) });
+            stat_util.write(T, writer, cache, .{ .resistance_bonus = @intCast(self.stat_boosts[resistance_stat]) });
+            stat_util.write(T, writer, cache, .{ .speed_bonus = @intCast(self.stat_boosts[speed_stat]) });
+            stat_util.write(T, writer, cache, .{ .stamina_bonus = @intCast(self.stat_boosts[stamina_stat]) });
+            stat_util.write(T, writer, cache, .{ .intelligence_bonus = @intCast(self.stat_boosts[intelligence_stat]) });
+            stat_util.write(T, writer, cache, .{ .penetration_bonus = @intCast(self.stat_boosts[penetration_stat]) });
+            stat_util.write(T, writer, cache, .{ .piercing_bonus = @intCast(self.stat_boosts[piercing_stat]) });
+            stat_util.write(T, writer, cache, .{ .haste_bonus = @intCast(self.stat_boosts[haste_stat]) });
+            stat_util.write(T, writer, cache, .{ .tenacity_bonus = @intCast(self.stat_boosts[tenacity_stat]) });
 
             inline for (0..self.inventory.len) |i| {
-                const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
+                const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? = 
                     @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_0) + @as(u8, i));
-                stat_util.write(
-                    network_data.PlayerStat,
-                    allocator,
-                    writer,
-                    cache,
-                    @unionInit(network_data.PlayerStat, @tagName(inv_tag), self.inventory[i]),
-                );
+                stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_tag), self.inventory[i]));
             }
         }
 

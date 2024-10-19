@@ -1,4 +1,5 @@
 const std = @import("std");
+const main = @import("../main.zig");
 const gen_behaviors = @import("../_gen_behavior_file_dont_use.zig");
 const shared = @import("shared");
 const utils = shared.utils;
@@ -82,7 +83,7 @@ pub const EnemyBehavior = Behavior(.enemy);
 pub var entity_behavior_map: std.AutoHashMapUnmanaged(u16, EntityBehavior) = .empty;
 pub var enemy_behavior_map: std.AutoHashMapUnmanaged(u16, EnemyBehavior) = .empty;
 
-pub fn init(allocator: std.mem.Allocator) !void {
+pub fn init() !void {
     inline for (gen_behaviors.behaviors) |import| {
         inline for (@typeInfo(import).@"struct".decls) |d| @"continue": {
             const behav = @field(import, d.name);
@@ -96,8 +97,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
             }).id;
 
             const res = try switch (metadata.type) {
-                .entity => entity_behavior_map.getOrPut(allocator, id),
-                .enemy => enemy_behavior_map.getOrPut(allocator, id),
+                .entity => entity_behavior_map.getOrPut(main.allocator, id),
+                .enemy => enemy_behavior_map.getOrPut(main.allocator, id),
             };
             if (res.found_existing)
                 std.log.err("The struct \"{s}\" overwrote the behavior for the object \"{s}\"", .{ @typeName(behav), metadata.name });
@@ -110,7 +111,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     }
 }
 
-pub fn deinit(allocator: std.mem.Allocator) void {
-    entity_behavior_map.deinit(allocator);
-    enemy_behavior_map.deinit(allocator);
+pub fn deinit() void {
+    entity_behavior_map.deinit(main.allocator);
+    enemy_behavior_map.deinit(main.allocator);
 }

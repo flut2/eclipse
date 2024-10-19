@@ -24,9 +24,6 @@ pub const c = @cImport({
 
 pub const tps_ms = 1000 / settings.tps;
 
-pub const read_buffer_size = 65535;
-pub const write_buffer_size = 65535;
-
 pub var client_pool: std.heap.MemoryPool(Client) = undefined;
 pub var socket_pool: std.heap.MemoryPool(uv.uv_tcp_t) = undefined;
 pub var game_timer: uv.uv_timer_t = undefined;
@@ -42,7 +39,7 @@ pub fn main() !void {
     utils.rng.seed(@intCast(std.time.microTimestamp()));
 
     const is_debug = builtin.mode == .Debug;
-    var gpa = if (is_debug) std.heap.GeneralPurposeAllocator(.{}){} else {};
+    var gpa = if (is_debug) std.heap.GeneralPurposeAllocator(.{}).init else {};
     defer _ = if (is_debug) gpa.deinit();
 
     try rpmalloc.init(null, .{});
@@ -57,21 +54,19 @@ pub fn main() !void {
         break :blk tracy_alloc.allocator();
     } else child_allocator;
 
-    behavior_logic.allocator = allocator;
-
     try game_data.init(allocator);
     defer game_data.deinit();
 
-    try behavior.init(allocator);
-    defer behavior.deinit(allocator);
+    try behavior.init();
+    defer behavior.deinit();
 
-    try maps.init(allocator);
+    try maps.init();
     defer maps.deinit();
 
-    try db.init(allocator);
+    try db.init();
     defer db.deinit();
 
-    try login.init(allocator);
+    try login.init();
     defer login.deinit();
 
     client_pool = std.heap.MemoryPool(Client).init(allocator);
@@ -87,9 +82,7 @@ pub fn main() !void {
     defer game_thread.join();
 
     const stdin = std.io.getStdIn().reader();
-    if (try stdin.readUntilDelimiterOrEofAlloc(allocator, '\n', 1024)) |dummy| {
-        allocator.free(dummy);
-    }
+    if (try stdin.readUntilDelimiterOrEofAlloc(allocator, '\n', 1024)) |dummy| allocator.free(dummy);
 }
 
 fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.C) void {

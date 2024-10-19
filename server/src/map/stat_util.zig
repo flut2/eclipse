@@ -1,11 +1,11 @@
 const std = @import("std");
+const main = @import("../main.zig");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 
 pub fn write(
     comptime StatType: type,
-    allocator: std.mem.Allocator,
     writer: *utils.PacketWriter,
     cache: *[@typeInfo(StatType).@"union".fields.len]?StatType,
     value: StatType,
@@ -27,8 +27,8 @@ pub fn write(
                 !is_condition and !is_array and !is_slice and @field(cache[tag_id].?, @tagName(tag)) == inner_value))
                 return;
 
-            writer.write(@intFromEnum(tag), allocator);
-            writer.write(inner_value, allocator);
+            writer.write(@intFromEnum(tag), main.allocator);
+            writer.write(inner_value, main.allocator);
 
             if (cache[tag_id]) |*cache_field| {
                 @field(cache_field.*, @tagName(tag)) = inner_value;
