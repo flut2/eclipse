@@ -1,6 +1,5 @@
 const std = @import("std");
 const build_options = @import("options");
-const settings = @import("settings.zig");
 const db = @import("db.zig");
 const httpz = @import("httpz");
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
@@ -28,7 +27,7 @@ var handlers: Handlers = .{};
 var server: httpz.Server(Handlers) = undefined;
 
 pub fn init() !void {
-    server = try .init(main.allocator, .{ .port = settings.login_port }, handlers);
+    server = try .init(main.allocator, .{ .port = main.settings.login_port }, handlers);
 
     var router = server.router(.{});
     router.post("/account/verify", handleAccountVerify, .{});
@@ -145,9 +144,9 @@ fn handleAccountRegister(_: Handlers, req: *httpz.Request, res: *httpz.Response)
         .max_chars = try acc_data.get(.max_char_slots),
         .characters = &.{},
         .servers = &.{.{
-            .name = settings.server_name,
-            .ip = settings.public_ip,
-            .port = settings.game_port,
+            .name = main.settings.server_name,
+            .ip = main.settings.public_ip,
+            .port = main.settings.game_port,
             .max_players = 500,
             .admin_only = false,
         }}, // TODO: multi-server support
@@ -232,9 +231,9 @@ fn handleAccountVerify(_: Handlers, req: *httpz.Request, res: *httpz.Response) !
         .max_chars = try acc_data.get(.max_char_slots),
         .characters = char_list.items,
         .servers = &.{.{
-            .name = settings.server_name,
-            .ip = settings.public_ip,
-            .port = settings.game_port,
+            .name = main.settings.server_name,
+            .ip = main.settings.public_ip,
+            .port = main.settings.game_port,
             .max_players = 500,
             .admin_only = false,
         }}, // TODO: multi-server support
@@ -311,9 +310,9 @@ fn handleCharList(_: Handlers, req: *httpz.Request, res: *httpz.Response) !void 
         .max_chars = try acc_data.get(.max_char_slots),
         .characters = char_list.items,
         .servers = &.{.{
-            .name = settings.server_name,
-            .ip = settings.public_ip,
-            .port = settings.game_port,
+            .name = main.settings.server_name,
+            .ip = main.settings.public_ip,
+            .port = main.settings.game_port,
             .max_players = 500,
             .admin_only = false,
         }}, // TODO: multi-server support

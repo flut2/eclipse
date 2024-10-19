@@ -4,7 +4,6 @@ const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const uv = shared.uv;
-const settings = @import("settings.zig");
 const main = @import("main.zig");
 const builtin = @import("builtin");
 const db = @import("db.zig");
@@ -383,7 +382,7 @@ pub const Client = struct {
             return;
         }
 
-        if (!std.mem.eql(u8, data.build_ver, settings.build_version)) {
+        if (!std.mem.eql(u8, data.build_ver, main.settings.build_version)) {
             self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Incorrect version" } });
             return;
         }
@@ -622,7 +621,7 @@ pub const Client = struct {
             return;
         }
 
-        if (!std.mem.eql(u8, data.build_ver, settings.build_version)) {
+        if (!std.mem.eql(u8, data.build_ver, main.settings.build_version)) {
             self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Incorrect version" } });
             return;
         }

@@ -17,19 +17,17 @@ pub const BehaviorMetadata = struct {
 fn getMetadata(comptime T: type) BehaviorMetadata {
     if (!@inComptime()) @compileError("This function is comptime-only");
 
-    var ret: BehaviorMetadata = undefined;
-    var found_metadata = false;
+    var ret: ?BehaviorMetadata = null;
     for (@typeInfo(T).@"struct".decls) |decl| @"continue": {
         if (!std.mem.eql(u8, decl.name, "data")) break :@"continue";
         const metadata = @field(T, decl.name);
         if (@TypeOf(metadata) != BehaviorMetadata) continue;
-        if (found_metadata) @compileError("Duplicate behavior metadata");
+        if (ret != null) @compileError("Duplicate behavior metadata");
         ret = metadata;
-        found_metadata = true;
     }
 
-    if (!found_metadata) @compileError("No behavior metadata found");
-    return ret;
+    if (ret == null) @compileError("No behavior metadata found");
+    return ret.?;
 }
 
 fn Behavior(comptime behav_type: BehaviorType) type {

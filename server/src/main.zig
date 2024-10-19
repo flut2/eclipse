@@ -2,7 +2,6 @@ const std = @import("std");
 const build_options = @import("options");
 const db = @import("db.zig");
 const login = @import("login.zig");
-const settings = @import("settings.zig");
 const builtin = @import("builtin");
 const tracy = if (build_options.enable_tracy) @import("tracy") else {};
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
@@ -15,14 +14,13 @@ const behavior = @import("logic/behavior.zig");
 const behavior_logic = @import("logic/logic.zig");
 
 const Client = @import("client.zig").Client;
+const Settings = @import("Settings.zig");
 
 pub const c = @cImport({
     @cDefine("REDIS_OPT_NONBLOCK", {});
     @cDefine("REDIS_OPT_REUSEADDR", {});
     @cInclude("hiredis.h");
 });
-
-pub const tps_ms = 1000 / settings.tps;
 
 pub var client_pool: std.heap.MemoryPool(Client) = undefined;
 pub var socket_pool: std.heap.MemoryPool(uv.uv_tcp_t) = undefined;
@@ -32,6 +30,7 @@ pub var login_thread: std.Thread = undefined;
 pub var game_thread: std.Thread = undefined;
 pub var tick_id: u8 = 0;
 pub var current_time: i64 = -1;
+pub var settings: Settings = .{};
 
 pub fn main() !void {
     if (build_options.enable_tracy) tracy.SetThreadName("Main");
@@ -50,9 +49,12 @@ pub fn main() !void {
         else => rpmalloc.allocator(),
     };
     allocator = if (build_options.enable_tracy) blk: {
-        var tracy_alloc = tracy.TracyAllocator.init(child_allocator);
+        var tracy_alloc: tracy.TracyAllocator = .init(child_allocator);
         break :blk tracy_alloc.allocator();
     } else child_allocator;
+
+    settings = try .init(allocator);
+    defer Settings.deinit();
 
     try game_data.init(allocator);
     defer game_data.deinit();
@@ -69,16 +71,16 @@ pub fn main() !void {
     try login.init();
     defer login.deinit();
 
-    client_pool = std.heap.MemoryPool(Client).init(allocator);
+    client_pool = .init(allocator);
     defer client_pool.deinit();
 
-    socket_pool = std.heap.MemoryPool(uv.uv_tcp_t).init(allocator);
+    socket_pool = .init(allocator);
     defer socket_pool.deinit();
 
-    login_thread = try std.Thread.spawn(.{}, login.tick, .{});
+    login_thread = try .spawn(.{}, login.tick, .{});
     defer login_thread.join();
 
-    game_thread = try std.Thread.spawn(.{}, gameTick, .{});
+    game_thread = try .spawn(.{}, gameTick, .{});
     defer game_thread.join();
 
     const stdin = std.io.getStdIn().reader();
@@ -191,7 +193,7 @@ pub fn gameTick() !void {
     const timer_init_status = uv.uv_timer_init(uv.uv_default_loop(), @ptrCast(&game_timer));
     if (timer_init_status != 0)
         std.debug.panic("Timer init failed: {s}", .{uv.uv_strerror(timer_init_status)});
-    const timer_start_status = uv.uv_timer_start(@ptrCast(&game_timer), timerCallback, 0, tps_ms);
+    const timer_start_status = uv.uv_timer_start(@ptrCast(&game_timer), timerCallback, 0, std.time.ms_per_s / settings.tps);
     if (timer_start_status != 0)
         std.debug.panic("Timer start failed: {s}", .{uv.uv_strerror(timer_start_status)});
 

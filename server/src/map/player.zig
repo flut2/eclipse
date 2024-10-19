@@ -5,7 +5,6 @@ const utils = shared.utils;
 const network_data = shared.network_data;
 const db = @import("../db.zig");
 const main = @import("../main.zig");
-const settings = @import("../settings.zig");
 const client = @import("../client.zig");
 const stat_util = @import("stat_util.zig");
 

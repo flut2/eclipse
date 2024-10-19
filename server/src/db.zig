@@ -1,5 +1,4 @@
 const std = @import("std");
-const settings = @import("settings.zig");
 const builtin = @import("builtin");
 const network_data = @import("shared").network_data;
 const main = @import("main.zig");
@@ -366,7 +365,11 @@ fn redisCommand(ctx: [*c]c.redisContext, format: [*c]const u8, args: anytype) ?*
 }
 
 pub fn init() !void {
-    context = c.redisConnect(settings.redis_ip, settings.redis_port) orelse return error.OutOfMemory;
+    var buf: [40]u8 = undefined;
+    context = c.redisConnect(
+        std.fmt.bufPrintZ(&buf, "{s}", .{main.settings.redis_ip}) catch @panic("Invalid IP size"),
+        main.settings.redis_port,
+    ) orelse return error.OutOfMemory;
     if (context.err != 0) {
         std.log.err("Redis connection error: {s}", .{context.errstr});
         return error.ConnectionError;
