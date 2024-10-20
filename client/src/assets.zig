@@ -189,7 +189,7 @@ const AudioState = struct {
     device: *zaudio.Device,
     engine: *zaudio.Engine,
 
-    fn audioCallback(device: *zaudio.Device, output: ?*anyopaque, _: ?*const anyopaque, num_frames: u32) callconv (.C) void {
+    fn audioCallback(device: *zaudio.Device, output: ?*anyopaque, _: ?*const anyopaque, num_frames: u32) callconv(.C) void {
         const audio: *AudioState = @ptrCast(@alignCast(device.getUserData()));
         audio.engine.readPcmFrames(output.?, num_frames, null) catch {};
     }
@@ -1114,7 +1114,7 @@ pub fn init() !void {
     try addImage("generic_8x8", "generic_8x8.png", 8, 8, true, &ctx);
     try addImage("particles", "particles.png", 8, 8, false, &ctx);
 
-    try addWall("walls", "walls.png", 11, 17, 9, 15, &ctx);
+    try addWall("walls", "walls.png", 11, 20, 9, 18, &ctx);
 
     try addAnimEnemy("low_realm", "low_realm.png", 10, 10, &ctx);
     try addAnimEnemy("low_realm_big", "low_realm_big.png", 18, 18, &ctx);

@@ -70,5 +70,109 @@
             }
         ],
         "blend_prio": 2
+    },
+    {
+        "id": 5,
+        "name": "Retrieve Metal Plating 1",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 5
+            },
+            {
+                "sheet": "ground",
+                "index": 5
+            },
+            {
+                "sheet": "ground",
+                "index": 5
+            },
+            {
+                "sheet": "ground",
+                "index": 6
+            }
+        ],
+        "blend_prio": 1
+    },
+    {
+        "id": 6,
+        "name": "Retrieve Metal Plating 2",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 7
+            },
+            {
+                "sheet": "ground",
+                "index": 8
+            },
+            {
+                "sheet": "ground",
+                "index": 8
+            },
+            {
+                "sheet": "ground",
+                "index": 8
+            }
+        ],
+        "blend_prio": 1
+    },
+    {
+        "id": 7,
+        "name": "Retrieve Air Vent",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 9
+            },
+            {
+                "sheet": "ground",
+                "index": 10
+            },
+            {
+                "sheet": "ground",
+                "index": 10
+            },
+            {
+                "sheet": "ground",
+                "index": 10
+            }
+        ],
+        "blend_prio": 1
+    },
+    {
+        "id": 8,
+        "name": "Retrieve Metal Tile",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 12
+            },
+            {
+                "sheet": "ground",
+                "index": 12
+            },
+            {
+                "sheet": "ground",
+                "index": 12
+            },
+            {
+                "sheet": "ground",
+                "index": 12
+            },
+            {
+                "sheet": "ground",
+                "index": 13
+            },
+            {
+                "sheet": "ground",
+                "index": 13
+            },
+            {
+                "sheet": "ground",
+                "index": 11
+            }
+        ],
+        "blend_prio": 1
     }
 ]

@@ -190,7 +190,7 @@
     },
     {
         "id": 11,
-        "name": "Wall Test",
+        "name": "Retrieve Sheet Metal Wall",
         "textures": [
             {
                 "sheet": "walls",
@@ -198,5 +198,326 @@
             }
         ],
         "is_wall": true
+    },
+    {
+        "id": 12,
+        "name": "Retrieve Electronic Wall Off",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 1
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 13,
+        "name": "Retrieve Electronic Wall On",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 2
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 14,
+        "name": "Retrieve Electronic Pillar 1",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 3
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 15,
+        "name": "Retrieve Electronic Pillar 2",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 4
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 16,
+        "name": "Retrieve Electronic Pillar 3",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 5
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 17,
+        "name": "Retrieve Terminal Off",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 6
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 18,
+        "name": "Retrieve Terminal Blue",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 7
+            }
+        ],
+        "animation":{
+            "period": 3,
+            "frames":[
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 7
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 8
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 9
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 10
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 11
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 12
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 13
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 14
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 15
+                    }
+                }
+                
+
+            ]
+        },
+        "is_wall": true
+    },
+    {
+        "id": 19,
+        "name": "Retrieve Terminal Green",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 16
+            }
+        ],
+        "animation":{
+            "period": 3,
+            "frames":[
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 16
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 17
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 18
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 19
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 20
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 21
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 22
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 23
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 24
+                    }
+                }
+                
+
+            ]
+        },
+        "is_wall": true
+    },
+    {
+        "id": 20,
+        "name": "Retrieve Terminal Red",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 25
+            }
+        ],
+        "animation":{
+            "period": 3,
+            "frames":[
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 25
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 26
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 27
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 28
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 29
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 30
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 31
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 32
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 33
+                    }
+                }
+                
+
+            ]
+        },
+        "is_wall": true
+    },
+    {
+        "id": 21,
+        "name": "Retrieve Terminal Error",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 34
+            }
+        ],
+        "is_wall": true
     }
+
 ]
