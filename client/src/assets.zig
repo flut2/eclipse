@@ -1122,6 +1122,7 @@ pub fn init() !void {
     try addAnimEnemy("mid_realm_big", "mid_realm_big.png", 16, 16, &ctx);
     try addAnimPlayer("players", "players.png", 10, 10, &ctx);
     try addAnimPlayer("player_skins", "player_skins.png", 8, 8, &ctx);
+    try addAnimEnemy("misc_chars_big", "misc_chars_big.png", 18, 18, &ctx);
 
     // try zstbi.Image.writeToFile(atlas, "atlas.png", .png);
 
@@ -1219,7 +1220,7 @@ pub fn init() !void {
     try addUiImage("scroll_wheel_press", "scroll_wheel_press.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("scrollbar_decor", "scrollbar_decor.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("stats_button", "stats_button.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("ability_icons", "ability_icons.png", 44, 44, &ui_ctx);
+    try addUiImage("ability_icons", "ability_icons.png", 22, 22, &ui_ctx);
     try addUiImage("speech_balloons", "speech_balloons.png", 65, 45, &ui_ctx);
     try addUiImage("key_indicators", "key_indicators.png", 100, 100, &ui_ctx);
 
