@@ -1095,7 +1095,7 @@ pub fn init() !void {
     defer ctx.deinit();
 
     try addImage("light", "light.png", 128, 128, false, &ctx);
-    try addImage("bars", "bars.png", 24, 8, false, &ctx);
+    try addImage("bars", "bars.png", 26, 8, false, &ctx);
     try addImage("conditions", "conditions.png", 16, 16, false, &ctx);
     try addImage("error_texture", "error_texture.png", 8, 8, false, &ctx);
     try addImage("invisible", "invisible.png", 8, 8, true, &ctx);
