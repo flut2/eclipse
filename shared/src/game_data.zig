@@ -115,6 +115,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try parseGeneric(arena_allocator, "./assets/data/portals.json", PortalData, &portal);
     try parseGeneric(arena_allocator, "./assets/data/regions.json", RegionData, &region);
     try parseGeneric(arena_allocator, "./assets/data/purchasables.json", PurchasableData, &purchasable);
+    try parseGeneric(arena_allocator, "./assets/data/walls.json", EntityData, &entity);
 
     // Must be last to resolve item name->id
     try parseClasses(arena_allocator, "./assets/data/classes.json");
