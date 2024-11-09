@@ -5,10 +5,10 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 
-const Entity = @import("../map/entity.zig").Entity;
-const Enemy = @import("../map/enemy.zig").Enemy;
+const Entity = @import("../map/Entity.zig");
+const Enemy = @import("../map/Enemy.zig");
 
-const BehaviorType = enum { entity, enemy };
+const BehaviorType = enum { entity, enemy, ally };
 pub const BehaviorMetadata = struct {
     type: BehaviorType,
     name: []const u8,
@@ -77,9 +77,11 @@ fn Behavior(comptime behav_type: BehaviorType) type {
 
 pub const EntityBehavior = Behavior(.entity);
 pub const EnemyBehavior = Behavior(.enemy);
+pub const AllyBehavior = Behavior(.ally);
 
 pub var entity_behavior_map: std.AutoHashMapUnmanaged(u16, EntityBehavior) = .empty;
 pub var enemy_behavior_map: std.AutoHashMapUnmanaged(u16, EnemyBehavior) = .empty;
+pub var ally_behavior_map: std.AutoHashMapUnmanaged(u16, AllyBehavior) = .empty;
 
 pub fn init() !void {
     inline for (gen_behaviors.behaviors) |import| {
@@ -89,6 +91,7 @@ pub fn init() !void {
             const id = (switch (metadata.type) {
                 .entity => game_data.entity.from_name.get(metadata.name),
                 .enemy => game_data.enemy.from_name.get(metadata.name),
+                .ally => game_data.ally.from_name.get(metadata.name),
             } orelse {
                 std.log.err("Adding behavior for \"{s}\" failed: object not found", .{metadata.name});
                 break :@"continue";
@@ -97,6 +100,7 @@ pub fn init() !void {
             const res = try switch (metadata.type) {
                 .entity => entity_behavior_map.getOrPut(main.allocator, id),
                 .enemy => enemy_behavior_map.getOrPut(main.allocator, id),
+                .ally => ally_behavior_map.getOrPut(main.allocator, id),
             };
             if (res.found_existing)
                 std.log.err("The struct \"{s}\" overwrote the behavior for the object \"{s}\"", .{ @typeName(behav), metadata.name });
@@ -104,6 +108,7 @@ pub fn init() !void {
             res.value_ptr.* = @unionInit(switch (metadata.type) {
                 .entity => EntityBehavior,
                 .enemy => EnemyBehavior,
+                .ally => AllyBehavior,
             }, std.fmt.comptimePrint("{d}", .{utils.typeId(behav)}), .{});
         }
     }
@@ -112,4 +117,5 @@ pub fn init() !void {
 pub fn deinit() void {
     entity_behavior_map.deinit(main.allocator);
     enemy_behavior_map.deinit(main.allocator);
+    ally_behavior_map.deinit(main.allocator);
 }

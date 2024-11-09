@@ -1,0 +1,23 @@
+[
+    {
+        "id": 0,
+        "name": "Boulder Buddy",
+        "health": 3600,
+        "defense": 25,
+        "resistance": 5,
+        "textures": [
+            {
+                "sheet": "misc_chars",
+                "index": 7
+            },
+            {
+                "sheet": "misc_chars",
+                "index": 8
+            },
+            {
+                "sheet": "misc_chars",
+                "index": 9
+            }
+        ]
+    }
+]

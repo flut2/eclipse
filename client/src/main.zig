@@ -57,6 +57,7 @@ pub export var NvOptimusEnablement: c_int = 1;
 pub export var AmdPowerXpressRequestHighPerformance: c_int = 1;
 
 pub var ctx: *gpu.GraphicsContext = undefined;
+pub var window: *glfw.Window = undefined;
 pub var account_arena_allocator: std.mem.Allocator = undefined;
 pub var asset_arena_allocator: std.mem.Allocator = undefined;
 pub var current_account: ?AccountData = null;
@@ -106,8 +107,7 @@ fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
 
 // lock ui_systems.ui_lock before calling (UI already does this implicitly)
 pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_data_id: u16) void {
-    if (current_account == null)
-        return;
+    if (current_account == null) return;
 
     // TODO: readd RLS when fixed
     server.hello_data = network_data.C2SPacket{ .hello = .{
@@ -125,8 +125,7 @@ pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_d
 }
 
 pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_map: []u8) void {
-    if (current_account == null)
-        return;
+    if (current_account == null) return;
 
     // TODO: readd RLS when fixed
     server.hello_data = network_data.C2SPacket{ .map_hello = .{
@@ -240,8 +239,7 @@ fn renderTick() !void {
     }
 }
 
-fn gameTick(idle: [*c]uv.uv_idle_t) callconv (.C) void {
-    var window: *glfw.Window = @ptrCast(@alignCast(idle.*.data));
+fn gameTick(_: [*c]uv.uv_idle_t) callconv (.C) void {
     if (window.shouldClose()) {
         @branchHint(.unlikely);
         uv.uv_stop(@ptrCast(main_loop));
@@ -351,7 +349,7 @@ pub fn main() !void {
     defer input.deinit();
 
     glfw.windowHintTyped(.client_api, .no_api);
-    const window = try glfw.Window.create(1280, 720, "Eclipse", null);
+    window = try glfw.Window.create(1280, 720, "Eclipse", null);
     defer window.destroy();
     window.setSizeLimits(1280, 720, -1, -1);
     window.setCursor(switch (settings.cursor_type) {
@@ -436,7 +434,7 @@ pub fn main() !void {
             character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, account_arena_allocator, response, .{ .allocate = .alloc_always }) catch {
                 ui_systems.ui_lock.lock();
                 defer ui_systems.ui_lock.unlock();
-                ui_systems.switchScreen(.main_menu);
+                ui_systems.switchScreen(.editor);
                 break :enterGame;
             };
             if (character_list.?.characters.len == 0) {
@@ -459,7 +457,6 @@ pub fn main() !void {
         std.log.err("Idle creation error: {s}", .{uv.uv_strerror(loop_status)});
         return error.NoIdle;
     }
-    idler.data = window;
 
     const idle_start_status = uv.uv_idle_start(&idler, gameTick);
     if (idle_start_status != 0) {

@@ -171,16 +171,16 @@ pub fn draw(self: *Dropdown, cam_data: render.CameraData, x_offset: f32, y_offse
         .nine_slice => |nine_slice| .{ nine_slice.w, nine_slice.h },
         .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
     };
-    self.title_data.draw(base_x, base_y);
+    self.title_data.draw(base_x, base_y, self.base.scissor);
 
     render.drawText(base_x, base_y, 1.0, &self.title_text, self.base.scissor);
 
     const toggled = self.toggled;
     const button_image_data = (if (toggled) self.button_data_extended else self.button_data_collapsed).current(self.button_state);
-    button_image_data.draw(base_x + title_w, base_y);
+    button_image_data.draw(base_x + title_w, base_y, self.base.scissor);
 
     if (self.toggled and self.container.base.visible) {
-        self.background_data.draw(base_x, base_y + title_h);
+        self.background_data.draw(base_x, base_y + title_h, self.base.scissor);
 
         self.lock.lock();
         defer self.lock.unlock();

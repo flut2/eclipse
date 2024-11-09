@@ -85,7 +85,7 @@ pub fn deinit(self: *Button) void {
 
 pub fn draw(self: *Button, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
-    self.image_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset);
+    self.image_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
     if (self.text_data) |*text_data| render.drawText(
         self.base.x + x_offset,
         self.base.y + y_offset,

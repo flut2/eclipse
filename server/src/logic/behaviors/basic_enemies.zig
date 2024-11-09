@@ -3,8 +3,8 @@ const loot = @import("../loot.zig");
 const logic = @import("../logic.zig");
 
 const Metadata = @import("../behavior.zig").BehaviorMetadata;
-const Enemy = @import("../../map/enemy.zig").Enemy;
-const Entity = @import("../../map/entity.zig").Entity;
+const Enemy = @import("../../map/Enemy.zig");
+const Entity = @import("../../map/Entity.zig");
 
 pub const Crocodile = struct {
     pub const data: Metadata = .{
@@ -20,7 +20,6 @@ pub const Crocodile = struct {
         if (!logic.follow(@src(), host, dt, .{
             .speed = 3.0,
             .acquire_range = 9.0,
-            .range = 2.0,
             .cooldown = 2.0 * std.time.us_per_s,
         })) logic.wander(@src(), host, dt, 2.5);
 
@@ -335,7 +334,6 @@ pub const JackalArcher = struct {
         if (!logic.follow(@src(), host, dt, .{
             .speed = 3.0,
             .acquire_range = 9.0,
-            .range = 2.0,
             .cooldown = 1.0 * std.time.us_per_s,
         })) logic.wander(@src(), host, dt, 2.5);
 
@@ -363,7 +361,6 @@ pub const RegalMummy = struct {
         if (!logic.follow(@src(), host, dt, .{
             .speed = 3.0,
             .acquire_range = 9.0,
-            .range = 2.0,
             .cooldown = 1.0 * std.time.us_per_s,
         })) logic.wander(@src(), host, dt, 2.5);
 

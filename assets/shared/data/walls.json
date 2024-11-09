@@ -1,0 +1,619 @@
+[
+    {
+        "id": 1000,
+        "name": "Retrieve Sheet Metal Wall",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 0
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 1001,
+        "name": "Retrieve Electronic Wall Off",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 1
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 1002,
+        "name": "Retrieve Electronic Wall On",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 2
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 1003,
+        "name": "Retrieve Electronic Pillar 1",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 3
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 1004,
+        "name": "Retrieve Electronic Pillar 2",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 4
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 1005,
+        "name": "Retrieve Electronic Pillar 3",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 5
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 1006,
+        "name": "Retrieve Terminal Off",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 6
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 1007,
+        "name": "Retrieve Terminal Blue",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 7
+            }
+        ],
+        "animation":{
+            "period": 3,
+            "frames":[
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 7
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 8
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 9
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 10
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 11
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 12
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 13
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 14
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 15
+                    }
+                }
+                
+
+            ]
+        },
+        "is_wall": true
+    },
+    {
+        "id": 1008,
+        "name": "Retrieve Terminal Green",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 16
+            }
+        ],
+        "animation":{
+            "period": 3,
+            "frames":[
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 16
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 17
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 18
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 19
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 20
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 21
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 22
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 23
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 24
+                    }
+                }
+                
+
+            ]
+        },
+        "is_wall": true
+    },
+    {
+        "id": 1009,
+        "name": "Retrieve Terminal Red",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 25
+            }
+        ],
+        "animation":{
+            "period": 3,
+            "frames":[
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 25
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 26
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 27
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 28
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 29
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 30
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 31
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 32
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 33
+                    }
+                }
+                
+
+            ]
+        },
+        "is_wall": true
+    },
+    {
+        "id": 1010,
+        "name": "Retrieve Terminal Error",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 34
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 1011,
+        "name": "Crimson Chasm Breakable Wall 1",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 35
+            }
+        ],
+        "is_wall": true,
+        "defense": 10,
+        "resistance": 10,
+        "health": 500
+    },
+    {
+        "id": 1012,
+        "name": "Crimson Chasm Breakable Wall 2",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 80
+            }
+        ],
+        "is_wall": true,
+        "defense": 10,
+        "resistance": 10,
+        "health": 500
+    },
+    {
+        "id": 1013,
+        "name": "Crimson Chasm Candle Wall 1",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 36
+            }
+        ],
+        "animation":{
+            "period": 3,
+            "frames":[
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 36
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 37
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 38
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 39
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 40
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 41
+                    }
+                }
+            ]
+        },
+        "is_wall": true
+    },
+    {
+        "id": 1014,
+        "name": "Crimson Chasm Candle Wall 2",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 42
+            }
+        ],
+        "animation":{
+            "period": 3,
+            "frames":[
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 42
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 43
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 44
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 45
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 46
+                    }
+                },
+                {
+                    "time": 0.3,
+                    "texture": {
+                        "sheet": "walls",
+                        "index": 47
+                    }
+                }
+            ]
+        },
+        "is_wall": true
+    },
+    {
+        "id": 1015,
+        "name": "Crimson Chasm Wall",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 48
+            },
+            {
+                "sheet": "walls",
+                "index": 49
+            },
+            {
+                "sheet": "walls",
+                "index": 50
+            },
+            {
+                "sheet": "walls",
+                "index": 51
+            },
+            {
+                "sheet": "walls",
+                "index": 52
+            },
+            {
+                "sheet": "walls",
+                "index": 53
+            },
+            {
+                "sheet": "walls",
+                "index": 54
+            },
+            {
+                "sheet": "walls",
+                "index": 55
+            },
+            {
+                "sheet": "walls",
+                "index": 56
+            },
+            {
+                "sheet": "walls",
+                "index": 57
+            },
+            {
+                "sheet": "walls",
+                "index": 58
+            },
+            {
+                "sheet": "walls",
+                "index": 59
+            },
+            {
+                "sheet": "walls",
+                "index": 60
+            },
+            {
+                "sheet": "walls",
+                "index": 61
+            },
+            {
+                "sheet": "walls",
+                "index": 62
+            },
+            {
+                "sheet": "walls",
+                "index": 63
+            }
+        ],
+        "is_wall": true
+    },
+    {
+        "id": 1016,
+        "name": "Crimson Chasm Wall Fiery",
+        "textures": [
+            {
+                "sheet": "walls",
+                "index": 64
+            },
+            {
+                "sheet": "walls",
+                "index": 65
+            },
+            {
+                "sheet": "walls",
+                "index": 66
+            },
+            {
+                "sheet": "walls",
+                "index": 67
+            },
+            {
+                "sheet": "walls",
+                "index": 68
+            },
+            {
+                "sheet": "walls",
+                "index": 69
+            },
+            {
+                "sheet": "walls",
+                "index": 70
+            },
+            {
+                "sheet": "walls",
+                "index": 71
+            },
+            {
+                "sheet": "walls",
+                "index": 72
+            },
+            {
+                "sheet": "walls",
+                "index": 73
+            },
+            {
+                "sheet": "walls",
+                "index": 74
+            },
+            {
+                "sheet": "walls",
+                "index": 75
+            },
+            {
+                "sheet": "walls",
+                "index": 76
+            },
+            {
+                "sheet": "walls",
+                "index": 77
+            },
+            {
+                "sheet": "walls",
+                "index": 78
+            },
+            {
+                "sheet": "walls",
+                "index": 79
+            }
+        ],
+        "is_wall": true
+    }
+]

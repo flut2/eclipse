@@ -11,14 +11,15 @@ const particles = @import("particles.zig");
 const systems = @import("../ui/systems.zig");
 const assets = @import("../assets.zig");
 
-const Square = @import("square.zig").Square;
-const Player = @import("player.zig").Player;
-const Projectile = @import("projectile.zig").Projectile;
-const Entity = @import("entity.zig").Entity;
-const Enemy = @import("enemy.zig").Enemy;
-const Container = @import("container.zig").Container;
-const Portal = @import("portal.zig").Portal;
-const Purchasable = @import("purchasable.zig").Purchasable;
+const Square = @import("Square.zig");
+const Player = @import("Player.zig");
+const Projectile = @import("Projectile.zig");
+const Entity = @import("Entity.zig");
+const Enemy = @import("Enemy.zig");
+const Container = @import("Container.zig");
+const Portal = @import("Portal.zig");
+const Purchasable = @import("Purchasable.zig");
+const Ally = @import("Ally.zig");
 
 const day_cycle: i32 = 10 * std.time.us_per_min;
 const day_cycle_half: f32 = @as(f32, day_cycle) / 2;
@@ -34,6 +35,7 @@ pub var use_lock: struct {
     particle: std.Thread.Mutex = .{},
     particle_effect: std.Thread.Mutex = .{},
     purchasable: std.Thread.Mutex = .{},
+    ally: std.Thread.Mutex = .{},
 } = .{};
 pub var list: struct {
     player: std.ArrayListUnmanaged(Player) = .empty,
@@ -45,6 +47,7 @@ pub var list: struct {
     particle: std.ArrayListUnmanaged(particles.Particle) = .empty,
     particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
     purchasable: std.ArrayListUnmanaged(Purchasable) = .empty,
+    ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
 pub var add_list: struct {
     player: std.ArrayListUnmanaged(Player) = .empty,
@@ -56,6 +59,7 @@ pub var add_list: struct {
     particle: std.ArrayListUnmanaged(particles.Particle) = .empty,
     particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
     purchasable: std.ArrayListUnmanaged(Purchasable) = .empty,
+    ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
 pub var remove_list: struct {
     player: std.ArrayListUnmanaged(usize) = .empty,
@@ -67,6 +71,7 @@ pub var remove_list: struct {
     particle: std.ArrayListUnmanaged(usize) = .empty,
     particle_effect: std.ArrayListUnmanaged(usize) = .empty,
     purchasable: std.ArrayListUnmanaged(usize) = .empty,
+    ally: std.ArrayListUnmanaged(usize) = .empty,
 } = .{};
 
 pub var interactive: struct {
@@ -94,6 +99,7 @@ pub fn useLockForType(comptime T: type) *std.Thread.Mutex {
         particles.Particle => &use_lock.particle,
         particles.ParticleEffect => &use_lock.particle_effect,
         Purchasable => &use_lock.purchasable,
+        Ally => &use_lock.ally,
         else => @compileError("Invalid type"),
     };
 }
@@ -109,6 +115,7 @@ pub fn listForType(comptime T: type) *std.ArrayListUnmanaged(T) {
         particles.Particle => &list.particle,
         particles.ParticleEffect => &list.particle_effect,
         Purchasable => &list.purchasable,
+        Ally => &list.ally,
         else => @compileError("Invalid type"),
     };
 }
@@ -124,6 +131,7 @@ pub fn addListForType(comptime T: type) *std.ArrayListUnmanaged(T) {
         particles.Particle => &add_list.particle,
         particles.ParticleEffect => &add_list.particle_effect,
         Purchasable => &add_list.purchasable,
+        Ally => &add_list.ally,
         else => @compileError("Invalid type"),
     };
 }
@@ -139,6 +147,7 @@ pub fn removeListForType(comptime T: type) *std.ArrayListUnmanaged(usize) {
         particles.Particle => &remove_list.particle,
         particles.ParticleEffect => &remove_list.particle_effect,
         Purchasable => &remove_list.purchasable,
+        Ally => &remove_list.ally,
         else => @compileError("Invalid type"),
     };
 }
@@ -345,7 +354,18 @@ pub fn update(time: i64, dt: f32) void {
     const cam_min_y: f32 = @floatFromInt(main.camera.min_y);
     const cam_max_y: f32 = @floatFromInt(main.camera.max_y);
 
-    inline for (.{ Entity, Enemy, Player, Portal, Projectile, Container, particles.Particle, particles.ParticleEffect, Purchasable }) |ObjType| {
+    inline for (.{
+        Entity,
+        Enemy,
+        Player,
+        Portal,
+        Projectile,
+        Container,
+        particles.Particle,
+        particles.ParticleEffect,
+        Purchasable,
+        Ally,
+    }) |ObjType| {
         var obj_lock = useLockForType(ObjType);
         obj_lock.lock();
         defer obj_lock.unlock();
@@ -463,6 +483,7 @@ pub fn update(time: i64, dt: f32) void {
                     obj_remove_list.append(main.allocator, i) catch @panic("Removing particle effect failed"),
                 Entity => obj.update(time),
                 Enemy => obj.update(time, dt),
+                Ally => obj.update(time, dt),
                 else => @compileError("Invalid type"),
             }
         }
@@ -572,8 +593,7 @@ pub fn takeDamage(
     conditions: utils.Condition,
     proj_colors: []const u32,
 ) void {
-    if (self.dead)
-        return;
+    if (self.dead) return;
 
     if (damage >= self.hp) {
         self.dead = true;
@@ -608,51 +628,34 @@ pub fn takeDamage(
 
                 self.condition.set(eff, true);
 
-                // element.StatusText.add(.{
-                //     .obj_type = switch (@TypeOf(self.*)) {
-                //         Entity => .entity,
-                //         Enemy => .enemy,
-                //         Player => .player,
-                //         else => @compileError("Invalid type"),
-                //     },
-                //     .map_id = self.map_id,
-                //     .text_data = .{
-                //         .text = std.fmt.allocPrint(allocator, "{s}", .{cond_str}) catch unreachable,
-                //         .text_type = .bold,
-                //         .size = 16,
-                //         .color = 0xB02020,
-                //     },
-                //     .initial_size = 16,
-                // }) catch |e| {
-                //     std.log.err("Allocation for condition text \"{s}\" failed: {}", .{ cond_str, e });
-                // };
+                self.status_texts.append(main.allocator, .{
+                    .initial_size = 16.0,
+                    .dispose_text = true,
+                    .show_at = main.current_time,
+                    .text_data = .{
+                        .text = std.fmt.allocPrint(main.allocator, "{s}", .{cond_str}) catch @panic("OOM"),
+                        .text_type = .bold,
+                        .size = 16,
+                        .color = 0xB02020,
+                    },
+                }) catch @panic("OOM");
             }
         }
     }
 
-    _ = damage_type;
-    // if (damage > 0) {
-    //     element.StatusText.add(.{
-    //         .obj_type = switch (@TypeOf(self.*)) {
-    //             Entity => .entity,
-    //             Enemy => .enemy,
-    //             Player => .player,
-    //             else => @compileError("Invalid type"),
-    //         },
-    //         .map_id = self.map_id,
-    //         .text_data = .{
-    //             .text = std.fmt.allocPrint(allocator, "-{}", .{damage}) catch unreachable,
-    //             .text_type = .bold,
-    //             .size = 16,
-    //             .color = switch (damage_type) {
-    //                 .physical => 0xB02020,
-    //                 .magic => 0xB02020,
-    //                 .true => 0xB02020,
-    //             },
-    //         },
-    //         .initial_size = 16,
-    //     }) catch |e| {
-    //         std.log.err("Allocation for damage text \"-{}\" failed: {}", .{ damage, e });
-    //     };
-    // }
+    self.status_texts.append(main.allocator, .{
+        .initial_size = 16.0,
+        .dispose_text = true,
+        .show_at = main.current_time,
+        .text_data = .{
+            .text = std.fmt.allocPrint(main.allocator, "-{}", .{damage}) catch @panic("OOM"),
+            .text_type = .bold,
+            .size = 16,
+            .color = switch (damage_type) {
+                .physical => 0xB02020,
+                .magic => 0xB02020,
+                .true => 0xB02020,
+            },
+        },
+    }) catch @panic("OOM");
 }

@@ -16,7 +16,7 @@ text_inlay_y: f32,
 image_data: element.InteractableImageData,
 cursor_image_data: element.ImageData,
 text_data: element.TextData,
-enter_callback: ?*const fn ([]const u8) void = null,
+enterCallback: ?*const fn ([]const u8) void = null,
 state: element.InteractableState = .none,
 is_chat: bool = false,
 // -1 means not selected
@@ -88,7 +88,7 @@ pub fn deinit(self: *Input) void {
 pub fn draw(self: *Input, _: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
     if (!self.base.visible) return;
 
-    self.image_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset);
+    self.image_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
 
     const text_x = self.base.x + self.text_inlay_x + assets.padding + x_offset + self.x_offset;
     const text_y = self.base.y + self.text_inlay_y + assets.padding + y_offset;
@@ -96,8 +96,8 @@ pub fn draw(self: *Input, _: render.CameraData, x_offset: f32, y_offset: f32, ti
 
     const flash_delay = 500 * std.time.us_per_ms;
     if (self.last_input != -1 and (time - self.last_input < flash_delay or @mod(@divFloor(time, flash_delay), 2) == 0)) {
-        const cursor_x = @floor(text_x + self.text_data.width);
-        self.cursor_image_data.draw(cursor_x, text_y);
+        const cursor_x = text_x + self.text_data.width + assets.CharacterData.padding * (self.text_data.size / assets.CharacterData.size) + 1.0;
+        self.cursor_image_data.draw(cursor_x, text_y, self.base.scissor);
     }
 }
 

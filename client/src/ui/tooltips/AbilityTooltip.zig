@@ -30,24 +30,24 @@ pub fn init(self: *AbilityTooltip) !void {
     });
 
     self.image = try self.root.createChild(Image, .{
-        .base = .{ .x = 10, .y = 10 },
-        .image_data = .{ .normal = .{ .atlas_data = undefined } },
+        .base = .{ .x = 10, .y = 13 },
+        .image_data = .{ .normal = .{ .atlas_data = undefined, .scale_x = 2.0, .scale_y = 2.0 } },
     });
 
     self.title = try self.root.createChild(Text, .{
-        .base = .{ .x = 8 * 4 + 30, .y = 9 },
+        .base = .{ .x = 8 * 4 + 30, .y = 15 },
         .text_data = .{
             .text = "",
-            .size = 16,
+            .size = 14,
             .text_type = .bold_italic,
         },
     });
 
     self.subtext = try self.root.createChild(Text, .{
-        .base = .{ .x = 8 * 4 + 30, .y = self.title.text_data.height + 9 },
+        .base = .{ .x = 8 * 4 + 30, .y = 15 + 5 + self.title.text_data.height },
         .text_data = .{
             .text = "",
-            .size = 14,
+            .size = 12,
             .color = 0xB3B3B3,
             .max_chars = 128,
         },
@@ -65,7 +65,7 @@ pub fn init(self: *AbilityTooltip) !void {
         .base = .{ .x = 10, .y = self.line_break.base.y + self.line_break.height() + 10 },
         .text_data = .{
             .text = "",
-            .size = 14,
+            .size = 12,
             .max_width = self.decor.width() - 20,
             .color = 0x9B9B9B,
         },

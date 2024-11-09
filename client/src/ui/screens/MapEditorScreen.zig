@@ -145,12 +145,12 @@ const CommandQueue = struct {
 };
 
 const Settings = @import("../../Settings.zig");
-const Player = @import("../../game/player.zig").Player;
-const Entity = @import("../../game/entity.zig").Entity;
-const Enemy = @import("../../game/enemy.zig").Enemy;
-const Portal = @import("../../game/portal.zig").Portal;
-const Container = @import("../../game/container.zig").Container;
-const Square = @import("../../game/square.zig").Square;
+const Player = @import("../../game/Player.zig");
+const Entity = @import("../../game/Entity.zig");
+const Enemy = @import("../../game/Enemy.zig");
+const Portal = @import("../../game/Portal.zig");
+const Container = @import("../../game/Container.zig");
+const Square = @import("../../game/Square.zig");
 
 const MapEditorScreen = @This();
 const Text = @import("../elements/Text.zig");
@@ -404,10 +404,8 @@ pub fn init(self: *MapEditorScreen) !void {
             .size = 12,
             .text_type = .bold,
         },
-        .key = self.place_key.getKey(),
-        .mouse = self.place_key.getMouse(),
         .settings_button = &self.place_key,
-        .set_key_callback = noAction,
+        .setKeyCallback = noAction,
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + (button_pad_h + button_height) * 2 },
@@ -417,10 +415,8 @@ pub fn init(self: *MapEditorScreen) !void {
             .size = 12,
             .text_type = .bold,
         },
-        .key = self.sample_key.getKey(),
-        .mouse = self.sample_key.getMouse(),
         .settings_button = &self.sample_key,
-        .set_key_callback = noAction,
+        .setKeyCallback = noAction,
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset, .y = button_inset + (button_pad_h + button_height) * 3 },
@@ -430,10 +426,8 @@ pub fn init(self: *MapEditorScreen) !void {
             .size = 12,
             .text_type = .bold,
         },
-        .key = self.erase_key.getKey(),
-        .mouse = self.erase_key.getMouse(),
         .settings_button = &self.erase_key,
-        .set_key_callback = noAction,
+        .setKeyCallback = noAction,
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + (button_pad_h + button_height) * 3 },
@@ -443,10 +437,8 @@ pub fn init(self: *MapEditorScreen) !void {
             .size = 12,
             .text_type = .bold,
         },
-        .key = self.random_key.getKey(),
-        .mouse = self.random_key.getMouse(),
         .settings_button = &self.random_key,
-        .set_key_callback = noAction,
+        .setKeyCallback = noAction,
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset, .y = button_inset + (button_pad_h + button_height) * 4 },
@@ -456,10 +448,8 @@ pub fn init(self: *MapEditorScreen) !void {
             .size = 12,
             .text_type = .bold,
         },
-        .key = self.undo_key.getKey(),
-        .mouse = self.undo_key.getMouse(),
         .settings_button = &self.undo_key,
-        .set_key_callback = noAction,
+        .setKeyCallback = noAction,
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + (button_pad_h + button_height) * 4 },
@@ -469,10 +459,8 @@ pub fn init(self: *MapEditorScreen) !void {
             .size = 12,
             .text_type = .bold,
         },
-        .key = self.redo_key.getKey(),
-        .mouse = self.redo_key.getMouse(),
         .settings_button = &self.redo_key,
-        .set_key_callback = noAction,
+        .setKeyCallback = noAction,
     });
 
     _ = try self.controls_container.createChild(KeyMapper, .{
@@ -483,10 +471,8 @@ pub fn init(self: *MapEditorScreen) !void {
             .size = 12,
             .text_type = .bold,
         },
-        .key = self.fill_key.getKey(),
-        .mouse = self.fill_key.getMouse(),
         .settings_button = &self.fill_key,
-        .set_key_callback = noAction,
+        .setKeyCallback = noAction,
     });
 
     const slider_background_data = assets.getUiData("slider_background", 0);
@@ -1245,58 +1231,58 @@ pub fn resize(self: *MapEditorScreen, w: f32, _: f32) void {
 }
 
 pub fn onMousePress(self: *MapEditorScreen, button: glfw.MouseButton) void {
-    if (button == self.undo_key.getMouse())
+    if (self.undo_key == .mouse and button == self.undo_key.mouse)
         self.action = .undo
-    else if (button == self.redo_key.getMouse())
+    else if (self.redo_key == .mouse and button == self.redo_key.mouse)
         self.action = .redo
-    else if (button == self.place_key.getMouse())
+    else if (self.place_key == .mouse and button == self.place_key.mouse)
         self.action = .place
-    else if (button == self.erase_key.getMouse())
+    else if (self.erase_key == .mouse and button == self.erase_key.mouse)
         self.action = .erase
-    else if (button == self.sample_key.getMouse())
+    else if (self.sample_key == .mouse and button == self.sample_key.mouse)
         self.action = .sample
-    else if (button == self.random_key.getMouse())
+    else if (self.random_key == .mouse and button == self.random_key.mouse)
         self.action = .random
-    else if (button == self.fill_key.getMouse())
+    else if (self.fill_key == .mouse and button == self.fill_key.mouse)
         self.action = .fill;
 }
 
 pub fn onMouseRelease(self: *MapEditorScreen, button: glfw.MouseButton) void {
-    if (button == self.undo_key.getMouse() or
-        button == self.redo_key.getMouse() or
-        button == self.place_key.getMouse() or
-        button == self.erase_key.getMouse() or
-        button == self.sample_key.getMouse() or
-        button == self.random_key.getMouse() or
-        button == self.fill_key.getMouse())
+    if (self.undo_key == .mouse and button == self.undo_key.mouse or
+        self.redo_key == .mouse and button == self.redo_key.mouse or
+        self.place_key == .mouse and button == self.place_key.mouse or
+        self.erase_key == .mouse and button == self.erase_key.mouse or
+        self.sample_key == .mouse and button == self.sample_key.mouse or
+        self.random_key == .mouse and button == self.random_key.mouse or
+        self.fill_key == .mouse and button == self.fill_key.mouse)
         self.action = .none;
 }
 
 pub fn onKeyPress(self: *MapEditorScreen, key: glfw.Key) void {
-    if (key == self.undo_key.getKey())
+    if (self.undo_key == .key and key == self.undo_key.key)
         self.action = .undo
-    else if (key == self.redo_key.getKey())
+    else if (self.redo_key == .key and key == self.redo_key.key)
         self.action = .redo
-    else if (key == self.place_key.getKey())
+    else if (self.place_key == .key and key == self.place_key.key)
         self.action = .place
-    else if (key == self.erase_key.getKey())
+    else if (self.erase_key == .key and key == self.erase_key.key)
         self.action = .erase
-    else if (key == self.sample_key.getKey())
+    else if (self.sample_key == .key and key == self.sample_key.key)
         self.action = .sample
-    else if (key == self.random_key.getKey())
+    else if (self.random_key == .key and key == self.random_key.key)
         self.action = .random
-    else if (key == self.fill_key.getKey())
+    else if (self.fill_key == .key and key == self.fill_key.key)
         self.action = .fill;
 }
 
 pub fn onKeyRelease(self: *MapEditorScreen, key: glfw.Key) void {
-    if (key == self.undo_key.getKey() or
-        key == self.redo_key.getKey() or
-        key == self.place_key.getKey() or
-        key == self.erase_key.getKey() or
-        key == self.sample_key.getKey() or
-        key == self.random_key.getKey() or
-        key == self.fill_key.getKey())
+    if (self.undo_key == .key and key == self.undo_key.key or
+        self.redo_key == .key and key == self.redo_key.key or
+        self.place_key == .key and key == self.place_key.key or
+        self.erase_key == .key and key == self.erase_key.key or
+        self.sample_key == .key and key == self.sample_key.key or
+        self.random_key == .key and key == self.random_key.key or
+        self.fill_key == .key and key == self.fill_key.key)
         self.action = .none;
 }
 

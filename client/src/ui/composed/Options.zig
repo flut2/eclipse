@@ -192,7 +192,6 @@ pub fn create() !*Options {
     try addKeyMap(options.general_tab, &main.settings.interact, "Interact", "");
     try addKeyMap(options.general_tab, &main.settings.shoot, "Shoot", "");
     try addKeyMap(options.general_tab, &main.settings.walk, "Walk", "Allows you to move slowly");
-    try addKeyMap(options.general_tab, &main.settings.toggle_stats, "Toggle Stats", "This toggles whether to show the stats view");
     try addKeyMap(options.general_tab, &main.settings.toggle_perf_stats, "Toggle Performance Counter", "This toggles whether to show the performance counter");
 
     try addToggle(options.graphics_tab, &main.settings.enable_vsync, "V-Sync", "Toggles vertical syncing, which can reduce screen tearing");
@@ -256,10 +255,8 @@ fn addKeyMap(target_tab: *Container, button: *Settings.Button, title: []const u8
             .size = 16,
             .text_type = .bold_italic,
         } else null,
-        .key = button.getKey(),
-        .mouse = button.getMouse(),
         .settings_button = button,
-        .set_key_callback = keyCallback,
+        .setKeyCallback = keyCallback,
     });
 }
 
@@ -350,12 +347,6 @@ fn sliderCallback(slider: *Slider) void {
 }
 
 fn keyCallback(key_mapper: *KeyMapper) void {
-    key_mapper.settings_button.* = switch (key_mapper.key) {
-        .escape => .{ .key = .unknown },
-        .unknown => .{ .mouse = key_mapper.mouse },
-        else => .{ .key = key_mapper.key },
-    };
-
     if (key_mapper.settings_button == &main.settings.interact)
         assets.interact_key_tex = assets.getKeyTexture(main.settings.interact);
 

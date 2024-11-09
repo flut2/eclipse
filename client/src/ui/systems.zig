@@ -154,20 +154,7 @@ pub fn mouseMove(x: f32, y: f32) bool {
     return false;
 }
 
-pub fn mousePress(x: f32, y: f32, mods: glfw.Mods, button: glfw.MouseButton) bool {
-    if (input.selected_input_field) |input_field| {
-        input_field.last_input = -1;
-        input.selected_input_field = null;
-    }
-
-    if (input.selected_key_mapper) |key_mapper| {
-        key_mapper.key = .unknown;
-        key_mapper.mouse = button;
-        key_mapper.listening = false;
-        key_mapper.set_key_callback(key_mapper);
-        input.selected_key_mapper = null;
-    }
-
+pub fn mousePress(x: f32, y: f32, mods: glfw.Mods) bool {
     ui_lock.lock();
     defer ui_lock.unlock();
 

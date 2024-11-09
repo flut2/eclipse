@@ -11,11 +11,9 @@ const KeyMapper = @This();
 const ElementBase = element.ElementBase;
 
 base: ElementBase,
-set_key_callback: *const fn (*KeyMapper) void,
+setKeyCallback: *const fn (*KeyMapper) void,
 image_data: element.InteractableImageData,
 settings_button: *Settings.Button,
-key: glfw.Key = .unknown,
-mouse: glfw.MouseButton = .eight,
 title_text_data: ?element.TextData = null,
 tooltip_text: ?element.TextData = null,
 state: element.InteractableState = .none,
@@ -97,7 +95,14 @@ pub fn draw(self: *KeyMapper, _: render.CameraData, x_offset: f32, y_offset: f32
         .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
     };
 
-    render.drawQuad(self.base.x + x_offset, self.base.y + y_offset, w, h, assets.getKeyTexture(self.settings_button.*), .{});
+    render.drawQuad(
+        self.base.x + x_offset,
+        self.base.y + y_offset,
+        w,
+        h,
+        assets.getKeyTexture(self.settings_button.*),
+        .{ .scissor = self.base.scissor },
+    );
     if (self.title_text_data) |*text_data| render.drawText(
         self.base.x + w + 5 + x_offset,
         self.base.y + (h - text_data.height) / 2 + y_offset,

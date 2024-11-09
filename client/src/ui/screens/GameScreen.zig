@@ -20,8 +20,8 @@ const Bar = @import("../elements/Bar.zig");
 const Button = @import("../elements/Button.zig");
 const Item = @import("../elements/Item.zig");
 const Options = @import("../composed/Options.zig");
-const Container = @import("../../game/container.zig").Container;
-const Player = @import("../../game/player.zig").Player;
+const Container = @import("../../game/Container.zig");
+const Player = @import("../../game/Player.zig");
 
 pub const Slot = struct {
     idx: u8,
@@ -95,8 +95,13 @@ chat_container: *ScrollableContainer = undefined,
 chat_lines: std.ArrayListUnmanaged(*Text) = .empty,
 bars_decor: *Image = undefined,
 stats_button: *Button = undefined,
+cards_button: *Button = undefined,
 stats_container: *UiContainer = undefined,
+cards_container: *UiContainer = undefined,
 ability_container: *UiContainer = undefined,
+ability_overlays: [4]*Image = undefined,
+ability_overlay_texts: [4]*Text = undefined,
+
 stats_decor: *Image = undefined,
 strength_stat_text: *Text = undefined,
 wit_stat_text: *Text = undefined,
@@ -267,47 +272,6 @@ pub fn init(self: *GameScreen) !void {
         .image_data = .{ .normal = .{ .atlas_data = bars_data } },
     });
 
-    const stats_button_data = assets.getUiData("stats_button", 0);
-    self.stats_button = try element.create(Button, .{
-        .base = .{
-            .x = self.bars_decor.base.x + 21 + (32 - stats_button_data.width() + assets.padding * 2) / 2.0,
-            .y = self.bars_decor.base.y + 117 + (32 - stats_button_data.height() + assets.padding * 2) / 2.0,
-        },
-        .image_data = .{ .base = .{ .normal = .{ .atlas_data = stats_button_data, .glow = true } } },
-        .userdata = self,
-        .press_callback = statsCallback,
-    });
-
-    self.ability_container = try element.create(UiContainer, .{ .base = .{
-        .x = self.bars_decor.base.x + 69,
-        .y = self.bars_decor.base.y + 45,
-    } });
-
-    const stats_decor_data = assets.getUiData("player_stats", 0);
-    self.stats_container = try element.create(UiContainer, .{ .base = .{
-        .x = self.bars_decor.base.x + 63 - 15,
-        .y = self.bars_decor.base.y + 15 - stats_decor_data.height(),
-        .visible = false,
-    } });
-
-    self.stats_decor = try self.stats_container.createChild(Image, .{
-        .base = .{ .x = 0, .y = 0 },
-        .image_data = .{ .normal = .{ .atlas_data = stats_decor_data } },
-    });
-
-    var idx: f32 = 0;
-    try addStatText(self.stats_container, &self.strength_stat_text, &idx);
-    try addStatText(self.stats_container, &self.wit_stat_text, &idx);
-    try addStatText(self.stats_container, &self.defense_stat_text, &idx);
-    try addStatText(self.stats_container, &self.resistance_stat_text, &idx);
-    try addStatText(self.stats_container, &self.speed_stat_text, &idx);
-    try addStatText(self.stats_container, &self.stamina_stat_text, &idx);
-    try addStatText(self.stats_container, &self.intelligence_stat_text, &idx);
-    try addStatText(self.stats_container, &self.penetration_stat_text, &idx);
-    try addStatText(self.stats_container, &self.piercing_stat_text, &idx);
-    try addStatText(self.stats_container, &self.haste_stat_text, &idx);
-    try addStatText(self.stats_container, &self.tenacity_stat_text, &idx);
-
     const health_bar_data = assets.getUiData("player_health_bar", 0);
     self.health_bar = try element.create(Bar, .{
         .base = .{ .x = self.bars_decor.base.x + 70, .y = self.bars_decor.base.y + 102 },
@@ -344,6 +308,65 @@ pub fn init(self: *GameScreen) !void {
         },
     });
 
+    const cards_button_data = assets.getUiData("cards_button", 0);
+    self.cards_button = try element.create(Button, .{
+        .base = .{
+            .x = self.bars_decor.base.x + 21 + (32 - cards_button_data.width() + assets.padding * 2) / 2.0,
+            .y = self.bars_decor.base.y + 73 + (32 - cards_button_data.height() + assets.padding * 2) / 2.0,
+        },
+        .image_data = .{ .base = .{ .normal = .{ .atlas_data = cards_button_data, .glow = true } } },
+        .userdata = self,
+        .press_callback = cardsCallback,
+    });
+
+    const cards_decor_data = assets.getUiData("player_stats", 0);
+    self.cards_container = try element.create(UiContainer, .{ .base = .{
+        .x = self.bars_decor.base.x + 63 - 15,
+        .y = self.bars_decor.base.y + 15 - cards_decor_data.height(),
+        .visible = false,
+    } });
+
+    const stats_button_data = assets.getUiData("stats_button", 0);
+    self.stats_button = try element.create(Button, .{
+        .base = .{
+            .x = self.bars_decor.base.x + 21 + (32 - stats_button_data.width() + assets.padding * 2) / 2.0,
+            .y = self.bars_decor.base.y + 117 + (32 - stats_button_data.height() + assets.padding * 2) / 2.0,
+        },
+        .image_data = .{ .base = .{ .normal = .{ .atlas_data = stats_button_data, .glow = true } } },
+        .userdata = self,
+        .press_callback = statsCallback,
+    });
+
+    const stats_decor_data = assets.getUiData("player_stats", 0);
+    self.stats_container = try element.create(UiContainer, .{ .base = .{
+        .x = self.bars_decor.base.x + 63 - 15,
+        .y = self.bars_decor.base.y + 15 - stats_decor_data.height(),
+        .visible = false,
+    } });
+
+    self.stats_decor = try self.stats_container.createChild(Image, .{
+        .base = .{ .x = 0, .y = 0 },
+        .image_data = .{ .normal = .{ .atlas_data = stats_decor_data } },
+    });
+
+    var idx: f32 = 0;
+    try addStatText(self.stats_container, &self.strength_stat_text, &idx);
+    try addStatText(self.stats_container, &self.wit_stat_text, &idx);
+    try addStatText(self.stats_container, &self.defense_stat_text, &idx);
+    try addStatText(self.stats_container, &self.resistance_stat_text, &idx);
+    try addStatText(self.stats_container, &self.speed_stat_text, &idx);
+    try addStatText(self.stats_container, &self.stamina_stat_text, &idx);
+    try addStatText(self.stats_container, &self.intelligence_stat_text, &idx);
+    try addStatText(self.stats_container, &self.penetration_stat_text, &idx);
+    try addStatText(self.stats_container, &self.piercing_stat_text, &idx);
+    try addStatText(self.stats_container, &self.haste_stat_text, &idx);
+    try addStatText(self.stats_container, &self.tenacity_stat_text, &idx);
+
+    self.ability_container = try element.create(UiContainer, .{ .base = .{
+        .x = self.bars_decor.base.x + 69,
+        .y = self.bars_decor.base.y + 45,
+    } });
+
     const chat_data = assets.getUiData("chatbox_background", 0);
     const input_data = assets.getUiData("chatbox_input", 0);
     self.chat_decor = try element.create(Image, .{
@@ -371,7 +394,7 @@ pub fn init(self: *GameScreen) !void {
             .max_chars = 256,
             .handle_special_chars = false,
         },
-        .enter_callback = chatCallback,
+        .enterCallback = chatCallback,
         .is_chat = true,
     });
 
@@ -458,22 +481,41 @@ pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_c
     self.chat_container.update();
 }
 
-fn addAbility(container: *UiContainer, ability: game_data.AbilityData, idx: *f32) !void {
-    defer idx.* += 1;
+fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !void {
+    const fidx: f32 = @floatFromInt(idx);
 
     if (assets.ui_atlas_data.get(ability.icon.sheet)) |data| {
         const index = ability.icon.index;
-        if (data.len <= index) {
-            std.log.err("Could not initiate ability for GameScreen, index was out of bounds", .{});
-            return;
-        }
+        if (data.len <= index) @panic("Could not initiate ability for GameScreen, index was out of bounds");
 
-        _ = try container.createChild(Image, .{
-            .base = .{ .x = idx.* * 56.0, .y = 0 },
-            .image_data = .{ .normal = .{ .atlas_data = data[index] } },
+        _ = try self.ability_container.createChild(Image, .{
+            .base = .{ .x = fidx * 56.0, .y = 0 },
+            .image_data = .{ .normal = .{ .atlas_data = data[index], .scale_x = 2.0, .scale_y = 2.0 } },
             .ability_props = ability,
         });
-    } else std.log.err("Could not initiate ability for GameScreen, sheet was missing", .{});
+    } else @panic("Could not initiate ability for GameScreen, sheet was missing");
+
+    self.ability_overlays[idx] = try self.ability_container.createChild(Image, .{
+        .base = .{ .x = fidx * 56.0, .y = 0, .visible = false },
+        .image_data = undefined,
+    });
+
+    self.ability_overlay_texts[idx] = try self.ability_container.createChild(Text, .{
+        .base = .{ .x = fidx * 56.0 - 7.0, .y = -7.0, .visible = false },
+        .text_data = .{
+            .text = "",
+            .size = 12.0,
+            .text_type = .bold,
+            .hori_align = .middle,
+            .vert_align = .middle,
+            .max_chars = 32,
+            .max_width = 56.0,
+            .max_height = 56.0,
+        },
+    });
+    self.ability_overlay_texts[idx].text_data.lock.lock();
+    defer self.ability_overlay_texts[idx].text_data.lock.unlock();
+    self.ability_overlay_texts[idx].text_data.recalculateAttributes();
 }
 
 fn addStatText(container: *UiContainer, text: **Text, idx: *f32) !void {
@@ -500,6 +542,8 @@ pub fn deinit(self: *GameScreen) void {
     element.destroy(self.container_decor);
     element.destroy(self.container_name);
     element.destroy(self.bars_decor);
+    element.destroy(self.cards_button);
+    element.destroy(self.cards_container);
     element.destroy(self.stats_button);
     element.destroy(self.stats_container);
     element.destroy(self.ability_container);
@@ -539,6 +583,8 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
     self.stats_container.base.y = self.bars_decor.base.y + 15 - self.stats_decor.height();
     self.ability_container.base.x = self.bars_decor.base.x + 69;
     self.ability_container.base.y = self.bars_decor.base.y + 45;
+    self.cards_button.base.x = self.bars_decor.base.x + 21 + (32 - self.cards_button.width() + assets.padding * 2) / 2.0;
+    self.cards_button.base.y = self.bars_decor.base.y + 73 + (32 - self.cards_button.height() + assets.padding * 2) / 2.0;
     self.stats_button.base.x = self.bars_decor.base.x + 21 + (32 - self.stats_button.width() + assets.padding * 2) / 2.0;
     self.stats_button.base.y = self.bars_decor.base.y + 117 + (32 - self.stats_button.height() + assets.padding * 2) / 2.0;
     self.health_bar.base.x = self.bars_decor.base.x + 70;
@@ -586,7 +632,7 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
     self.options.resize(w, h);
 }
 
-pub fn update(self: *GameScreen, _: i64, _: f32) !void {
+pub fn update(self: *GameScreen, time: i64, _: f32) !void {
     self.fps_text.base.visible = main.settings.stats_enabled;
 
     var lock = map.useLockForType(Player);
@@ -594,9 +640,62 @@ pub fn update(self: *GameScreen, _: i64, _: f32) !void {
     defer lock.unlock();
     if (map.localPlayer(.con)) |local_player| {
         if (!self.abilities_inited) {
-            var idx: f32 = 0;
-            for (0..4) |i| try addAbility(self.ability_container, local_player.data.abilities[i], &idx);
+            for (0..4) |i| try addAbility(self, local_player.data.abilities[i], i);
             self.abilities_inited = true;
+        }
+
+        for (0..4) |i| {
+            const mana_cost = local_player.data.abilities[i].mana_cost;
+            if (mana_cost != 0 and mana_cost > local_player.mp) {
+                self.ability_overlays[i].image_data = .{ .normal = .{ .atlas_data = assets.getUiData("out_of_mana_slot", 0) } };
+                self.ability_overlays[i].base.visible = true;
+                self.ability_overlay_texts[i].base.visible = false;
+                continue;
+            }
+
+            const health_cost = local_player.data.abilities[i].health_cost;
+            if (health_cost != 0 and health_cost > local_player.hp) {
+                self.ability_overlays[i].image_data = .{ .normal = .{ .atlas_data = assets.getUiData("out_of_health_slot", 0) } };
+                self.ability_overlays[i].base.visible = true;
+                self.ability_overlay_texts[i].base.visible = false;
+                continue;
+            }
+
+            const gold_cost = local_player.data.abilities[i].gold_cost;
+            if (gold_cost != 0 and gold_cost > local_player.gold) {
+                self.ability_overlays[i].image_data = .{ .normal = .{ .atlas_data = assets.getUiData("out_of_gold_slot", 0) } };
+                self.ability_overlays[i].base.visible = true;
+                self.ability_overlay_texts[i].base.visible = false;
+                continue;
+            }
+
+            const time_elapsed = time - local_player.last_ability_use[i];
+            const cooldown_us = @as(i64, @intFromFloat(local_player.data.abilities[i].cooldown)) * std.time.us_per_s;
+            if (time_elapsed < cooldown_us) {
+                const cooldown_left = @as(f32, @floatFromInt(cooldown_us - time_elapsed)) / std.time.us_per_s;
+
+                self.ability_overlays[i].image_data = .{ .normal = .{ .atlas_data = assets.getUiData("on_cooldown_slot", 0) } };
+                self.ability_overlays[i].image_data.normal.scissor.max_x =
+                    self.ability_overlays[i].texWRaw() * (cooldown_left / local_player.data.abilities[i].cooldown);
+
+                {
+                    self.ability_overlay_texts[i].text_data.lock.lock();
+                    defer self.ability_overlay_texts[i].text_data.lock.unlock();
+                    self.ability_overlay_texts[i].text_data.text = try std.fmt.bufPrint(
+                        self.ability_overlay_texts[i].text_data.backing_buffer,
+                        "{d:.1}s",
+                        .{cooldown_left},
+                    );
+                    self.ability_overlay_texts[i].text_data.recalculateAttributes();
+                }
+
+                self.ability_overlays[i].base.visible = true;
+                self.ability_overlay_texts[i].base.visible = true;
+                continue;
+            }
+
+            self.ability_overlays[i].base.visible = false;
+            self.ability_overlay_texts[i].base.visible = false;
         }
 
         if (self.last_spirits_communed != local_player.spirits_communed or self.last_aether != local_player.aether) {
@@ -900,18 +999,25 @@ fn returnToRetrieve(_: ?*anyopaque) void {
 }
 
 fn openOptions(_: ?*anyopaque) void {
-    input.openOptions();
+    input.handleOptions();
 }
 
-pub fn statsCallback(ud: ?*anyopaque) void {
+fn statsCallback(ud: ?*anyopaque) void {
     const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
     screen.stats_container.base.visible = !screen.stats_container.base.visible;
+    screen.cards_container.base.visible = false;
     if (screen.stats_container.base.visible) {
         var lock = map.useLockForType(Player);
         lock.lock();
         defer lock.unlock();
         screen.updateStats();
     }
+}
+
+pub fn cardsCallback(ud: ?*anyopaque) void {
+    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    screen.cards_container.base.visible = !screen.cards_container.base.visible;
+    screen.stats_container.base.visible = false;
 }
 
 fn chatCallback(input_text: []const u8) void {

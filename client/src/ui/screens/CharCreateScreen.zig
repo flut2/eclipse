@@ -29,7 +29,7 @@ pub fn init(self: *CharCreateScreen) !void {
             .class_data_id = char.id,
             .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 40, 26, 21, 3, 3, 1.0),
             .text_data = .{
-                .text = char.name[0..],
+                .text = char.name,
                 .size = 16,
                 .text_type = .bold,
             },

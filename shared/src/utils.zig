@@ -113,6 +113,9 @@ pub const ConditionEnum = enum {
     hidden,
     targeted,
     invisible,
+    paralyzed,
+    stunned,
+    silenced,
 
     pub fn toString(self: ConditionEnum) []const u8 {
         return switch (self) {
@@ -129,6 +132,9 @@ pub const ConditionEnum = enum {
             .hidden => "Hidden",
             .targeted => "Targeted",
             .invisible => "Invisible",
+            .paralyzed => "Paralyzed",
+            .stunned => "Stunned",
+            .silenced => "Silenced",
         };
     }
 };
@@ -160,6 +166,10 @@ pub const Condition = packed struct {
     hidden: bool = false,
     targeted: bool = false,
     invisible: bool = false,
+    paralyzed: bool = false,
+    stunned: bool = false,
+    silenced: bool = false,
+
     pub fn isDefault(self: Condition) bool {
         return self == .{};
     }

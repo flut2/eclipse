@@ -3,14 +3,13 @@ const shared = @import("shared");
 const map_data = shared.map_data;
 const game_data = shared.game_data;
 const main = @import("../main.zig");
-const world = @import("../world.zig");
 
-const Tile = @import("tile.zig").Tile;
-const Entity = @import("entity.zig").Entity;
-const Enemy = @import("enemy.zig").Enemy;
-const Portal = @import("portal.zig").Portal;
-const Container = @import("container.zig").Container;
-const World = world.World;
+const World = @import("../World.zig");
+const Tile = @import("Tile.zig");
+const Entity = @import("Entity.zig");
+const Enemy = @import("Enemy.zig");
+const Portal = @import("Portal.zig");
+const Container = @import("Container.zig");
 
 pub const retrieve_id = -1;
 
@@ -58,7 +57,7 @@ pub const MapData = struct {
     enemies: []const Enemy,
     portals: []const Portal,
     containers: []const Container,
-    regions: std.AutoHashMapUnmanaged(u16, []world.WorldPoint),
+    regions: std.AutoHashMapUnmanaged(u16, []World.WorldPoint),
 
     pub fn deinit(self: *MapData) void {
         var regions_iter = self.regions.valueIterator();
@@ -82,7 +81,7 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
     var enemies: std.ArrayListUnmanaged(Enemy) = .empty;
     var portals: std.ArrayListUnmanaged(Portal) = .empty;
     var containers: std.ArrayListUnmanaged(Container) = .empty;
-    var regions: std.AutoHashMapUnmanaged(u16, std.ArrayListUnmanaged(world.WorldPoint)) = .empty;
+    var regions: std.AutoHashMapUnmanaged(u16, std.ArrayListUnmanaged(World.WorldPoint)) = .empty;
     defer {
         tiles.deinit(main.allocator);
         entities.deinit(main.allocator);
@@ -123,7 +122,7 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
             if (regions.getPtr(data.id)) |list| {
                 try list.append(main.allocator, .{ .x = ux, .y = uy });
             } else {
-                var list: std.ArrayListUnmanaged(world.WorldPoint) = .empty;
+                var list: std.ArrayListUnmanaged(World.WorldPoint) = .empty;
                 try list.append(main.allocator, .{ .x = ux, .y = uy });
                 try regions.put(main.allocator, data.id, list);
             }
@@ -161,7 +160,7 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
     map.regions = .{};
     var region_iter = regions.iterator();
     while (region_iter.next()) |entry| {
-        try map.regions.put(main.allocator, entry.key_ptr.*, try main.allocator.dupe(world.WorldPoint, entry.value_ptr.*.items));
+        try map.regions.put(main.allocator, entry.key_ptr.*, try main.allocator.dupe(World.WorldPoint, entry.value_ptr.*.items));
     }
 
     return map;

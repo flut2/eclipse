@@ -6,21 +6,19 @@ const utils = shared.utils;
 const db = @import("db.zig");
 const main = @import("main.zig");
 
-const Entity = @import("map/entity.zig").Entity;
-const Enemy = @import("map/enemy.zig").Enemy;
-const Portal = @import("map/portal.zig").Portal;
-const Container = @import("map/container.zig").Container;
-const Player = @import("map/player.zig").Player;
-const Client = @import("client.zig").Client;
+const Entity = @import("map/Entity.zig");
+const Enemy = @import("map/Enemy.zig");
+const Portal = @import("map/Portal.zig");
+const Container = @import("map/Container.zig");
+const Player = @import("map/Player.zig");
+const Client = @import("Client.zig");
 
 fn h(str: []const u8) u64 {
     return std.hash.Wyhash.hash(0, str);
 }
 
 fn checkRank(player: *Player, comptime rank: network_data.Rank) bool {
-    if (@intFromEnum(player.rank) >= @intFromEnum(rank))
-        return true;
-
+    if (@intFromEnum(player.rank) >= @intFromEnum(rank)) return true;
     player.client.sendMessage("You don't meet the rank requirements");
     return false;
 }
@@ -71,15 +69,12 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
             else => unreachable,
         }.from_name.get(written_name)) |data| {
             name = data.name;
-            for (0..count) |_| {
-                var obj: ObjType = .{
-                    .x = player.x,
-                    .y = player.y,
-                    .data_id = data.id,
-                    .spawned = true,
-                };
-                _ = player.world.addExisting(ObjType, &obj) catch return;
-            }
+            for (0..count) |_| _ = player.world.add(ObjType, .{
+                .x = player.x,
+                .y = player.y,
+                .data_id = data.id,
+                .spawned = true,
+            }) catch return;
         }
     }
 

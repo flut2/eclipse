@@ -228,7 +228,7 @@ pub fn deinit(self: *Slider) void {
 
 pub fn draw(self: *Slider, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
-    self.decor_image_data.draw(self.base.x + x_offset, self.base.y + y_offset);
+    self.decor_image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
 
     const knob_image_data = self.knob_image_data.current(self.state);
     const knob_x = self.base.x + self.knob_x + x_offset;
@@ -237,7 +237,7 @@ pub fn draw(self: *Slider, _: render.CameraData, x_offset: f32, y_offset: f32, _
         .nine_slice => |nine_slice| .{ nine_slice.w, nine_slice.h },
         .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
     };
-    knob_image_data.draw(knob_x, knob_y);
+    knob_image_data.draw(knob_x, knob_y, self.base.scissor);
 
     if (self.title_text_data) |*text_data| render.drawText(
         self.base.x + x_offset,

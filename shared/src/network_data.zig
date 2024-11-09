@@ -42,6 +42,17 @@ pub const ServerData = struct {
     admin_only: bool,
 };
 
+pub const AbilityState = packed struct(u8) {
+    heart_of_stone: bool = false,
+    time_dilation: bool = false,
+    time_lock: bool = false,
+    equivalent_exchange: bool = false,
+    asset_bubble: bool = false,
+    post_asset_bubble: bool = false,
+    premium_protection: bool = false,
+    compound_interest: bool = false,
+};
+
 pub const PlayerStat = union(enum) {
     x: f32,
     y: f32,
@@ -57,6 +68,7 @@ pub const PlayerStat = union(enum) {
     muted_until: i64,
     damage_mult: f32,
     hit_mult: f32,
+    ability_state: AbilityState,
     hp: i32,
     mp: i32,
     max_hp: i32,
@@ -159,6 +171,16 @@ pub const PurchasableStat = union(enum) {
     currency: game_data.Currency,
 };
 
+pub const AllyStat = union(enum) {
+    x: f32,
+    y: f32,
+    size_mult: f32,
+    condition: utils.Condition,
+    hp: i32,
+    max_hp: i32,
+    owner_map_id: u32,
+};
+
 pub const TileData = packed struct {
     x: u16,
     y: u16,
@@ -178,6 +200,7 @@ pub const ObjectType = enum(u8) {
     container,
     portal,
     purchasable,
+    ally,
 };
 
 pub const ObjectData = struct {
@@ -199,6 +222,13 @@ pub const MapInfo = struct {
 };
 
 pub const DamageType = enum(u2) { physical, magic, true };
+pub const ErrorType = enum(u3) {
+    message_no_disconnect,
+    message_with_disconnect,
+    client_update_needed,
+    force_close_game,
+    invalid_teleport_target,
+};
 
 // All packets without variable length fields (like slices) should be packed.
 // This allows us to directly copy the struct into/from the buffer
@@ -218,13 +248,7 @@ pub const C2SPacket = union(enum) {
         to_slot_id: u8,
     },
     use_item: packed struct { time: i64, obj_type: ObjectType, map_id: u32, slot_id: u8, x: f32, y: f32 },
-    hello: struct {
-        build_ver: []const u8,
-        email: []const u8,
-        token: u128,
-        char_id: u32,
-        class_id: u16,
-    },
+    hello: struct { build_ver: []const u8, email: []const u8, token: u128, char_id: u32, class_id: u16 },
     inv_drop: packed struct { player_map_id: u32, slot_id: u8 },
     pong: packed struct { ping_time: i64, time: i64 },
     teleport: packed struct { player_map_id: u32 },
@@ -233,14 +257,10 @@ pub const C2SPacket = union(enum) {
     ground_damage: packed struct { time: i64, x: f32, y: f32 },
     player_hit: packed struct { proj_index: u8, enemy_map_id: u32 },
     enemy_hit: packed struct { time: i64, proj_index: u8, enemy_map_id: u32, killed: bool },
+    ally_hit: packed struct { ally_map_id: u32, proj_index: u8, enemy_map_id: u32 },
     escape: packed struct {},
-    map_hello: struct {
-        build_ver: []const u8,
-        email: []const u8,
-        token: u128,
-        char_id: u32,
-        map: []const u8,
-    },
+    map_hello: struct { build_ver: []const u8, email: []const u8, token: u128, char_id: u32, map: []const u8 },
+    use_ability: struct { time: i64, index: u8, data: []const u8 },
 };
 
 pub const S2CPacket = union(enum) {
@@ -254,28 +274,22 @@ pub const S2CPacket = union(enum) {
         name_color: u32,
         text_color: u32,
     },
-    damage: packed struct {
-        player_map_id: u32,
-        effects: utils.Condition,
-        damage_type: DamageType,
-        amount: i32,
-    },
-    new_data: struct {
-        tick_id: u8,
-        tiles: []const TileData,
-        players: []const ObjectData,
-        enemies: []const ObjectData,
-        entities: []const ObjectData,
-        portals: []const ObjectData,
-        containers: []const ObjectData,
-    },
-    dropped_map_ids: struct {
-        players: []const u32,
-        enemies: []const u32,
-        entities: []const u32,
-        portals: []const u32,
-        containers: []const u32,
-    },
+    damage: packed struct { player_map_id: u32, effects: utils.Condition, damage_type: DamageType, amount: i32 },
+    new_tick: struct { tick_id: u8, tiles: []const TileData },
+    new_players: struct { list: []const ObjectData },
+    new_enemies: struct { list: []const ObjectData },
+    new_entities: struct { list: []const ObjectData },
+    new_portals: struct { list: []const ObjectData },
+    new_containers: struct { list: []const ObjectData },
+    new_purchasables: struct { list: []const ObjectData },
+    new_allies: struct { list: []const ObjectData },
+    dropped_players: struct { map_ids: []const u32 },
+    dropped_enemies: struct { map_ids: []const u32 },
+    dropped_entities: struct { map_ids: []const u32 },
+    dropped_portals: struct { map_ids: []const u32 },
+    dropped_containers: struct { map_ids: []const u32 },
+    dropped_purchasables: struct { map_ids: []const u32 },
+    dropped_allies: struct { map_ids: []const u32 },
     notification: struct { obj_type: ObjectType, map_id: u32, message: []const u8, color: u32 },
     show_effect: packed struct {
         eff_type: enum(u8) {
@@ -307,16 +321,7 @@ pub const S2CPacket = union(enum) {
     ping: packed struct { time: i64 },
     map_info: MapInfo,
     death: struct { killer_name: []const u8 },
-    aoe: struct {
-        x: f32,
-        y: f32,
-        radius: f32,
-        damage: u16,
-        eff: utils.Condition,
-        duration: f32,
-        orig_type: u8,
-        color: u32,
-    },
+    aoe: struct { x: f32, y: f32, radius: f32, damage: u16, eff: utils.Condition, duration: f32, orig_type: u8, color: u32 },
     ally_projectile: packed struct { proj_index: u8, player_map_id: u32, item_data_id: u16, angle: f32 },
     enemy_projectile: packed struct {
         enemy_map_id: u32,
@@ -331,14 +336,5 @@ pub const S2CPacket = union(enum) {
         angle: f32,
         angle_incr: f32,
     },
-    @"error": struct {
-        type: enum {
-            message_no_disconnect,
-            message_with_disconnect,
-            client_update_needed,
-            force_close_game,
-            invalid_teleport_target,
-        },
-        description: []const u8,
-    },
+    @"error": struct { type: ErrorType, description: []const u8 },
 };

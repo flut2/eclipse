@@ -8,16 +8,17 @@ const map = @import("map.zig");
 const main = @import("../main.zig");
 const ui_systems = @import("../ui/systems.zig");
 const render = @import("../render.zig");
-const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const size_mult = Camera.size_mult;
 
-const Player = @import("player.zig").Player;
-const Entity = @import("entity.zig").Entity;
-const Enemy = @import("enemy.zig").Enemy;
-const Portal = @import("portal.zig").Portal;
-const Container = @import("container.zig").Container;
-const Purchasable = @import("purchasable.zig").Purchasable;
+const Camera = @import("../Camera.zig");
+const Player = @import("Player.zig");
+const Entity = @import("Entity.zig");
+const Enemy = @import("Enemy.zig");
+const Portal = @import("Portal.zig");
+const Container = @import("Container.zig");
+const Purchasable = @import("Purchasable.zig");
+const Ally = @import("Ally.zig");
 
 pub fn addToMap(self: anytype, comptime ObjType: type) void {
     const type_name = switch (ObjType) {
@@ -27,6 +28,7 @@ pub fn addToMap(self: anytype, comptime ObjType: type) void {
         Portal => "portal",
         Container => "container",
         Purchasable => "purchasable",
+        Ally => "ally",
         else => @compileError("Invalid type"),
     };
 
@@ -38,8 +40,14 @@ pub fn addToMap(self: anytype, comptime ObjType: type) void {
 
     texParse: {
         const T = @TypeOf(self.*);
-        if (T == Enemy) {
-            const tex = self.data.texture;
+        if (T == Enemy or T == Ally) {
+            if (self.data.textures.len == 0) {
+                std.log.err("{s} with data id {} has an empty texture list, parsing failed", .{ type_name, self.data_id });
+                break :texParse;
+            }
+
+            const tex = self.data.textures[utils.rng.next() % self.data.textures.len];
+
             if (assets.anim_enemies.get(tex.sheet)) |anim_data| {
                 self.anim_data = anim_data[tex.index];
             } else {
@@ -181,5 +189,18 @@ pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_int
                 cond_new_idx += 1.0;
             }
         }
+    }
+}
+
+pub fn drawStatusTexts(self: anytype, time: i64, x: f32, y: f32, scale: f32) void {
+    var status_texts_to_dispose: std.ArrayListUnmanaged(usize) = .empty;
+    for (self.status_texts.items, 0..) |*text, i| 
+        if (!text.draw(time, x, y, scale))
+            status_texts_to_dispose.append(main.allocator, i) catch @panic("OOM");
+
+    var iter = std.mem.reverseIterator(status_texts_to_dispose.items);
+    while (iter.next()) |i| {
+        self.status_texts.items[i].deinit();
+        _ = self.status_texts.orderedRemove(i);
     }
 }

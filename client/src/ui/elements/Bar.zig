@@ -25,7 +25,7 @@ pub fn draw(self: *Bar, _: render.CameraData, x_offset: f32, y_offset: f32, _: i
         .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
     };
 
-    self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset);
+    self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
     render.drawText(
         self.base.x + (w - self.text_data.width) / 2 + x_offset,
         self.base.y + (h - self.text_data.height) / 2 + y_offset,

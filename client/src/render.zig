@@ -12,14 +12,16 @@ const ui_systems = @import("ui/systems.zig");
 const glfw = @import("zglfw");
 const px_per_tile = @import("Camera.zig").px_per_tile;
 
-const Square = @import("game/square.zig").Square;
+const Square = @import("game/Square.zig");
 const Particle = @import("game/particles.zig").Particle;
-const Player = @import("game/player.zig").Player;
-const Entity = @import("game/entity.zig").Entity;
-const Enemy = @import("game/enemy.zig").Enemy;
-const Container = @import("game/container.zig").Container;
-const Portal = @import("game/portal.zig").Portal;
-const Projectile = @import("game/projectile.zig").Projectile;
+const Player = @import("game/Player.zig");
+const Entity = @import("game/Entity.zig");
+const Enemy = @import("game/Enemy.zig");
+const Container = @import("game/Container.zig");
+const Purchasable = @import("game/Purchasable.zig");
+const Ally = @import("game/Ally.zig");
+const Portal = @import("game/Portal.zig");
+const Projectile = @import("game/Projectile.zig");
 
 pub const CameraData = struct {
     minimap_zoom: f32,
@@ -297,8 +299,8 @@ fn createPipelines(ctx: *gpu.GraphicsContext) void {
     const generic_color_targets: []const gpu.wgpu.ColorTargetState = &.{.{
         .format = gpu.GraphicsContext.swapchain_format,
         .blend = &.{
-            .color = .{ .src_factor = .src_alpha, .dst_factor = .one_minus_src_alpha },
-            .alpha = .{ .src_factor = .src_alpha, .dst_factor = .one_minus_src_alpha },
+            .color = .{ .src_factor = .one, .dst_factor = .one_minus_src_alpha },
+            .alpha = .{ .src_factor = .one, .dst_factor = .one_minus_src_alpha },
         },
     }};
     const generic_pipeline_descriptor: gpu.wgpu.RenderPipelineDescriptor = .{
@@ -390,7 +392,7 @@ pub fn init(ctx: *gpu.GraphicsContext) !void {
             .armored => &.{3},
             .armor_broken => &.{9},
             .targeted => &.{8},
-            .hidden, .invisible => &.{},
+            .hidden, .invisible, .paralyzed, .stunned, .silenced => &.{},
         };
 
         const indices_len = sheet_indices.len;
@@ -571,8 +573,7 @@ pub fn drawText(
     text_data.lock.lock();
     defer text_data.lock.unlock();
 
-    if (text_data.line_widths == null or text_data.break_indices == null)
-        return;
+    if (text_data.line_widths == null or text_data.break_indices == null) return;
 
     const size_scale = text_data.size / assets.CharacterData.size * scale * assets.CharacterData.padding_mult;
     const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
@@ -585,7 +586,7 @@ pub fn drawText(
         if (text_data.disable_subpixel) .text_drop_shadow_subpixel_off else .text_drop_shadow
     else if (text_data.disable_subpixel) .text_normal_subpixel_off else .text_normal;
 
-    const pad_offset = assets.CharacterData.padding * (text_data.size / assets.CharacterData.size);
+    const pad_offset = assets.CharacterData.padding * size_scale;
     const start_x = x - pad_offset;
     const start_y = y + line_height - pad_offset;
     const y_base = switch (text_data.vert_align) {
@@ -762,8 +763,10 @@ pub fn drawText(
 
         const w = char_data.width * current_size;
         const h = char_data.height * current_size;
-        const px_range = assets.CharacterData.px_range / scale;
-        const pos = [_]f32{ x_pointer + char_data.x_offset * current_size, y_pointer - char_data.y_offset * current_size - h };
+        const pos = [_]f32{
+            x_pointer + (char_data.x_offset + assets.CharacterData.padding) * current_size,
+            y_pointer - (char_data.y_offset + assets.CharacterData.padding) * current_size - h,
+        };
 
         const uv_w_per_px = char_data.tex_w / w;
         const uv_h_per_px = char_data.tex_h / h;
@@ -778,7 +781,7 @@ pub fn drawText(
         generics.append(main.allocator, .{
             .render_type = render_type,
             .text_type = current_type,
-            .text_dist_factor = current_size * px_range,
+            .text_dist_factor = assets.CharacterData.px_range * current_size,
             .shadow_color = text_data.shadow_color,
             .alpha_mult = text_data.alpha,
             .outline_color = text_data.outline_color,
@@ -804,7 +807,7 @@ pub fn drawText(
 
 pub fn drawLight(data: game_data.LightData, tile_cx: f32, tile_cy: f32, scale: f32, float_time_ms: f32) void {
     if (data.color == std.math.maxInt(u32)) return;
-    
+
     const size = px_per_tile * (data.radius + data.pulse * @sin(float_time_ms / 1000.0 * data.pulse_speed)) * scale * 4;
     lights.append(main.allocator, .{
         .x = tile_cx - size / 2.0,
@@ -888,7 +891,7 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
             }
         }
 
-        inline for (.{ Entity, Enemy, Container, Player }) |T| {
+        inline for (.{ Entity, Enemy, Container, Player, Purchasable, Ally }) |T| {
             var lock = map.useLockForType(T);
             lock.lock();
             defer lock.unlock();

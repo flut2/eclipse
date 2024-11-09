@@ -32,7 +32,7 @@ pub const CharacterData = struct {
     pub const padding = 8.0;
     pub const padding_mult = 1.0 + CharacterData.padding * 2 / size;
     pub const line_height = 1.149;
-    pub const px_range = 18.0;
+    pub const px_range = 16.0;
 
     atlas_w: f32,
     atlas_h: f32,
@@ -53,12 +53,12 @@ pub const CharacterData = struct {
             .x_advance = try std.fmt.parseFloat(f32, split.next().?) * size,
             .x_offset = try std.fmt.parseFloat(f32, split.next().?) * size,
             .y_offset = try std.fmt.parseFloat(f32, split.next().?) * size,
-            .width = try std.fmt.parseFloat(f32, split.next().?) * size + CharacterData.padding * 2,
-            .height = try std.fmt.parseFloat(f32, split.next().?) * size + CharacterData.padding * 2,
-            .tex_u = (try std.fmt.parseFloat(f32, split.next().?) - CharacterData.padding) / atlas_w,
-            .tex_h = (atlas_h - try std.fmt.parseFloat(f32, split.next().?) + CharacterData.padding * 2) / atlas_h,
-            .tex_w = (try std.fmt.parseFloat(f32, split.next().?) + CharacterData.padding * 2) / atlas_w,
-            .tex_v = (atlas_h - try std.fmt.parseFloat(f32, split.next().?) - CharacterData.padding) / atlas_h,
+            .width = try std.fmt.parseFloat(f32, split.next().?) * size,
+            .height = try std.fmt.parseFloat(f32, split.next().?) * size,
+            .tex_u = try std.fmt.parseFloat(f32, split.next().?) / atlas_w,
+            .tex_h = (atlas_h - try std.fmt.parseFloat(f32, split.next().?)) / atlas_h,
+            .tex_w = try std.fmt.parseFloat(f32, split.next().?) / atlas_w,
+            .tex_v = (atlas_h - try std.fmt.parseFloat(f32, split.next().?)) / atlas_h,
         };
         data.width -= data.x_offset;
         data.height -= data.y_offset;
@@ -958,7 +958,7 @@ fn addAnimPlayer(
     try dominant_color_data.put(main.asset_arena_allocator, sheet_name, dominant_colors);
 }
 
-fn parseFontData(comptime atlas_w: f32, comptime atlas_h: f32, comptime path: []const u8, chars: *[256]CharacterData) !void {
+fn parseFontData(atlas_w: f32, atlas_h: f32, comptime path: []const u8, chars: *[256]CharacterData) !void {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
@@ -1075,10 +1075,30 @@ pub fn init() !void {
     medium_atlas = try .loadFromFile("./assets/fonts/ubuntu_medium.png", 4);
     medium_italic_atlas = try .loadFromFile("./assets/fonts/ubuntu_medium_italic.png", 4);
 
-    try parseFontData(1024, 1024, "./assets/fonts/ubuntu_bold.csv", &bold_chars);
-    try parseFontData(1024, 1024, "./assets/fonts/ubuntu_bold_italic.csv", &bold_italic_chars);
-    try parseFontData(1024, 512, "./assets/fonts/ubuntu_medium.csv", &medium_chars);
-    try parseFontData(1024, 1024, "./assets/fonts/ubuntu_medium_italic.csv", &medium_italic_chars);
+    try parseFontData(
+        @floatFromInt(bold_atlas.width),
+        @floatFromInt(bold_atlas.height),
+        "./assets/fonts/ubuntu_bold.csv",
+        &bold_chars,
+    );
+    try parseFontData(
+        @floatFromInt(bold_italic_atlas.width),
+        @floatFromInt(bold_italic_atlas.height),
+        "./assets/fonts/ubuntu_bold_italic.csv",
+        &bold_italic_chars,
+    );
+    try parseFontData(
+        @floatFromInt(medium_atlas.width),
+        @floatFromInt(medium_atlas.height),
+        "./assets/fonts/ubuntu_medium.csv",
+        &medium_chars,
+    );
+    try parseFontData(
+        @floatFromInt(medium_italic_atlas.width),
+        @floatFromInt(medium_italic_atlas.height),
+        "./assets/fonts/ubuntu_medium_italic.csv",
+        &medium_italic_chars,
+    );
 
     audio_state = try AudioState.create();
     try audio_state.engine.start();
@@ -1095,7 +1115,7 @@ pub fn init() !void {
     defer ctx.deinit();
 
     try addImage("light", "light.png", 128, 128, false, &ctx);
-    try addImage("bars", "bars.png", 24, 8, false, &ctx);
+    try addImage("bars", "bars.png", 26, 8, false, &ctx);
     try addImage("conditions", "conditions.png", 16, 16, false, &ctx);
     try addImage("error_texture", "error_texture.png", 8, 8, false, &ctx);
     try addImage("invisible", "invisible.png", 8, 8, true, &ctx);
@@ -1111,11 +1131,13 @@ pub fn init() !void {
     try addImage("projectiles", "projectiles.png", 8, 8, true, &ctx);
     try addImage("basic_items", "basic_items.png", 8, 8, false, &ctx);
     try addImage("basic_projectiles", "basic_projectiles.png", 8, 8, true, &ctx);
+    try addImage("projectiles_big", "projectiles_big.png", 18, 18, true, &ctx);
     try addImage("generic_8x8", "generic_8x8.png", 8, 8, true, &ctx);
     try addImage("particles", "particles.png", 8, 8, false, &ctx);
 
     try addWall("walls", "walls.png", 11, 20, 9, 18, &ctx);
 
+    try addAnimEnemy("misc_chars", "misc_chars.png", 10, 10, &ctx);
     try addAnimEnemy("low_realm", "low_realm.png", 10, 10, &ctx);
     try addAnimEnemy("low_realm_big", "low_realm_big.png", 18, 18, &ctx);
     try addAnimEnemy("mid_realm", "mid_realm.png", 8, 8, &ctx);
@@ -1133,6 +1155,8 @@ pub fn init() !void {
     try addUiImage("menu_decor_frame", "menu_decor_frame.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("retrieve_button", "retrieve_button.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("options_button", "options_button.png", imply_size, imply_size, &ui_ctx);
+    try addUiImage("stats_button", "stats_button.png", imply_size, imply_size, &ui_ctx);
+    try addUiImage("cards_button", "cards_button.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("rare_slot", "rare_slot.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("epic_slot", "epic_slot.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("legendary_slot", "legendary_slot.png", imply_size, imply_size, &ui_ctx);
@@ -1145,6 +1169,8 @@ pub fn init() !void {
     try addUiImage("out_of_combat_icon", "out_of_combat_icon.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("out_of_mana_slot", "out_of_mana_slot.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("out_of_health_slot", "out_of_health_slot.png", imply_size, imply_size, &ui_ctx);
+    try addUiImage("out_of_gold_slot", "out_of_gold_slot.png", imply_size, imply_size, &ui_ctx);
+    try addUiImage("on_cooldown_slot", "on_cooldown_slot.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("dialog_base_background", "screens/dialog_base_background.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("dialog_title_background", "screens/dialog_title_background.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("button_base", "screens/button_base.png", imply_size, imply_size, &ui_ctx);
@@ -1218,8 +1244,7 @@ pub fn init() !void {
     try addUiImage("scroll_wheel_hover", "scroll_wheel_hover.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("scroll_wheel_press", "scroll_wheel_press.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("scrollbar_decor", "scrollbar_decor.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("stats_button", "stats_button.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("ability_icons", "ability_icons.png", 44, 44, &ui_ctx);
+    try addUiImage("ability_icons", "ability_icons.png", 22, 22, &ui_ctx);
     try addUiImage("speech_balloons", "speech_balloons.png", 65, 45, &ui_ctx);
     try addUiImage("key_indicators", "key_indicators.png", 100, 100, &ui_ctx);
 

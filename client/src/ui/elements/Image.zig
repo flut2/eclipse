@@ -60,7 +60,7 @@ pub fn deinit(self: *Image) void {
 pub fn draw(self: Image, cam_data: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
 
-    self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset);
+    self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
 
     if (self.is_minimap_decor) {
         const fw: f32 = @floatFromInt(map.info.width);
@@ -90,7 +90,7 @@ pub fn draw(self: Image, cam_data: render.CameraData, x_offset: f32, y_offset: f
             player_icon_w,
             player_icon_h,
             player_icon,
-            .{ .shadow_texel_mult = 0.5 },
+            .{ .shadow_texel_mult = 0.5, .scissor = self.base.scissor },
         );
     }
 }

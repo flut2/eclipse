@@ -7,10 +7,38 @@ const network = @import("network.zig");
 const game_data = @import("shared").game_data;
 const ui_systems = @import("ui/systems.zig");
 
-const Player = @import("game/player.zig").Player;
+const Player = @import("game/Player.zig");
 const GameScreen = @import("ui/screens/GameScreen.zig");
 const KeyMapper = @import("ui/elements/KeyMapper.zig");
 const Input = @import("ui/elements/Input.zig");
+
+const press_mappings = .{
+    .{ &main.settings.move_up, handleMoveUpPress },
+    .{ &main.settings.move_down, handleMoveDownPress },
+    .{ &main.settings.move_left, handleMoveLeftPress },
+    .{ &main.settings.move_right, handleMoveRightPress },
+    .{ &main.settings.walk, handleWalkPress },
+    .{ &main.settings.shoot, handleShootPress },
+    .{ &main.settings.options, handleOptions },
+    .{ &main.settings.escape, handleEscape },
+    .{ &main.settings.interact, handleInteract },
+    .{ &main.settings.chat, handleChat },
+    .{ &main.settings.chat_cmd, handleChatCmd },
+    .{ &main.settings.toggle_perf_stats, handleTogglePerfStats },
+    .{ &main.settings.ability_1, handleAbility1 },
+    .{ &main.settings.ability_2, handleAbility2 },
+    .{ &main.settings.ability_3, handleAbility3 },
+    .{ &main.settings.ability_4, handleAbility4 },
+};
+
+const release_mappings = .{
+    .{ &main.settings.move_up, handleMoveUpRelease },
+    .{ &main.settings.move_down, handleMoveDownRelease },
+    .{ &main.settings.move_left, handleMoveLeftRelease },
+    .{ &main.settings.move_right, handleMoveRightRelease },
+    .{ &main.settings.walk, handleWalkRelease },
+    .{ &main.settings.shoot, handleShootRelease },
+};
 
 var move_up: f32 = 0.0;
 var move_down: f32 = 0.0;
@@ -43,138 +71,116 @@ pub fn deinit() void {
     input_history.deinit(main.allocator);
 }
 
-fn keyPress(window: *glfw.Window, key: glfw.Key) void {
-    if (ui_systems.screen != .game and ui_systems.screen != .editor or disable_input) return;
+fn handleMoveUpPress() void {
+    move_up = 1.0;
+}
 
-    if (key == main.settings.move_up.getKey()) {
-        move_up = 1.0;
-    } else if (key == main.settings.move_down.getKey()) {
-        move_down = 1.0;
-    } else if (key == main.settings.move_left.getKey()) {
-        move_left = 1.0;
-    } else if (key == main.settings.move_right.getKey()) {
-        move_right = 1.0;
-    } else if (key == main.settings.walk.getKey()) {
-        walking_speed_multiplier = 0.5;
-    } else if (key == main.settings.shoot.getKey()) {
-        if (ui_systems.screen == .game) {
-            attacking = true;
-        }
-    } else if (key == main.settings.options.getKey()) {
-        openOptions();
-    } else if (key == main.settings.escape.getKey()) {
-        if (ui_systems.screen == .game) main.server.sendPacket(.{ .escape = .{} });
-    } else if (key == main.settings.interact.getKey()) {
-        const int_id = map.interactive.map_id.load(.acquire);
-        if (int_id != -1) {
-            switch (map.interactive.type.load(.acquire)) {
-                .portal => main.server.sendPacket(.{ .use_portal = .{ .portal_map_id = int_id } }),
-                else => {},
-            }
-        }
-    } else if (key == main.settings.chat.getKey()) {
-        selected_input_field = ui_systems.screen.game.chat_input;
-        selected_input_field.?.last_input = 0;
-    } else if (key == main.settings.chat_cmd.getKey()) {
-        charEvent(window, @intFromEnum(glfw.Key.slash));
-        selected_input_field = ui_systems.screen.game.chat_input;
-        selected_input_field.?.last_input = 0;
-    } else if (key == main.settings.toggle_perf_stats.getKey()) {
-        main.settings.stats_enabled = !main.settings.stats_enabled;
-    } else if (key == main.settings.toggle_stats.getKey()) {
-        if (ui_systems.screen == .game) {
-            GameScreen.statsCallback(ui_systems.screen.game);
+fn handleMoveDownPress() void {
+    move_down = 1.0;
+}
+
+fn handleMoveLeftPress() void {
+    move_left = 1.0;
+}
+
+fn handleMoveRightPress() void {
+    move_right = 1.0;
+}
+
+fn handleWalkPress() void {
+    walking_speed_multiplier = 0.5;
+}
+
+fn handleShootPress() void {
+    if (ui_systems.screen == .game) attacking = true;
+}
+
+fn handleMoveUpRelease() void {
+    move_up = 0.0;
+}
+
+fn handleMoveDownRelease() void {
+    move_down = 0.0;
+}
+
+fn handleMoveLeftRelease() void {
+    move_left = 0.0;
+}
+
+fn handleMoveRightRelease() void {
+    move_right = 0.0;
+}
+
+fn handleWalkRelease() void {
+    walking_speed_multiplier = 1.0;
+}
+
+fn handleShootRelease() void {
+    if (ui_systems.screen == .game) attacking = false;
+}
+
+pub fn handleOptions() void {
+    if (ui_systems.screen == .game) {
+        ui_systems.screen.game.options.setVisible(true);
+        disable_input = true;
+    }
+}
+
+fn handleEscape() void {
+    if (ui_systems.screen == .game) main.server.sendPacket(.{ .escape = .{} });
+}
+
+fn handleInteract() void {
+    const int_id = map.interactive.map_id.load(.acquire);
+    if (int_id != -1) {
+        switch (map.interactive.type.load(.acquire)) {
+            .portal => main.server.sendPacket(.{ .use_portal = .{ .portal_map_id = int_id } }),
+            else => {},
         }
     }
 }
 
-fn keyRelease(key: glfw.Key) void {
-    if (ui_systems.screen != .game and ui_systems.screen != .editor or disable_input) return;
-
-    if (key == main.settings.move_up.getKey()) {
-        move_up = 0.0;
-    } else if (key == main.settings.move_down.getKey()) {
-        move_down = 0.0;
-    } else if (key == main.settings.move_left.getKey()) {
-        move_left = 0.0;
-    } else if (key == main.settings.move_right.getKey()) {
-        move_right = 0.0;
-    } else if (key == main.settings.walk.getKey()) {
-        walking_speed_multiplier = 1.0;
-    } else if (key == main.settings.shoot.getKey()) {
-        if (ui_systems.screen == .game) {
-            attacking = false;
-        }
-    }
+fn handleChat() void {
+    selected_input_field = ui_systems.screen.game.chat_input;
+    selected_input_field.?.last_input = 0;
 }
 
-fn mousePress(window: *glfw.Window, button: glfw.MouseButton) void {
-    if (ui_systems.screen != .game and ui_systems.screen != .editor or disable_input) return;
-
-    if (button == main.settings.move_up.getMouse()) {
-        move_up = 1.0;
-    } else if (button == main.settings.move_down.getMouse()) {
-        move_down = 1.0;
-    } else if (button == main.settings.move_left.getMouse()) {
-        move_left = 1.0;
-    } else if (button == main.settings.move_right.getMouse()) {
-        move_right = 1.0;
-    } else if (button == main.settings.walk.getMouse()) {
-        walking_speed_multiplier = 0.5;
-    } else if (button == main.settings.shoot.getMouse()) {
-        if (ui_systems.screen == .game) {
-            attacking = true;
-        }
-    } else if (button == main.settings.options.getMouse()) {
-        openOptions();
-    } else if (button == main.settings.escape.getMouse()) {
-        if (ui_systems.screen == .game) main.server.sendPacket(.{ .escape = .{} });
-    } else if (button == main.settings.interact.getMouse()) {
-        const int_id = map.interactive.map_id.load(.acquire);
-        if (int_id != -1) {
-            switch (map.interactive.type.load(.acquire)) {
-                .portal => main.server.sendPacket(.{ .use_portal = .{ .portal_map_id = int_id } }),
-                else => {},
-            }
-        }
-    } else if (button == main.settings.chat.getMouse()) {
-        if (ui_systems.screen == .game) {
-            selected_input_field = ui_systems.screen.game.chat_input;
-            selected_input_field.?.last_input = 0;
-        }
-    } else if (button == main.settings.chat_cmd.getMouse()) {
-        if (ui_systems.screen == .game) {
-            charEvent(window, @intFromEnum(glfw.Key.slash));
-            selected_input_field = ui_systems.screen.game.chat_input;
-            selected_input_field.?.last_input = 0;
-        }
-    } else if (button == main.settings.toggle_perf_stats.getMouse()) {
-        main.settings.stats_enabled = !main.settings.stats_enabled;
-    } else if (button == main.settings.toggle_stats.getMouse()) {
-        if (ui_systems.screen == .game) {
-            GameScreen.statsCallback(ui_systems.screen.game);
-        }
-    }
+fn handleChatCmd() void {
+    charEvent(main.window, @intFromEnum(glfw.Key.slash));
+    selected_input_field = ui_systems.screen.game.chat_input;
+    selected_input_field.?.last_input = 0;
 }
 
-fn mouseRelease(button: glfw.MouseButton) void {
-    if (ui_systems.screen != .game and ui_systems.screen != .editor or disable_input) return;
+fn handleTogglePerfStats() void {
+    main.settings.stats_enabled = !main.settings.stats_enabled;
+}
 
-    if (button == main.settings.move_up.getMouse()) {
-        move_up = 0.0;
-    } else if (button == main.settings.move_down.getMouse()) {
-        move_down = 0.0;
-    } else if (button == main.settings.move_left.getMouse()) {
-        move_left = 0.0;
-    } else if (button == main.settings.move_right.getMouse()) {
-        move_right = 0.0;
-    } else if (button == main.settings.walk.getMouse()) {
-        walking_speed_multiplier = 1.0;
-    } else if (button == main.settings.shoot.getMouse()) {
-        if (ui_systems.screen == .game) {
-            attacking = false;
-        }
-    }
+fn handleAbility1() void {
+    var lock = map.useLockForType(Player);
+    lock.lock();
+    defer lock.unlock();
+    if (map.localPlayer(.ref)) |player| player.useAbility(0);
+}
+
+fn handleAbility2() void {
+    var lock = map.useLockForType(Player);
+    lock.lock();
+    defer lock.unlock();
+    if (map.localPlayer(.ref)) |player| player.useAbility(1);
+}
+
+fn handleAbility3() void {
+    var lock = map.useLockForType(Player);
+    lock.lock();
+    defer lock.unlock();
+    if (map.localPlayer(.ref)) |player| player.useAbility(2);
+}
+
+fn handleAbility4() void {
+    var lock = map.useLockForType(Player);
+    lock.lock();
+    defer lock.unlock();
+    if (map.localPlayer(.ref)) |player| player.useAbility(3);
 }
 
 pub fn charEvent(_: *glfw.Window, char: u32) callconv(.C) void {
@@ -195,10 +201,9 @@ pub fn charEvent(_: *glfw.Window, char: u32) callconv(.C) void {
 pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     if (action == .press or action == .repeat) {
         if (selected_key_mapper) |key_mapper| {
-            key_mapper.mouse = .eight;
-            key_mapper.key = key;
+            key_mapper.settings_button.* = if (key == .escape) .{ .key = .unknown } else .{ .key = key };
             key_mapper.listening = false;
-            key_mapper.set_key_callback(key_mapper);
+            key_mapper.setKeyCallback(key_mapper);
             selected_key_mapper = null;
         }
 
@@ -213,6 +218,7 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
                     },
                     .v => {
                         if (window.getClipboardString()) |clip_str| {
+                            if (clip_str.len > 256 - input_field.index) return;
                             const clip_len = clip_str.len;
                             @memcpy(input_field.text_data.backing_buffer[input_field.index .. input_field.index + clip_len], clip_str);
                             input_field.index += @intCast(clip_len);
@@ -233,8 +239,8 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
 
             switch (key) {
                 .enter => {
-                    if (input_field.enter_callback) |enter_cb| {
-                        enter_cb(input_field.text_data.text);
+                    if (input_field.enterCallback) |enterCb| {
+                        enterCb(input_field.text_data.text);
                         input_field.clear();
                         input_field.last_input = -1;
                         selected_input_field = null;
@@ -290,17 +296,19 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
 
             return;
         }
-    }
 
-    if (action == .press) {
-        keyPress(window, key);
-        if (ui_systems.screen == .editor) ui_systems.screen.editor.onKeyPress(key);
+        const is_editor = ui_systems.screen == .editor;
+        if ((ui_systems.screen == .game or is_editor) and !disable_input)
+            inline for (press_mappings) |mapping| if (mapping[0].* == .key and mapping[0].key == key) mapping[1]();
+        if (is_editor) ui_systems.screen.editor.onKeyPress(key);
     } else if (action == .release) {
-        keyRelease(key);
-        if (ui_systems.screen == .editor) ui_systems.screen.editor.onKeyRelease(key);
+        const is_editor = ui_systems.screen == .editor;
+        if ((ui_systems.screen == .game or is_editor) and !disable_input)
+            inline for (release_mappings) |mapping| if (mapping[0].* == .key and mapping[0].key == key) mapping[1]();
+        if (is_editor) ui_systems.screen.editor.onKeyRelease(key);
     }
 
-    updateState();
+    updateMove();
 }
 
 pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
@@ -314,6 +322,25 @@ pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.A
             .target_enemy => assets.target_enemy_cursor_pressed,
             .target_ally => assets.target_ally_cursor_pressed,
         });
+
+        if (selected_input_field) |input_field| {
+            input_field.last_input = -1;
+            selected_input_field = null;
+        }
+
+        if (selected_key_mapper) |key_mapper| {
+            key_mapper.settings_button.* = .{ .mouse = button };
+            key_mapper.listening = false;
+            key_mapper.setKeyCallback(key_mapper);
+            selected_key_mapper = null;
+        }
+
+        if (!ui_systems.mousePress(mouse_x, mouse_y, mods)) {
+            const is_editor = ui_systems.screen == .editor;
+            if ((ui_systems.screen == .game or is_editor) and !disable_input)
+                inline for (press_mappings) |mapping| if (mapping[0].* == .mouse and mapping[0].mouse == button) mapping[1]();
+            if (is_editor) ui_systems.screen.editor.onMousePress(button);
+        }
     } else if (action == .release) {
         window.setCursor(switch (main.settings.cursor_type) {
             .basic => assets.default_cursor,
@@ -324,28 +351,18 @@ pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.A
             .target_enemy => assets.target_enemy_cursor,
             .target_ally => assets.target_ally_cursor,
         });
-    }
-    if (action == .press) {
-        if (!ui_systems.mousePress(mouse_x, mouse_y, mods, button)) {
-            mousePress(window, button);
-
-            if (ui_systems.screen == .editor) {
-                ui_systems.screen.editor.onMousePress(button);
-            }
-        }
-    } else if (action == .release) {
         if (!ui_systems.mouseRelease(mouse_x, mouse_y)) {
-            if (ui_systems.screen == .editor) {
-                ui_systems.screen.editor.onMouseRelease(button);
-            }
-            mouseRelease(button);
+            const is_editor = ui_systems.screen == .editor;
+            if ((ui_systems.screen == .game or is_editor) and !disable_input)
+                inline for (release_mappings) |mapping| if (mapping[0].* == .mouse and mapping[0].mouse == button) mapping[1]();
+            if (is_editor) ui_systems.screen.editor.onMouseRelease(button);
         }
     }
 
-    updateState();
+    updateMove();
 }
 
-pub fn updateState() void {
+pub fn updateMove() void {
     const y_dt = move_down - move_up;
     const x_dt = move_right - move_left;
     move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
@@ -382,12 +399,5 @@ pub fn scrollEvent(_: *glfw.Window, x_offset: f64, y_offset: f64) callconv(.C) v
             },
             else => {},
         }
-    }
-}
-
-pub fn openOptions() void {
-    if (ui_systems.screen == .game) {
-        ui_systems.screen.game.options.setVisible(true);
-        disable_input = true;
     }
 }

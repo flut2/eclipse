@@ -1,0 +1,355 @@
+const std = @import("std");
+const assets = @import("../assets.zig");
+const game_data = @import("shared").game_data;
+const main = @import("../main.zig");
+const map = @import("map.zig");
+const utils = @import("shared").utils;
+const network = @import("../network.zig");
+const particles = @import("particles.zig");
+const render = @import("../render.zig");
+const px_per_tile = Camera.px_per_tile;
+
+const Camera = @import("../Camera.zig");
+const Ally = @import("Ally.zig");
+const Player = @import("Player.zig");
+const Entity = @import("Entity.zig");
+const Enemy = @import("Enemy.zig");
+const Square = @import("Square.zig");
+const Projectile = @This();
+
+x: f32 = 0.0,
+y: f32 = 0.0,
+z: f32 = 0.0,
+size: f32 = 1.0,
+atlas_data: assets.AtlasData = .default,
+start_time: i64 = 0,
+angle: f32 = 0.0,
+visual_angle: f32 = 0.0,
+total_angle_change: f32 = 0.0,
+zero_vel_dist: f32 = -1.0,
+start_x: f32 = 0.0,
+start_y: f32 = 0.0,
+last_deflect: f32 = 0.0,
+index: u8 = 0,
+owner_map_id: u32 = std.math.maxInt(u32),
+damage_players: bool = false,
+phys_dmg: i32 = 0,
+magic_dmg: i32 = 0,
+true_dmg: i32 = 0,
+data: *const game_data.ProjectileData,
+colors: []u32 = &.{},
+hit_list: std.AutoHashMapUnmanaged(u32, void) = .empty,
+heat_seek_fired: bool = false,
+time_dilation_active: bool = false,
+last_hit_check: i64 = 0,
+
+pub fn addToMap(self: *Projectile) void {
+    self.start_time = main.current_time;
+    self.start_x = self.x;
+    self.start_y = self.y;
+
+    const tex_list = self.data.textures;
+    const tex = tex_list[utils.rng.next() % tex_list.len];
+    if (assets.atlas_data.get(tex.sheet)) |data| {
+        self.atlas_data = data[tex.index];
+    } else {
+        std.log.err("Could not find sheet {s} for projectile. Using error texture", .{tex.sheet});
+        self.atlas_data = assets.error_data;
+    }
+
+    self.colors = assets.atlas_to_color_data.get(@bitCast(self.atlas_data)) orelse blk: {
+        std.log.err("Could not parse color data for projectile. Setting it to empty", .{});
+        break :blk &.{};
+    };
+
+    map.addListForType(Projectile).append(main.allocator, self.*) catch @panic("Adding projectile failed");
+}
+
+pub fn deinit(self: *Projectile) void {
+    self.hit_list.deinit(main.allocator);
+}
+
+fn findTargetAlly(x: f32, y: f32, radius: f32) ?*Ally {
+    var min_dist = radius * radius;
+    var target: ?*Ally = null;
+
+    var lock = map.useLockForType(Ally);
+    lock.lock();
+    defer lock.unlock();
+    for (map.listForType(Ally).items) |*p| {
+        const dist_sqr = utils.distSqr(p.x, p.y, x, y);
+        if (dist_sqr < min_dist) {
+            min_dist = dist_sqr;
+            target = p;
+        }
+    }
+
+    return target;
+}
+
+fn findTargetPlayer(x: f32, y: f32, radius: f32) ?*Player {
+    var min_dist = radius * radius;
+    var target: ?*Player = null;
+
+    var lock = map.useLockForType(Player);
+    lock.lock();
+    defer lock.unlock();
+    for (map.listForType(Player).items) |*p| {
+        const dist_sqr = utils.distSqr(p.x, p.y, x, y);
+        if (dist_sqr < min_dist) {
+            min_dist = dist_sqr;
+            target = p;
+        }
+    }
+
+    return target;
+}
+
+fn findTargetEnemy(x: f32, y: f32, radius: f32) ?*Enemy {
+    var min_dist = radius * radius;
+    var target: ?*Enemy = null;
+
+    var lock = map.useLockForType(Enemy);
+    lock.lock();
+    defer lock.unlock();
+    for (map.listForType(Enemy).items) |*e| {
+        if (e.data.health <= 0) continue;
+
+        const dist_sqr = utils.distSqr(e.x, e.y, x, y);
+        if (dist_sqr < min_dist) {
+            min_dist = dist_sqr;
+            target = e;
+        }
+    }
+
+    return target;
+}
+
+fn updatePosition(self: *Projectile, elapsed: f32, dt: f32) void {
+    if (self.data.heat_seek_radius > 0 and elapsed >= self.data.heat_seek_delay and !self.heat_seek_fired) {
+        var target_x: f32 = -1.0;
+        var target_y: f32 = -1.0;
+
+        if (self.damage_players) {
+            if (findTargetPlayer(self.x, self.y, self.data.heat_seek_radius * self.data.heat_seek_radius)) |player| {
+                target_x = player.x;
+                target_y = player.y;
+            }
+        } else {
+            if (findTargetEnemy(self.x, self.y, self.data.heat_seek_radius * self.data.heat_seek_radius)) |enemy| {
+                target_x = enemy.x;
+                target_y = enemy.y;
+            }
+        }
+
+        if (target_x > 0 and target_y > 0) {
+            self.angle = @mod(std.math.atan2(target_y - self.y, target_x - self.x), std.math.tau);
+            self.heat_seek_fired = true;
+        }
+    }
+
+    var angle_change: f32 = 0.0;
+    if (self.data.angle_change != 0 and elapsed < self.data.angle_change_end and elapsed >= self.data.angle_change_delay) {
+        angle_change += dt * std.math.degreesToRadians(self.data.angle_change);
+    }
+
+    if (self.data.angle_change_accel != 0 and elapsed >= self.data.angle_change_accel_delay) {
+        const time_in_accel = elapsed - self.data.angle_change_accel_delay;
+        angle_change += dt * std.math.degreesToRadians(self.data.angle_change_accel) * time_in_accel;
+    }
+
+    if (angle_change != 0.0) {
+        if (self.data.angle_change_clamp != 0) {
+            const clamp_dt = self.data.angle_change_clamp - self.total_angle_change;
+            const clamped_change = @min(angle_change, clamp_dt);
+            self.total_angle_change += clamped_change;
+            self.angle += clamped_change;
+        } else {
+            self.angle += angle_change;
+        }
+    }
+
+    var dist: f32 = 0.0;
+    const uses_zero_vel = self.data.zero_velocity_delay > 0;
+    if (!uses_zero_vel or self.data.zero_velocity_delay > elapsed) {
+        if (self.data.accel == 0.0 or elapsed < self.data.accel_delay) {
+            dist = dt * self.data.speed * 10.0;
+        } else {
+            const time_in_accel = elapsed - self.data.accel_delay;
+            const accel_dist = dt * (self.data.speed * 10.0 + self.data.accel * 10.0 * time_in_accel);
+            if (self.data.speed_clamp == 0.0) {
+                dist = accel_dist;
+            } else {
+                const clamp_dist = dt * self.data.speed_clamp * 10.0;
+                dist = if (self.data.accel > 0) @min(accel_dist, clamp_dist) else @max(accel_dist, clamp_dist);
+            }
+        }
+    } else {
+        if (self.zero_vel_dist == -1.0) {
+            self.zero_vel_dist = utils.dist(self.start_x, self.start_y, self.x, self.y);
+        }
+
+        self.x = self.start_x + self.zero_vel_dist * @cos(self.angle);
+        self.y = self.start_y + self.zero_vel_dist * @sin(self.angle);
+        return;
+    }
+
+    if (self.data.boomerang and elapsed > self.data.duration / 2.0) dist = -dist;
+
+    self.x += dist * @cos(self.angle);
+    self.y += dist * @sin(self.angle);
+    if (self.data.amplitude != 0) {
+        const phase: f32 = if (self.index % 2 == 0) 0.0 else std.math.pi;
+        const time_ratio = elapsed / self.data.duration;
+        const deflection_target = self.data.amplitude * @sin(phase + time_ratio * self.data.frequency * std.math.tau);
+        self.x += (deflection_target - self.last_deflect) * @cos(self.angle + std.math.pi / 2.0);
+        self.y += (deflection_target - self.last_deflect) * @sin(self.angle + std.math.pi / 2.0);
+        self.last_deflect = deflection_target;
+    }
+}
+
+pub fn draw(self: Projectile, cam_data: render.CameraData, float_time_ms: f32) void {
+    if (!cam_data.visibleInCamera(self.x, self.y)) return;
+
+    const size = Camera.size_mult * cam_data.scale * self.data.size_mult;
+    const w = self.atlas_data.texWRaw() * size;
+    const h = self.atlas_data.texHRaw() * size;
+    const screen_pos = cam_data.worldToScreen(self.x, self.y);
+    const z_offset = self.z * -px_per_tile - h + assets.padding * size;
+    const rotation = self.data.rotation;
+    const angle_correction = @as(f32, @floatFromInt(self.data.angle_correction)) * std.math.degreesToRadians(45);
+    const angle = -(self.visual_angle + angle_correction +
+        (if (rotation == 0.0) 0.0 else std.math.degreesToRadians(float_time_ms / (1 / rotation))));
+
+    if (main.settings.enable_lights) {
+        const tile_pos = cam_data.worldToScreen(self.x, self.y);
+        render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+    }
+
+    render.drawQuad(
+        screen_pos.x - w / 2.0,
+        screen_pos.y + z_offset,
+        w,
+        h,
+        self.atlas_data,
+        .{ .shadow_texel_mult = 2.0 / size, .rotation = angle },
+    );
+}
+
+pub fn update(self: *Projectile, time: i64, dt: f32) bool {
+    defer self.time_dilation_active = false;
+
+    const elapsed_sec = @as(f32, @floatFromInt(time - self.start_time)) / std.time.us_per_s;
+    const dt_sec = dt / std.time.us_per_s;
+    if (elapsed_sec >= self.data.duration) return false;
+
+    const last_x = self.x;
+    const last_y = self.y;
+
+    self.updatePosition(elapsed_sec, dt_sec * @as(f32, if (self.time_dilation_active) 0.7 else 1.0));
+    if (self.x < 0 or self.y < 0 or
+        self.x >= @as(f32, @floatFromInt(map.info.width - 1)) or self.y >= @as(f32, @floatFromInt(map.info.height - 1)))
+        return false;
+
+    if (last_x == 0 and last_y == 0) {
+        self.visual_angle = self.angle;
+    } else {
+        const y_dt: f32 = self.y - last_y;
+        const x_dt: f32 = self.x - last_x;
+        self.visual_angle = std.math.atan2(y_dt, x_dt);
+    }
+
+    if (time - self.last_hit_check < 16 * std.time.us_per_ms) return true;
+
+    self.last_hit_check = time;
+
+    const square = map.getSquare(self.x, self.y, false).?;
+    if (square.data_id == Square.editor_tile or square.data_id == Square.empty_tile) return false;
+
+    {
+        var lock = map.useLockForType(Entity);
+        lock.lock();
+        defer lock.unlock();
+        if (map.findObject(Entity, square.entity_map_id, .con)) |e| {
+            if (e.data.occupy_square or e.data.full_occupy or e.data.is_wall) {
+                particles.HitEffect.addToMap(.{
+                    .x = self.x,
+                    .y = self.y,
+                    .colors = self.colors,
+                    .angle = self.angle,
+                    .speed = self.data.speed,
+                    .size = 1.0,
+                    .amount = 3,
+                });
+                return false;
+            }
+        }
+    }
+
+    if (self.damage_players) {
+        if (findTargetAlly(self.x, self.y, 0.6)) |ally| return self.hit(Ally, ally, time);
+        if (findTargetPlayer(self.x, self.y, 0.6)) |player| return self.hit(Player, player, time);
+    } else if (findTargetEnemy(self.x, self.y, 0.6)) |enemy| return self.hit(Enemy, enemy, time);
+
+    return true;
+}
+
+fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
+    if (self.hit_list.contains(obj.map_id)) return true;
+
+    particles.HitEffect.addToMap(.{
+        .x = self.x,
+        .y = self.y,
+        .colors = self.colors,
+        .angle = self.angle,
+        .speed = self.data.speed,
+        .size = 1.0,
+        .amount = 3,
+    });
+
+    if (obj.condition.invulnerable) {
+        self.hit_list.put(main.allocator, obj.map_id, {}) catch @panic("OOM");
+        assets.playSfx(obj.data.hit_sound);
+        return false;
+    }
+
+    var phys_dmg: i32 = 0;
+    var magic_dmg: i32 = 0;
+    const true_dmg = self.true_dmg;
+    switch (@TypeOf(obj.*)) {
+        Player => {
+            if (map.info.player_map_id != obj.map_id) return self.data.piercing;
+            phys_dmg = game_data.physDamage(self.phys_dmg, obj.defense + obj.defense_bonus, obj.condition);
+            magic_dmg = game_data.magicDamage(self.magic_dmg, obj.resistance + obj.resistance_bonus, obj.condition);
+            main.server.sendPacket(.{ .player_hit = .{ .proj_index = self.index, .enemy_map_id = self.owner_map_id } });
+        },
+        Ally => {
+            phys_dmg = game_data.physDamage(self.phys_dmg, obj.data.defense, obj.condition);
+            magic_dmg = game_data.magicDamage(self.magic_dmg, obj.data.resistance, obj.condition);
+            main.server.sendPacket(.{ .ally_hit = .{
+                .ally_map_id = obj.map_id,
+                .proj_index = self.index,
+                .enemy_map_id = self.owner_map_id,
+            } });
+        },
+        Enemy => {
+            phys_dmg = game_data.physDamage(self.phys_dmg, obj.defense, obj.condition);
+            magic_dmg = game_data.magicDamage(self.magic_dmg, obj.resistance, obj.condition);
+            main.server.sendPacket(.{ .enemy_hit = .{
+                .time = time,
+                .proj_index = self.index,
+                .enemy_map_id = obj.map_id,
+                .killed = obj.hp <= phys_dmg + magic_dmg + true_dmg,
+            } });
+        },
+        else => @compileError("Invalid type"),
+    }
+
+    const cond = utils.Condition.fromCondSlice(self.data.conditions);
+    if (phys_dmg > 0) map.takeDamage(obj, phys_dmg, .physical, cond, self.colors);
+    if (magic_dmg > 0) map.takeDamage(obj, magic_dmg, .magic, cond, self.colors);
+    if (true_dmg > 0) map.takeDamage(obj, true_dmg, .true, cond, self.colors);
+
+    self.hit_list.put(main.allocator, obj.map_id, {}) catch @panic("OOM");
+    return self.data.piercing;
+}

@@ -1,0 +1,219 @@
+const std = @import("std");
+const element = @import("../ui/elements/element.zig");
+const shared = @import("shared");
+const utils = shared.utils;
+const game_data = shared.game_data;
+const assets = @import("../assets.zig");
+const particles = @import("particles.zig");
+const map = @import("map.zig");
+const main = @import("../main.zig");
+const base = @import("object_base.zig");
+const render = @import("../render.zig");
+const px_per_tile = Camera.px_per_tile;
+
+const Camera = @import("../Camera.zig");
+const StatusText = @import("../ui/game/StatusText.zig");
+const Enemy = @This();
+
+map_id: u32 = std.math.maxInt(u32),
+data_id: u16 = std.math.maxInt(u16),
+dead: bool = false,
+x: f32 = 0.0,
+y: f32 = 0.0,
+z: f32 = 0.0,
+alpha: f32 = 1.0,
+name: ?[]const u8 = null,
+name_text_data: ?element.TextData = null,
+size_mult: f32 = 1.0,
+max_hp: i32 = 0,
+hp: i32 = 0,
+defense: i16 = 0,
+resistance: i16 = 0,
+condition: utils.Condition = .{},
+anim_data: assets.AnimEnemyData = undefined,
+atlas_data: assets.AtlasData = .default,
+move_angle: f32 = std.math.nan(f32),
+move_step: f32 = 0.0,
+target_x: f32 = 0.0,
+target_y: f32 = 0.0,
+attack_start: i64 = 0,
+attack_angle: f32 = 0.0,
+data: *const game_data.EnemyData = undefined,
+colors: []u32 = &.{},
+direction: assets.Direction = .right,
+anim_idx: u8 = 0,
+facing: f32 = std.math.nan(f32),
+status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
+next_anim: i64 = -1,
+
+pub fn addToMap(self: *Enemy) void {
+    base.addToMap(self, Enemy);
+}
+
+pub fn deinit(self: *Enemy) void {
+    base.deinit(self);
+    for (self.status_texts.items) |*text| text.deinit();
+    self.status_texts.deinit(main.allocator);
+}
+
+pub fn draw(self: *Enemy, cam_data: render.CameraData, float_time_ms: f32) void {
+    if (self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
+
+    var screen_pos = cam_data.worldToScreen(self.x, self.y);
+    const size = Camera.size_mult * cam_data.scale * self.size_mult;
+
+    var atlas_data = self.atlas_data;
+    var sink: f32 = 1.0;
+    if (map.getSquare(self.x, self.y, true)) |square| sink += if (square.data.sink) 0.75 else 0;
+    atlas_data.tex_h /= sink;
+
+    const w = atlas_data.texWRaw() * size;
+    const h = atlas_data.texHRaw() * size;
+    const dir_idx: u8 = @intFromEnum(self.direction);
+    const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimEnemyData.walk_actions];
+    const stand_w = stand_data.width() * size;
+    const x_offset = (if (self.direction == .left) stand_w - w else w - stand_w) / 2.0;
+
+    screen_pos.x += x_offset;
+    screen_pos.y += self.z * -px_per_tile - h + assets.padding * size;
+
+    var alpha_mult: f32 = self.alpha;
+    if (self.condition.invisible)
+        alpha_mult = 0.6;
+
+    var color: u32 = 0;
+    var color_intensity: f32 = 0.0;
+    _ = &color;
+    _ = &color_intensity;
+    // flash
+
+    if (main.settings.enable_lights) {
+        const tile_pos = cam_data.worldToScreen(self.x, self.y);
+        render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+    }
+
+    if (self.data.show_name) {
+        if (self.name_text_data) |*data| render.drawText(
+            screen_pos.x - x_offset - data.width * cam_data.scale / 2,
+            screen_pos.y - data.height * cam_data.scale - 5,
+            cam_data.scale,
+            data,
+            .{},
+        );
+    }
+
+    render.drawQuad(
+        screen_pos.x - w / 2.0,
+        screen_pos.y,
+        w,
+        h,
+        atlas_data,
+        .{
+            .shadow_texel_mult = 2.0 / size,
+            .alpha_mult = alpha_mult,
+            .color = color,
+            .color_intensity = color_intensity,
+        },
+    );
+
+    var y_pos: f32 = if (sink != 1.0) 15.0 else 5.0;
+
+    if (self.hp >= 0 and self.hp < self.max_hp) {
+        const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * cam_data.scale;
+        const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * cam_data.scale;
+        const hp_bar_y = screen_pos.y + h + y_pos;
+
+        render.drawQuad(
+            screen_pos.x - x_offset - hp_bar_w / 2.0,
+            hp_bar_y,
+            hp_bar_w,
+            hp_bar_h,
+            assets.empty_bar_data,
+            .{ .shadow_texel_mult = 0.5, .sort_extra = -0.0001 },
+        );
+
+        const float_hp: f32 = @floatFromInt(self.hp);
+        const float_max_hp: f32 = @floatFromInt(self.max_hp);
+        const hp_perc = 1.0 / (float_hp / float_max_hp);
+        var hp_bar_data = assets.hp_bar_data;
+        hp_bar_data.tex_w /= hp_perc;
+
+        render.drawQuad(
+            screen_pos.x - x_offset - hp_bar_w / 2.0,
+            hp_bar_y,
+            hp_bar_w / hp_perc,
+            hp_bar_h,
+            hp_bar_data,
+            .{ .shadow_texel_mult = 0.5 },
+        );
+
+        y_pos += hp_bar_h + 5.0;
+    }
+
+    const cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.? = @bitCast(self.condition);
+    if (cond_int > 0) {
+        base.drawConditions(cond_int, float_time_ms, screen_pos.x - x_offset, screen_pos.y + h + y_pos, cam_data.scale);
+        y_pos += 20;
+    }
+
+    base.drawStatusTexts(
+        self,
+        @as(i64, @intFromFloat(float_time_ms)) * std.time.us_per_ms,
+        screen_pos.x - x_offset,
+        screen_pos.y,
+        cam_data.scale,
+    );
+}
+
+pub fn update(self: *Enemy, time: i64, dt: f32) void {
+    const attack_period = std.time.us_per_s / 3;
+    const move_period = std.time.us_per_s / 2;
+
+    var float_period: f32 = 0.0;
+    var action: assets.Action = .stand;
+    if (time < self.attack_start + attack_period) {
+        const time_dt: f32 = @floatFromInt(time - self.attack_start);
+        float_period = @mod(time_dt, attack_period) / attack_period;
+        self.facing = self.attack_angle;
+        action = .attack;
+    } else if (!std.math.isNan(self.move_angle)) {
+        const float_time: f32 = @floatFromInt(time);
+        float_period = @mod(float_time, move_period) / move_period;
+        self.facing = self.move_angle;
+        action = .walk;
+    } else {
+        float_period = 0;
+        action = .stand;
+    }
+
+    const angle = if (std.math.isNan(self.facing))
+        0.0
+    else
+        utils.halfBound(self.facing) / (std.math.pi / 4.0);
+
+    const dir: assets.Direction = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
+        2...5 => .right,
+        else => .left,
+    };
+
+    const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);
+    const dir_idx: u8 = @intFromEnum(dir);
+    const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimEnemyData.walk_actions];
+
+    self.atlas_data = switch (action) {
+        .walk => self.anim_data.walk_anims[dir_idx * assets.AnimEnemyData.walk_actions + 1 + anim_idx],
+        .attack => self.anim_data.attack_anims[dir_idx * assets.AnimEnemyData.attack_actions + anim_idx],
+        .stand => stand_data,
+    };
+
+    self.direction = dir;
+
+    if (!std.math.isNan(self.move_angle) and self.move_step > 0.0) {
+        const cos_angle = @cos(self.move_angle);
+        const sin_angle = @sin(self.move_angle);
+        const next_x = self.x + dt * self.move_step * cos_angle;
+        const next_y = self.y + dt * self.move_step * sin_angle;
+        self.x = if (cos_angle > 0.0) @min(self.target_x, next_x) else @max(self.target_x, next_x);
+        self.y = if (sin_angle > 0.0) @min(self.target_y, next_y) else @max(self.target_y, next_y);
+    }
+}

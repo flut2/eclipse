@@ -9,7 +9,7 @@ const ItemTooltip = @This();
 const Container = @import("../elements/Container.zig");
 const Image = @import("../elements/Image.zig");
 const Text = @import("../elements/Text.zig");
-const Player = @import("../../game/player.zig").Player;
+const Player = @import("../../game/Player.zig");
 
 root: *Container = undefined,
 

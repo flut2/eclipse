@@ -13,7 +13,7 @@ const maps = @import("map/maps.zig");
 const behavior = @import("logic/behavior.zig");
 const behavior_logic = @import("logic/logic.zig");
 
-const Client = @import("client.zig").Client;
+const Client = @import("Client.zig");
 const Settings = @import("Settings.zig");
 
 pub const c = @cImport({

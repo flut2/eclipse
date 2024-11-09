@@ -12,17 +12,15 @@ const ui_systems = @import("ui/systems.zig");
 const dialog = @import("ui/dialogs/dialog.zig");
 const build_options = @import("options");
 
-const Square = @import("game/square.zig").Square;
-const Player = @import("game/player.zig").Player;
-const Enemy = @import("game/enemy.zig").Enemy;
-const Entity = @import("game/entity.zig").Entity;
-const Container = @import("game/container.zig").Container;
-const Portal = @import("game/portal.zig").Portal;
-const Projectile = @import("game/projectile.zig").Projectile;
-const Purchasable = @import("game/purchasable.zig").Purchasable;
-
-const read_buffer_size = 65535;
-const write_buffer_size = 65535;
+const Square = @import("game/Square.zig");
+const Player = @import("game/Player.zig");
+const Enemy = @import("game/Enemy.zig");
+const Entity = @import("game/Entity.zig");
+const Container = @import("game/Container.zig");
+const Portal = @import("game/Portal.zig");
+const Projectile = @import("game/Projectile.zig");
+const Purchasable = @import("game/Purchasable.zig");
+const Ally = @import("game/Ally.zig");
 
 pub fn typeToObjEnum(comptime T: type) network_data.ObjectType {
     return switch (T) {
@@ -32,6 +30,7 @@ pub fn typeToObjEnum(comptime T: type) network_data.ObjectType {
         Container => .container,
         Portal => .portal,
         Purchasable => .purchasable,
+        Ally => .ally,
         else => @compileError("Invalid type"),
     };
 }
@@ -44,6 +43,7 @@ pub fn ObjEnumToType(comptime obj_type: network_data.ObjectType) type {
         .portal => Portal,
         .container => Container,
         .purchasable => Purchasable,
+        .ally => Ally,
     };
 }
 
@@ -72,12 +72,25 @@ pub const Server = struct {
             .@"error" => handleError,
             .inv_result => handleInvResult,
             .map_info => handleMapInfo,
-            .dropped_map_ids => handleDroppedMapIds,
             .notification => handleNotification,
             .ping => handlePing,
             .show_effect => handleShowEffect,
             .text => handleText,
-            .new_data => handleNewData,
+            .new_tick => handleNewTick,
+            .dropped_players => handleDroppedPlayers,
+            .dropped_entities => handleDroppedEntities,
+            .dropped_enemies => handleDroppedEnemies,
+            .dropped_portals => handleDroppedPortals,
+            .dropped_containers => handleDroppedContainers,
+            .dropped_purchasables => handleDroppedPurchasables,
+            .dropped_allies => handleDroppedAllies,
+            .new_players => handleNewPlayers,
+            .new_entities => handleNewEntities,
+            .new_enemies => handleNewEnemies,
+            .new_portals => handleNewPortals,
+            .new_containers => handleNewContainers,
+            .new_purchasables => handleNewPurchasables,
+            .new_allies => handleNewAllies,
         };
     }
 
@@ -89,6 +102,7 @@ pub const Server = struct {
             .portal => network_data.PortalStat,
             .container => network_data.ContainerStat,
             .purchasable => network_data.PurchasableStat,
+            .ally => network_data.AllyStat,
         };
     }
 
@@ -100,15 +114,16 @@ pub const Server = struct {
             .portal => parsePortalStat,
             .container => parseContainerStat,
             .purchasable => parsePurchasableStat,
+            .ally => parseAllyStat,
         };
     }
 
-    pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv (.C) void {
+    pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
         buf.*.base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch unreachable);
         buf.*.len = @intCast(suggested_size);
     }
 
-    fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv (.C) void {
+    fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
         const wr: *WriteRequest = @ptrCast(@alignCast(ud));
         const server: *Server = @ptrCast(@alignCast(wr.request.data));
         main.allocator.free(wr.buffer.base[0..wr.buffer.len]);
@@ -125,7 +140,7 @@ pub const Server = struct {
         }
     }
 
-    pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv (.C) void {
+    pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
         const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
         const server: *Server = @ptrCast(@alignCast(socket.data));
         var child_arena = std.heap.ArenaAllocator.init(main.allocator);
@@ -171,7 +186,7 @@ pub const Server = struct {
         if (buf.*.base != null) main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
     }
 
-    fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv (.C) void {
+    fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
         const server: *Server = @ptrCast(@alignCast(conn.*.data));
         defer main.allocator.destroy(@as(*uv.uv_connect_t, @ptrCast(conn)));
 
@@ -206,13 +221,13 @@ pub const Server = struct {
         server.sendPacket(server.hello_data);
     }
 
-    fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv (.C) void {
+    fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.C) void {
         const server: *Server = @ptrCast(@alignCast(handle.*.data));
         server.shutdown();
         dialog.showDialog(.none, {});
     }
 
-    fn asyncWriteCallback(async_handle: [*c]uv.uv_async_t) callconv (.C) void {
+    fn asyncWriteCallback(async_handle: [*c]uv.uv_async_t) callconv(.C) void {
         const wr: *WriteRequest = @ptrCast(@alignCast(async_handle.*.data));
         const server: *Server = @ptrCast(@alignCast(wr.request.data));
 
@@ -322,7 +337,7 @@ pub const Server = struct {
         if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
     }
 
-    fn closeCallback(_: [*c]uv.uv_handle_t) callconv (.C) void {}
+    fn closeCallback(_: [*c]uv.uv_handle_t) callconv(.C) void {}
 
     fn logRead(comptime tick: enum { non_tick, tick }) bool {
         return if (tick == .non_tick)
@@ -471,49 +486,59 @@ pub const Server = struct {
         main.tick_frame = true;
     }
 
-    fn handleDroppedMapIds(_: *Server, data: PacketData(.dropped_map_ids)) void {
-        inline for (.{
-            .{ data.players, Player },
-            .{ data.enemies, Enemy },
-            .{ data.entities, Entity },
-            .{ data.portals, Portal },
-            .{ data.containers, Container },
-        }) |typed_list| @"continue": {
-            const list = typed_list[0];
-            const T = typed_list[1];
+    fn handleDroppedPlayers(_: *Server, data: PacketData(.dropped_players)) void {
+        droppedObject(Player, data.map_ids);
+    }
 
-            if (list.len == 0) break :@"continue";
+    fn handleDroppedEnemies(_: *Server, data: PacketData(.dropped_enemies)) void {
+        droppedObject(Enemy, data.map_ids);
+    }
 
-            var lock = map.useLockForType(T);
-            lock.lock();
-            defer lock.unlock();
-            for (list) |map_id| _ = map.removeEntity(T, map_id);
-        }
+    fn handleDroppedEntities(_: *Server, data: PacketData(.dropped_entities)) void {
+        droppedObject(Entity, data.map_ids);
+    }
+
+    fn handleDroppedPortals(_: *Server, data: PacketData(.dropped_portals)) void {
+        droppedObject(Portal, data.map_ids);
+    }
+
+    fn handleDroppedContainers(_: *Server, data: PacketData(.dropped_containers)) void {
+        droppedObject(Container, data.map_ids);
+    }
+
+    fn handleDroppedPurchasables(_: *Server, data: PacketData(.dropped_purchasables)) void {
+        droppedObject(Purchasable, data.map_ids);
+    }
+
+    fn handleDroppedAllies(_: *Server, data: PacketData(.dropped_allies)) void {
+        droppedObject(Ally, data.map_ids);
     }
 
     fn handleNotification(_: *Server, data: PacketData(.notification)) void {
         switch (data.obj_type) {
-            inline else => |inner| {
+            inline .player, .ally, .enemy, .entity => |inner| {
                 const T = ObjEnumToType(inner);
                 var lock = map.useLockForType(T);
                 lock.lock();
                 defer lock.unlock();
-                if (map.findObject(T, data.map_id, .con) == null) return;
+                if (map.findObject(T, data.map_id, .ref)) |obj| obj.status_texts.append(main.allocator, .{
+                    .initial_size = 16.0,
+                    .dispose_text = true,
+                    .show_at = main.current_time,
+                    .duration = 2.0 * std.time.us_per_s,
+                    .text_data = .{
+                        .text = main.allocator.dupe(u8, data.message) catch @panic("OOM"),
+                        .text_type = .bold,
+                        .size = 16,
+                        .color = data.color,
+                    },
+                }) catch @panic("OOM");
+            },
+            else => {
+                std.log.err("Invalid type: {}", .{data.obj_type});
+                return;
             },
         }
-
-        // element.StatusText.add(.{
-        //     .obj_type = data.obj_type,
-        //     .map_id = data.map_id,
-        //     .lifetime = 2000,
-        //     .text_data = .{
-        //         .text = main.allocator.dupe(u8, data.message) catch return,
-        //         .text_type = .bold,
-        //         .size = 16,
-        //         .color = data.color,
-        //     },
-        //     .initial_size = 16,
-        // }) catch unreachable;
     }
 
     fn handlePing(self: *Server, data: PacketData(.ping)) void {
@@ -667,9 +692,7 @@ pub const Server = struct {
         }
     }
 
-    fn handleNewData(self: *Server, data: PacketData(.new_data)) void {
-        const tick_time = @as(f32, std.time.us_per_s) / 30.0;
-
+    fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
         defer {
             if (main.tick_frame) {
                 const time = main.current_time;
@@ -711,52 +734,84 @@ pub const Server = struct {
         }
 
         main.need_minimap_update = data.tiles.len > 0;
+    }
 
-        inline for (.{
-            .{ data.players, Player },
-            .{ data.enemies, Enemy },
-            .{ data.entities, Entity },
-            .{ data.portals, Portal },
-            .{ data.containers, Container },
-        }) |typed_list| {
-            const T = typed_list[1];
-            var lock = map.useLockForType(T);
-            lock.lock();
-            defer lock.unlock();
-            for (typed_list[0]) |obj| {
-                var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };
-                const current_obj = map.findObject(T, obj.map_id, .ref) orelse findAddObj: {
-                    for (map.addListForType(T).items) |*add_obj| {
-                        if (add_obj.map_id == obj.map_id) break :findAddObj add_obj;
-                    }
+    fn handleNewPlayers(_: *Server, data: PacketData(.new_players)) void {
+        newObject(Player, data.list);
+    }
 
-                    break :findAddObj null;
-                };
-                if (current_obj) |object| {
-                    const pre_x = switch (T) {
-                        Player, Enemy => object.x,
-                        else => 0.0,
-                    };
-                    const pre_y = switch (T) {
-                        Player, Enemy => object.y,
-                        else => 0.0,
-                    };
+    fn handleNewEntities(_: *Server, data: PacketData(.new_entities)) void {
+        newObject(Entity, data.list);
+    }
 
-                    parseObjectStat(typeToObjEnum(T), &stat_reader, object);
+    fn handleNewEnemies(_: *Server, data: PacketData(.new_enemies)) void {
+        newObject(Enemy, data.list);
+    }
 
-                    switch (T) {
-                        Player => {
-                            if (object.map_id != map.info.player_map_id) updateMove(object, pre_x, pre_y, tick_time);
-                            if (object.map_id == map.info.player_map_id and ui_systems.screen == .game) ui_systems.screen.game.updateStats();
-                        },
-                        Enemy => updateMove(object, pre_x, pre_y, tick_time),
-                        else => {},
-                    }
-                } else {
-                    var new_obj: T = .{ .map_id = obj.map_id, .data_id = obj.data_id };
-                    parseObjectStat(typeToObjEnum(T), &stat_reader, &new_obj);
-                    new_obj.addToMap();
+    fn handleNewPortals(_: *Server, data: PacketData(.new_portals)) void {
+        newObject(Portal, data.list);
+    }
+
+    fn handleNewContainers(_: *Server, data: PacketData(.new_containers)) void {
+        newObject(Container, data.list);
+    }
+
+    fn handleNewPurchasables(_: *Server, data: PacketData(.new_purchasables)) void {
+        newObject(Purchasable, data.list);
+    }
+
+    fn handleNewAllies(_: *Server, data: PacketData(.new_allies)) void {
+        newObject(Ally, data.list);
+    }
+
+    fn droppedObject(comptime T: type, list: []const u32) void {
+        if (list.len == 0) return;
+
+        var lock = map.useLockForType(T);
+        lock.lock();
+        defer lock.unlock();
+        for (list) |map_id| _ = map.removeEntity(T, map_id);
+    }
+
+    fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
+        const tick_time = @as(f32, std.time.us_per_s) / 30.0;
+
+        var lock = map.useLockForType(T);
+        lock.lock();
+        defer lock.unlock();
+        for (list) |obj| {
+            var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };
+            const current_obj = map.findObject(T, obj.map_id, .ref) orelse findAddObj: {
+                for (map.addListForType(T).items) |*add_obj| {
+                    if (add_obj.map_id == obj.map_id) break :findAddObj add_obj;
                 }
+
+                break :findAddObj null;
+            };
+            if (current_obj) |object| {
+                const pre_x = switch (T) {
+                    Player, Enemy, Ally => object.x,
+                    else => 0.0,
+                };
+                const pre_y = switch (T) {
+                    Player, Enemy, Ally => object.y,
+                    else => 0.0,
+                };
+
+                parseObjectStat(typeToObjEnum(T), &stat_reader, object);
+
+                switch (T) {
+                    Player => {
+                        if (object.map_id != map.info.player_map_id) updateMove(object, pre_x, pre_y, tick_time);
+                        if (object.map_id == map.info.player_map_id and ui_systems.screen == .game) ui_systems.screen.game.updateStats();
+                    },
+                    Enemy, Ally => updateMove(object, pre_x, pre_y, tick_time),
+                    else => {},
+                }
+            } else {
+                var new_obj: T = .{ .map_id = obj.map_id, .data_id = obj.data_id };
+                parseObjectStat(typeToObjEnum(T), &stat_reader, &new_obj);
+                new_obj.addToMap();
             }
         }
     }
@@ -831,6 +886,7 @@ pub const Server = struct {
             .spirits_communed => |val| player.spirits_communed = val,
             .damage_mult => |val| player.damage_mult = val,
             .hit_mult => |val| player.hit_mult = val,
+            .ability_state => |val| player.ability_state = val,
             .condition => |val| player.condition = val,
             .gold => |val| player.gold = val,
             .gems => |val| player.gems = val,
@@ -966,6 +1022,21 @@ pub const Server = struct {
             .cost => |val| purchasable.cost = val,
             .currency => |val| purchasable.currency = val,
             .name => |val| parseNameStat(purchasable, val),
+        }
+    }
+
+    fn parseAllyStat(ally: *Ally, stat: network_data.AllyStat) void {
+        switch (stat) {
+            .x => |val| ally.x = val,
+            .y => |val| ally.y = val,
+            .size_mult => |val| ally.size_mult = val,
+            .max_hp => |val| ally.max_hp = val,
+            .hp => |val| {
+                ally.hp = val;
+                if (val > 0) ally.dead = false;
+            },
+            .condition => |val| ally.condition = val,
+            .owner_map_id => |val| ally.owner_map_id = val,
         }
     }
 };

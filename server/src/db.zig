@@ -10,7 +10,6 @@ pub const c = @cImport({
     @cInclude("hiredis.h");
 });
 
-// TODO: important, change this seed when hosting a server to the public to prevent login tokens from being predicted
 pub var csprng: std.Random.DefaultCsprng = blk: {
     @setEvalBranchQuota(10000);
     break :blk .init(@splat(0));
@@ -111,24 +110,22 @@ pub const MutedHwids = struct {
     }
 
     pub fn ttl(self: *MutedHwids, ip: []const u8) !u32 {
-        switch (builtin.os.tag) {
-            .linux => {
-                if (redisCommand(context, "FIELDTTL muted_hwids %b", .{ ip.ptr, ip.len })) |reply| {
-                    try self.reply_list.append(main.allocator, reply);
-                    if (reply.len <= 0)
-                        return error.NoData;
+        if (use_dragonfly) {
+            if (redisCommand(context, "FIELDTTL muted_hwids %b", .{ ip.ptr, ip.len })) |reply| {
+                try self.reply_list.append(main.allocator, reply);
+                if (reply.len <= 0) return error.NoData;
 
-                    const value = bytesToAny(i32, reply.str[0..reply.len]);
-                    return switch (value) {
-                        -1 => 0,
-                        -2 => error.NoKey,
-                        -3 => error.NoField,
-                        else => @intCast(value),
-                    };
-                } else return error.NoData;
-            },
-            else => return 0,
+                const value = bytesToAny(i32, reply.str[0..reply.len]);
+                return switch (value) {
+                    -1 => 0,
+                    -2 => error.NoKey,
+                    -3 => error.NoField,
+                    else => @intCast(value),
+                };
+            } else return error.NoData;
         }
+
+        return error.Unsupported;
     }
 };
 
@@ -226,8 +223,9 @@ pub const AccountData = struct {
         last_login_timestamp: i64,
         mute_expiry: i64,
         ban_expiry: i64,
-        fame: u32,
         gold: u32,
+        gems: u32,
+        crowns: u32,
         rank: network_data.Rank,
         next_char_id: u32,
         alive_char_ids: []const u32,
@@ -365,9 +363,16 @@ fn redisCommand(ctx: [*c]c.redisContext, format: [*c]const u8, args: anytype) ?*
 }
 
 pub fn init() !void {
-    var buf: [40]u8 = undefined;
+    var buf: [std.Random.DefaultCsprng.secret_seed_length]u8 = undefined;
+    std.posix.getrandom(&buf) catch |e| {
+        std.log.err("getrandom() failed: {}. This means that the server is insecure and should not be used in production", .{e});
+        buf = @splat(0);
+    };
+    csprng = .init(buf);
+
+    var ip_buf: [40]u8 = undefined;
     context = c.redisConnect(
-        std.fmt.bufPrintZ(&buf, "{s}", .{main.settings.redis_ip}) catch @panic("Invalid IP size"),
+        std.fmt.bufPrintZ(&ip_buf, "{s}", .{main.settings.redis_ip}) catch @panic("Invalid IP size"),
         main.settings.redis_port,
     ) orelse return error.OutOfMemory;
     if (context.err != 0) {

@@ -92,7 +92,7 @@ pub fn draw(self: *Toggle, _: render.CameraData, x_offset: f32, y_offset: f32, _
         .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
     };
 
-    image_data.draw(self.base.x + x_offset, self.base.y + y_offset);
+    image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
     if (self.text_data) |*text_data| render.drawText(
         self.base.x + w + 5 + x_offset,
         self.base.y + (h - text_data.height) / 2 + y_offset,

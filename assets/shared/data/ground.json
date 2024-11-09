@@ -174,5 +174,215 @@
             }
         ],
         "blend_prio": 1
+    },
+    {
+        "id": 9,
+        "name": "Crimson Chasm Gravel",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 22
+            },
+            {
+                "sheet": "ground",
+                "index": 22
+            },
+            {
+                "sheet": "ground",
+                "index": 22
+            },
+            {
+                "sheet": "ground",
+                "index": 22
+            },
+            {
+                "sheet": "ground",
+                "index": 23
+            },
+            {
+                "sheet": "ground",
+                "index": 24
+            },
+            {
+                "sheet": "ground",
+                "index": 25
+            }
+
+        ],
+        "blend_prio": 2
+    },
+    {
+        "id": 10,
+        "name": "Crimson Chasm Path",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 26
+            },
+            {
+                "sheet": "ground",
+                "index": 26
+            },
+            {
+                "sheet": "ground",
+                "index": 27
+            },
+            {
+                "sheet": "ground",
+                "index": 27
+            },
+            {
+                "sheet": "ground",
+                "index": 27  
+            },
+            {
+                "sheet": "ground",
+                "index": 28
+            },
+            {
+                "sheet": "ground",
+                "index": 29
+            },
+            {
+                "sheet": "ground",
+                "index": 30
+            },
+            {
+                "sheet": "ground",
+                "index": 31
+            }
+
+        ],
+        "blend_prio": 1
+    },
+    {
+        "id": 11,
+        "name": "Crimson Chasm Soil",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 32
+            },
+            {
+                "sheet": "ground",
+                "index": 33
+            },
+            {
+                "sheet": "ground",
+                "index": 34
+            },
+            {
+                "sheet": "ground",
+                "index": 35
+            },
+            {
+                "sheet": "ground",
+                "index": 36  
+            },
+            {
+                "sheet": "ground",
+                "index": 37
+            },
+            {
+                "sheet": "ground",
+                "index": 38
+            },
+            {
+                "sheet": "ground",
+                "index": 39
+            },
+            {
+                "sheet": "ground",
+                "index": 40
+            },
+            {
+                "sheet": "ground",
+                "index": 41
+            },
+            {
+                "sheet": "ground",
+                "index": 42
+            },
+            {
+                "sheet": "ground",
+                "index": 43
+            },
+            {
+                "sheet": "ground",
+                "index": 44
+            },
+            {
+                "sheet": "ground",
+                "index": 45
+            },
+            {
+                "sheet": "ground",
+                "index": 46
+            },
+            {
+                "sheet": "ground",
+                "index": 47
+            },
+            {
+                "sheet": "ground",
+                "index": 48
+            },
+            {
+                "sheet": "ground",
+                "index": 49
+            }
+
+        ],
+        "blend_prio": 1
+    },
+    {
+        "id": 12,
+        "name": "Crimson Chasm Checker Tile",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 50
+            }
+        ],
+        "blend_prio": 1
+    },
+    {
+        "id": 13,
+        "name": "Crimson Chasm Lava",
+        "light": {
+            "color": "0xFFF4AA",
+            "intensity": 0.165,
+            "radius": 1
+        },
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 51
+            }
+        ],
+        "blend_prio": 4,
+        "animation": {
+            "type": "wave",
+            "delta_x": -0.26,
+            "delta_y": 0.26
+        },
+        "sink": true,
+        "damage": 50
+    },
+    {
+        "id": 14,
+        "name": "Crimson Chasm Lava Path",
+        "light": {
+            "color": "0xFFF4AA",
+            "intensity": 0.015,
+            "radius": 0.75
+        },
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 52
+            }
+        ],
+        "blend_prio": 5
     }
 ]

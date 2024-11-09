@@ -130,7 +130,8 @@ fn handleAccountRegister(_: Handlers, req: *httpz.Request, res: *httpz.Response)
     try acc_data.set(.{ .mute_expiry = 0 });
     try acc_data.set(.{ .ban_expiry = 0 });
     try acc_data.set(.{ .gold = 0 });
-    try acc_data.set(.{ .fame = 0 });
+    try acc_data.set(.{ .gems = 0 });
+    try acc_data.set(.{ .crowns = 0 });
     try acc_data.set(.{ .rank = if (acc_id == 0) .admin else .default });
     try acc_data.set(.{ .next_char_id = 0 });
     try acc_data.set(.{ .alive_char_ids = &[0]u32{} });

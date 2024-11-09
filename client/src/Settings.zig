@@ -6,40 +6,9 @@ const main = @import("main.zig");
 
 const Self = @This();
 
-pub const CursorType = enum {
-    basic,
-    royal,
-    ranger,
-    aztec,
-    fiery,
-    target_enemy,
-    target_ally,
-};
-
-pub const AaType = enum {
-    none,
-    fxaa,
-    taa,
-};
-
-pub const Button = union(enum) {
-    key: glfw.Key,
-    mouse: glfw.MouseButton,
-
-    pub fn getKey(self: Button) glfw.Key {
-        switch (self) {
-            .key => |key| return key,
-            .mouse => return .unknown,
-        }
-    }
-
-    pub fn getMouse(self: Button) glfw.MouseButton {
-        switch (self) {
-            .key => return .eight,
-            .mouse => |mouse| return mouse,
-        }
-    }
-};
+pub const CursorType = enum { basic, royal, ranger, aztec, fiery, target_enemy, target_ally };
+pub const AaType = enum { none, fxaa };
+pub const Button = union(enum) { key: glfw.Key, mouse: glfw.MouseButton };
 
 var arena: std.heap.ArenaAllocator = undefined;
 
@@ -62,7 +31,6 @@ chat: Button = .{ .key = .enter },
 chat_cmd: Button = .{ .key = .slash },
 respond: Button = .{ .key = .F2 },
 shoot: Button = .{ .mouse = .left },
-toggle_stats: Button = .{ .key = .b },
 sfx_volume: f32 = 0.33,
 music_volume: f32 = 0.1,
 enable_vsync: bool = true,

@@ -101,7 +101,7 @@ pub const TextData = struct {
     shadow_alpha_mult: f32 = 0.5,
     shadow_texel_offset_mult: f32 = 0.0,
     outline_color: u32 = 0x000000,
-    outline_width: f32 = 1.0, // 0.5 for off
+    outline_width: f32 = 0.5,
     password: bool = false,
     handle_special_chars: bool = true,
     disable_subpixel: bool = false,
@@ -150,9 +150,10 @@ pub const TextData = struct {
         const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
         var line_height = start_line_height;
 
+        const pad_offset = assets.CharacterData.padding * size_scale;
+        var x_pointer: f32 = -pad_offset;
+        var y_pointer: f32 = line_height - pad_offset;
         var x_max: f32 = 0.0;
-        var x_pointer: f32 = 0.0;
-        var y_pointer: f32 = line_height;
         var current_size = size_scale;
         var current_type = self.text_type;
         var index_offset: u16 = 0;
@@ -391,12 +392,13 @@ pub const NineSliceImageData = struct {
         };
     }
 
-    pub fn draw(self: NineSliceImageData, x: f32, y: f32) void {
+    pub fn draw(self: NineSliceImageData, x: f32, y: f32, scissor_override: ?ScissorRect) void {
+        const scissor = if (scissor_override) |s| s else self.scissor;
         var opts: render.QuadOptions = .{
             .alpha_mult = self.alpha,
             .color = self.color,
             .color_intensity = self.color_intensity,
-            .scissor = self.scissor,
+            .scissor = scissor,
         };
 
         const w = self.w;
@@ -409,125 +411,125 @@ pub const NineSliceImageData = struct {
 
         const top_right = self.topRight();
         const top_right_w = top_right.texWRaw();
-        if (self.scissor.min_x != ScissorRect.dont_scissor)
-            opts.scissor.min_x = self.scissor.min_x - (w - top_right_w);
-        if (self.scissor.max_x != ScissorRect.dont_scissor)
-            opts.scissor.max_x = self.scissor.max_x - (w - top_right_w);
+        if (scissor.min_x != ScissorRect.dont_scissor)
+            opts.scissor.min_x = scissor.min_x - (w - top_right_w);
+        if (scissor.max_x != ScissorRect.dont_scissor)
+            opts.scissor.max_x = scissor.max_x - (w - top_right_w);
         render.drawQuad(x + (w - top_right_w), y, top_right_w, top_right.texHRaw(), top_right, opts);
 
         const bottom_left = self.bottomLeft();
         const bottom_left_w = bottom_left.texWRaw();
         const bottom_left_h = bottom_left.texHRaw();
-        opts.scissor.min_x = self.scissor.min_x;
-        opts.scissor.max_x = self.scissor.max_x;
-        if (self.scissor.min_y != ScissorRect.dont_scissor)
-            opts.scissor.min_y = self.scissor.min_y - (h - bottom_left_h);
-        if (self.scissor.max_y != ScissorRect.dont_scissor)
-            opts.scissor.max_y = self.scissor.max_y - (h - bottom_left_h);
+        opts.scissor.min_x = scissor.min_x;
+        opts.scissor.max_x = scissor.max_x;
+        if (scissor.min_y != ScissorRect.dont_scissor)
+            opts.scissor.min_y = scissor.min_y - (h - bottom_left_h);
+        if (scissor.max_y != ScissorRect.dont_scissor)
+            opts.scissor.max_y = scissor.max_y - (h - bottom_left_h);
         render.drawQuad(x, y + (h - bottom_left_h), bottom_left_w, bottom_left_h, bottom_left, opts);
 
         const bottom_right = self.bottomRight();
         const bottom_right_w = bottom_right.texWRaw();
         const bottom_right_h = bottom_right.texHRaw();
-        opts.scissor.min_x = if (self.scissor.min_x != ScissorRect.dont_scissor)
-            self.scissor.min_x - (w - top_right_w)
+        opts.scissor.min_x = if (scissor.min_x != ScissorRect.dont_scissor)
+            scissor.min_x - (w - top_right_w)
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_x = if (self.scissor.max_x != ScissorRect.dont_scissor)
-            self.scissor.max_x - (w - top_right_w)
+        opts.scissor.max_x = if (scissor.max_x != ScissorRect.dont_scissor)
+            scissor.max_x - (w - top_right_w)
         else
             ScissorRect.dont_scissor;
-        opts.scissor.min_y = if (self.scissor.min_y != ScissorRect.dont_scissor)
-            self.scissor.min_y - (h - bottom_left_h)
+        opts.scissor.min_y = if (scissor.min_y != ScissorRect.dont_scissor)
+            scissor.min_y - (h - bottom_left_h)
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_y = if (self.scissor.max_y != ScissorRect.dont_scissor)
-            self.scissor.max_y - (h - bottom_left_h)
+        opts.scissor.max_y = if (scissor.max_y != ScissorRect.dont_scissor)
+            scissor.max_y - (h - bottom_left_h)
         else
             ScissorRect.dont_scissor;
         render.drawQuad(x + (w - bottom_right_w), y + (h - bottom_right_h), bottom_right_w, bottom_right_h, bottom_right, opts);
 
         const top_center = self.topCenter();
-        opts.scissor.min_x = if (self.scissor.min_x != ScissorRect.dont_scissor)
-            self.scissor.min_x - top_left_w
+        opts.scissor.min_x = if (scissor.min_x != ScissorRect.dont_scissor)
+            scissor.min_x - top_left_w
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_x = if (self.scissor.max_x != ScissorRect.dont_scissor)
-            self.scissor.max_x - top_left_w
+        opts.scissor.max_x = if (scissor.max_x != ScissorRect.dont_scissor)
+            scissor.max_x - top_left_w
         else
             ScissorRect.dont_scissor;
-        opts.scissor.min_y = self.scissor.min_y;
-        opts.scissor.max_y = self.scissor.max_y;
+        opts.scissor.min_y = scissor.min_y;
+        opts.scissor.max_y = scissor.max_y;
         render.drawQuad(x + top_left_w, y, w - top_left_w - top_right_w, top_center.texHRaw(), top_center, opts);
 
         const bottom_center = self.bottomCenter();
         const bottom_center_h = bottom_center.texHRaw();
-        opts.scissor.min_x = if (self.scissor.min_x != ScissorRect.dont_scissor)
-            self.scissor.min_x - bottom_left_w
+        opts.scissor.min_x = if (scissor.min_x != ScissorRect.dont_scissor)
+            scissor.min_x - bottom_left_w
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_x = if (self.scissor.max_x != ScissorRect.dont_scissor)
-            self.scissor.max_x - bottom_left_w
+        opts.scissor.max_x = if (scissor.max_x != ScissorRect.dont_scissor)
+            scissor.max_x - bottom_left_w
         else
             ScissorRect.dont_scissor;
-        opts.scissor.min_y = if (self.scissor.min_y != ScissorRect.dont_scissor)
-            self.scissor.min_y - (h - bottom_center_h)
+        opts.scissor.min_y = if (scissor.min_y != ScissorRect.dont_scissor)
+            scissor.min_y - (h - bottom_center_h)
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_y = if (self.scissor.max_y != ScissorRect.dont_scissor)
-            self.scissor.max_y - (h - bottom_center_h)
+        opts.scissor.max_y = if (scissor.max_y != ScissorRect.dont_scissor)
+            scissor.max_y - (h - bottom_center_h)
         else
             ScissorRect.dont_scissor;
         render.drawQuad(x + bottom_left_w, y + (h - bottom_center_h), w - bottom_left_w - bottom_right_w, bottom_center_h, bottom_center, opts);
 
         const middle_center = self.middleCenter();
-        opts.scissor.min_x = if (self.scissor.min_x != ScissorRect.dont_scissor)
-            self.scissor.min_x - top_left_w
+        opts.scissor.min_x = if (scissor.min_x != ScissorRect.dont_scissor)
+            scissor.min_x - top_left_w
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_x = if (self.scissor.max_x != ScissorRect.dont_scissor)
-            self.scissor.max_x - top_left_w
+        opts.scissor.max_x = if (scissor.max_x != ScissorRect.dont_scissor)
+            scissor.max_x - top_left_w
         else
             ScissorRect.dont_scissor;
-        opts.scissor.min_y = if (self.scissor.min_y != ScissorRect.dont_scissor)
-            self.scissor.min_y - top_left_h
+        opts.scissor.min_y = if (scissor.min_y != ScissorRect.dont_scissor)
+            scissor.min_y - top_left_h
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_y = if (self.scissor.max_y != ScissorRect.dont_scissor)
-            self.scissor.max_y - top_left_h
+        opts.scissor.max_y = if (scissor.max_y != ScissorRect.dont_scissor)
+            scissor.max_y - top_left_h
         else
             ScissorRect.dont_scissor;
         render.drawQuad(x + top_left_w, y + top_left_h, w - top_left_w - top_right_w, h - top_left_h - bottom_left_h, middle_center, opts);
 
         const middle_left = self.middleLeft();
-        opts.scissor.min_x = self.scissor.min_x;
-        opts.scissor.max_x = self.scissor.max_x;
-        opts.scissor.min_y = if (self.scissor.min_y != ScissorRect.dont_scissor)
-            self.scissor.min_y - top_left_h
+        opts.scissor.min_x = scissor.min_x;
+        opts.scissor.max_x = scissor.max_x;
+        opts.scissor.min_y = if (scissor.min_y != ScissorRect.dont_scissor)
+            scissor.min_y - top_left_h
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_y = if (self.scissor.max_y != ScissorRect.dont_scissor)
-            self.scissor.max_y - top_left_h
+        opts.scissor.max_y = if (scissor.max_y != ScissorRect.dont_scissor)
+            scissor.max_y - top_left_h
         else
             ScissorRect.dont_scissor;
         render.drawQuad(x, y + top_left_h, middle_left.texWRaw(), h - top_left_h - bottom_left_h, middle_left, opts);
 
         const middle_right = self.middleRight();
         const middle_right_w = middle_right.texWRaw();
-        opts.scissor.min_x = if (self.scissor.min_x != ScissorRect.dont_scissor)
-            self.scissor.min_x - (w - middle_right_w)
+        opts.scissor.min_x = if (scissor.min_x != ScissorRect.dont_scissor)
+            scissor.min_x - (w - middle_right_w)
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_x = if (self.scissor.max_x != ScissorRect.dont_scissor)
-            self.scissor.max_x - (w - middle_right_w)
+        opts.scissor.max_x = if (scissor.max_x != ScissorRect.dont_scissor)
+            scissor.max_x - (w - middle_right_w)
         else
             ScissorRect.dont_scissor;
-        opts.scissor.min_y = if (self.scissor.min_y != ScissorRect.dont_scissor)
-            self.scissor.min_y - top_left_h
+        opts.scissor.min_y = if (scissor.min_y != ScissorRect.dont_scissor)
+            scissor.min_y - top_left_h
         else
             ScissorRect.dont_scissor;
-        opts.scissor.max_y = if (self.scissor.max_y != ScissorRect.dont_scissor)
-            self.scissor.max_y - top_left_h
+        opts.scissor.max_y = if (scissor.max_y != ScissorRect.dont_scissor)
+            scissor.max_y - top_left_h
         else
             ScissorRect.dont_scissor;
         render.drawQuad(x + (w - middle_right_w), y + top_left_h, middle_right_w, h - top_left_h - bottom_left_h, middle_right, opts);
@@ -580,10 +582,10 @@ pub const NormalImageData = struct {
     scissor: ScissorRect = .{},
     atlas_data: assets.AtlasData,
 
-    pub fn draw(self: NormalImageData, x: f32, y: f32) void {
+    pub fn draw(self: NormalImageData, x: f32, y: f32, scissor_override: ?ScissorRect) void {
         const opts: render.QuadOptions = .{
             .alpha_mult = self.alpha,
-            .scissor = self.scissor,
+            .scissor = if (scissor_override) |s| s else self.scissor,
             .color = self.color,
             .color_intensity = self.color_intensity,
             .shadow_texel_mult = if (self.glow) 2.0 / @max(self.scale_x, self.scale_y) else 0.0,
@@ -619,10 +621,11 @@ pub const ImageData = union(enum) {
     nine_slice: NineSliceImageData,
     normal: NormalImageData,
 
-    pub fn draw(self: ImageData, x: f32, y: f32) void {
+    pub fn draw(self: ImageData, x: f32, y: f32, scissor_override: ScissorRect) void {
+        const scissor = if (scissor_override.isDefault()) null else scissor_override;
         switch (self) {
-            .nine_slice => |nine_slice| nine_slice.draw(x, y),
-            .normal => |normal| normal.draw(x, y),
+            .nine_slice => |nine_slice| nine_slice.draw(x, y, scissor),
+            .normal => |normal| normal.draw(x, y, scissor),
         }
     }
 

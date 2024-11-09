@@ -10,6 +10,7 @@ pub var item: Maps(ItemData) = .{};
 pub var portal: Maps(PortalData) = .{};
 pub var region: Maps(RegionData) = .{};
 pub var purchasable: Maps(PurchasableData) = .{};
+pub var ally: Maps(AllyData) = .{};
 
 var arena: std.heap.ArenaAllocator = undefined;
 
@@ -56,6 +57,15 @@ fn parseClasses(allocator: std.mem.Allocator, path: []const u8) !void {
                 },
                 .projectiles = if (old_abil.projectiles) |projs| try allocator.dupe(ProjectileData, projs) else null,
             };
+            if (old_abil.projectiles) |projs| {
+                const new_projs = try allocator.dupe(ProjectileData, projs);
+                for (new_projs) |*proj| {
+                    const new_textures = try allocator.dupe(TextureData, proj.textures);
+                    for (new_textures) |*tex| tex.sheet = try allocator.dupe(u8, tex.sheet);
+                    proj.textures = new_textures;
+                }
+                abil_data.projectiles = new_projs;
+            }
         }
 
         const class_data: ClassData = .{
@@ -98,23 +108,36 @@ pub fn init(allocator: std.mem.Allocator) !void {
     defer {
         const dummy_id_ctx: std.hash_map.AutoContext(u16) = undefined;
         const dummy_name_ctx: StringContext = undefined;
-        inline for (.{ &item, &container, &enemy, &entity, &ground, &portal, &region, &class }) |data_maps| {
+        inline for (.{
+            &item,
+            &container,
+            &enemy,
+            &entity,
+            &ground,
+            &portal,
+            &region,
+            &purchasable,
+            &ally,
+            &class,
+        }) |data_maps| {
             if (data_maps.from_id.capacity() > 0) data_maps.from_id.rehash(dummy_id_ctx);
             if (data_maps.from_name.capacity() > 0) data_maps.from_name.rehash(dummy_name_ctx);
         }
     }
 
-    arena = std.heap.ArenaAllocator.init(allocator);
+    arena = .init(allocator);
     const arena_allocator = arena.allocator();
 
     try parseGeneric(arena_allocator, "./assets/data/items.json", ItemData, &item);
     try parseGeneric(arena_allocator, "./assets/data/containers.json", ContainerData, &container);
     try parseGeneric(arena_allocator, "./assets/data/enemies.json", EnemyData, &enemy);
     try parseGeneric(arena_allocator, "./assets/data/entities.json", EntityData, &entity);
+    try parseGeneric(arena_allocator, "./assets/data/walls.json", EntityData, &entity);
     try parseGeneric(arena_allocator, "./assets/data/ground.json", GroundData, &ground);
     try parseGeneric(arena_allocator, "./assets/data/portals.json", PortalData, &portal);
     try parseGeneric(arena_allocator, "./assets/data/regions.json", RegionData, &region);
     try parseGeneric(arena_allocator, "./assets/data/purchasables.json", PurchasableData, &purchasable);
+    try parseGeneric(arena_allocator, "./assets/data/allies.json", AllyData, &ally);
 
     // Must be last to resolve item name->id
     try parseClasses(arena_allocator, "./assets/data/classes.json");
@@ -375,6 +398,7 @@ pub const AbilityData = struct {
     cooldown: f32,
     icon: TextureData,
     projectiles: ?[]ProjectileData = null,
+    sound: []const u8 = "",
 };
 
 const InternalClassData = struct {
@@ -449,6 +473,8 @@ pub const ProjectileData = struct {
     heat_seek_delay: f32 = 0,
     light: LightData = .{},
     conditions: ?[]const TimedCondition = null,
+    knockback: bool = false,
+    knockback_strength: f32 = 1.0,
 
     pub fn range(self: ProjectileData) f32 {
         return self.speed * self.duration * 10.0;
@@ -458,7 +484,7 @@ pub const ProjectileData = struct {
 pub const EnemyData = struct {
     id: u16,
     name: []const u8,
-    texture: TextureData,
+    textures: []const TextureData,
     health: u32 = 0, // Having no health means it can't be hit/die
     defense: i32 = 0,
     resistance: i32 = 0,
@@ -496,10 +522,26 @@ pub const EntityData = struct {
 pub const PurchasableData = struct {
     id: u16,
     name: []const u8,
+    size_mult: f32 = 1.0,
     textures: []const TextureData,
     light: LightData = .{},
     show_name: bool = true,
     draw_on_ground: bool = false,
+};
+
+pub const AllyData = struct {
+    id: u16,
+    name: []const u8,
+    health: i32 = 0, // Having no health means it can't be hit/die
+    defense: i32 = 0,
+    resistance: i32 = 0,
+    size_mult: f32 = 1.0,
+    textures: []const TextureData,
+    light: LightData = .{},
+    show_name: bool = false,
+    draw_on_ground: bool = false,
+    hit_sound: []const u8 = "Unknown",
+    death_sound: []const u8 = "Unknown",
 };
 
 pub const GroundData = struct {

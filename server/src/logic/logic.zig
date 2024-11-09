@@ -5,12 +5,14 @@ const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
 
-const Player = @import("../map/player.zig").Player;
-const Projectile = @import("../map/projectile.zig").Projectile;
-const Enemy = @import("../map/enemy.zig").Enemy;
-const Entity = @import("../map/entity.zig").Entity;
+const Player = @import("../map/Player.zig");
+const Projectile = @import("../map/Projectile.zig");
+const Enemy = @import("../map/Enemy.zig");
+const Entity = @import("../map/Entity.zig");
+const Ally = @import("../map/Ally.zig");
+const World = @import("../World.zig");
 
-pub const EnemyStorages = struct {
+pub const Storages = struct {
     heal: std.AutoHashMapUnmanaged(u64, HealStorage) = .empty,
     charge: std.AutoHashMapUnmanaged(u64, ChargeStorage) = .empty,
     aoe: std.AutoHashMapUnmanaged(u64, AoeStorage) = .empty,
@@ -18,30 +20,13 @@ pub const EnemyStorages = struct {
     wander: std.AutoHashMapUnmanaged(u64, WanderStorage) = .empty,
     shoot: std.AutoHashMapUnmanaged(u64, ShootStorage) = .empty,
 
-    pub fn clear(self: *EnemyStorages) void {
+    pub fn clear(self: *Storages) void {
         inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
             @field(self.*, field.name).clearRetainingCapacity();
         }
     }
 
-    pub fn deinit(self: *EnemyStorages) void {
-        inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
-            @field(self.*, field.name).deinit(main.allocator);
-        }
-    }
-};
-
-pub const EntityStorages = struct {
-    heal: std.AutoHashMapUnmanaged(u64, HealStorage) = .empty,
-    aoe: std.AutoHashMapUnmanaged(u64, AoeStorage) = .empty,
-
-    pub fn clear(self: *EntityStorages) void {
-        inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
-            @field(self.*, field.name).clearRetainingCapacity();
-        }
-    }
-
-    pub fn deinit(self: *EntityStorages) void {
+    pub fn deinit(self: *Storages) void {
         inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
             @field(self.*, field.name).deinit(main.allocator);
         }
@@ -54,8 +39,11 @@ fn getStorageId(comptime src_loc: std.builtin.SourceLocation) u64 {
 
 fn verifyType(comptime T: type) void {
     const type_info = @typeInfo(T);
-    if (type_info != .pointer or type_info.pointer.child != Enemy and type_info.pointer.child != Entity)
-        @compileError("Invalid type given");
+    if (type_info != .pointer or
+        type_info.pointer.child != Enemy and
+        type_info.pointer.child != Entity and
+        type_info.pointer.child != Ally)
+        @compileError("Invalid type given. Please use \"Enemy\", \"Entity\" or \"Ally\"");
 }
 
 const HealStorage = struct { time: i64 = 0 };
@@ -65,8 +53,7 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
     target_name: []const u8,
     cooldown: i64,
 }) bool {
-    const T = @TypeOf(host);
-    verifyType(T);
+    verifyType(@TypeOf(host));
 
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.heal.getPtr(storage_id) orelse blk: {
@@ -74,8 +61,7 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
         break :blk host.storages.heal.getPtr(storage_id).?;
     };
     storage.time -= dt;
-    if (storage.time > 0)
-        return false;
+    if (storage.time > 0) return false;
     defer storage.time = opts.cooldown;
 
     for (host.world.listForType(Enemy).items) |*e| {
@@ -85,8 +71,7 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
             const pre_hp = e.hp;
             e.hp = @min(e.max_hp, e.hp + opts.amount);
             const hp_delta = e.hp - pre_hp;
-            if (hp_delta <= 0)
-                return false;
+            if (hp_delta <= 0) return false;
 
             var buf: [64]u8 = undefined;
             const msg = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return false;
@@ -120,11 +105,13 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
 }
 
 const ChargeStorage = struct { target_x: f32 = std.math.nan(f32), target_y: f32 = std.math.nan(f32), time: i64 = 0 };
-pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i64, opts: struct {
+pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64, opts: struct {
     speed: f32,
     range: f32,
     cooldown: i64,
 }) bool {
+    verifyType(@TypeOf(host));
+
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.charge.getPtr(storage_id) orelse blk: {
         host.storages.charge.put(main.allocator, storage_id, .{}) catch return false;
@@ -132,7 +119,7 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i6
     };
 
     if (!std.math.isNan(storage.target_x) and !std.math.isNan(storage.target_y)) {
-        host.moveToward(storage.target_x, storage.target_y, 0.0001, opts.speed, dt);
+        World.moveToward(host, storage.target_x, storage.target_y, opts.speed, dt);
         storage.time -= dt;
         if (storage.time < 0) {
             storage.target_x = std.math.nan(f32);
@@ -144,10 +131,9 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i6
         return true;
     } else {
         storage.time -= dt;
-        if (storage.time > 0)
-            return false;
+        if (storage.time > 0) return false;
 
-        if (host.world.getNearestPlayerWithin(host.x, host.y, opts.range * opts.range)) |p| {
+        if (host.world.getNearestWithin(Player, host.x, host.y, opts.range * opts.range)) |p| {
             const dx = host.x - p.x;
             const dy = host.y - p.y;
             storage.target_x = p.x;
@@ -159,13 +145,15 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i6
     }
 }
 
-pub fn orbit(host: *Enemy, dt: i64, opts: struct {
+pub fn orbit(host: anytype, dt: i64, opts: struct {
     speed: f32,
     radius: f32,
     acquire_range: f32,
     target_name: []const u8,
     rotate_speed: f32 = 1.0,
 }) bool {
+    verifyType(@TypeOf(host));
+
     const acq_sqr = opts.acquire_range * opts.acquire_range;
     for (host.world.listForType(Enemy).items) |*e| {
         const dx = host.x - e.x;
@@ -174,7 +162,30 @@ pub fn orbit(host: *Enemy, dt: i64, opts: struct {
             dx * dx + dy * dy <= acq_sqr)
         {
             const angle = std.math.atan2(dy, dx) + @mod(@as(f32, @floatFromInt(dt)) / std.time.us_per_s * opts.rotate_speed, std.math.tau);
-            host.moveToward(e.x + opts.radius * @cos(angle), e.y + opts.radius * @sin(angle), 0.0001, opts.speed, dt);
+            World.moveToward(host, e.x + opts.radius * @cos(angle), e.y + opts.radius * @sin(angle), opts.speed, dt);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+pub fn orbitPlayer(host: anytype, dt: i64, opts: struct {
+    speed: f32,
+    radius: f32,
+    acquire_range: f32,
+    target_map_id: u32,
+    rotate_speed: f32 = 1.0,
+}) bool {
+    verifyType(@TypeOf(host));
+
+    const acq_sqr = opts.acquire_range * opts.acquire_range;
+    if (host.world.find(Player, opts.target_map_id)) |p| {
+        const dx = host.x - p.x;
+        const dy = host.y - p.y;
+        if (dx * dx + dy * dy <= acq_sqr) {
+            const angle = std.math.atan2(dy, dx) + @mod(@as(f32, @floatFromInt(dt)) / std.time.us_per_s * opts.rotate_speed, std.math.tau);
+            World.moveToward(host, p.x + opts.radius * @cos(angle), p.y + opts.radius * @sin(angle), opts.speed, dt);
             return true;
         }
     }
@@ -202,11 +213,17 @@ pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64,
     };
 
     storage.time -= dt;
-    if (storage.time > 0)
-        return;
+    if (storage.time > 0) return;
     defer storage.time = opts.cooldown;
 
-    host.world.aoePlayer(host.x, host.y, host.data.name, opts.radius, .{
+    const obj_type: network_data.ObjectType = switch (@TypeOf(host.*)) {
+        Enemy => .enemy,
+        Entity => .entity,
+        Ally => .ally,
+        else => unreachable,
+    };
+
+    host.world.aoe(Player, host.x, host.y, obj_type, host.map_id, opts.radius, .{
         .phys_dmg = opts.phys_dmg,
         .magic_dmg = opts.magic_dmg,
         .true_dmg = opts.true_dmg,
@@ -217,12 +234,13 @@ pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64,
 }
 
 const FollowStorage = struct { time: i64 = 0 };
-pub fn follow(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i64, opts: struct {
+pub fn follow(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64, opts: struct {
     speed: f32,
     acquire_range: f32,
-    range: f32,
     cooldown: i64,
 }) bool {
+    verifyType(@TypeOf(host));
+
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.follow.getPtr(storage_id) orelse blk: {
         host.storages.follow.put(main.allocator, storage_id, .{}) catch return false;
@@ -230,20 +248,20 @@ pub fn follow(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i6
     };
 
     storage.time -= dt;
-    if (storage.time > 0)
-        return false;
+    if (storage.time > 0) return false;
     defer storage.time = opts.cooldown;
 
     const acq_sqr = opts.acquire_range * opts.acquire_range;
-    const range_sqr = opts.range * opts.range;
 
-    const target = host.world.getNearestPlayerWithinRing(host.x, host.y, acq_sqr, range_sqr) orelse return false;
-    host.moveToward(target.x, target.y, range_sqr, opts.speed, dt);
+    const target = host.world.getNearestWithin(Player, host.x, host.y, acq_sqr) orelse return false;
+    World.moveToward(host, target.x, target.y, opts.speed, dt);
     return true;
 }
 
 const WanderStorage = struct { move_cos: f32 = 0.0, move_sin: f32 = 0.0, rem_dist: f32 = 0.0 };
-pub fn wander(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i64, speed: f32) void {
+pub fn wander(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64, speed: f32) void {
+    verifyType(@TypeOf(host));
+
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.wander.getPtr(storage_id) orelse blk: {
         host.storages.wander.put(main.allocator, storage_id, .{}) catch return;
@@ -259,7 +277,7 @@ pub fn wander(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, dt: i6
 
     const fdt: f32 = @floatFromInt(dt);
     const dist = speed * (fdt / std.time.us_per_s);
-    host.move(host.x + dist * storage.move_cos, host.y + dist * storage.move_sin);
+    World.validatedMove(host, host.x + dist * storage.move_cos, host.y + dist * storage.move_sin);
     storage.rem_dist -= dist;
 }
 
@@ -283,16 +301,14 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
     };
 
     storage.cooldown -= dt;
-    if (storage.cooldown > 0)
-        return;
-
+    if (storage.cooldown > 0) return;
     defer storage.cooldown = opts.cooldown;
 
     const radius_sqr = opts.radius * opts.radius;
 
     var angle: f32 = 0.0;
     if (std.math.isNan(opts.fixed_angle)) {
-        if (host.world.getNearestPlayerWithin(host.x, host.y, radius_sqr)) |p| {
+        if (host.world.getNearestWithin(Player, host.x, host.y, radius_sqr)) |p| {
             angle = if (opts.predictivity > 0 and opts.predictivity > utils.rng.random().float(f32))
                 0.0 // predict(host, p)
             else
@@ -318,7 +334,7 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
     for (0..opts.count) |i| {
         const fi: f32 = @floatFromInt(i);
 
-        var proj: Projectile = .{
+        const map_id = host.world.add(Projectile, .{
             .owner_obj_type = .enemy,
             .owner_map_id = host.map_id,
             .x = host.x,
@@ -330,11 +346,9 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
             .true_dmg = proj_data.true_dmg,
             .index = host.next_proj_index,
             .data = &host.data.projectiles.?[opts.proj_index],
-        };
+        }) catch return;
 
-        _ = host.world.addExisting(Projectile, &proj) catch return;
-
-        host.projectiles[host.next_proj_index] = proj.map_id;
+        host.projectiles[host.next_proj_index] = map_id;
         host.next_proj_index +%= 1;
     }
 

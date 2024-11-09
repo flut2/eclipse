@@ -67,7 +67,7 @@ pub fn deinit(self: *DropdownContainer) void {
 
 pub fn draw(self: DropdownContainer, cam_data: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
     if (!self.base.visible) return;
-    self.background_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset);
+    self.background_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
     self.container.draw(cam_data, self.base.x + x_offset, self.base.y + y_offset, time);
 }
 
