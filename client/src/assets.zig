@@ -1227,7 +1227,7 @@ pub fn init() !void {
     try addUiImage("container_view", "container_view.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("minimap", "minimap.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("minimap_slots", "minimap_slots.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("minimap_icons", "minimap_icons.png", 8, 8, &ui_ctx);
+    try addUiImage("minimap_icons", "minimap_icons.png", 10, 10, &ui_ctx);
     try addUiImage("player_inventory", "player_inventory.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("player_health_bar", "player_health_bar.png", imply_size, imply_size, &ui_ctx);
     try addUiImage("player_mana_bar", "player_mana_bar.png", imply_size, imply_size, &ui_ctx);
