@@ -2,11 +2,9 @@ const std = @import("std");
 const shared = @import("shared");
 const network_data = shared.network_data;
 const game_data = shared.game_data;
-const requests = shared.requests;
 const utils = shared.utils;
 const uv = shared.uv;
 const assets = @import("assets.zig");
-const network = @import("network.zig");
 const builtin = @import("builtin");
 const glfw = @import("zglfw");
 const zstbi = @import("zstbi");
@@ -24,6 +22,8 @@ const gpu = @import("zgpu");
 
 const Camera = @import("Camera.zig");
 const Settings = @import("Settings.zig");
+const GameServer = @import("GameServer.zig");
+const LoginServer = @import("LoginServer.zig");
 
 const AccountData = struct {
     email: []const u8,
@@ -80,7 +80,8 @@ pub var minimap_update: struct {
 pub var version_text: []const u8 = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var start_time: i64 = 0;
-pub var server: network.Server = undefined;
+pub var game_server: GameServer = undefined;
+pub var login_server: LoginServer = undefined;
 pub var camera: Camera = .{};
 pub var settings: Settings = .{};
 pub var main_loop: *uv.uv_loop_t = undefined;
@@ -110,7 +111,7 @@ pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_d
     if (current_account == null) return;
 
     // TODO: readd RLS when fixed
-    server.hello_data = network_data.C2SPacket{ .hello = .{
+    game_server.hello_data = network_data.C2SPacket{ .hello = .{
         .build_ver = build_options.version,
         .email = current_account.?.email,
         .token = current_account.?.token,
@@ -118,7 +119,7 @@ pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_d
         .class_id = class_data_id,
     } };
 
-    server.connect(selected_server.ip, selected_server.port) catch |e| {
+    game_server.connect(selected_server.ip, selected_server.port) catch |e| {
         std.log.err("Connection failed: {}", .{e});
         return;
     };
@@ -128,7 +129,7 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
     if (current_account == null) return;
 
     // TODO: readd RLS when fixed
-    server.hello_data = network_data.C2SPacket{ .map_hello = .{
+    game_server.hello_data = network_data.C2SPacket{ .map_hello = .{
         .build_ver = build_options.version,
         .email = current_account.?.email,
         .token = current_account.?.token,
@@ -136,7 +137,7 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
         .map = test_map,
     } };
 
-    server.connect(selected_server.ip, selected_server.port) catch |e| {
+    game_server.connect(selected_server.ip, selected_server.port) catch |e| {
         std.log.err("Connection failed: {}", .{e});
         return;
     };
@@ -239,7 +240,7 @@ fn renderTick() !void {
     }
 }
 
-fn gameTick(_: [*c]uv.uv_idle_t) callconv (.C) void {
+fn gameTick(_: [*c]uv.uv_idle_t) callconv(.C) void {
     if (window.shouldClose()) {
         @branchHint(.unlikely);
         uv.uv_stop(@ptrCast(main_loop));
@@ -337,9 +338,6 @@ pub fn main() !void {
     try game_data.init(allocator);
     defer game_data.deinit();
 
-    requests.init(allocator);
-    defer requests.deinit();
-
     try map.init();
     defer map.deinit();
 
@@ -406,50 +404,19 @@ pub fn main() !void {
     }
     defer allocator.destroy(main_loop);
 
-    try server.init();
-    defer server.deinit();
-
-    if (current_account) |acc| {
-        const token_str = try std.fmt.allocPrint(account_arena_allocator, "{}", .{acc.token});
-        defer account_arena_allocator.free(token_str);
-
-        var data: std.StringHashMapUnmanaged([]const u8) = .empty;
-        try data.put(account_arena_allocator, "email", acc.email);
-        try data.put(account_arena_allocator, "token", token_str);
-        defer data.deinit(account_arena_allocator);
-
-        var needs_free = true;
-        const response = requests.sendRequest(build_options.login_server_uri ++ "char/list", data) catch |e| blk: {
-            switch (e) {
-                error.ConnectionRefused => {
-                    needs_free = false;
-                    break :blk "Connection Refused";
-                },
-                else => return e,
-            }
-        };
-        defer if (needs_free) requests.freeResponse(response);
-
-        enterGame: {
-            character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, account_arena_allocator, response, .{ .allocate = .alloc_always }) catch {
-                ui_systems.ui_lock.lock();
-                defer ui_systems.ui_lock.unlock();
-                ui_systems.switchScreen(.editor);
-                break :enterGame;
-            };
-            if (character_list.?.characters.len == 0) {
-                ui_systems.ui_lock.lock();
-                defer ui_systems.ui_lock.unlock();
-                ui_systems.switchScreen(.main_menu);
-                break :enterGame;
-            }
-            enterGame(character_list.?.servers[0], character_list.?.characters[0].char_id, std.math.maxInt(u16));
-        }
-    } else {
+    {
         ui_systems.ui_lock.lock();
         defer ui_systems.ui_lock.unlock();
         ui_systems.switchScreen(.main_menu);
     }
+
+    if (current_account != null) login_server.needs_verify = true;
+
+    try game_server.init();
+    defer game_server.deinit();
+
+    try login_server.init();
+    defer login_server.deinit();
 
     var idler: uv.uv_idle_t = undefined;
     const idle_init_status = uv.uv_idle_init(@ptrCast(main_loop), &idler);

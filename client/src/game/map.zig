@@ -1,5 +1,4 @@
 const std = @import("std");
-const network = @import("../network.zig");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;

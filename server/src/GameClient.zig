@@ -81,7 +81,7 @@ fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.C) void {
 
     main.socket_pool.destroy(client.socket);
     client.arena.deinit();
-    main.client_pool.destroy(client);
+    main.game_client_pool.destroy(client);
 }
 
 fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
@@ -280,8 +280,8 @@ fn handlePlayerText(self: *Client, data: PacketData(.player_text)) void {
             .bubble_time = 0,
             .recipient = "",
             .text = data.text,
-            .name_color = if (@intFromEnum(player.rank) >= @intFromEnum(network_data.Rank.staff)) 0xF2CA46 else 0xEBEBEB,
-            .text_color = if (@intFromEnum(player.rank) >= @intFromEnum(network_data.Rank.staff)) 0xD4AF37 else 0xB0B0B0,
+            .name_color = if (@intFromEnum(player.rank) >= @intFromEnum(network_data.Rank.mod)) 0xF2CA46 else 0xEBEBEB,
+            .text_color = if (@intFromEnum(player.rank) >= @intFromEnum(network_data.Rank.mod)) 0xD4AF37 else 0xB0B0B0,
         } });
     }
 }

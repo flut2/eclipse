@@ -186,6 +186,7 @@ pub fn tick(self: *World, time: i64, dt: i64) !void {
     }
 
     var callback_indices_to_remove: std.ArrayListUnmanaged(usize) = .empty;
+    defer callback_indices_to_remove.deinit(main.allocator);
     for (self.callbacks.items, 0..) |timed_cb, i| {
         if (timed_cb.trigger_on <= time) {
             timed_cb.callback(self, timed_cb.data);

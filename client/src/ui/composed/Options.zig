@@ -379,7 +379,7 @@ fn miscTabCallback(ud: ?*anyopaque) void {
 
 fn disconnectCallback(ud: ?*anyopaque) void {
     closeCallback(ud);
-    main.server.shutdown();
+    main.game_server.shutdown();
     main.disconnect(true);
 }
 

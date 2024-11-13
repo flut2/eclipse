@@ -4,10 +4,11 @@ const shared = @import("shared");
 const utils = shared.utils;
 const network_data = shared.network_data;
 const map = @import("map.zig");
-const network = @import("../network.zig");
 const render = @import("../render.zig");
 const px_per_tile = @import("../Camera.zig").px_per_tile;
 const main = @import("../main.zig");
+
+const GameServer = @import("../GameServer.zig");
 
 pub const ThrowParticle = struct {
     x: f32 = 0.0,
@@ -255,7 +256,7 @@ pub const HealParticle = struct {
 
         switch (self.target_obj_type) {
             inline else => |obj_enum| {
-                const T = network.ObjEnumToType(obj_enum);
+                const T = GameServer.ObjEnumToType(obj_enum);
                 var lock = map.useLockForType(T);
                 lock.lock();
                 defer lock.unlock();
@@ -535,7 +536,7 @@ pub const HealEffect = struct {
     pub fn update(self: *HealEffect, _: i64, _: f32) bool {
         switch (self.target_obj_type) {
             inline else => |obj_enum| {
-                const T = network.ObjEnumToType(obj_enum);
+                const T = GameServer.ObjEnumToType(obj_enum);
                 var lock = map.useLockForType(T);
                 lock.lock();
                 defer lock.unlock();

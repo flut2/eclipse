@@ -1,0 +1,1016 @@
+const std = @import("std");
+const shared = @import("shared");
+const utils = shared.utils;
+const game_data = shared.game_data;
+const network_data = shared.network_data;
+const uv = shared.uv;
+const main = @import("main.zig");
+const map = @import("game/map.zig");
+const assets = @import("assets.zig");
+const particles = @import("game/particles.zig");
+const ui_systems = @import("ui/systems.zig");
+const dialog = @import("ui/dialogs/dialog.zig");
+const build_options = @import("options");
+
+const Square = @import("game/Square.zig");
+const Player = @import("game/Player.zig");
+const Enemy = @import("game/Enemy.zig");
+const Entity = @import("game/Entity.zig");
+const Container = @import("game/Container.zig");
+const Portal = @import("game/Portal.zig");
+const Projectile = @import("game/Projectile.zig");
+const Purchasable = @import("game/Purchasable.zig");
+const Ally = @import("game/Ally.zig");
+const Server = @This();
+
+pub fn typeToObjEnum(comptime T: type) network_data.ObjectType {
+    return switch (T) {
+        Player => .player,
+        Enemy => .enemy,
+        Entity => .entity,
+        Container => .container,
+        Portal => .portal,
+        Purchasable => .purchasable,
+        Ally => .ally,
+        else => @compileError("Invalid type"),
+    };
+}
+
+pub fn ObjEnumToType(comptime obj_type: network_data.ObjectType) type {
+    return switch (obj_type) {
+        .player => Player,
+        .entity => Entity,
+        .enemy => Enemy,
+        .portal => Portal,
+        .container => Container,
+        .purchasable => Purchasable,
+        .ally => Ally,
+    };
+}
+
+const WriteRequest = extern struct {
+    request: uv.uv_write_t = .{},
+    buffer: uv.uv_buf_t = .{},
+};
+
+socket: *uv.uv_tcp_t = undefined,
+hello_data: network_data.C2SPacket = undefined,
+initialized: bool = false,
+
+fn PacketData(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?) type {
+    return @typeInfo(network_data.S2CPacket).@"union".fields[@intFromEnum(tag)].type;
+}
+
+fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?) fn (*Server, PacketData(tag)) void {
+    return switch (tag) {
+        .ally_projectile => handleAllyProjectile,
+        .aoe => handleAoe,
+        .damage => handleDamage,
+        .death => handleDeath,
+        .enemy_projectile => handleEnemyProjectile,
+        .@"error" => handleError,
+        .inv_result => handleInvResult,
+        .map_info => handleMapInfo,
+        .notification => handleNotification,
+        .ping => handlePing,
+        .show_effect => handleShowEffect,
+        .text => handleText,
+        .new_tick => handleNewTick,
+        .dropped_players => handleDroppedPlayers,
+        .dropped_entities => handleDroppedEntities,
+        .dropped_enemies => handleDroppedEnemies,
+        .dropped_portals => handleDroppedPortals,
+        .dropped_containers => handleDroppedContainers,
+        .dropped_purchasables => handleDroppedPurchasables,
+        .dropped_allies => handleDroppedAllies,
+        .new_players => handleNewPlayers,
+        .new_entities => handleNewEntities,
+        .new_enemies => handleNewEnemies,
+        .new_portals => handleNewPortals,
+        .new_containers => handleNewContainers,
+        .new_purchasables => handleNewPurchasables,
+        .new_allies => handleNewAllies,
+    };
+}
+
+fn ObjEnumToStatType(comptime obj_type: network_data.ObjectType) type {
+    return switch (obj_type) {
+        .player => network_data.PlayerStat,
+        .entity => network_data.EntityStat,
+        .enemy => network_data.EnemyStat,
+        .portal => network_data.PortalStat,
+        .container => network_data.ContainerStat,
+        .purchasable => network_data.PurchasableStat,
+        .ally => network_data.AllyStat,
+    };
+}
+
+fn ObjEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnumToType(obj_type), ObjEnumToStatType(obj_type)) void {
+    return switch (obj_type) {
+        .player => parsePlayerStat,
+        .entity => parseEntityStat,
+        .enemy => parseEnemyStat,
+        .portal => parsePortalStat,
+        .container => parseContainerStat,
+        .purchasable => parsePurchasableStat,
+        .ally => parseAllyStat,
+    };
+}
+
+pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
+    buf.*.base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch unreachable);
+    buf.*.len = @intCast(suggested_size);
+}
+
+fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
+    const wr: *WriteRequest = @ptrCast(@alignCast(ud));
+    const server: *Server = @ptrCast(@alignCast(wr.request.data));
+    main.allocator.free(wr.buffer.base[0..wr.buffer.len]);
+    main.allocator.destroy(wr);
+
+    if (status != 0) {
+        std.log.err("Write error: {s}", .{uv.uv_strerror(status)});
+        server.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Socket writing was interrupted",
+        });
+        return;
+    }
+}
+
+pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
+    const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
+    const server: *Server = @ptrCast(@alignCast(socket.data));
+    var child_arena = std.heap.ArenaAllocator.init(main.allocator);
+    defer child_arena.deinit();
+    const child_arena_allocator = child_arena.allocator();
+
+    if (bytes_read > 0) {
+        var reader: utils.PacketReader = .{ .buffer = buf.*.base[0..@intCast(bytes_read)] };
+
+        while (reader.index <= bytes_read - 3) {
+            defer _ = child_arena.reset(.retain_capacity);
+
+            const len = reader.read(u16, child_arena_allocator);
+            if (len > bytes_read - reader.index)
+                return;
+
+            const next_packet_idx = reader.index + len;
+            const EnumType = @typeInfo(network_data.S2CPacket).@"union".tag_type.?;
+            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), child_arena_allocator);
+            const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
+                std.log.err("Error parsing S2CPacketId ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
+                return;
+            };
+
+            switch (packet_id) {
+                inline else => |id| handlerFn(id)(server, reader.read(PacketData(id), child_arena_allocator)),
+            }
+
+            if (reader.index < next_packet_idx) {
+                std.log.err("S2C packet {} has {} bytes left over", .{ packet_id, next_packet_idx - reader.index });
+                reader.index = next_packet_idx;
+            }
+        }
+    } else if (bytes_read < 0) {
+        std.log.err("Read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
+        server.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Server closed the connection",
+        });
+    }
+
+    if (buf.*.base != null) main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
+}
+
+fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
+    const server: *Server = @ptrCast(@alignCast(conn.*.data));
+    defer main.allocator.destroy(@as(*uv.uv_connect_t, @ptrCast(conn)));
+
+    if (status != 0) {
+        std.log.err("Connection callback error: {s}", .{uv.uv_strerror(status)});
+        main.disconnect(false);
+        server.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Connection failed",
+        });
+        return;
+    }
+
+    const read_status = uv.uv_read_start(@ptrCast(server.socket), allocBuffer, readCallback);
+    if (read_status != 0) {
+        std.log.err("Read init error: {s}", .{uv.uv_strerror(read_status)});
+        server.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Server inaccessible",
+        });
+        return;
+    }
+
+    server.initialized = true;
+
+    {
+        ui_systems.ui_lock.lock();
+        defer ui_systems.ui_lock.unlock();
+        ui_systems.switchScreen(.game);
+    }
+
+    server.sendPacket(server.hello_data);
+}
+
+fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.C) void {
+    const server: *Server = @ptrCast(@alignCast(handle.*.data));
+    server.shutdown();
+    dialog.showDialog(.none, {});
+}
+
+pub fn init(self: *Server) !void {
+    self.socket = try main.allocator.create(uv.uv_tcp_t);
+}
+
+pub fn deinit(self: *Server) void {
+    main.disconnect(false);
+    main.allocator.destroy(self.socket);
+    self.initialized = false;
+}
+
+pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
+    if (!self.initialized) return;
+    
+    const is_tick = packet == .move or packet == .pong;
+    if (build_options.log_packets == .all or
+        build_options.log_packets == .c2s or
+        (build_options.log_packets == .c2s_tick or build_options.log_packets == .all_tick) and is_tick or
+        (build_options.log_packets == .c2s_non_tick or build_options.log_packets == .all_non_tick) and !is_tick)
+    {
+        std.log.info("Send: {}", .{packet}); // TODO: custom formatting
+    }
+
+    if (packet == .use_portal or packet == .escape) {
+        var lock = map.useLockForType(Player); // not great assuming that this won't ever deadlock...
+        lock.lock();
+        defer lock.unlock();
+        if (map.localPlayer(.ref)) |player| {
+            player.x = -1.0;
+            player.y = -1.0;
+            map.clearMoveRecords(main.current_time);
+        }
+    }
+
+    switch (packet) {
+        inline else => |data| {
+            var writer: utils.PacketWriter = .{};
+            defer writer.list.deinit(main.allocator);
+            writer.writeLength(main.allocator);
+            writer.write(@intFromEnum(std.meta.activeTag(packet)), main.allocator);
+            writer.write(data, main.allocator);
+            writer.updateLength();
+
+            const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
+
+            var write_status = uv.UV_EAGAIN;
+            while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
+            if (write_status < 0) {
+                std.log.err("Write send error: {s}", .{uv.uv_strerror(write_status)});
+                self.shutdown();
+                dialog.showDialog(.text, .{
+                    .title = "Connection Error",
+                    .body = "Socket writing failed",
+                });
+                return;
+            }
+        },
+    }
+}
+
+pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
+    const addr = try std.net.Address.parseIp4(ip, port);
+
+    self.socket.data = self;
+    const tcp_status = uv.uv_tcp_init(@ptrCast(main.main_loop), @ptrCast(self.socket));
+    if (tcp_status != 0) {
+        std.log.err("Socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
+        return error.NoSocket;
+    }
+
+    var connect_data = try main.allocator.create(uv.uv_connect_t);
+    connect_data.data = self;
+    const conn_status = uv.uv_tcp_connect(@ptrCast(connect_data), @ptrCast(self.socket), @ptrCast(&addr.in.sa), connectCallback);
+    if (conn_status != 0) {
+        std.log.err("Connection error: {s}", .{uv.uv_strerror(conn_status)});
+        return error.ConnectionFailed;
+    }
+}
+
+pub fn shutdown(self: *Server) void {
+    if (!self.initialized) return;
+    self.initialized = false;
+    if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
+}
+
+fn closeCallback(_: [*c]uv.uv_handle_t) callconv(.C) void {}
+
+fn logRead(comptime tick: enum { non_tick, tick }) bool {
+    return if (tick == .non_tick)
+        build_options.log_packets == .all or
+            build_options.log_packets == .s2c or
+            build_options.log_packets == .s2c_non_tick or
+            build_options.log_packets == .all_non_tick
+    else
+        build_options.log_packets == .all or
+            build_options.log_packets == .s2c or
+            build_options.log_packets == .s2c_tick or
+            build_options.log_packets == .all_tick;
+}
+
+fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
+    if (logRead(.non_tick)) std.log.debug("Recv - AllyProjectile: {}", .{data});
+
+    var lock = map.useLockForType(Player);
+    lock.lock();
+    defer lock.unlock();
+
+    if (map.findObject(Player, data.player_map_id, .ref)) |player| {
+        const item_data = game_data.item.from_id.getPtr(data.item_data_id);
+        var proj: Projectile = .{
+            .x = player.x,
+            .y = player.y,
+            .data = &item_data.?.projectile.?,
+            .angle = data.angle,
+            .index = @intCast(data.proj_index),
+            .owner_map_id = player.map_id,
+        };
+        proj.addToMap();
+
+        const attack_period: i64 = @intFromFloat(1.0 / (Player.attack_frequency * item_data.?.fire_rate));
+        player.attack_period = attack_period;
+        player.attack_angle = data.angle;
+        player.attack_start = main.current_time;
+    }
+}
+
+fn handleAoe(_: *Server, data: PacketData(.aoe)) void {
+    particles.AoeEffect.addToMap(.{
+        .x = data.x,
+        .y = data.y,
+        .color = data.color,
+        .radius = data.radius,
+    });
+
+    if (logRead(.non_tick)) std.log.debug("Recv - Aoe: {}", .{data});
+}
+
+fn handleDamage(_: *Server, data: PacketData(.damage)) void {
+    var lock = map.useLockForType(Player);
+    lock.lock();
+    defer lock.unlock();
+
+    if (map.findObject(Player, data.player_map_id, .ref)) |player| {
+        map.takeDamage(
+            player,
+            data.amount,
+            data.damage_type,
+            data.effects,
+            player.colors,
+        );
+    }
+
+    if (logRead(.non_tick)) std.log.debug("Recv - Damage: {}", .{data});
+}
+
+fn handleDeath(self: *Server, data: PacketData(.death)) void {
+    self.shutdown();
+    dialog.showDialog(.none, {});
+
+    if (logRead(.non_tick)) std.log.debug("Recv - Death: {}", .{data});
+}
+
+fn handleEnemyProjectile(_: *Server, data: PacketData(.enemy_projectile)) void {
+    if (logRead(.non_tick)) std.log.debug("Recv - EnemyProjectile: {}", .{data});
+
+    var lock = map.useLockForType(Enemy);
+    lock.lock();
+    defer lock.unlock();
+
+    var owner = if (map.findObject(Enemy, data.enemy_map_id, .ref)) |enemy| enemy else return;
+
+    const owner_data = game_data.enemy.from_id.getPtr(owner.data_id);
+    if (owner_data == null or owner_data.?.projectiles == null or data.proj_data_id >= owner_data.?.projectiles.?.len)
+        return;
+
+    const total_angle = data.angle_incr * @as(f32, @floatFromInt(data.num_projs - 1));
+    var current_angle = data.angle - total_angle / 2.0;
+
+    for (0..data.num_projs) |i| {
+        var proj: Projectile = .{
+            .x = data.x,
+            .y = data.y,
+            .phys_dmg = data.phys_dmg,
+            .magic_dmg = data.magic_dmg,
+            .true_dmg = data.true_dmg,
+            .data = &owner_data.?.projectiles.?[data.proj_data_id],
+            .angle = current_angle,
+            .index = data.proj_index +% @as(u8, @intCast(i)),
+            .owner_map_id = data.enemy_map_id,
+            .damage_players = true,
+        };
+        proj.addToMap();
+
+        current_angle += data.angle_incr;
+    }
+
+    owner.attack_angle = data.angle;
+    owner.attack_start = main.current_time;
+}
+
+fn handleError(self: *Server, data: PacketData(.@"error")) void {
+    if (logRead(.non_tick)) std.log.debug("Recv - Error: {}", .{data});
+
+    if (data.type == .message_with_disconnect or data.type == .force_close_game) {
+        self.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = main.allocator.dupe(u8, data.description) catch return,
+            .dispose_body = true,
+        });
+    }
+}
+
+fn handleInvResult(_: *Server, data: PacketData(.inv_result)) void {
+    if (logRead(.non_tick)) std.log.debug("Recv - InvResult: {}", .{data});
+}
+
+fn handleMapInfo(_: *Server, data: PacketData(.map_info)) void {
+    if (logRead(.non_tick)) std.log.debug("Recv - MapInfo: {}", .{data});
+
+    map.dispose();
+
+    {
+        main.camera.lock.lock();
+        defer main.camera.lock.unlock();
+        main.camera.quake = false;
+    }
+
+    map.setMapInfo(data);
+    map.info.name = data.name;
+
+    main.tick_frame = true;
+}
+
+fn handleDroppedPlayers(_: *Server, data: PacketData(.dropped_players)) void {
+    droppedObject(Player, data.map_ids);
+}
+
+fn handleDroppedEnemies(_: *Server, data: PacketData(.dropped_enemies)) void {
+    droppedObject(Enemy, data.map_ids);
+}
+
+fn handleDroppedEntities(_: *Server, data: PacketData(.dropped_entities)) void {
+    droppedObject(Entity, data.map_ids);
+}
+
+fn handleDroppedPortals(_: *Server, data: PacketData(.dropped_portals)) void {
+    droppedObject(Portal, data.map_ids);
+}
+
+fn handleDroppedContainers(_: *Server, data: PacketData(.dropped_containers)) void {
+    droppedObject(Container, data.map_ids);
+}
+
+fn handleDroppedPurchasables(_: *Server, data: PacketData(.dropped_purchasables)) void {
+    droppedObject(Purchasable, data.map_ids);
+}
+
+fn handleDroppedAllies(_: *Server, data: PacketData(.dropped_allies)) void {
+    droppedObject(Ally, data.map_ids);
+}
+
+fn handleNotification(_: *Server, data: PacketData(.notification)) void {
+    switch (data.obj_type) {
+        inline .player, .ally, .enemy, .entity => |inner| {
+            const T = ObjEnumToType(inner);
+            var lock = map.useLockForType(T);
+            lock.lock();
+            defer lock.unlock();
+            if (map.findObject(T, data.map_id, .ref)) |obj| obj.status_texts.append(main.allocator, .{
+                .initial_size = 16.0,
+                .dispose_text = true,
+                .show_at = main.current_time,
+                .duration = 2.0 * std.time.us_per_s,
+                .text_data = .{
+                    .text = main.allocator.dupe(u8, data.message) catch @panic("OOM"),
+                    .text_type = .bold,
+                    .size = 16,
+                    .color = data.color,
+                },
+            }) catch @panic("OOM");
+        },
+        else => {
+            std.log.err("Invalid type: {}", .{data.obj_type});
+            return;
+        },
+    }
+}
+
+fn handlePing(self: *Server, data: PacketData(.ping)) void {
+    self.sendPacket(.{ .pong = .{ .ping_time = data.time, .time = main.current_time } });
+
+    if (logRead(.tick)) std.log.debug("Recv - Ping: {}", .{data});
+}
+
+fn handleShowEffect(_: *Server, data: PacketData(.show_effect)) void {
+    switch (data.eff_type) {
+        .area_blast => {
+            particles.AoeEffect.addToMap(.{
+                .x = data.x1,
+                .y = data.y1,
+                .radius = data.x2,
+                .color = data.color,
+            });
+        },
+        .throw => {
+            var start_x = data.x2;
+            var start_y = data.y2;
+
+            switch (data.obj_type) {
+                inline else => |inner| {
+                    const T = ObjEnumToType(inner);
+                    var lock = map.useLockForType(T);
+                    lock.lock();
+                    defer lock.unlock();
+                    if (map.findObject(T, data.map_id, .con)) |obj| {
+                        start_x = obj.x;
+                        start_y = obj.y;
+                    }
+                },
+            }
+            particles.ThrowEffect.addToMap(.{
+                .start_x = start_x,
+                .start_y = start_y,
+                .end_x = data.x1,
+                .end_y = data.y1,
+                .color = data.color,
+                .duration = 1500,
+            });
+        },
+        .teleport => {
+            particles.TeleportEffect.addToMap(.{
+                .x = data.x1,
+                .y = data.y1,
+            });
+        },
+        .trail => {
+            var start_x = data.x2;
+            var start_y = data.y2;
+
+            switch (data.obj_type) {
+                inline else => |inner| {
+                    const T = ObjEnumToType(inner);
+                    var lock = map.useLockForType(T);
+                    lock.lock();
+                    defer lock.unlock();
+                    if (map.findObject(T, data.map_id, .con)) |obj| {
+                        start_x = obj.x;
+                        start_y = obj.y;
+                    }
+                },
+            }
+
+            particles.LineEffect.addToMap(.{
+                .start_x = start_x,
+                .start_y = start_y,
+                .end_x = data.x1,
+                .end_y = data.y1,
+                .color = data.color,
+            });
+        },
+        .potion => {
+            // the effect itself handles checks for invalid entity
+            particles.HealEffect.addToMap(.{
+                .target_obj_type = data.obj_type,
+                .target_map_id = data.map_id,
+                .color = data.color,
+            });
+        },
+        .earthquake => {
+            main.camera.lock.lock();
+            defer main.camera.lock.unlock();
+            main.camera.quake = true;
+            main.camera.quake_amount = 0.0;
+        },
+        else => {},
+    }
+
+    if (logRead(.non_tick)) std.log.debug("Recv - ShowEffect: {}", .{data});
+}
+
+fn handleText(_: *Server, data: PacketData(.text)) void {
+    if (ui_systems.screen == .game)
+        ui_systems.screen.game.addChatLine(data.name, data.text, data.name_color, data.text_color) catch |e| {
+            std.log.err("Adding message with name {s} and text {s} failed: {}", .{ data.name, data.text, e });
+        };
+
+    if (data.map_id != std.math.maxInt(u32)) {
+        {
+            switch (data.obj_type) {
+                inline else => |inner| {
+                    const T = ObjEnumToType(inner);
+                    var lock = map.useLockForType(T);
+                    lock.lock();
+                    defer lock.unlock();
+                    if (map.findObject(T, data.map_id, .con) == null) return;
+                },
+            }
+        }
+
+        var atlas_data = assets.error_data;
+        if (assets.ui_atlas_data.get("speech_balloons")) |balloon_data| {
+            switch (data.name_color) {
+                0xD4AF37 => atlas_data = balloon_data[5], // admin balloon
+                // TODO: change these to be the actual values if you add guilds/parties
+                0x000000 => atlas_data = balloon_data[2], // guild balloon
+                0x000001 => atlas_data = balloon_data[4], // party balloon
+                else => {
+                    if (!std.mem.eql(u8, data.recipient, "")) {
+                        atlas_data = balloon_data[1]; // tell balloon
+                    } else {
+                        atlas_data = if (data.obj_type == .enemy)
+                            balloon_data[3] // enemy balloon
+                        else
+                            balloon_data[0]; // normal balloon
+                    }
+                },
+            }
+        } else @panic("Could not find speech_balloons in the UI atlas");
+
+        // element.SpeechBalloon.add(.{
+        //     .image_data = .{ .normal = .{
+        //         .scale_x = 3.0,
+        //         .scale_y = 3.0,
+        //         .atlas_data = atlas_data,
+        //     } },
+        //     .text_data = .{
+        //         .text = main.allocator.dupe(u8, data.text) catch unreachable,
+        //         .size = 16,
+        //         .max_width = 160,
+        //         .outline_width = 1.5,
+        //         .disable_subpixel = true,
+        //         .color = data.text_color,
+        //     },
+        //     .target_obj_type = data.obj_type,
+        //     .target_map_id = data.map_id,
+        // }) catch unreachable;
+    }
+}
+
+fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
+    defer {
+        if (main.tick_frame) {
+            const time = main.current_time;
+            var lock = map.useLockForType(Player);
+            lock.lock();
+            defer lock.unlock();
+            if (map.localPlayer(.ref)) |local_player| {
+                self.sendPacket(.{ .move = .{
+                    .tick_id = data.tick_id,
+                    .time = time,
+                    .x = local_player.x,
+                    .y = local_player.y,
+                    .records = map.move_records.items,
+                } });
+
+                local_player.onMove();
+            } else {
+                self.sendPacket(.{ .move = .{
+                    .tick_id = data.tick_id,
+                    .time = time,
+                    .x = -1.0,
+                    .y = -1.0,
+                    .records = &.{},
+                } });
+            }
+
+            map.clearMoveRecords(time);
+        }
+    }
+
+    for (data.tiles) |tile| {
+        var square: Square = .{
+            .data_id = tile.data_id,
+            .x = @as(f32, @floatFromInt(tile.x)) + 0.5,
+            .y = @as(f32, @floatFromInt(tile.y)) + 0.5,
+        };
+
+        square.addToMap();
+    }
+
+    main.need_minimap_update = data.tiles.len > 0;
+}
+
+fn handleNewPlayers(_: *Server, data: PacketData(.new_players)) void {
+    newObject(Player, data.list);
+}
+
+fn handleNewEntities(_: *Server, data: PacketData(.new_entities)) void {
+    newObject(Entity, data.list);
+}
+
+fn handleNewEnemies(_: *Server, data: PacketData(.new_enemies)) void {
+    newObject(Enemy, data.list);
+}
+
+fn handleNewPortals(_: *Server, data: PacketData(.new_portals)) void {
+    newObject(Portal, data.list);
+}
+
+fn handleNewContainers(_: *Server, data: PacketData(.new_containers)) void {
+    newObject(Container, data.list);
+}
+
+fn handleNewPurchasables(_: *Server, data: PacketData(.new_purchasables)) void {
+    newObject(Purchasable, data.list);
+}
+
+fn handleNewAllies(_: *Server, data: PacketData(.new_allies)) void {
+    newObject(Ally, data.list);
+}
+
+fn droppedObject(comptime T: type, list: []const u32) void {
+    if (list.len == 0) return;
+
+    var lock = map.useLockForType(T);
+    lock.lock();
+    defer lock.unlock();
+    for (list) |map_id| _ = map.removeEntity(T, map_id);
+}
+
+fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
+    const tick_time = @as(f32, std.time.us_per_s) / 30.0;
+
+    var lock = map.useLockForType(T);
+    lock.lock();
+    defer lock.unlock();
+    for (list) |obj| {
+        var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };
+        const current_obj = map.findObject(T, obj.map_id, .ref) orelse findAddObj: {
+            for (map.addListForType(T).items) |*add_obj| {
+                if (add_obj.map_id == obj.map_id) break :findAddObj add_obj;
+            }
+
+            break :findAddObj null;
+        };
+        if (current_obj) |object| {
+            const pre_x = switch (T) {
+                Player, Enemy, Ally => object.x,
+                else => 0.0,
+            };
+            const pre_y = switch (T) {
+                Player, Enemy, Ally => object.y,
+                else => 0.0,
+            };
+
+            parseObjectStat(typeToObjEnum(T), &stat_reader, object);
+
+            switch (T) {
+                Player => {
+                    if (object.map_id != map.info.player_map_id) updateMove(object, pre_x, pre_y, tick_time);
+                    if (object.map_id == map.info.player_map_id and ui_systems.screen == .game) ui_systems.screen.game.updateStats();
+                },
+                Enemy, Ally => updateMove(object, pre_x, pre_y, tick_time),
+                else => {},
+            }
+        } else {
+            var new_obj: T = .{ .map_id = obj.map_id, .data_id = obj.data_id };
+            parseObjectStat(typeToObjEnum(T), &stat_reader, &new_obj);
+            new_obj.addToMap();
+        }
+    }
+}
+
+fn updateMove(obj: anytype, pre_x: f32, pre_y: f32, tick_time: f32) void {
+    const y_dt = obj.y - pre_y;
+    const x_dt = obj.x - pre_x;
+
+    if (!std.math.isNan(obj.move_angle)) {
+        const dist_sqr = y_dt * y_dt + x_dt * x_dt;
+        obj.move_step = @sqrt(dist_sqr) / tick_time;
+        obj.target_x = obj.x;
+        obj.target_y = obj.y;
+        obj.x = pre_x;
+        obj.y = pre_y;
+    }
+
+    obj.move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
+}
+
+fn parseObjectStat(
+    comptime obj_type: network_data.ObjectType,
+    stat_reader: *utils.PacketReader,
+    object: *ObjEnumToType(obj_type),
+) void {
+    while (stat_reader.index < stat_reader.buffer.len) {
+        const StatType = ObjEnumToStatType(obj_type);
+        const type_info = @typeInfo(StatType).@"union";
+        const TagType = type_info.tag_type.?;
+        const stat_id: usize = @intFromEnum(stat_reader.read(TagType, main.allocator));
+        inline for (type_info.fields, 0..) |field, i| @"continue": {
+            if (i != stat_id) break :@"continue";
+
+            const stat = @unionInit(StatType, field.name, stat_reader.read(field.type, main.allocator));
+            ObjEnumToStatHandler(obj_type)(object, stat);
+        }
+    }
+}
+
+fn parseNameStat(object: anytype, name: []const u8) void {
+    if (name.len <= 0) return;
+
+    if (object.name) |obj_name| main.allocator.free(obj_name);
+
+    object.name = name;
+
+    if (object.name_text_data) |*data| {
+        data.setText(object.name.?);
+    } else {
+        object.name_text_data = .{
+            .text = undefined,
+            .text_type = .bold,
+            .size = 12,
+        };
+        if (@TypeOf(object) == Player) {
+            object.name_text_data.color = 0xFCDF00;
+            object.name_text_data.max_width = 200;
+        }
+
+        object.name_text_data.?.setText(object.name.?);
+    }
+}
+
+fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
+    const is_self = player.map_id == map.info.player_map_id;
+    switch (stat) {
+        .x => |val| player.x = val,
+        .y => |val| player.y = val,
+        .size_mult => |val| player.size_mult = val,
+        .in_combat => |val| player.in_combat = val,
+        .aether => |val| player.aether = val,
+        .spirits_communed => |val| player.spirits_communed = val,
+        .damage_mult => |val| player.damage_mult = val,
+        .hit_mult => |val| player.hit_mult = val,
+        .ability_state => |val| player.ability_state = val,
+        .condition => |val| player.condition = val,
+        .gold => |val| player.gold = val,
+        .gems => |val| player.gems = val,
+        .crowns => |val| player.crowns = val,
+        .muted_until => |val| player.muted_until = val,
+        .max_hp => |val| player.max_hp = val,
+        .hp => |val| {
+            player.hp = val;
+            if (val > 0) player.dead = false;
+        },
+        .max_mp => |val| player.max_mp = val,
+        .mp => |val| player.mp = val,
+        .strength => |val| player.strength = val,
+        .wit => |val| player.wit = val,
+        .defense => |val| player.defense = val,
+        .resistance => |val| player.resistance = val,
+        .speed => |val| player.speed = val,
+        .stamina => |val| player.stamina = val,
+        .intelligence => |val| player.intelligence = val,
+        .penetration => |val| player.penetration = val,
+        .piercing => |val| player.piercing = val,
+        .haste => |val| player.haste = val,
+        .tenacity => |val| player.tenacity = val,
+        .max_hp_bonus => |val| player.max_hp_bonus = val,
+        .max_mp_bonus => |val| player.max_mp_bonus = val,
+        .strength_bonus => |val| player.strength_bonus = val,
+        .wit_bonus => |val| player.wit_bonus = val,
+        .defense_bonus => |val| player.defense_bonus = val,
+        .resistance_bonus => |val| player.resistance_bonus = val,
+        .speed_bonus => |val| player.speed_bonus = val,
+        .stamina_bonus => |val| player.stamina_bonus = val,
+        .intelligence_bonus => |val| player.intelligence_bonus = val,
+        .penetration_bonus => |val| player.penetration_bonus = val,
+        .piercing_bonus => |val| player.piercing_bonus = val,
+        .haste_bonus => |val| player.haste_bonus = val,
+        .tenacity_bonus => |val| player.tenacity_bonus = val,
+        .inv_0,
+        .inv_1,
+        .inv_2,
+        .inv_3,
+        .inv_4,
+        .inv_5,
+        .inv_6,
+        .inv_7,
+        .inv_8,
+        .inv_9,
+        .inv_10,
+        .inv_11,
+        .inv_12,
+        .inv_13,
+        .inv_14,
+        .inv_15,
+        .inv_16,
+        .inv_17,
+        .inv_18,
+        .inv_19,
+        .inv_20,
+        .inv_21,
+        => |val| {
+            const inv_idx = @intFromEnum(stat) - @intFromEnum(network_data.PlayerStat.inv_0);
+            player.inventory[inv_idx] = val;
+            if (is_self and ui_systems.screen == .game)
+                ui_systems.screen.game.setInvItem(val, inv_idx);
+        },
+        .name => |val| parseNameStat(player, val),
+    }
+}
+
+fn parseEnemyStat(enemy: *Enemy, stat: network_data.EnemyStat) void {
+    switch (stat) {
+        .x => |val| enemy.x = val,
+        .y => |val| enemy.y = val,
+        .max_hp => |val| enemy.max_hp = val,
+        .hp => |val| {
+            enemy.hp = val;
+            if (val > 0) enemy.dead = false;
+        },
+        .size_mult => |val| enemy.size_mult = val,
+        .condition => |val| enemy.condition = val,
+        .name => |val| parseNameStat(enemy, val),
+    }
+}
+
+fn parseEntityStat(entity: *Entity, stat: network_data.EntityStat) void {
+    switch (stat) {
+        .x => |val| entity.x = val,
+        .y => |val| entity.y = val,
+        .hp => |val| {
+            entity.hp = val;
+            if (val > 0) entity.dead = false;
+        },
+        .size_mult => |val| entity.size_mult = val,
+        .name => |val| parseNameStat(entity, val),
+    }
+}
+
+fn parseContainerStat(container: *Container, stat: network_data.ContainerStat) void {
+    switch (stat) {
+        .x => |val| container.x = val,
+        .y => |val| container.y = val,
+        .size_mult => |val| container.size_mult = val,
+        .inv_0, .inv_1, .inv_2, .inv_3, .inv_4, .inv_5, .inv_6, .inv_7, .inv_8 => |val| {
+            const inv_idx = @intFromEnum(stat) - @intFromEnum(network_data.ContainerStat.inv_0);
+            container.inventory[inv_idx] = val;
+
+            const int_id = map.interactive.map_id.load(.acquire);
+            if (container.map_id == int_id and ui_systems.screen == .game)
+                ui_systems.screen.game.setContainerItem(val, inv_idx);
+        },
+        .name => |val| {
+            const int_id = map.interactive.map_id.load(.acquire);
+            if (container.map_id == int_id and ui_systems.screen == .game)
+                ui_systems.screen.game.container_name.text_data.setText(val);
+            parseNameStat(container, val);
+        },
+    }
+}
+
+fn parsePortalStat(portal: *Portal, stat: network_data.PortalStat) void {
+    switch (stat) {
+        .x => |val| portal.x = val,
+        .y => |val| portal.y = val,
+        .size_mult => |val| portal.size_mult = val,
+        .name => |val| parseNameStat(portal, val),
+    }
+}
+
+fn parsePurchasableStat(purchasable: *Purchasable, stat: network_data.PurchasableStat) void {
+    switch (stat) {
+        .x => |val| purchasable.x = val,
+        .y => |val| purchasable.y = val,
+        .size_mult => |val| purchasable.size_mult = val,
+        .cost => |val| purchasable.cost = val,
+        .currency => |val| purchasable.currency = val,
+        .name => |val| parseNameStat(purchasable, val),
+    }
+}
+
+fn parseAllyStat(ally: *Ally, stat: network_data.AllyStat) void {
+    switch (stat) {
+        .x => |val| ally.x = val,
+        .y => |val| ally.y = val,
+        .size_mult => |val| ally.size_mult = val,
+        .max_hp => |val| ally.max_hp = val,
+        .hp => |val| {
+            ally.hp = val;
+            if (val > 0) ally.dead = false;
+        },
+        .condition => |val| ally.condition = val,
+        .owner_map_id => |val| ally.owner_map_id = val,
+    }
+}

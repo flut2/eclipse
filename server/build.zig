@@ -46,11 +46,6 @@ pub fn build(b: *std.Build) !void {
         exe.root_module.addImport("rpmalloc", shared_dep.module("rpmalloc"));
         if (enable_tracy) exe.root_module.addImport("tracy", shared_dep.module("tracy"));
 
-        exe.root_module.addImport("httpz", b.dependency("httpz", .{
-            .target = target,
-            .optimize = optimize,
-        }).module("httpz"));
-
         const hiredis = b.dependency("hiredis", .{});
         const hiredis_path = hiredis.path(".");
         exe.addIncludePath(hiredis_path);

@@ -26,6 +26,7 @@ disappear_time: i64 = std.math.maxInt(i64),
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.AllyData = undefined,
 world: *World = undefined,
+spawned: bool = false,
 behavior: ?*behavior_data.AllyBehavior = null,
 storages: behavior_logic.Storages = .{},
 

@@ -19,7 +19,8 @@ pub fn build(b: *std.Build) !void {
     const dawn_debug_mode = b.option(bool, "dawn_debug_mode", "Whether to have Dawn validation errors and to use the debug binary") orelse true;
     const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
     const version = b.option([]const u8, "version", "Build version, for the version text and client-server version checks") orelse "1.0";
-    const login_server_uri = b.option([]const u8, "login_server_uri", "The URI of the login server") orelse "http://127.0.0.1:2833/";
+    const login_server_ip = b.option([]const u8, "login_server_ip", "The IP of the login server") orelse "127.0.0.1";
+    const login_server_port = b.option(u16, "login_server_port", "The port of the login server") orelse 2833;
 
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -41,7 +42,8 @@ pub fn build(b: *std.Build) !void {
         options.addOption(bool, "enable_tracy", enable_tracy);
         options.addOption(PacketLogType, "log_packets", log_packets);
         options.addOption([]const u8, "version", version);
-        options.addOption([]const u8, "login_server_uri", login_server_uri);
+        options.addOption([]const u8, "login_server_ip", login_server_ip);
+        options.addOption(u16, "login_server_port", login_server_port);
         exe.root_module.addOptions("options", options);
 
         const shared_dep = b.dependency("shared", .{

@@ -9,7 +9,6 @@ const abilities = @import("abilities.zig");
 const map = @import("map.zig");
 const main = @import("../main.zig");
 const input = @import("../input.zig");
-const network = @import("../network.zig");
 const particles = @import("particles.zig");
 const ui_systems = @import("../ui/systems.zig");
 const base = @import("object_base.zig");
@@ -227,7 +226,7 @@ pub fn useAbility(self: *Player, index: comptime_int) void {
 
     assets.playSfx(abil_data.sound);
     self.last_ability_use[index] = time;
-    main.server.sendPacket(.{ .use_ability = .{ .time = time, .index = index, .data = data } });
+    main.game_server.sendPacket(.{ .use_ability = .{ .time = time, .index = index, .data = data } });
 }
 
 pub fn doShoot(
@@ -261,7 +260,7 @@ pub fn doShoot(
         };
         proj.addToMap();
 
-        main.server.sendPacket(.{ .player_projectile = .{
+        main.game_server.sendPacket(.{ .player_projectile = .{
             .time = time,
             .proj_index = proj_index,
             .x = x,
@@ -564,7 +563,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
                         break :blk e.data.block_ground_damage;
                     };
                     if (square.data.damage > 0 and !protect) {
-                        main.server.sendPacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
+                        main.game_server.sendPacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
                         map.takeDamage(self, square.data.damage, .true, .{}, self.colors);
                         self.last_ground_damage_time = time;
                     }

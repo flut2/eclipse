@@ -4,7 +4,6 @@ const game_data = @import("shared").game_data;
 const main = @import("../main.zig");
 const map = @import("map.zig");
 const utils = @import("shared").utils;
-const network = @import("../network.zig");
 const particles = @import("particles.zig");
 const render = @import("../render.zig");
 const px_per_tile = Camera.px_per_tile;
@@ -321,12 +320,12 @@ fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
             if (map.info.player_map_id != obj.map_id) return self.data.piercing;
             phys_dmg = game_data.physDamage(self.phys_dmg, obj.defense + obj.defense_bonus, obj.condition);
             magic_dmg = game_data.magicDamage(self.magic_dmg, obj.resistance + obj.resistance_bonus, obj.condition);
-            main.server.sendPacket(.{ .player_hit = .{ .proj_index = self.index, .enemy_map_id = self.owner_map_id } });
+            main.game_server.sendPacket(.{ .player_hit = .{ .proj_index = self.index, .enemy_map_id = self.owner_map_id } });
         },
         Ally => {
             phys_dmg = game_data.physDamage(self.phys_dmg, obj.data.defense, obj.condition);
             magic_dmg = game_data.magicDamage(self.magic_dmg, obj.data.resistance, obj.condition);
-            main.server.sendPacket(.{ .ally_hit = .{
+            main.game_server.sendPacket(.{ .ally_hit = .{
                 .ally_map_id = obj.map_id,
                 .proj_index = self.index,
                 .enemy_map_id = self.owner_map_id,
@@ -335,7 +334,7 @@ fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
         Enemy => {
             phys_dmg = game_data.physDamage(self.phys_dmg, obj.defense, obj.condition);
             magic_dmg = game_data.magicDamage(self.magic_dmg, obj.resistance, obj.condition);
-            main.server.sendPacket(.{ .enemy_hit = .{
+            main.game_server.sendPacket(.{ .enemy_hit = .{
                 .time = time,
                 .proj_index = self.index,
                 .enemy_map_id = obj.map_id,

@@ -1,7 +1,6 @@
 const std = @import("std");
 const element = @import("../elements/element.zig");
 const assets = @import("../../assets.zig");
-const network = @import("../../network.zig");
 const main = @import("../../main.zig");
 const shared = @import("shared");
 const utils = shared.utils;
@@ -872,7 +871,7 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
     if (end_slot.idx == 255) {
         if (!start_slot.is_container) {
             self.setInvItem(std.math.maxInt(u16), start_slot.idx);
-            main.server.sendPacket(.{ .inv_drop = .{
+            main.game_server.sendPacket(.{ .inv_drop = .{
                 .player_map_id = map.info.player_map_id,
                 .slot_id = start_slot.idx,
             } });
@@ -922,7 +921,7 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
                 self.setInvItem(start_item, end_slot.idx);
             }
 
-            main.server.sendPacket(.{ .inv_swap = .{
+            main.game_server.sendPacket(.{ .inv_swap = .{
                 .time = main.current_time,
                 .x = local_player.x,
                 .y = local_player.y,
@@ -949,7 +948,7 @@ fn itemDoubleClickCallback(item: *Item) void {
             lock.lock();
             defer lock.unlock();
             if (map.localPlayer(.con)) |local_player| {
-                main.server.sendPacket(.{ .use_item = .{
+                main.game_server.sendPacket(.{ .use_item = .{
                     .obj_type = .player,
                     .map_id = map.info.player_map_id,
                     .slot_id = start_slot.idx,
@@ -995,7 +994,7 @@ fn itemDoubleClickCallback(item: *Item) void {
 }
 
 fn returnToRetrieve(_: ?*anyopaque) void {
-    if (systems.screen == .game) main.server.sendPacket(.{ .escape = .{} });
+    if (systems.screen == .game) main.game_server.sendPacket(.{ .escape = .{} });
 }
 
 fn openOptions(_: ?*anyopaque) void {
@@ -1022,7 +1021,7 @@ pub fn cardsCallback(ud: ?*anyopaque) void {
 
 fn chatCallback(input_text: []const u8) void {
     if (input_text.len > 0) {
-        main.server.sendPacket(.{ .player_text = .{ .text = input_text } });
+        main.game_server.sendPacket(.{ .player_text = .{ .text = input_text } });
 
         const text_copy = main.allocator.dupe(u8, input_text) catch unreachable;
         input.input_history.append(main.allocator, text_copy) catch unreachable;
@@ -1070,7 +1069,7 @@ fn itemShiftClickCallback(item: *Item) void {
             lock.lock();
             defer lock.unlock();
             if (map.localPlayer(.con)) |local_player| {
-                main.server.sendPacket(.{ .use_item = .{
+                main.game_server.sendPacket(.{ .use_item = .{
                     .obj_type = if (slot.is_container) .container else .player,
                     .map_id = if (slot.is_container) current_screen.container_id else map.info.player_map_id,
                     .slot_id = slot.idx,

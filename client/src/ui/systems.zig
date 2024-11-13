@@ -10,7 +10,6 @@ const assets = @import("../assets.zig");
 const tooltip = @import("tooltips/tooltip.zig");
 const dialog = @import("dialogs/dialog.zig");
 const glfw = @import("zglfw");
-const network = @import("../network.zig");
 
 const MenuBackground = @import("elements/MenuBackground.zig");
 const AccountLoginScreen = @import("screens/AccountLoginScreen.zig");

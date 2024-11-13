@@ -10,8 +10,10 @@ const Entity = @import("map/Entity.zig");
 const Enemy = @import("map/Enemy.zig");
 const Portal = @import("map/Portal.zig");
 const Container = @import("map/Container.zig");
+const Purchasable = @import("map/Purchasable.zig");
+const Ally = @import("map/Ally.zig");
 const Player = @import("map/Player.zig");
-const Client = @import("Client.zig");
+const Client = @import("GameClient.zig");
 
 fn h(str: []const u8) u64 {
     return std.hash.Wyhash.hash(0, str);
@@ -33,7 +35,7 @@ pub fn handle(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         h("/unban") => if (checkRank(player, .mod)) handleUnban(iter, player),
         h("/mute") => if (checkRank(player, .mod)) handleMute(iter, player),
         h("/unmute") => if (checkRank(player, .mod)) handleUnmute(iter, player),
-        h("/cond"), h("/condition") => if (checkRank(player, .staff)) handleCond(iter, player),
+        h("/cond"), h("/condition") => if (checkRank(player, .mod)) handleCond(iter, player),
         else => player.client.sendMessage("Unknown command"),
     }
 }
@@ -60,12 +62,14 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
 
     const written_name = name_stream.getWritten();
     var name: ?[]const u8 = null;
-    inline for (.{ Entity, Enemy, Portal, Container }) |ObjType| {
+    inline for (.{ Entity, Enemy, Portal, Container, Purchasable, Ally }) |ObjType| {
         if (switch (ObjType) {
             Entity => game_data.entity,
             Enemy => game_data.enemy,
             Portal => game_data.portal,
             Container => game_data.container,
+            Purchasable => game_data.purchasable,
+            Ally => game_data.ally,
             else => unreachable,
         }.from_name.get(written_name)) |data| {
             name = data.name;

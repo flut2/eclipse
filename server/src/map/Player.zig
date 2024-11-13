@@ -14,7 +14,7 @@ const Container = @import("Container.zig");
 const Purchasable = @import("Purchasable.zig");
 const Ally = @import("Ally.zig");
 const World = @import("../World.zig");
-const Client = @import("../Client.zig");
+const Client = @import("../GameClient.zig");
 const Player = @This();
 
 pub const health_stat = 0;

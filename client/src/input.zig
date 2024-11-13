@@ -3,7 +3,6 @@ const std = @import("std");
 const map = @import("game/map.zig");
 const main = @import("main.zig");
 const assets = @import("assets.zig");
-const network = @import("network.zig");
 const game_data = @import("shared").game_data;
 const ui_systems = @import("ui/systems.zig");
 
@@ -127,14 +126,14 @@ pub fn handleOptions() void {
 }
 
 fn handleEscape() void {
-    if (ui_systems.screen == .game) main.server.sendPacket(.{ .escape = .{} });
+    if (ui_systems.screen == .game) main.game_server.sendPacket(.{ .escape = .{} });
 }
 
 fn handleInteract() void {
     const int_id = map.interactive.map_id.load(.acquire);
     if (int_id != -1) {
         switch (map.interactive.type.load(.acquire)) {
-            .portal => main.server.sendPacket(.{ .use_portal = .{ .portal_map_id = int_id } }),
+            .portal => main.game_server.sendPacket(.{ .use_portal = .{ .portal_map_id = int_id } }),
             else => {},
         }
     }

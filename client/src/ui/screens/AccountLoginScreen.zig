@@ -1,6 +1,5 @@
 const std = @import("std");
 const shared = @import("shared");
-const requests = shared.requests;
 const network_data = shared.network_data;
 const element = @import("../elements/element.zig");
 const assets = @import("../../assets.zig");
@@ -209,50 +208,14 @@ pub fn update(_: *AccountLoginScreen, _: i64, _: f32) !void {}
 
 fn loginCallback(ud: ?*anyopaque) void {
     const current_screen: *AccountLoginScreen = @alignCast(@ptrCast(ud.?));
-    _ = login(current_screen.email_input.text_data.text, current_screen.password_input.text_data.text) catch |e| {
-        std.log.err("Login failed: {}", .{e});
-    };
+    const email = main.account_arena_allocator.dupe(u8, current_screen.email_input.text_data.text) catch @panic("OOM");
+    main.current_account = .{ .email = email, .token = 0 };
+    main.login_server.sendPacket(.{ .login = .{
+        .email = email,
+        .password = current_screen.password_input.text_data.text,
+    } });
 }
 
 fn registerCallback(_: ?*anyopaque) void {
     ui_systems.switchScreen(.register);
-}
-
-fn login(email: []const u8, password: []const u8) !bool {
-    var data: std.StringHashMapUnmanaged([]const u8) = .empty;
-    try data.put(main.account_arena_allocator, "email", email);
-    try data.put(main.account_arena_allocator, "password", password);
-    defer data.deinit(main.account_arena_allocator);
-
-    var needs_free = true;
-    const response = requests.sendRequest(build_options.login_server_uri ++ "account/verify", data) catch |e| blk: {
-        switch (e) {
-            error.ConnectionRefused => {
-                needs_free = false;
-                break :blk "Connection Refused";
-            },
-            else => return e,
-        }
-    };
-    defer if (needs_free) requests.freeResponse(response);
-
-    main.character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, main.account_arena_allocator, response, .{ .allocate = .alloc_always }) catch {
-        dialog.showDialog(.text, .{
-            .title = "Login Failed",
-            .body = try std.fmt.allocPrint(main.account_arena_allocator, "Error: {s}", .{response}),
-        });
-        return false;
-    };
-
-    main.current_account = .{
-        .email = try main.account_arena_allocator.dupe(u8, email),
-        .token = main.character_list.?.token,
-    };
-
-    if (main.character_list.?.characters.len > 0)
-        ui_systems.switchScreen(.char_select)
-    else
-        ui_systems.switchScreen(.char_create);
-
-    return true;
 }

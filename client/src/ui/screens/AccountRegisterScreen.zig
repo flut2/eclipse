@@ -1,6 +1,5 @@
 const std = @import("std");
 const shared = @import("shared");
-const requests = shared.requests;
 const network_data = shared.network_data;
 const element = @import("../elements/element.zig");
 const assets = @import("../../assets.zig");
@@ -333,57 +332,29 @@ fn getHwid(allocator: std.mem.Allocator) ![]const u8 {
     };
 }
 
-fn register(email: []const u8, password: []const u8, name: []const u8) !bool {
-    const hwid = try getHwid(main.account_arena_allocator);
-    defer if (builtin.os.tag == .windows or builtin.os.tag == .macos) main.account_arena_allocator.free(hwid);
-    var data: std.StringHashMapUnmanaged([]const u8) = .empty;
-    try data.put(main.account_arena_allocator, "name", name);
-    try data.put(main.account_arena_allocator, "hwid", hwid);
-    try data.put(main.account_arena_allocator, "email", email);
-    try data.put(main.account_arena_allocator, "password", password);
-    defer data.deinit(main.account_arena_allocator);
-
-    var needs_free = true;
-    const response = requests.sendRequest(build_options.login_server_uri ++ "account/register", data) catch |e| blk: {
-        switch (e) {
-            error.ConnectionRefused => {
-                needs_free = false;
-                break :blk "Connection Refused";
-            },
-            else => return e,
-        }
-    };
-    defer if (needs_free) requests.freeResponse(response);
-
-    main.character_list = std.json.parseFromSliceLeaky(network_data.CharacterListData, main.account_arena_allocator, response, .{ .allocate = .alloc_always }) catch {
-        dialog.showDialog(.text, .{
-            .title = "Login Failed",
-            .body = try std.fmt.allocPrint(main.account_arena_allocator, "Error: {s}", .{response}),
-        });
-        return false;
-    };
-    main.current_account = .{
-        .email = try main.account_arena_allocator.dupe(u8, email),
-        .token = main.character_list.?.token,
-    };
-
-    if (main.character_list.?.characters.len > 0)
-        ui_systems.switchScreen(.char_select)
-    else
-        ui_systems.switchScreen(.char_create);
-    return true;
-}
-
 fn registerCallback(ud: ?*anyopaque) void {
     const current_screen: *AccountRegisterScreen = @alignCast(@ptrCast(ud.?));
-    _ = register(
-        current_screen.email_input.text_data.text,
-        current_screen.password_input.text_data.text,
-        current_screen.username_input.text_data.text,
-    ) catch |e| {
-        std.log.err("Register failed: {}", .{e});
+    const email = main.account_arena_allocator.dupe(u8, current_screen.email_input.text_data.text) catch @panic("OOM");
+    const hwid = getHwid(main.account_arena_allocator) catch {
+        {
+            ui_systems.ui_lock.lock();
+            defer ui_systems.ui_lock.unlock();
+            ui_systems.switchScreen(.main_menu);
+        }
+        dialog.showDialog(.text, .{
+            .title = "Register Failed",
+            .body = "Unable to retrieve HWID",
+        });
         return;
     };
+    defer if (builtin.os.tag == .windows or builtin.os.tag == .macos) main.account_arena_allocator.free(hwid);
+    main.current_account = .{ .email = email, .token = 0 };
+    main.login_server.sendPacket(.{ .register = .{
+        .name = current_screen.username_input.text_data.text,
+        .email = email,
+        .password = current_screen.password_input.text_data.text,
+        .hwid = hwid,
+    } });
 }
 
 fn backCallback(_: ?*anyopaque) void {

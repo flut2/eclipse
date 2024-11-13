@@ -4,10 +4,6 @@
     .dependencies = .{
         .shared = .{ .path = "../shared" },
         .hiredis = .{ .path = "libs/hiredis" },
-        .httpz = .{
-            .url = "git+https://github.com/karlseguin/http.zig.git#6e45041ef1e0ed8d3e36e15ccb459a3392571f7f",
-            .hash = "1220c47311099ba5705d906d11927bc222e9562830bcc32b6d638e10124371f4eeb6",
-        },
     },
     .paths = .{
         "build.zig",

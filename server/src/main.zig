@@ -1,7 +1,6 @@
 const std = @import("std");
 const build_options = @import("options");
 const db = @import("db.zig");
-const login = @import("login.zig");
 const builtin = @import("builtin");
 const tracy = if (build_options.enable_tracy) @import("tracy") else {};
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
@@ -13,7 +12,8 @@ const maps = @import("map/maps.zig");
 const behavior = @import("logic/behavior.zig");
 const behavior_logic = @import("logic/logic.zig");
 
-const Client = @import("Client.zig");
+const LoginClient = @import("LoginClient.zig");
+const GameClient = @import("GameClient.zig");
 const Settings = @import("Settings.zig");
 
 pub const c = @cImport({
@@ -22,12 +22,11 @@ pub const c = @cImport({
     @cInclude("hiredis.h");
 });
 
-pub var client_pool: std.heap.MemoryPool(Client) = undefined;
+pub var game_client_pool: std.heap.MemoryPool(GameClient) = undefined;
+pub var login_client_pool: std.heap.MemoryPool(LoginClient) = undefined;
 pub var socket_pool: std.heap.MemoryPool(uv.uv_tcp_t) = undefined;
 pub var game_timer: uv.uv_timer_t = undefined;
 pub var allocator: std.mem.Allocator = undefined;
-pub var login_thread: std.Thread = undefined;
-pub var game_thread: std.Thread = undefined;
 pub var tick_id: u8 = 0;
 pub var current_time: i64 = -1;
 pub var settings: Settings = .{};
@@ -68,23 +67,43 @@ pub fn main() !void {
     try db.init();
     defer db.deinit();
 
-    try login.init();
-    defer login.deinit();
+    game_client_pool = .init(allocator);
+    defer game_client_pool.deinit();
 
-    client_pool = .init(allocator);
-    defer client_pool.deinit();
+    login_client_pool = .init(allocator);
+    defer login_client_pool.deinit();
 
     socket_pool = .init(allocator);
     defer socket_pool.deinit();
 
-    login_thread = try .spawn(.{}, login.tick, .{});
-    defer login_thread.join();
+    const timer_init_status = uv.uv_timer_init(uv.uv_default_loop(), @ptrCast(&game_timer));
+    if (timer_init_status != 0) std.debug.panic("Timer init failed: {s}", .{uv.uv_strerror(timer_init_status)});
+    const timer_start_status = uv.uv_timer_start(@ptrCast(&game_timer), timerCallback, 0, std.time.ms_per_s / settings.tps);
+    if (timer_start_status != 0) std.debug.panic("Timer start failed: {s}", .{uv.uv_strerror(timer_start_status)});
 
-    game_thread = try .spawn(.{}, gameTick, .{});
-    defer game_thread.join();
+    var game_server: uv.uv_tcp_t = .{};
+    var login_server: uv.uv_tcp_t = .{};
+    listenToServer(onGameAccept, @ptrCast(&game_server), settings.game_port);
+    listenToServer(onLoginAccept, @ptrCast(&login_server), settings.login_port);
+    
+    const run_status = uv.uv_run(uv.uv_default_loop(), uv.UV_RUN_DEFAULT);
+    if (run_status != 0 and run_status != 1) std.log.err("Run failed: {s}", .{uv.uv_strerror(run_status)});
+}
 
-    const stdin = std.io.getStdIn().reader();
-    if (try stdin.readUntilDelimiterOrEofAlloc(allocator, '\n', 1024)) |dummy| allocator.free(dummy);
+fn listenToServer(comptime acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.C) void, server_handle: [*c]uv.uv_tcp_t, port: u16) void {
+    const accept_socket_status = uv.uv_tcp_init(uv.uv_default_loop(), server_handle);
+    if (accept_socket_status != 0) std.debug.panic("Setting up accept socket failed: {s}", .{uv.uv_strerror(accept_socket_status)});
+
+    const addr = std.net.Address.parseIp4("0.0.0.0", port) catch unreachable;
+    const socket_bind_status = uv.uv_tcp_bind(server_handle, @ptrCast(&addr.in.sa), 0);
+    if (socket_bind_status != 0) std.debug.panic("Setting up socket bind failed: {s}", .{uv.uv_strerror(socket_bind_status)});
+
+    const listen_result = uv.uv_listen(@ptrCast(server_handle), switch (builtin.os.tag) {
+        .windows => std.os.windows.ws2_32.SOMAXCONN,
+        .macos, .ios, .tvos, .watchos, .linux => std.os.linux.SOMAXCONN,
+        else => @compileError("Host OS not supported"),
+    }, acceptFunc);
+    if (listen_result != 0) std.debug.panic("Listen error: {s}", .{uv.uv_strerror(listen_result)});
 }
 
 fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.C) void {
@@ -96,34 +115,67 @@ fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.C) void {
     while (iter.next()) |entry| entry.value_ptr.tick(time, dt) catch unreachable;
 }
 
-fn onAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
+fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
     if (status < 0) {
-        std.log.err("New connection error: {s}", .{uv.uv_strerror(status)});
+        std.log.err("New game connection error: {s}", .{uv.uv_strerror(status)});
         return;
     }
 
     const socket = socket_pool.create() catch unreachable;
     const init_recv_status = uv.uv_tcp_init(uv.uv_default_loop(), @ptrCast(socket));
     if (init_recv_status != 0) {
-        std.log.err("Failed to initialize received socket: {s}", .{uv.uv_strerror(init_recv_status)});
+        std.log.err("Failed to initialize received game socket: {s}", .{uv.uv_strerror(init_recv_status)});
         uv.uv_close(@ptrCast(socket), onSocketClose);
         return;
     }
 
     const accept_status = uv.uv_accept(server, @ptrCast(socket));
     if (accept_status != 0) {
-        std.log.err("Failed to accept socket: {s}", .{uv.uv_strerror(accept_status)});
+        std.log.err("Failed to accept game socket: {s}", .{uv.uv_strerror(accept_status)});
         uv.uv_close(@ptrCast(socket), onSocketClose);
         return;
     }
 
-    const cli = client_pool.create() catch unreachable;
+    const cli = game_client_pool.create() catch unreachable;
     socket.*.data = cli;
-    cli.* = .{ .arena = std.heap.ArenaAllocator.init(allocator), .socket = socket };
+    cli.* = .{ .arena = .init(allocator), .socket = socket };
 
-    const read_init_status = uv.uv_read_start(@ptrCast(socket), Client.allocBuffer, Client.readCallback);
+    const read_init_status = uv.uv_read_start(@ptrCast(socket), GameClient.allocBuffer, GameClient.readCallback);
     if (read_init_status != 0) {
-        std.log.err("Failed to initialize reading on socket: {s}", .{uv.uv_strerror(read_init_status)});
+        std.log.err("Failed to initialize reading on game socket: {s}", .{uv.uv_strerror(read_init_status)});
+        cli.sameThreadShutdown();
+        return;
+    }
+}
+
+fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
+    if (status < 0) {
+        std.log.err("New login connection error: {s}", .{uv.uv_strerror(status)});
+        return;
+    }
+
+    const socket = socket_pool.create() catch unreachable;
+    const init_recv_status = uv.uv_tcp_init(uv.uv_default_loop(), @ptrCast(socket));
+    if (init_recv_status != 0) {
+        std.log.err("Failed to initialize received login socket: {s}", .{uv.uv_strerror(init_recv_status)});
+        uv.uv_close(@ptrCast(socket), onSocketClose);
+        return;
+    }
+
+    const accept_status = uv.uv_accept(server, @ptrCast(socket));
+    if (accept_status != 0) {
+        std.log.err("Failed to accept login socket: {s}", .{uv.uv_strerror(accept_status)});
+        uv.uv_close(@ptrCast(socket), onSocketClose);
+        return;
+    }
+
+    const cli = login_client_pool.create() catch unreachable;
+    socket.*.data = cli;
+    cli.* = .{ .arena = .init(allocator), .socket = socket };
+
+    const read_init_status = uv.uv_read_start(@ptrCast(socket), LoginClient.allocBuffer, LoginClient.readCallback);
+    if (read_init_status != 0) {
+        std.log.err("Failed to initialize reading on login socket: {s}", .{uv.uv_strerror(read_init_status)});
         cli.sameThreadShutdown();
         return;
     }
@@ -179,43 +231,4 @@ pub fn getIp(addr: std.net.Address) ![]const u8 {
         else => unreachable,
     }
     return stream.getWritten();
-}
-
-pub fn gameTick() !void {
-    if (build_options.enable_tracy) tracy.SetThreadName("Game");
-
-    rpmalloc.initThread() catch |e| {
-        std.log.err("Game thread initialization failed: {}", .{e});
-        return;
-    };
-    defer rpmalloc.deinitThread(true);
-
-    const timer_init_status = uv.uv_timer_init(uv.uv_default_loop(), @ptrCast(&game_timer));
-    if (timer_init_status != 0)
-        std.debug.panic("Timer init failed: {s}", .{uv.uv_strerror(timer_init_status)});
-    const timer_start_status = uv.uv_timer_start(@ptrCast(&game_timer), timerCallback, 0, std.time.ms_per_s / settings.tps);
-    if (timer_start_status != 0)
-        std.debug.panic("Timer start failed: {s}", .{uv.uv_strerror(timer_start_status)});
-
-    var server: uv.uv_tcp_t = .{};
-    const accept_socket_status = uv.uv_tcp_init(uv.uv_default_loop(), @ptrCast(&server));
-    if (accept_socket_status != 0)
-        std.debug.panic("Setting up accept socket failed: {s}", .{uv.uv_strerror(accept_socket_status)});
-
-    const addr = try std.net.Address.parseIp4("0.0.0.0", settings.game_port);
-    const socket_bind_status = uv.uv_tcp_bind(@ptrCast(&server), @ptrCast(&addr.in.sa), 0);
-    if (socket_bind_status != 0)
-        std.debug.panic("Setting up socket bind failed: {s}", .{uv.uv_strerror(socket_bind_status)});
-
-    const listen_result = uv.uv_listen(@ptrCast(&server), switch (builtin.os.tag) {
-        .windows => std.os.windows.ws2_32.SOMAXCONN,
-        .macos, .ios, .tvos, .watchos, .linux => std.os.linux.SOMAXCONN,
-        else => @compileError("Host OS not supported"),
-    }, onAccept);
-    if (listen_result != 0)
-        std.debug.panic("Listen error: {s}", .{uv.uv_strerror(listen_result)});
-
-    const run_status = uv.uv_run(uv.uv_default_loop(), uv.UV_RUN_DEFAULT);
-    if (run_status != 0 and run_status != 1)
-        std.log.err("Run failed: {s}", .{uv.uv_strerror(socket_bind_status)});
 }
