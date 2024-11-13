@@ -219,6 +219,13 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
 pub fn shutdown(self: *Server) void {
     if (!self.initialized) return;
     self.initialized = false;
+
+    {
+        ui_systems.ui_lock.lock();
+        defer ui_systems.ui_lock.unlock();
+        ui_systems.switchScreen(.main_menu);
+    }
+
     if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
 }
 

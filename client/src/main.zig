@@ -404,13 +404,7 @@ pub fn main() !void {
     }
     defer allocator.destroy(main_loop);
 
-    {
-        ui_systems.ui_lock.lock();
-        defer ui_systems.ui_lock.unlock();
-        ui_systems.switchScreen(.main_menu);
-    }
-
-    if (current_account != null) login_server.needs_verify = true;
+    login_server.needs_verify = true;
 
     try game_server.init();
     defer game_server.deinit();

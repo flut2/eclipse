@@ -51,7 +51,7 @@ pub var is_testing: bool = false;
 
 pub fn init() !void {
     menu_background = try element.create(MenuBackground, .{
-        .base = .{ .x = 0, .y = 0 },
+        .base = .{ .x = 0, .y = 0, .visible = false },
         .w = main.camera.width,
         .h = main.camera.height,
     });
