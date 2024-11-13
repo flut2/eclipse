@@ -20,6 +20,11 @@ pub const BoulderBuddy = struct {
         };
 
         const dist_sqr = utils.distSqr(owner.x, owner.y, host.x, host.y);
+        if (dist_sqr < 1 * 1) {
+            logic.wander(@src(), host, dt, 2.5);
+            return;
+        }
+
         if (dist_sqr < 3 * 3) {
             if (!logic.orbitPlayer(host, dt, .{
                 .speed = 3.85,
