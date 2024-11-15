@@ -122,9 +122,6 @@ container_decor: *Image = undefined,
 container_name: *Text = undefined,
 container_items: [9]*Item = undefined,
 minimap_decor: *Image = undefined,
-minimap_slots: *Image = undefined,
-retrieve_button: *Button = undefined,
-options_button: *Button = undefined,
 options: *Options = undefined,
 inventory_pos_data: [22]utils.Rect = undefined,
 container_pos_data: [9]utils.Rect = undefined,
@@ -154,42 +151,6 @@ pub fn init(self: *GameScreen) !void {
         .minimap_offset_y = 21.0,
         .minimap_width = 212.0,
         .minimap_height = 212.0,
-    });
-
-    const minimap_slots_data = assets.getUiData("minimap_slots", 0);
-    self.minimap_slots = try element.create(Image, .{
-        .base = .{ .x = self.minimap_decor.base.x + 15, .y = self.minimap_decor.base.y + 209 },
-        .image_data = .{ .normal = .{ .atlas_data = minimap_slots_data } },
-    });
-
-    const retrieve_button_data = assets.getUiData("retrieve_button", 0);
-    self.retrieve_button = try element.create(Button, .{
-        .base = .{
-            .x = self.minimap_slots.base.x + 6 + (18 - retrieve_button_data.width()) / 2.0,
-            .y = self.minimap_slots.base.y + 6 + (18 - retrieve_button_data.height()) / 2.0,
-        },
-        .image_data = .{ .base = .{ .normal = .{ .atlas_data = retrieve_button_data } } },
-        .tooltip_text = .{
-            .text = "Return to the Retrieve",
-            .size = 12,
-            .text_type = .bold_italic,
-        },
-        .press_callback = returnToRetrieve,
-    });
-
-    const options_button_data = assets.getUiData("options_button", 0);
-    self.options_button = try element.create(Button, .{
-        .base = .{
-            .x = self.minimap_slots.base.x + 36 + (18 - options_button_data.width()) / 2.0,
-            .y = self.minimap_slots.base.y + 6 + (18 - options_button_data.height()) / 2.0,
-        },
-        .image_data = .{ .base = .{ .normal = .{ .atlas_data = options_button_data } } },
-        .tooltip_text = .{
-            .text = "Open Options",
-            .size = 12,
-            .text_type = .bold_italic,
-        },
-        .press_callback = openOptions,
     });
 
     self.inventory_decor = try element.create(Image, .{
@@ -536,7 +497,6 @@ fn addStatText(container: *UiContainer, text: **Text, idx: *f32) !void {
 
 pub fn deinit(self: *GameScreen) void {
     element.destroy(self.minimap_decor);
-    element.destroy(self.minimap_slots);
     element.destroy(self.inventory_decor);
     element.destroy(self.container_decor);
     element.destroy(self.container_name);
@@ -553,8 +513,6 @@ pub fn deinit(self: *GameScreen) void {
     element.destroy(self.chat_decor);
     element.destroy(self.chat_input);
     element.destroy(self.fps_text);
-    element.destroy(self.options_button);
-    element.destroy(self.retrieve_button);
     for (self.inventory_items) |item| element.destroy(item);
     for (self.container_items) |item| element.destroy(item);
 
@@ -566,8 +524,6 @@ pub fn deinit(self: *GameScreen) void {
 
 pub fn resize(self: *GameScreen, w: f32, h: f32) void {
     self.minimap_decor.base.x = w - self.minimap_decor.width() + 10;
-    self.minimap_slots.base.x = self.minimap_decor.base.x + 15;
-    self.minimap_slots.base.y = self.minimap_decor.base.y + 209;
     self.fps_text.base.x = self.minimap_decor.base.x;
     self.fps_text.base.y = self.minimap_decor.base.y + self.minimap_decor.height() - 10;
     self.inventory_decor.base.x = w - self.inventory_decor.width() + 10;
@@ -605,10 +561,6 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
         self.chat_container.scroll_bar_decor.base.y = self.chat_decor.base.y + 24;
     }
     self.chat_input.base.y = self.chat_decor.base.y + chat_decor_h - 10;
-    self.retrieve_button.base.x = self.minimap_slots.base.x + 6 + (18 - self.retrieve_button.width()) / 2.0;
-    self.retrieve_button.base.y = self.minimap_slots.base.y + 6 + (18 - self.retrieve_button.height()) / 2.0;
-    self.options_button.base.x = self.minimap_slots.base.x + 36 + (18 - self.options_button.width()) / 2.0;
-    self.options_button.base.y = self.minimap_slots.base.y + 6 + (18 - self.options_button.height()) / 2.0;
 
     for (0..self.inventory_items.len) |idx| {
         self.inventory_items[idx].base.x = self.inventory_decor.base.x +
@@ -991,14 +943,6 @@ fn itemDoubleClickCallback(item: *Item) void {
             }
         }
     }
-}
-
-fn returnToRetrieve(_: ?*anyopaque) void {
-    if (systems.screen == .game) main.game_server.sendPacket(.{ .escape = .{} });
-}
-
-fn openOptions(_: ?*anyopaque) void {
-    input.handleOptions();
 }
 
 fn statsCallback(ud: ?*anyopaque) void {

@@ -24,6 +24,33 @@ pub const ui_texel_h = 1.0 / @as(comptime_float, ui_atlas_height);
 // for packing
 const Position = struct { x: u16, y: u16 };
 
+const GameSheet = struct {
+    type: enum { image, anim_enemy, anim_player },
+    name: []const u8,
+    path: []const u8,
+    w: u32,
+    h: u32,
+    dont_trim: bool = false,
+};
+
+const WallSheet = struct {
+    name: []const u8,
+    path: []const u8,
+    full_w: u32,
+    full_h: u32,
+    w: u32,
+    h: u32,
+};
+
+const UiSheet = struct {
+    const imply_size = std.math.maxInt(u32);
+
+    name: []const u8,
+    path: []const u8,
+    w: u32 = imply_size,
+    h: u32 = imply_size,
+};
+
 pub const Action = enum { stand, walk, attack };
 pub const Direction = enum { right, left, down, up };
 
@@ -31,7 +58,7 @@ pub const CharacterData = struct {
     pub const size = 64.0;
     pub const padding = 8.0;
     pub const padding_mult = 1.0 + CharacterData.padding * 2 / size;
-    pub const line_height = 1.149;
+    pub const line_height = 1.212;
     pub const px_range = 16.0;
 
     atlas_w: f32,
@@ -195,7 +222,7 @@ const AudioState = struct {
     }
 
     fn create() !*AudioState {
-        const audio = try main.asset_arena_allocator.create(AudioState);
+        const audio = try arena.allocator().create(AudioState);
 
         var device_config = zaudio.Device.Config.init(.playback);
         device_config.data_callback = audioCallback;
@@ -232,6 +259,7 @@ const RGBA = packed struct(u32) {
 pub var sfx_path_buffer: [256]u8 = undefined;
 pub var audio_state: *AudioState = undefined;
 pub var main_music: *zaudio.Sound = undefined;
+pub var arena: std.heap.ArenaAllocator = undefined;
 
 pub var atlas: zstbi.Image = undefined;
 pub var ui_atlas: zstbi.Image = undefined;
@@ -342,8 +370,8 @@ fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, compti
         const cur_src_x = (i * cut_width) % img.width;
         const cur_src_y = @divFloor(i * cut_width, img.width) * cut_height;
 
-        var temp = try main.asset_arena_allocator.alloc(u8, img_size * 4);
-        defer main.asset_arena_allocator.free(temp);
+        var temp = try arena.allocator().alloc(u8, img_size * 4);
+        defer arena.allocator().free(temp);
 
         for (0..img_size) |j| {
             const row_count = @divFloor(j, cut_width);
@@ -380,34 +408,42 @@ fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, compti
 }
 
 fn addWall(
-    comptime sheet_name: [:0]const u8,
-    comptime image_name: [:0]const u8,
-    comptime full_cut_width: u32,
-    comptime full_cut_height: u32,
-    comptime base_cut_width: u32,
-    comptime base_cut_height: u32,
+    sheet_name: []const u8,
+    image_path: []const u8,
+    full_cut_width: u32,
+    full_cut_height: u32,
+    base_cut_width: u32,
+    base_cut_height: u32,
     ctx: *pack.Context,
 ) !void {
-    const x_off = @as(comptime_float, full_cut_width - base_cut_width) / 2.0;
-    const y_off = @as(comptime_float, full_cut_height - base_cut_height) / 2.0;
-    if (x_off < 0 or y_off < 0) @compileError("Invalid base cut w/h");
+    if (walls.contains(sheet_name)) std.debug.panic("\"{s}\" is already present in wall data", .{sheet_name});
 
-    var img: zstbi.Image = try .loadFromFile("./assets/sheets/" ++ image_name, 4);
+    const x_off = @as(f32, @floatFromInt(full_cut_width - base_cut_width)) / 2.0;
+    const y_off = @as(f32, @floatFromInt(full_cut_height - base_cut_height)) / 2.0;
+    if (x_off < 0 or y_off < 0) @panic("Invalid base cut w/h");
+    if (std.mem.indexOf(u8, image_path, "..") != null) {
+        std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
+        std.posix.exit(0);
+    }
+    var buf: [128]u8 = undefined;
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
+    var img: zstbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
     const len = std.math.divExact(u32, img.width * img.height, full_cut_width * full_cut_height) catch
-        std.debug.panic("Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{
+        std.debug.panic("Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{
+        sheet_name,
         img.width,
         img.height,
         full_cut_width,
         full_cut_height,
     });
 
-    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
-    defer main.asset_arena_allocator.free(current_rects);
+    var current_rects = try arena.allocator().alloc(pack.IdRect, len);
+    defer arena.allocator().free(current_rects);
 
-    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
-    defer main.asset_arena_allocator.free(current_positions);
+    var current_positions = try arena.allocator().alloc(Position, len);
+    defer arena.allocator().free(current_positions);
 
     for (0..len) |i| {
         const cur_src_x = (i * full_cut_width) % img.width;
@@ -422,13 +458,13 @@ fn addWall(
 
     try pack.pack(pack.IdRect, ctx, current_rects, .{ .assume_capacity = true, .sortLessThanFn = packSort });
 
-    var data = try main.asset_arena_allocator.alloc(WallData, len);
+    var data = try arena.allocator().alloc(WallData, len);
 
-    var dominant_colors = try main.asset_arena_allocator.alloc(RGBA, len);
+    var dominant_colors = try arena.allocator().alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
     var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
-    defer color_counts.deinit(main.asset_arena_allocator);
+    defer color_counts.deinit(arena.allocator());
 
     for (0..len) |i| {
         const id_rect = current_rects[i];
@@ -468,21 +504,21 @@ fn addWall(
                         .a = 255,
                     };
                     if (color_counts.get(rgba)) |count| {
-                        try color_counts.put(main.asset_arena_allocator, rgba, count + 1);
+                        try color_counts.put(arena.allocator(), rgba, count + 1);
                     } else {
-                        try color_counts.put(main.asset_arena_allocator, rgba, 1);
+                        try color_counts.put(arena.allocator(), rgba, 1);
                     }
                 }
             }
         }
 
         var colors: std.ArrayListUnmanaged(u32) = .empty;
-        defer colors.deinit(main.asset_arena_allocator);
+        defer colors.deinit(arena.allocator());
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(main.asset_arena_allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
+            try colors.append(arena.allocator(), @as(u32, @intCast(entry.key_ptr.r)) << 16 |
                 @as(u32, @intCast(entry.key_ptr.g)) << 8 |
                 @as(u32, @intCast(entry.key_ptr.b)));
 
@@ -506,32 +542,40 @@ fn addWall(
             .top_outline = .fromRawF32(fx + x_off, fy, base_w, y_off, .base),
             .bottom_outline = .fromRawF32(fx + x_off, fy + y_off + base_h, base_w, y_off, .base),
         };
-        try atlas_to_color_data.put(main.asset_arena_allocator, @bitCast(base_atlas_data), try main.asset_arena_allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(arena.allocator(), @bitCast(base_atlas_data), try arena.allocator().dupe(u32, colors.items));
     }
 
-    try walls.put(main.asset_arena_allocator, sheet_name, data);
-    try dominant_color_data.put(main.asset_arena_allocator, sheet_name, dominant_colors);
+    try walls.put(arena.allocator(), sheet_name, data);
+    try dominant_color_data.put(arena.allocator(), sheet_name, dominant_colors);
 }
 
 fn addImage(
-    comptime sheet_name: [:0]const u8,
-    comptime image_name: [:0]const u8,
-    comptime cut_width: u32,
-    comptime cut_height: u32,
-    comptime dont_trim: bool,
+    sheet_name: []const u8,
+    image_path: []const u8,
+    cut_width: u32,
+    cut_height: u32,
+    dont_trim: bool,
     ctx: *pack.Context,
 ) !void {
-    var img: zstbi.Image = try .loadFromFile("./assets/sheets/" ++ image_name, 4);
+    if (atlas_data.contains(sheet_name)) std.debug.panic("\"{s}\" is already present in game atlas data", .{sheet_name});
+
+    if (std.mem.indexOf(u8, image_path, "..") != null) {
+        std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
+        std.posix.exit(0);
+    }
+    var buf: [128]u8 = undefined;
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
+    var img: zstbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
     const len = std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
-        std.debug.panic("Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{ img.width, img.height, cut_width, cut_height });
+        std.debug.panic("Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{ sheet_name, img.width, img.height, cut_width, cut_height });
 
-    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
-    defer main.asset_arena_allocator.free(current_rects);
+    var current_rects = try arena.allocator().alloc(pack.IdRect, len);
+    defer arena.allocator().free(current_rects);
 
-    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
-    defer main.asset_arena_allocator.free(current_positions);
+    var current_positions = try arena.allocator().alloc(Position, len);
+    defer arena.allocator().free(current_positions);
 
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
@@ -544,8 +588,8 @@ fn addImage(
                 current_rects[i].rect.w = 0;
                 current_rects[i].rect.h = 0;
             } else {
-                current_rects[i].rect.w = cut_width + padding * 2;
-                current_rects[i].rect.h = cut_height + padding * 2;
+                current_rects[i].rect.w = @intCast(cut_width + padding * 2);
+                current_rects[i].rect.h = @intCast(cut_height + padding * 2);
             }
             current_rects[i].id = @intCast(i);
         } else {
@@ -559,13 +603,13 @@ fn addImage(
 
     try pack.pack(pack.IdRect, ctx, current_rects, .{ .assume_capacity = true, .sortLessThanFn = packSort });
 
-    var data = try main.asset_arena_allocator.alloc(AtlasData, len);
+    var data = try arena.allocator().alloc(AtlasData, len);
 
-    var dominant_colors = try main.asset_arena_allocator.alloc(RGBA, len);
+    var dominant_colors = try arena.allocator().alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
     var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
-    defer color_counts.deinit(main.asset_arena_allocator);
+    defer color_counts.deinit(arena.allocator());
 
     for (0..len) |i| {
         const id_rect = current_rects[i];
@@ -599,21 +643,21 @@ fn addImage(
                         .a = 255,
                     };
                     if (color_counts.get(rgba)) |count| {
-                        try color_counts.put(main.asset_arena_allocator, rgba, count + 1);
+                        try color_counts.put(arena.allocator(), rgba, count + 1);
                     } else {
-                        try color_counts.put(main.asset_arena_allocator, rgba, 1);
+                        try color_counts.put(arena.allocator(), rgba, 1);
                     }
                 }
             }
         }
 
         var colors: std.ArrayListUnmanaged(u32) = .empty;
-        defer colors.deinit(main.asset_arena_allocator);
+        defer colors.deinit(arena.allocator());
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(main.asset_arena_allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
+            try colors.append(arena.allocator(), @as(u32, @intCast(entry.key_ptr.r)) << 16 |
                 @as(u32, @intCast(entry.key_ptr.g)) << 8 |
                 @as(u32, @intCast(entry.key_ptr.b)));
 
@@ -624,37 +668,44 @@ fn addImage(
         }
 
         data[idx] = .fromRaw(rect.x, rect.y, rect.w, rect.h, .base);
-        try atlas_to_color_data.put(main.asset_arena_allocator, @bitCast(data[idx]), try main.asset_arena_allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(arena.allocator(), @bitCast(data[idx]), try arena.allocator().dupe(u32, colors.items));
     }
 
-    try atlas_data.put(main.asset_arena_allocator, sheet_name, data);
-    try dominant_color_data.put(main.asset_arena_allocator, sheet_name, dominant_colors);
+    try atlas_data.put(arena.allocator(), sheet_name, data);
+    try dominant_color_data.put(arena.allocator(), sheet_name, dominant_colors);
 }
 
 fn addUiImage(
-    comptime sheet_name: [:0]const u8,
-    comptime image_name: [:0]const u8,
-    comptime cut_width_base: u32,
-    comptime cut_height_base: u32,
+    sheet_name: []const u8,
+    image_path: []const u8,
+    cut_width_base: u32,
+    cut_height_base: u32,
     ctx: *pack.Context,
 ) !void {
-    var img: zstbi.Image = try .loadFromFile("./assets/ui/" ++ image_name, 4);
+    if (ui_atlas_data.contains(sheet_name)) std.debug.panic("\"{s}\" is already present in UI atlas data", .{sheet_name});
+
+    if (std.mem.indexOf(u8, image_path, "..") != null) {
+        std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
+        std.posix.exit(0);
+    }
+    var buf: [128]u8 = undefined;
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/ui/{s}", .{image_path});
+    var img: zstbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
-    const imply_size = std.math.maxInt(u32);
-    const cut_width = if (cut_width_base == imply_size) img.width else cut_width_base;
-    const cut_height = if (cut_height_base == imply_size) img.height else cut_height_base;
+    const cut_width = if (cut_width_base == UiSheet.imply_size) img.width else cut_width_base;
+    const cut_height = if (cut_height_base == UiSheet.imply_size) img.height else cut_height_base;
 
     const len = std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
-        std.debug.panic("Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{ img.width, img.height, cut_width, cut_height });
+        std.debug.panic("Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{ sheet_name, img.width, img.height, cut_width, cut_height });
 
-    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
-    defer main.asset_arena_allocator.free(current_rects);
+    var current_rects = try arena.allocator().alloc(pack.IdRect, len);
+    defer arena.allocator().free(current_rects);
 
-    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
-    defer main.asset_arena_allocator.free(current_positions);
+    var current_positions = try arena.allocator().alloc(Position, len);
+    defer arena.allocator().free(current_positions);
 
-    var data = try main.asset_arena_allocator.alloc(AtlasData, len);
+    var data = try arena.allocator().alloc(AtlasData, len);
 
     for (0..len) |i| {
         const cur_src_x = (i * cut_width) % img.width;
@@ -692,30 +743,38 @@ fn addUiImage(
         data[idx] = .fromRaw(rect.x, rect.y, rect.w, rect.h, .ui);
     }
 
-    try ui_atlas_data.put(main.asset_arena_allocator, sheet_name, data);
+    try ui_atlas_data.put(arena.allocator(), sheet_name, data);
 }
 
 fn addAnimEnemy(
-    comptime sheet_name: [:0]const u8,
-    comptime image_name: [:0]const u8,
-    comptime cut_width: u32,
-    comptime cut_height: u32,
+    sheet_name: []const u8,
+    image_path: []const u8,
+    cut_width: u32,
+    cut_height: u32,
     ctx: *pack.Context,
 ) !void {
-    var img: zstbi.Image = try .loadFromFile("./assets/sheets/" ++ image_name, 4);
+    if (anim_enemies.contains(sheet_name)) std.debug.panic("\"{s}\" is already present in animated enemy data", .{sheet_name});
+
+    if (std.mem.indexOf(u8, image_path, "..") != null) {
+        std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
+        std.posix.exit(0);
+    }
+    var buf: [128]u8 = undefined;
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
+    var img: zstbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
     const len = @divExact(std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
         std.debug.panic(
-        "Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
-        .{ img.width, img.height, cut_width, cut_height },
+        "Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
+        .{ sheet_name, img.width, img.height, cut_width, cut_height },
     ), 6) * 5 * AnimEnemyData.directions;
 
-    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
-    defer main.asset_arena_allocator.free(current_rects);
+    var current_rects = try arena.allocator().alloc(pack.IdRect, len);
+    defer arena.allocator().free(current_rects);
 
-    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
-    defer main.asset_arena_allocator.free(current_positions);
+    var current_positions = try arena.allocator().alloc(Position, len);
+    defer arena.allocator().free(current_positions);
 
     var left_sub: u32 = 0;
     for (0..len) |i| {
@@ -738,13 +797,13 @@ fn addAnimEnemy(
 
     try pack.pack(pack.IdRect, ctx, current_rects, .{ .assume_capacity = true, .sortLessThanFn = packSort });
 
-    const enemy_data = try main.asset_arena_allocator.alloc(AnimEnemyData, @divFloor(len, 5));
+    const enemy_data = try arena.allocator().alloc(AnimEnemyData, @divFloor(len, 5));
 
-    var dominant_colors = try main.asset_arena_allocator.alloc(RGBA, len);
+    var dominant_colors = try arena.allocator().alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
     var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
-    defer color_counts.deinit(main.asset_arena_allocator);
+    defer color_counts.deinit(arena.allocator());
 
     for (0..len) |i| {
         const id_rect = current_rects[i];
@@ -793,20 +852,20 @@ fn addAnimEnemy(
                     .a = 255,
                 };
                 if (color_counts.get(rgba)) |count| {
-                    try color_counts.put(main.asset_arena_allocator, rgba, count + 1);
+                    try color_counts.put(arena.allocator(), rgba, count + 1);
                 } else {
-                    try color_counts.put(main.asset_arena_allocator, rgba, 1);
+                    try color_counts.put(arena.allocator(), rgba, 1);
                 }
             }
         }
 
         var colors: std.ArrayListUnmanaged(u32) = .empty;
-        defer colors.deinit(main.asset_arena_allocator);
+        defer colors.deinit(arena.allocator());
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(main.asset_arena_allocator, @as(u32, @intCast(entry.key_ptr.r)) << 16 |
+            try colors.append(arena.allocator(), @as(u32, @intCast(entry.key_ptr.r)) << 16 |
                 @as(u32, @intCast(entry.key_ptr.g)) << 8 |
                 @as(u32, @intCast(entry.key_ptr.b)));
 
@@ -816,35 +875,43 @@ fn addAnimEnemy(
             }
         }
 
-        try atlas_to_color_data.put(main.asset_arena_allocator, @bitCast(data), try main.asset_arena_allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(arena.allocator(), @bitCast(data), try arena.allocator().dupe(u32, colors.items));
     }
 
-    try anim_enemies.put(main.asset_arena_allocator, sheet_name, enemy_data);
-    try dominant_color_data.put(main.asset_arena_allocator, sheet_name, dominant_colors);
+    try anim_enemies.put(arena.allocator(), sheet_name, enemy_data);
+    try dominant_color_data.put(arena.allocator(), sheet_name, dominant_colors);
 }
 
 fn addAnimPlayer(
-    comptime sheet_name: [:0]const u8,
-    comptime image_name: [:0]const u8,
-    comptime cut_width: u32,
-    comptime cut_height: u32,
+    sheet_name: []const u8,
+    image_path: []const u8,
+    cut_width: u32,
+    cut_height: u32,
     ctx: *pack.Context,
 ) !void {
-    var img: zstbi.Image = try .loadFromFile("./assets/sheets/" ++ image_name, 4);
+    if (anim_players.contains(sheet_name)) std.debug.panic("\"{s}\" is already present in animated player data", .{sheet_name});
+
+    if (std.mem.indexOf(u8, image_path, "..") != null) {
+        std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
+        std.posix.exit(0);
+    }
+    var buf: [128]u8 = undefined;
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
+    var img: zstbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
     var len = @divExact(std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
         std.debug.panic(
-        "Sheet " ++ sheet_name ++ " has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
-        .{ img.width, img.height, cut_width, cut_height },
+        "Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
+        .{ sheet_name, img.width, img.height, cut_width, cut_height },
     ), 6) * 5;
     len += @divFloor(len, 3); // for the "missing" left side
 
-    var current_rects = try main.asset_arena_allocator.alloc(pack.IdRect, len);
-    defer main.asset_arena_allocator.free(current_rects);
+    var current_rects = try arena.allocator().alloc(pack.IdRect, len);
+    defer arena.allocator().free(current_rects);
 
-    var current_positions = try main.asset_arena_allocator.alloc(Position, len);
-    defer main.asset_arena_allocator.free(current_positions);
+    var current_positions = try arena.allocator().alloc(Position, len);
+    defer arena.allocator().free(current_positions);
 
     var left_sub: u32 = 0;
     for (0..len) |i| {
@@ -869,13 +936,13 @@ fn addAnimPlayer(
 
     left_sub = 0;
 
-    const player_data = try main.asset_arena_allocator.alloc(AnimPlayerData, @divFloor(len, 5 * 4));
+    const player_data = try arena.allocator().alloc(AnimPlayerData, @divFloor(len, 5 * 4));
 
-    var dominant_colors = try main.asset_arena_allocator.alloc(RGBA, len);
+    var dominant_colors = try arena.allocator().alloc(RGBA, len);
     @memset(dominant_colors, RGBA{});
 
     var color_counts: std.AutoHashMapUnmanaged(RGBA, u32) = .{};
-    defer color_counts.deinit(main.asset_arena_allocator);
+    defer color_counts.deinit(arena.allocator());
 
     for (0..len) |j| {
         const id_rect = current_rects[j];
@@ -928,20 +995,20 @@ fn addAnimPlayer(
                     .a = 255,
                 };
                 if (color_counts.get(rgba)) |count| {
-                    try color_counts.put(main.asset_arena_allocator, rgba, count + 1);
+                    try color_counts.put(arena.allocator(), rgba, count + 1);
                 } else {
-                    try color_counts.put(main.asset_arena_allocator, rgba, 1);
+                    try color_counts.put(arena.allocator(), rgba, 1);
                 }
             }
         }
 
         var colors: std.ArrayListUnmanaged(u32) = .empty;
-        defer colors.deinit(main.asset_arena_allocator);
+        defer colors.deinit(arena.allocator());
 
         var max: u32 = 0;
         var count_iter = color_counts.iterator();
         while (count_iter.next()) |entry| {
-            try colors.append(main.asset_arena_allocator, @as(u32, entry.key_ptr.r) << 16 |
+            try colors.append(arena.allocator(), @as(u32, entry.key_ptr.r) << 16 |
                 @as(u32, entry.key_ptr.g) << 8 |
                 @as(u32, entry.key_ptr.b));
 
@@ -951,19 +1018,19 @@ fn addAnimPlayer(
             }
         }
 
-        try atlas_to_color_data.put(main.asset_arena_allocator, @bitCast(data), try main.asset_arena_allocator.dupe(u32, colors.items));
+        try atlas_to_color_data.put(arena.allocator(), @bitCast(data), try arena.allocator().dupe(u32, colors.items));
     }
 
-    try anim_players.put(main.asset_arena_allocator, sheet_name, player_data);
-    try dominant_color_data.put(main.asset_arena_allocator, sheet_name, dominant_colors);
+    try anim_players.put(arena.allocator(), sheet_name, player_data);
+    try dominant_color_data.put(arena.allocator(), sheet_name, dominant_colors);
 }
 
 fn parseFontData(atlas_w: f32, atlas_h: f32, comptime path: []const u8, chars: *[256]CharacterData) !void {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    const data = try file.readToEndAlloc(main.asset_arena_allocator, std.math.maxInt(u16));
-    defer main.asset_arena_allocator.free(data);
+    const data = try file.readToEndAlloc(arena.allocator(), std.math.maxInt(u16));
+    defer arena.allocator().free(data);
 
     var iter = std.mem.splitSequence(u8, data, if (std.mem.indexOf(u8, data, "\r\n") != null) "\r\n" else "\n");
     while (iter.next()) |line| {
@@ -1002,8 +1069,8 @@ pub fn playSfx(name: []const u8) void {
         var new_copy_audio = audio_state.engine.createSoundCopy(audio, .{}, null) catch return;
         new_copy_audio.setVolume(main.settings.sfx_volume);
         new_copy_audio.start() catch return;
-        audio_copies.?.append(main.asset_arena_allocator, new_copy_audio) catch return;
-        sfx_copy_map.put(main.asset_arena_allocator, audio, audio_copies.?) catch return;
+        audio_copies.?.append(arena.allocator(), new_copy_audio) catch return;
+        sfx_copy_map.put(arena.allocator(), audio, audio_copies.?) catch return;
         return;
     }
 
@@ -1014,7 +1081,7 @@ pub fn playSfx(name: []const u8) void {
         audio.setVolume(main.settings.sfx_volume);
         audio.start() catch return;
 
-        sfx_map.put(main.asset_arena_allocator, name, audio) catch return;
+        sfx_map.put(arena.allocator(), name, audio) catch return;
     } else |_| {
         if (!std.mem.eql(u8, name, "Unknown"))
             std.log.err("Could not find sound effect for \"{s}\"", .{name});
@@ -1022,15 +1089,16 @@ pub fn playSfx(name: []const u8) void {
 }
 
 pub fn deinit() void {
+    arena.deinit();
+
     main_music.destroy();
+    audio_state.destroy();
 
     var copy_audio_iter = sfx_copy_map.valueIterator();
     while (copy_audio_iter.next()) |copy_audio_list| for (copy_audio_list.items) |copy_audio| copy_audio.*.destroy();
 
     var audio_iter = sfx_map.valueIterator();
     while (audio_iter.next()) |audio| audio.*.destroy();
-
-    audio_state.destroy();
 
     default_cursor_pressed.destroy();
     default_cursor.destroy();
@@ -1049,6 +1117,9 @@ pub fn deinit() void {
 }
 
 pub fn init() !void {
+    arena = .init(main.allocator);
+    const arena_allocator = arena.allocator();
+
     defer {
         const dummy_string_ctx: std.hash_map.StringContext = undefined;
         if (sfx_map.capacity() > 0) sfx_map.rehash(dummy_string_ctx);
@@ -1070,33 +1141,33 @@ pub fn init() !void {
 
     menu_background = try .loadFromFile("./assets/ui/menu_background.png", 4);
 
-    bold_atlas = try .loadFromFile("./assets/fonts/ubuntu_bold.png", 4);
-    bold_italic_atlas = try .loadFromFile("./assets/fonts/ubuntu_bold_italic.png", 4);
-    medium_atlas = try .loadFromFile("./assets/fonts/ubuntu_medium.png", 4);
-    medium_italic_atlas = try .loadFromFile("./assets/fonts/ubuntu_medium_italic.png", 4);
+    bold_atlas = try .loadFromFile("./assets/fonts/amaranth_bold.png", 4);
+    bold_italic_atlas = try .loadFromFile("./assets/fonts/amaranth_bold_italic.png", 4);
+    medium_atlas = try .loadFromFile("./assets/fonts/amaranth_regular.png", 4);
+    medium_italic_atlas = try .loadFromFile("./assets/fonts/amaranth_italic.png", 4);
 
     try parseFontData(
         @floatFromInt(bold_atlas.width),
         @floatFromInt(bold_atlas.height),
-        "./assets/fonts/ubuntu_bold.csv",
+        "./assets/fonts/amaranth_bold.csv",
         &bold_chars,
     );
     try parseFontData(
         @floatFromInt(bold_italic_atlas.width),
         @floatFromInt(bold_italic_atlas.height),
-        "./assets/fonts/ubuntu_bold_italic.csv",
+        "./assets/fonts/amaranth_bold_italic.csv",
         &bold_italic_chars,
     );
     try parseFontData(
         @floatFromInt(medium_atlas.width),
         @floatFromInt(medium_atlas.height),
-        "./assets/fonts/ubuntu_medium.csv",
+        "./assets/fonts/amaranth_regular.csv",
         &medium_chars,
     );
     try parseFontData(
         @floatFromInt(medium_italic_atlas.width),
         @floatFromInt(medium_italic_atlas.height),
-        "./assets/fonts/ubuntu_medium_italic.csv",
+        "./assets/fonts/amaranth_italic.csv",
         &medium_italic_chars,
     );
 
@@ -1114,140 +1185,38 @@ pub fn init() !void {
     var ctx: pack.Context = try .create(main.allocator, atlas_width, atlas_height, .{ .spaces_to_prealloc = 4096 });
     defer ctx.deinit();
 
-    try addImage("light", "light.png", 128, 128, false, &ctx);
-    try addImage("bars", "bars.png", 26, 8, false, &ctx);
-    try addImage("conditions", "conditions.png", 16, 16, false, &ctx);
-    try addImage("error_texture", "error_texture.png", 8, 8, false, &ctx);
-    try addImage("invisible", "invisible.png", 8, 8, true, &ctx);
-    try addImage("ground", "ground.png", 9, 9, true, &ctx);
-    try addImage("ground_masks", "ground_masks.png", 9, 9, true, &ctx);
-    try addImage("items", "items.png", 10, 10, false, &ctx);
-    try addImage("misc", "misc.png", 10, 10, false, &ctx);
-    try addImage("misc_big", "misc_big.png", 18, 18, false, &ctx);
-    try addImage("portals", "portals.png", 10, 10, false, &ctx);
-    try addImage("portals_big", "portals_big.png", 18, 18, false, &ctx);
-    try addImage("props", "props.png", 10, 10, false, &ctx);
-    try addImage("props_big", "props_big.png", 18, 18, false, &ctx);
-    try addImage("projectiles", "projectiles.png", 8, 8, true, &ctx);
-    try addImage("basic_items", "basic_items.png", 8, 8, false, &ctx);
-    try addImage("basic_projectiles", "basic_projectiles.png", 8, 8, true, &ctx);
-    try addImage("projectiles_big", "projectiles_big.png", 18, 18, true, &ctx);
-    try addImage("generic_8x8", "generic_8x8.png", 8, 8, true, &ctx);
-    try addImage("particles", "particles.png", 8, 8, false, &ctx);
-
-    try addWall("walls", "walls.png", 11, 20, 9, 18, &ctx);
-
-    try addAnimEnemy("misc_chars", "misc_chars.png", 10, 10, &ctx);
-    try addAnimEnemy("low_realm", "low_realm.png", 10, 10, &ctx);
-    try addAnimEnemy("low_realm_big", "low_realm_big.png", 18, 18, &ctx);
-    try addAnimEnemy("mid_realm", "mid_realm.png", 8, 8, &ctx);
-    try addAnimEnemy("mid_realm_big", "mid_realm_big.png", 16, 16, &ctx);
-    try addAnimPlayer("players", "players.png", 10, 10, &ctx);
-    try addAnimPlayer("player_skins", "player_skins.png", 8, 8, &ctx);
-
-    // try zstbi.Image.writeToFile(atlas, "atlas.png", .png);
-
     ui_atlas = try zstbi.Image.createEmpty(ui_atlas_width, ui_atlas_height, 4, .{});
     var ui_ctx: pack.Context = try .create(main.allocator, ui_atlas_width, ui_atlas_height, .{ .spaces_to_prealloc = 4096 });
     defer ui_ctx.deinit();
 
-    const imply_size = std.math.maxInt(u32);
-    try addUiImage("menu_decor_frame", "menu_decor_frame.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("retrieve_button", "retrieve_button.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("options_button", "options_button.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("stats_button", "stats_button.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("cards_button", "cards_button.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("rare_slot", "rare_slot.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("epic_slot", "epic_slot.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("legendary_slot", "legendary_slot.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("mythic_slot", "mythic_slot.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("rare_slot_equip", "rare_slot_equip.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("epic_slot_equip", "epic_slot_equip.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("legendary_slot_equip", "legendary_slot_equip.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("mythic_slot_equip", "mythic_slot_equip.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("in_combat_icon", "in_combat_icon.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("out_of_combat_icon", "out_of_combat_icon.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("out_of_mana_slot", "out_of_mana_slot.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("out_of_health_slot", "out_of_health_slot.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("out_of_gold_slot", "out_of_gold_slot.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("on_cooldown_slot", "on_cooldown_slot.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dialog_base_background", "screens/dialog_base_background.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dialog_title_background", "screens/dialog_title_background.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("button_base", "screens/button_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("button_hover", "screens/button_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("button_press", "screens/button_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_collapsed_icon_base", "screens/dropdown_collapsed_icon_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_collapsed_icon_hover", "screens/dropdown_collapsed_icon_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_collapsed_icon_press", "screens/dropdown_collapsed_icon_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_extended_icon_base", "screens/dropdown_extended_icon_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_extended_icon_hover", "screens/dropdown_extended_icon_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_extended_icon_press", "screens/dropdown_extended_icon_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_main_color_base", "screens/dropdown_main_color_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_main_color_hover", "screens/dropdown_main_color_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_main_color_press", "screens/dropdown_main_color_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_alt_color_base", "screens/dropdown_alt_color_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_alt_color_hover", "screens/dropdown_alt_color_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_alt_color_press", "screens/dropdown_alt_color_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_title_background", "screens/dropdown_title_background.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("dropdown_background", "screens/dropdown_background.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("checked_box_base", "screens/checked_box_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("checked_box_hover", "screens/checked_box_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("checked_box_press", "screens/checked_box_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("slider_background", "screens/slider_background.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("slider_knob_base", "screens/slider_knob_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("slider_knob_hover", "screens/slider_knob_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("slider_knob_press", "screens/slider_knob_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("text_input_base", "screens/text_input_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("text_input_hover", "screens/text_input_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("text_input_press", "screens/text_input_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("toggle_slider_base_off", "screens/toggle_slider_base_off.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("toggle_slider_hover_off", "screens/toggle_slider_hover_off.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("toggle_slider_press_off", "screens/toggle_slider_press_off.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("toggle_slider_base_on", "screens/toggle_slider_base_on.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("toggle_slider_hover_on", "screens/toggle_slider_hover_on.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("toggle_slider_press_on", "screens/toggle_slider_press_on.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_background", "screens/tooltip_background.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_background_rare", "screens/tooltip_background_rare.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_background_epic", "screens/tooltip_background_epic.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_background_legendary", "screens/tooltip_background_legendary.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_background_mythic", "screens/tooltip_background_mythic.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_bottom", "screens/tooltip_line_spacer_bottom.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_bottom_rare", "screens/tooltip_line_spacer_bottom_rare.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_bottom_epic", "screens/tooltip_line_spacer_bottom_epic.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_bottom_legendary", "screens/tooltip_line_spacer_bottom_legendary.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_bottom_mythic", "screens/tooltip_line_spacer_bottom_mythic.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_top", "screens/tooltip_line_spacer_top.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_top_rare", "screens/tooltip_line_spacer_top_rare.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_top_epic", "screens/tooltip_line_spacer_top_epic.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_top_legendary", "screens/tooltip_line_spacer_top_legendary.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("tooltip_line_spacer_top_mythic", "screens/tooltip_line_spacer_top_mythic.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("unchecked_box_base", "screens/unchecked_box_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("unchecked_box_hover", "screens/unchecked_box_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("unchecked_box_press", "screens/unchecked_box_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("container_view", "container_view.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("minimap", "minimap.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("minimap_icons", "minimap_icons.png", 10, 10, &ui_ctx);
-    try addUiImage("player_inventory", "player_inventory.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("player_health_bar", "player_health_bar.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("player_mana_bar", "player_mana_bar.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("player_abilities_bars", "player_abilities_bars.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("player_xp_bar", "player_xp_bar.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("player_xp_decor", "player_xp_decor.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("options_background", "options_background.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("player_stats", "player_stats.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("chatbox_background", "chatbox_background.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("chatbox_input", "chatbox_input.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("chatbox_cursor", "chatbox_cursor.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("scroll_background", "scroll_background.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("scroll_wheel_base", "scroll_wheel_base.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("scroll_wheel_hover", "scroll_wheel_hover.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("scroll_wheel_press", "scroll_wheel_press.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("scrollbar_decor", "scrollbar_decor.png", imply_size, imply_size, &ui_ctx);
-    try addUiImage("ability_icons", "ability_icons.png", 22, 22, &ui_ctx);
-    try addUiImage("speech_balloons", "speech_balloons.png", 65, 45, &ui_ctx);
-    try addUiImage("key_indicators", "key_indicators.png", 100, 100, &ui_ctx);
+    const game_sheets_file = try std.fs.cwd().openFile("./assets/sheets/game_sheets.json", .{});
+    defer game_sheets_file.close();
 
-    // try zstbi.Image.writeToFile(ui_atlas, "ui_atlas.png", .png);
+    const game_sheets_file_data = try game_sheets_file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+
+    for (try std.json.parseFromSliceLeaky([]GameSheet, arena_allocator, game_sheets_file_data, .{ .allocate = .alloc_always })) |game_sheet| {
+        switch (game_sheet.type) {
+            .image => try addImage(game_sheet.name, game_sheet.path, game_sheet.w, game_sheet.h, game_sheet.dont_trim, &ctx),
+            .anim_enemy => try addAnimEnemy(game_sheet.name, game_sheet.path, game_sheet.w, game_sheet.h, &ctx),
+            .anim_player => try addAnimPlayer(game_sheet.name, game_sheet.path, game_sheet.w, game_sheet.h, &ctx),
+        }
+    }
+
+    const wall_sheets_file = try std.fs.cwd().openFile("./assets/sheets/wall_sheets.json", .{});
+    defer wall_sheets_file.close();
+
+    const wall_sheets_file_data = try wall_sheets_file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+
+    for (try std.json.parseFromSliceLeaky([]WallSheet, arena_allocator, wall_sheets_file_data, .{ .allocate = .alloc_always })) |wall_sheet|
+        try addWall(wall_sheet.name, wall_sheet.path, wall_sheet.full_w, wall_sheet.full_h, wall_sheet.w, wall_sheet.h, &ctx);
+
+    const ui_sheets_file = try std.fs.cwd().openFile("./assets/ui/ui_sheets.json", .{});
+    defer ui_sheets_file.close();
+
+    const ui_sheets_file_data = try ui_sheets_file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+
+    for (try std.json.parseFromSliceLeaky([]UiSheet, arena_allocator, ui_sheets_file_data, .{ .allocate = .alloc_always })) |ui_sheet|
+        try addUiImage(ui_sheet.name, ui_sheet.path, ui_sheet.w, ui_sheet.h, &ui_ctx);
 
     if (ui_atlas_data.get("minimap_icons")) |icons| minimap_icons = icons else @panic("minimap_icons not found in UI atlas");
 
@@ -1311,109 +1280,110 @@ pub fn init() !void {
 }
 
 fn populateKeyMap() !void {
-    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .left }, 46);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .right }, 59);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .middle }, 58);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .four }, 108);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .mouse = .five }, 109);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .zero }, 0);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .one }, 4);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .two }, 5);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .three }, 6);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .four }, 7);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .five }, 8);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .six }, 16);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .seven }, 17);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .eight }, 18);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .nine }, 19);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_0 }, 91);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_1 }, 92);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_2 }, 93);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_3 }, 94);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_4 }, 95);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_5 }, 96);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_6 }, 97);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_7 }, 98);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_8 }, 99);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_9 }, 100);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F1 }, 68);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F2 }, 69);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F3 }, 70);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F4 }, 71);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F5 }, 72);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F6 }, 73);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F7 }, 74);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F8 }, 75);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F9 }, 76);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F10 }, 1);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F11 }, 2);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .F12 }, 3);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .a }, 20);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .b }, 34);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .c }, 39);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .d }, 50);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .e }, 52);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .f }, 84);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .g }, 85);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .h }, 86);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .i }, 88);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .j }, 63);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .k }, 74);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .l }, 75);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .m }, 76);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .n }, 61);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .o }, 65);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .p }, 66);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .q }, 25);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .r }, 28);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .s }, 29);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .t }, 73);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .u }, 67);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .v }, 31);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .w }, 10);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .x }, 12);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .y }, 13);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .z }, 14);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .up }, 32);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .down }, 22);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left }, 23);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right }, 24);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_shift }, 15);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_shift }, 9);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_bracket }, 37);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_bracket }, 38);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_control }, 49);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_control }, 49);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_alt }, 21);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_alt }, 21);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .comma }, 101);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .period }, 102);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .slash }, 103);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .backslash }, 41);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .semicolon }, 30);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .minus }, 45);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .equal }, 42);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .tab }, 79);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .space }, 57);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .backspace }, 35);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .enter }, 54);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .delete }, 51);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .end }, 53);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .print_screen }, 44);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .insert }, 62);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .escape }, 64);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .home }, 87);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .page_up }, 89);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .page_down }, 90);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .caps_lock }, 40);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_add }, 43);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_subtract }, 107);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_multiply }, 33);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_divide }, 106);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_decimal }, 105);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .kp_enter }, 56);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .left_super }, if (builtin.os.tag == .windows) 11 else 48);
-    try key_tex_map.put(main.asset_arena_allocator, .{ .key = .right_super }, if (builtin.os.tag == .windows) 11 else 48);
+    const arena_allocator = arena.allocator();
+    try key_tex_map.put(arena_allocator, .{ .mouse = .left }, 46);
+    try key_tex_map.put(arena_allocator, .{ .mouse = .right }, 59);
+    try key_tex_map.put(arena_allocator, .{ .mouse = .middle }, 58);
+    try key_tex_map.put(arena_allocator, .{ .mouse = .four }, 108);
+    try key_tex_map.put(arena_allocator, .{ .mouse = .five }, 109);
+    try key_tex_map.put(arena_allocator, .{ .key = .zero }, 0);
+    try key_tex_map.put(arena_allocator, .{ .key = .one }, 4);
+    try key_tex_map.put(arena_allocator, .{ .key = .two }, 5);
+    try key_tex_map.put(arena_allocator, .{ .key = .three }, 6);
+    try key_tex_map.put(arena_allocator, .{ .key = .four }, 7);
+    try key_tex_map.put(arena_allocator, .{ .key = .five }, 8);
+    try key_tex_map.put(arena_allocator, .{ .key = .six }, 16);
+    try key_tex_map.put(arena_allocator, .{ .key = .seven }, 17);
+    try key_tex_map.put(arena_allocator, .{ .key = .eight }, 18);
+    try key_tex_map.put(arena_allocator, .{ .key = .nine }, 19);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_0 }, 91);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_1 }, 92);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_2 }, 93);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_3 }, 94);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_4 }, 95);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_5 }, 96);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_6 }, 97);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_7 }, 98);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_8 }, 99);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_9 }, 100);
+    try key_tex_map.put(arena_allocator, .{ .key = .F1 }, 68);
+    try key_tex_map.put(arena_allocator, .{ .key = .F2 }, 69);
+    try key_tex_map.put(arena_allocator, .{ .key = .F3 }, 70);
+    try key_tex_map.put(arena_allocator, .{ .key = .F4 }, 71);
+    try key_tex_map.put(arena_allocator, .{ .key = .F5 }, 72);
+    try key_tex_map.put(arena_allocator, .{ .key = .F6 }, 73);
+    try key_tex_map.put(arena_allocator, .{ .key = .F7 }, 74);
+    try key_tex_map.put(arena_allocator, .{ .key = .F8 }, 75);
+    try key_tex_map.put(arena_allocator, .{ .key = .F9 }, 76);
+    try key_tex_map.put(arena_allocator, .{ .key = .F10 }, 1);
+    try key_tex_map.put(arena_allocator, .{ .key = .F11 }, 2);
+    try key_tex_map.put(arena_allocator, .{ .key = .F12 }, 3);
+    try key_tex_map.put(arena_allocator, .{ .key = .a }, 20);
+    try key_tex_map.put(arena_allocator, .{ .key = .b }, 34);
+    try key_tex_map.put(arena_allocator, .{ .key = .c }, 39);
+    try key_tex_map.put(arena_allocator, .{ .key = .d }, 50);
+    try key_tex_map.put(arena_allocator, .{ .key = .e }, 52);
+    try key_tex_map.put(arena_allocator, .{ .key = .f }, 84);
+    try key_tex_map.put(arena_allocator, .{ .key = .g }, 85);
+    try key_tex_map.put(arena_allocator, .{ .key = .h }, 86);
+    try key_tex_map.put(arena_allocator, .{ .key = .i }, 88);
+    try key_tex_map.put(arena_allocator, .{ .key = .j }, 63);
+    try key_tex_map.put(arena_allocator, .{ .key = .k }, 74);
+    try key_tex_map.put(arena_allocator, .{ .key = .l }, 75);
+    try key_tex_map.put(arena_allocator, .{ .key = .m }, 76);
+    try key_tex_map.put(arena_allocator, .{ .key = .n }, 61);
+    try key_tex_map.put(arena_allocator, .{ .key = .o }, 65);
+    try key_tex_map.put(arena_allocator, .{ .key = .p }, 66);
+    try key_tex_map.put(arena_allocator, .{ .key = .q }, 25);
+    try key_tex_map.put(arena_allocator, .{ .key = .r }, 28);
+    try key_tex_map.put(arena_allocator, .{ .key = .s }, 29);
+    try key_tex_map.put(arena_allocator, .{ .key = .t }, 73);
+    try key_tex_map.put(arena_allocator, .{ .key = .u }, 67);
+    try key_tex_map.put(arena_allocator, .{ .key = .v }, 31);
+    try key_tex_map.put(arena_allocator, .{ .key = .w }, 10);
+    try key_tex_map.put(arena_allocator, .{ .key = .x }, 12);
+    try key_tex_map.put(arena_allocator, .{ .key = .y }, 13);
+    try key_tex_map.put(arena_allocator, .{ .key = .z }, 14);
+    try key_tex_map.put(arena_allocator, .{ .key = .up }, 32);
+    try key_tex_map.put(arena_allocator, .{ .key = .down }, 22);
+    try key_tex_map.put(arena_allocator, .{ .key = .left }, 23);
+    try key_tex_map.put(arena_allocator, .{ .key = .right }, 24);
+    try key_tex_map.put(arena_allocator, .{ .key = .left_shift }, 15);
+    try key_tex_map.put(arena_allocator, .{ .key = .right_shift }, 9);
+    try key_tex_map.put(arena_allocator, .{ .key = .left_bracket }, 37);
+    try key_tex_map.put(arena_allocator, .{ .key = .right_bracket }, 38);
+    try key_tex_map.put(arena_allocator, .{ .key = .left_control }, 49);
+    try key_tex_map.put(arena_allocator, .{ .key = .right_control }, 49);
+    try key_tex_map.put(arena_allocator, .{ .key = .left_alt }, 21);
+    try key_tex_map.put(arena_allocator, .{ .key = .right_alt }, 21);
+    try key_tex_map.put(arena_allocator, .{ .key = .comma }, 101);
+    try key_tex_map.put(arena_allocator, .{ .key = .period }, 102);
+    try key_tex_map.put(arena_allocator, .{ .key = .slash }, 103);
+    try key_tex_map.put(arena_allocator, .{ .key = .backslash }, 41);
+    try key_tex_map.put(arena_allocator, .{ .key = .semicolon }, 30);
+    try key_tex_map.put(arena_allocator, .{ .key = .minus }, 45);
+    try key_tex_map.put(arena_allocator, .{ .key = .equal }, 42);
+    try key_tex_map.put(arena_allocator, .{ .key = .tab }, 79);
+    try key_tex_map.put(arena_allocator, .{ .key = .space }, 57);
+    try key_tex_map.put(arena_allocator, .{ .key = .backspace }, 35);
+    try key_tex_map.put(arena_allocator, .{ .key = .enter }, 54);
+    try key_tex_map.put(arena_allocator, .{ .key = .delete }, 51);
+    try key_tex_map.put(arena_allocator, .{ .key = .end }, 53);
+    try key_tex_map.put(arena_allocator, .{ .key = .print_screen }, 44);
+    try key_tex_map.put(arena_allocator, .{ .key = .insert }, 62);
+    try key_tex_map.put(arena_allocator, .{ .key = .escape }, 64);
+    try key_tex_map.put(arena_allocator, .{ .key = .home }, 87);
+    try key_tex_map.put(arena_allocator, .{ .key = .page_up }, 89);
+    try key_tex_map.put(arena_allocator, .{ .key = .page_down }, 90);
+    try key_tex_map.put(arena_allocator, .{ .key = .caps_lock }, 40);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_add }, 43);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_subtract }, 107);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_multiply }, 33);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_divide }, 106);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_decimal }, 105);
+    try key_tex_map.put(arena_allocator, .{ .key = .kp_enter }, 56);
+    try key_tex_map.put(arena_allocator, .{ .key = .left_super }, if (builtin.os.tag == .windows) 11 else 48);
+    try key_tex_map.put(arena_allocator, .{ .key = .right_super }, if (builtin.os.tag == .windows) 11 else 48);
 }
 
 pub fn getKeyTexture(button: Settings.Button) AtlasData {

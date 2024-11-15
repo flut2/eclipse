@@ -41,7 +41,7 @@ cursor_type: CursorType = .aztec,
 aa_type: AaType = .none,
 
 pub fn init(allocator: std.mem.Allocator) !Self {
-    arena = std.heap.ArenaAllocator.init(allocator);
+    arena = .init(allocator);
     const arena_allocator = arena.allocator();
 
     const file = std.fs.cwd().openFile("settings.json", .{}) catch return .{};
@@ -50,7 +50,7 @@ pub fn init(allocator: std.mem.Allocator) !Self {
     const file_data = try file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
     defer arena_allocator.free(file_data);
 
-    return try std.json.parseFromSliceLeaky(Self, arena_allocator, file_data, .{ .ignore_unknown_fields = true, .allocate = .alloc_always });
+    return try std.json.parseFromSliceLeaky(Self, arena_allocator, file_data, .{});
 }
 
 pub fn deinit(self: Self) void {

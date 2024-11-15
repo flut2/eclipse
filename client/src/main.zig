@@ -59,7 +59,6 @@ pub export var AmdPowerXpressRequestHighPerformance: c_int = 1;
 pub var ctx: *gpu.GraphicsContext = undefined;
 pub var window: *glfw.Window = undefined;
 pub var account_arena_allocator: std.mem.Allocator = undefined;
-pub var asset_arena_allocator: std.mem.Allocator = undefined;
 pub var current_account: ?AccountData = null;
 pub var character_list: ?network_data.CharacterListData = null;
 pub var current_time: i64 = 0;
@@ -312,10 +311,6 @@ pub fn main() !void {
     var account_arena: std.heap.ArenaAllocator = .init(allocator);
     account_arena_allocator = account_arena.allocator();
     defer account_arena.deinit();
-
-    var asset_arena: std.heap.ArenaAllocator = .init(allocator);
-    asset_arena_allocator = asset_arena.allocator();
-    defer asset_arena.deinit();
 
     current_account = AccountData.load() catch null;
     defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
