@@ -1089,8 +1089,6 @@ pub fn playSfx(name: []const u8) void {
 }
 
 pub fn deinit() void {
-    arena.deinit();
-
     main_music.destroy();
     var copy_audio_iter = sfx_copy_map.valueIterator();
     while (copy_audio_iter.next()) |copy_audio_list| for (copy_audio_list.items) |copy_audio| copy_audio.*.destroy();
@@ -1112,6 +1110,8 @@ pub fn deinit() void {
     target_enemy_cursor.destroy();
     target_ally_cursor_pressed.destroy();
     target_ally_cursor.destroy();
+    
+    arena.deinit();
 }
 
 pub fn init() !void {
