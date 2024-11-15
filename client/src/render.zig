@@ -771,7 +771,7 @@ pub fn drawText(
 
         const dont_scissor = element.ScissorRect.dont_scissor;
 
-        const scissor = if (scissor_override.isDefault()) text_data.scissor else scissor_override;
+        const scissor = if (scissor_override == element.ScissorRect{}) text_data.scissor else scissor_override;
 
         sort_extras.append(main.allocator, text_data.sort_extra) catch @panic("OOM");
         generics.append(main.allocator, .{

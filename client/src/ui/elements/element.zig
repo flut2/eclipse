@@ -122,7 +122,6 @@ pub const TextData = struct {
     pub fn setText(self: *TextData, text: []const u8) void {
         self.lock.lock();
         defer self.lock.unlock();
-
         self.text = text;
         self.recalculateAttributes();
     }
@@ -130,20 +129,9 @@ pub const TextData = struct {
     pub fn recalculateAttributes(self: *TextData) void {
         std.debug.assert(!self.lock.tryLock());
 
-        if (self.backing_buffer.len == 0 and self.max_chars > 0)
-            self.backing_buffer = main.allocator.alloc(u8, self.max_chars) catch @panic("OOM");
-
-        if (self.line_widths) |*line_widths| {
-            line_widths.clearRetainingCapacity();
-        } else {
-            self.line_widths = .{};
-        }
-
-        if (self.break_indices) |*break_indices| {
-            break_indices.clearRetainingCapacity();
-        } else {
-            self.break_indices = .{};
-        }
+        if (self.backing_buffer.len == 0 and self.max_chars > 0) self.backing_buffer = main.allocator.alloc(u8, self.max_chars) catch @panic("OOM");
+        if (self.line_widths) |*line_widths| line_widths.clearRetainingCapacity() else self.line_widths = .{};
+        if (self.break_indices) |*break_indices| break_indices.clearRetainingCapacity() else self.break_indices = .{};
 
         const size_scale = self.size / assets.CharacterData.size * assets.CharacterData.padding_mult;
         const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
@@ -175,8 +163,7 @@ pub const TextData = struct {
             var skip_space_check = false;
             var char = self.text[offset_i];
             specialChar: {
-                if (!self.handle_special_chars)
-                    break :specialChar;
+                if (!self.handle_special_chars) break :specialChar;
 
                 if (char == '&') {
                     const name_start = self.text[offset_i + 1 ..];
@@ -200,8 +187,7 @@ pub const TextData = struct {
 
                     if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
                         const value_start_idx = offset_i + 1 + eql_idx + 1;
-                        if (self.text.len <= value_start_idx or self.text[value_start_idx] != '"')
-                            break :specialChar;
+                        if (self.text.len <= value_start_idx or self.text[value_start_idx] != '"') break :specialChar;
 
                         const value_start = self.text[value_start_idx + 1 ..];
                         if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
@@ -216,15 +202,14 @@ pub const TextData = struct {
                                 line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
                                 y_pointer += (line_height - start_line_height) / 2.0;
                             } else if (std.mem.eql(u8, name, "type")) {
-                                if (std.mem.eql(u8, value, "med")) {
-                                    current_type = .medium;
-                                } else if (std.mem.eql(u8, value, "med_it")) {
-                                    current_type = .medium_italic;
-                                } else if (std.mem.eql(u8, value, "bold")) {
-                                    current_type = .bold;
-                                } else if (std.mem.eql(u8, value, "bold_it")) {
+                                if (std.mem.eql(u8, value, "med"))
+                                    current_type = .medium
+                                else if (std.mem.eql(u8, value, "med_it"))
+                                    current_type = .medium_italic
+                                else if (std.mem.eql(u8, value, "bold"))
+                                    current_type = .bold
+                                else if (std.mem.eql(u8, value, "bold_it"))
                                     current_type = .bold_italic;
-                                }
                             } else if (std.mem.eql(u8, name, "img")) {
                                 var values = std.mem.splitScalar(u8, value, ',');
                                 const sheet = values.next();
@@ -271,8 +256,7 @@ pub const TextData = struct {
                                     x_pointer = x_pointer - last_word_start_pointer;
                                     y_pointer += line_height;
                                 }
-                            } else if (!std.mem.eql(u8, name, "col"))
-                                break :specialChar;
+                            } else if (!std.mem.eql(u8, name, "col")) break :specialChar;
 
                             index_offset += @intCast(1 + eql_idx + 1 + value_end_idx + 1);
                             continue;
@@ -317,8 +301,7 @@ pub const TextData = struct {
             }
 
             x_pointer = next_x_pointer;
-            if (x_pointer > x_max)
-                x_max = x_pointer;
+            if (x_pointer > x_max) x_max = x_pointer;
         }
 
         self.width = @max(x_max, x_pointer);
@@ -410,10 +393,8 @@ pub const NineSliceImageData = struct {
 
         const top_right = self.topRight();
         const top_right_w = top_right.texWRaw();
-        if (scissor.min_x != ScissorRect.dont_scissor)
-            opts.scissor.min_x = scissor.min_x - (w - top_right_w);
-        if (scissor.max_x != ScissorRect.dont_scissor)
-            opts.scissor.max_x = scissor.max_x - (w - top_right_w);
+        if (scissor.min_x != ScissorRect.dont_scissor) opts.scissor.min_x = scissor.min_x - (w - top_right_w);
+        if (scissor.max_x != ScissorRect.dont_scissor) opts.scissor.max_x = scissor.max_x - (w - top_right_w);
         render.drawQuad(x + (w - top_right_w), y, top_right_w, top_right.texHRaw(), top_right, opts);
 
         const bottom_left = self.bottomLeft();
@@ -421,10 +402,8 @@ pub const NineSliceImageData = struct {
         const bottom_left_h = bottom_left.texHRaw();
         opts.scissor.min_x = scissor.min_x;
         opts.scissor.max_x = scissor.max_x;
-        if (scissor.min_y != ScissorRect.dont_scissor)
-            opts.scissor.min_y = scissor.min_y - (h - bottom_left_h);
-        if (scissor.max_y != ScissorRect.dont_scissor)
-            opts.scissor.max_y = scissor.max_y - (h - bottom_left_h);
+        if (scissor.min_y != ScissorRect.dont_scissor) opts.scissor.min_y = scissor.min_y - (h - bottom_left_h);
+        if (scissor.max_y != ScissorRect.dont_scissor) opts.scissor.max_y = scissor.max_y - (h - bottom_left_h);
         render.drawQuad(x, y + (h - bottom_left_h), bottom_left_w, bottom_left_h, bottom_left, opts);
 
         const bottom_right = self.bottomRight();
@@ -589,14 +568,7 @@ pub const NormalImageData = struct {
             .color_intensity = self.color_intensity,
             .shadow_texel_mult = if (self.glow) 2.0 / @max(self.scale_x, self.scale_y) else 0.0,
         };
-        render.drawQuad(
-            x,
-            y,
-            self.texWRaw(),
-            self.texHRaw(),
-            self.atlas_data,
-            opts,
-        );
+        render.drawQuad(x, y, self.texWRaw(), self.texHRaw(), self.atlas_data, opts);
     }
 
     pub fn width(self: NormalImageData) f32 {
@@ -621,7 +593,7 @@ pub const ImageData = union(enum) {
     normal: NormalImageData,
 
     pub fn draw(self: ImageData, x: f32, y: f32, scissor_override: ScissorRect) void {
-        const scissor = if (scissor_override.isDefault()) null else scissor_override;
+        const scissor = if (scissor_override == ScissorRect{}) null else scissor_override;
         switch (self) {
             .nine_slice => |nine_slice| nine_slice.draw(x, y, scissor),
             .normal => |normal| normal.draw(x, y, scissor),
@@ -758,18 +730,13 @@ pub const InteractableImageData = struct {
 };
 
 // Scissor positions are relative to the element it's attached to
-pub const ScissorRect = extern struct {
+pub const ScissorRect = packed struct {
     pub const dont_scissor = -1.0;
 
     min_x: f32 = dont_scissor,
     max_x: f32 = dont_scissor,
     min_y: f32 = dont_scissor,
     max_y: f32 = dont_scissor,
-
-    // hack
-    pub fn isDefault(self: ScissorRect) bool {
-        return @as(u128, @bitCast(self)) == @as(u128, @bitCast(ScissorRect{}));
-    }
 };
 
 pub fn create(comptime T: type, data: T) !*@TypeOf(data) {
