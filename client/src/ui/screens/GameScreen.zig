@@ -481,11 +481,11 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
 fn addStatText(container: *UiContainer, text: **Text, idx: *f32) !void {
     defer idx.* += 1;
 
-    const x = 38.0 + 70.0 * @mod(idx.*, 3.0);
-    const y = 27.0 + 28.0 * @floor(idx.* / 3.0);
+    const x = 34.0 + 70.0 * @mod(idx.*, 3.0);
+    const y = 26.0 + 28.0 * @floor(idx.* / 3.0);
     text.* = try container.createChild(Text, .{ .base = .{ .x = x, .y = y }, .text_data = .{
         .text = "",
-        .size = 10,
+        .size = 8,
         .text_type = .bold,
         .max_width = 67,
         .max_height = 18,
@@ -722,13 +722,13 @@ fn updateStat(text_data: *element.TextData, base_val: i32, bonus_val: i32) void 
     text_data.setText((if (bonus_val > 0)
         std.fmt.bufPrint(
             text_data.backing_buffer,
-            "{} &size=\"8\"&col=\"65E698\"(+{})",
+            "{}&size=\"6\"&col=\"65E698\"\n(+{})",
             .{ base_val + bonus_val, bonus_val },
         )
     else if (bonus_val < 0)
         std.fmt.bufPrint(
             text_data.backing_buffer,
-            "{} &size=\"8\"&col=\"FF7070\"({})",
+            "{}&size=\"6\"&col=\"FF7070\"\n({})",
             .{ base_val + bonus_val, bonus_val },
         )
     else
