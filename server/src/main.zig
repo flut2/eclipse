@@ -194,7 +194,7 @@ pub fn getIp(addr: std.net.Address) ![]const u8 {
             try std.fmt.format(stream.writer(), "{}.{}.{}.{}", .{ bytes[0], bytes[1], bytes[2], bytes[3] });
         },
         std.posix.AF.INET6 => {
-            if (std.mem.eql(u8, addr.in6.sa.addr[0..12], &[_]u8{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff })) {
+            if (std.mem.eql(u8, addr.in6.sa.addr[0..12], &.{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff })) {
                 try std.fmt.format(stream.writer(), "[::ffff:{}.{}.{}.{}]", .{
                     addr.in6.sa.addr[12],
                     addr.in6.sa.addr[13],

@@ -68,15 +68,15 @@ pub fn draw(self: Image, cam_data: render.CameraData, x_offset: f32, y_offset: f
         const fminimap_w: f32 = @floatFromInt(map.minimap.width);
         const fminimap_h: f32 = @floatFromInt(map.minimap.height);
         const zoom = cam_data.minimap_zoom;
-        const uv_size = [_]f32{ fw / zoom / fminimap_w, fh / zoom / fminimap_h };
+        const uv_size = .{ fw / zoom / fminimap_w, fh / zoom / fminimap_h };
         render.generics.append(main.allocator, .{
             .render_type = .minimap,
-            .pos = [_]f32{
+            .pos = .{
                 self.base.x + self.minimap_offset_x + x_offset + assets.padding,
                 self.base.y + self.minimap_offset_y + y_offset + assets.padding,
             },
-            .size = [_]f32{ self.minimap_width, self.minimap_height },
-            .uv = [_]f32{ cam_data.x / fminimap_w - uv_size[0] / 2.0, cam_data.y / fminimap_h - uv_size[1] / 2.0 },
+            .size = .{ self.minimap_width, self.minimap_height },
+            .uv = .{ cam_data.x / fminimap_w - uv_size[0] / 2.0, cam_data.y / fminimap_h - uv_size[1] / 2.0 },
             .uv_size = uv_size,
         }) catch @panic("OOM");
 

@@ -101,12 +101,12 @@ pub const GenericData = extern struct {
     outline_width: f32 = 0.0,
     base_color: u32 = 0,
     color_intensity: f32 = 0.0,
-    pos: [2]f32 = [_]f32{ 0.0, 0.0 },
-    size: [2]f32 = [_]f32{ 1.0, 1.0 },
-    uv: [2]f32 = [_]f32{ -1.0, -1.0 },
-    uv_size: [2]f32 = [_]f32{ 0.0, 0.0 },
-    shadow_texel_size: [2]f32 = [_]f32{ 0.0, 0.0 },
-    scissor: [4]f32 = [_]f32{ 0.0, 1.0, 0.0, 1.0 }, // min x, max x, min y, max y, in tex coord space
+    pos: [2]f32 = .{ 0.0, 0.0 },
+    size: [2]f32 = .{ 1.0, 1.0 },
+    uv: [2]f32 = .{ -1.0, -1.0 },
+    uv_size: [2]f32 = .{ 0.0, 0.0 },
+    shadow_texel_size: [2]f32 = .{ 0.0, 0.0 },
+    scissor: [4]f32 = .{ 0.0, 1.0, 0.0, 1.0 }, // min x, max x, min y, max y, in tex coord space
 };
 
 pub const GroundData = extern struct {
@@ -117,7 +117,7 @@ pub const GroundData = extern struct {
     top_blend_uv: [2]f32,
     right_blend_uv: [2]f32,
     bottom_blend_uv: [2]f32,
-    padding: [2]f32 = [_]f32{ 0.0, 0.0 },
+    padding: [2]f32 = .{ 0.0, 0.0 },
 };
 
 pub const GenericUniformData = extern struct {
@@ -547,12 +547,12 @@ pub fn drawQuad(x: f32, y: f32, w: f32, h: f32, atlas_data: assets.AtlasData, op
         .alpha_mult = opts.alpha_mult,
         .base_color = opts.color,
         .color_intensity = opts.color_intensity,
-        .pos = [_]f32{ x, y },
-        .size = [_]f32{ w, h },
-        .uv = [_]f32{ atlas_data.tex_u, atlas_data.tex_v },
-        .uv_size = [_]f32{ atlas_data.tex_w, atlas_data.tex_h },
-        .shadow_texel_size = [_]f32{ shadow_texel_w, shadow_texel_h },
-        .scissor = [_]f32{
+        .pos = .{ x, y },
+        .size = .{ w, h },
+        .uv = .{ atlas_data.tex_u, atlas_data.tex_v },
+        .uv_size = .{ atlas_data.tex_w, atlas_data.tex_h },
+        .shadow_texel_size = .{ shadow_texel_w, shadow_texel_h },
+        .scissor = .{
             atlas_data.tex_u + if (opts.scissor.min_x == dont_scissor) 0 else opts.scissor.min_x * uv_w_per_px,
             atlas_data.tex_u + if (opts.scissor.max_x == dont_scissor) atlas_data.tex_w else opts.scissor.max_x * uv_w_per_px,
             atlas_data.tex_v + if (opts.scissor.min_y == dont_scissor) 0 else opts.scissor.min_y * uv_h_per_px,
@@ -759,7 +759,7 @@ pub fn drawText(
 
         const w = char_data.width * current_size;
         const h = char_data.height * current_size;
-        const pos = [_]f32{
+        const pos = .{
             x_pointer + (char_data.x_offset + assets.CharacterData.padding) * current_size,
             y_pointer - (char_data.y_offset + assets.CharacterData.padding) * current_size - h,
         };
@@ -785,11 +785,11 @@ pub fn drawText(
             .base_color = current_color,
             .color_intensity = 1.0,
             .pos = pos,
-            .size = [_]f32{ w, h },
-            .uv = [_]f32{ char_data.tex_u, char_data.tex_v },
-            .uv_size = [_]f32{ char_data.tex_w, char_data.tex_h },
-            .shadow_texel_size = [_]f32{ shadow_texel_w, shadow_texel_h },
-            .scissor = [_]f32{
+            .size = .{ w, h },
+            .uv = .{ char_data.tex_u, char_data.tex_v },
+            .uv_size = .{ char_data.tex_w, char_data.tex_h },
+            .shadow_texel_size = .{ shadow_texel_w, shadow_texel_h },
+            .scissor = .{
                 char_data.tex_u + if (scissor.min_x == dont_scissor) 0 else (scissor.min_x + x_off) * uv_w_per_px,
                 char_data.tex_u + if (scissor.max_x == dont_scissor) char_data.tex_w else (scissor.max_x + x_off) * uv_w_per_px,
                 char_data.tex_v + if (scissor.min_y == dont_scissor) 0 else (scissor.min_y + y_off) * uv_h_per_px,
@@ -875,9 +875,9 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
                     };
 
                     grounds.append(main.allocator, .{
-                        .pos = [_]f32{ screen_pos.x, screen_pos.y },
-                        .uv = [_]f32{ square.atlas_data.tex_u, square.atlas_data.tex_v },
-                        .offset_uv = [_]f32{ u_offset, v_offset },
+                        .pos = .{ screen_pos.x, screen_pos.y },
+                        .uv = .{ square.atlas_data.tex_u, square.atlas_data.tex_v },
+                        .offset_uv = .{ u_offset, v_offset },
                         .left_blend_uv = @bitCast(square.blends[0]),
                         .top_blend_uv = @bitCast(square.blends[1]),
                         .right_blend_uv = @bitCast(square.blends[2]),
@@ -929,7 +929,7 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
             .bottom_mask_uv = assets.bottom_mask_uv,
             .clip_scale = cam_data.clip_scale,
             .clip_offset = cam_data.clip_offset,
-            .atlas_size = [_]f32{ assets.atlas_width, assets.atlas_height },
+            .atlas_size = .{ assets.atlas_width, assets.atlas_height },
         }});
         queue.writeBuffer(ground_buffer, 0, GroundData, grounds.items[0..ground_len]);
         pass.setPipeline(ground_pipeline);

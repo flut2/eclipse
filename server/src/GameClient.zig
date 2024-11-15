@@ -351,7 +351,7 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
         player.char_data.char_id = next_char_id;
         try player.acc_data.set(.{ .next_char_id = next_char_id + 1 });
 
-        const new_alive_ids = try std.mem.concat(player.client.arena.allocator(), u32, &.{ alive_ids, &[_]u32{next_char_id} });
+        const new_alive_ids = try std.mem.concat(player.client.arena.allocator(), u32, &.{ alive_ids, &.{next_char_id} });
         try player.acc_data.set(.{ .alive_char_ids = new_alive_ids });
 
         try player.char_data.set(.{ .class_id = class_id });

@@ -1092,13 +1092,11 @@ pub fn deinit() void {
     arena.deinit();
 
     main_music.destroy();
-    audio_state.destroy();
-
     var copy_audio_iter = sfx_copy_map.valueIterator();
     while (copy_audio_iter.next()) |copy_audio_list| for (copy_audio_list.items) |copy_audio| copy_audio.*.destroy();
-
     var audio_iter = sfx_map.valueIterator();
     while (audio_iter.next()) |audio| audio.*.destroy();
+    audio_state.destroy();
 
     default_cursor_pressed.destroy();
     default_cursor.destroy();
@@ -1241,10 +1239,10 @@ pub fn init() !void {
         var bottom_mask_rect = ground_masks[3];
         bottom_mask_rect.removePadding();
 
-        left_mask_uv = [_]f32{ left_mask_rect.tex_u, left_mask_rect.tex_v };
-        top_mask_uv = [_]f32{ top_mask_rect.tex_u, top_mask_rect.tex_v };
-        right_mask_uv = [_]f32{ right_mask_rect.tex_u, right_mask_rect.tex_v };
-        bottom_mask_uv = [_]f32{ bottom_mask_rect.tex_u, bottom_mask_rect.tex_v };
+        left_mask_uv = .{ left_mask_rect.tex_u, left_mask_rect.tex_v };
+        top_mask_uv = .{ top_mask_rect.tex_u, top_mask_rect.tex_v };
+        right_mask_uv = .{ right_mask_rect.tex_u, right_mask_rect.tex_v };
+        bottom_mask_uv = .{ bottom_mask_rect.tex_u, bottom_mask_rect.tex_v };
     } else @panic("Could not find ground_masks in the atlas");
 
     if (atlas_data.get("generic_8x8")) |backfaces| {
