@@ -101,10 +101,9 @@ pub const TextData = struct {
     shadow_alpha_mult: f32 = 0.5,
     shadow_texel_offset_mult: f32 = 0.0,
     outline_color: u32 = 0x000000,
-    outline_width: f32 = 0.5,
+    outline_width: f32 = 0.7,
     password: bool = false,
     handle_special_chars: bool = true,
-    disable_subpixel: bool = false,
     scissor: ScissorRect = .{},
     // alignments other than default need max width/height defined respectively
     hori_align: AlignHori = .left,

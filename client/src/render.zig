@@ -88,8 +88,6 @@ pub const RenderType = enum(u32) {
     menu_bg = 3,
     text_normal = 4,
     text_drop_shadow = 5,
-    text_normal_subpixel_off = 6,
-    text_drop_shadow_subpixel_off = 7,
 };
 
 pub const GenericData = extern struct {
@@ -582,9 +580,7 @@ pub fn drawText(
     const max_width_off = text_data.max_width == std.math.floatMax(f32);
     const max_height_off = text_data.max_height == std.math.floatMax(f32);
 
-    const render_type: RenderType = if (text_data.shadow_texel_offset_mult != 0)
-        if (text_data.disable_subpixel) .text_drop_shadow_subpixel_off else .text_drop_shadow
-    else if (text_data.disable_subpixel) .text_normal_subpixel_off else .text_normal;
+    const render_type: RenderType = if (text_data.shadow_texel_offset_mult != 0) .text_drop_shadow else .text_normal;
 
     const pad_offset = assets.CharacterData.padding * size_scale;
     const start_x = x - pad_offset;

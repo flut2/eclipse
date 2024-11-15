@@ -658,7 +658,6 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
         //         .size = 16,
         //         .max_width = 160,
         //         .outline_width = 1.5,
-        //         .disable_subpixel = true,
         //         .color = data.text_color,
         //     },
         //     .target_obj_type = data.obj_type,

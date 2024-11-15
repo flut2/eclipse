@@ -42,8 +42,6 @@ const minimap_render_type = 2;
 const menu_bg_render_type = 3;
 const text_normal_render_type = 4;
 const text_drop_shadow_render_type = 5;
-const text_normal_subpixel_off_render_type = 6;
-const text_drop_shadow_subpixel_off_render_type = 7;
 
 struct Uniforms {
     clip_scale: vec2<f32>,
@@ -131,60 +129,6 @@ fn fragmentMain(fragment: FragmentData) -> @location(0) vec4<f32> {
         }
 
         case text_normal_render_type {
-            const subpixel = 1.0 / 3.0;
-            let subpixel_width = (abs(dx.x) + abs(dy.x)) * subpixel; // this is just fwidth(in.uv).x * subpixel
-
-            var red_tex = vec4(0.0, 0.0, 0.0, 0.0);
-            var green_tex = vec4(0.0, 0.0, 0.0, 0.0);
-            var blue_tex = vec4(0.0, 0.0, 0.0, 0.0);
-            switch instance.text_type {
-                default {
-                    discard;
-                }
-
-                case medium_text_type {
-                    red_tex = textureSampleGrad(medium_tex, linear_sampler, vec2(fragment.uv.x - subpixel_width, fragment.uv.y), dx, dy);
-                    green_tex = textureSampleGrad(medium_tex, linear_sampler, fragment.uv, dx, dy);
-                    blue_tex = textureSampleGrad(medium_tex, linear_sampler, vec2(fragment.uv.x + subpixel_width, fragment.uv.y), dx, dy);
-                }
-
-                case medium_italic_text_type {
-                    red_tex = textureSampleGrad(medium_italic_tex, linear_sampler, vec2(fragment.uv.x - subpixel_width, fragment.uv.y), dx, dy);
-                    green_tex = textureSampleGrad(medium_italic_tex, linear_sampler, fragment.uv, dx, dy);
-                    blue_tex = textureSampleGrad(medium_italic_tex, linear_sampler, vec2(fragment.uv.x + subpixel_width, fragment.uv.y), dx, dy);
-                }
-
-                case bold_text_type {
-                    red_tex = textureSampleGrad(bold_tex, linear_sampler, vec2(fragment.uv.x - subpixel_width, fragment.uv.y), dx, dy);
-                    green_tex = textureSampleGrad(bold_tex, linear_sampler, fragment.uv, dx, dy);
-                    blue_tex = textureSampleGrad(bold_tex, linear_sampler, vec2(fragment.uv.x + subpixel_width, fragment.uv.y), dx, dy);
-                }
-
-                case bold_italic_text_type {
-                    red_tex = textureSampleGrad(bold_italic_tex, linear_sampler, vec2(fragment.uv.x - subpixel_width, fragment.uv.y), dx, dy);
-                    green_tex = textureSampleGrad(bold_italic_tex, linear_sampler, fragment.uv, dx, dy);
-                    blue_tex = textureSampleGrad(bold_italic_tex, linear_sampler, vec2(fragment.uv.x + subpixel_width, fragment.uv.y), dx, dy);
-                }
-            }
-
-            let red = sampleMsdf(red_tex, instance.text_dist_factor, 0.0);
-            let green = sampleMsdf(green_tex, instance.text_dist_factor, 0.0);
-            let blue = sampleMsdf(blue_tex, instance.text_dist_factor, 0.0);
-            let alpha = clamp((red + green + blue) / 3.0, 0.0, 1.0);
-            let base_color = unpackColor(instance.base_color);
-            let base_pixel = vec4(red * base_color.r, green * base_color.g, blue * base_color.b, alpha * instance.alpha_mult);
-
-            if instance.outline_width <= 0.0 {
-                return base_pixel;
-            }
-
-            let outline_alpha = sampleMsdf(green_tex, instance.text_dist_factor, instance.outline_width);
-            let outline_pixel = vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult);
-
-            return premultiply(mix(outline_pixel, base_pixel, alpha));
-        }
-
-        case text_normal_subpixel_off_render_type {
             var tex = vec4(0.0, 0.0, 0.0, 0.0);
             switch instance.text_type {
                 default {
@@ -219,69 +163,6 @@ fn fragmentMain(fragment: FragmentData) -> @location(0) vec4<f32> {
         }
 
         case text_drop_shadow_render_type {
-            const subpixel = 1.0 / 3.0;
-            let subpixel_width = (abs(dx.x) + abs(dy.x)) * subpixel; // this is just fwidth(in.uv).x * subpixel
-
-            var red_tex = vec4(0.0, 0.0, 0.0, 0.0);
-            var green_tex = vec4(0.0, 0.0, 0.0, 0.0);
-            var blue_tex = vec4(0.0, 0.0, 0.0, 0.0);
-            var tex_offset = vec4(0.0, 0.0, 0.0, 0.0);
-            switch instance.text_type {
-                default {
-                    discard;
-                }
-
-                case medium_text_type {
-                    red_tex = textureSampleGrad(medium_tex, linear_sampler, vec2(fragment.uv.x - subpixel_width, fragment.uv.y), dx, dy);
-                    green_tex = textureSampleGrad(medium_tex, linear_sampler, fragment.uv, dx, dy);
-                    blue_tex = textureSampleGrad(medium_tex, linear_sampler, vec2(fragment.uv.x + subpixel_width, fragment.uv.y), dx, dy);
-                    tex_offset = textureSampleGrad(medium_tex, linear_sampler, fragment.uv - instance.shadow_texel_size, dx, dy);
-                }
-
-                case medium_italic_text_type {
-                    red_tex = textureSampleGrad(medium_italic_tex, linear_sampler, vec2(fragment.uv.x - subpixel_width, fragment.uv.y), dx, dy);
-                    green_tex = textureSampleGrad(medium_italic_tex, linear_sampler, fragment.uv, dx, dy);
-                    blue_tex = textureSampleGrad(medium_italic_tex, linear_sampler, vec2(fragment.uv.x + subpixel_width, fragment.uv.y), dx, dy);
-                    tex_offset = textureSampleGrad(medium_italic_tex, linear_sampler, fragment.uv - instance.shadow_texel_size, dx, dy);
-                }
-
-                case bold_text_type {
-                    red_tex = textureSampleGrad(bold_tex, linear_sampler, vec2(fragment.uv.x - subpixel_width, fragment.uv.y), dx, dy);
-                    green_tex = textureSampleGrad(bold_tex, linear_sampler, fragment.uv, dx, dy);
-                    blue_tex = textureSampleGrad(bold_tex, linear_sampler, vec2(fragment.uv.x + subpixel_width, fragment.uv.y), dx, dy);
-                    tex_offset = textureSampleGrad(bold_tex, linear_sampler, fragment.uv - instance.shadow_texel_size, dx, dy);
-                }
-
-                case bold_italic_text_type {
-                    red_tex = textureSampleGrad(bold_italic_tex, linear_sampler, vec2(fragment.uv.x - subpixel_width, fragment.uv.y), dx, dy);
-                    green_tex = textureSampleGrad(bold_italic_tex, linear_sampler, fragment.uv, dx, dy);
-                    blue_tex = textureSampleGrad(bold_italic_tex, linear_sampler, vec2(fragment.uv.x + subpixel_width, fragment.uv.y), dx, dy);
-                    tex_offset = textureSampleGrad(bold_italic_tex, linear_sampler, fragment.uv - instance.shadow_texel_size, dx, dy);
-                }
-            }
-
-            let red = sampleMsdf(red_tex, instance.text_dist_factor, 0.0);
-            let green = sampleMsdf(green_tex, instance.text_dist_factor, 0.0);
-            let blue = sampleMsdf(blue_tex, instance.text_dist_factor, 0.0);
-
-            let alpha = clamp((red + green + blue) / 3.0, 0.0, 1.0);
-            let base_color = unpackColor(instance.base_color);
-            let base_pixel = vec4(red * base_color.r, green * base_color.g, blue * base_color.b, alpha * instance.alpha_mult);
-
-            let offset_opacity = sampleMsdf(tex_offset, instance.text_dist_factor, instance.outline_width);
-            let offset_pixel = vec4(unpackColor(instance.shadow_color), offset_opacity * instance.alpha_mult);
-
-            if instance.outline_width <= 0.0 {
-                return mix(offset_pixel, base_pixel, alpha);
-            }
-
-            let outline_alpha = sampleMsdf(green_tex, instance.text_dist_factor, instance.outline_width);
-            let outlined_pixel = mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult);
-
-            return premultiply(mix(offset_pixel, outlined_pixel, outline_alpha));
-        }
-
-        case text_drop_shadow_subpixel_off_render_type {
             var tex = vec4(0.0, 0.0, 0.0, 0.0);
             var tex_offset = vec4(0.0, 0.0, 0.0, 0.0);
             switch instance.text_type {

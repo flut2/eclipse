@@ -37,28 +37,28 @@ pub fn init(self: *ItemTooltip) !void {
 
     self.image = try self.root.createChild(Image, .{
         .base = .{
-            .x = 20 - assets.padding * 4,
-            .y = 18 - assets.padding * 4,
+            .x = 15 - assets.padding * 4,
+            .y = 15 - assets.padding * 4,
         },
         .image_data = .{ .normal = .{ .atlas_data = undefined, .scale_x = 4, .scale_y = 4, .glow = true } },
     });
 
     self.item_name = try self.root.createChild(Text, .{
         .base = .{
-            .x = 8 * 4 + 30,
-            .y = 10,
+            .x = 8 * 4 + 25,
+            .y = 11,
         },
-        .text_data = .{ .text = "", .size = 16, .text_type = .bold_italic },
+        .text_data = .{ .text = "", .size = 14, .text_type = .bold_italic },
     });
 
     self.rarity = try self.root.createChild(Text, .{
         .base = .{
-            .x = 8 * 4 + 30,
-            .y = self.item_name.text_data.height + 12,
+            .x = 8 * 4 + 25,
+            .y = self.item_name.text_data.height + 11 + 2,
         },
         .text_data = .{
             .text = "",
-            .size = 14,
+            .size = 12,
             .color = 0xB3B3B3,
             .max_chars = 64,
             .text_type = .medium_italic,
@@ -67,7 +67,7 @@ pub fn init(self: *ItemTooltip) !void {
 
     const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top", 0);
     self.line_break_one = try self.root.createChild(Image, .{
-        .base = .{ .x = 20, .y = self.image.base.y + 40 + 12 },
+        .base = .{ .x = 20, .y = self.image.base.y + 40 },
         .image_data = .{
             .nine_slice = .fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0),
         },
@@ -77,7 +77,7 @@ pub fn init(self: *ItemTooltip) !void {
         .base = .{ .x = 10, .y = self.line_break_one.base.y + self.line_break_one.height() - 10 },
         .text_data = .{
             .text = "",
-            .size = 14,
+            .size = 12,
             .max_width = self.decor.width() - 20,
             .color = 0x9B9B9B,
             // only half of the buffer is used at a time to avoid aliasing, so the max len is half of this
@@ -97,7 +97,7 @@ pub fn init(self: *ItemTooltip) !void {
         .base = .{ .x = 10, .y = self.line_break_two.base.y + self.line_break_two.height() - 10 },
         .text_data = .{
             .text = "",
-            .size = 14,
+            .size = 12,
             .max_width = self.decor.width() - 20,
             .color = 0x9B9B9B,
             // only half of the buffer is used at a time to avoid aliasing, so the max len is half of this
@@ -206,13 +206,13 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
             self.image.image_data.normal.atlas_data = tex_data[data.texture.index];
             const scale_x = self.image.image_data.normal.scale_x;
             const scale_y = self.image.image_data.normal.scale_y;
-            self.image.base.x = 20 - assets.padding * 4 + (8 * scale_x - self.image.width()) / 2;
-            self.image.base.y = 18 - assets.padding * 4 + (8 * scale_y - self.image.height()) / 2;
+            self.image.base.x = 15 - assets.padding * 4 + (8 * scale_x - self.image.width()) / 2;
+            self.image.base.y = 15 - assets.padding * 4 + (8 * scale_y - self.image.height()) / 2;
         }
 
         self.item_name.text_data.setText(data.name);
 
-        self.line_break_one.base.y = self.image.base.y + 40 + 10;
+        self.line_break_one.base.y = self.image.base.y + 40;
         self.main_text.base.y = self.line_break_one.base.y - 10;
 
         const line_base = "{s}\n";
