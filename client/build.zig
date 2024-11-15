@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) !void {
     const check_step = b.step("check", "Check if app compiles");
     const enable_tracy = b.option(bool, "enable_tracy", "Enables Tracy integration") orelse false;
     const dawn_debug_mode = b.option(bool, "dawn_debug_mode", "Whether to have Dawn validation errors and to use the debug binary") orelse true;
-    const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
+    const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .all;
     const version = b.option([]const u8, "version", "Build version, for the version text and client-server version checks") orelse "1.0";
     const login_server_ip = b.option([]const u8, "login_server_ip", "The IP of the login server") orelse "127.0.0.1";
     const login_server_port = b.option(u16, "login_server_port", "The port of the login server") orelse 2833;

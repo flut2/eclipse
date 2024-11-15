@@ -129,11 +129,11 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
     main.allocator.destroy(wr);
 
     if (status != 0) {
-        std.log.err("Write error: {s}", .{uv.uv_strerror(status)});
+        std.log.err("Game write error: {s}", .{uv.uv_strerror(status)});
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
-            .body = "Socket writing was interrupted",
+            .body = "Game socket writing was interrupted",
         });
         return;
     }
@@ -160,7 +160,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
             const EnumType = @typeInfo(network_data.S2CPacket).@"union".tag_type.?;
             const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), child_arena_allocator);
             const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
-                std.log.err("Error parsing S2CPacketId ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
+                std.log.err("Error parsing S2CPacket ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
                 return;
             };
 
@@ -174,11 +174,11 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
             }
         }
     } else if (bytes_read < 0) {
-        std.log.err("Read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
+        std.log.err("Game read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
-            .body = "Server closed the connection",
+            .body = "Game server closed the connection",
         });
     }
 
@@ -190,23 +190,23 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
     defer main.allocator.destroy(@as(*uv.uv_connect_t, @ptrCast(conn)));
 
     if (status != 0) {
-        std.log.err("Connection callback error: {s}", .{uv.uv_strerror(status)});
+        std.log.err("Game connection callback error: {s}", .{uv.uv_strerror(status)});
         main.disconnect(false);
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
-            .body = "Connection failed",
+            .body = "Connection failed to game server",
         });
         return;
     }
 
     const read_status = uv.uv_read_start(@ptrCast(server.socket), allocBuffer, readCallback);
     if (read_status != 0) {
-        std.log.err("Read init error: {s}", .{uv.uv_strerror(read_status)});
+        std.log.err("Game read init error: {s}", .{uv.uv_strerror(read_status)});
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
-            .body = "Server inaccessible",
+            .body = "Game server inaccessible",
         });
         return;
     }
@@ -275,11 +275,11 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
             var write_status = uv.UV_EAGAIN;
             while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
             if (write_status < 0) {
-                std.log.err("Write send error: {s}", .{uv.uv_strerror(write_status)});
+                std.log.err("Game write send error: {s}", .{uv.uv_strerror(write_status)});
                 self.shutdown();
                 dialog.showDialog(.text, .{
                     .title = "Connection Error",
-                    .body = "Socket writing failed",
+                    .body = "Game socket writing failed",
                 });
                 return;
             }
@@ -293,7 +293,7 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
     self.socket.data = self;
     const tcp_status = uv.uv_tcp_init(@ptrCast(main.main_loop), @ptrCast(self.socket));
     if (tcp_status != 0) {
-        std.log.err("Socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
+        std.log.err("Game socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
         return error.NoSocket;
     }
 
@@ -301,7 +301,7 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
     connect_data.data = self;
     const conn_status = uv.uv_tcp_connect(@ptrCast(connect_data), @ptrCast(self.socket), @ptrCast(&addr.in.sa), connectCallback);
     if (conn_status != 0) {
-        std.log.err("Connection error: {s}", .{uv.uv_strerror(conn_status)});
+        std.log.err("Game connection error: {s}", .{uv.uv_strerror(conn_status)});
         return error.ConnectionFailed;
     }
 }
