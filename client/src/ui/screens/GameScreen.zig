@@ -709,6 +709,7 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
 
             self.last_mp = local_player.mp;
             self.last_max_mp = local_player.max_mp;
+            self.last_max_mp_bonus = local_player.max_mp_bonus;
         }
     }
 }

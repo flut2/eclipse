@@ -145,161 +145,189 @@ pub const TextData = struct {
         const start_line_height = current_font_data.line_height * current_font_data.size * size_scale;
         var line_height = start_line_height;
 
-        var x_pointer: f32 = 0.0;
-        var y_pointer: f32 = line_height;
-        var x_max: f32 = 0.0;
-        var current_size = size_scale;
-        var index_offset: u16 = 0;
-        var word_start: usize = 0;
-        var last_word_start_pointer: f32 = 0.0;
-        var last_word_end_pointer: f32 = 0.0;
-        var needs_new_word_idx = true;
-        defer {
-            self.width = @max(x_max, x_pointer);
-            self.line_widths.?.append(main.allocator, x_pointer) catch @panic("OOM");
-            self.height = y_pointer;
-        }
-        for (0..self.text.len) |i| {
-            const offset_i = i + index_offset;
-            if (offset_i >= self.text.len) return;
+        var word_widths: std.ArrayListUnmanaged(f32) = .empty;
+        defer word_widths.deinit(main.allocator);
+        inline for (.{ true, false }) |width_pass| @"continue": {
+            var x_pointer: f32 = 0.0;
+            var y_pointer: f32 = line_height;
+            var x_max: f32 = 0.0;
+            var current_size = size_scale;
+            var index_offset: u16 = 0;
+            var word_start: usize = 0;
+            var word_idx: usize = 0;
+            var last_word_start_pointer: f32 = 0.0;
+            var last_word_end_pointer: f32 = 0.0;
+            var needs_new_word_idx = true;
+            defer self.width = if (!width_pass) @max(x_max, x_pointer) else self.width;
+            defer if (!width_pass) self.line_widths.?.append(main.allocator, x_pointer) catch @panic("OOM");
+            defer self.height = if (!width_pass) y_pointer else self.height;
+            defer if (width_pass) word_widths.append(main.allocator, x_pointer - last_word_start_pointer) catch @panic("OOM");
 
-            var skip_space_check = false;
-            var char = self.text[offset_i];
-            specialChar: {
-                if (!self.handle_special_chars) break :specialChar;
+            for (0..self.text.len) |i| {
+                const offset_i = i + index_offset;
+                if (offset_i >= self.text.len) break :@"continue";
 
-                if (char == '&') {
-                    const name_start = self.text[offset_i + 1 ..];
-                    const reset = "reset";
-                    if (self.text.len >= offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
-                        current_type = self.text_type;
-                        current_font_data = switch (current_type) {
-                            .medium => assets.medium_data,
-                            .medium_italic => assets.medium_italic_data,
-                            .bold => assets.bold_data,
-                            .bold_italic => assets.bold_italic_data,
-                        };
-                        current_size = size_scale;
-                        line_height = start_line_height;
-                        y_pointer += (line_height - start_line_height) / 2.0;
-                        index_offset += @intCast(reset.len);
-                        continue;
-                    }
+                var skip_space_check = false;
+                var char = self.text[offset_i];
+                specialChar: {
+                    if (!self.handle_special_chars) break :specialChar;
 
-                    const space = "space";
-                    if (self.text.len >= offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
-                        char = ' ';
-                        skip_space_check = true;
-                        index_offset += @intCast(space.len);
-                        break :specialChar;
-                    }
-
-                    if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
-                        const value_start_idx = offset_i + 1 + eql_idx + 1;
-                        if (self.text.len <= value_start_idx or self.text[value_start_idx] != '"') break :specialChar;
-
-                        const value_start = self.text[value_start_idx + 1 ..];
-                        if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
-                            const name = name_start[0..eql_idx];
-                            const value = value_start[0..value_end_idx];
-                            if (std.mem.eql(u8, name, "size")) {
-                                const size = std.fmt.parseFloat(f32, value) catch {
-                                    std.log.err("Invalid size given to control code: {s}", .{value});
-                                    break :specialChar;
-                                };
-                                current_size = size / current_font_data.size * (1.0 + current_font_data.padding * 2 / current_font_data.size);
-                                line_height = current_font_data.line_height * current_font_data.size * current_size;
-                                y_pointer += (line_height - start_line_height) / 2.0;
-                            } else if (std.mem.eql(u8, name, "type")) {
-                                if (std.mem.eql(u8, value, "med"))
-                                    current_type = .medium
-                                else if (std.mem.eql(u8, value, "med_it"))
-                                    current_type = .medium_italic
-                                else if (std.mem.eql(u8, value, "bold"))
-                                    current_type = .bold
-                                else if (std.mem.eql(u8, value, "bold_it"))
-                                    current_type = .bold_italic;
-                                current_font_data = switch (current_type) {
-                                    .medium => assets.medium_data,
-                                    .medium_italic => assets.medium_italic_data,
-                                    .bold => assets.bold_data,
-                                    .bold_italic => assets.bold_italic_data,
-                                };
-                            } else if (std.mem.eql(u8, name, "img")) {
-                                var values = std.mem.splitScalar(u8, value, ',');
-                                const sheet = values.next();
-                                if (sheet == null or std.mem.eql(u8, sheet.?, value)) {
-                                    std.log.err("Invalid sheet given to control code: {?s}", .{sheet});
-                                    break :specialChar;
-                                }
-
-                                const index_str = values.next() orelse {
-                                    std.log.err("Index was not found for control code with sheet {s}", .{sheet.?});
-                                    break :specialChar;
-                                };
-                                const index = std.fmt.parseInt(u32, index_str, 0) catch {
-                                    std.log.err("Invalid index given to control code with sheet {s}: {s}", .{ sheet.?, index_str });
-                                    break :specialChar;
-                                };
-                                const data = assets.atlas_data.get(sheet.?) orelse {
-                                    std.log.err("Sheet {s} given to control code was not found in atlas", .{sheet.?});
-                                    break :specialChar;
-                                };
-                                if (index >= data.len) {
-                                    std.log.err("The index {} given for sheet {s} in control code was out of bounds", .{ index, sheet.? });
-                                    break :specialChar;
-                                }
-
-                                if (needs_new_word_idx) {
-                                    word_start = i;
-                                    last_word_start_pointer = x_pointer;
-                                    needs_new_word_idx = false;
-                                }
-
-                                x_pointer += current_size * current_font_data.size;
-                                if (x_pointer > self.max_width) {
-                                    self.line_widths.?.append(main.allocator, last_word_end_pointer) catch @panic("OOM");
-                                    self.break_indices.?.put(main.allocator, word_start, {}) catch @panic("OOM");
-                                    self.line_count += 1;
-                                    x_pointer -= last_word_start_pointer;
-                                    y_pointer += line_height;
-                                }
-                            } else if (!std.mem.eql(u8, name, "col")) break :specialChar;
-
-                            index_offset += @intCast(1 + eql_idx + 1 + value_end_idx + 1);
-                            x_max = @max(x_max, x_pointer);
+                    if (char == '&') {
+                        const name_start = self.text[offset_i + 1 ..];
+                        const reset = "reset";
+                        if (self.text.len >= offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
+                            current_type = self.text_type;
+                            current_font_data = switch (current_type) {
+                                .medium => assets.medium_data,
+                                .medium_italic => assets.medium_italic_data,
+                                .bold => assets.bold_data,
+                                .bold_italic => assets.bold_italic_data,
+                            };
+                            current_size = size_scale;
+                            line_height = start_line_height;
+                            y_pointer += (line_height - start_line_height) / 2.0;
+                            index_offset += @intCast(reset.len);
                             continue;
+                        }
+
+                        const space = "space";
+                        if (self.text.len >= offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
+                            char = ' ';
+                            skip_space_check = true;
+                            index_offset += @intCast(space.len);
+                            break :specialChar;
+                        }
+
+                        if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
+                            const value_start_idx = offset_i + 1 + eql_idx + 1;
+                            if (self.text.len <= value_start_idx or self.text[value_start_idx] != '"') break :specialChar;
+
+                            const value_start = self.text[value_start_idx + 1 ..];
+                            if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
+                                const name = name_start[0..eql_idx];
+                                const value = value_start[0..value_end_idx];
+                                if (std.mem.eql(u8, name, "size")) {
+                                    const size = std.fmt.parseFloat(f32, value) catch {
+                                        std.log.err("Invalid size given to control code: {s}", .{value});
+                                        break :specialChar;
+                                    };
+                                    current_size = size / current_font_data.size * (1.0 + current_font_data.padding * 2 / current_font_data.size);
+                                    line_height = current_font_data.line_height * current_font_data.size * current_size;
+                                    y_pointer += (line_height - start_line_height) / 2.0;
+                                } else if (std.mem.eql(u8, name, "type")) {
+                                    if (std.mem.eql(u8, value, "med"))
+                                        current_type = .medium
+                                    else if (std.mem.eql(u8, value, "med_it"))
+                                        current_type = .medium_italic
+                                    else if (std.mem.eql(u8, value, "bold"))
+                                        current_type = .bold
+                                    else if (std.mem.eql(u8, value, "bold_it"))
+                                        current_type = .bold_italic;
+                                    current_font_data = switch (current_type) {
+                                        .medium => assets.medium_data,
+                                        .medium_italic => assets.medium_italic_data,
+                                        .bold => assets.bold_data,
+                                        .bold_italic => assets.bold_italic_data,
+                                    };
+                                } else if (std.mem.eql(u8, name, "img")) {
+                                    var values = std.mem.splitScalar(u8, value, ',');
+                                    const sheet = values.next();
+                                    if (sheet == null or std.mem.eql(u8, sheet.?, value)) {
+                                        std.log.err("Invalid sheet given to control code: {?s}", .{sheet});
+                                        break :specialChar;
+                                    }
+
+                                    const index_str = values.next() orelse {
+                                        std.log.err("Index was not found for control code with sheet {s}", .{sheet.?});
+                                        break :specialChar;
+                                    };
+                                    const index = std.fmt.parseInt(u32, index_str, 0) catch {
+                                        std.log.err("Invalid index given to control code with sheet {s}: {s}", .{ sheet.?, index_str });
+                                        break :specialChar;
+                                    };
+                                    const data = assets.atlas_data.get(sheet.?) orelse {
+                                        std.log.err("Sheet {s} given to control code was not found in atlas", .{sheet.?});
+                                        break :specialChar;
+                                    };
+                                    if (index >= data.len) {
+                                        std.log.err("The index {} given for sheet {s} in control code was out of bounds", .{ index, sheet.? });
+                                        break :specialChar;
+                                    }
+
+                                    if (needs_new_word_idx) {
+                                        if (!width_pass) word_start = i;
+                                        last_word_start_pointer = x_pointer;
+                                        needs_new_word_idx = false;
+                                    }
+
+                                    x_pointer += current_size * current_font_data.size;
+                                    if (!width_pass and x_pointer > self.max_width) {
+                                        self.line_widths.?.append(main.allocator, last_word_end_pointer) catch @panic("OOM");
+                                        self.break_indices.?.put(main.allocator, word_start, {}) catch @panic("OOM");
+                                        self.line_count += 1;
+                                        x_pointer -= last_word_start_pointer;
+                                        y_pointer += line_height;
+                                    }
+                                } else if (!std.mem.eql(u8, name, "col")) break :specialChar;
+
+                                index_offset += @intCast(1 + eql_idx + 1 + value_end_idx + 1);
+                                if (!width_pass) x_max = @max(x_max, x_pointer);
+                                continue;
+                            } else break :specialChar;
                         } else break :specialChar;
-                    } else break :specialChar;
+                    }
+                }
+
+                const mod_char = if (self.password) '*' else char;
+                const char_data = current_font_data.characters[mod_char];
+                const scaled_advance = char_data.x_advance * current_size;
+
+                if (!width_pass and char == '\n') {
+                    y_pointer += line_height;
+                    self.line_widths.?.append(main.allocator, x_pointer) catch @panic("OOM");
+                    self.break_indices.?.put(main.allocator, i, {}) catch @panic("OOM");
+                    self.line_count += 1;
+                    x_pointer = scaled_advance;
+                    x_max = @max(x_max, x_pointer);
+                    continue;
+                }
+
+                if (!skip_space_check and std.ascii.isWhitespace(char)) {
+                    if (!needs_new_word_idx) {
+                        if (width_pass)
+                            word_widths.append(main.allocator, x_pointer - last_word_start_pointer) catch @panic("OOM")
+                        else
+                            last_word_end_pointer = x_pointer;
+                    }
+                    needs_new_word_idx = true;
+                } else if (needs_new_word_idx) {
+                    last_word_start_pointer = x_pointer;
+                    if (!width_pass) {
+                        if (word_start != 0) word_idx += 1;
+                        word_start = i;
+                        if (x_pointer + word_widths.items[word_idx] > self.max_width) {
+                            y_pointer += line_height;
+                            self.line_widths.?.append(main.allocator, x_pointer) catch @panic("OOM");
+                            self.break_indices.?.put(main.allocator, i, {}) catch @panic("OOM");
+                            self.line_count += 1;
+                            x_pointer = 0.0;
+                        }
+                    }
+                    needs_new_word_idx = false;
+                }
+
+                x_pointer += scaled_advance;
+                if (!width_pass) {
+                    x_max = @max(x_max, x_pointer);
+                    if (x_pointer > self.max_width) {
+                        y_pointer += line_height;
+                        self.line_widths.?.append(main.allocator, x_pointer) catch @panic("OOM");
+                        self.break_indices.?.put(main.allocator, i, {}) catch @panic("OOM");
+                        self.line_count += 1;
+                        x_pointer = 0.0;
+                    }
                 }
             }
-
-            const mod_char = if (self.password) '*' else char;
-            const char_data = current_font_data.characters[mod_char];
-
-            const scaled_advance = char_data.x_advance * current_size;
-            x_pointer += scaled_advance;
-
-            if (!skip_space_check and std.ascii.isWhitespace(char)) {
-                last_word_end_pointer = x_pointer;
-                needs_new_word_idx = true;
-            } else if (needs_new_word_idx) {
-                word_start = i;
-                last_word_start_pointer = x_pointer - scaled_advance;
-                needs_new_word_idx = false;
-            }
-
-            const width_overflow = x_pointer > self.max_width;
-            if (char == '\n' or width_overflow) {
-                y_pointer += line_height;
-                const next_pointer = if (width_overflow) last_word_end_pointer else x_pointer;
-                self.line_widths.?.append(main.allocator, next_pointer) catch @panic("OOM");
-                self.break_indices.?.put(main.allocator, if (width_overflow) word_start else i, {}) catch @panic("OOM");
-                self.line_count += 1;
-                if (width_overflow) x_pointer -= last_word_start_pointer else x_pointer = scaled_advance;
-            }
-
-            x_max = @max(x_max, x_pointer);
         }
     }
 
