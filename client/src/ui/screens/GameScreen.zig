@@ -449,19 +449,19 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
         if (data.len <= index) @panic("Could not initiate ability for GameScreen, index was out of bounds");
 
         _ = try self.ability_container.createChild(Image, .{
-            .base = .{ .x = fidx * 56.0, .y = 0 },
+            .base = .{ .x = fidx * 56.0, .y = 0.0 },
             .image_data = .{ .normal = .{ .atlas_data = data[index], .scale_x = 2.0, .scale_y = 2.0 } },
             .ability_props = ability,
         });
     } else @panic("Could not initiate ability for GameScreen, sheet was missing");
 
     self.ability_overlays[idx] = try self.ability_container.createChild(Image, .{
-        .base = .{ .x = fidx * 56.0, .y = 0, .visible = false },
+        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false },
         .image_data = undefined,
     });
 
     self.ability_overlay_texts[idx] = try self.ability_container.createChild(Text, .{
-        .base = .{ .x = fidx * 56.0 - 7.0, .y = -7.0, .visible = false },
+        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false },
         .text_data = .{
             .text = "",
             .size = 12.0,
@@ -469,8 +469,8 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
             .hori_align = .middle,
             .vert_align = .middle,
             .max_chars = 32,
-            .max_width = 56.0,
-            .max_height = 56.0,
+            .max_width = 44.0,
+            .max_height = 44.0,
         },
     });
     self.ability_overlay_texts[idx].text_data.lock.lock();
@@ -629,16 +629,11 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
                 self.ability_overlays[i].image_data.normal.scissor.max_x =
                     self.ability_overlays[i].texWRaw() * (cooldown_left / local_player.data.abilities[i].cooldown);
 
-                {
-                    self.ability_overlay_texts[i].text_data.lock.lock();
-                    defer self.ability_overlay_texts[i].text_data.lock.unlock();
-                    self.ability_overlay_texts[i].text_data.text = try std.fmt.bufPrint(
-                        self.ability_overlay_texts[i].text_data.backing_buffer,
-                        "{d:.1}s",
-                        .{cooldown_left},
-                    );
-                    self.ability_overlay_texts[i].text_data.recalculateAttributes();
-                }
+                self.ability_overlay_texts[i].text_data.setText(try std.fmt.bufPrint(
+                    self.ability_overlay_texts[i].text_data.backing_buffer,
+                    "{d:.1}s",
+                    .{cooldown_left},
+                ));
 
                 self.ability_overlays[i].base.visible = true;
                 self.ability_overlay_texts[i].base.visible = true;

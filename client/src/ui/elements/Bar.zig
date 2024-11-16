@@ -27,8 +27,8 @@ pub fn draw(self: *Bar, _: render.CameraData, x_offset: f32, y_offset: f32, _: i
 
     self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
     render.drawText(
-        self.base.x + (w - self.text_data.width) / 2 + x_offset,
-        self.base.y + (h - self.text_data.height) / 2 + y_offset,
+        self.base.x + (w - self.text_data.width) / 2.0 + x_offset,
+        self.base.y + (h - self.text_data.height) / 2.0 + y_offset,
         1.0,
         &self.text_data,
         .{},

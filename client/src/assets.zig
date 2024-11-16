@@ -9,18 +9,6 @@ const pack = @import("turbopack");
 
 const Settings = @import("Settings.zig");
 
-pub const padding = 0;
-
-pub const atlas_width = 2048;
-pub const atlas_height = 1024;
-pub const base_texel_w = 1.0 / @as(comptime_float, atlas_width);
-pub const base_texel_h = 1.0 / @as(comptime_float, atlas_height);
-
-pub const ui_atlas_width = 2048;
-pub const ui_atlas_height = 1024;
-pub const ui_texel_w = 1.0 / @as(comptime_float, ui_atlas_width);
-pub const ui_texel_h = 1.0 / @as(comptime_float, ui_atlas_height);
-
 // for packing
 const Position = struct { x: u16, y: u16 };
 
@@ -51,18 +39,119 @@ const UiSheet = struct {
     h: u32 = imply_size,
 };
 
+const PlaneBounds = struct {
+    left: f32 = 0.0,
+    bottom: f32 = 0.0,
+    right: f32 = 0.0,
+    top: f32 = 0.0,
+};
+
+const AtlasBounds = struct {
+    left: f32 = 0.0,
+    bottom: f32 = 0.0,
+    right: f32 = 0.0,
+    top: f32 = 0.0,
+};
+
+const GlyphData = struct {
+    unicode: u8,
+    advance: f32,
+    plane_bounds: ?PlaneBounds = null,
+    atlas_bounds: ?AtlasBounds = null,
+};
+
+const InternalFontData = struct {
+    atlas: struct {
+        type: enum { sdf, msdf, mtsdf },
+        distance_range: f32,
+        distance_range_middle: f32,
+        size: f32,
+        width: f32,
+        height: f32,
+        y_origin: enum { top, bottom },
+    },
+    metrics: struct {
+        em_size: f32,
+        line_height: f32,
+        ascender: f32,
+        descender: f32,
+        underline_y: f32,
+        underline_thickness: f32,
+    },
+    glyphs: []GlyphData,
+    kerning: []struct {},
+};
+
+const ParsedFontData = struct {
+    characters: [256]CharacterData,
+    size: f32,
+    padding: f32,
+    px_range: f32,
+    line_height: f32,
+    width: f32,
+    height: f32,
+};
+
+const AudioState = struct {
+    device: *zaudio.Device,
+    engine: *zaudio.Engine,
+
+    fn audioCallback(device: *zaudio.Device, output: ?*anyopaque, _: ?*const anyopaque, num_frames: u32) callconv(.C) void {
+        const audio: *AudioState = @ptrCast(@alignCast(device.getUserData()));
+        audio.engine.readPcmFrames(output.?, num_frames, null) catch {};
+    }
+
+    fn create() !*AudioState {
+        const audio = try arena.allocator().create(AudioState);
+
+        var device_config: zaudio.Device.Config = .init(.playback);
+        device_config.data_callback = audioCallback;
+        device_config.user_data = audio;
+        device_config.sample_rate = 48000;
+        device_config.period_size_in_frames = 480;
+        device_config.period_size_in_milliseconds = 10;
+        device_config.playback.format = .float32;
+        device_config.playback.channels = 2;
+        const device = try zaudio.Device.create(null, device_config);
+
+        var engine_config: zaudio.Engine.Config = .init();
+        engine_config.device = device;
+        engine_config.no_auto_start = .true32;
+        const engine = try zaudio.Engine.create(engine_config);
+
+        audio.* = .{ .device = device, .engine = engine };
+        return audio;
+    }
+
+    fn destroy(audio: *AudioState) void {
+        audio.engine.destroy();
+        audio.device.destroy();
+    }
+};
+
+const RGBA = packed struct(u32) {
+    r: u8 = 0,
+    g: u8 = 0,
+    b: u8 = 0,
+    a: u8 = 0,
+};
+
+pub const padding = 0;
+
+pub const atlas_width = 2048;
+pub const atlas_height = 1024;
+pub const base_texel_w = 1.0 / @as(comptime_float, atlas_width);
+pub const base_texel_h = 1.0 / @as(comptime_float, atlas_height);
+
+pub const ui_atlas_width = 2048;
+pub const ui_atlas_height = 1024;
+pub const ui_texel_w = 1.0 / @as(comptime_float, ui_atlas_width);
+pub const ui_texel_h = 1.0 / @as(comptime_float, ui_atlas_height);
+
 pub const Action = enum { stand, walk, attack };
 pub const Direction = enum { right, left, down, up };
 
 pub const CharacterData = struct {
-    pub const size = 64.0;
-    pub const padding = 8.0;
-    pub const padding_mult = 1.0 + CharacterData.padding * 2 / size;
-    pub const line_height = 1.212;
-    pub const px_range = 16.0;
-
-    atlas_w: f32,
-    atlas_h: f32,
     x_advance: f32,
     tex_u: f32,
     tex_v: f32,
@@ -73,25 +162,20 @@ pub const CharacterData = struct {
     width: f32,
     height: f32,
 
-    pub fn parse(split: *std.mem.SplitIterator(u8, .sequence), atlas_w: f32, atlas_h: f32) !CharacterData {
-        var data: CharacterData = .{
-            .atlas_w = atlas_w,
-            .atlas_h = atlas_h,
-            .x_advance = try std.fmt.parseFloat(f32, split.next().?) * size,
-            .x_offset = try std.fmt.parseFloat(f32, split.next().?) * size,
-            .y_offset = try std.fmt.parseFloat(f32, split.next().?) * size,
-            .width = try std.fmt.parseFloat(f32, split.next().?) * size,
-            .height = try std.fmt.parseFloat(f32, split.next().?) * size,
-            .tex_u = try std.fmt.parseFloat(f32, split.next().?) / atlas_w,
-            .tex_h = (atlas_h - try std.fmt.parseFloat(f32, split.next().?)) / atlas_h,
-            .tex_w = try std.fmt.parseFloat(f32, split.next().?) / atlas_w,
-            .tex_v = (atlas_h - try std.fmt.parseFloat(f32, split.next().?)) / atlas_h,
+    pub fn parse(glyph: GlyphData, size: f32, atlas_w: f32, atlas_h: f32) !CharacterData {
+        const plane_bounds: PlaneBounds = glyph.plane_bounds orelse .{};
+        const atlas_bounds: AtlasBounds = glyph.atlas_bounds orelse .{};
+        return .{
+            .x_advance = glyph.advance * size,
+            .x_offset = plane_bounds.left * size,
+            .y_offset = plane_bounds.bottom * size,
+            .width = (plane_bounds.right - plane_bounds.left) * size,
+            .height = (plane_bounds.top - plane_bounds.bottom) * size,
+            .tex_u = atlas_bounds.left / atlas_w,
+            .tex_v = (atlas_h - atlas_bounds.top) / atlas_h,
+            .tex_h = (atlas_bounds.top - atlas_bounds.bottom) / atlas_h,
+            .tex_w = (atlas_bounds.right - atlas_bounds.left) / atlas_w,
         };
-        data.width -= data.x_offset;
-        data.height -= data.y_offset;
-        data.tex_h -= data.tex_v;
-        data.tex_w -= data.tex_u;
-        return data;
     }
 };
 
@@ -212,50 +296,6 @@ pub const AtlasData = extern struct {
     }
 };
 
-const AudioState = struct {
-    device: *zaudio.Device,
-    engine: *zaudio.Engine,
-
-    fn audioCallback(device: *zaudio.Device, output: ?*anyopaque, _: ?*const anyopaque, num_frames: u32) callconv(.C) void {
-        const audio: *AudioState = @ptrCast(@alignCast(device.getUserData()));
-        audio.engine.readPcmFrames(output.?, num_frames, null) catch {};
-    }
-
-    fn create() !*AudioState {
-        const audio = try arena.allocator().create(AudioState);
-
-        var device_config = zaudio.Device.Config.init(.playback);
-        device_config.data_callback = audioCallback;
-        device_config.user_data = audio;
-        device_config.sample_rate = 48000;
-        device_config.period_size_in_frames = 480;
-        device_config.period_size_in_milliseconds = 10;
-        device_config.playback.format = .float32;
-        device_config.playback.channels = 2;
-        const device = try zaudio.Device.create(null, device_config);
-
-        var engine_config = zaudio.Engine.Config.init();
-        engine_config.device = device;
-        engine_config.no_auto_start = .true32;
-        const engine = try zaudio.Engine.create(engine_config);
-
-        audio.* = .{ .device = device, .engine = engine };
-        return audio;
-    }
-
-    fn destroy(audio: *AudioState) void {
-        audio.engine.destroy();
-        audio.device.destroy();
-    }
-};
-
-const RGBA = packed struct(u32) {
-    r: u8 = 0,
-    g: u8 = 0,
-    b: u8 = 0,
-    a: u8 = 0,
-};
-
 pub var sfx_path_buffer: [256]u8 = undefined;
 pub var audio_state: *AudioState = undefined;
 pub var main_music: *zaudio.Sound = undefined;
@@ -266,13 +306,13 @@ pub var ui_atlas: zstbi.Image = undefined;
 pub var menu_background: zstbi.Image = undefined;
 
 pub var bold_atlas: zstbi.Image = undefined;
-pub var bold_chars: [256]CharacterData = undefined;
+pub var bold_data: ParsedFontData = undefined;
 pub var bold_italic_atlas: zstbi.Image = undefined;
-pub var bold_italic_chars: [256]CharacterData = undefined;
+pub var bold_italic_data: ParsedFontData = undefined;
 pub var medium_atlas: zstbi.Image = undefined;
-pub var medium_chars: [256]CharacterData = undefined;
+pub var medium_data: ParsedFontData = undefined;
 pub var medium_italic_atlas: zstbi.Image = undefined;
-pub var medium_italic_chars: [256]CharacterData = undefined;
+pub var medium_italic_data: ParsedFontData = undefined;
 
 // horrible, but no other option since cursor is opaque
 pub var default_cursor_pressed: *glfw.Cursor = undefined;
@@ -1025,27 +1065,45 @@ fn addAnimPlayer(
     try dominant_color_data.put(arena.allocator(), sheet_name, dominant_colors);
 }
 
-fn parseFontData(atlas_w: f32, atlas_h: f32, comptime path: []const u8, chars: *[256]CharacterData) !void {
+fn parseFontData(comptime path: []const u8) !ParsedFontData {
+    const arena_allocator = arena.allocator();
+
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    const data = try file.readToEndAlloc(arena.allocator(), std.math.maxInt(u16));
-    defer arena.allocator().free(data);
+    const file_data = try file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+    defer arena_allocator.free(file_data);
 
-    var iter = std.mem.splitSequence(u8, data, if (std.mem.indexOf(u8, data, "\r\n") != null) "\r\n" else "\n");
-    while (iter.next()) |line| {
-        if (line.len == 0)
-            continue;
+    const font_data = try std.json.parseFromSlice(InternalFontData, arena_allocator, file_data, .{});
+    defer font_data.deinit();
+    const font_data_value = font_data.value;
 
-        var split = std.mem.splitSequence(u8, line, ",");
-        const idx = try std.fmt.parseInt(usize, split.next().?, 0);
-        chars[idx] = try CharacterData.parse(&split, atlas_w, atlas_h);
-    }
+    const empty_char: CharacterData = .{
+        .x_advance = 0.0,
+        .tex_u = 0.0,
+        .tex_v = 0.0,
+        .tex_w = 0.0,
+        .tex_h = 0.0,
+        .x_offset = 0.0,
+        .y_offset = 0.0,
+        .width = 0.0,
+        .height = 0.0,
+    };
+    var ret: ParsedFontData = .{
+        .characters = @splat(empty_char),
+        .size = font_data_value.atlas.size,
+        .padding = 8.0,
+        .px_range = font_data_value.atlas.distance_range,
+        .line_height = font_data_value.metrics.line_height,
+        .width = font_data_value.atlas.width,
+        .height = font_data_value.atlas.height,
+    };
+    for (font_data_value.glyphs) |glyph| ret.characters[glyph.unicode] = try CharacterData.parse(glyph, ret.size, ret.width, ret.height);
+    return ret;
 }
 
 pub fn playSfx(name: []const u8) void {
-    if (main.settings.sfx_volume <= 0.0)
-        return;
+    if (main.settings.sfx_volume <= 0.0) return;
 
     if (sfx_map.get(name)) |audio| {
         if (!audio.isPlaying()) {
@@ -1110,7 +1168,7 @@ pub fn deinit() void {
     target_enemy_cursor.destroy();
     target_ally_cursor_pressed.destroy();
     target_ally_cursor.destroy();
-    
+
     arena.deinit();
 }
 
@@ -1144,30 +1202,10 @@ pub fn init() !void {
     medium_atlas = try .loadFromFile("./assets/fonts/amaranth_regular.png", 4);
     medium_italic_atlas = try .loadFromFile("./assets/fonts/amaranth_italic.png", 4);
 
-    try parseFontData(
-        @floatFromInt(bold_atlas.width),
-        @floatFromInt(bold_atlas.height),
-        "./assets/fonts/amaranth_bold.csv",
-        &bold_chars,
-    );
-    try parseFontData(
-        @floatFromInt(bold_italic_atlas.width),
-        @floatFromInt(bold_italic_atlas.height),
-        "./assets/fonts/amaranth_bold_italic.csv",
-        &bold_italic_chars,
-    );
-    try parseFontData(
-        @floatFromInt(medium_atlas.width),
-        @floatFromInt(medium_atlas.height),
-        "./assets/fonts/amaranth_regular.csv",
-        &medium_chars,
-    );
-    try parseFontData(
-        @floatFromInt(medium_italic_atlas.width),
-        @floatFromInt(medium_italic_atlas.height),
-        "./assets/fonts/amaranth_italic.csv",
-        &medium_italic_chars,
-    );
+    bold_data = try parseFontData("./assets/fonts/amaranth_bold.json");
+    bold_italic_data = try parseFontData("./assets/fonts/amaranth_bold_italic.json");
+    medium_data = try parseFontData("./assets/fonts/amaranth_regular.json");
+    medium_italic_data = try parseFontData("./assets/fonts/amaranth_italic.json");
 
     audio_state = try AudioState.create();
     try audio_state.engine.start();

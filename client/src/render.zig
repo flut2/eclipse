@@ -573,8 +573,16 @@ pub fn drawText(
 
     if (text_data.line_widths == null or text_data.break_indices == null) return;
 
-    const size_scale = text_data.size / assets.CharacterData.size * scale * assets.CharacterData.padding_mult;
-    const start_line_height = assets.CharacterData.line_height * assets.CharacterData.size * size_scale;
+    var current_type = text_data.text_type;
+    var current_font_data = switch (current_type) {
+        .medium => assets.medium_data,
+        .medium_italic => assets.medium_italic_data,
+        .bold => assets.bold_data,
+        .bold_italic => assets.bold_italic_data,
+    };
+
+    const size_scale = text_data.size / current_font_data.size * scale * (1.0 + current_font_data.padding * 2 / current_font_data.size);
+    const start_line_height = current_font_data.line_height * current_font_data.size * size_scale;
     var line_height = start_line_height;
 
     const max_width_off = text_data.max_width == std.math.floatMax(f32);
@@ -582,7 +590,7 @@ pub fn drawText(
 
     const render_type: RenderType = if (text_data.shadow_texel_offset_mult != 0) .text_drop_shadow else .text_normal;
 
-    const pad_offset = assets.CharacterData.padding * size_scale;
+    const pad_offset = current_font_data.padding * size_scale;
     const start_x = x - pad_offset;
     const start_y = y + line_height - pad_offset;
     const y_base = switch (text_data.vert_align) {
@@ -600,26 +608,29 @@ pub fn drawText(
     var y_pointer = y_base;
     var current_color = text_data.color;
     var current_size = size_scale;
-    var current_type = text_data.text_type;
     var index_offset: u16 = 0;
     for (0..text_data.text.len) |i| {
         const offset_i = i + index_offset;
-        if (offset_i >= text_data.text.len)
-            return;
+        if (offset_i >= text_data.text.len) return;
 
         var char = text_data.text[offset_i];
         specialChar: {
-            if (!text_data.handle_special_chars)
-                break :specialChar;
+            if (!text_data.handle_special_chars) break :specialChar;
 
             if (char == '&') {
                 const name_start = text_data.text[offset_i + 1 ..];
                 const reset = "reset";
                 if (text_data.text.len >= offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
                     current_type = text_data.text_type;
+                    current_font_data = switch (current_type) {
+                        .medium => assets.medium_data,
+                        .medium_italic => assets.medium_italic_data,
+                        .bold => assets.bold_data,
+                        .bold_italic => assets.bold_italic_data,
+                    };
                     current_color = text_data.color;
                     current_size = size_scale;
-                    line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
+                    line_height = start_line_height;
                     y_pointer += (line_height - start_line_height) / 2.0;
                     index_offset += @intCast(reset.len);
                     continue;
@@ -634,8 +645,7 @@ pub fn drawText(
 
                 if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
                     const value_start_idx = offset_i + 1 + eql_idx + 1;
-                    if (text_data.text.len <= value_start_idx or text_data.text[value_start_idx] != '"')
-                        break :specialChar;
+                    if (text_data.text.len <= value_start_idx or text_data.text[value_start_idx] != '"') break :specialChar;
 
                     const value_start = text_data.text[value_start_idx + 1 ..];
                     if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
@@ -651,19 +661,24 @@ pub fn drawText(
                                 std.log.err("Invalid size given to control code: {s}", .{value});
                                 break :specialChar;
                             };
-                            current_size = size / assets.CharacterData.size * scale * assets.CharacterData.padding_mult;
-                            line_height = assets.CharacterData.line_height * assets.CharacterData.size * current_size;
+                            current_size = size / current_font_data.size * scale * (1.0 + current_font_data.padding * 2 / current_font_data.size);
+                            line_height = current_font_data.line_height * current_font_data.size * current_size;
                             y_pointer += (line_height - start_line_height) / 2.0;
                         } else if (std.mem.eql(u8, name, "type")) {
-                            if (std.mem.eql(u8, value, "med")) {
-                                current_type = .medium;
-                            } else if (std.mem.eql(u8, value, "med_it")) {
-                                current_type = .medium_italic;
-                            } else if (std.mem.eql(u8, value, "bold")) {
-                                current_type = .bold;
-                            } else if (std.mem.eql(u8, value, "bold_it")) {
+                            if (std.mem.eql(u8, value, "med"))
+                                current_type = .medium
+                            else if (std.mem.eql(u8, value, "med_it"))
+                                current_type = .medium_italic
+                            else if (std.mem.eql(u8, value, "bold"))
+                                current_type = .bold
+                            else if (std.mem.eql(u8, value, "bold_it"))
                                 current_type = .bold_italic;
-                            }
+                            current_font_data = switch (current_type) {
+                                .medium => assets.medium_data,
+                                .medium_italic => assets.medium_italic_data,
+                                .bold => assets.bold_data,
+                                .bold_italic => assets.bold_italic_data,
+                            };
                         } else if (std.mem.eql(u8, name, "img")) {
                             var values = std.mem.splitScalar(u8, value, ',');
                             const sheet = values.next();
@@ -689,10 +704,9 @@ pub fn drawText(
                                 break :specialChar;
                             }
 
-                            if (std.mem.indexOfScalar(usize, text_data.break_indices.?.items, i) != null) {
+                            if (text_data.break_indices.?.get(i) != null) {
                                 y_pointer += line_height;
-                                if (y_pointer - y_base > text_data.max_height)
-                                    return;
+                                if (y_pointer - y_base > text_data.max_height) return;
 
                                 x_base = switch (text_data.hori_align) {
                                     .left => start_x,
@@ -704,7 +718,7 @@ pub fn drawText(
                             }
 
                             const w_larger = data[index].tex_w > data[index].tex_h;
-                            const quad_size = current_size * assets.CharacterData.size;
+                            const quad_size = current_size * current_font_data.size;
                             drawQuad(
                                 x_pointer,
                                 y_pointer - quad_size,
@@ -725,22 +739,17 @@ pub fn drawText(
         }
 
         const mod_char = if (text_data.password) '*' else char;
+        const char_data = current_font_data.characters[mod_char];
 
-        const char_data = switch (current_type) {
-            .medium => assets.medium_chars[mod_char],
-            .medium_italic => assets.medium_italic_chars[mod_char],
-            .bold => assets.bold_chars[mod_char],
-            .bold_italic => assets.bold_italic_chars[mod_char],
-        };
+        const shadow_texel_w = text_data.shadow_texel_offset_mult / current_font_data.width;
+        const shadow_texel_h = text_data.shadow_texel_offset_mult / current_font_data.height;
 
-        const shadow_texel_w = text_data.shadow_texel_offset_mult / char_data.atlas_w;
-        const shadow_texel_h = text_data.shadow_texel_offset_mult / char_data.atlas_h;
-
-        var next_x_pointer = x_pointer + char_data.x_advance * current_size;
-        if (std.mem.indexOfScalar(usize, text_data.break_indices.?.items, i) != null) {
+        const scaled_advance = char_data.x_advance * current_size;
+        var next_x_pointer = x_pointer + scaled_advance;
+        defer x_pointer = next_x_pointer;
+        if (text_data.break_indices.?.get(i) != null) {
             y_pointer += line_height;
-            if (y_pointer - y_base > text_data.max_height)
-                return;
+            if (y_pointer - y_base > text_data.max_height) return;
 
             x_base = switch (text_data.hori_align) {
                 .left => start_x,
@@ -748,20 +757,17 @@ pub fn drawText(
                 .right => if (max_width_off) start_x else start_x + @round(text_data.max_width - text_data.line_widths.?.items[line_idx]),
             };
             x_pointer = x_base;
-            next_x_pointer = x_base + char_data.x_advance * current_size;
+            next_x_pointer = x_base + scaled_advance;
             line_idx += 1;
         }
 
-        if (char_data.tex_w <= 0) {
-            x_pointer += char_data.x_advance * current_size;
-            continue;
-        }
+        if (char_data.tex_w <= 0) continue;
 
         const w = char_data.width * current_size;
         const h = char_data.height * current_size;
         const pos = .{
-            x_pointer + (char_data.x_offset + assets.CharacterData.padding) * current_size,
-            y_pointer - (char_data.y_offset + assets.CharacterData.padding) * current_size - h,
+            x_pointer + (char_data.x_offset + current_font_data.padding) * current_size,
+            y_pointer - (char_data.y_offset + current_font_data.padding) * current_size - h,
         };
 
         const uv_w_per_px = char_data.tex_w / w;
@@ -777,7 +783,7 @@ pub fn drawText(
         generics.append(main.allocator, .{
             .render_type = render_type,
             .text_type = current_type,
-            .text_dist_factor = assets.CharacterData.px_range * current_size,
+            .text_dist_factor = current_font_data.px_range * current_size,
             .shadow_color = text_data.shadow_color,
             .alpha_mult = text_data.alpha,
             .outline_color = text_data.outline_color,
@@ -796,8 +802,6 @@ pub fn drawText(
                 char_data.tex_v + if (scissor.max_y == dont_scissor) char_data.tex_h else (scissor.max_y + y_off) * uv_h_per_px,
             },
         }) catch @panic("OOM");
-
-        x_pointer = next_x_pointer;
     }
 }
 
