@@ -1,12 +1,13 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 
+pub var card: Maps(CardData) = .{};
+pub var item: Maps(ItemData) = .{};
 pub var class: Maps(ClassData) = .{};
 pub var container: Maps(ContainerData) = .{};
 pub var enemy: Maps(EnemyData) = .{};
 pub var entity: Maps(EntityData) = .{};
 pub var ground: Maps(GroundData) = .{};
-pub var item: Maps(ItemData) = .{};
 pub var portal: Maps(PortalData) = .{};
 pub var region: Maps(RegionData) = .{};
 pub var purchasable: Maps(PurchasableData) = .{};
@@ -109,7 +110,9 @@ pub fn init(allocator: std.mem.Allocator) !void {
         const dummy_id_ctx: std.hash_map.AutoContext(u16) = undefined;
         const dummy_name_ctx: StringContext = undefined;
         inline for (.{
+            &card,
             &item,
+            &class,
             &container,
             &enemy,
             &entity,
@@ -118,7 +121,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
             &region,
             &purchasable,
             &ally,
-            &class,
         }) |data_maps| {
             if (data_maps.from_id.capacity() > 0) data_maps.from_id.rehash(dummy_id_ctx);
             if (data_maps.from_name.capacity() > 0) data_maps.from_name.rehash(dummy_name_ctx);
@@ -128,6 +130,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     arena = .init(allocator);
     const arena_allocator = arena.allocator();
 
+    try parseGeneric(arena_allocator, "./assets/data/cards.json", CardData, &card);
     try parseGeneric(arena_allocator, "./assets/data/items.json", ItemData, &item);
     try parseGeneric(arena_allocator, "./assets/data/containers.json", ContainerData, &container);
     try parseGeneric(arena_allocator, "./assets/data/enemies.json", EnemyData, &enemy);
@@ -640,12 +643,13 @@ pub const ActivationData = union(enum) {
     condition_effect_aura: struct { cond: TimedCondition, radius: f32 },
 };
 
+pub const ItemRarity = enum { common, rare, epic, legendary, mythic };
 pub const ItemData = struct {
     id: u16,
     name: []const u8,
     description: []const u8 = "",
     item_type: ItemType,
-    rarity: []const u8 = "Common",
+    rarity: ItemRarity = .common,
     texture: TextureData,
     fire_rate: f32 = 1.0,
     projectile_count: u8 = 1,
@@ -661,6 +665,14 @@ pub const ItemData = struct {
     untradeable: bool = false,
     bag_type: enum { brown, purple, blue, white } = .brown,
     sound: []const u8 = "Unknown",
+};
+
+pub const CardRarity = enum { common, rare, epic, legendary, mythic };
+pub const CardData = struct {
+    id: u16,
+    name: []const u8,
+    rarity: CardRarity,
+    description: []const u8,
 };
 
 pub const PortalData = struct {

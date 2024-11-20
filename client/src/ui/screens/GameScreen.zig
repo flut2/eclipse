@@ -1046,17 +1046,13 @@ pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
             const pos_w = self.container_pos_data[idx].w;
             const pos_h = self.container_pos_data[idx].h;
 
-            if (std.mem.eql(u8, data.rarity, "Mythic")) {
-                self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
-            } else if (std.mem.eql(u8, data.rarity, "Legendary")) {
-                self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
-            } else if (std.mem.eql(u8, data.rarity, "Epic")) {
-                self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
-            } else if (std.mem.eql(u8, data.rarity, "Rare")) {
-                self.container_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
-            } else {
-                self.container_items[idx].background_image_data = null;
-            }
+            self.container_items[idx].background_image_data = switch (data.rarity) {
+                .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } },
+                .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } },
+                .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } },
+                .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } },
+                .common => null,
+            };
 
             self.container_items[idx].item = item;
             self.container_items[idx].image_data.normal.atlas_data = atlas_data;
@@ -1098,29 +1094,21 @@ pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
             const pos_h = self.inventory_pos_data[idx].h;
 
             if (idx < 4) {
-                if (std.mem.eql(u8, data.rarity, "Mythic")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot_equip", 0) } };
-                } else if (std.mem.eql(u8, data.rarity, "Legendary")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot_equip", 0) } };
-                } else if (std.mem.eql(u8, data.rarity, "Epic")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot_equip", 0) } };
-                } else if (std.mem.eql(u8, data.rarity, "Rare")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot_equip", 0) } };
-                } else {
-                    self.inventory_items[idx].background_image_data = null;
-                }
+                self.inventory_items[idx].background_image_data = switch (data.rarity) {
+                    .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot_equip", 0) } },
+                    .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot_equip", 0) } },
+                    .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot_equip", 0) } },
+                    .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot_equip", 0) } },
+                    .common => null,
+                };
             } else {
-                if (std.mem.eql(u8, data.rarity, "Mythic")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } };
-                } else if (std.mem.eql(u8, data.rarity, "Legendary")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } };
-                } else if (std.mem.eql(u8, data.rarity, "Epic")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } };
-                } else if (std.mem.eql(u8, data.rarity, "Rare")) {
-                    self.inventory_items[idx].background_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } };
-                } else {
-                    self.inventory_items[idx].background_image_data = null;
-                }
+                self.inventory_items[idx].background_image_data = switch (data.rarity) {
+                    .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } },
+                    .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } },
+                    .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } },
+                    .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } },
+                    .common => null,
+                };
             }
 
             self.inventory_items[idx].item = item;

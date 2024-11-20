@@ -1,0 +1,38 @@
+[
+    {
+        "id": 0,
+        "name": "Heavy Strikes I",
+        "rarity": "common",
+        "description": "Gain +4% STR"
+    },
+    {
+        "id": 1,
+        "name": "Heavy Strikes II",
+        "rarity": "common",
+        "description": "Gain +6% STR"
+    },
+    {
+        "id": 2,
+        "name": "Titan's Resolve",
+        "rarity": "rare",
+        "description": "Gain +15% STA, +15% INT"
+    },
+    {
+        "id": 3,
+        "name": "Daft Hands",
+        "rarity": "epic",
+        "description": "All weapons gain +10% Rate of Fire (additive)"
+    },
+    {
+        "id": 4,
+        "name": "Absorption",
+        "rarity": "legendary",
+        "description": "Release a 10 (+1% HP) HP healing blast for your party when receiving Physical or Magic Damage above 100 in a single hit"
+    },
+    {
+        "id": 5,
+        "name": "Veil of Shadows",
+        "rarity": "mythic",
+        "description": "Receive Invisibility after 90 seconds of not attacking and not taking damage. Doing either breaks this effect and resets the timer"
+    }
+]

@@ -46,7 +46,7 @@ pub fn init(self: *ItemTooltip) !void {
     self.item_name = try self.root.createChild(Text, .{
         .base = .{
             .x = 8 * 4 + 25,
-            .y = 11,
+            .y = 10,
         },
         .text_data = .{ .text = "", .size = 14, .text_type = .bold_italic },
     });
@@ -54,7 +54,7 @@ pub fn init(self: *ItemTooltip) !void {
     self.rarity = try self.root.createChild(Text, .{
         .base = .{
             .x = 8 * 4 + 25,
-            .y = self.item_name.text_data.height + 11 + 2,
+            .y = self.item_name.text_data.height + 10,
         },
         .text_data = .{
             .text = "",
@@ -154,51 +154,65 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         self.line_break_two.image_data.nine_slice.color_intensity = 0;
 
         var rarity_text_color: u32 = 0xB3B3B3;
-        if (std.mem.eql(u8, data.rarity, "Mythic")) {
-            const tooltip_background_data = assets.getUiData("tooltip_background_mythic", 0);
-            const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_mythic", 0);
-            const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_mythic", 0);
-            self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
-            self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-            self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-            rarity_text_color = 0xB80000;
-        } else if (std.mem.eql(u8, data.rarity, "Legendary")) {
-            const tooltip_background_data = assets.getUiData("tooltip_background_legendary", 0);
-            const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_legendary", 0);
-            const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_legendary", 0);
-            self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
-            self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-            self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-            rarity_text_color = 0xE6A100;
-        } else if (std.mem.eql(u8, data.rarity, "Epic")) {
-            const tooltip_background_data = assets.getUiData("tooltip_background_epic", 0);
-            const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_epic", 0);
-            const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_epic", 0);
-            self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
-            self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-            self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-            rarity_text_color = 0xA825E6;
-        } else if (std.mem.eql(u8, data.rarity, "Rare")) {
-            const tooltip_background_data = assets.getUiData("tooltip_background_rare", 0);
-            const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_rare", 0);
-            const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_rare", 0);
-            self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
-            self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-            self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-            rarity_text_color = 0x2575E6;
-        } else {
-            const tooltip_background_data = assets.getUiData("tooltip_background", 0);
-            const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top", 0);
-            const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom", 0);
-            self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
-            self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-            self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+        switch (data.rarity) {
+            .mythic => {
+                const tooltip_background_data = assets.getUiData("tooltip_background_mythic", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_mythic", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_mythic", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                rarity_text_color = 0xB80000;
+            },
+            .legendary => {
+                const tooltip_background_data = assets.getUiData("tooltip_background_legendary", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_legendary", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_legendary", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                rarity_text_color = 0xE6A100;
+            },
+            .epic => {
+                const tooltip_background_data = assets.getUiData("tooltip_background_epic", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_epic", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_epic", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                rarity_text_color = 0xA825E6;
+            },
+            .rare => {
+                const tooltip_background_data = assets.getUiData("tooltip_background_rare", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top_rare", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom_rare", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                rarity_text_color = 0x2575E6;
+            },
+            .common => {
+                const tooltip_background_data = assets.getUiData("tooltip_background", 0);
+                const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top", 0);
+                const tooltip_line_spacer_bottom_data = assets.getUiData("tooltip_line_spacer_bottom", 0);
+                self.decor.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0);
+                self.line_break_one.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+                self.line_break_two.image_data.nine_slice = element.NineSliceImageData.fromAtlasData(tooltip_line_spacer_bottom_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+            },
         }
+
+        const rarity_text = switch (data.rarity) {
+            .mythic => "Mythic",
+            .legendary => "Legendary",
+            .epic => "Epic",
+            .rare => "Rare",
+            .common => "Common",
+        };
 
         self.rarity.text_data.setText(std.fmt.bufPrint(
             self.rarity.text_data.backing_buffer,
             "{s} {s}",
-            .{ data.rarity, data.item_type.toString() },
+            .{ rarity_text, data.item_type.toString() },
         ) catch self.rarity.text_data.text);
         self.rarity.text_data.color = rarity_text_color;
 
