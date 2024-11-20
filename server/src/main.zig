@@ -31,6 +31,10 @@ pub var tick_id: u8 = 0;
 pub var current_time: i64 = -1;
 pub var settings: Settings = .{};
 
+pub fn oomPanic() noreturn {
+    @panic("Out of memory");
+}
+
 pub fn main() !void {
     if (build_options.enable_tracy) tracy.SetThreadName("Main");
 
@@ -94,7 +98,7 @@ fn listenToServer(comptime acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.C)
     const accept_socket_status = uv.uv_tcp_init(uv.uv_default_loop(), server_handle);
     if (accept_socket_status != 0) std.debug.panic("Setting up accept socket failed: {s}", .{uv.uv_strerror(accept_socket_status)});
 
-    const addr = std.net.Address.parseIp4("0.0.0.0", port) catch unreachable;
+    const addr = std.net.Address.parseIp4("0.0.0.0", port) catch @panic("Parsing 0.0.0.0 failed");
     const socket_bind_status = uv.uv_tcp_bind(server_handle, @ptrCast(&addr.in.sa), 0);
     if (socket_bind_status != 0) std.debug.panic("Setting up socket bind failed: {s}", .{uv.uv_strerror(socket_bind_status)});
 
@@ -112,7 +116,7 @@ fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.C) void {
     defer current_time = time;
     const dt = if (current_time == -1) 0 else time - current_time;
     var iter = maps.worlds.iterator();
-    while (iter.next()) |entry| entry.value_ptr.tick(time, dt) catch unreachable;
+    while (iter.next()) |entry| entry.value_ptr.tick(time, dt) catch @panic("TODO: Tick error, handle this appropriately later");
 }
 
 fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
@@ -121,7 +125,7 @@ fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
         return;
     }
 
-    const socket = socket_pool.create() catch unreachable;
+    const socket = socket_pool.create() catch oomPanic();
     const init_recv_status = uv.uv_tcp_init(uv.uv_default_loop(), @ptrCast(socket));
     if (init_recv_status != 0) {
         std.log.err("Failed to initialize received game socket: {s}", .{uv.uv_strerror(init_recv_status)});
@@ -136,7 +140,7 @@ fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
         return;
     }
 
-    const cli = game_client_pool.create() catch unreachable;
+    const cli = game_client_pool.create() catch oomPanic();
     socket.*.data = cli;
     cli.* = .{ .arena = .init(allocator), .socket = socket };
 
@@ -154,7 +158,7 @@ fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
         return;
     }
 
-    const socket = socket_pool.create() catch unreachable;
+    const socket = socket_pool.create() catch oomPanic();
     const init_recv_status = uv.uv_tcp_init(uv.uv_default_loop(), @ptrCast(socket));
     if (init_recv_status != 0) {
         std.log.err("Failed to initialize received login socket: {s}", .{uv.uv_strerror(init_recv_status)});
@@ -169,7 +173,7 @@ fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
         return;
     }
 
-    const cli = login_client_pool.create() catch unreachable;
+    const cli = login_client_pool.create() catch oomPanic();
     socket.*.data = cli;
     cli.* = .{ .arena = .init(allocator), .socket = socket };
 
@@ -228,7 +232,7 @@ pub fn getIp(addr: std.net.Address) ![]const u8 {
             }
             try std.fmt.format(stream.writer(), "]", .{});
         },
-        else => unreachable,
+        else => @panic("Invalid IP family"),
     }
     return stream.getWritten();
 }

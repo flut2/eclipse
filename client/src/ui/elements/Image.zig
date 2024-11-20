@@ -78,7 +78,7 @@ pub fn draw(self: Image, cam_data: render.CameraData, x_offset: f32, y_offset: f
             .size = .{ self.minimap_width, self.minimap_height },
             .uv = .{ cam_data.x / fminimap_w - uv_size[0] / 2.0, cam_data.y / fminimap_h - uv_size[1] / 2.0 },
             .uv_size = uv_size,
-        }) catch @panic("OOM");
+        }) catch main.oomPanic();
 
         const player_icon = assets.minimap_icons[0];
         const scale = 2.0;

@@ -7,7 +7,7 @@ pub const PacketWriter = struct {
     list: std.ArrayListUnmanaged(u8) = .empty,
 
     pub fn writeLength(self: *PacketWriter, allocator: std.mem.Allocator) void {
-        self.list.appendSlice(allocator, &.{ 0, 0 }) catch unreachable;
+        self.list.appendSlice(allocator, &.{ 0, 0 }) catch @panic("OOM");
     }
 
     pub fn updateLength(self: *PacketWriter) void {
@@ -48,7 +48,7 @@ pub const PacketWriter = struct {
             }
         }
 
-        self.list.appendSlice(allocator, value_bytes) catch unreachable;
+        self.list.appendSlice(allocator, value_bytes) catch @panic("OOM");
     }
 };
 
@@ -68,7 +68,7 @@ pub const PacketReader = struct {
         if (type_info == .pointer or type_info == .array) {
             const ChildType = if (type_info == .array) type_info.array.child else type_info.pointer.child;
             const len = self.read(u16, allocator);
-            var ret = allocator.alloc(ChildType, len) catch unreachable;
+            var ret = allocator.alloc(ChildType, len) catch @panic("OOM");
             for (0..len) |i| {
                 ret[i] = self.read(ChildType, allocator);
             }

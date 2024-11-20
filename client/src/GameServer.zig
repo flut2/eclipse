@@ -118,7 +118,7 @@ fn ObjEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnum
 }
 
 pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
-    buf.*.base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch unreachable);
+    buf.*.base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic());
     buf.*.len = @intCast(suggested_size);
 }
 
@@ -240,7 +240,7 @@ pub fn deinit(self: *Server) void {
 
 pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
     if (!self.initialized) return;
-    
+
     const is_tick = packet == .move or packet == .pong;
     if (build_options.log_packets == .all or
         build_options.log_packets == .c2s or
@@ -502,12 +502,12 @@ fn handleNotification(_: *Server, data: PacketData(.notification)) void {
                 .show_at = main.current_time,
                 .duration = 2.0 * std.time.us_per_s,
                 .text_data = .{
-                    .text = main.allocator.dupe(u8, data.message) catch @panic("OOM"),
+                    .text = main.allocator.dupe(u8, data.message) catch main.oomPanic(),
                     .text_type = .bold,
                     .size = 16,
                     .color = data.color,
                 },
-            }) catch @panic("OOM");
+            }) catch main.oomPanic();
         },
         else => {
             std.log.err("Invalid type: {}", .{data.obj_type});
@@ -646,23 +646,6 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
                 },
             }
         } else @panic("Could not find speech_balloons in the UI atlas");
-
-        // element.SpeechBalloon.add(.{
-        //     .image_data = .{ .normal = .{
-        //         .scale_x = 3.0,
-        //         .scale_y = 3.0,
-        //         .atlas_data = atlas_data,
-        //     } },
-        //     .text_data = .{
-        //         .text = main.allocator.dupe(u8, data.text) catch unreachable,
-        //         .size = 16,
-        //         .max_width = 160,
-        //         .outline_width = 1.5,
-        //         .color = data.text_color,
-        //     },
-        //     .target_obj_type = data.obj_type,
-        //     .target_map_id = data.map_id,
-        // }) catch unreachable;
     }
 }
 

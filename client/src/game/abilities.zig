@@ -37,8 +37,8 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
 
     var buf: [5]u8 = undefined;
     var fba = std.io.fixedBufferStream(&buf);
-    _ = fba.write(&std.mem.toBytes(proj_index)) catch unreachable;
-    _ = fba.write(&std.mem.toBytes(attack_angle)) catch unreachable;
+    _ = fba.write(&std.mem.toBytes(proj_index)) catch main.oomPanic();
+    _ = fba.write(&std.mem.toBytes(attack_angle)) catch main.oomPanic();
     return fba.getWritten();
 }
 
@@ -87,7 +87,7 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
                 if (true_dmg > 0) map.takeDamage(e, true_dmg, .true, .{}, p.colors);
             }
             p.deinit();
-            projs_to_remove.append(main.allocator, i) catch @panic("OOM");
+            projs_to_remove.append(main.allocator, i) catch main.oomPanic();
         }
     }
     var iter = std.mem.reverseIterator(projs_to_remove.items);

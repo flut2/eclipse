@@ -180,7 +180,7 @@ pub fn queuePacket(self: *Client, packet: network_data.S2CPacket) void {
             writer.write(data, arena_allocator);
             writer.updateLength();
 
-            const wr: *WriteRequest = arena_allocator.create(WriteRequest) catch unreachable;
+            const wr: *WriteRequest = arena_allocator.create(WriteRequest) catch main.oomPanic();
             wr.buffer.base = @ptrCast(writer.list.items);
             wr.buffer.len = @intCast(writer.list.items.len);
             wr.request.data = @ptrCast(self);
@@ -463,7 +463,7 @@ fn handleInvDrop(self: *Client, data: PacketData(.inv_drop)) void {
         .x = player.x,
         .y = player.y,
         .data_id = game_data.container.from_name.get("Brown Bag").?.id,
-        .name = main.allocator.dupe(u8, player.name) catch @panic("OOM"),
+        .name = main.allocator.dupe(u8, player.name) catch main.oomPanic(),
         .inventory = inventory,
     }) catch {
         self.sendError(.message_with_disconnect, "Bag spawning failed");

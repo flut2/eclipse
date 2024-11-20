@@ -152,7 +152,7 @@ pub fn handleNullPulse(player: *Player) !void {
                 e.damage(.player, player.map_id, phys_dmg, magic_dmg, true_dmg);
             }
             try p.deinit();
-            projs_to_remove.append(main.allocator, i) catch @panic("OOM");
+            projs_to_remove.append(main.allocator, i) catch main.oomPanic();
         }
     }
     var iter = std.mem.reverseIterator(projs_to_remove.items);

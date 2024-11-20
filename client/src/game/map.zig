@@ -632,12 +632,12 @@ pub fn takeDamage(
                     .dispose_text = true,
                     .show_at = main.current_time,
                     .text_data = .{
-                        .text = std.fmt.allocPrint(main.allocator, "{s}", .{cond_str}) catch @panic("OOM"),
+                        .text = std.fmt.allocPrint(main.allocator, "{s}", .{cond_str}) catch main.oomPanic(),
                         .text_type = .bold,
                         .size = 16,
                         .color = 0xB02020,
                     },
-                }) catch @panic("OOM");
+                }) catch main.oomPanic();
             }
         }
     }
@@ -647,7 +647,7 @@ pub fn takeDamage(
         .dispose_text = true,
         .show_at = main.current_time,
         .text_data = .{
-            .text = std.fmt.allocPrint(main.allocator, "-{}", .{damage}) catch @panic("OOM"),
+            .text = std.fmt.allocPrint(main.allocator, "-{}", .{damage}) catch main.oomPanic(),
             .text_type = .bold,
             .size = 16,
             .color = switch (damage_type) {
@@ -656,5 +656,5 @@ pub fn takeDamage(
                 .true => 0xB02020,
             },
         },
-    }) catch @panic("OOM");
+    }) catch main.oomPanic();
 }

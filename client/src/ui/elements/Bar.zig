@@ -11,6 +11,10 @@ text_data: element.TextData,
 pub fn init(self: *Bar) void {
     self.text_data.lock.lock();
     defer self.text_data.lock.unlock();
+    self.text_data.max_width = self.width();
+    self.text_data.max_height = self.height();
+    self.text_data.vert_align = .middle;
+    self.text_data.hori_align = .middle;
     self.text_data.recalculateAttributes();
 }
 
@@ -20,19 +24,8 @@ pub fn deinit(self: *Bar) void {
 
 pub fn draw(self: *Bar, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
-    const w, const h = switch (self.image_data) {
-        .nine_slice => |nine_slice| .{ nine_slice.w, nine_slice.h },
-        .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
-    };
-
     self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
-    render.drawText(
-        self.base.x + (w - self.text_data.width) / 2.0 + x_offset,
-        self.base.y + (h - self.text_data.height) / 2.0 + y_offset,
-        1.0,
-        &self.text_data,
-        .{},
-    );
+    render.drawText(self.base.x + x_offset, self.base.y + y_offset, 1.0, &self.text_data, .{});
 }
 
 pub fn width(self: Bar) f32 {

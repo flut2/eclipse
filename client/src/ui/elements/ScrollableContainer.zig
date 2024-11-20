@@ -72,7 +72,7 @@ pub fn init(self: *ScrollableContainer) void {
 
     self.base_y = self.base.y;
 
-    self.container = main.allocator.create(Container) catch @panic("OOM");
+    self.container = main.allocator.create(Container) catch main.oomPanic();
     self.container.* = .{ .base = .{
         .x = self.base.x,
         .y = self.base.y,

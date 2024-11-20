@@ -17,7 +17,7 @@ pub fn draw(self: MenuBackground, _: render.CameraData, x_offset: f32, y_offset:
         .size = .{ self.w, self.h },
         .uv = .{ 0.0, 0.0 },
         .uv_size = .{ 1.0, 1.0 },
-    }) catch @panic("OOM");
+    }) catch main.oomPanic();
 }
 
 pub fn width(_: MenuBackground) f32 {

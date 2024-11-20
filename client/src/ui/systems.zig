@@ -103,7 +103,7 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
         inline else => |inner_screen| inner_screen.deinit(),
     }
 
-    var screen_inner = main.allocator.create(@typeInfo(T).pointer.child) catch @panic("OOM");
+    var screen_inner = main.allocator.create(@typeInfo(T).pointer.child) catch main.oomPanic();
     screen_inner.* = .{};
     screen_inner.init() catch |e| std.debug.panic("Screen init failed: {}", .{e});
     screen = @unionInit(Screen, @tagName(screen_type), screen_inner);
@@ -145,9 +145,8 @@ pub fn mouseMove(x: f32, y: f32) bool {
 
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| switch (elem) {
-        inline else => |inner_elem| 
-            if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseMove") and inner_elem.mouseMove(x, y, 0, 0)) 
-                return true,
+        inline else => |inner_elem| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseMove") and inner_elem.mouseMove(x, y, 0, 0))
+            return true,
     };
 
     return false;
@@ -159,9 +158,8 @@ pub fn mousePress(x: f32, y: f32, mods: glfw.Mods) bool {
 
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| switch (elem) {
-        inline else => |inner_elem|
-            if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))
-                return true,
+        inline else => |inner_elem| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))
+            return true,
     };
 
     return false;
@@ -173,9 +171,8 @@ pub fn mouseRelease(x: f32, y: f32) bool {
 
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| switch (elem) {
-        inline else => |inner_elem|
-            if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseRelease") and inner_elem.mouseRelease(x, y, 0, 0))
-                return true,
+        inline else => |inner_elem| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseRelease") and inner_elem.mouseRelease(x, y, 0, 0))
+            return true,
     };
 
     return false;
@@ -187,9 +184,8 @@ pub fn mouseScroll(x: f32, y: f32, x_scroll: f32, y_scroll: f32) bool {
 
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| switch (elem) {
-        inline else => |inner_elem| 
-            if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseScroll") and inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll))
-                return true,
+        inline else => |inner_elem| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseScroll") and inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll))
+            return true,
     };
 
     return false;

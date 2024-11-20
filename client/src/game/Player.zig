@@ -478,7 +478,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
         1, 2 => .up,
         3, 4 => .right,
         5, 6 => .down,
-        else => unreachable,
+        else => @panic("Invalid direction in player update"),
     };
 
     const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);

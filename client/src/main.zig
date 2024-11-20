@@ -248,7 +248,10 @@ fn gameTick(_: [*c]uv.uv_idle_t) callconv(.C) void {
 
     glfw.pollEvents();
 
-    const instant = std.time.Instant.now() catch unreachable;
+    const instant = std.time.Instant.now() catch {
+        std.log.err("Platform not supported", .{});
+        std.posix.exit(0);
+    };
     const time = switch (builtin.os.tag) {
         .windows => @as(i64, @intCast(@divFloor(instant.timestamp * std.time.us_per_s, win_freq))),
         else => @divFloor(instant.timestamp.nsec, std.time.ns_per_us) + instant.timestamp.sec * std.time.us_per_s,
@@ -281,11 +284,18 @@ pub fn disconnect(has_lock: bool) void {
     }
 }
 
+pub fn oomPanic() noreturn {
+    @panic("Out of memory");
+}
+
 pub fn main() !void {
     if (build_options.enable_tracy) tracy.SetThreadName("Main");
 
     win_freq = if (builtin.os.tag == .windows) std.os.windows.QueryPerformanceFrequency() else 0;
-    const start_instant = std.time.Instant.now() catch unreachable;
+    const start_instant = std.time.Instant.now() catch {
+        std.log.err("Platform not supported", .{});
+        std.posix.exit(0);
+    };
     start_time = switch (builtin.os.tag) {
         .windows => @intCast(@divFloor(start_instant.timestamp * std.time.us_per_s, win_freq)),
         else => @divFloor(start_instant.timestamp.nsec, std.time.ns_per_us) + start_instant.timestamp.sec * std.time.us_per_s,

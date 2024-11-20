@@ -539,7 +539,7 @@ pub fn drawQuad(x: f32, y: f32, w: f32, h: f32, atlas_data: assets.AtlasData, op
 
     const dont_scissor = element.ScissorRect.dont_scissor;
 
-    sort_extras.append(main.allocator, opts.sort_extra) catch @panic("OOM");
+    sort_extras.append(main.allocator, opts.sort_extra) catch main.oomPanic();
     generics.append(main.allocator, .{
         .render_type = render_type,
         .rotation = opts.rotation,
@@ -558,7 +558,7 @@ pub fn drawQuad(x: f32, y: f32, w: f32, h: f32, atlas_data: assets.AtlasData, op
             atlas_data.tex_v + if (opts.scissor.min_y == dont_scissor) 0 else opts.scissor.min_y * uv_h_per_px,
             atlas_data.tex_v + if (opts.scissor.max_y == dont_scissor) atlas_data.tex_h else opts.scissor.max_y * uv_h_per_px,
         },
-    }) catch @panic("OOM");
+    }) catch main.oomPanic();
 }
 
 pub fn drawText(
@@ -652,57 +652,34 @@ pub fn drawText(
                         const name = name_start[0..eql_idx];
                         const value = value_start[0..value_end_idx];
                         if (std.mem.eql(u8, name, "col")) {
-                            current_color = std.fmt.parseInt(u32, value, 16) catch {
-                                std.log.err("Invalid color given to control code: {s}", .{value});
-                                break :specialChar;
-                            };
+                            current_color = std.fmt.parseInt(u32, value, 16) catch break :specialChar;
                         } else if (std.mem.eql(u8, name, "size")) {
-                            const size = std.fmt.parseFloat(f32, value) catch {
-                                std.log.err("Invalid size given to control code: {s}", .{value});
-                                break :specialChar;
-                            };
+                            const size = std.fmt.parseFloat(f32, value) catch break :specialChar;
                             current_size = size / current_font_data.size * scale * (1.0 + current_font_data.padding * 2 / current_font_data.size);
                             line_height = current_font_data.line_height * current_font_data.size * current_size;
                             y_pointer += (line_height - start_line_height) / 2.0;
                         } else if (std.mem.eql(u8, name, "type")) {
-                            if (std.mem.eql(u8, value, "med"))
-                                current_type = .medium
-                            else if (std.mem.eql(u8, value, "med_it"))
-                                current_type = .medium_italic
-                            else if (std.mem.eql(u8, value, "bold"))
-                                current_type = .bold
-                            else if (std.mem.eql(u8, value, "bold_it"))
+                            if (std.mem.eql(u8, value, "med")) {
+                                current_type = .medium;
+                                current_font_data = assets.medium_data;
+                            } else if (std.mem.eql(u8, value, "med_it")) {
+                                current_type = .medium_italic;
+                                current_font_data = assets.medium_italic_data;
+                            } else if (std.mem.eql(u8, value, "bold")) {
+                                current_type = .bold;
+                                current_font_data = assets.bold_data;
+                            } else if (std.mem.eql(u8, value, "bold_it")) {
                                 current_type = .bold_italic;
-                            current_font_data = switch (current_type) {
-                                .medium => assets.medium_data,
-                                .medium_italic => assets.medium_italic_data,
-                                .bold => assets.bold_data,
-                                .bold_italic => assets.bold_italic_data,
-                            };
+                                current_font_data = assets.bold_italic_data;
+                            }
                         } else if (std.mem.eql(u8, name, "img")) {
                             var values = std.mem.splitScalar(u8, value, ',');
                             const sheet = values.next();
-                            if (sheet == null or std.mem.eql(u8, sheet.?, value)) {
-                                std.log.err("Invalid sheet given to control code: {?s}", .{sheet});
-                                break :specialChar;
-                            }
-
-                            const index_str = values.next() orelse {
-                                std.log.err("Index was not found for control code with sheet {s}", .{sheet.?});
-                                break :specialChar;
-                            };
-                            const index = std.fmt.parseInt(u32, index_str, 0) catch {
-                                std.log.err("Invalid index given to control code with sheet {s}: {s}", .{ sheet.?, index_str });
-                                break :specialChar;
-                            };
-                            const data = assets.atlas_data.get(sheet.?) orelse {
-                                std.log.err("Sheet {s} given to control code was not found in atlas", .{sheet.?});
-                                break :specialChar;
-                            };
-                            if (index >= data.len) {
-                                std.log.err("The index {} given for sheet {s} in control code was out of bounds", .{ index, sheet.? });
-                                break :specialChar;
-                            }
+                            if (sheet == null or std.mem.eql(u8, sheet.?, value)) break :specialChar;
+                            const index_str = values.next() orelse break :specialChar;
+                            const index = std.fmt.parseInt(u32, index_str, 0) catch break :specialChar;
+                            const data = assets.atlas_data.get(sheet.?) orelse break :specialChar;
+                            if (index >= data.len) break :specialChar;
 
                             if (text_data.break_indices.?.get(i) != null) {
                                 y_pointer += line_height;
@@ -718,17 +695,17 @@ pub fn drawText(
                             }
 
                             const w_larger = data[index].tex_w > data[index].tex_h;
-                            const quad_size = current_size * current_font_data.size;
+                            const scaled_size = current_size * current_font_data.size;
                             drawQuad(
                                 x_pointer,
-                                y_pointer - quad_size,
-                                if (w_larger) quad_size else data[index].width() * (quad_size / data[index].height()),
-                                if (w_larger) data[index].height() * (quad_size / data[index].width()) else quad_size,
+                                y_pointer - scaled_size,
+                                if (w_larger) scaled_size else data[index].width() * (scaled_size / data[index].height()),
+                                if (w_larger) data[index].height() * (scaled_size / data[index].width()) else scaled_size,
                                 data[index],
                                 .{ .alpha_mult = text_data.alpha },
                             );
 
-                            x_pointer += quad_size;
+                            x_pointer += scaled_size;
                         } else break :specialChar;
 
                         index_offset += @intCast(1 + eql_idx + 1 + value_end_idx + 1);
@@ -779,7 +756,7 @@ pub fn drawText(
 
         const scissor = if (scissor_override == element.ScissorRect{}) text_data.scissor else scissor_override;
 
-        sort_extras.append(main.allocator, text_data.sort_extra) catch @panic("OOM");
+        sort_extras.append(main.allocator, text_data.sort_extra) catch main.oomPanic();
         generics.append(main.allocator, .{
             .render_type = render_type,
             .text_type = current_type,
@@ -801,7 +778,7 @@ pub fn drawText(
                 char_data.tex_v + if (scissor.min_y == dont_scissor) 0 else (scissor.min_y + y_off) * uv_h_per_px,
                 char_data.tex_v + if (scissor.max_y == dont_scissor) char_data.tex_h else (scissor.max_y + y_off) * uv_h_per_px,
             },
-        }) catch @panic("OOM");
+        }) catch main.oomPanic();
     }
 }
 
@@ -816,7 +793,7 @@ pub fn drawLight(data: game_data.LightData, tile_cx: f32, tile_cy: f32, scale: f
         .h = size,
         .color = data.color,
         .intensity = data.intensity,
-    }) catch @panic("OOM");
+    }) catch main.oomPanic();
 }
 
 pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.CommandEncoder) void {
@@ -886,7 +863,7 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
                         .top_blend_uv = @bitCast(square.blends[1]),
                         .right_blend_uv = @bitCast(square.blends[2]),
                         .bottom_blend_uv = @bitCast(square.blends[3]),
-                    }) catch @panic("OOM");
+                    }) catch main.oomPanic();
                 }
             }
         }

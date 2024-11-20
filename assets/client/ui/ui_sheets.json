@@ -8,40 +8,36 @@
         "path": "stats_button.png"
     },
     {
-        "name": "cards_button",
-        "path": "cards_button.png"
-    },
-    {
         "name": "rare_slot",
-        "path": "rare_slot.png"
+        "path": "item/rare_slot.png"
     },
     {
         "name": "epic_slot",
-        "path": "epic_slot.png"
+        "path": "item/epic_slot.png"
     },
     {
         "name": "legendary_slot",
-        "path": "legendary_slot.png"
+        "path": "item/legendary_slot.png"
     },
     {
         "name": "mythic_slot",
-        "path": "mythic_slot.png"
+        "path": "item/mythic_slot.png"
     },
     {
         "name": "rare_slot_equip",
-        "path": "rare_slot_equip.png"
+        "path": "item/rare_slot_equip.png"
     },
     {
         "name": "epic_slot_equip",
-        "path": "epic_slot_equip.png"
+        "path": "item/epic_slot_equip.png"
     },
     {
         "name": "legendary_slot_equip",
-        "path": "legendary_slot_equip.png"
+        "path": "item/legendary_slot_equip.png"
     },
     {
         "name": "mythic_slot_equip",
-        "path": "mythic_slot_equip.png"
+        "path": "item/mythic_slot_equip.png"
     },
     {
         "name": "in_combat_icon",
@@ -49,239 +45,239 @@
     },
     {
         "name": "out_of_combat_icon",
-        "path": "out_of_combat_icon.png"
+        "path": "ability/out_of_combat_icon.png"
     },
     {
         "name": "out_of_mana_slot",
-        "path": "out_of_mana_slot.png"
+        "path": "ability/out_of_mana_slot.png"
     },
     {
         "name": "out_of_health_slot",
-        "path": "out_of_health_slot.png"
+        "path": "ability/out_of_health_slot.png"
     },
     {
         "name": "out_of_gold_slot",
-        "path": "out_of_gold_slot.png"
+        "path": "ability/out_of_gold_slot.png"
     },
     {
         "name": "on_cooldown_slot",
-        "path": "on_cooldown_slot.png"
+        "path": "ability/on_cooldown_slot.png"
     },
     {
         "name": "dialog_base_background",
-        "path": "screens/dialog_base_background.png"
+        "path": "elements/dialog_base_background.png"
     },
     {
         "name": "dialog_title_background",
-        "path": "screens/dialog_title_background.png"
+        "path": "elements/dialog_title_background.png"
     },
     {
         "name": "button_base",
-        "path": "screens/button_base.png"
+        "path": "elements/button_base.png"
     },
     {
         "name": "button_hover",
-        "path": "screens/button_hover.png"
+        "path": "elements/button_hover.png"
     },
     {
         "name": "button_press",
-        "path": "screens/button_press.png"
+        "path": "elements/button_press.png"
     },
     {
         "name": "dropdown_collapsed_icon_base",
-        "path": "screens/dropdown_collapsed_icon_base.png"
+        "path": "elements/dropdown_collapsed_icon_base.png"
     },
     {
         "name": "dropdown_collapsed_icon_hover",
-        "path": "screens/dropdown_collapsed_icon_hover.png"
+        "path": "elements/dropdown_collapsed_icon_hover.png"
     },
     {
         "name": "dropdown_collapsed_icon_press",
-        "path": "screens/dropdown_collapsed_icon_press.png"
+        "path": "elements/dropdown_collapsed_icon_press.png"
     },
     {
         "name": "dropdown_extended_icon_base",
-        "path": "screens/dropdown_extended_icon_base.png"
+        "path": "elements/dropdown_extended_icon_base.png"
     },
     {
         "name": "dropdown_extended_icon_hover",
-        "path": "screens/dropdown_extended_icon_hover.png"
+        "path": "elements/dropdown_extended_icon_hover.png"
     },
     {
         "name": "dropdown_extended_icon_press",
-        "path": "screens/dropdown_extended_icon_press.png"
+        "path": "elements/dropdown_extended_icon_press.png"
     },
     {
         "name": "dropdown_main_color_base",
-        "path": "screens/dropdown_main_color_base.png"
+        "path": "elements/dropdown_main_color_base.png"
     },
     {
         "name": "dropdown_main_color_hover",
-        "path": "screens/dropdown_main_color_hover.png"
+        "path": "elements/dropdown_main_color_hover.png"
     },
     {
         "name": "dropdown_main_color_press",
-        "path": "screens/dropdown_main_color_press.png"
+        "path": "elements/dropdown_main_color_press.png"
     },
     {
         "name": "dropdown_alt_color_base",
-        "path": "screens/dropdown_alt_color_base.png"
+        "path": "elements/dropdown_alt_color_base.png"
     },
     {
         "name": "dropdown_alt_color_hover",
-        "path": "screens/dropdown_alt_color_hover.png"
+        "path": "elements/dropdown_alt_color_hover.png"
     },
     {
         "name": "dropdown_alt_color_press",
-        "path": "screens/dropdown_alt_color_press.png"
+        "path": "elements/dropdown_alt_color_press.png"
     },
     {
         "name": "dropdown_title_background",
-        "path": "screens/dropdown_title_background.png"
+        "path": "elements/dropdown_title_background.png"
     },
     {
         "name": "dropdown_background",
-        "path": "screens/dropdown_background.png"
+        "path": "elements/dropdown_background.png"
     },
     {
         "name": "checked_box_base",
-        "path": "screens/checked_box_base.png"
+        "path": "elements/checked_box_base.png"
     },
     {
         "name": "checked_box_hover",
-        "path": "screens/checked_box_hover.png"
+        "path": "elements/checked_box_hover.png"
     },
     {
         "name": "checked_box_press",
-        "path": "screens/checked_box_press.png"
+        "path": "elements/checked_box_press.png"
     },
     {
         "name": "slider_background",
-        "path": "screens/slider_background.png"
+        "path": "elements/slider_background.png"
     },
     {
         "name": "slider_knob_base",
-        "path": "screens/slider_knob_base.png"
+        "path": "elements/slider_knob_base.png"
     },
     {
         "name": "slider_knob_hover",
-        "path": "screens/slider_knob_hover.png"
+        "path": "elements/slider_knob_hover.png"
     },
     {
         "name": "slider_knob_press",
-        "path": "screens/slider_knob_press.png"
+        "path": "elements/slider_knob_press.png"
     },
     {
         "name": "text_input_base",
-        "path": "screens/text_input_base.png"
+        "path": "elements/text_input_base.png"
     },
     {
         "name": "text_input_hover",
-        "path": "screens/text_input_hover.png"
+        "path": "elements/text_input_hover.png"
     },
     {
         "name": "text_input_press",
-        "path": "screens/text_input_press.png"
+        "path": "elements/text_input_press.png"
     },
     {
         "name": "toggle_slider_base_off",
-        "path": "screens/toggle_slider_base_off.png"
+        "path": "elements/toggle_slider_base_off.png"
     },
     {
         "name": "toggle_slider_hover_off",
-        "path": "screens/toggle_slider_hover_off.png"
+        "path": "elements/toggle_slider_hover_off.png"
     },
     {
         "name": "toggle_slider_press_off",
-        "path": "screens/toggle_slider_press_off.png"
+        "path": "elements/toggle_slider_press_off.png"
     },
     {
         "name": "toggle_slider_base_on",
-        "path": "screens/toggle_slider_base_on.png"
+        "path": "elements/toggle_slider_base_on.png"
     },
     {
         "name": "toggle_slider_hover_on",
-        "path": "screens/toggle_slider_hover_on.png"
+        "path": "elements/toggle_slider_hover_on.png"
     },
     {
         "name": "toggle_slider_press_on",
-        "path": "screens/toggle_slider_press_on.png"
+        "path": "elements/toggle_slider_press_on.png"
     },
     {
         "name": "tooltip_background",
-        "path": "screens/tooltip_background.png"
+        "path": "elements/tooltip_background.png"
     },
     {
         "name": "tooltip_background_rare",
-        "path": "screens/tooltip_background_rare.png"
+        "path": "elements/tooltip_background_rare.png"
     },
     {
         "name": "tooltip_background_epic",
-        "path": "screens/tooltip_background_epic.png"
+        "path": "elements/tooltip_background_epic.png"
     },
     {
         "name": "tooltip_background_legendary",
-        "path": "screens/tooltip_background_legendary.png"
+        "path": "elements/tooltip_background_legendary.png"
     },
     {
         "name": "tooltip_background_mythic",
-        "path": "screens/tooltip_background_mythic.png"
+        "path": "elements/tooltip_background_mythic.png"
     },
     {
         "name": "tooltip_line_spacer_bottom",
-        "path": "screens/tooltip_line_spacer_bottom.png"
+        "path": "elements/tooltip_line_spacer_bottom.png"
     },
     {
         "name": "tooltip_line_spacer_bottom_rare",
-        "path": "screens/tooltip_line_spacer_bottom_rare.png"
+        "path": "elements/tooltip_line_spacer_bottom_rare.png"
     },
     {
         "name": "tooltip_line_spacer_bottom_epic",
-        "path": "screens/tooltip_line_spacer_bottom_epic.png"
+        "path": "elements/tooltip_line_spacer_bottom_epic.png"
     },
     {
         "name": "tooltip_line_spacer_bottom_legendary",
-        "path": "screens/tooltip_line_spacer_bottom_legendary.png"
+        "path": "elements/tooltip_line_spacer_bottom_legendary.png"
     },
     {
         "name": "tooltip_line_spacer_bottom_mythic",
-        "path": "screens/tooltip_line_spacer_bottom_mythic.png"
+        "path": "elements/tooltip_line_spacer_bottom_mythic.png"
     },
     {
         "name": "tooltip_line_spacer_top",
-        "path": "screens/tooltip_line_spacer_top.png"
+        "path": "elements/tooltip_line_spacer_top.png"
     },
     {
         "name": "tooltip_line_spacer_top_rare",
-        "path": "screens/tooltip_line_spacer_top_rare.png"
+        "path": "elements/tooltip_line_spacer_top_rare.png"
     },
     {
         "name": "tooltip_line_spacer_top_epic",
-        "path": "screens/tooltip_line_spacer_top_epic.png"
+        "path": "elements/tooltip_line_spacer_top_epic.png"
     },
     {
         "name": "tooltip_line_spacer_top_legendary",
-        "path": "screens/tooltip_line_spacer_top_legendary.png"
+        "path": "elements/tooltip_line_spacer_top_legendary.png"
     },
     {
         "name": "tooltip_line_spacer_top_mythic",
-        "path": "screens/tooltip_line_spacer_top_mythic.png"
+        "path": "elements/tooltip_line_spacer_top_mythic.png"
     },
     {
         "name": "unchecked_box_base",
-        "path": "screens/unchecked_box_base.png"
+        "path": "elements/unchecked_box_base.png"
     },
     {
         "name": "unchecked_box_hover",
-        "path": "screens/unchecked_box_hover.png"
+        "path": "elements/unchecked_box_hover.png"
     },
     {
         "name": "unchecked_box_press",
-        "path": "screens/unchecked_box_press.png"
+        "path": "elements/unchecked_box_press.png"
     },
     {
         "name": "container_view",
-        "path": "container_view.png"
+        "path": "item/container_view.png"
     },
     {
         "name": "minimap",
@@ -289,7 +285,7 @@
     },
     {
         "name": "player_inventory",
-        "path": "player_inventory.png"
+        "path": "item/player_inventory.png"
     },
     {
         "name": "player_health_bar",
@@ -321,35 +317,85 @@
     },
     {
         "name": "chatbox_background",
-        "path": "chatbox_background.png"
+        "path": "chat/chatbox_background.png"
     },
     {
         "name": "chatbox_input",
-        "path": "chatbox_input.png"
+        "path": "chat/chatbox_input.png"
     },
     {
         "name": "chatbox_cursor",
-        "path": "chatbox_cursor.png"
+        "path": "chat/chatbox_cursor.png"
     },
     {
         "name": "scroll_background",
-        "path": "scroll_background.png"
+        "path": "elements/scroll_background.png"
     },
     {
         "name": "scroll_wheel_base",
-        "path": "scroll_wheel_base.png"
+        "path": "elements/scroll_wheel_base.png"
     },
     {
         "name": "scroll_wheel_hover",
-        "path": "scroll_wheel_hover.png"
+        "path": "elements/scroll_wheel_hover.png"
     },
     {
         "name": "scroll_wheel_press",
-        "path": "scroll_wheel_press.png"
+        "path": "elements/scroll_wheel_press.png"
     },
     {
         "name": "scrollbar_decor",
-        "path": "scrollbar_decor.png"
+        "path": "elements/scrollbar_decor.png"
+    },
+    {
+        "name": "party_view",
+        "path": "party_view.png"
+    },
+    {
+        "name": "party_view_health_bar",
+        "path": "party_view_health_bar.png"
+    },
+    {
+        "name": "party_view_mana_bar",
+        "path": "party_view_mana_bar.png"
+    },
+    {
+        "name": "card_panel_bg",
+        "path": "cards/card_panel_bg.png"
+    },
+    {
+        "name": "cards_button",
+        "path": "cards/cards_button.png"
+    },
+    {
+        "name": "empty_card_slot",
+        "path": "cards/empty_card_slot.png"
+    },
+    {
+        "name": "common_card_slot",
+        "path": "cards/common_card_slot.png"
+    },
+    {
+        "name": "rare_card_slot",
+        "path": "cards/rare_card_slot.png"
+    },
+    {
+        "name": "epic_card_slot",
+        "path": "cards/epic_card_slot.png"
+    },
+    {
+        "name": "legendary_card_slot",
+        "path": "cards/legendary_card_slot.png"
+    },
+    {
+        "name": "mythic_card_slot",
+        "path": "cards/mythic_card_slot.png"
+    },
+    {
+        "name": "card_panel_buttons",
+        "path": "cards/card_panel_buttons.png",
+        "w": 49,
+        "h": 28
     },
     {
         "name": "minimap_icons",
@@ -359,15 +405,27 @@
     },
     {
         "name": "ability_icons",
-        "path": "ability_icons.png",
+        "path": "ability/ability_icons.png",
         "w": 22,
         "h": 22
     },
     {
-        "name": "speech_balloons",
-        "path": "speech_balloons.png",
-        "w": 65,
-        "h": 45
+        "name": "speech_balloons_large",
+        "path": "chat/speech_balloons_large.png",
+        "w": 63,
+        "h": 39
+    },
+    {
+        "name": "speech_balloons_medium",
+        "path": "chat/speech_balloons_medium.png",
+        "w": 47,
+        "h": 30
+    },
+    {
+        "name": "speech_balloons_small",
+        "path": "chat/speech_balloons_small.png",
+        "w": 47,
+        "h": 20
     },
     {
         "name": "key_indicators",

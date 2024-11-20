@@ -208,7 +208,7 @@ pub fn update(_: *AccountLoginScreen, _: i64, _: f32) !void {}
 
 fn loginCallback(ud: ?*anyopaque) void {
     const current_screen: *AccountLoginScreen = @alignCast(@ptrCast(ud.?));
-    const email = main.account_arena_allocator.dupe(u8, current_screen.email_input.text_data.text) catch @panic("OOM");
+    const email = main.account_arena_allocator.dupe(u8, current_screen.email_input.text_data.text) catch main.oomPanic();
     main.current_account = .{ .email = email, .token = 0 };
     main.login_server.sendPacket(.{ .login = .{
         .email = email,

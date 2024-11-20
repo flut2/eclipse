@@ -195,9 +195,9 @@ pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_int
 pub fn drawStatusTexts(self: anytype, time: i64, x: f32, y: f32, scale: f32) void {
     var status_texts_to_dispose: std.ArrayListUnmanaged(usize) = .empty;
     defer status_texts_to_dispose.deinit(main.allocator);
-    for (self.status_texts.items, 0..) |*text, i| 
+    for (self.status_texts.items, 0..) |*text, i|
         if (!text.draw(time, x, y, scale))
-            status_texts_to_dispose.append(main.allocator, i) catch @panic("OOM");
+            status_texts_to_dispose.append(main.allocator, i) catch main.oomPanic();
 
     var iter = std.mem.reverseIterator(status_texts_to_dispose.items);
     while (iter.next()) |i| {

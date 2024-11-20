@@ -481,7 +481,7 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
 fn addStatText(container: *UiContainer, text: **Text, idx: *f32) !void {
     defer idx.* += 1;
 
-    const x = 34.0 + 70.0 * @mod(idx.*, 3.0);
+    const x = 35.0 + 70.0 * @mod(idx.*, 3.0);
     const y = 26.0 + 28.0 * @floor(idx.* / 3.0);
     text.* = try container.createChild(Text, .{ .base = .{ .x = x, .y = y }, .text_data = .{
         .text = "",
@@ -672,7 +672,7 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
                     local_player.max_hp_bonus,
                 }));
             } else if (local_player.max_hp_bonus < 0) {
-                health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"FF7070\"(+{})", .{
+                health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"FF7070\"({})", .{
                     local_player.hp,
                     local_player.max_hp + local_player.max_hp_bonus,
                     local_player.max_hp_bonus,
@@ -698,7 +698,7 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
                     local_player.max_mp_bonus,
                 }));
             } else if (local_player.max_mp_bonus < 0) {
-                mana_text_data.setText(try std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"FF7070\"(+{})", .{
+                mana_text_data.setText(try std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"FF7070\"({})", .{
                     local_player.mp,
                     local_player.max_mp + local_player.max_mp_bonus,
                     local_player.max_mp_bonus,
@@ -963,8 +963,8 @@ fn chatCallback(input_text: []const u8) void {
     if (input_text.len > 0) {
         main.game_server.sendPacket(.{ .player_text = .{ .text = input_text } });
 
-        const text_copy = main.allocator.dupe(u8, input_text) catch unreachable;
-        input.input_history.append(main.allocator, text_copy) catch unreachable;
+        const text_copy = main.allocator.dupe(u8, input_text) catch main.oomPanic();
+        input.input_history.append(main.allocator, text_copy) catch main.oomPanic();
         input.input_history_idx = @intCast(input.input_history.items.len);
     }
 }

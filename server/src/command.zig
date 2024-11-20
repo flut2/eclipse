@@ -46,7 +46,7 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
     const first_str = iter.next() orelse return;
     const count = blk: {
         const int = std.fmt.parseInt(u16, first_str, 0) catch {
-            _ = name_stream.write(first_str) catch unreachable;
+            _ = name_stream.write(first_str) catch main.oomPanic();
             break :blk 1;
         };
 
@@ -54,8 +54,8 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
     };
     if (iter.index) |i| {
         if (name_stream.pos != 0)
-            _ = name_stream.write(" ") catch unreachable;
-        _ = name_stream.write(iter.buffer[i..]) catch unreachable;
+            _ = name_stream.write(" ") catch main.oomPanic();
+        _ = name_stream.write(iter.buffer[i..]) catch main.oomPanic();
     }
 
     var response_buf: [256]u8 = undefined;
@@ -70,7 +70,7 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
             Container => game_data.container,
             Purchasable => game_data.purchasable,
             Ally => game_data.ally,
-            else => unreachable,
+            else => @compileError("Invalid type"),
         }.from_name.get(written_name)) |data| {
             name = data.name;
             for (0..count) |_| _ = player.world.add(ObjType, .{
@@ -140,7 +140,7 @@ fn handleBan(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         return;
     };
     const acc_id = names.get(player_name) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch unreachable);
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch main.oomPanic());
         return;
     };
 
@@ -158,11 +158,11 @@ fn handleBan(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     }
 
     acc_data.set(.{ .ban_expiry = main.current_time + expiry * std.time.us_per_s }) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch unreachable);
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch main.oomPanic());
         return;
     };
 
-    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully banned", .{player_name}) catch unreachable);
+    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully banned", .{player_name}) catch main.oomPanic());
 }
 
 fn handleUnban(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
@@ -176,7 +176,7 @@ fn handleUnban(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
         return;
     };
     const acc_id = names.get(player_name) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch unreachable);
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch main.oomPanic());
         return;
     };
 
@@ -191,11 +191,11 @@ fn handleUnban(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
     }
 
     acc_data.set(.{ .ban_expiry = 0 }) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch unreachable);
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch main.oomPanic());
         return;
     };
 
-    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully unbanned", .{player_name}) catch unreachable);
+    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully unbanned", .{player_name}) catch main.oomPanic());
 }
 
 fn handleMute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
@@ -209,7 +209,7 @@ fn handleMute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         return;
     };
     const acc_id = names.get(player_name) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch unreachable);
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch main.oomPanic());
         return;
     };
 
@@ -227,11 +227,11 @@ fn handleMute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     }
 
     acc_data.set(.{ .mute_expiry = main.current_time + expiry * std.time.us_per_s }) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch unreachable);
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch main.oomPanic());
         return;
     };
 
-    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully muted", .{player_name}) catch unreachable);
+    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully muted", .{player_name}) catch main.oomPanic());
 }
 
 fn handleUnmute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
@@ -245,7 +245,7 @@ fn handleUnmute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void
         return;
     };
     const acc_id = names.get(player_name) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch unreachable);
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" not found in database", .{player_name}) catch main.oomPanic());
         return;
     };
 
@@ -260,11 +260,11 @@ fn handleUnmute(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void
     }
 
     acc_data.set(.{ .mute_expiry = 0 }) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch unreachable);
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch main.oomPanic());
         return;
     };
 
-    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully unmuted", .{player_name}) catch unreachable);
+    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Player \"{s}\" successfully unmuted", .{player_name}) catch main.oomPanic());
 }
 
 fn handleCond(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {

@@ -220,7 +220,7 @@ pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64,
         Enemy => .enemy,
         Entity => .entity,
         Ally => .ally,
-        else => unreachable,
+        else => @compileError("Unsupported type"),
     };
 
     host.world.aoe(Player, host.x, host.y, obj_type, host.map_id, opts.radius, .{

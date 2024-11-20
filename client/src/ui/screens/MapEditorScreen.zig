@@ -1341,7 +1341,7 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
         defer next_map_id.* += 1;
         tile.region_map_id = next_map_id.*;
 
-        const duped_name = main.allocator.dupe(u8, data.name) catch @panic("OOM");
+        const duped_name = main.allocator.dupe(u8, data.name) catch main.oomPanic();
         var indicator: Entity = .{
             .x = @as(f32, @floatFromInt(x)) + 0.5,
             .y = @as(f32, @floatFromInt(y)) + 0.5,

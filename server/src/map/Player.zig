@@ -243,7 +243,7 @@ fn CacheType(comptime T: type) type {
         Container => [@typeInfo(network_data.ContainerStat).@"union".fields.len]?network_data.ContainerStat,
         Purchasable => [@typeInfo(network_data.PurchasableStat).@"union".fields.len]?network_data.PurchasableStat,
         Ally => [@typeInfo(network_data.AllyStat).@"union".fields.len]?network_data.AllyStat,
-        else => unreachable,
+        else => @compileError("Unsupported type"),
     };
 }
 
@@ -265,7 +265,7 @@ fn exportObject(self: *Player, comptime T: type) !void {
                 Container => self.caches.container,
                 Purchasable => self.caches.purchasable,
                 Ally => self.caches.ally,
-                else => unreachable,
+                else => @compileError("Unsupported type"),
             };
             const obj_type: network_data.ObjectType = switch (T) {
                 Entity => .entity,
@@ -274,7 +274,7 @@ fn exportObject(self: *Player, comptime T: type) !void {
                 Container => .container,
                 Purchasable => .purchasable,
                 Ally => .ally,
-                else => unreachable,
+                else => @compileError("Unsupported type"),
             };
             if (caches.getPtr(object.map_id)) |cache| {
                 const stats = try object.exportStats(cache);

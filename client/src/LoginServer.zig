@@ -38,7 +38,7 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacketLogin).@"union".tag_t
 }
 
 pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
-    buf.*.base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch unreachable);
+    buf.*.base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic());
     buf.*.len = @intCast(suggested_size);
 }
 
@@ -164,7 +164,7 @@ pub fn deinit(self: *Server) void {
 
 pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
     if (!self.initialized) {
-        self.unsent_packets.writeItem(packet) catch @panic("OOM");
+        self.unsent_packets.writeItem(packet) catch main.oomPanic();
         self.connect(build_options.login_server_ip, build_options.login_server_port) catch return;
         return;
     }
@@ -278,7 +278,7 @@ fn deepCopyList(temp_list: network_data.CharacterListData) !network_data.Charact
 fn handleLoginResponse(_: *Server, data: PacketData(.login_response)) void {
     if (logRead(.non_tick)) std.log.debug("Login Recv - LoginResponse: {}", .{data});
 
-    main.character_list = deepCopyList(data) catch @panic("OOM");
+    main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.current_account) |*acc| acc.token = main.character_list.?.token;
 
     ui_systems.ui_lock.lock();
@@ -292,7 +292,7 @@ fn handleLoginResponse(_: *Server, data: PacketData(.login_response)) void {
 fn handleRegisterResponse(_: *Server, data: PacketData(.register_response)) void {
     if (logRead(.non_tick)) std.log.debug("Login Recv - RegisterResponse: {}", .{data});
 
-    main.character_list = deepCopyList(data) catch @panic("OOM");
+    main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.current_account) |*acc| acc.token = main.character_list.?.token;
 
     ui_systems.ui_lock.lock();
@@ -306,7 +306,7 @@ fn handleRegisterResponse(_: *Server, data: PacketData(.register_response)) void
 fn handleVerifyResponse(_: *Server, data: PacketData(.verify_response)) void {
     if (logRead(.non_tick)) std.log.debug("Login Recv - VerifyResponse: {}", .{data});
 
-    main.character_list = deepCopyList(data) catch @panic("OOM");
+    main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.character_list.?.characters.len == 0) return;
     {
         ui_systems.ui_lock.lock();

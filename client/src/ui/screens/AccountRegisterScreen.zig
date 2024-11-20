@@ -302,7 +302,7 @@ fn getHwid(allocator: std.mem.Allocator) ![]const u8 {
                 if (std.mem.indexOf(u8, line, "IOPlatformUUID") != null) {
                     const left_bound = (std.mem.indexOf(u8, line, " = \"") orelse @panic("No HWID found")) + " = \"".len;
                     const right_bound = std.mem.lastIndexOfScalar(u8, line, '"') orelse @panic("No HWID found");
-                    return allocator.dupe(u8, line[left_bound..right_bound]) catch @panic("OOM");
+                    return allocator.dupe(u8, line[left_bound..right_bound]) catch main.oomPanic();
                 }
             }
             @panic("No HWID found");
@@ -334,7 +334,7 @@ fn getHwid(allocator: std.mem.Allocator) ![]const u8 {
 
 fn registerCallback(ud: ?*anyopaque) void {
     const current_screen: *AccountRegisterScreen = @alignCast(@ptrCast(ud.?));
-    const email = main.account_arena_allocator.dupe(u8, current_screen.email_input.text_data.text) catch @panic("OOM");
+    const email = main.account_arena_allocator.dupe(u8, current_screen.email_input.text_data.text) catch main.oomPanic();
     const hwid = getHwid(main.account_arena_allocator) catch {
         {
             ui_systems.ui_lock.lock();

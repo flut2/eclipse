@@ -190,7 +190,7 @@ pub fn tick(self: *World, time: i64, dt: i64) !void {
     for (self.callbacks.items, 0..) |timed_cb, i| {
         if (timed_cb.trigger_on <= time) {
             timed_cb.callback(self, timed_cb.data);
-            callback_indices_to_remove.append(main.allocator, i) catch @panic("OOM");
+            callback_indices_to_remove.append(main.allocator, i) catch main.oomPanic();
         }
     }
     var iter = std.mem.reverseIterator(callback_indices_to_remove.items);

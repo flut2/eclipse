@@ -307,7 +307,7 @@ fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
     });
 
     if (obj.condition.invulnerable) {
-        self.hit_list.put(main.allocator, obj.map_id, {}) catch @panic("OOM");
+        self.hit_list.put(main.allocator, obj.map_id, {}) catch main.oomPanic();
         assets.playSfx(obj.data.hit_sound);
         return false;
     }
@@ -349,6 +349,6 @@ fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
     if (magic_dmg > 0) map.takeDamage(obj, magic_dmg, .magic, cond, self.colors);
     if (true_dmg > 0) map.takeDamage(obj, true_dmg, .true, cond, self.colors);
 
-    self.hit_list.put(main.allocator, obj.map_id, {}) catch @panic("OOM");
+    self.hit_list.put(main.allocator, obj.map_id, {}) catch main.oomPanic();
     return self.data.piercing;
 }
