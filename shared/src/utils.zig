@@ -72,7 +72,7 @@ pub const PacketReader = struct {
             for (0..len) |i| {
                 ret[i] = self.read(ChildType, allocator);
             }
-
+            
             return ret;
         }
 

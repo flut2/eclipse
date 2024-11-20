@@ -178,7 +178,7 @@ fn getListData(self: *Client, acc_id: u32, token: u128) !network_data.CharacterL
                 .dexterity = stats[5],
                 .vitality = stats[6],
                 .wisdom = stats[7],
-                .items = &try char_data.get(.items),
+                .inventory = &try char_data.get(.inventory),
             });
         }
     }
@@ -345,11 +345,15 @@ fn handleRegister(self: *Client, data: PacketData(.register)) void {
         self.databaseError();
         return;
     };
-    acc_data.set(.{ .alive_char_ids = &[0]u32{} }) catch {
+    acc_data.set(.{ .alive_char_ids = &.{} }) catch {
         self.databaseError();
         return;
     };
     acc_data.set(.{ .max_char_slots = 2 }) catch {
+        self.databaseError();
+        return;
+    };
+    acc_data.set(.{ .resources = &.{} }) catch {
         self.databaseError();
         return;
     };
@@ -381,7 +385,6 @@ fn handleRegister(self: *Client, data: PacketData(.register)) void {
             .admin_only = false,
         }}, // TODO: multi-server support
     };
-    defer disposeList(list);
     self.queuePacket(.{ .register_response = list });
 }
 
@@ -390,7 +393,6 @@ fn handleVerify(self: *Client, data: PacketData(.verify)) void {
         self.sendError(switch (e) {
             error.NoData => "Invalid email",
             error.InvalidToken => "Invalid token",
-            else => "Unknown error",
         });
         return;
     };

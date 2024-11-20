@@ -75,6 +75,8 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?
         .ping => handlePing,
         .show_effect => handleShowEffect,
         .text => handleText,
+        .card_options => handleCardOptions,
+        .talent_upgrade_response => handleTalentUpgradeResponse,
         .new_tick => handleNewTick,
         .dropped_players => handleDroppedPlayers,
         .dropped_entities => handleDroppedEntities,
@@ -613,39 +615,21 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
         };
 
     if (data.map_id != std.math.maxInt(u32)) {
-        {
-            switch (data.obj_type) {
-                inline else => |inner| {
-                    const T = ObjEnumToType(inner);
-                    var lock = map.useLockForType(T);
-                    lock.lock();
-                    defer lock.unlock();
-                    if (map.findObject(T, data.map_id, .con) == null) return;
-                },
-            }
+        switch (data.obj_type) {
+            inline else => |inner| {
+                const T = ObjEnumToType(inner);
+                var lock = map.useLockForType(T);
+                lock.lock();
+                defer lock.unlock();
+                if (map.findObject(T, data.map_id, .con) == null) return;
+            },
         }
-
-        var atlas_data = assets.error_data;
-        if (assets.ui_atlas_data.get("speech_balloons")) |balloon_data| {
-            switch (data.name_color) {
-                0xD4AF37 => atlas_data = balloon_data[5], // admin balloon
-                // TODO: change these to be the actual values if you add guilds/parties
-                0x000000 => atlas_data = balloon_data[2], // guild balloon
-                0x000001 => atlas_data = balloon_data[4], // party balloon
-                else => {
-                    if (!std.mem.eql(u8, data.recipient, "")) {
-                        atlas_data = balloon_data[1]; // tell balloon
-                    } else {
-                        atlas_data = if (data.obj_type == .enemy)
-                            balloon_data[3] // enemy balloon
-                        else
-                            balloon_data[0]; // normal balloon
-                    }
-                },
-            }
-        } else @panic("Could not find speech_balloons in the UI atlas");
     }
 }
+
+fn handleCardOptions(_: *Server, _: PacketData(.card_options)) void {}
+
+fn handleTalentUpgradeResponse(_: *Server, _: PacketData(.talent_upgrade_response)) void {}
 
 fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     defer {
@@ -836,6 +820,9 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         .x => |val| player.x = val,
         .y => |val| player.y = val,
         .size_mult => |val| player.size_mult = val,
+        .cards => |val| player.cards = val,
+        .resources => |val| player.resources = val,
+        .talents => |val| player.talents = val,
         .in_combat => |val| player.in_combat = val,
         .aether => |val| player.aether = val,
         .spirits_communed => |val| player.spirits_communed = val,

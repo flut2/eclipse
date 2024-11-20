@@ -59,6 +59,8 @@ fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?
         .escape => handleEscape,
         .map_hello => handleMapHello,
         .use_ability => handleUseAbility,
+        .select_card => handleSelectCard,
+        .talent_upgrade => handleTalentUpgrade,
     };
 }
 
@@ -356,8 +358,6 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
 
         try player.char_data.set(.{ .class_id = class_id });
         try player.char_data.set(.{ .create_timestamp = timestamp });
-        try player.char_data.set(.{ .aether = 1 });
-        try player.char_data.set(.{ .spirits_communed = 0 });
 
         var stats: [13]i32 = undefined;
         stats[Player.health_stat] = class_data.stats.health;
@@ -376,9 +376,9 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
         try player.char_data.set(.{ .hp = class_data.stats.health });
         try player.char_data.set(.{ .mp = class_data.stats.mana });
         try player.char_data.set(.{ .stats = stats });
-        var starting_items: [22]u16 = @splat(std.math.maxInt(u16));
-        for (class_data.default_items, 0..) |item, i| starting_items[i] = item;
-        try player.char_data.set(.{ .items = starting_items });
+        var starting_inventory: [22]u16 = @splat(std.math.maxInt(u16));
+        for (class_data.default_items, 0..) |item, i| starting_inventory[i] = item;
+        try player.char_data.set(.{ .inventory = starting_inventory });
     } else return error.InvalidCharId;
 }
 
@@ -397,7 +397,6 @@ fn handleHello(self: *Client, data: PacketData(.hello)) void {
         switch (e) {
             error.NoData => self.sendError(.message_with_disconnect, "Invalid email"),
             error.InvalidToken => self.sendError(.message_with_disconnect, "Invalid token"),
-            else => self.sendError(.message_with_disconnect, "Unknown login error"),
         }
         return;
     };
@@ -640,7 +639,6 @@ fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
         switch (e) {
             error.NoData => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Invalid email" } }),
             error.InvalidToken => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Invalid credentials" } }),
-            else => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Unknown error" } }),
         }
         return;
     };
@@ -761,3 +759,7 @@ fn handleUseAbility(self: *Client, data: PacketData(.use_ability)) void {
 
     player.last_ability_use[data.index] = time;
 }
+
+fn handleSelectCard(_: *Client, _: PacketData(.select_card)) void {}
+
+fn handleTalentUpgrade(_: *Client, _: PacketData(.talent_upgrade)) void {}

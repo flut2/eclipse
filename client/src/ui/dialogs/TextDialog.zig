@@ -30,26 +30,14 @@ pub fn init(self: *TextDialog) !void {
     self.base_decor = try self.root.createChild(Image, .{
         .base = .{ .x = 0, .y = 0 },
         .image_data = .{
-            .nine_slice = .fromAtlasData(base_data, width, height, 6, 6, 2, 2, 1.0),
-        },
-    });
-
-    self.base_text = try self.root.createChild(Text, .{
-        .base = .{ .x = 5, .y = 5 },
-        .text_data = .{
-            .text = "",
-            .size = 16,
-            .hori_align = .middle,
-            .vert_align = .middle,
-            .max_width = width - 10,
-            .max_height = height - button_height - 15 - 10,
+            .nine_slice = .fromAtlasData(base_data, width, height, 49, 15, 1, 1, 1.0),
         },
     });
 
     const title_data = assets.getUiData("dialog_title_background", 0);
     self.title_decor = try self.root.createChild(Image, .{
         .base = .{ .x = 0, .y = 0 },
-        .image_data = .{ .nine_slice = .fromAtlasData(title_data, 0, 0, 6, 11, 2, 2, 1.0) },
+        .image_data = .{ .nine_slice = .fromAtlasData(title_data, 0, 0, 77, 15, 1, 1, 1.0) },
     });
 
     self.title_text = try self.root.createChild(Text, .{
@@ -63,13 +51,25 @@ pub fn init(self: *TextDialog) !void {
         },
     });
 
+    self.base_text = try self.root.createChild(Text, .{
+        .base = .{ .x = 5, .y = 5 },
+        .text_data = .{
+            .text = "",
+            .size = 16,
+            .hori_align = .middle,
+            .vert_align = .middle,
+            .max_width = width - 10,
+            .max_height = height - button_height - self.title_decor.height() / 2.0 - 10,
+        },
+    });
+
     const button_data_base = assets.getUiData("button_base", 0);
     const button_data_hover = assets.getUiData("button_hover", 0);
     const button_data_press = assets.getUiData("button_press", 0);
 
     self.close_button = try self.root.createChild(Button, .{
         .base = .{ .x = (width - button_width) / 2.0, .y = height - button_height - 15 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Ok",
             .size = 16,
@@ -107,13 +107,15 @@ pub fn setValues(self: *TextDialog, params: dialog.ParamsFor(TextDialog)) void {
         }
 
         self.title_decor.base.x = (width - self.title_decor.width()) / 2.0;
-        self.title_decor.base.y = -self.title_decor.height() + 6;
+        self.title_decor.base.y = -self.title_decor.height() / 2.0 + 6.0;
         self.title_text.base.x = self.title_decor.base.x;
         self.title_text.base.y = self.title_decor.base.y;
         self.title_text.text_data.max_width = self.title_decor.width();
         self.title_text.text_data.max_height = self.title_decor.height();
     }
 
+    self.base_text.base.y = self.title_decor.height() / 2.0;
+    self.base_text.text_data.max_height = height - button_height - (self.title_decor.height() / 2.0 + 6.0) - 10;
     self.base_text.text_data.setText(params.body);
 
     self.dispose_title = params.title != null and params.dispose_title;

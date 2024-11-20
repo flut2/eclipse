@@ -27,7 +27,7 @@ pub fn init(self: *CharCreateScreen) !void {
             },
             .id = 0,
             .class_data_id = char.id,
-            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 40, 26, 21, 3, 3, 1.0),
+            .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 40, 26, 19, 1, 1, 1.0),
             .text_data = .{
                 .text = char.name,
                 .size = 16,

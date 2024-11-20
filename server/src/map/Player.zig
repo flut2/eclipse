@@ -53,6 +53,9 @@ mp_regen: f32 = 0.0,
 stats: [13]i32 = @splat(0),
 stat_boosts: [13]i32 = @splat(0),
 inventory: [22]u16 = @splat(std.math.maxInt(u16)),
+cards: []u16 = &.{},
+resources: []u32 = &.{},
+talents: []u8 = &.{},
 muted_until: i64 = 0,
 condition: utils.Condition = .{},
 caches: struct {
@@ -112,27 +115,30 @@ pub fn init(self: *Player) !void {
     };
 
     const hwid_mute_expiry = blk: {
-        const hwid = self.acc_data.get(.hwid) catch break :blk 0;
+        const hwid = try self.acc_data.get(.hwid);
         var muted_hwids: db.MutedHwids = .{};
         defer muted_hwids.deinit();
         break :blk main.current_time + (muted_hwids.ttl(hwid) catch break :blk 0);
     };
 
-    const acc_mute_expiry = self.acc_data.get(.mute_expiry) catch 0;
+    const acc_mute_expiry = try self.acc_data.get(.mute_expiry);
 
     self.muted_until = @max(hwid_mute_expiry, acc_mute_expiry);
 
-    self.rank = try self.acc_data.get(.rank);
-    self.gold = try self.acc_data.get(.gold);
-    self.gems = try self.acc_data.get(.gems);
-    self.crowns = try self.acc_data.get(.crowns);
-    self.aether = try self.char_data.get(.aether);
-    self.spirits_communed = try self.char_data.get(.spirits_communed);
-    self.hp = try self.char_data.get(.hp);
-    self.mp = try self.char_data.get(.mp);
+    self.rank = try self.acc_data.getWithDefault(.rank, .default);
+    self.gold = try self.acc_data.getWithDefault(.gold, 0);
+    self.gems = try self.acc_data.getWithDefault(.gems, 0);
+    self.crowns = try self.acc_data.getWithDefault(.crowns, 0);
+    self.resources = try main.allocator.dupe(u32, try self.acc_data.getWithDefault(.resources, &.{}));
 
+    self.aether = try self.char_data.getWithDefault(.aether, 1);
+    self.spirits_communed = try self.char_data.getWithDefault(.spirits_communed, 0);
+    self.hp = try self.char_data.getWithDefault(.hp, 100);
+    self.mp = try self.char_data.getWithDefault(.mp, 0);
+    self.cards = try main.allocator.dupe(u16, try self.char_data.getWithDefault(.cards, &.{}));
+    self.talents = try main.allocator.dupe(u8, try self.char_data.getWithDefault(.talents, &.{}));
     self.stats = try self.char_data.get(.stats);
-    self.inventory = try self.char_data.get(.items);
+    self.inventory = try self.char_data.get(.inventory);
 
     self.recalculateItems();
 
@@ -157,6 +163,9 @@ pub fn deinit(self: *Player) !void {
     }
 
     main.allocator.free(self.name);
+    main.allocator.free(self.cards);
+    main.allocator.free(self.resources);
+    main.allocator.free(self.talents);
     self.stats_writer.list.deinit(main.allocator);
 }
 
@@ -195,13 +204,16 @@ pub fn save(self: *Player) !void {
     try self.acc_data.set(.{ .gold = self.gold });
     try self.acc_data.set(.{ .gems = self.gems });
     try self.acc_data.set(.{ .crowns = self.crowns });
+    try self.acc_data.set(.{ .resources = self.resources });
 
     try self.char_data.set(.{ .hp = self.hp });
     try self.char_data.set(.{ .mp = self.mp });
     try self.char_data.set(.{ .aether = self.aether });
     try self.char_data.set(.{ .spirits_communed = self.spirits_communed });
-    try self.char_data.set(.{ .items = self.inventory });
+    try self.char_data.set(.{ .inventory = self.inventory });
     try self.char_data.set(.{ .stats = self.stats });
+    try self.char_data.set(.{ .cards = self.cards });
+    try self.char_data.set(.{ .talents = self.talents });
 }
 
 pub fn death(self: *Player, killer: []const u8) !void {
@@ -487,6 +499,9 @@ pub fn exportStats(
     stat_util.write(T, writer, cache, .{ .max_mp_bonus = self.stat_boosts[mana_stat] });
     stat_util.write(T, writer, cache, .{ .mp = self.mp });
     stat_util.write(T, writer, cache, .{ .condition = self.condition });
+    stat_util.write(T, writer, cache, .{ .cards = self.cards });
+    stat_util.write(T, writer, cache, .{ .resources = self.resources });
+    stat_util.write(T, writer, cache, .{ .talents = self.talents });
 
     if (is_self) {
         stat_util.write(T, writer, cache, .{ .spirits_communed = self.spirits_communed });

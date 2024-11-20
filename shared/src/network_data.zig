@@ -30,7 +30,7 @@ pub const CharacterData = struct {
     dexterity: i32,
     vitality: i32,
     wisdom: i32,
-    items: []const u16,
+    inventory: []const u16,
 };
 
 pub const ServerData = struct {
@@ -57,6 +57,9 @@ pub const PlayerStat = union(enum) {
     y: f32,
     size_mult: f32,
     name: []const u8,
+    cards: []const u16,
+    resources: []const u32,
+    talents: []const u8,
     in_combat: bool,
     aether: u8,
     spirits_communed: u32,
@@ -260,6 +263,8 @@ pub const C2SPacket = union(enum) {
     escape: packed struct {},
     map_hello: struct { build_ver: []const u8, email: []const u8, token: u128, char_id: u32, map: []const u8 },
     use_ability: struct { time: i64, index: u8, data: []const u8 },
+    select_card: packed struct { selection: enum(u8) { none, first, second, third } },
+    talent_upgrade: packed struct { index: u8 },
 };
 
 pub const S2CPacket = union(enum) {
@@ -335,6 +340,8 @@ pub const S2CPacket = union(enum) {
         angle: f32,
         angle_incr: f32,
     },
+    card_options: struct { cards: []u16 },
+    talent_upgrade_response: struct { success: bool, message: []const u8 },
     @"error": struct { type: ErrorType, description: []const u8 },
 };
 

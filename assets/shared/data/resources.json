@@ -1,0 +1,12 @@
+[
+    {
+        "id": 0,
+        "name": "Test Resource",
+        "description": "Amazing material",
+        "rarity": "epic",
+        "icon": {
+            "sheet": "misc",
+            "index": 0
+        }
+    }
+]

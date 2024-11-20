@@ -202,7 +202,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
             .x = x_offset + (input_w - (button_width * 2)) / 2 - 12.5,
             .y = y_offset,
         },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Confirm",
             .size = 16,
@@ -217,7 +217,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
             .x = self.confirm_button.base.x + button_width + 25,
             .y = y_offset,
         },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Back",
             .size = 16,

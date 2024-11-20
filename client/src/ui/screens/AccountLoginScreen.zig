@@ -147,7 +147,7 @@ pub fn init(self: *AccountLoginScreen) !void {
             .x = self.password_input.base.x + (input_w - 200) / 2 - 12,
             .y = self.password_input.base.y + 150,
         },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Login",
             .size = 16,
@@ -162,7 +162,7 @@ pub fn init(self: *AccountLoginScreen) !void {
             .x = self.login_button.base.x + (input_w - 100) / 2 + 24,
             .y = self.login_button.base.y,
         },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 100, 35, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Register",
             .size = 16,

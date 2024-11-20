@@ -350,7 +350,7 @@ pub fn init(self: *MapEditorScreen) !void {
 
     _ = try self.controls_container.createChild(Button, .{
         .base = .{ .x = button_inset, .y = button_inset },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Open",
             .size = 16,
@@ -362,7 +362,7 @@ pub fn init(self: *MapEditorScreen) !void {
 
     _ = try self.controls_container.createChild(Button, .{
         .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Save",
             .size = 16,
@@ -374,7 +374,7 @@ pub fn init(self: *MapEditorScreen) !void {
 
     _ = try self.controls_container.createChild(Button, .{
         .base = .{ .x = button_inset, .y = button_inset + button_pad_h + button_height },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Test",
             .size = 16,
@@ -386,7 +386,7 @@ pub fn init(self: *MapEditorScreen) !void {
 
     _ = try self.controls_container.createChild(Button, .{
         .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + button_pad_h + button_height },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Exit",
             .size = 16,
@@ -398,7 +398,7 @@ pub fn init(self: *MapEditorScreen) !void {
 
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset, .y = button_inset + (button_pad_h + button_height) * 2 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
         .title_text_data = .{
             .text = "Place",
             .size = 12,
@@ -409,7 +409,7 @@ pub fn init(self: *MapEditorScreen) !void {
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + (button_pad_h + button_height) * 2 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
         .title_text_data = .{
             .text = "Sample",
             .size = 12,
@@ -420,7 +420,7 @@ pub fn init(self: *MapEditorScreen) !void {
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset, .y = button_inset + (button_pad_h + button_height) * 3 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
         .title_text_data = .{
             .text = "Erase",
             .size = 12,
@@ -431,7 +431,7 @@ pub fn init(self: *MapEditorScreen) !void {
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + (button_pad_h + button_height) * 3 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
         .title_text_data = .{
             .text = "Random",
             .size = 12,
@@ -442,7 +442,7 @@ pub fn init(self: *MapEditorScreen) !void {
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset, .y = button_inset + (button_pad_h + button_height) * 4 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
         .title_text_data = .{
             .text = "Undo",
             .size = 12,
@@ -453,7 +453,7 @@ pub fn init(self: *MapEditorScreen) !void {
     });
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + (button_pad_h + button_height) * 4 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
         .title_text_data = .{
             .text = "Redo",
             .size = 12,
@@ -465,7 +465,7 @@ pub fn init(self: *MapEditorScreen) !void {
 
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset, .y = button_inset + (button_pad_h + button_height) * 5 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
         .title_text_data = .{
             .text = "Fill",
             .size = 12,

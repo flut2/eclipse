@@ -36,7 +36,7 @@ pub fn init(self: *CharSelectScreen) !void {
                     },
                     .id = char.char_id,
                     .class_data_id = char.class_id,
-                    .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+                    .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
                     .text_data = .{
                         .text = class.name,
                         .size = 16,
@@ -55,7 +55,7 @@ pub fn init(self: *CharSelectScreen) !void {
             .y = @floatFromInt(50 * (counter + 1)),
             .visible = false,
         },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "New Character",
             .size = 16,
@@ -68,7 +68,7 @@ pub fn init(self: *CharSelectScreen) !void {
 
     self.editor_button = try element.create(Button, .{
         .base = .{ .x = 100, .y = 100 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Editor",
             .size = 16,
@@ -79,7 +79,7 @@ pub fn init(self: *CharSelectScreen) !void {
 
     self.back_button = try element.create(Button, .{
         .base = .{ .x = 100, .y = 200 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, 200, 35, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Back to Login",
             .size = 16,

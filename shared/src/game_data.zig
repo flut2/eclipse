@@ -1,6 +1,7 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 
+pub var resource: Maps(ResourceData) = .{};
 pub var card: Maps(CardData) = .{};
 pub var item: Maps(ItemData) = .{};
 pub var class: Maps(ClassData) = .{};
@@ -69,6 +70,18 @@ fn parseClasses(allocator: std.mem.Allocator, path: []const u8) !void {
             }
         }
 
+        const talents_copy = try allocator.dupe(TalentData, int_class.talents);
+        for (talents_copy, 0..) |*talent, i| {
+            talent.name = try allocator.dupe(u8, int_class.talents[i].name);
+            talent.description = try allocator.dupe(u8, int_class.talents[i].description);
+            talent.level_costs = try allocator.dupe(TalentLevelCost, int_class.talents[i].level_costs);
+            for (talent.level_costs, 0..) |*level_cost, j| {
+                level_cost.resource_costs = try allocator.dupe(ResourceCost, int_class.talents[i].level_costs[j].resource_costs);
+                level_cost.item_costs = try allocator.dupe(ItemCost, int_class.talents[i].level_costs[j].item_costs);
+            }
+            talent.requires = try allocator.dupe(TalentRequirement, int_class.talents[i].requires);
+        }
+
         const class_data: ClassData = .{
             .id = int_class.id,
             .name = try allocator.dupe(u8, int_class.name),
@@ -85,6 +98,7 @@ fn parseClasses(allocator: std.mem.Allocator, path: []const u8) !void {
             .rpc_name = try allocator.dupe(u8, int_class.rpc_name),
             .abilities = abilities_copy,
             .light = int_class.light,
+            .talents = talents_copy,
         };
         try class.from_id.put(allocator, class_data.id, class_data);
         try class.from_name.put(allocator, class_data.name, class_data);
@@ -404,6 +418,37 @@ pub const AbilityData = struct {
     sound: []const u8 = "",
 };
 
+pub const ResourceRarity = enum { common, rare, epic };
+pub const ResourceData = struct {
+    id: u16,
+    name: []const u8,
+    description: []const u8,
+    rarity: ResourceRarity,
+    icon: TextureData,
+};
+
+pub const ResourceCost = struct { index: u16, cost: u32 };
+pub const ItemCost = struct { data_id: u16, amount: u8 };
+
+pub const TalentType = enum { minor, major, keystone };
+pub const TalentLevelCost = struct {
+    resource_costs: []ResourceCost,
+    item_costs: []ItemCost,
+};
+pub const TalentRequirement = struct {
+    index: u16,
+    level: u8,
+};
+pub const TalentData = struct {
+    name: []const u8,
+    description: []const u8,
+    type: TalentType,
+    icon: TextureData,
+    max_level: u8,
+    level_costs: []TalentLevelCost,
+    requires: []TalentRequirement = &.{},
+};
+
 const InternalClassData = struct {
     id: u16,
     name: []const u8,
@@ -417,6 +462,7 @@ const InternalClassData = struct {
     rpc_name: []const u8 = "Unknown",
     abilities: [4]AbilityData,
     light: LightData = .{},
+    talents: []TalentData,
 };
 
 pub const ClassData = struct {
@@ -432,6 +478,7 @@ pub const ClassData = struct {
     rpc_name: []const u8,
     abilities: [4]AbilityData,
     light: LightData,
+    talents: []TalentData,
 };
 
 pub const ContainerData = struct {

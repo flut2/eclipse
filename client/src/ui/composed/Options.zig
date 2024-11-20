@@ -101,7 +101,7 @@ pub fn create() !*Options {
             .x = (main.camera.width - button_width) / 2,
             .y = button_height / 2 - 20,
         },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Continue",
             .size = 16,
@@ -116,7 +116,7 @@ pub fn create() !*Options {
             .x = main.camera.width - button_width - 50,
             .y = button_height / 2 - 20,
         },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Disconnect",
             .size = 16,
@@ -128,7 +128,7 @@ pub fn create() !*Options {
 
     options.defaults_button = try options.buttons.createChild(Button, .{
         .base = .{ .x = 50, .y = button_height / 2 - 20 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Defaults",
             .size = 16,
@@ -142,7 +142,7 @@ pub fn create() !*Options {
 
     _ = try options.tabs.createChild(Button, .{
         .base = .{ .x = tabx_offset, .y = tab_y },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "General",
             .size = 16,
@@ -156,7 +156,7 @@ pub fn create() !*Options {
 
     _ = try options.tabs.createChild(Button, .{
         .base = .{ .x = tabx_offset, .y = tab_y },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Graphics",
             .size = 16,
@@ -170,7 +170,7 @@ pub fn create() !*Options {
 
     _ = try options.tabs.createChild(Button, .{
         .base = .{ .x = tabx_offset, .y = tab_y },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),
         .text_data = .{
             .text = "Misc",
             .size = 16,
@@ -244,7 +244,7 @@ fn addKeyMap(target_tab: *Container, button: *Settings.Button, title: []const u8
 
     _ = try target_tab.createChild(KeyMapper, .{
         .base = .{ .x = 0, .y = 0 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, w, h, 26, 21, 3, 3, 1.0),
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, w, h, 26, 19, 1, 1, 1.0),
         .title_text_data = .{
             .text = title,
             .size = 18,

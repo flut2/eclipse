@@ -96,13 +96,7 @@ pub fn draw(self: *Input, _: render.CameraData, x_offset: f32, y_offset: f32, ti
 
     const flash_delay = 500 * std.time.us_per_ms;
     if (self.last_input != -1 and (time - self.last_input < flash_delay or @mod(@divFloor(time, flash_delay), 2) == 0)) {
-        const font_data = switch (self.text_data.text_type) {
-            .medium => assets.medium_data,
-            .medium_italic => assets.medium_italic_data,
-            .bold => assets.bold_data,
-            .bold_italic => assets.bold_italic_data,
-        };
-        const cursor_x = text_x + self.text_data.width + font_data.padding * (self.text_data.size / font_data.size) + 1.0;
+        const cursor_x = text_x + self.text_data.width + 1.0;
         self.cursor_image_data.draw(cursor_x, text_y, self.base.scissor);
     }
 }
