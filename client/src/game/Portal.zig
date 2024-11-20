@@ -28,8 +28,8 @@ data: *const game_data.PortalData = undefined,
 anim_idx: u8 = 0,
 next_anim: i64 = -1,
 
-pub fn addToMap(self: *Portal) void {
-    base.addToMap(self, Portal);
+pub fn addToMap(portal_data: Portal) void {
+    base.addToMap(portal_data, Portal);
 }
 
 pub fn deinit(self: *Portal) void {

@@ -29,8 +29,8 @@ inventory: [9]u16 = @splat(std.math.maxInt(u16)),
 anim_idx: u8 = 0,
 next_anim: i64 = -1,
 
-pub fn addToMap(self: *Container) void {
-    base.addToMap(self, Container);
+pub fn addToMap(container_data: Container) void {
+    base.addToMap(container_data, Container);
 }
 
 pub fn deinit(self: *Container) void {

@@ -42,7 +42,8 @@ heat_seek_fired: bool = false,
 time_dilation_active: bool = false,
 last_hit_check: i64 = 0,
 
-pub fn addToMap(self: *Projectile) void {
+pub fn addToMap(proj_data: Projectile) void {
+    var self = proj_data;
     self.start_time = main.current_time;
     self.start_x = self.x;
     self.start_y = self.y;
@@ -61,7 +62,7 @@ pub fn addToMap(self: *Projectile) void {
         break :blk &.{};
     };
 
-    map.addListForType(Projectile).append(main.allocator, self.*) catch @panic("Adding projectile failed");
+    map.addListForType(Projectile).append(main.allocator, self) catch @panic("Adding projectile failed");
 }
 
 pub fn deinit(self: *Projectile) void {

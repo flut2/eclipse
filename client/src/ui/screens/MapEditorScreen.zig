@@ -906,27 +906,22 @@ fn initialize(self: *MapEditorScreen) void {
     {
         map.square_lock.lock();
         defer map.square_lock.unlock();
-        for (0..self.map_size) |y| {
-            for (0..self.map_size) |x| {
-                var square: Square = .{
-                    .x = @as(f32, @floatFromInt(x)) + 0.5,
-                    .y = @as(f32, @floatFromInt(y)) + 0.5,
-                    .data_id = Square.editor_tile,
-                };
-                square.addToMap();
-            }
-        }
+        for (0..self.map_size) |y| for (0..self.map_size) |x|
+            Square.addToMap(.{
+                .x = @as(f32, @floatFromInt(x)) + 0.5,
+                .y = @as(f32, @floatFromInt(y)) + 0.5,
+                .data_id = Square.editor_tile,
+            });
     }
 
     map.info.player_map_id = std.math.maxInt(u32) - 1;
-    var player: Player = .{
+    Player.addToMap(.{
         .x = if (self.start_x_override == std.math.maxInt(u16)) center else @floatFromInt(self.start_x_override),
         .y = if (self.start_y_override == std.math.maxInt(u16)) center else @floatFromInt(self.start_y_override),
         .map_id = map.info.player_map_id,
         .data_id = 0,
         .speed = 300,
-    };
-    player.addToMap();
+    });
 
     main.editing_map = true;
     self.start_x_override = std.math.maxInt(u16);
@@ -1307,12 +1302,11 @@ fn setTile(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
 
     map.square_lock.lock();
     defer map.square_lock.unlock();
-    var square: Square = .{
+    Square.addToMap(.{
         .x = @as(f32, @floatFromInt(x)) + 0.5,
         .y = @as(f32, @floatFromInt(y)) + 0.5,
         .data_id = data_id,
-    };
-    square.addToMap();
+    });
 }
 
 fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
@@ -1349,14 +1343,14 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
             .data_id = 0xFFFE,
             .name = duped_name,
             .render_color_override = data.color,
-        };
-        indicator.addToMap();
-        indicator.name_text_data = .{
-            .text = undefined,
-            .text_type = .bold,
-            .size = 12,
+            .name_text_data = .{
+                .text = undefined,
+                .text_type = .bold,
+                .size = 12,
+            },
         };
         indicator.name_text_data.?.setText(duped_name);
+        Entity.addToMap(indicator);
 
         tile.region = data_id;
     }
@@ -1403,16 +1397,15 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
 
         field.* = next_map_id.*;
 
-        var obj: ObjType = .{
+        const needs_lock = ObjType == Entity and data.?.is_wall;
+        if (needs_lock) lock.lock();
+        defer if (needs_lock) lock.unlock();
+        ObjType.addToMap(.{
             .x = @as(f32, @floatFromInt(x)) + 0.5,
             .y = @as(f32, @floatFromInt(y)) + 0.5,
             .map_id = next_map_id.*,
             .data_id = data_id,
-        };
-        const needs_lock = ObjType == Entity and data.?.is_wall;
-        if (needs_lock) lock.lock();
-        defer if (needs_lock) lock.unlock();
-        obj.addToMap();
+        });
     }
 }
 

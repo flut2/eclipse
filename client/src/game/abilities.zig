@@ -24,7 +24,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
     const y = player.y + @sin(attack_angle) * 0.25;
 
     const fstr: f32 = @floatFromInt(player.strength + player.strength_bonus);
-    var proj: Projectile = .{
+    Projectile.addToMap(.{
         .x = x,
         .y = y,
         .data = proj_data,
@@ -32,8 +32,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
         .index = proj_index,
         .owner_map_id = player.map_id,
         .phys_dmg = @intFromFloat(1300.0 + fstr * 2.0),
-    };
-    proj.addToMap();
+    });
 
     var buf: [5]u8 = undefined;
     var fba = std.io.fixedBufferStream(&buf);

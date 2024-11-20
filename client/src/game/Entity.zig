@@ -46,7 +46,8 @@ wall_outline_cull: packed struct {
 } = .{},
 status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
 
-pub fn addToMap(self: *Entity) void {
+pub fn addToMap(entity_data: Entity) void {
+    var self = entity_data;
     self.data = game_data.entity.from_id.getPtr(self.data_id) orelse {
         std.log.err("Could not find data for entity with data id {}, returning", .{self.data_id});
         return;

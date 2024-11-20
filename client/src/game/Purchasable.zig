@@ -29,8 +29,8 @@ size_mult: f32 = 0,
 atlas_data: assets.AtlasData = .default,
 data: *const game_data.PurchasableData = undefined,
 
-pub fn addToMap(self: *Purchasable) void {
-    base.addToMap(self, Purchasable);
+pub fn addToMap(purchasable_data: Purchasable) void {
+    base.addToMap(purchasable_data, Purchasable);
 }
 
 pub fn deinit(self: *Purchasable) void {

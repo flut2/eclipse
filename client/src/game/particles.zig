@@ -41,7 +41,7 @@ pub const ThrowParticle = struct {
 
         if (time - self.last_update >= 16 * std.time.us_per_ms) {
             const duration: f32 = 0.4 * std.time.us_per_s;
-            var particle: SparkParticle = .{
+            SparkParticle.addToMap(.{
                 .size = @floor(self.z + 1),
                 .initial_size = @floor(self.z + 1),
                 .color = self.color,
@@ -52,8 +52,7 @@ pub const ThrowParticle = struct {
                 .x = self.x,
                 .y = self.y,
                 .z = self.z,
-            };
-            particle.addToMap();
+            });
 
             self.last_update = time;
         }
@@ -91,7 +90,7 @@ pub const SparkerParticle = struct {
 
         if (time - self.last_update >= 16 * std.time.us_per_ms) {
             const duration: f32 = 0.6 * std.time.us_per_s;
-            var particle: SparkParticle = .{
+            SparkParticle.addToMap(.{
                 .size = 1.0,
                 .initial_size = 1.0,
                 .color = self.color,
@@ -102,8 +101,7 @@ pub const SparkerParticle = struct {
                 .x = self.x,
                 .y = self.y,
                 .z = self.z,
-            };
-            particle.addToMap();
+            });
 
             self.last_update = time;
         }
@@ -331,7 +329,7 @@ pub const ThrowEffect = struct {
 
     pub fn update(self: *ThrowEffect, _: i64, _: f32) bool {
         const duration: f32 = @floatFromInt((if (self.duration == 0) 1500 else self.duration) * std.time.us_per_ms);
-        var particle: ThrowParticle = .{
+        ThrowParticle.addToMap(.{
             .size = 2.0,
             .initial_size = 2.0,
             .color = self.color,
@@ -341,8 +339,7 @@ pub const ThrowEffect = struct {
             .dy = (self.end_y - self.start_y) / duration,
             .x = self.start_x,
             .y = self.start_y,
-        };
-        particle.addToMap();
+        });
 
         return false;
     }
@@ -366,7 +363,7 @@ pub const AoeEffect = struct {
             const end_x = self.x + self.radius * @cos(angle);
             const end_y = self.y + self.radius * @sin(angle);
             const duration = 0.2 * std.time.us_per_s;
-            var particle: SparkerParticle = .{
+            SparkerParticle.addToMap(.{
                 .size = 0.4,
                 .initial_size = 0.4,
                 .color = self.color,
@@ -376,8 +373,7 @@ pub const AoeEffect = struct {
                 .dy = (end_y - self.y) / duration,
                 .x = self.x,
                 .y = self.y,
-            };
-            particle.addToMap();
+            });
         }
 
         return false;
@@ -398,15 +394,14 @@ pub const TeleportEffect = struct {
             const angle = 2.0 * std.math.pi * rand;
             const radius = 0.7 * rand;
 
-            var particle: TeleportParticle = .{
+            TeleportParticle.addToMap(.{
                 .size = 0.8,
                 .color = 0x0000FF,
                 .time_left = (0.5 + 1.0 * rand) * std.time.us_per_s,
                 .z_dir = 0.1,
                 .x = self.x + radius * @cos(angle),
                 .y = self.y + radius * @sin(angle),
-            };
-            particle.addToMap();
+            });
         }
 
         return false;
@@ -428,7 +423,7 @@ pub const LineEffect = struct {
         const duration = 0.7 * std.time.us_per_s;
         for (0..30) |i| {
             const f = @as(f32, @floatFromInt(i)) / 30;
-            var particle: SparkParticle = .{
+            SparkParticle.addToMap(.{
                 .size = 1.0,
                 .initial_size = 1.0,
                 .color = self.color,
@@ -439,8 +434,7 @@ pub const LineEffect = struct {
                 .x = self.end_x + f * (self.start_x - self.end_x),
                 .y = self.end_y + f * (self.start_y - self.end_y),
                 .z = 0.5,
-            };
-            particle.addToMap();
+            });
         }
 
         return false;
@@ -464,7 +458,7 @@ pub const ExplosionEffect = struct {
 
         for (0..self.amount) |_| {
             const duration = (0.2 + utils.rng.random().float(f32) * 0.1) * std.time.us_per_s;
-            var particle: ExplosionParticle = .{
+            ExplosionParticle.addToMap(.{
                 .size = self.size,
                 .color = self.colors[utils.rng.next() % self.colors.len],
                 .lifetime = duration,
@@ -475,8 +469,7 @@ pub const ExplosionEffect = struct {
                 .x = self.x,
                 .y = self.y,
                 .z = 0.5,
-            };
-            particle.addToMap();
+            });
         }
 
         return false;
@@ -505,7 +498,7 @@ pub const HitEffect = struct {
 
         for (0..self.amount) |_| {
             const duration = (0.2 + utils.rng.random().float(f32) * 0.1) * std.time.us_per_s;
-            var particle: HitParticle = .{
+            HitParticle.addToMap(.{
                 .size = self.size,
                 .color = self.colors[utils.rng.next() % self.colors.len],
                 .lifetime = duration,
@@ -516,8 +509,7 @@ pub const HitEffect = struct {
                 .x = self.x,
                 .y = self.y,
                 .z = 0.5,
-            };
-            particle.addToMap();
+            });
         }
 
         return false;
@@ -545,7 +537,7 @@ pub const HealEffect = struct {
                         const float_i: f32 = @floatFromInt(i);
                         const angle = std.math.tau * (float_i / 10.0);
                         const radius = 0.3 + 0.4 * utils.rng.random().float(f32);
-                        var particle: HealParticle = .{
+                        HealParticle.addToMap(.{
                             .size = 0.5 + utils.rng.random().float(f32),
                             .color = self.color,
                             .time_left = 1.0 * std.time.us_per_s,
@@ -557,8 +549,7 @@ pub const HealEffect = struct {
                             .x = obj.x + radius * @cos(angle),
                             .y = obj.y + radius * @sin(angle),
                             .z = utils.rng.random().float(f32) * 0.3,
-                        };
-                        particle.addToMap();
+                        });
                     }
 
                     return false;
@@ -599,7 +590,7 @@ pub const RingEffect = struct {
             const end_x = self.start_x + self.radius * 0.9 * cos_angle;
             const end_y = self.start_y + self.radius * 0.9 * sin_angle;
 
-            var particle: SparkerParticle = .{
+            SparkerParticle.addToMap(.{
                 .size = 1.0,
                 .initial_size = 1.0,
                 .color = self.color,
@@ -610,8 +601,7 @@ pub const RingEffect = struct {
                 .x = start_x,
                 .y = start_y,
                 .z = 0.5,
-            };
-            particle.addToMap();
+            });
         }
 
         self.last_activate = time;

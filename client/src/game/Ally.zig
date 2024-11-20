@@ -41,8 +41,8 @@ facing: f32 = std.math.nan(f32),
 status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
 data: *const game_data.AllyData = undefined,
 
-pub fn addToMap(self: *Ally) void {
-    base.addToMap(self, Ally);
+pub fn addToMap(ally_data: Ally) void {
+    base.addToMap(ally_data, Ally);
 }
 
 pub fn deinit(self: *Ally) void {

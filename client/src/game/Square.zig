@@ -28,7 +28,10 @@ blends: [4]Blend = @splat(.{ .u = -1.0, .v = -1.0 }),
 data: *const game_data.GroundData = undefined,
 entity_map_id: u32 = std.math.maxInt(u32),
 
-pub fn addToMap(self: *Square) void {
+pub fn addToMap(square_data: Square) void {
+    std.debug.assert(!map.square_lock.tryLock());
+
+    var self = square_data;
     const floor_y: u32 = @intFromFloat(@floor(self.y));
     const floor_x: u32 = @intFromFloat(@floor(self.x));
 
@@ -71,7 +74,7 @@ pub fn addToMap(self: *Square) void {
     }
 
     self.updateBlends();
-    map.squares[floor_y * map.info.width + floor_x] = self.*;
+    map.squares[floor_y * map.info.width + floor_x] = self;
 }
 
 fn parseDir(x: f32, y: f32, square: *Square, current_prio: i32, comptime blend_idx: comptime_int) void {

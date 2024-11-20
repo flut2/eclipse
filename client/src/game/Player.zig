@@ -105,7 +105,8 @@ direction: assets.Direction = .right,
 last_ability_use: [4]i64 = @splat(std.math.minInt(i31)),
 ability_state: network_data.AbilityState = .{},
 
-pub fn addToMap(self: *Player) void {
+pub fn addToMap(player_data: Player) void {
+    var self = player_data;
     self.data = game_data.class.from_id.getPtr(self.data_id) orelse {
         std.log.err("Player with data id {} has no class data, can't add", .{self.data_id});
         return;
@@ -134,7 +135,7 @@ pub fn addToMap(self: *Player) void {
         self.name_text_data.?.setText(if (self.name) |player_name| player_name else self.data.name);
     }
 
-    map.addListForType(Player).append(main.allocator, self.*) catch @panic("Adding player failed");
+    map.addListForType(Player).append(main.allocator, self) catch @panic("Adding player failed");
 }
 
 pub fn deinit(self: *Player) void {
@@ -247,7 +248,7 @@ pub fn doShoot(
         const x = self.x + @cos(attack_angle) * 0.25;
         const y = self.y + @sin(attack_angle) * 0.25;
 
-        var proj: Projectile = .{
+        Projectile.addToMap(.{
             .x = x,
             .y = y,
             .data = &item_props.projectile.?,
@@ -257,8 +258,7 @@ pub fn doShoot(
             .phys_dmg = @intFromFloat(@as(f32, @floatFromInt(proj_data.phys_dmg)) * self.strengthMult()),
             .magic_dmg = @intFromFloat(@as(f32, @floatFromInt(proj_data.magic_dmg)) * self.witMult()),
             .true_dmg = @intFromFloat(@as(f32, @floatFromInt(proj_data.true_dmg))),
-        };
-        proj.addToMap();
+        });
 
         main.game_server.sendPacket(.{ .player_projectile = .{
             .time = time,

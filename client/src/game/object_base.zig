@@ -20,7 +20,7 @@ const Container = @import("Container.zig");
 const Purchasable = @import("Purchasable.zig");
 const Ally = @import("Ally.zig");
 
-pub fn addToMap(self: anytype, comptime ObjType: type) void {
+pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
     const type_name = switch (ObjType) {
         Player => "player",
         Entity => "entity",
@@ -32,6 +32,7 @@ pub fn addToMap(self: anytype, comptime ObjType: type) void {
         else => @compileError("Invalid type"),
     };
 
+    var self = obj_data;
     self.data = @field(game_data, type_name).from_id.getPtr(self.data_id) orelse {
         std.log.err("Could not find data for {s} with data id {}, returning", .{ type_name, self.data_id });
         return;
@@ -39,7 +40,7 @@ pub fn addToMap(self: anytype, comptime ObjType: type) void {
     self.size_mult = self.data.size_mult;
 
     texParse: {
-        const T = @TypeOf(self.*);
+        const T = @TypeOf(self);
         if (T == Enemy or T == Ally) {
             if (self.data.textures.len == 0) {
                 std.log.err("{s} with data id {} has an empty texture list, parsing failed", .{ type_name, self.data_id });
@@ -101,7 +102,7 @@ pub fn addToMap(self: anytype, comptime ObjType: type) void {
         self.name_text_data.?.setText(if (self.name) |obj_name| obj_name else self.data.name);
     }
 
-    map.addListForType(ObjType).append(main.allocator, self.*) catch @panic("Adding " ++ type_name ++ " failed");
+    map.addListForType(ObjType).append(main.allocator, self) catch @panic("Adding " ++ type_name ++ " failed");
 }
 
 pub fn deinit(self: anytype) void {

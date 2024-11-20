@@ -336,15 +336,14 @@ fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
 
     if (map.findObject(Player, data.player_map_id, .ref)) |player| {
         const item_data = game_data.item.from_id.getPtr(data.item_data_id);
-        var proj: Projectile = .{
+        Projectile.addToMap(.{
             .x = player.x,
             .y = player.y,
             .data = &item_data.?.projectile.?,
             .angle = data.angle,
             .index = @intCast(data.proj_index),
             .owner_map_id = player.map_id,
-        };
-        proj.addToMap();
+        });
 
         const attack_period: i64 = @intFromFloat(1.0 / (Player.attack_frequency * item_data.?.fire_rate));
         player.attack_period = attack_period;
@@ -406,7 +405,7 @@ fn handleEnemyProjectile(_: *Server, data: PacketData(.enemy_projectile)) void {
     var current_angle = data.angle - total_angle / 2.0;
 
     for (0..data.num_projs) |i| {
-        var proj: Projectile = .{
+        Projectile.addToMap(.{
             .x = data.x,
             .y = data.y,
             .phys_dmg = data.phys_dmg,
@@ -417,8 +416,7 @@ fn handleEnemyProjectile(_: *Server, data: PacketData(.enemy_projectile)) void {
             .index = data.proj_index +% @as(u8, @intCast(i)),
             .owner_map_id = data.enemy_map_id,
             .damage_players = true,
-        };
-        proj.addToMap();
+        });
 
         current_angle += data.angle_incr;
     }
@@ -680,14 +678,14 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
         }
     }
 
-    for (data.tiles) |tile| {
-        var square: Square = .{
+    {
+        map.square_lock.lock();
+        defer map.square_lock.unlock();
+        for (data.tiles) |tile| Square.addToMap(.{
             .data_id = tile.data_id,
             .x = @as(f32, @floatFromInt(tile.x)) + 0.5,
             .y = @as(f32, @floatFromInt(tile.y)) + 0.5,
-        };
-
-        square.addToMap();
+        });
     }
 
     main.need_minimap_update = data.tiles.len > 0;
@@ -768,7 +766,7 @@ fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
         } else {
             var new_obj: T = .{ .map_id = obj.map_id, .data_id = obj.data_id };
             parseObjectStat(typeToObjEnum(T), &stat_reader, &new_obj);
-            new_obj.addToMap();
+            T.addToMap(new_obj);
         }
     }
 }

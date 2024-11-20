@@ -46,8 +46,8 @@ facing: f32 = std.math.nan(f32),
 status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
 next_anim: i64 = -1,
 
-pub fn addToMap(self: *Enemy) void {
-    base.addToMap(self, Enemy);
+pub fn addToMap(enemy_data: Enemy) void {
+    base.addToMap(enemy_data, Enemy);
 }
 
 pub fn deinit(self: *Enemy) void {
