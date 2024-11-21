@@ -155,30 +155,26 @@ fn handleTogglePerfStats() void {
 }
 
 fn handleAbility1() void {
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
     if (map.localPlayer(.ref)) |player| player.useAbility(0);
 }
 
 fn handleAbility2() void {
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
     if (map.localPlayer(.ref)) |player| player.useAbility(1);
 }
 
 fn handleAbility3() void {
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
     if (map.localPlayer(.ref)) |player| player.useAbility(2);
 }
 
 fn handleAbility4() void {
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
     if (map.localPlayer(.ref)) |player| player.useAbility(3);
 }
 

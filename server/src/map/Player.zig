@@ -499,6 +499,7 @@ pub fn exportStats(
     stat_util.write(T, writer, cache, .{ .max_mp_bonus = self.stat_boosts[mana_stat] });
     stat_util.write(T, writer, cache, .{ .mp = self.mp });
     stat_util.write(T, writer, cache, .{ .condition = self.condition });
+    stat_util.write(T, writer, cache, .{ .ability_state = self.ability_state });
     stat_util.write(T, writer, cache, .{ .cards = self.cards });
     stat_util.write(T, writer, cache, .{ .resources = self.resources });
     stat_util.write(T, writer, cache, .{ .talents = self.talents });

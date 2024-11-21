@@ -1037,27 +1037,23 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
                 .ground_name = if (map_tile.ground == defaultType(.ground)) "" else game_data.ground.from_id.get(map_tile.ground).?.name,
                 .region_name = if (map_tile.region == defaultType(.region)) "" else game_data.region.from_id.get(map_tile.region).?.name,
                 .enemy_name = blk: {
-                    var lock = map.useLockForType(Enemy);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     break :blk if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "";
                 },
                 .entity_name = blk: {
-                    var lock = map.useLockForType(Entity);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "";
                 },
                 .portal_name = blk: {
-                    var lock = map.useLockForType(Portal);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     break :blk if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "";
                 },
                 .container_name = blk: {
-                    var lock = map.useLockForType(Container);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     break :blk if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "";
                 },
             };
@@ -1084,27 +1080,23 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
                 .ground_name = if (map_tile.ground == defaultType(.ground)) "" else game_data.ground.from_id.get(map_tile.ground).?.name,
                 .region_name = if (map_tile.region == defaultType(.region)) "" else game_data.region.from_id.get(map_tile.region).?.name,
                 .enemy_name = blk: {
-                    var lock = map.useLockForType(Enemy);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     break :blk if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "";
                 },
                 .entity_name = blk: {
-                    var lock = map.useLockForType(Entity);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "";
                 },
                 .portal_name = blk: {
-                    var lock = map.useLockForType(Portal);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     break :blk if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "";
                 },
                 .container_name = blk: {
-                    var lock = map.useLockForType(Container);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     break :blk if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "";
                 },
             };
@@ -1312,10 +1304,9 @@ fn setTile(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
 fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
     const tile = self.getTilePtr(x, y);
 
-    var lock = map.useLockForType(Entity);
     if (data_id == std.math.maxInt(u16)) {
-        lock.lock();
-        defer lock.unlock();
+        map.object_lock.lock();
+        defer map.object_lock.unlock();
         _ = map.removeEntity(Entity, tile.region_map_id);
         tile.region_map_id = std.math.maxInt(u32);
     } else {
@@ -1325,8 +1316,8 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
         };
 
         if (tile.region_map_id != std.math.maxInt(u32)) {
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             if (map.findObject(Entity, tile.region_map_id, .con)) |obj| if (std.mem.eql(u8, obj.name orelse "", data.name)) return;
             _ = map.removeEntity(Entity, tile.region_map_id);
         }
@@ -1366,10 +1357,9 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
         else => @compileError("Invalid type"),
     };
 
-    var lock = map.useLockForType(ObjType);
     if (data_id == std.math.maxInt(u16)) {
-        lock.lock();
-        defer lock.unlock();
+        map.object_lock.lock();
+        defer map.object_lock.unlock();
         _ = map.removeEntity(ObjType, field.*);
         field.* = std.math.maxInt(u32);
     } else {
@@ -1386,8 +1376,8 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
         }
 
         if (field.* != std.math.maxInt(u32)) {
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             if (map.findObject(ObjType, field.*, .con)) |obj| if (obj.data_id == data_id) return;
             _ = map.removeEntity(ObjType, field.*);
         }
@@ -1398,8 +1388,8 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
         field.* = next_map_id.*;
 
         const needs_lock = ObjType == Entity and data.?.is_wall;
-        if (needs_lock) lock.lock();
-        defer if (needs_lock) lock.unlock();
+        if (needs_lock) map.object_lock.lock();
+        defer if (needs_lock) map.object_lock.unlock();
         ObjType.addToMap(.{
             .x = @as(f32, @floatFromInt(x)) + 0.5,
             .y = @as(f32, @floatFromInt(y)) + 0.5,
@@ -1444,27 +1434,23 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
                             .ground => break :blk tile.ground,
                             .region => break :blk tile.region,
                             .entity => break :blk lockBlk: {
-                                var lock = map.useLockForType(Entity);
-                                lock.lock();
-                                defer lock.unlock();
+                                map.object_lock.lock();
+                                defer map.object_lock.unlock();
                                 break :lockBlk if (map.findObject(Entity, tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
                             },
                             .enemy => break :blk lockBlk: {
-                                var lock = map.useLockForType(Enemy);
-                                lock.lock();
-                                defer lock.unlock();
+                                map.object_lock.lock();
+                                defer map.object_lock.unlock();
                                 break :lockBlk if (map.findObject(Enemy, tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
                             },
                             .portal => break :blk lockBlk: {
-                                var lock = map.useLockForType(Portal);
-                                lock.lock();
-                                defer lock.unlock();
+                                map.object_lock.lock();
+                                defer map.object_lock.unlock();
                                 break :lockBlk if (map.findObject(Portal, tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
                             },
                             .container => break :blk lockBlk: {
-                                var lock = map.useLockForType(Container);
-                                lock.lock();
-                                defer lock.unlock();
+                                map.object_lock.lock();
+                                defer map.object_lock.unlock();
                                 break :lockBlk if (map.findObject(Container, tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
                             },
                         }
@@ -1513,27 +1499,23 @@ fn typeAt(layer: Layer, screen: *MapEditorScreen, x: u16, y: u16) u16 {
         .ground => map_tile.ground,
         .region => map_tile.region,
         .enemy => blk: {
-            var lock = map.useLockForType(Enemy);
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             break :blk if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
         },
         .entity => blk: {
-            var lock = map.useLockForType(Entity);
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
         },
         .portal => blk: {
-            var lock = map.useLockForType(Portal);
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             break :blk if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
         },
         .container => blk: {
-            var lock = map.useLockForType(Container);
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             break :blk if (map.findObject(Container, map_tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
         },
     };
@@ -1640,27 +1622,23 @@ pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
             .ground => self.selected.ground = map_tile.ground,
             .region => self.selected.region = map_tile.region,
             .enemy => self.selected.enemy = blk: {
-                var lock = map.useLockForType(Enemy);
-                lock.lock();
-                defer lock.unlock();
+                map.object_lock.lock();
+                defer map.object_lock.unlock();
                 break :blk if (map.findObject(Enemy, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
             },
             .entity => self.selected.entity = blk: {
-                var lock = map.useLockForType(Entity);
-                lock.lock();
-                defer lock.unlock();
+                map.object_lock.lock();
+                defer map.object_lock.unlock();
                 break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
             },
             .portal => self.selected.portal = blk: {
-                var lock = map.useLockForType(Portal);
-                lock.lock();
-                defer lock.unlock();
+                map.object_lock.lock();
+                defer map.object_lock.unlock();
                 break :blk if (map.findObject(Portal, map_tile.entity, .con)) |p| p.data_id else std.math.maxInt(u16);
             },
             .container => self.selected.container = blk: {
-                var lock = map.useLockForType(Container);
-                lock.lock();
-                defer lock.unlock();
+                map.object_lock.lock();
+                defer map.object_lock.unlock();
                 break :blk if (map.findObject(Container, map_tile.entity, .con)) |c| c.data_id else std.math.maxInt(u16);
             },
         },

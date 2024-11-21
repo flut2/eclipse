@@ -456,12 +456,22 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
     } else @panic("Could not initiate ability for GameScreen, sheet was missing");
 
     self.ability_overlays[idx] = try self.ability_container.createChild(Image, .{
-        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false },
+        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false, .event_policy = .{
+            .pass_move = true,
+            .pass_press = true,
+            .pass_release = true,
+            .pass_scroll = true,
+        } },
         .image_data = undefined,
     });
 
     self.ability_overlay_texts[idx] = try self.ability_container.createChild(Text, .{
-        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false },
+        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false, .event_policy = .{
+            .pass_move = true,
+            .pass_press = true,
+            .pass_release = true,
+            .pass_scroll = true,
+        } },
         .text_data = .{
             .text = "",
             .size = 12.0,
@@ -586,9 +596,8 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
 pub fn update(self: *GameScreen, time: i64, _: f32) !void {
     self.fps_text.base.visible = main.settings.stats_enabled;
 
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
     if (map.localPlayer(.con)) |local_player| {
         if (!self.abilities_inited) {
             for (0..4) |i| try addAbility(self, local_player.data.abilities[i], i);
@@ -732,7 +741,7 @@ fn updateStat(text_data: *element.TextData, base_val: i32, bonus_val: i32) void 
 }
 
 pub fn updateStats(self: *GameScreen) void {
-    std.debug.assert(!map.useLockForType(Player).tryLock());
+    std.debug.assert(!map.object_lock.tryLock());
     if (map.localPlayer(.con)) |player| {
         updateStat(&self.strength_stat_text.text_data, player.strength, player.strength_bonus);
         updateStat(&self.wit_stat_text.text_data, player.wit, player.wit_bonus);
@@ -807,7 +816,7 @@ fn swapError(self: *GameScreen, start_slot: Slot, start_item: u16) void {
 }
 
 pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
-    std.debug.assert(!map.useLockForType(Player).tryLock());
+    std.debug.assert(!map.object_lock.tryLock());
 
     const int_id = map.interactive.map_id.load(.acquire);
 
@@ -836,9 +845,8 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
 
             const end_item_types = blk: {
                 if (end_slot.is_container) {
-                    var cont_lock = map.useLockForType(Container);
-                    cont_lock.lock();
-                    defer cont_lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     const container = map.findObject(Container, self.container_id, .con) orelse {
                         self.swapError(start_slot, start_item);
                         return;
@@ -892,9 +900,8 @@ fn itemDoubleClickCallback(item: *Item) void {
     const start_slot = Slot.findSlotId(systems.screen.game.*, item.base.x + 4, item.base.y + 4);
     if (game_data.item.from_id.get(@intCast(item.item))) |props| {
         if (props.consumable and !start_slot.is_container) {
-            var lock = map.useLockForType(Player);
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             if (map.localPlayer(.con)) |local_player| {
                 main.game_server.sendPacket(.{ .use_item = .{
                     .obj_type = .player,
@@ -911,9 +918,8 @@ fn itemDoubleClickCallback(item: *Item) void {
         }
     }
 
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
     if (map.localPlayer(.con)) |local_player| {
         if (game_data.item.from_id.get(@intCast(item.item))) |data| {
             if (start_slot.is_container) {
@@ -946,9 +952,8 @@ fn statsCallback(ud: ?*anyopaque) void {
     screen.stats_container.base.visible = !screen.stats_container.base.visible;
     screen.cards_container.base.visible = false;
     if (screen.stats_container.base.visible) {
-        var lock = map.useLockForType(Player);
-        lock.lock();
-        defer lock.unlock();
+        map.object_lock.lock();
+        defer map.object_lock.unlock();
         screen.updateStats();
     }
 }
@@ -991,9 +996,8 @@ fn itemDragEndCallback(item: *Item) void {
         return;
     }
 
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
     current_screen.swapSlots(start_slot, end_slot);
 }
 
@@ -1005,9 +1009,8 @@ fn itemShiftClickCallback(item: *Item) void {
 
     if (game_data.item.from_id.get(@intCast(item.item))) |props| {
         if (props.consumable) {
-            var lock = map.useLockForType(Player);
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             if (map.localPlayer(.con)) |local_player| {
                 main.game_server.sendPacket(.{ .use_item = .{
                     .obj_type = if (slot.is_container) .container else .player,

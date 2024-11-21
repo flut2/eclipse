@@ -24,18 +24,7 @@ const day_cycle: i32 = 10 * std.time.us_per_min;
 const day_cycle_half: f32 = @as(f32, day_cycle) / 2;
 
 pub var square_lock: std.Thread.Mutex = .{};
-pub var use_lock: struct {
-    player: std.Thread.Mutex = .{},
-    entity: std.Thread.Mutex = .{},
-    enemy: std.Thread.Mutex = .{},
-    container: std.Thread.Mutex = .{},
-    portal: std.Thread.Mutex = .{},
-    projectile: std.Thread.Mutex = .{},
-    particle: std.Thread.Mutex = .{},
-    particle_effect: std.Thread.Mutex = .{},
-    purchasable: std.Thread.Mutex = .{},
-    ally: std.Thread.Mutex = .{},
-} = .{};
+pub var object_lock: std.Thread.Mutex = .{};
 pub var list: struct {
     player: std.ArrayListUnmanaged(Player) = .empty,
     entity: std.ArrayListUnmanaged(Entity) = .empty,
@@ -60,18 +49,7 @@ pub var add_list: struct {
     purchasable: std.ArrayListUnmanaged(Purchasable) = .empty,
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
-pub var remove_list: struct {
-    player: std.ArrayListUnmanaged(usize) = .empty,
-    entity: std.ArrayListUnmanaged(usize) = .empty,
-    enemy: std.ArrayListUnmanaged(usize) = .empty,
-    container: std.ArrayListUnmanaged(usize) = .empty,
-    portal: std.ArrayListUnmanaged(usize) = .empty,
-    projectile: std.ArrayListUnmanaged(usize) = .empty,
-    particle: std.ArrayListUnmanaged(usize) = .empty,
-    particle_effect: std.ArrayListUnmanaged(usize) = .empty,
-    purchasable: std.ArrayListUnmanaged(usize) = .empty,
-    ally: std.ArrayListUnmanaged(usize) = .empty,
-} = .{};
+pub var remove_list: std.ArrayListUnmanaged(usize) = .empty;
 
 pub var interactive: struct {
     const InteractiveType = enum(u8) { unset, portal, container, purchasable };
@@ -86,22 +64,6 @@ pub var minimap: zstbi.Image = undefined;
 pub var minimap_copy: []u8 = undefined;
 
 var last_update: i64 = 0;
-
-pub fn useLockForType(comptime T: type) *std.Thread.Mutex {
-    return switch (T) {
-        Entity => &use_lock.entity,
-        Enemy => &use_lock.enemy,
-        Player => &use_lock.player,
-        Portal => &use_lock.portal,
-        Container => &use_lock.container,
-        Projectile => &use_lock.projectile,
-        particles.Particle => &use_lock.particle,
-        particles.ParticleEffect => &use_lock.particle_effect,
-        Purchasable => &use_lock.purchasable,
-        Ally => &use_lock.ally,
-        else => @compileError("Invalid type"),
-    };
-}
 
 pub fn listForType(comptime T: type) *std.ArrayListUnmanaged(T) {
     return switch (T) {
@@ -135,22 +97,6 @@ pub fn addListForType(comptime T: type) *std.ArrayListUnmanaged(T) {
     };
 }
 
-pub fn removeListForType(comptime T: type) *std.ArrayListUnmanaged(usize) {
-    return switch (T) {
-        Entity => &remove_list.entity,
-        Enemy => &remove_list.enemy,
-        Player => &remove_list.player,
-        Portal => &remove_list.portal,
-        Container => &remove_list.container,
-        Projectile => &remove_list.projectile,
-        particles.Particle => &remove_list.particle,
-        particles.ParticleEffect => &remove_list.particle_effect,
-        Purchasable => &remove_list.purchasable,
-        Ally => &remove_list.ally,
-        else => @compileError("Invalid type"),
-    };
-}
-
 pub fn init() !void {
     minimap = try zstbi.Image.createEmpty(1024, 1024, 4, .{});
     minimap_copy = try main.allocator.alloc(u8, 1024 * 1024 * 4);
@@ -158,11 +104,8 @@ pub fn init() !void {
 
 pub fn deinit() void {
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
-        var lock = &@field(use_lock, field.name);
-        lock.lock();
-        defer lock.unlock();
-
-        @field(remove_list, field.name).deinit(main.allocator);
+        object_lock.lock();
+        defer object_lock.unlock();
 
         var child_list = &@field(list, field.name);
         defer child_list.deinit(main.allocator);
@@ -176,6 +119,8 @@ pub fn deinit() void {
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
             for (child_list.items) |*obj| obj.deinit();
     }
+
+    remove_list.deinit(main.allocator);
 
     move_records.deinit(main.allocator);
     main.allocator.free(info.name);
@@ -196,11 +141,8 @@ pub fn dispose() void {
     info = .{};
 
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
-        var lock = &@field(use_lock, field.name);
-        lock.lock();
-        defer lock.unlock();
-
-        @field(remove_list, field.name).clearRetainingCapacity();
+        object_lock.lock();
+        defer object_lock.unlock();
 
         var child_list = &@field(list, field.name);
         defer child_list.clearRetainingCapacity();
@@ -278,7 +220,7 @@ pub fn setMapInfo(data: network_data.MapInfo) void {
 
 const Constness = enum { con, ref };
 pub fn findObject(comptime T: type, map_id: u32, comptime constness: Constness) if (constness == .con) ?T else ?*T {
-    std.debug.assert(!useLockForType(T).tryLock());
+    std.debug.assert(!object_lock.tryLock());
     switch (constness) {
         .con => for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj,
         .ref => for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj,
@@ -288,7 +230,7 @@ pub fn findObject(comptime T: type, map_id: u32, comptime constness: Constness) 
 
 // Using this is a bad idea if you don't know what you're doing
 pub fn findObjectWithAddList(comptime T: type, map_id: u32, comptime constness: Constness) if (constness == .con) ?T else ?*T {
-    std.debug.assert(!useLockForType(T).tryLock());
+    std.debug.assert(!object_lock.tryLock());
     switch (constness) {
         .con => {
             for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
@@ -303,14 +245,14 @@ pub fn findObjectWithAddList(comptime T: type, map_id: u32, comptime constness: 
 }
 
 pub fn localPlayer(comptime constness: Constness) if (constness == .con) ?Player else ?*Player {
-    std.debug.assert(!useLockForType(Player).tryLock());
+    std.debug.assert(!object_lock.tryLock());
     if (info.player_map_id == std.math.maxInt(u32)) return null;
     if (findObject(Player, info.player_map_id, constness)) |player| return player;
     return null;
 }
 
 pub fn removeEntity(comptime T: type, map_id: u32) bool {
-    std.debug.assert(!useLockForType(T).tryLock());
+    std.debug.assert(!object_lock.tryLock());
     var obj_list = listForType(T);
     for (obj_list.items, 0..) |*obj, i| if (obj.map_id == map_id) {
         obj.deinit();
@@ -353,6 +295,9 @@ pub fn update(time: i64, dt: f32) void {
     const cam_min_y: f32 = @floatFromInt(main.camera.min_y);
     const cam_max_y: f32 = @floatFromInt(main.camera.max_y);
 
+    object_lock.lock();
+    defer object_lock.unlock();
+
     inline for (.{
         Entity,
         Enemy,
@@ -365,9 +310,6 @@ pub fn update(time: i64, dt: f32) void {
         Purchasable,
         Ally,
     }) |ObjType| {
-        var obj_lock = useLockForType(ObjType);
-        obj_lock.lock();
-        defer obj_lock.unlock();
         var obj_list = listForType(ObjType);
         {
             var obj_add_list = addListForType(ObjType);
@@ -375,8 +317,7 @@ pub fn update(time: i64, dt: f32) void {
             obj_list.appendSlice(main.allocator, obj_add_list.items) catch @panic("Failed to add objects");
         }
 
-        var obj_remove_list = removeListForType(ObjType);
-        obj_remove_list.clearRetainingCapacity();
+        remove_list.clearRetainingCapacity();
 
         for (obj_list.items, 0..) |*obj, i| {
             if (ObjType != particles.ParticleEffect and (ObjType != Player or obj.map_id != info.player_map_id)) {
@@ -424,13 +365,10 @@ pub fn update(time: i64, dt: f32) void {
                     obj.update(time);
                 },
                 Player => {
-                    const is_self = obj.map_id == info.player_map_id;
-                    if (is_self) useLockForType(Entity).lock();
-                    defer if (is_self) useLockForType(Entity).unlock();
                     obj.walk_speed_multiplier = input.walking_speed_multiplier;
                     obj.move_angle = input.move_angle;
                     obj.update(time, dt);
-                    if (is_self) {
+                    if (obj.map_id == info.player_map_id) {
                         main.camera.update(obj.x, obj.y, dt);
                         addMoveRecord(time, obj.x, obj.y);
                         if (input.attacking) {
@@ -475,11 +413,11 @@ pub fn update(time: i64, dt: f32) void {
                     obj.update(time);
                 },
                 Projectile => if (!obj.update(time, dt))
-                    obj_remove_list.append(main.allocator, i) catch @panic("Removing projectile failed"),
+                    remove_list.append(main.allocator, i) catch @panic("Removing projectile failed"),
                 particles.Particle => if (!obj.update(time, dt))
-                    obj_remove_list.append(main.allocator, i) catch @panic("Removing particle failed"),
+                    remove_list.append(main.allocator, i) catch @panic("Removing particle failed"),
                 particles.ParticleEffect => if (!obj.update(time, dt))
-                    obj_remove_list.append(main.allocator, i) catch @panic("Removing particle effect failed"),
+                    remove_list.append(main.allocator, i) catch @panic("Removing particle effect failed"),
                 Entity => obj.update(time),
                 Enemy => obj.update(time, dt),
                 Ally => obj.update(time, dt),
@@ -487,9 +425,10 @@ pub fn update(time: i64, dt: f32) void {
             }
         }
 
-        var iter = std.mem.reverseIterator(obj_remove_list.items);
+        var iter = std.mem.reverseIterator(remove_list.items);
         while (iter.next()) |i| {
-            if (@hasField(@TypeOf(obj_list.items[i]), "deinit")) obj_list.items[i].deinit();
+            const T = @TypeOf(obj_list.items[i]);
+            if (T != particles.Particle and T != particles.ParticleEffect) obj_list.items[i].deinit();
             _ = obj_list.orderedRemove(i);
         }
     }

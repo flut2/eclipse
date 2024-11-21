@@ -583,15 +583,12 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
     }
 
     if (self.ability_state.time_dilation) {
-        const fint: f32 = @floatFromInt(self.intelligence + self.intelligence_bonus);
-        const radius = 3.0 + fint * 0.12;
+        const wit: f32 = @floatFromInt(self.wit + self.wit_bonus);
+        const radius = 3.0 + wit * 0.06;
         const radius_sqr = radius * radius;
 
-        var lock = map.useLockForType(Projectile);
-        lock.lock();
-        defer lock.unlock();
         for (map.listForType(Projectile).items) |*p| {
-            if (utils.distSqr(p.x, p.y, self.x, self.y) <= radius_sqr) p.time_dilation_active = true;
+            if (p.damage_players and utils.distSqr(p.x, p.y, self.x, self.y) <= radius_sqr) p.time_dilation_active = true;
         }
     }
 }

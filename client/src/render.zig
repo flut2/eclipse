@@ -868,32 +868,14 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
             }
         }
 
-        inline for (.{ Entity, Enemy, Container, Player, Purchasable, Ally }) |T| {
-            var lock = map.useLockForType(T);
-            lock.lock();
-            defer lock.unlock();
-            for (map.listForType(T).items) |*obj| obj.draw(cam_data, float_time_ms);
-        }
-
         {
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
+            inline for (.{ Entity, Enemy, Container, Player, Projectile, Purchasable, Ally }) |T|
+                for (map.listForType(T).items) |*obj| obj.draw(cam_data, float_time_ms);
+
             const int_id = map.interactive.map_id.load(.acquire);
-            var lock = map.useLockForType(Portal);
-            lock.lock();
-            defer lock.unlock();
             for (map.listForType(Portal).items) |*portal| portal.draw(cam_data, float_time_ms, int_id);
-        }
-
-        {
-            var lock = map.useLockForType(Projectile);
-            lock.lock();
-            defer lock.unlock();
-            for (map.listForType(Projectile).items) |p| p.draw(cam_data, float_time_ms);
-        }
-
-        {
-            var lock = map.useLockForType(Particle);
-            lock.lock();
-            defer lock.unlock();
             for (map.listForType(Particle).items) |particle| particle.draw(cam_data);
         }
     }

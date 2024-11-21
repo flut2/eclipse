@@ -253,9 +253,8 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
     }
 
     if (packet == .use_portal or packet == .escape) {
-        var lock = map.useLockForType(Player); // not great assuming that this won't ever deadlock...
-        lock.lock();
-        defer lock.unlock();
+        map.object_lock.lock();
+        defer map.object_lock.unlock();
         if (map.localPlayer(.ref)) |player| {
             player.x = -1.0;
             player.y = -1.0;
@@ -332,9 +331,8 @@ fn logRead(comptime tick: enum { non_tick, tick }) bool {
 fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
     if (logRead(.non_tick)) std.log.debug("Recv - AllyProjectile: {}", .{data});
 
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
 
     if (map.findObject(Player, data.player_map_id, .ref)) |player| {
         const item_data = game_data.item.from_id.getPtr(data.item_data_id);
@@ -366,9 +364,8 @@ fn handleAoe(_: *Server, data: PacketData(.aoe)) void {
 }
 
 fn handleDamage(_: *Server, data: PacketData(.damage)) void {
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
 
     if (map.findObject(Player, data.player_map_id, .ref)) |player| {
         map.takeDamage(
@@ -393,9 +390,8 @@ fn handleDeath(self: *Server, data: PacketData(.death)) void {
 fn handleEnemyProjectile(_: *Server, data: PacketData(.enemy_projectile)) void {
     if (logRead(.non_tick)) std.log.debug("Recv - EnemyProjectile: {}", .{data});
 
-    var lock = map.useLockForType(Enemy);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
 
     var owner = if (map.findObject(Enemy, data.enemy_map_id, .ref)) |enemy| enemy else return;
 
@@ -493,9 +489,8 @@ fn handleNotification(_: *Server, data: PacketData(.notification)) void {
     switch (data.obj_type) {
         inline .player, .ally, .enemy, .entity => |inner| {
             const T = ObjEnumToType(inner);
-            var lock = map.useLockForType(T);
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             if (map.findObject(T, data.map_id, .ref)) |obj| obj.status_texts.append(main.allocator, .{
                 .initial_size = 16.0,
                 .dispose_text = true,
@@ -539,9 +534,8 @@ fn handleShowEffect(_: *Server, data: PacketData(.show_effect)) void {
             switch (data.obj_type) {
                 inline else => |inner| {
                     const T = ObjEnumToType(inner);
-                    var lock = map.useLockForType(T);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     if (map.findObject(T, data.map_id, .con)) |obj| {
                         start_x = obj.x;
                         start_y = obj.y;
@@ -570,9 +564,8 @@ fn handleShowEffect(_: *Server, data: PacketData(.show_effect)) void {
             switch (data.obj_type) {
                 inline else => |inner| {
                     const T = ObjEnumToType(inner);
-                    var lock = map.useLockForType(T);
-                    lock.lock();
-                    defer lock.unlock();
+                    map.object_lock.lock();
+                    defer map.object_lock.unlock();
                     if (map.findObject(T, data.map_id, .con)) |obj| {
                         start_x = obj.x;
                         start_y = obj.y;
@@ -618,9 +611,8 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
         switch (data.obj_type) {
             inline else => |inner| {
                 const T = ObjEnumToType(inner);
-                var lock = map.useLockForType(T);
-                lock.lock();
-                defer lock.unlock();
+                map.object_lock.lock();
+                defer map.object_lock.unlock();
                 if (map.findObject(T, data.map_id, .con) == null) return;
             },
         }
@@ -635,9 +627,8 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     defer {
         if (main.tick_frame) {
             const time = main.current_time;
-            var lock = map.useLockForType(Player);
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             if (map.localPlayer(.ref)) |local_player| {
                 self.sendPacket(.{ .move = .{
                     .tick_id = data.tick_id,
@@ -706,18 +697,16 @@ fn handleNewAllies(_: *Server, data: PacketData(.new_allies)) void {
 fn droppedObject(comptime T: type, list: []const u32) void {
     if (list.len == 0) return;
 
-    var lock = map.useLockForType(T);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
     for (list) |map_id| _ = map.removeEntity(T, map_id);
 }
 
 fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
     const tick_time = @as(f32, std.time.us_per_s) / 30.0;
 
-    var lock = map.useLockForType(T);
-    lock.lock();
-    defer lock.unlock();
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
     for (list) |obj| {
         var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };
         const current_obj = map.findObject(T, obj.map_id, .ref) orelse findAddObj: {

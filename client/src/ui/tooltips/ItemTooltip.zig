@@ -364,9 +364,8 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         if (data.item_type == .boots or data.item_type == .artifact) {
             footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Usable by: " ++ string_fmt, .{ footer_text, "All Classes" }) catch footer_text;
         } else if (data.item_type != .any and data.item_type != .consumable) {
-            var lock = map.useLockForType(Player);
-            lock.lock();
-            defer lock.unlock();
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
             if (map.localPlayer(.con)) |player| {
                 const has_type = blk: {
                     for (player.data.item_types) |item_type| {

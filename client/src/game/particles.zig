@@ -255,9 +255,8 @@ pub const HealParticle = struct {
         switch (self.target_obj_type) {
             inline else => |obj_enum| {
                 const T = GameServer.ObjEnumToType(obj_enum);
-                var lock = map.useLockForType(T);
-                lock.lock();
-                defer lock.unlock();
+                map.object_lock.lock();
+                defer map.object_lock.unlock();
                 if (map.findObject(T, self.target_map_id, .con)) |obj| {
                     self.x = obj.x + self.dist * @cos(self.angle);
                     self.y = obj.y + self.dist * @sin(self.angle);
@@ -529,9 +528,8 @@ pub const HealEffect = struct {
         switch (self.target_obj_type) {
             inline else => |obj_enum| {
                 const T = GameServer.ObjEnumToType(obj_enum);
-                var lock = map.useLockForType(T);
-                lock.lock();
-                defer lock.unlock();
+                map.object_lock.lock();
+                defer map.object_lock.unlock();
                 if (map.findObject(T, self.target_map_id, .con)) |obj| {
                     for (0..10) |i| {
                         const float_i: f32 = @floatFromInt(i);

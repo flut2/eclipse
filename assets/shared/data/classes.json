@@ -217,7 +217,7 @@
         "abilities": [
             {
                 "name": "Time Dilation",
-                "description": "All enemies and projectiles within &type=\"bold_it\"&col=\"A15AFF\"4 (+6%&space&img=\"misc_big,35\")&reset tiles of you move 30% slower for &type=\"bold_it\"&col=\"6080FF\"10 (+12% &img=\"misc_big,59\")&reset seconds.",
+                "description": "All enemy projectiles within &type=\"bold_it\"&col=\"A15AFF\"3 (+6%&space&img=\"misc_big,35\")&reset tiles of you move 30% slower for &type=\"bold_it\"&col=\"6080FF\"10 (+12% &img=\"misc_big,59\")&reset seconds.",
                 "mana_cost": 72,
                 "cooldown": 24.0,
                 "icon": {
@@ -227,7 +227,7 @@
             },
             {
                 "name": "Rewind",
-                "description": "Rewind time by &type=\"bold_it\"&col=\"FFE770\"3 (&col=\"6080FF\"+6% &img=\"misc_big,59\", &col=\"1C40FF\"+6% &img=\"misc_big,39\", &col=\"A15AFF\"+6%&space&img=\"misc_big,35\"&col=\"FFE770\")&reset seconds, causing you to return to your old position and Health. (if higher than current)",
+                "description": "Rewind time by &type=\"bold_it\"&col=\"FFE770\"3 (&col=\"6080FF\"+1% &img=\"misc_big,59\", &col=\"1C40FF\"+0.6% &img=\"misc_big,39\", &col=\"A15AFF\"+1%&space&img=\"misc_big,35\"&col=\"FFE770\")&reset seconds, causing you to return to your old position and Health. (if higher than current)",
                 "mana_cost": 54,
                 "cooldown": 6.0,
                 "icon": {

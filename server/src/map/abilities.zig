@@ -123,13 +123,14 @@ pub fn handleRewind(player: *Player) !void {
     const fint: f32 = @floatFromInt(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
     const fmana: f32 = @floatFromInt(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat]);
     const fwit: f32 = @floatFromInt(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
-    const duration: i64 = @intFromFloat((3.0 + fint * 0.06 + fmana * 0.06 + fwit * 0.06) * std.time.us_per_s);
+    const duration: i64 = @intFromFloat((3.0 + fint * 0.01 + fmana * 0.006 + fwit * 0.01) * std.time.us_per_s);
     if (duration <= 0 or duration > 25 * std.time.us_per_s) {
         player.client.sendError(.message_with_disconnect, "Too many/little seconds elapsed");
         return;
     }
 
-    const tick = player.chunked_tick_id -% @divFloor(@as(u64, @intCast(duration)), @as(u64, std.time.us_per_s) / main.settings.tps * 3);
+    const tick = player.chunked_tick_id -%
+        @as(u8, @intCast(@divFloor(@as(u64, @intCast(duration)), @as(u64, std.time.us_per_s) / main.settings.tps * 3)));
     player.hp = player.hp_records[tick];
     player.x = player.position_records[tick].x;
     player.y = player.position_records[tick].y;

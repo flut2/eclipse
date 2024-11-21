@@ -73,9 +73,6 @@ fn findTargetAlly(x: f32, y: f32, radius: f32) ?*Ally {
     var min_dist = radius * radius;
     var target: ?*Ally = null;
 
-    var lock = map.useLockForType(Ally);
-    lock.lock();
-    defer lock.unlock();
     for (map.listForType(Ally).items) |*p| {
         const dist_sqr = utils.distSqr(p.x, p.y, x, y);
         if (dist_sqr < min_dist) {
@@ -91,9 +88,6 @@ fn findTargetPlayer(x: f32, y: f32, radius: f32) ?*Player {
     var min_dist = radius * radius;
     var target: ?*Player = null;
 
-    var lock = map.useLockForType(Player);
-    lock.lock();
-    defer lock.unlock();
     for (map.listForType(Player).items) |*p| {
         const dist_sqr = utils.distSqr(p.x, p.y, x, y);
         if (dist_sqr < min_dist) {
@@ -109,9 +103,6 @@ fn findTargetEnemy(x: f32, y: f32, radius: f32) ?*Enemy {
     var min_dist = radius * radius;
     var target: ?*Enemy = null;
 
-    var lock = map.useLockForType(Enemy);
-    lock.lock();
-    defer lock.unlock();
     for (map.listForType(Enemy).items) |*e| {
         if (e.data.health <= 0) continue;
 
@@ -208,7 +199,9 @@ fn updatePosition(self: *Projectile, elapsed: f32, dt: f32) void {
     }
 }
 
-pub fn draw(self: Projectile, cam_data: render.CameraData, float_time_ms: f32) void {
+pub fn draw(self: *Projectile, cam_data: render.CameraData, float_time_ms: f32) void {
+    defer self.time_dilation_active = false;
+
     if (!cam_data.visibleInCamera(self.x, self.y)) return;
 
     const size = Camera.size_mult * cam_data.scale * self.data.size_mult;
@@ -226,19 +219,20 @@ pub fn draw(self: Projectile, cam_data: render.CameraData, float_time_ms: f32) v
         render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
+    const color: u32 = if (self.time_dilation_active) 0x0000FF else 0x000000;
+    const color_intensity: f32 = if (self.time_dilation_active) 0.33 else 0.0;
+
     render.drawQuad(
         screen_pos.x - w / 2.0,
         screen_pos.y + z_offset,
         w,
         h,
         self.atlas_data,
-        .{ .shadow_texel_mult = 2.0 / size, .rotation = angle },
+        .{ .shadow_texel_mult = 2.0 / size, .rotation = angle, .color = color, .color_intensity = color_intensity },
     );
 }
 
 pub fn update(self: *Projectile, time: i64, dt: f32) bool {
-    defer self.time_dilation_active = false;
-
     const elapsed_sec = @as(f32, @floatFromInt(time - self.start_time)) / std.time.us_per_s;
     const dt_sec = dt / std.time.us_per_s;
     if (elapsed_sec >= self.data.duration) return false;
@@ -266,23 +260,18 @@ pub fn update(self: *Projectile, time: i64, dt: f32) bool {
     const square = map.getSquare(self.x, self.y, false).?;
     if (square.data_id == Square.editor_tile or square.data_id == Square.empty_tile) return false;
 
-    {
-        var lock = map.useLockForType(Entity);
-        lock.lock();
-        defer lock.unlock();
-        if (map.findObject(Entity, square.entity_map_id, .con)) |e| {
-            if (e.data.occupy_square or e.data.full_occupy or e.data.is_wall) {
-                particles.HitEffect.addToMap(.{
-                    .x = self.x,
-                    .y = self.y,
-                    .colors = self.colors,
-                    .angle = self.angle,
-                    .speed = self.data.speed,
-                    .size = 1.0,
-                    .amount = 3,
-                });
-                return false;
-            }
+    if (map.findObject(Entity, square.entity_map_id, .con)) |e| {
+        if (e.data.occupy_square or e.data.full_occupy or e.data.is_wall) {
+            particles.HitEffect.addToMap(.{
+                .x = self.x,
+                .y = self.y,
+                .colors = self.colors,
+                .angle = self.angle,
+                .speed = self.data.speed,
+                .size = 1.0,
+                .amount = 3,
+            });
+            return false;
         }
     }
 
