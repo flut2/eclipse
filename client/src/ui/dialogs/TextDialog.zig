@@ -75,7 +75,7 @@ pub fn init(self: *TextDialog) !void {
             .size = 16,
             .text_type = .bold,
         },
-        .press_callback = closeDialog,
+        .pressCallback = closeDialog,
     });
 }
 

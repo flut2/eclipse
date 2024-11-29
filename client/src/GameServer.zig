@@ -132,6 +132,7 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
 
     if (status != 0) {
         std.log.err("Game write error: {s}", .{uv.uv_strerror(status)});
+        main.disconnect(false);
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -177,6 +178,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
         }
     } else if (bytes_read < 0) {
         std.log.err("Game read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
+        main.disconnect(false);
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -205,6 +207,7 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
     const read_status = uv.uv_read_start(@ptrCast(server.socket), allocBuffer, readCallback);
     if (read_status != 0) {
         std.log.err("Game read init error: {s}", .{uv.uv_strerror(read_status)});
+        main.disconnect(false);
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -277,6 +280,7 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
             while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
             if (write_status < 0) {
                 std.log.err("Game write send error: {s}", .{uv.uv_strerror(write_status)});
+                main.disconnect(false);
                 self.shutdown();
                 dialog.showDialog(.text, .{
                     .title = "Connection Error",
@@ -427,6 +431,7 @@ fn handleError(self: *Server, data: PacketData(.@"error")) void {
     if (logRead(.non_tick)) std.log.debug("Recv - Error: {}", .{data});
 
     if (data.type == .message_with_disconnect or data.type == .force_close_game) {
+        main.disconnect(false);
         self.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -619,7 +624,9 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
     }
 }
 
-fn handleCardOptions(_: *Server, _: PacketData(.card_options)) void {}
+fn handleCardOptions(_: *Server, data: PacketData(.card_options)) void {
+    if (ui_systems.screen == .game) ui_systems.screen.game.card_selection.updateSelectables(data.cards);
+}
 
 fn handleTalentUpgradeResponse(_: *Server, _: PacketData(.talent_upgrade_response)) void {}
 

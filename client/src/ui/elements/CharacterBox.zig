@@ -10,7 +10,7 @@ const ElementBase = element.ElementBase;
 base: ElementBase,
 id: u32,
 class_data_id: u16,
-press_callback: *const fn (*CharacterBox) void,
+pressCallback: *const fn (*CharacterBox) void,
 image_data: element.InteractableImageData,
 state: element.InteractableState = .none,
 text_data: ?element.TextData = null,
@@ -21,7 +21,7 @@ pub fn mousePress(self: *CharacterBox, x: f32, y: f32, _: f32, _: f32, _: glfw.M
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
         self.state = .pressed;
-        self.press_callback(self);
+        self.pressCallback(self);
         assets.playSfx("button.mp3");
         return true;
     }

@@ -33,7 +33,7 @@ pub fn init(self: *CharCreateScreen) !void {
                 .size = 16,
                 .text_type = .bold,
             },
-            .press_callback = boxClickCallback,
+            .pressCallback = boxClickCallback,
         }) catch return;
         self.boxes.append(main.allocator, box) catch return;
     }

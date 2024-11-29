@@ -42,7 +42,7 @@ pub fn init(self: *CharSelectScreen) !void {
                         .size = 16,
                         .text_type = .bold,
                     },
-                    .press_callback = boxClickCallback,
+                    .pressCallback = boxClickCallback,
                 });
                 try self.boxes.append(main.allocator, box);
             }
@@ -61,7 +61,7 @@ pub fn init(self: *CharSelectScreen) !void {
             .size = 16,
             .text_type = .bold,
         },
-        .press_callback = newCharCallback,
+        .pressCallback = newCharCallback,
     });
 
     if (counter < if (main.character_list) |list| list.max_chars else 0) self.new_char_button.base.visible = true;
@@ -74,7 +74,7 @@ pub fn init(self: *CharSelectScreen) !void {
             .size = 16,
             .text_type = .bold,
         },
-        .press_callback = editorCallback,
+        .pressCallback = editorCallback,
     });
 
     self.back_button = try element.create(Button, .{
@@ -85,7 +85,7 @@ pub fn init(self: *CharSelectScreen) !void {
             .size = 16,
             .text_type = .bold,
         },
-        .press_callback = backCallback,
+        .pressCallback = backCallback,
     });
 }
 

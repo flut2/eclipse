@@ -9,20 +9,22 @@ const Button = @This();
 const ElementBase = element.ElementBase;
 
 base: ElementBase,
+enabled: bool = true,
 userdata: ?*anyopaque = null,
-press_callback: *const fn (?*anyopaque) void,
+pressCallback: *const fn (?*anyopaque) void,
 image_data: element.InteractableImageData,
 state: element.InteractableState = .none,
+disabled_image_data: ?element.ImageData = null,
 text_data: ?element.TextData = null,
 tooltip_text: ?element.TextData = null,
 
 pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
-    if (!self.base.visible) return false;
+    if (!self.base.visible or !self.enabled) return false;
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
         self.state = .pressed;
-        self.press_callback(self.userdata);
+        self.pressCallback(self.userdata);
         assets.playSfx("button.mp3");
         return true;
     }
@@ -31,14 +33,14 @@ pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) b
 }
 
 pub fn mouseRelease(self: *Button, x: f32, y: f32, _: f32, _: f32) bool {
-    if (!self.base.visible) return false;
+    if (!self.base.visible or !self.enabled) return false;
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) self.state = .hovered;
     return !(self.base.event_policy.pass_release or !in_bounds);
 }
 
 pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
-    if (!self.base.visible) return false;
+    if (!self.base.visible or !self.enabled) return false;
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
@@ -85,7 +87,8 @@ pub fn deinit(self: *Button) void {
 
 pub fn draw(self: *Button, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
-    self.image_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
+    const image_data = if (self.enabled or self.disabled_image_data == null) self.image_data.current(self.state) else self.disabled_image_data.?;
+    image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
     if (self.text_data) |*text_data| render.drawText(
         self.base.x + x_offset,
         self.base.y + y_offset,
@@ -96,13 +99,14 @@ pub fn draw(self: *Button, _: render.CameraData, x_offset: f32, y_offset: f32, _
 }
 
 pub fn width(self: Button) f32 {
+    const data = if (self.enabled or self.disabled_image_data == null) self.image_data.current(self.state) else self.disabled_image_data.?;
     if (self.text_data) |text| {
-        return @max(text.width, switch (self.image_data.current(self.state)) {
+        return @max(text.width, switch (data) {
             .nine_slice => |nine_slice| return nine_slice.w,
             .normal => |image_data| return image_data.width(),
         });
     } else {
-        return switch (self.image_data.current(self.state)) {
+        return switch (data) {
             .nine_slice => |nine_slice| return nine_slice.w,
             .normal => |image_data| return image_data.width(),
         };
@@ -110,13 +114,14 @@ pub fn width(self: Button) f32 {
 }
 
 pub fn height(self: Button) f32 {
+    const data = if (self.enabled or self.disabled_image_data == null) self.image_data.current(self.state) else self.disabled_image_data.?;
     if (self.text_data) |text| {
-        return @max(text.height, switch (self.image_data.current(self.state)) {
+        return @max(text.height, switch (data) {
             .nine_slice => |nine_slice| return nine_slice.h,
             .normal => |image_data| return image_data.height(),
         });
     } else {
-        return switch (self.image_data.current(self.state)) {
+        return switch (data) {
             .nine_slice => |nine_slice| return nine_slice.h,
             .normal => |image_data| return image_data.height(),
         };
@@ -124,13 +129,14 @@ pub fn height(self: Button) f32 {
 }
 
 pub fn texWRaw(self: Button) f32 {
+    const data = if (self.enabled or self.disabled_image_data == null) self.image_data.current(self.state) else self.disabled_image_data.?;
     if (self.text_data) |text| {
-        return @max(text.width, switch (self.image_data.current(self.state)) {
+        return @max(text.width, switch (data) {
             .nine_slice => |nine_slice| return nine_slice.w,
             .normal => |image_data| return image_data.texWRaw(),
         });
     } else {
-        return switch (self.image_data.current(self.state)) {
+        return switch (data) {
             .nine_slice => |nine_slice| return nine_slice.w,
             .normal => |image_data| return image_data.texWRaw(),
         };
@@ -138,13 +144,14 @@ pub fn texWRaw(self: Button) f32 {
 }
 
 pub fn texHRaw(self: Button) f32 {
+    const data = if (self.enabled or self.disabled_image_data == null) self.image_data.current(self.state) else self.disabled_image_data.?;
     if (self.text_data) |text| {
-        return @max(text.height, switch (self.image_data.current(self.state)) {
+        return @max(text.height, switch (data) {
             .nine_slice => |nine_slice| return nine_slice.h,
             .normal => |image_data| return image_data.texHRaw(),
         });
     } else {
-        return switch (self.image_data.current(self.state)) {
+        return switch (data) {
             .nine_slice => |nine_slice| return nine_slice.h,
             .normal => |image_data| return image_data.texHRaw(),
         };

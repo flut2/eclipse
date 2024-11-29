@@ -53,6 +53,7 @@ mp_regen: f32 = 0.0,
 stats: [13]i32 = @splat(0),
 stat_boosts: [13]i32 = @splat(0),
 inventory: [22]u16 = @splat(std.math.maxInt(u16)),
+selecting_cards: ?[3]u16 = null,
 cards: []u16 = &.{},
 resources: []u32 = &.{},
 talents: []u8 = &.{},
@@ -267,6 +268,10 @@ fn defaultCache(comptime T: type) CacheType(T) {
 
 fn exportObject(self: *Player, comptime T: type) !void {
     for (self.world.listForType(T).items) |*object| {
+        if (T == Container and
+            object.owner_map_id != std.math.maxInt(u32) and
+            object.owner_map_id != self.map_id) continue;
+
         const x_dt = object.x - self.x;
         const y_dt = object.y - self.y;
         if (x_dt * x_dt + y_dt * y_dt <= 16 * 16) {

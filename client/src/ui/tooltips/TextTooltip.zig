@@ -18,18 +18,12 @@ text: *Text = undefined,
 pub fn init(self: *TextTooltip) !void {
     const tooltip_background_data = assets.getUiData("tooltip_background", 0);
     self.decor = try self.root.createChild(Image, .{
-        .base = .{
-            .x = 0,
-            .y = 0,
-        },
+        .base = .{ .x = 0, .y = 0 },
         .image_data = .{ .nine_slice = .fromAtlasData(tooltip_background_data, 0, 0, 34, 34, 1, 1, 1.0) },
     });
 
     self.text = try self.root.createChild(Text, .{
-        .base = .{
-            .x = 16,
-            .y = 16,
-        },
+        .base = .{ .x = 16, .y = 16 },
         .text_data = .{ .text = "", .size = 0 },
     });
 

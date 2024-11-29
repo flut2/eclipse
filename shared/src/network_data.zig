@@ -340,7 +340,7 @@ pub const S2CPacket = union(enum) {
         angle: f32,
         angle_incr: f32,
     },
-    card_options: struct { cards: []u16 },
+    card_options: struct { cards: [3]u16 },
     talent_upgrade_response: struct { success: bool, message: []const u8 },
     @"error": struct { type: ErrorType, description: []const u8 },
 };

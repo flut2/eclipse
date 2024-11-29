@@ -481,10 +481,12 @@ pub const ClassData = struct {
     talents: []TalentData,
 };
 
+pub const ContainerRarity = enum { common, rare, epic, legendary, mythic };
 pub const ContainerData = struct {
     id: u16,
     name: []const u8,
     textures: []const TextureData,
+    rarity: ContainerRarity = .common,
     size_mult: f32 = 1.0,
     item_types: [8]ItemType = @splat(.any),
     light: LightData = .{},

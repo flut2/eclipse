@@ -22,15 +22,7 @@ pub const PacketWriter = struct {
 
         if (type_info == .pointer and (type_info.pointer.size == .Slice or type_info.pointer.size == .Many)) {
             self.write(@as(u16, @intCast(value.len)), allocator);
-            for (value) |val|
-                self.write(val, allocator);
-            return;
-        }
-
-        if (type_info == .array) {
-            self.write(@as(u16, @intCast(value.len)), allocator);
-            for (value) |val|
-                self.write(val, allocator);
+            for (value) |val| self.write(val, allocator);
             return;
         }
 
@@ -65,34 +57,30 @@ pub const PacketReader = struct {
     // Arrays and slices are allocated. Using an arena allocator is recommended
     pub fn read(self: *PacketReader, comptime T: type, allocator: std.mem.Allocator) T {
         const type_info = @typeInfo(T);
-        if (type_info == .pointer or type_info == .array) {
-            const ChildType = if (type_info == .array) type_info.array.child else type_info.pointer.child;
-            const len = self.read(u16, allocator);
-            var ret = allocator.alloc(ChildType, len) catch @panic("OOM");
-            for (0..len) |i| {
-                ret[i] = self.read(ChildType, allocator);
-            }
-            
-            return ret;
-        }
-
-        if (type_info == .@"struct") {
-            switch (type_info.@"struct".layout) {
-                .auto, .@"extern" => {
-                    var value: T = undefined;
-                    inline for (type_info.@"struct".fields) |field| {
-                        @field(value, field.name) = self.read(field.type, allocator);
-                    }
-                    return value;
-                },
-                .@"packed" => {}, // will be handled below, packed structs are just ints
-            }
+        switch (type_info) {
+            .pointer => {
+                const ChildType = type_info.pointer.child;
+                const len = self.read(u16, allocator);
+                var ret = allocator.alloc(ChildType, len) catch @panic("OOM");
+                for (0..len) |i| ret[i] = self.read(ChildType, allocator);
+                return ret;
+            },
+            .@"struct" => {
+                switch (type_info.@"struct".layout) {
+                    .auto, .@"extern" => {
+                        var value: T = undefined;
+                        inline for (type_info.@"struct".fields) |field| @field(value, field.name) = self.read(field.type, allocator);
+                        return value;
+                    },
+                    .@"packed" => {}, // will be handled below, packed structs are just ints
+                }
+            },
+            else => {},
         }
 
         const byte_size = @sizeOf(T);
         const next_idx = self.index + byte_size;
-        if (next_idx > self.buffer.len)
-            std.debug.panic("Buffer attempted to read out of bounds", .{});
+        if (next_idx > self.buffer.len) std.debug.panic("Buffer attempted to read out of bounds", .{});
         var buf = self.buffer[self.index..next_idx];
         self.index += byte_size;
         return std.mem.bytesToValue(T, buf[0..byte_size]);

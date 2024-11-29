@@ -12,7 +12,8 @@ const ElementBase = element.ElementBase;
 base: ElementBase,
 image_data: element.ImageData,
 tooltip_text: ?element.TextData = null,
-ability_props: ?game_data.AbilityData = null,
+ability_data: ?game_data.AbilityData = null,
+card_data: ?game_data.CardData = null,
 // hack
 is_minimap_decor: bool = false,
 minimap_offset_x: f32 = 0.0,
@@ -25,14 +26,25 @@ pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) boo
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
-        if (self.ability_props) |props| {
+        if (self.card_data) |data| {
+            tooltip.switchTooltip(.card, .{
+                .x = x + x_offset,
+                .y = y + y_offset,
+                .data = data,
+            });
+            return true;
+        }
+
+        if (self.ability_data) |data| {
             tooltip.switchTooltip(.ability, .{
                 .x = x + x_offset,
                 .y = y + y_offset,
-                .props = props,
+                .data = data,
             });
             return true;
-        } else if (self.tooltip_text) |text| {
+        }
+
+        if (self.tooltip_text) |text| {
             tooltip.switchTooltip(.text, .{
                 .x = x + x_offset,
                 .y = y + y_offset,

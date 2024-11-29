@@ -82,22 +82,22 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
     self.root.base.x = if (left_x < 0) params.x + 15 else left_x;
     self.root.base.y = if (up_y < 0) params.y + 15 else up_y;
 
-    if (!std.mem.eql(u8, self.last_abil_name, params.props.name)) {
-        if (assets.ui_atlas_data.get(params.props.icon.sheet)) |data| {
-            self.image.image_data.normal.atlas_data = data[params.props.icon.index];
+    if (!std.mem.eql(u8, self.last_abil_name, params.data.name)) {
+        if (assets.ui_atlas_data.get(params.data.icon.sheet)) |data| {
+            self.image.image_data.normal.atlas_data = data[params.data.icon.index];
         }
 
-        self.title.text_data.setText(params.props.name);
+        self.title.text_data.setText(params.data.name);
 
         const cooldown_icon = "&img=\"misc_big,69\"";
-        const has_mana_cost = params.props.mana_cost > 0;
-        const has_health_cost = params.props.health_cost > 0;
-        const has_gold_cost = params.props.gold_cost > 0;
+        const has_mana_cost = params.data.mana_cost > 0;
+        const has_health_cost = params.data.health_cost > 0;
+        const has_gold_cost = params.data.gold_cost > 0;
         if (!has_mana_cost and !has_health_cost and !has_gold_cost) {
             self.subtext.text_data.text = std.fmt.bufPrint(
                 self.subtext.text_data.backing_buffer,
                 "No Cost | {d:.1}s " ++ cooldown_icon,
-                .{params.props.cooldown},
+                .{params.data.cooldown},
             ) catch self.subtext.text_data.text;
         } else {
             const mana_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_mp = undefined });
@@ -108,30 +108,30 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
                 self.subtext.text_data.text = std.fmt.bufPrint(
                     self.subtext.text_data.backing_buffer,
                     "{d} " ++ mana_icon ++ " {d} " ++ health_icon ++ " | {d:.1}s " ++ cooldown_icon,
-                    .{ params.props.mana_cost, params.props.health_cost, params.props.cooldown },
+                    .{ params.data.mana_cost, params.data.health_cost, params.data.cooldown },
                 ) catch self.subtext.text_data.text;
             } else if (has_health_cost) {
                 self.subtext.text_data.text = std.fmt.bufPrint(
                     self.subtext.text_data.backing_buffer,
                     "{d} " ++ health_icon ++ " | {d:.1}s " ++ cooldown_icon,
-                    .{ params.props.health_cost, params.props.cooldown },
+                    .{ params.data.health_cost, params.data.cooldown },
                 ) catch self.subtext.text_data.text;
             } else if (has_mana_cost) {
                 self.subtext.text_data.text = std.fmt.bufPrint(
                     self.subtext.text_data.backing_buffer,
                     "{d} " ++ mana_icon ++ " | {d:.1}s " ++ cooldown_icon,
-                    .{ params.props.mana_cost, params.props.cooldown },
+                    .{ params.data.mana_cost, params.data.cooldown },
                 ) catch self.subtext.text_data.text;
             } else {
                 self.subtext.text_data.text = std.fmt.bufPrint(
                     self.subtext.text_data.backing_buffer,
                     "{d} " ++ gold_icon ++ " | {d:.1}s " ++ cooldown_icon,
-                    .{ params.props.gold_cost, params.props.cooldown },
+                    .{ params.data.gold_cost, params.data.cooldown },
                 ) catch self.subtext.text_data.text;
             }
         }
 
-        self.description.text_data.setText(params.props.description);
+        self.description.text_data.setText(params.data.description);
 
         self.line_break.base.y = self.image.base.y + self.image.height() + 10;
         self.description.base.y = self.line_break.base.y + 10;
@@ -142,6 +142,6 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
             .normal => |*image_data| image_data.scale_y = new_h / image_data.height(),
         }
 
-        self.last_abil_name = params.props.name;
+        self.last_abil_name = params.data.name;
     }
 }

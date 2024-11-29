@@ -74,13 +74,10 @@ pub fn create() !*Options {
         .visible = options.visible and options.selected_tab == .misc,
     } });
 
-    const options_background = assets.getUiData("options_background", 0);
+    const background = assets.getUiData("dark_background", 0);
     options.options_bg = try options.main_container.createChild(Image, .{
-        .base = .{
-            .x = 0,
-            .y = 0,
-        },
-        .image_data = .{ .nine_slice = .fromAtlasData(options_background, main.camera.width, main.camera.height, 0, 0, 8, 8, 1.0) },
+        .base = .{ .x = 0, .y = 0 },
+        .image_data = .{ .nine_slice = .fromAtlasData(background, main.camera.width, main.camera.height, 0, 0, 8, 8, 1.0) },
     });
 
     options.options_text = try options.main_container.createChild(Text, .{
@@ -108,7 +105,7 @@ pub fn create() !*Options {
             .text_type = .bold,
         },
         .userdata = options,
-        .press_callback = closeCallback,
+        .pressCallback = closeCallback,
     });
 
     options.disconnect_button = try options.buttons.createChild(Button, .{
@@ -123,7 +120,7 @@ pub fn create() !*Options {
             .text_type = .bold,
         },
         .userdata = options,
-        .press_callback = disconnectCallback,
+        .pressCallback = disconnectCallback,
     });
 
     options.defaults_button = try options.buttons.createChild(Button, .{
@@ -134,7 +131,7 @@ pub fn create() !*Options {
             .size = 16,
             .text_type = .bold,
         },
-        .press_callback = resetToDefaultsCallback,
+        .pressCallback = resetToDefaultsCallback,
     });
 
     var tabx_offset: f32 = 50;
@@ -149,7 +146,7 @@ pub fn create() !*Options {
             .text_type = .bold,
         },
         .userdata = options,
-        .press_callback = generalTabCallback,
+        .pressCallback = generalTabCallback,
     });
 
     tabx_offset += button_width + 10;
@@ -163,7 +160,7 @@ pub fn create() !*Options {
             .text_type = .bold,
         },
         .userdata = options,
-        .press_callback = graphicsTabCallback,
+        .pressCallback = graphicsTabCallback,
     });
 
     tabx_offset += button_width + 10;
@@ -177,7 +174,7 @@ pub fn create() !*Options {
             .text_type = .bold,
         },
         .userdata = options,
-        .press_callback = miscTabCallback,
+        .pressCallback = miscTabCallback,
     });
 
     try addKeyMap(options.general_tab, &main.settings.move_up, "Move Up", "");

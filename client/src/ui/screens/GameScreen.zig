@@ -18,9 +18,10 @@ const UiContainer = @import("../elements/Container.zig");
 const Bar = @import("../elements/Bar.zig");
 const Button = @import("../elements/Button.zig");
 const Item = @import("../elements/Item.zig");
-const Options = @import("../composed/Options.zig");
 const Container = @import("../../game/Container.zig");
 const Player = @import("../../game/Player.zig");
+const Options = @import("../composed/Options.zig");
+const CardSelection = @import("../composed/CardSelection.zig");
 
 pub const Slot = struct {
     idx: u8,
@@ -87,6 +88,79 @@ pub const Slot = struct {
     }
 };
 
+const CardSlot = struct {
+    base: *UiContainer,
+    decor: *Image,
+    title: *Text,
+    data_id: u16 = std.math.maxInt(u16),
+
+    pub fn create(root: *UiContainer, x: f32, y: f32) !CardSlot {
+        const decor_image = assets.getUiData("empty_card_slot", 0);
+        const base = try root.createChild(UiContainer, .{ .base = .{ .x = x, .y = y } });
+        const decor = try base.createChild(Image, .{
+            .base = .{ .x = 0.0, .y = 0.0 },
+            .image_data = .{ .normal = .{ .atlas_data = decor_image } },
+            .tooltip_text = .{
+                .text = "Empty Card Slot",
+                .size = 16,
+                .text_type = .bold_italic,
+                .max_width = 200,
+            },
+        });
+        return .{
+            .base = base,
+            .decor = decor,
+            .title = try base.createChild(Text, .{
+                .base = .{ .x = 0.0, .y = 0.0, .visible = false },
+                .text_data = .{
+                    .text = "",
+                    .size = 10,
+                    .text_type = .bold,
+                    .max_chars = 64,
+                    .hori_align = .middle,
+                    .vert_align = .middle,
+                    .max_width = decor.width(),
+                    .max_height = decor.height(),
+                },
+            }),
+        };
+    }
+
+    pub fn setCard(self: *CardSlot, data_id: u16) !void {
+        if (self.data_id == data_id) return;
+        self.data_id = data_id;
+
+        if (data_id == std.math.maxInt(u16)) {
+            self.title.base.visible = false;
+            self.decor.image_data.normal.atlas_data = assets.getUiData("empty_card_slot", 0);
+            self.decor.card_data = null;
+            self.decor.tooltip_text.?.text = "Empty Card Slot";
+            return;
+        }
+
+        const data = game_data.card.from_id.get(data_id) orelse return;
+        self.title.text_data.color = switch (data.rarity) {
+            .mythic => 0xE54E4E,
+            .legendary => 0xE5B84E,
+            .epic => 0x9F50E5,
+            .rare => 0x5066E5,
+            .common => 0xE5CCAC,
+        };
+        self.title.text_data.setText(data.name);
+        self.title.base.visible = true;
+
+        self.decor.image_data.normal.atlas_data = switch (data.rarity) {
+            .mythic => assets.getUiData("mythic_card_slot", 0),
+            .legendary => assets.getUiData("legendary_card_slot", 0),
+            .epic => assets.getUiData("epic_card_slot", 0),
+            .rare => assets.getUiData("rare_card_slot", 0),
+            .common => assets.getUiData("common_card_slot", 0),
+        };
+        self.decor.tooltip_text = null;
+        self.decor.card_data = data;
+    }
+};
+
 fps_text: *Text = undefined,
 chat_input: *Input = undefined,
 chat_decor: *Image = undefined,
@@ -95,6 +169,7 @@ chat_lines: std.ArrayListUnmanaged(*Text) = .empty,
 bars_decor: *Image = undefined,
 stats_button: *Button = undefined,
 cards_button: *Button = undefined,
+talents_button: *Button = undefined,
 stats_container: *UiContainer = undefined,
 cards_container: *UiContainer = undefined,
 ability_container: *UiContainer = undefined,
@@ -102,6 +177,11 @@ ability_overlays: [4]*Image = undefined,
 ability_overlay_texts: [4]*Text = undefined,
 
 stats_decor: *Image = undefined,
+cards_decor: *Image = undefined,
+cards_text: *Text = undefined,
+left_card_flipper: *Button = undefined,
+right_card_flipper: *Button = undefined,
+card_slots: []CardSlot = &.{},
 strength_stat_text: *Text = undefined,
 wit_stat_text: *Text = undefined,
 defense_stat_text: *Text = undefined,
@@ -122,9 +202,17 @@ container_decor: *Image = undefined,
 container_name: *Text = undefined,
 container_items: [9]*Item = undefined,
 minimap_decor: *Image = undefined,
+
 options: *Options = undefined,
+card_selection: *CardSelection = undefined,
+// talent_view: *TalentView = undefined,
+
 inventory_pos_data: [22]utils.Rect = undefined,
 container_pos_data: [9]utils.Rect = undefined,
+container_visible: bool = false,
+container_id: u32 = std.math.maxInt(u32),
+abilities_inited: bool = false,
+card_page: u8 = 1,
 last_aether: u8 = std.math.maxInt(u8),
 last_spirits_communed: u32 = std.math.maxInt(u32),
 last_hp: i32 = -1,
@@ -134,9 +222,7 @@ last_mp: i32 = -1,
 last_max_mp: i32 = -1,
 last_max_mp_bonus: i32 = -1,
 last_in_combat: bool = false,
-container_visible: bool = false,
-container_id: u32 = std.math.maxInt(u32),
-abilities_inited: bool = false,
+last_card_count: i32 = -1,
 
 pub fn init(self: *GameScreen) !void {
     const inventory_data = assets.getUiData("player_inventory", 0);
@@ -192,13 +278,13 @@ pub fn init(self: *GameScreen) !void {
     });
 
     self.container_name = try element.create(Text, .{
-        .base = .{ .x = self.container_decor.base.x + 22, .y = self.container_decor.base.y + 126 },
+        .base = .{ .x = self.container_decor.base.x + 21, .y = self.container_decor.base.y + 159 },
         .text_data = .{
             .text = "",
             .size = 14,
             .vert_align = .middle,
             .hori_align = .middle,
-            .max_width = 196,
+            .max_width = 126,
             .max_height = 18,
         },
     });
@@ -268,33 +354,93 @@ pub fn init(self: *GameScreen) !void {
         },
     });
 
-    const cards_button_data = assets.getUiData("cards_button", 0);
-    self.cards_button = try element.create(Button, .{
+    const talents_button_base = assets.getUiData("talent_view_button", 0);
+    const talents_button_hover = assets.getUiData("talent_view_button", 1);
+    const talents_button_press = assets.getUiData("talent_view_button", 2);
+    self.talents_button = try element.create(Button, .{
         .base = .{
-            .x = self.bars_decor.base.x + 21 + (32 - cards_button_data.width() + assets.padding * 2) / 2.0,
-            .y = self.bars_decor.base.y + 73 + (32 - cards_button_data.height() + assets.padding * 2) / 2.0,
+            .x = self.bars_decor.base.x + 21 + (32 - talents_button_base.width() + assets.padding * 2) / 2.0,
+            .y = self.bars_decor.base.y + 29 + (32 - talents_button_base.height() + assets.padding * 2) / 2.0,
         },
-        .image_data = .{ .base = .{ .normal = .{ .atlas_data = cards_button_data, .glow = true } } },
+        .image_data = .fromImageData(talents_button_base, talents_button_hover, talents_button_press),
         .userdata = self,
-        .press_callback = cardsCallback,
+        .pressCallback = talentsCallback,
     });
 
-    const cards_decor_data = assets.getUiData("player_stats", 0);
+    const cards_button_base = assets.getUiData("cards_button", 0);
+    const cards_button_hover = assets.getUiData("cards_button", 1);
+    const cards_button_press = assets.getUiData("cards_button", 2);
+    self.cards_button = try element.create(Button, .{
+        .base = .{
+            .x = self.bars_decor.base.x + 21 + (32 - cards_button_base.width() + assets.padding * 2) / 2.0,
+            .y = self.bars_decor.base.y + 73 + (32 - cards_button_base.height() + assets.padding * 2) / 2.0,
+        },
+        .image_data = .fromImageData(cards_button_base, cards_button_hover, cards_button_press),
+        .userdata = self,
+        .pressCallback = cardsCallback,
+    });
+
+    const cards_decor_data = assets.getUiData("card_panel_bg", 0);
     self.cards_container = try element.create(UiContainer, .{ .base = .{
         .x = self.bars_decor.base.x + 63 - 15,
         .y = self.bars_decor.base.y + 15 - cards_decor_data.height(),
         .visible = false,
     } });
 
-    const stats_button_data = assets.getUiData("stats_button", 0);
+    self.cards_decor = try self.cards_container.createChild(Image, .{
+        .base = .{ .x = 0, .y = 0 },
+        .image_data = .{ .normal = .{ .atlas_data = cards_decor_data } },
+    });
+
+    self.cards_text = try self.cards_container.createChild(Text, .{
+        .base = .{ .x = 21, .y = 21 },
+        .text_data = .{
+            .text = "Cards - 1/1",
+            .size = 16,
+            .text_type = .bold_italic,
+            .hori_align = .middle,
+            .vert_align = .middle,
+            .max_width = 212,
+            .max_height = 24,
+            .max_chars = 32,
+        },
+    });
+
+    const left_flipper_normal = assets.getUiData("card_panel_buttons", 0);
+    const left_flipper_hover = assets.getUiData("card_panel_buttons", 2);
+    const left_flipper_press = assets.getUiData("card_panel_buttons", 4);
+    self.left_card_flipper = try self.cards_container.createChild(Button, .{
+        .base = .{ .x = 132, .y = 105 },
+        .image_data = .fromImageData(left_flipper_normal, left_flipper_hover, left_flipper_press),
+        .disabled_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("card_panel_buttons", 6) } },
+        .userdata = self,
+        .enabled = false,
+        .pressCallback = leftCardFlipperCallback,
+    });
+
+    const right_flipper_normal = assets.getUiData("card_panel_buttons", 1);
+    const right_flipper_hover = assets.getUiData("card_panel_buttons", 3);
+    const right_flipper_press = assets.getUiData("card_panel_buttons", 5);
+    self.right_card_flipper = try self.cards_container.createChild(Button, .{
+        .base = .{ .x = 181, .y = 105 },
+        .image_data = .fromImageData(right_flipper_normal, right_flipper_hover, right_flipper_press),
+        .disabled_image_data = .{ .normal = .{ .atlas_data = assets.getUiData("card_panel_buttons", 7) } },
+        .userdata = self,
+        .enabled = false,
+        .pressCallback = rightCardFlipperCallback,
+    });
+
+    const stats_button_base = assets.getUiData("stats_button", 0);
+    const stats_button_hover = assets.getUiData("stats_button", 1);
+    const stats_button_press = assets.getUiData("stats_button", 2);
     self.stats_button = try element.create(Button, .{
         .base = .{
-            .x = self.bars_decor.base.x + 21 + (32 - stats_button_data.width() + assets.padding * 2) / 2.0,
-            .y = self.bars_decor.base.y + 117 + (32 - stats_button_data.height() + assets.padding * 2) / 2.0,
+            .x = self.bars_decor.base.x + 21 + (32 - stats_button_base.width() + assets.padding * 2) / 2.0,
+            .y = self.bars_decor.base.y + 117 + (32 - stats_button_base.height() + assets.padding * 2) / 2.0,
         },
-        .image_data = .{ .base = .{ .normal = .{ .atlas_data = stats_button_data, .glow = true } } },
+        .image_data = .fromImageData(stats_button_base, stats_button_hover, stats_button_press),
         .userdata = self,
-        .press_callback = statsCallback,
+        .pressCallback = statsCallback,
     });
 
     const stats_decor_data = assets.getUiData("player_stats", 0);
@@ -403,6 +549,7 @@ pub fn init(self: *GameScreen) !void {
     });
 
     self.options = try .create();
+    self.card_selection = try .create();
 }
 
 pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_color: u32, text_color: u32) !void {
@@ -451,7 +598,7 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
         _ = try self.ability_container.createChild(Image, .{
             .base = .{ .x = fidx * 56.0, .y = 0.0 },
             .image_data = .{ .normal = .{ .atlas_data = data[index], .scale_x = 2.0, .scale_y = 2.0 } },
-            .ability_props = ability,
+            .ability_data = ability,
         });
     } else @panic("Could not initiate ability for GameScreen, sheet was missing");
 
@@ -511,6 +658,7 @@ pub fn deinit(self: *GameScreen) void {
     element.destroy(self.container_decor);
     element.destroy(self.container_name);
     element.destroy(self.bars_decor);
+    element.destroy(self.talents_button);
     element.destroy(self.cards_button);
     element.destroy(self.cards_container);
     element.destroy(self.stats_button);
@@ -528,6 +676,7 @@ pub fn deinit(self: *GameScreen) void {
 
     self.chat_lines.deinit(main.allocator);
     self.options.deinit();
+    self.card_selection.deinit();
 
     main.allocator.destroy(self);
 }
@@ -540,14 +689,18 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
     self.inventory_decor.base.y = h - self.inventory_decor.height() + 10;
     self.container_decor.base.x = self.inventory_decor.base.x - self.container_decor.width() + 10;
     self.container_decor.base.y = h - self.container_decor.height() + 10;
-    self.container_name.base.x = self.container_decor.base.x + 22;
-    self.container_name.base.y = self.container_decor.base.y + 126;
+    self.container_name.base.x = self.container_decor.base.x + 21;
+    self.container_name.base.y = self.container_decor.base.y + 159;
     self.bars_decor.base.x = (w - self.bars_decor.width()) / 2;
     self.bars_decor.base.y = h - self.bars_decor.height() + 10;
     self.stats_container.base.x = self.bars_decor.base.x + 63 - 15;
     self.stats_container.base.y = self.bars_decor.base.y + 15 - self.stats_decor.height();
+    self.cards_container.base.x = self.bars_decor.base.x + 63 - 15;
+    self.cards_container.base.y = self.bars_decor.base.y + 15 - self.cards_decor.height();
     self.ability_container.base.x = self.bars_decor.base.x + 69;
     self.ability_container.base.y = self.bars_decor.base.y + 45;
+    self.talents_button.base.x = self.bars_decor.base.x + 21 + (32 - self.talents_button.width() + assets.padding * 2) / 2.0;
+    self.talents_button.base.y = self.bars_decor.base.y + 73 + (32 - self.talents_button.height() + assets.padding * 2) / 2.0;
     self.cards_button.base.x = self.bars_decor.base.x + 21 + (32 - self.cards_button.width() + assets.padding * 2) / 2.0;
     self.cards_button.base.y = self.bars_decor.base.y + 73 + (32 - self.cards_button.height() + assets.padding * 2) / 2.0;
     self.stats_button.base.x = self.bars_decor.base.x + 21 + (32 - self.stats_button.width() + assets.padding * 2) / 2.0;
@@ -653,7 +806,45 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
             self.ability_overlay_texts[i].base.visible = false;
         }
 
-        if (self.last_spirits_communed != local_player.spirits_communed or self.last_aether != local_player.aether) {
+        const aether_changed = self.last_aether != local_player.aether;
+
+        if (self.last_card_count != local_player.cards.len or aether_changed) {
+            const old_cards_len = if (self.last_aether == std.math.maxInt(u8)) 0 else self.last_aether * 5;
+            const new_cards_len = local_player.aether * 5;
+
+            self.card_page = @min(self.card_page, local_player.aether);
+            if (self.card_page <= 1) self.left_card_flipper.enabled = false;
+            if (self.card_page >= local_player.aether) self.right_card_flipper.enabled = false;
+
+            if (old_cards_len != new_cards_len) {
+                self.card_slots = try main.allocator.realloc(self.card_slots, new_cards_len);
+                if (new_cards_len > old_cards_len) for (old_cards_len..new_cards_len) |i| {
+                    const current_page = @divFloor(i, 5) + 1;
+                    const paged_idx = i % 5;
+                    const x = 24 + @divFloor(paged_idx, 3) * 108;
+                    const y = 45 + paged_idx % 3 * 30;
+                    self.card_slots[i] = try .create(self.cards_container, @floatFromInt(x), @floatFromInt(y));
+                    if (current_page != self.card_page) self.card_slots[i].base.base.visible = false;
+                };
+            }
+            var i: usize = 0;
+            for (local_player.cards) |data_id| {
+                defer i += 1;
+                try self.card_slots[i].setCard(data_id);
+            }
+            for (i..new_cards_len) |j| try self.card_slots[j].setCard(std.math.maxInt(u16));
+
+            self.cards_text.text_data.setText(try std.fmt.bufPrint(
+                self.cards_text.text_data.backing_buffer,
+                "Cards - {d}/{d}",
+                .{ self.card_page, local_player.aether },
+            ));
+
+            self.last_card_count = @intCast(local_player.cards.len);
+            self.last_aether = local_player.aether;
+        }
+
+        if (self.last_spirits_communed != local_player.spirits_communed or aether_changed) {
             const spirit_goal = game_data.spiritGoal(local_player.aether);
             const spirit_perc = @as(f32, @floatFromInt(local_player.spirits_communed)) / @as(f32, @floatFromInt(spirit_goal));
             self.spirit_bar.base.scissor.max_x = self.spirit_bar.texWRaw() * spirit_perc;
@@ -958,10 +1149,27 @@ fn statsCallback(ud: ?*anyopaque) void {
     }
 }
 
-pub fn cardsCallback(ud: ?*anyopaque) void {
+fn cardsCallback(ud: ?*anyopaque) void {
     const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
     screen.cards_container.base.visible = !screen.cards_container.base.visible;
     screen.stats_container.base.visible = false;
+}
+
+fn talentsCallback(ud: ?*anyopaque) void {
+    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    screen.cards_container.base.visible = false;
+    screen.stats_container.base.visible = false;
+}
+
+fn leftCardFlipperCallback(ud: ?*anyopaque) void {
+    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    screen.card_page = @max(1, screen.card_page - 1);
+}
+
+fn rightCardFlipperCallback(ud: ?*anyopaque) void {
+    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    if (map.localPlayer(.con)) |player|
+        screen.card_page = @min(@divFloor(player.cards.len, 5), screen.card_page + 1);
 }
 
 fn chatCallback(input_text: []const u8) void {

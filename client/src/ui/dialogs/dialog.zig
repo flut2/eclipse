@@ -31,7 +31,7 @@ pub fn init() !void {
         if (map.capacity() > 0) map.rehash(dummy_dialog_ctx);
     }
 
-    const background_data = assets.getUiData("options_background", 0);
+    const background_data = assets.getUiData("dark_background", 0);
     dialog_bg = try element.create(Image, .{
         .base = .{ .x = 0, .y = 0, .visible = false, .layer = .dialog },
         .image_data = .{ .nine_slice = .fromAtlasData(background_data, main.camera.width, main.camera.height, 0, 0, 8, 8, 1.0) },

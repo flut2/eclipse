@@ -357,7 +357,7 @@ pub fn init(self: *MapEditorScreen) !void {
             .text_type = .bold,
         },
         .userdata = self,
-        .press_callback = openCallback,
+        .pressCallback = openCallback,
     });
 
     _ = try self.controls_container.createChild(Button, .{
@@ -369,7 +369,7 @@ pub fn init(self: *MapEditorScreen) !void {
             .text_type = .bold,
         },
         .userdata = self,
-        .press_callback = saveCallback,
+        .pressCallback = saveCallback,
     });
 
     _ = try self.controls_container.createChild(Button, .{
@@ -381,7 +381,7 @@ pub fn init(self: *MapEditorScreen) !void {
             .text_type = .bold,
         },
         .userdata = self,
-        .press_callback = testCallback,
+        .pressCallback = testCallback,
     });
 
     _ = try self.controls_container.createChild(Button, .{
@@ -393,7 +393,7 @@ pub fn init(self: *MapEditorScreen) !void {
             .text_type = .bold,
         },
         .userdata = self,
-        .press_callback = exitCallback,
+        .pressCallback = exitCallback,
     });
 
     _ = try self.controls_container.createChild(KeyMapper, .{
@@ -589,7 +589,7 @@ pub fn init(self: *MapEditorScreen) !void {
             },
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = 4.0, .scale_y = 4.0 } } },
             .userdata = entry.key_ptr,
-            .press_callback = groundClicked,
+            .pressCallback = groundClicked,
             .tooltip_text = .{
                 .text = (game_data.ground.from_id.get(entry.key_ptr.*) orelse {
                     std.log.err("Could find name for tile with data id {}. Not adding to tile list", .{entry.key_ptr.*});
@@ -684,7 +684,7 @@ pub fn init(self: *MapEditorScreen) !void {
                 .color_intensity = 1.0,
             } } },
             .userdata = entry.key_ptr,
-            .press_callback = regionClicked,
+            .pressCallback = regionClicked,
             .tooltip_text = .{
                 .text = entry.value_ptr.name,
                 .size = 12,
@@ -835,7 +835,7 @@ fn addObjectContainer(
             },
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = scale, .scale_y = scale } } },
             .userdata = entry.key_ptr,
-            .press_callback = callback,
+            .pressCallback = callback,
             .tooltip_text = .{
                 .text = entry.value_ptr.name,
                 .size = 12,

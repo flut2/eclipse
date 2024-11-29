@@ -7,24 +7,28 @@ const Container = @import("../elements/Container.zig");
 const ItemTooltip = @import("ItemTooltip.zig");
 const TextTooltip = @import("TextTooltip.zig");
 const AbilityTooltip = @import("AbilityTooltip.zig");
+const CardTooltip = @import("CardTooltip.zig");
 
 pub const TooltipType = enum {
     none,
     item,
     text,
     ability,
+    card,
 };
 pub const Tooltip = union(TooltipType) {
     none: void,
     item: ItemTooltip,
     text: TextTooltip,
     ability: AbilityTooltip,
+    card: CardTooltip,
 };
 pub const TooltipParams = union(TooltipType) {
     none: void,
     item: struct { x: f32, y: f32, item: u16 },
     text: struct { x: f32, y: f32, text_data: element.TextData },
-    ability: struct { x: f32, y: f32, props: game_data.AbilityData },
+    ability: struct { x: f32, y: f32, data: game_data.AbilityData },
+    card: struct { x: f32, y: f32, data: game_data.CardData },
 };
 
 pub var map: std.AutoHashMapUnmanaged(TooltipType, *Tooltip) = .empty;

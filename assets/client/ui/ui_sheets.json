@@ -4,10 +4,6 @@
         "path": "menu_decor_frame.png"
     },
     {
-        "name": "stats_button",
-        "path": "stats_button.png"
-    },
-    {
         "name": "rare_slot",
         "path": "item/rare_slot.png"
     },
@@ -168,18 +164,6 @@
         "path": "elements/slider_knob_press.png"
     },
     {
-        "name": "text_input_base",
-        "path": "elements/text_input_base.png"
-    },
-    {
-        "name": "text_input_hover",
-        "path": "elements/text_input_hover.png"
-    },
-    {
-        "name": "text_input_press",
-        "path": "elements/text_input_press.png"
-    },
-    {
         "name": "toggle_slider_base_off",
         "path": "elements/toggle_slider_base_off.png"
     },
@@ -202,26 +186,6 @@
     {
         "name": "toggle_slider_press_on",
         "path": "elements/toggle_slider_press_on.png"
-    },
-    {
-        "name": "tooltip_background",
-        "path": "elements/tooltip_background.png"
-    },
-    {
-        "name": "tooltip_background_rare",
-        "path": "elements/tooltip_background_rare.png"
-    },
-    {
-        "name": "tooltip_background_epic",
-        "path": "elements/tooltip_background_epic.png"
-    },
-    {
-        "name": "tooltip_background_legendary",
-        "path": "elements/tooltip_background_legendary.png"
-    },
-    {
-        "name": "tooltip_background_mythic",
-        "path": "elements/tooltip_background_mythic.png"
     },
     {
         "name": "tooltip_line_spacer_bottom",
@@ -308,8 +272,8 @@
         "path": "player_xp_decor.png"
     },
     {
-        "name": "options_background",
-        "path": "options_background.png"
+        "name": "dark_background",
+        "path": "dark_background.png"
     },
     {
         "name": "player_stats",
@@ -364,10 +328,6 @@
         "path": "cards/card_panel_bg.png"
     },
     {
-        "name": "cards_button",
-        "path": "cards/cards_button.png"
-    },
-    {
         "name": "empty_card_slot",
         "path": "cards/empty_card_slot.png"
     },
@@ -390,6 +350,76 @@
     {
         "name": "mythic_card_slot",
         "path": "cards/mythic_card_slot.png"
+    },
+    {
+        "name": "player_talent_tree_view",
+        "path": "talents/player_talent_tree_view.png"
+    },
+    {
+        "name": "text_input",
+        "path": "elements/text_input.png",
+        "w": 107,
+        "h": 41
+    },
+    {
+        "name": "talent_cell_big",
+        "path": "talents/talent_cell_big.png",
+        "w": 56,
+        "h": 80
+    },
+    {
+        "name": "talent_cell_small",
+        "path": "talents/talent_cell_small.png",
+        "w": 46,
+        "h": 70
+    },
+    {
+        "name": "cards_button",
+        "path": "cards/cards_button.png",
+        "w": 18,
+        "h": 18
+    },
+    {
+        "name": "stats_button",
+        "path": "stats_button.png",
+        "w": 18,
+        "h": 18
+    },
+    {
+        "name": "talent_view_button",
+        "path": "talents/talent_view_button.png",
+        "w": 18,
+        "h": 18
+    },
+    {
+        "name": "tooltip_background",
+        "path": "elements/tooltip_background.png",
+        "w": 69,
+        "h": 69
+    },
+    {
+        "name": "tooltip_background_rare",
+        "path": "elements/tooltip_background_rare.png",
+        "w": 69,
+        "h": 69
+    },
+    {
+        "name": "tooltip_background_epic",
+        "path": "elements/tooltip_background_epic.png",
+        "w": 69,
+        "h": 69
+    },
+    {
+        "name": "tooltip_background_legendary",
+        "path": "elements/tooltip_background_legendary.png",
+        "w": 69,
+        "h": 69
+    },
+    {
+        "name": "tooltip_background_mythic",
+        "path": "elements/tooltip_background_mythic.png",
+        "w": 69,
+        "h": 69
     },
     {
         "name": "card_panel_buttons",

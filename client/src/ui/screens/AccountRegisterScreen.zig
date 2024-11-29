@@ -29,9 +29,9 @@ pub fn init(self: *AccountRegisterScreen) !void {
     const input_w = 300;
     const input_h = 50;
 
-    const input_data_base = assets.getUiData("text_input_base", 0);
-    const input_data_hover = assets.getUiData("text_input_hover", 0);
-    const input_data_press = assets.getUiData("text_input_press", 0);
+    const input_data_base = assets.getUiData("text_input", 0);
+    const input_data_hover = assets.getUiData("text_input", 1);
+    const input_data_press = assets.getUiData("text_input", 2);
 
     const x_offset = (main.camera.width - input_w) / 2;
     var y_offset: f32 = main.camera.height / 7.2;
@@ -62,7 +62,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
-        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 53, 20, 1, 1, 1.0),
         .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
         .text_data = .{
             .text = "",
@@ -100,7 +100,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
-        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 53, 20, 1, 1, 1.0),
         .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
         .text_data = .{
             .text = "",
@@ -138,7 +138,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
-        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 53, 20, 1, 1, 1.0),
         .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
         .text_data = .{
             .text = "",
@@ -177,7 +177,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
-        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 53, 20, 1, 1, 1.0),
         .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
         .text_data = .{
             .text = "",
@@ -209,7 +209,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
             .text_type = .bold,
         },
         .userdata = self,
-        .press_callback = registerCallback,
+        .pressCallback = registerCallback,
     });
 
     self.back_button = try element.create(Button, .{
@@ -223,7 +223,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
             .size = 16,
             .text_type = .bold,
         },
-        .press_callback = backCallback,
+        .pressCallback = backCallback,
     });
 }
 

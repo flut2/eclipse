@@ -18,11 +18,13 @@ y: f32 = 0.0,
 name: ?[]const u8 = null,
 size_mult: f32 = 1.0,
 stats_writer: utils.PacketWriter = .{},
+owner_map_id: u32 = std.math.maxInt(u32),
 inventory: [8]u16 = inv_default,
 disappear_time: i64 = 0,
 data: *const game_data.ContainerData = undefined,
 world: *World = undefined,
 spawned: bool = false,
+free_name: bool = false,
 
 pub fn init(self: *Container) !void {
     self.stats_writer.list = try .initCapacity(main.allocator, 32);
@@ -34,6 +36,7 @@ pub fn init(self: *Container) !void {
 }
 
 pub fn deinit(self: *Container) !void {
+    if (self.free_name) if (self.name) |name| main.allocator.free(name);
     self.stats_writer.list.deinit(main.allocator);
 }
 

@@ -8,14 +8,20 @@ const stat_util = @import("stat_util.zig");
 const behavior_logic = @import("../logic/logic.zig");
 const behavior_data = @import("../logic/behavior.zig");
 
-const World = @import("../World.zig");
 const Entity = @This();
+const World = @import("../World.zig");
+const Ally = @import("Ally.zig");
 
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
 x: f32 = 0.0,
 y: f32 = 0.0,
 hp: i32 = 0,
+max_hp: i32 = 0,
+condition: utils.Condition = .{},
+conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .empty,
+conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .empty,
+damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.EntityData = undefined,
 world: *World = undefined,
@@ -46,6 +52,7 @@ pub fn init(self: *Entity) !void {
     }
 
     self.hp = self.data.health;
+    self.max_hp = self.data.health;
 }
 
 pub fn deinit(self: *Entity) !void {
@@ -63,14 +70,66 @@ pub fn deinit(self: *Entity) !void {
         self.world.tiles[uy * self.world.w + ux].occupied = false;
     }
 
+    self.damages_dealt.deinit(main.allocator);
     self.stats_writer.list.deinit(main.allocator);
+}
+
+pub fn applyCondition(self: *Entity, condition: utils.ConditionEnum, duration: i64) !void {
+    if (self.conditions_active.getPtr(condition)) |current_duration| {
+        if (duration > current_duration.*)
+            current_duration.* = duration;
+    } else try self.conditions_active.put(main.allocator, condition, duration);
+    self.condition.set(condition, true);
+}
+
+pub fn clearCondition(self: *Entity, condition: utils.ConditionEnum) void {
+    _ = self.conditions_active.swapRemove(condition);
+    self.condition.set(condition, false);
 }
 
 pub fn tick(self: *Entity, time: i64, dt: i64) !void {
     if (self.data.health > 0 and self.hp <= 0) try self.world.remove(Entity, self);
+
+    self.conditions_to_remove.clearRetainingCapacity();
+    for (self.conditions_active.values(), self.conditions_active.keys()) |*d, k| {
+        if (d.* <= dt) {
+            try self.conditions_to_remove.append(main.allocator, k);
+            continue;
+        }
+
+        d.* -= dt;
+    }
+
+    for (self.conditions_to_remove.items) |c| {
+        self.condition.set(c, false);
+        _ = self.conditions_active.swapRemove(c);
+    }
+
     if (self.behavior) |behav| switch (behav.*) {
         inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "tick")) try b.tick(self, time, dt),
     };
+}
+
+pub fn damage(self: *Entity, owner_type: network_data.ObjectType, owner_id: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
+    if (self.data.health == 0) return;
+
+    const dmg = game_data.physDamage(phys_dmg, self.data.defense, self.condition) +
+        game_data.magicDamage(magic_dmg, self.data.resistance, self.condition) +
+        true_dmg;
+    self.hp -= dmg;
+    if (self.hp <= 0) {
+        self.delete() catch return;
+        return;
+    }
+
+    const map_id = switch (owner_type) {
+        .player => owner_id,
+        .ally => (self.world.find(Ally, owner_id) orelse return).owner_map_id,
+        else => return,
+    };
+
+    const res = self.damages_dealt.getOrPut(main.allocator, map_id) catch return;
+    if (res.found_existing) res.value_ptr.* += dmg else res.value_ptr.* = dmg;
 }
 
 pub fn exportStats(self: *Entity, cache: *[@typeInfo(network_data.EntityStat).@"union".fields.len]?network_data.EntityStat) ![]u8 {

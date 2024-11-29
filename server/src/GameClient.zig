@@ -463,6 +463,7 @@ fn handleInvDrop(self: *Client, data: PacketData(.inv_drop)) void {
         .y = player.y,
         .data_id = game_data.container.from_name.get("Brown Bag").?.id,
         .name = main.allocator.dupe(u8, player.name) catch main.oomPanic(),
+        .free_name = true,
         .inventory = inventory,
     }) catch {
         self.sendError(.message_with_disconnect, "Bag spawning failed");
@@ -760,6 +761,26 @@ fn handleUseAbility(self: *Client, data: PacketData(.use_ability)) void {
     player.last_ability_use[data.index] = time;
 }
 
-fn handleSelectCard(_: *Client, _: PacketData(.select_card)) void {}
+fn handleSelectCard(self: *Client, data: PacketData(.select_card)) void {
+    const player = self.world.findRef(Player, self.player_map_id) orelse {
+        self.sendError(.message_with_disconnect, "Player does not exist");
+        return;
+    };
+
+    if (player.selecting_cards == null) {
+        self.sendError(.message_with_disconnect, "You have no cards to select");
+        return;
+    }
+
+    defer player.selecting_cards = null;
+
+    switch (data.selection) {
+        .none => {},
+        inline else => |idx| {
+            player.cards = main.allocator.realloc(player.cards, player.cards.len + 1) catch main.oomPanic();
+            player.cards[player.cards.len - 1] = player.selecting_cards.?[@intFromEnum(idx) - 1];
+        },
+    }
+}
 
 fn handleTalentUpgrade(_: *Client, _: PacketData(.talent_upgrade)) void {}

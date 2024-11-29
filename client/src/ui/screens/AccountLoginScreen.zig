@@ -27,9 +27,9 @@ remember_login_toggle: *Toggle = undefined,
 pub fn init(self: *AccountLoginScreen) !void {
     const input_w = 300;
     const input_h = 50;
-    const input_data_base = assets.getUiData("text_input_base", 0);
-    const input_data_hover = assets.getUiData("text_input_hover", 0);
-    const input_data_press = assets.getUiData("text_input_press", 0);
+    const input_data_base = assets.getUiData("text_input", 0);
+    const input_data_hover = assets.getUiData("text_input", 1);
+    const input_data_press = assets.getUiData("text_input", 2);
 
     const cursor_data = assets.getUiData("chatbox_cursor", 0);
     self.email_input = try element.create(Input, .{
@@ -39,7 +39,7 @@ pub fn init(self: *AccountLoginScreen) !void {
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
-        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 53, 20, 1, 1, 1.0),
         .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
         .text_data = .{
             .text = "",
@@ -75,7 +75,7 @@ pub fn init(self: *AccountLoginScreen) !void {
         },
         .text_inlay_x = 9,
         .text_inlay_y = 8,
-        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 12, 12, 2, 2, 1.0),
+        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, input_w, input_h, 53, 20, 1, 1, 1.0),
         .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
         .text_data = .{
             .text = "",
@@ -120,6 +120,7 @@ pub fn init(self: *AccountLoginScreen) !void {
         .off_image_data = .fromImageData(check_box_base_off, check_box_hover_off, check_box_press_off),
         .on_image_data = .fromImageData(check_box_base_on, check_box_hover_on, check_box_press_on),
         .toggled = &main.settings.remember_login,
+        .state_change = rememberLoginCallback,
     });
 
     self.remember_login_text = try element.create(Text, .{
@@ -154,7 +155,7 @@ pub fn init(self: *AccountLoginScreen) !void {
             .text_type = .bold,
         },
         .userdata = self,
-        .press_callback = loginCallback,
+        .pressCallback = loginCallback,
     });
 
     self.register_button = try element.create(Button, .{
@@ -168,7 +169,7 @@ pub fn init(self: *AccountLoginScreen) !void {
             .size = 16,
             .text_type = .bold,
         },
-        .press_callback = registerCallback,
+        .pressCallback = registerCallback,
     });
 }
 
@@ -205,6 +206,13 @@ pub fn resize(self: *AccountLoginScreen, w: f32, h: f32) void {
 }
 
 pub fn update(_: *AccountLoginScreen, _: i64, _: f32) !void {}
+
+fn rememberLoginCallback(_: *Toggle) void {
+    main.settings.save() catch |e| {
+        std.log.err("Error while saving settings in login screen: {}", .{e});
+        return;
+    };
+}
 
 fn loginCallback(ud: ?*anyopaque) void {
     const current_screen: *AccountLoginScreen = @alignCast(@ptrCast(ud.?));

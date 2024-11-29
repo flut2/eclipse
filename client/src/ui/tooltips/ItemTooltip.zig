@@ -28,34 +28,22 @@ footer_buffer_front: bool = false,
 pub fn init(self: *ItemTooltip) !void {
     const tooltip_background_data = assets.getUiData("tooltip_background", 0);
     self.decor = try self.root.createChild(Image, .{
-        .base = .{
-            .x = 0,
-            .y = 0,
-        },
+        .base = .{ .x = 0, .y = 0 },
         .image_data = .{ .nine_slice = .fromAtlasData(tooltip_background_data, 360, 360, 34, 34, 1, 1, 1.0) },
     });
 
     self.image = try self.root.createChild(Image, .{
-        .base = .{
-            .x = 15 - assets.padding * 4,
-            .y = 15 - assets.padding * 4,
-        },
+        .base = .{ .x = 15 - assets.padding * 4, .y = 15 - assets.padding * 4 },
         .image_data = .{ .normal = .{ .atlas_data = undefined, .scale_x = 4, .scale_y = 4, .glow = true } },
     });
 
     self.item_name = try self.root.createChild(Text, .{
-        .base = .{
-            .x = 8 * 4 + 25,
-            .y = 10,
-        },
+        .base = .{ .x = 8 * 4 + 25, .y = 10 },
         .text_data = .{ .text = "", .size = 14, .text_type = .bold_italic },
     });
 
     self.rarity = try self.root.createChild(Text, .{
-        .base = .{
-            .x = 8 * 4 + 25,
-            .y = self.item_name.text_data.height + 10,
-        },
+        .base = .{ .x = 8 * 4 + 25, .y = self.item_name.text_data.height + 10 },
         .text_data = .{
             .text = "",
             .size = 12,
