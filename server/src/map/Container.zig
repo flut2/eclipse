@@ -9,7 +9,7 @@ const stat_util = @import("stat_util.zig");
 const World = @import("../World.zig");
 const Container = @This();
 
-pub const inv_default: [8]u16 = @splat(std.math.maxInt(u16));
+pub const inv_default: [9]u16 = @splat(std.math.maxInt(u16));
 
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
@@ -19,7 +19,7 @@ name: ?[]const u8 = null,
 size_mult: f32 = 1.0,
 stats_writer: utils.PacketWriter = .{},
 owner_map_id: u32 = std.math.maxInt(u32),
-inventory: [8]u16 = inv_default,
+inventory: [9]u16 = inv_default,
 disappear_time: i64 = 0,
 data: *const game_data.ContainerData = undefined,
 world: *World = undefined,
@@ -64,6 +64,7 @@ pub fn exportStats(self: *Container, cache: *[@typeInfo(network_data.ContainerSt
     stat_util.write(T, writer, cache, .{ .inv_5 = self.inventory[5] });
     stat_util.write(T, writer, cache, .{ .inv_6 = self.inventory[6] });
     stat_util.write(T, writer, cache, .{ .inv_7 = self.inventory[7] });
+    stat_util.write(T, writer, cache, .{ .inv_8 = self.inventory[8] });
 
     return writer.list.items;
 }

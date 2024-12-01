@@ -241,7 +241,7 @@ pub fn damage(self: *Player, owner_type: network_data.ObjectType, owner_id: u32,
 
     if (self.hp <= 0) {
         const owner_name = blk: {
-            break :blk (self.world.find(Enemy, owner_id) orelse break :blk "Unknown").data.name;
+            break :blk (self.world.find(Enemy, owner_id, .con) orelse break :blk "Unknown").data.name;
         };
         self.death(owner_name) catch return;
     }

@@ -590,9 +590,8 @@ pub fn drawText(
 
     const render_type: RenderType = if (text_data.shadow_texel_offset_mult != 0) .text_drop_shadow else .text_normal;
 
-    const pad_offset = current_font_data.padding * size_scale;
-    const start_x = x - pad_offset;
-    const start_y = y + line_height - pad_offset;
+    const start_x = x;
+    const start_y = y + line_height;
     const y_base = switch (text_data.vert_align) {
         .top => start_y,
         .middle => if (max_height_off) start_y else start_y + (text_data.max_height - text_data.height) / 2.0,
@@ -687,8 +686,8 @@ pub fn drawText(
 
                                 x_base = switch (text_data.hori_align) {
                                     .left => start_x,
-                                    .middle => if (max_width_off) start_x else start_x + @round((text_data.max_width - text_data.line_widths.?.items[line_idx]) / 2),
-                                    .right => if (max_width_off) start_x else start_x + @round(text_data.max_width - text_data.line_widths.?.items[line_idx]),
+                                    .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]) / 2.0,
+                                    .right => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]),
                                 };
                                 x_pointer = x_base;
                                 line_idx += 1;
@@ -730,8 +729,8 @@ pub fn drawText(
 
             x_base = switch (text_data.hori_align) {
                 .left => start_x,
-                .middle => if (max_width_off) start_x else start_x + @round((text_data.max_width - text_data.line_widths.?.items[line_idx]) / 2),
-                .right => if (max_width_off) start_x else start_x + @round(text_data.max_width - text_data.line_widths.?.items[line_idx]),
+                .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]) / 2.0,
+                .right => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]),
             };
             x_pointer = x_base;
             next_x_pointer = x_base + scaled_advance;
@@ -743,8 +742,9 @@ pub fn drawText(
         const w = char_data.width * current_size;
         const h = char_data.height * current_size;
         const pos = .{
-            x_pointer + (char_data.x_offset + current_font_data.padding) * current_size,
-            y_pointer - (char_data.y_offset + current_font_data.padding) * current_size - h,
+            x_pointer + char_data.x_offset * current_size,
+            // TODO: need to subtract pad height as well... maybe render padding properly later
+            y_pointer + (-char_data.y_offset - current_font_data.padding * 2) * current_size - h,
         };
 
         const uv_w_per_px = char_data.tex_w / w;

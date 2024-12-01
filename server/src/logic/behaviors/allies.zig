@@ -14,7 +14,7 @@ pub const BoulderBuddy = struct {
     };
 
     pub fn tick(_: *BoulderBuddy, host: *Ally, _: i64, dt: i64) !void {
-        const owner = host.world.findRef(Player, host.owner_map_id) orelse {
+        const owner = host.world.find(Player, host.owner_map_id, .ref) orelse {
             logic.wander(@src(), host, dt, 2.5);
             return;
         };

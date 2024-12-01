@@ -134,7 +134,12 @@ const CardSlot = struct {
             self.title.base.visible = false;
             self.decor.image_data.normal.atlas_data = assets.getUiData("empty_card_slot", 0);
             self.decor.card_data = null;
-            self.decor.tooltip_text.?.text = "Empty Card Slot";
+            self.decor.tooltip_text = .{
+                .text = "Empty Card Slot",
+                .size = 16,
+                .text_type = .bold_italic,
+                .max_width = 200,
+            };
             return;
         }
 
@@ -156,6 +161,7 @@ const CardSlot = struct {
             .rare => assets.getUiData("rare_card_slot", 0),
             .common => assets.getUiData("common_card_slot", 0),
         };
+        if (self.decor.tooltip_text) |*text_data| text_data.deinit();
         self.decor.tooltip_text = null;
         self.decor.card_data = data;
     }
@@ -525,27 +531,19 @@ pub fn init(self: *GameScreen) !void {
         .start_value = 1.0,
     });
 
-    var fps_text_data: element.TextData = .{
-        .text = "",
-        .size = 12,
-        .text_type = .bold,
-        .hori_align = .middle,
-        .max_width = self.minimap_decor.width(),
-        .max_chars = 256,
-    };
-
-    {
-        fps_text_data.lock.lock();
-        defer fps_text_data.lock.unlock();
-        fps_text_data.recalculateAttributes();
-    }
-
     self.fps_text = try element.create(Text, .{
         .base = .{
             .x = self.minimap_decor.base.x,
             .y = self.minimap_decor.base.y + self.minimap_decor.height() - 10,
         },
-        .text_data = fps_text_data,
+        .text_data = .{
+            .text = "",
+            .size = 12,
+            .text_type = .bold,
+            .hori_align = .middle,
+            .max_width = self.minimap_decor.width(),
+            .max_chars = 256,
+        },
     });
 
     self.options = try .create();
@@ -630,9 +628,6 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
             .max_height = 44.0,
         },
     });
-    self.ability_overlay_texts[idx].text_data.lock.lock();
-    defer self.ability_overlay_texts[idx].text_data.lock.unlock();
-    self.ability_overlay_texts[idx].text_data.recalculateAttributes();
 }
 
 fn addStatText(container: *UiContainer, text: **Text, idx: *f32) !void {
@@ -678,6 +673,7 @@ pub fn deinit(self: *GameScreen) void {
     self.options.deinit();
     self.card_selection.deinit();
 
+    main.allocator.free(self.card_slots);
     main.allocator.destroy(self);
 }
 
@@ -700,7 +696,7 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
     self.ability_container.base.x = self.bars_decor.base.x + 69;
     self.ability_container.base.y = self.bars_decor.base.y + 45;
     self.talents_button.base.x = self.bars_decor.base.x + 21 + (32 - self.talents_button.width() + assets.padding * 2) / 2.0;
-    self.talents_button.base.y = self.bars_decor.base.y + 73 + (32 - self.talents_button.height() + assets.padding * 2) / 2.0;
+    self.talents_button.base.y = self.bars_decor.base.y + 29 + (32 - self.talents_button.height() + assets.padding * 2) / 2.0;
     self.cards_button.base.x = self.bars_decor.base.x + 21 + (32 - self.cards_button.width() + assets.padding * 2) / 2.0;
     self.cards_button.base.y = self.bars_decor.base.y + 73 + (32 - self.cards_button.height() + assets.padding * 2) / 2.0;
     self.stats_button.base.x = self.bars_decor.base.x + 21 + (32 - self.stats_button.width() + assets.padding * 2) / 2.0;
@@ -960,48 +956,26 @@ fn parseItemRects(self: *GameScreen) void {
     for (0..22) |i| {
         if (i < 4) {
             const hori_idx: f32 = @floatFromInt(@mod(i, 4));
-            self.inventory_pos_data[i] = .{
-                .x = 113 + hori_idx * 56,
-                .y = 15,
-                .w = 56,
-                .h = 56,
-                .w_pad = 0,
-                .h_pad = 0,
-            };
+            self.inventory_pos_data[i] = .{ .x = 113 + hori_idx * 56, .y = 15, .w = 56, .h = 56, .w_pad = 0, .h_pad = 0 };
         } else {
             const hori_idx: f32 = @floatFromInt(@mod(i - 4, 6));
             const vert_idx: f32 = @floatFromInt(@divFloor(i - 4, 6));
-            self.inventory_pos_data[i] = .{
-                .x = 15 + hori_idx * 46,
-                .y = 75 + vert_idx * 46,
-                .w = 46,
-                .h = 46,
-                .w_pad = 0,
-                .h_pad = 0,
-            };
+            self.inventory_pos_data[i] = .{ .x = 15 + hori_idx * 46, .y = 75 + vert_idx * 46, .w = 46, .h = 46, .w_pad = 0, .h_pad = 0 };
         }
     }
 
     for (0..9) |i| {
         const hori_idx: f32 = @floatFromInt(@mod(i, 3));
         const vert_idx: f32 = @floatFromInt(@divFloor(i, 3));
-        self.container_pos_data[i] = .{
-            .x = 15 + hori_idx * 46,
-            .y = 15 + vert_idx * 46,
-            .w = 46,
-            .h = 46,
-            .w_pad = 0,
-            .h_pad = 0,
-        };
+        self.container_pos_data[i] = .{ .x = 15 + hori_idx * 46, .y = 15 + vert_idx * 46, .w = 46, .h = 46, .w_pad = 0, .h_pad = 0 };
     }
 }
 
 fn swapError(self: *GameScreen, start_slot: Slot, start_item: u16) void {
-    if (start_slot.is_container) {
-        self.setContainerItem(start_item, start_slot.idx);
-    } else {
+    if (start_slot.is_container)
+        self.setContainerItem(start_item, start_slot.idx)
+    else
         self.setInvItem(start_item, start_slot.idx);
-    }
 
     assets.playSfx("error.mp3");
 }
@@ -1056,17 +1030,15 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
             else
                 self.inventory_items[end_slot.idx].item;
 
-            if (start_slot.is_container) {
-                self.setContainerItem(end_item, start_slot.idx);
-            } else {
+            if (start_slot.is_container)
+                self.setContainerItem(end_item, start_slot.idx)
+            else
                 self.setInvItem(end_item, start_slot.idx);
-            }
 
-            if (end_slot.is_container) {
-                self.setContainerItem(start_item, end_slot.idx);
-            } else {
+            if (end_slot.is_container)
+                self.setContainerItem(start_item, end_slot.idx)
+            else
                 self.setInvItem(start_item, end_slot.idx);
-            }
 
             main.game_server.sendPacket(.{ .inv_swap = .{
                 .time = main.current_time,
@@ -1168,8 +1140,7 @@ fn leftCardFlipperCallback(ud: ?*anyopaque) void {
 
 fn rightCardFlipperCallback(ud: ?*anyopaque) void {
     const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
-    if (map.localPlayer(.con)) |player|
-        screen.card_page = @min(@divFloor(player.cards.len, 5), screen.card_page + 1);
+    if (map.localPlayer(.con)) |player| screen.card_page = @min(@divFloor(player.cards.len, 5), screen.card_page + 1);
 }
 
 fn chatCallback(input_text: []const u8) void {
@@ -1271,12 +1242,8 @@ pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
             self.container_items[idx].base.y = base_y + (pos_h - self.container_items[idx].texHRaw()) / 2 + assets.padding;
 
             return;
-        } else {
-            std.log.err("Could not find ui sheet {s} for item with data id {}, index {}", .{ data.texture.sheet, item, idx });
-        }
-    } else {
-        std.log.err("Attempted to populate inventory index {} with item {}, but props was not found", .{ idx, item });
-    }
+        } else std.log.err("Could not find ui sheet {s} for item with data id {}, index {}", .{ data.texture.sheet, item, idx });
+    } else std.log.err("Attempted to populate inventory index {} with item {}, but props was not found", .{ idx, item });
 
     self.container_items[idx].item = std.math.maxInt(u16);
     self.container_items[idx].image_data.normal.atlas_data = assets.error_data;
@@ -1328,12 +1295,8 @@ pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
             self.inventory_items[idx].base.y = base_y + (pos_h - self.inventory_items[idx].texHRaw()) / 2 + assets.padding;
 
             return;
-        } else {
-            std.log.err("Could not find ui sheet {s} for item with data id {}, index {}", .{ data.texture.sheet, item, idx });
-        }
-    } else {
-        std.log.err("Attempted to populate inventory index {} with item id {}, but props was not found", .{ idx, item });
-    }
+        } else std.log.err("Could not find ui sheet {s} for item with data id {}, index {}", .{ data.texture.sheet, item, idx });
+    } else std.log.err("Attempted to populate inventory index {} with item id {}, but props was not found", .{ idx, item });
 
     const atlas_data = assets.error_data;
     self.inventory_items[idx].item = std.math.maxInt(u16);

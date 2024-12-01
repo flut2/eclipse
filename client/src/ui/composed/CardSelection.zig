@@ -90,11 +90,11 @@ const SelectableCard = struct {
             .base = .{ .x = inset_x, .y = desc_y },
             .text_data = .{
                 .text = "",
-                .size = 22,
+                .size = 18,
                 .text_type = .medium_italic,
                 .vert_align = .middle,
                 .hori_align = .middle,
-                .max_width = 300 - 6 * 2,
+                .max_width = 300 - inset_x * 2,
                 .max_height = 350 - 6 - desc_y,
             },
         });

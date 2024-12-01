@@ -121,7 +121,7 @@ pub fn damage(self: *Enemy, owner_type: network_data.ObjectType, owner_id: u32, 
 
     const map_id = switch (owner_type) {
         .player => owner_id,
-        .ally => (self.world.find(Ally, owner_id) orelse return).owner_map_id,
+        .ally => (self.world.find(Ally, owner_id, .con) orelse return).owner_map_id,
         else => return,
     };
 

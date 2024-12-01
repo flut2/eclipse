@@ -254,30 +254,20 @@ pub fn init(self: *MapEditorScreen) !void {
     const key_mapper_width = 35.0;
     const key_mapper_height = 35.0;
 
-    var fps_text_data: element.TextData = .{
-        .text = "",
-        .size = 12,
-        .text_type = .bold,
-        .hori_align = .left,
-        .max_width = control_decor_w,
-        .max_chars = 64,
-        .color = 0x6F573F,
-    };
-
-    {
-        fps_text_data.lock.lock();
-        defer fps_text_data.lock.unlock();
-        fps_text_data.recalculateAttributes();
-    }
-
     self.fps_text = try element.create(Text, .{
         .base = .{ .x = 5 + control_decor_w + 5, .y = 5 },
-        .text_data = fps_text_data,
+        .text_data = .{
+            .text = "",
+            .size = 12,
+            .text_type = .bold,
+            .hori_align = .left,
+            .max_width = control_decor_w,
+            .max_chars = 64,
+            .color = 0x6F573F,
+        },
     });
 
-    self.controls_container = try element.create(UiContainer, .{
-        .base = .{ .x = 5, .y = 5 },
-    });
+    self.controls_container = try element.create(UiContainer, .{ .base = .{ .x = 5, .y = 5 } });
 
     const collapsed_icon_base = assets.getUiData("dropdown_collapsed_icon_base", 0);
     const collapsed_icon_hover = assets.getUiData("dropdown_collapsed_icon_hover", 0);

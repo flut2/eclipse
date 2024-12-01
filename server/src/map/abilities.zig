@@ -30,7 +30,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
 fn heartOfStoneCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.findRef(Player, player_map_id.*)) |player| {
+    if (world.find(Player, player_map_id.*, .ref)) |player| {
         player.hit_multiplier = 1.0;
         player.ability_state.heart_of_stone = false;
     }
@@ -74,7 +74,7 @@ pub fn handleBoulderBuddies(player: *Player) !void {
         const fhp: f32 = @floatFromInt(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat]);
         const fdef: f32 = @floatFromInt(player.stats[Player.defense_stat] + player.stat_boosts[Player.defense_stat]);
         const fres: f32 = @floatFromInt(player.stats[Player.resistance_stat] + player.stat_boosts[Player.resistance_stat]);
-        if (player.world.findRef(Ally, map_id)) |ally| {
+        if (player.world.find(Ally, map_id, .ref)) |ally| {
             ally.max_hp = @intFromFloat(3600.0 + fhp * 3.6);
             ally.hp = ally.max_hp;
             ally.defense = @intFromFloat(25.0 + fdef * 0.15);
@@ -101,7 +101,7 @@ pub fn handlePlaceholder() !void {
 fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.findRef(Player, player_map_id.*)) |player| player.ability_state.time_dilation = false;
+    if (world.find(Player, player_map_id.*, .ref)) |player| player.ability_state.time_dilation = false;
 }
 
 pub fn handleTimeDilation(player: *Player) !void {
@@ -146,7 +146,7 @@ pub fn handleNullPulse(player: *Player) !void {
     var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
     for (player.world.listForType(Projectile).items, 0..) |*p, i| {
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
-            if (player.world.findRef(Enemy, p.owner_map_id)) |e| {
+            if (player.world.find(Enemy, p.owner_map_id, .ref)) |e| {
                 const phys_dmg: i32 = @intFromFloat(@as(f32, @floatFromInt(p.phys_dmg)) * damage_mult);
                 const magic_dmg: i32 = @intFromFloat(@as(f32, @floatFromInt(p.magic_dmg)) * damage_mult);
                 const true_dmg: i32 = @intFromFloat(@as(f32, @floatFromInt(p.true_dmg)) * damage_mult);
@@ -163,7 +163,7 @@ pub fn handleNullPulse(player: *Player) !void {
 fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.findRef(Player, player_map_id.*)) |player| {
+    if (world.find(Player, player_map_id.*, .ref)) |player| {
         const fint: f32 = @floatFromInt(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
         const radius = 9.0 + fint * 0.06;
         player.world.aoe(Enemy, player.x, player.x, .player, player.map_id, radius, .{
@@ -195,7 +195,7 @@ pub fn handleTimeLock(player: *Player) !void {
 fn equivalentExchangeCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.findRef(Player, player_map_id.*)) |player| player.ability_state.equivalent_exchange = false;
+    if (world.find(Player, player_map_id.*, .ref)) |player| player.ability_state.equivalent_exchange = false;
 }
 
 pub fn handleEquivalentExchange(player: *Player) !void {
@@ -213,12 +213,12 @@ pub fn handleEquivalentExchange(player: *Player) !void {
 fn postAssetBubbleCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.findRef(Player, player_map_id.*)) |player| player.ability_state.post_asset_bubble = false;
+    if (world.find(Player, player_map_id.*, .ref)) |player| player.ability_state.post_asset_bubble = false;
 }
 
 fn assetBubbleCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
-    if (world.findRef(Player, player_map_id.*)) |player| {
+    if (world.find(Player, player_map_id.*, .ref)) |player| {
         player.ability_state.asset_bubble = false;
         player.ability_state.post_asset_bubble = true;
         player.world.callbacks.append(main.allocator, .{
@@ -247,7 +247,7 @@ pub fn handleAssetBubble(player: *Player) !void {
 fn premiumProtectionCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.findRef(Player, player_map_id.*)) |player| player.ability_state.premium_protection = false;
+    if (world.find(Player, player_map_id.*, .ref)) |player| player.ability_state.premium_protection = false;
 }
 
 pub fn handlePremiumProtection(player: *Player) !void {

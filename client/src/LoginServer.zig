@@ -20,6 +20,7 @@ const WriteRequest = extern struct {
 };
 
 socket: *uv.uv_tcp_t = undefined,
+read_arena: std.heap.ArenaAllocator = undefined,
 unsent_packets: std.fifo.LinearFifo(network_data.C2SPacketLogin, .Dynamic) = undefined,
 initialized: bool = false,
 needs_verify: bool = false,
@@ -62,30 +63,26 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
 pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const server: *Server = @ptrCast(@alignCast(socket.data));
-    var child_arena = std.heap.ArenaAllocator.init(main.allocator);
-    defer child_arena.deinit();
-    const child_arena_allocator = child_arena.allocator();
+    defer _ = server.read_arena.reset(.{ .retain_with_limit = 1024 });
+    const allocator = server.read_arena.allocator();
 
     if (bytes_read > 0) {
         var reader: utils.PacketReader = .{ .buffer = buf.*.base[0..@intCast(bytes_read)] };
 
         while (reader.index <= bytes_read - 3) {
-            defer _ = child_arena.reset(.retain_capacity);
-
-            const len = reader.read(u16, child_arena_allocator);
-            if (len > bytes_read - reader.index)
-                return;
+            const len = reader.read(u16, allocator);
+            if (len > bytes_read - reader.index) return;
 
             const next_packet_idx = reader.index + len;
             const EnumType = @typeInfo(network_data.S2CPacketLogin).@"union".tag_type.?;
-            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), child_arena_allocator);
+            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), allocator);
             const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
                 std.log.err("Error parsing S2CPacketLogin ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
                 return;
             };
 
             switch (packet_id) {
-                inline else => |id| handlerFn(id)(server, reader.read(PacketData(id), child_arena_allocator)),
+                inline else => |id| handlerFn(id)(server, reader.read(PacketData(id), allocator)),
             }
 
             if (reader.index < next_packet_idx) {
@@ -148,6 +145,7 @@ fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.C) void {
 
 pub fn init(self: *Server) !void {
     self.socket = try main.allocator.create(uv.uv_tcp_t);
+    self.read_arena = .init(main.allocator);
     self.unsent_packets = .init(main.allocator);
     self.connect(build_options.login_server_ip, build_options.login_server_port) catch |e| {
         std.log.err("Login connection failed: {}", .{e});
@@ -158,6 +156,7 @@ pub fn init(self: *Server) !void {
 pub fn deinit(self: *Server) void {
     main.disconnect(false);
     main.allocator.destroy(self.socket);
+    self.read_arena.deinit();
     self.unsent_packets.deinit();
     self.initialized = false;
 }
@@ -175,9 +174,7 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
         build_options.log_packets == .all_tick or
         build_options.log_packets == .c2s_non_tick or
         build_options.log_packets == .all_non_tick)
-    {
         std.log.info("Send: {}", .{packet}); // TODO: custom formatting
-    }
 
     switch (packet) {
         inline else => |data| {

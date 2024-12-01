@@ -250,28 +250,26 @@ pub const TextData = struct {
                                     if (needs_new_word_idx) {
                                         last_word_start_pointer = x_pointer;
                                         if (!width_pass) {
-                                            if (word_start != 0) word_idx += 1;
+                                            defer word_idx += 1;
                                             word_start = i;
-                                            if (x_pointer + advance + word_widths.items[word_idx] > self.max_width) {
+                                            if (x_pointer + word_widths.items[word_idx] > self.max_width) {
                                                 y_pointer += line_height;
-                                                self.line_widths.?.append(main.allocator, x_pointer + advance) catch main.oomPanic();
+                                                self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
                                                 self.break_indices.?.put(main.allocator, i, {}) catch main.oomPanic();
                                                 self.line_count += 1;
-                                                x_pointer = advance;
+                                                x_pointer = 0.0;
                                             }
                                         }
                                         needs_new_word_idx = false;
                                     }
 
-                                    x_pointer += advance;
-
-                                    if (!width_pass and x_pointer > self.max_width) {
+                                    if (!width_pass and x_pointer + advance > self.max_width) {
                                         y_pointer += line_height;
                                         self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
                                         self.break_indices.?.put(main.allocator, i, {}) catch main.oomPanic();
                                         self.line_count += 1;
                                         x_pointer = advance;
-                                    }
+                                    } else x_pointer += advance;
                                 } else if (!std.mem.eql(u8, name, "col")) break :specialChar;
 
                                 index_offset += @intCast(1 + eql_idx + 1 + value_end_idx + 1);
@@ -297,35 +295,34 @@ pub const TextData = struct {
                 if (!skip_space_check and std.ascii.isWhitespace(char)) {
                     if (!needs_new_word_idx) {
                         if (width_pass)
-                            word_widths.append(main.allocator, x_pointer - last_word_start_pointer + scaled_advance) catch main.oomPanic()
+                            word_widths.append(main.allocator, x_pointer + scaled_advance - last_word_start_pointer) catch main.oomPanic()
                         else
                             last_word_end_pointer = x_pointer + scaled_advance;
                     }
                     needs_new_word_idx = true;
                 } else if (needs_new_word_idx) {
+                    defer needs_new_word_idx = false;
                     last_word_start_pointer = x_pointer;
                     if (!width_pass) {
-                        if (word_start != 0) word_idx += 1;
+                        defer word_idx += 1;
                         word_start = i;
-                        if (x_pointer + scaled_advance + word_widths.items[word_idx] > self.max_width) {
+                        if (x_pointer + word_widths.items[word_idx] > self.max_width) {
                             y_pointer += line_height;
-                            self.line_widths.?.append(main.allocator, x_pointer + scaled_advance) catch main.oomPanic();
+                            self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
                             self.break_indices.?.put(main.allocator, i, {}) catch main.oomPanic();
                             self.line_count += 1;
-                            x_pointer = scaled_advance;
+                            x_pointer = 0.0;
                         }
                     }
-                    needs_new_word_idx = false;
                 }
 
-                x_pointer += scaled_advance;
-                if (!width_pass and x_pointer > self.max_width) {
+                if (!width_pass and x_pointer + scaled_advance > self.max_width) {
                     y_pointer += line_height;
                     self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
                     self.break_indices.?.put(main.allocator, i, {}) catch main.oomPanic();
                     self.line_count += 1;
                     x_pointer = scaled_advance;
-                }
+                } else x_pointer += scaled_advance;
             }
         }
     }

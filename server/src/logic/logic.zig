@@ -180,7 +180,7 @@ pub fn orbitPlayer(host: anytype, dt: i64, opts: struct {
     verifyType(@TypeOf(host));
 
     const acq_sqr = opts.acquire_range * opts.acquire_range;
-    if (host.world.find(Player, opts.target_map_id)) |p| {
+    if (host.world.find(Player, opts.target_map_id, .con)) |p| {
         const dx = host.x - p.x;
         const dy = host.y - p.y;
         if (dx * dx + dy * dy <= acq_sqr) {

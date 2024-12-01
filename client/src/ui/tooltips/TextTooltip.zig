@@ -26,10 +26,6 @@ pub fn init(self: *TextTooltip) !void {
         .base = .{ .x = 16, .y = 16 },
         .text_data = .{ .text = "", .size = 0 },
     });
-
-    self.text.text_data.lock.lock();
-    defer self.text.text_data.lock.unlock();
-    self.text.text_data.recalculateAttributes();
 }
 
 pub fn deinit(self: *TextTooltip) void {

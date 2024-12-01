@@ -3,19 +3,22 @@
         "id": 0,
         "name": "Heavy Strikes",
         "rarity": "common",
-        "description": "Gain +4% STR"
+        "description": "Gain +4% STR",
+        "stackable": true
     },
     {
         "id": 1,
         "name": "Titan's Resolve",
         "rarity": "rare",
-        "description": "Gain +15% STA, +15% INT"
+        "description": "Gain +15% STA, +15% INT",
+        "stackable": true
     },
     {
         "id": 2,
         "name": "Deft Hands",
         "rarity": "epic",
-        "description": "All weapons gain +10% Rate of Fire (additive)"
+        "description": "All weapons gain +10% Rate of Fire (additive)",
+        "stackable": true
     },
     {
         "id": 3,

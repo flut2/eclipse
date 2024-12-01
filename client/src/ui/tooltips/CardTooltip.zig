@@ -28,45 +28,40 @@ pub fn init(self: *CardTooltip) !void {
     self.title = try self.root.createChild(Text, .{
         .base = .{ .x = 15, .y = 15 },
         .text_data = .{
-            .text = undefined,
+            .text = "",
             .size = 14.0,
             .text_type = .bold_italic,
             .hori_align = .middle,
             .max_width = 280 - 15 * 2,
         },
     });
-    self.title.text_data.setText("");
 
     self.rarity = try self.root.createChild(Text, .{
         .base = .{ .x = 15, .y = self.title.base.y + self.title.height() + 2 },
         .text_data = .{
-            .text = undefined,
+            .text = "",
             .size = 12.0,
             .text_type = .medium_italic,
             .hori_align = .middle,
             .max_width = 280 - 15 * 2,
         },
     });
-    self.rarity.text_data.setText("");
 
     const tooltip_line_spacer_data = assets.getUiData("tooltip_line_spacer_top", 0);
     self.line_break = try self.root.createChild(Image, .{
         .base = .{ .x = 15, .y = self.rarity.base.y + self.rarity.height() + 15 },
-        .image_data = .{
-            .nine_slice = .fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 30, 6, 16, 0, 1, 6, 1.0),
-        },
+        .image_data = .{ .nine_slice = .fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 30, 6, 16, 0, 1, 6, 1.0) },
     });
 
     self.description = try self.root.createChild(Text, .{
-        .base = .{ .x = 15, .y = self.line_break.base.y + self.line_break.height() + 15 },
+        .base = .{ .x = 6 + 2, .y = self.line_break.base.y + self.line_break.height() + 15 },
         .text_data = .{
-            .text = undefined,
+            .text = "",
             .size = 12.0,
             .hori_align = .middle,
-            .max_width = 280 - 15 * 2,
+            .max_width = 280 - (6 + 2) * 2,
         },
     });
-    self.description.text_data.setText("");
 }
 
 pub fn deinit(self: *CardTooltip) void {

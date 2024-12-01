@@ -30,7 +30,7 @@ pub fn deinit(self: *Projectile) !void {
 }
 
 pub fn delete(self: *Projectile) !void {
-    if (self.world.findRef(Player, self.owner_map_id)) |player| player.projectiles[self.index] = null;
+    if (self.world.find(Player, self.owner_map_id, .ref)) |player| player.projectiles[self.index] = null;
     try self.world.remove(Projectile, self);
 }
 

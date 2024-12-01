@@ -722,6 +722,7 @@ pub const CardData = struct {
     name: []const u8,
     rarity: CardRarity,
     description: []const u8,
+    stackable: bool = false,
 };
 
 pub const PortalData = struct {

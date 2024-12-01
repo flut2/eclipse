@@ -167,13 +167,11 @@ pub fn remove(self: *World, comptime T: type, value: *T) !void {
     };
 }
 
-pub fn find(self: *World, comptime T: type, map_id: u32) ?T {
-    for (self.listForType(T).items) |item| if (item.map_id == map_id) return item;
-    return null;
-}
-
-pub fn findRef(self: *World, comptime T: type, map_id: u32) ?*T {
-    for (self.listForType(T).items) |*item| if (item.map_id == map_id) return item;
+pub fn find(self: *World, comptime T: type, map_id: u32, comptime constness: enum { con, ref }) if (constness == .con) ?T else ?*T {
+    switch (constness) {
+        .con => for (self.listForType(T).items) |item| if (item.map_id == map_id) return item,
+        .ref => for (self.listForType(T).items) |*item| if (item.map_id == map_id) return item,
+    }
     return null;
 }
 

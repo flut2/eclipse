@@ -78,7 +78,7 @@ fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.C) void {
 
     removePlayer: {
         if (client.player_map_id == std.math.maxInt(u32)) break :removePlayer;
-        client.world.remove(Player, client.world.findRef(Player, client.player_map_id) orelse break :removePlayer) catch break :removePlayer;
+        client.world.remove(Player, client.world.find(Player, client.player_map_id, .ref) orelse break :removePlayer) catch break :removePlayer;
     }
 
     main.socket_pool.destroy(client.socket);
@@ -91,7 +91,7 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
     const client: *Client = @ptrCast(@alignCast(wr.request.data));
 
     if (status != 0) {
-        client.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Socket write error" } });
+        client.sendError(.message_with_disconnect, "Socket write error");
         return;
     }
 
@@ -136,8 +136,8 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
             const EnumType = @typeInfo(network_data.C2SPacket).@"union".tag_type.?;
             const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), child_arena_allocator);
             const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
-                std.log.err("Error parsing C2SPacketId ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
-                client.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Socket read error" } });
+                std.log.err("Error parsing C2SPacket ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
+                client.sendError(.message_with_disconnect, "Socket read error");
                 return;
             };
 
@@ -152,7 +152,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
         }
     } else if (bytes_read < 0) {
         if (bytes_read != uv.UV_EOF) {
-            client.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Socket read error" } });
+            client.sendError(.message_with_disconnect, "Socket read error");
         } else client.sameThreadShutdown();
         return;
     }
@@ -215,7 +215,7 @@ pub fn sendError(self: *Client, error_type: network_data.ErrorType, message: []c
 }
 
 fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) void {
-    const player = self.world.findRef(Player, self.player_map_id) orelse return;
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
     if (player.condition.stunned) return;
     const item_data = game_data.item.from_id.getPtr(player.inventory[0]) orelse return;
     const proj_data = item_data.projectile orelse return;
@@ -240,7 +240,7 @@ fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) v
 fn handleMove(self: *Client, data: PacketData(.move)) void {
     if (data.x < 0.0 or data.y < 0.0) return;
 
-    const player = self.world.findRef(Player, self.player_map_id) orelse {
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse {
         self.sendError(.message_with_disconnect, "Player not found");
         return;
     };
@@ -265,7 +265,7 @@ fn handleMove(self: *Client, data: PacketData(.move)) void {
 fn handlePlayerText(self: *Client, data: PacketData(.player_text)) void {
     if (data.text.len == 0 or data.text.len > 256) return;
 
-    const player = self.world.findRef(Player, self.player_map_id) orelse return;
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
     if (data.text[0] == '/') {
         var split = std.mem.splitScalar(u8, data.text, ' ');
         command.handle(&split, player);
@@ -298,7 +298,7 @@ fn verifySwap(item_id: u16, target_type: game_data.ItemType) bool {
 
 fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
     switch (data.from_obj_type) {
-        .player => if (self.world.findRef(Player, data.from_map_id)) |player| {
+        .player => if (self.world.find(Player, data.from_map_id, .ref)) |player| {
             const start = player.inventory[data.from_slot_id];
             switch (data.to_obj_type) {
                 .player => {
@@ -308,7 +308,7 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
                     player.inventory[data.from_slot_id] = player.inventory[data.to_slot_id];
                     player.inventory[data.to_slot_id] = start;
                 },
-                .container => if (self.world.findRef(Container, data.to_map_id)) |cont| {
+                .container => if (self.world.find(Container, data.to_map_id, .ref)) |cont| {
                     if (!verifySwap(cont.inventory[data.to_slot_id], if (data.from_slot_id < 4) player.data.item_types[data.from_slot_id] else .any))
                         return;
                     player.inventory[data.from_slot_id] = cont.inventory[data.to_slot_id];
@@ -319,17 +319,17 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
 
             player.recalculateItems();
         } else return,
-        .container => if (self.world.findRef(Container, data.from_map_id)) |cont| {
+        .container => if (self.world.find(Container, data.from_map_id, .ref)) |cont| {
             const start = cont.inventory[data.from_slot_id];
             switch (data.to_obj_type) {
-                .player => if (self.world.findRef(Player, data.to_map_id)) |player| {
+                .player => if (self.world.find(Player, data.to_map_id, .ref)) |player| {
                     if (!verifySwap(start, if (data.to_slot_id < 4) player.data.item_types[data.to_slot_id] else .any))
                         return;
                     cont.inventory[data.from_slot_id] = player.inventory[data.to_slot_id];
                     player.inventory[data.to_slot_id] = start;
                     player.recalculateItems();
                 } else return,
-                .container => if (self.world.findRef(Container, data.to_map_id)) |other_cont| {
+                .container => if (self.world.find(Container, data.to_map_id, .ref)) |other_cont| {
                     cont.inventory[data.from_slot_id] = other_cont.inventory[data.to_slot_id];
                     other_cont.inventory[data.to_slot_id] = start;
                 } else return,
@@ -455,7 +455,7 @@ fn handleHello(self: *Client, data: PacketData(.hello)) void {
 }
 
 fn handleInvDrop(self: *Client, data: PacketData(.inv_drop)) void {
-    const player = self.world.findRef(Player, data.player_map_id) orelse return;
+    const player = self.world.find(Player, data.player_map_id, .ref) orelse return;
     var inventory = Container.inv_default;
     inventory[0] = player.inventory[data.slot_id];
     _ = self.world.add(Container, .{
@@ -479,12 +479,12 @@ fn handlePong(_: *Client, _: PacketData(.pong)) void {}
 fn handleTeleport(_: *Client, _: PacketData(.teleport)) void {}
 
 fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
-    const en_type = if (self.world.find(Portal, data.portal_map_id)) |e| e.data_id else {
+    const portal_map_id = if (self.world.find(Portal, data.portal_map_id, .con)) |e| e.data_id else {
         self.sendMessage("Portal not found");
         return;
     };
 
-    const new_world = maps.portalWorld(en_type, data.portal_map_id) catch {
+    const new_world = maps.portalWorld(portal_map_id, data.portal_map_id) catch {
         self.sendMessage("Map load failed");
         return;
     } orelse {
@@ -492,17 +492,17 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
         return;
     };
 
-    const player = self.world.findRef(Player, self.player_map_id) orelse {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Player does not exist" } });
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse {
+        self.sendError(.message_with_disconnect, "Player does not exist");
         return;
     };
     player.save() catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Player save failed" } });
+        self.sendError(.message_with_disconnect, "Player save failed");
         return;
     };
 
     self.world.remove(Player, player) catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Removing player from map failed" } });
+        self.sendError(.message_with_disconnect, "Removing player from map failed");
         return;
     };
 
@@ -513,7 +513,7 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
         .char_data = .{ .acc_id = self.acc_id, .char_id = self.char_id },
         .client = self,
     }) catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Adding player to map failed" } });
+        self.sendError(.message_with_disconnect, "Adding player to map failed");
         return;
     };
 
@@ -538,7 +538,7 @@ fn handleGroundDamage(self: *Client, data: PacketData(.ground_damage)) void {
     const tile = self.world.tiles[uy * self.world.w + ux];
     if (tile.data_id == std.math.maxInt(u16)) return;
 
-    const player = self.world.findRef(Player, self.player_map_id) orelse return;
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
     for (self.world.listForType(Player).items) |world_player| {
         if (world_player.map_id == self.player_map_id) continue;
 
@@ -557,49 +557,49 @@ fn handleGroundDamage(self: *Client, data: PacketData(.ground_damage)) void {
 }
 
 fn handlePlayerHit(self: *Client, data: PacketData(.player_hit)) void {
-    const enemy = self.world.find(Enemy, data.enemy_map_id) orelse return;
-    const proj = self.world.findRef(Projectile, enemy.projectiles[data.proj_index] orelse return) orelse return;
+    const enemy = self.world.find(Enemy, data.enemy_map_id, .con) orelse return;
+    const proj = self.world.find(Projectile, enemy.projectiles[data.proj_index] orelse return, .ref) orelse return;
     if (proj.player_hit_list.contains(self.player_map_id)) return;
-    const player = self.world.findRef(Player, self.player_map_id) orelse return;
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
     player.damage(.enemy, enemy.map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
     proj.player_hit_list.put(main.allocator, self.player_map_id, {}) catch return;
 }
 
 fn handleEnemyHit(self: *Client, data: PacketData(.enemy_hit)) void {
-    const player = self.world.find(Player, self.player_map_id) orelse return;
-    const enemy = self.world.findRef(Enemy, data.enemy_map_id) orelse return;
-    const proj = self.world.findRef(Projectile, player.projectiles[data.proj_index] orelse return) orelse return;
+    const player = self.world.find(Player, self.player_map_id, .con) orelse return;
+    const enemy = self.world.find(Enemy, data.enemy_map_id, .ref) orelse return;
+    const proj = self.world.find(Projectile, player.projectiles[data.proj_index] orelse return, .ref) orelse return;
 
     enemy.damage(.player, self.player_map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
     if (!proj.data.piercing) proj.delete() catch return;
 }
 
 fn handleAllyHit(self: *Client, data: PacketData(.ally_hit)) void {
-    const enemy = self.world.find(Enemy, data.enemy_map_id) orelse return;
-    const proj = self.world.findRef(Projectile, enemy.projectiles[data.proj_index] orelse return) orelse return;
+    const enemy = self.world.find(Enemy, data.enemy_map_id, .con) orelse return;
+    const proj = self.world.find(Projectile, enemy.projectiles[data.proj_index] orelse return, .ref) orelse return;
     if (proj.ally_hit_list.contains(data.ally_map_id)) return;
-    const ally = self.world.findRef(Ally, data.ally_map_id) orelse return;
+    const ally = self.world.find(Ally, data.ally_map_id, .ref) orelse return;
     ally.damage(.enemy, enemy.map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
     proj.ally_hit_list.put(main.allocator, data.ally_map_id, {}) catch return;
 }
 
 fn handleEscape(self: *Client, _: PacketData(.escape)) void {
-    const player = self.world.findRef(Player, self.player_map_id) orelse {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Player does not exist" } });
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse {
+        self.sendError(.message_with_disconnect, "Player does not exist");
         return;
     };
     player.save() catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Player save failed" } });
+        self.sendError(.message_with_disconnect, "Player save failed");
         return;
     };
 
     self.world.remove(Player, player) catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Removing player from map failed" } });
+        self.sendError(.message_with_disconnect, "Removing player from map failed");
         return;
     };
 
     self.world = maps.worlds.getPtr(maps.retrieve_id) orelse {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Retrieve does not exist" } });
+        self.sendError(.message_with_disconnect, "Retrieve does not exist");
         return;
     };
 
@@ -608,7 +608,7 @@ fn handleEscape(self: *Client, _: PacketData(.escape)) void {
         .char_data = .{ .acc_id = self.acc_id, .char_id = self.char_id },
         .client = self,
     }) catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Adding player to map failed" } });
+        self.sendError(.message_with_disconnect, "Adding player to map failed");
         return;
     };
 
@@ -627,19 +627,19 @@ fn handleEscape(self: *Client, _: PacketData(.escape)) void {
 
 fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
     if (self.player_map_id != std.math.maxInt(u32)) {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Already connected" } });
+        self.sendError(.message_with_disconnect, "Already connected");
         return;
     }
 
     if (!std.mem.eql(u8, data.build_ver, main.settings.build_version)) {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Incorrect version" } });
+        self.sendError(.message_with_disconnect, "Incorrect version");
         return;
     }
 
     const acc_id = db.login(data.email, data.token) catch |e| {
         switch (e) {
-            error.NoData => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Invalid email" } }),
-            error.InvalidToken => self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Invalid credentials" } }),
+            error.NoData => self.sendError(.message_with_disconnect, "Invalid email"),
+            error.InvalidToken => self.sendError(.message_with_disconnect, "Invalid token"),
         }
         return;
     };
@@ -652,11 +652,11 @@ fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
     };
 
     const is_banned = db.accountBanned(&player.acc_data) catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Database is missing data" } });
+        self.sendError(.message_with_disconnect, "Database is missing data");
         return;
     };
     if (is_banned) {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Account banned" } });
+        self.sendError(.message_with_disconnect, "Account banned");
         return;
     }
 
@@ -664,17 +664,17 @@ fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
 
     self.char_id = player.char_data.char_id;
     player.char_data.set(.{ .last_login_timestamp = timestamp }) catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Could not interact with database" } });
+        self.sendError(.message_with_disconnect, "Could not interact with database");
         return;
     };
 
     self.world = maps.testWorld(data.map) catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Creating test map failed" } });
+        self.sendError(.message_with_disconnect, "Creating test map failed");
         return;
     };
 
     self.player_map_id = self.world.add(Player, player) catch {
-        self.queuePacket(.{ .@"error" = .{ .type = .message_with_disconnect, .description = "Adding player to map failed" } });
+        self.sendError(.message_with_disconnect, "Adding player to map failed");
         return;
     };
 
@@ -701,7 +701,7 @@ fn handleUseAbility(self: *Client, data: PacketData(.use_ability)) void {
         return;
     }
 
-    const player = self.world.findRef(Player, self.player_map_id) orelse {
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse {
         self.sendError(.message_with_disconnect, "Player does not exist");
         return;
     };
@@ -762,7 +762,7 @@ fn handleUseAbility(self: *Client, data: PacketData(.use_ability)) void {
 }
 
 fn handleSelectCard(self: *Client, data: PacketData(.select_card)) void {
-    const player = self.world.findRef(Player, self.player_map_id) orelse {
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse {
         self.sendError(.message_with_disconnect, "Player does not exist");
         return;
     };

@@ -145,6 +145,9 @@ pub fn deinit(self: *Player) void {
     base.deinit(self);
     for (self.status_texts.items) |*text| text.deinit();
     self.status_texts.deinit(main.allocator);
+    main.allocator.free(self.cards);
+    main.allocator.free(self.resources);
+    main.allocator.free(self.talents);
 }
 
 pub fn onMove(self: *Player) void {
