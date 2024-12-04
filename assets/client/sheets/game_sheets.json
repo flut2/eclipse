@@ -201,5 +201,12 @@
         "path":"containers.png",
         "w":18,
         "h":18
+    },
+    {
+        "type":"image",
+        "name":"talent_resources",
+        "path":"talent_resources.png",
+        "w":24,
+        "h":24
     }
 ]
