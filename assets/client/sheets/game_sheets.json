@@ -27,8 +27,8 @@
         "type": "image",
         "name": "projectiles",
         "path": "projectiles.png",
-        "w": 8,
-        "h": 8,
+        "w": 10,
+        "h": 10,
         "dont_trim": true
     },
     {
