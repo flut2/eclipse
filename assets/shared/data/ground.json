@@ -384,5 +384,96 @@
             }
         ],
         "blend_prio": 5
+    },
+    {
+        "id": 15,
+        "name": "T1 Realm Grass Blades Light",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 53
+            }
+        ],
+        "blend_prio": 1
+    },
+    {
+        "id": 16,
+        "name": "T1 Realm Grass Blades Dark",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 54
+            },
+            {
+                "sheet": "ground",
+                "index": 55
+            }
+        ],
+        "blend_prio": 2
+    },
+    {
+        "id": 17,
+        "name": "T1 Realm Grass Short",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 56
+            },
+            {
+                "sheet": "ground",
+                "index": 57
+            },
+            {
+                "sheet": "ground",
+                "index": 58
+            }
+        ],
+        "blend_prio": 3
+    },
+    {
+        "id": 18,
+        "name": "T1 Realm Grass Dead Light",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 59
+            }
+        ],
+        "blend_prio": 1
+    },
+    {
+        "id": 19,
+        "name": "T1 Realm Grass Dead Dark",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 60
+            },
+            {
+                "sheet": "ground",
+                "index": 61
+            }
+        ],
+        "blend_prio": 2
+    },
+    {
+        "id": 20,
+        "name": "T1 Realm Dead Grass Short",
+        "textures": [
+            {
+                "sheet": "ground",
+                "index": 62
+            },
+            {
+                "sheet": "ground",
+                "index": 63
+            },
+            {
+                "sheet": "ground",
+                "index": 64
+            }
+        ],
+        "blend_prio": 3
     }
+    
 ]
