@@ -1,15 +1,16 @@
 const std = @import("std");
-const element = @import("../elements/element.zig");
-const assets = @import("../../assets.zig");
-const main = @import("../../main.zig");
-const ui_systems = @import("../systems.zig");
+
 const build_options = @import("options");
 const game_data = @import("shared").game_data;
 
-const CharSelectScreen = @This();
+const assets = @import("../../assets.zig");
+const main = @import("../../main.zig");
 const Button = @import("../elements/Button.zig");
 const CharacterBox = @import("../elements/CharacterBox.zig");
+const element = @import("../elements/element.zig");
+const ui_systems = @import("../systems.zig");
 
+const CharSelectScreen = @This();
 boxes: std.ArrayListUnmanaged(*CharacterBox) = .empty,
 
 new_char_button: *Button = undefined,

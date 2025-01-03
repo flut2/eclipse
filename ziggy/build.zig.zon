@@ -1,0 +1,19 @@
+.{
+    .name = "ziggy",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"known-folders" = .{ .path = "libs/known-folders" },
+        .@"zig-lsp-kit" = .{ .path = "libs/zig-lsp-kit" },
+        .yaml = .{
+            .url = "https://github.com/kubkon/zig-yaml/archive/beddd5da24de91d430ca7028b00986f7745b13e9.tar.gz",
+            .hash = "1220841471bd4891cbb199d27cc5e7e0fb0a5b7c5388a70bd24fa3eb7285755c396c",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "LICENSE",
+        "README.md",
+    },
+}

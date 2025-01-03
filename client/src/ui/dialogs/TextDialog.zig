@@ -1,15 +1,15 @@
 const std = @import("std");
-const element = @import("../elements/element.zig");
-const assets = @import("../../assets.zig");
-const dialog = @import("dialog.zig");
-const main = @import("../../main.zig");
 
-const TextDialog = @This();
+const assets = @import("../../assets.zig");
+const main = @import("../../main.zig");
+const Button = @import("../elements/Button.zig");
 const Container = @import("../elements/Container.zig");
+const element = @import("../elements/element.zig");
 const Image = @import("../elements/Image.zig");
 const Text = @import("../elements/Text.zig");
-const Button = @import("../elements/Button.zig");
+const dialog = @import("dialog.zig");
 
+const TextDialog = @This();
 const width = 300;
 const height = 200;
 const button_width = 100;

@@ -1,13 +1,13 @@
-const element = @import("element.zig");
-const systems = @import("../systems.zig");
-const tooltip = @import("../tooltips/tooltip.zig");
-const render = @import("../../render.zig");
-const assets = @import("../../assets.zig");
 const glfw = @import("zglfw");
 
-const Button = @This();
+const assets = @import("../../assets.zig");
+const render = @import("../../render.zig");
+const systems = @import("../systems.zig");
+const tooltip = @import("../tooltips/tooltip.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const Button = @This();
 base: ElementBase,
 enabled: bool = true,
 userdata: ?*anyopaque = null,

@@ -1,20 +1,20 @@
 const std = @import("std");
-const element = @import("../elements/element.zig");
+
 const assets = @import("../../assets.zig");
-const main = @import("../../main.zig");
 const input = @import("../../input.zig");
+const main = @import("../../main.zig");
+const Settings = @import("../../Settings.zig");
+const Button = @import("../elements/Button.zig");
+const Container = @import("../elements/Container.zig");
+const element = @import("../elements/element.zig");
+const Image = @import("../elements/Image.zig");
+const KeyMapper = @import("../elements/KeyMapper.zig");
+const Slider = @import("../elements/Slider.zig");
+const Text = @import("../elements/Text.zig");
+const Toggle = @import("../elements/Toggle.zig");
 const systems = @import("../systems.zig");
 
 const Options = @This();
-const Container = @import("../elements/Container.zig");
-const Image = @import("../elements/Image.zig");
-const Button = @import("../elements/Button.zig");
-const Text = @import("../elements/Text.zig");
-const KeyMapper = @import("../elements/KeyMapper.zig");
-const Toggle = @import("../elements/Toggle.zig");
-const Slider = @import("../elements/Slider.zig");
-const Settings = @import("../../Settings.zig");
-
 const button_width = 150;
 const button_height = 50;
 
@@ -206,7 +206,7 @@ pub fn create() !*Options {
     return options;
 }
 
-pub fn deinit(self: *Options) void {
+pub fn destroy(self: *Options) void {
     element.destroy(self.main_container);
     element.destroy(self.buttons);
     element.destroy(self.tabs);
@@ -337,7 +337,10 @@ fn positionElements(container: *Container) void {
 fn sliderCallback(slider: *Slider) void {
     if (slider.target) |target| {
         if (target == &main.settings.music_volume)
-            assets.main_music.setVolume(slider.current_value);
+            if (assets.main_music) |music| {
+                music.setVolume(slider.current_value);
+                if (main.settings.music_volume > 0.0) music.start() catch main.audioFailure();
+            };
     } else @panic("Options slider has no target pointer. This is a bug, please add");
 
     trySave();

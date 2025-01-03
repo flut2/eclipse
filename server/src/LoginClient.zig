@@ -1,12 +1,14 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const uv = shared.uv;
-const main = @import("main.zig");
-const builtin = @import("builtin");
+
 const db = @import("db.zig");
+const main = @import("main.zig");
 
 const Client = @This();
 
@@ -33,11 +35,13 @@ fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacketLogin).@"union".tag_t
 
 pub fn allocBuffer(socket: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
     const client: *Client = @ptrCast(@alignCast(socket.*.data));
-    buf.*.base = @ptrCast(client.arena.allocator().alloc(u8, suggested_size) catch {
-        client.sameThreadShutdown(); // no failure, if we can't alloc it wouldn't go through anyway
-        return;
-    });
-    buf.*.len = @intCast(suggested_size);
+    buf.* = .{
+        .base = @ptrCast(client.arena.allocator().alloc(u8, suggested_size) catch {
+            client.sameThreadShutdown(); // no failure, if we can't alloc it wouldn't go through anyway
+            return;
+        }),
+        .len = @intCast(suggested_size),
+    };
 }
 
 fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.C) void {

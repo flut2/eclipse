@@ -1,13 +1,13 @@
-const element = @import("element.zig");
-const systems = @import("../systems.zig");
-const tooltip = @import("../tooltips/tooltip.zig");
-const render = @import("../../render.zig");
-const assets = @import("../../assets.zig");
 const glfw = @import("zglfw");
 
-const Toggle = @This();
+const assets = @import("../../assets.zig");
+const render = @import("../../render.zig");
+const systems = @import("../systems.zig");
+const tooltip = @import("../tooltips/tooltip.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const Toggle = @This();
 base: ElementBase,
 toggled: *bool,
 off_image_data: element.InteractableImageData,

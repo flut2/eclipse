@@ -1,7 +1,8 @@
 const std = @import("std");
+
 const main = @import("../../main.zig");
-const element = @import("../elements/element.zig");
 const render = @import("../../render.zig");
+const element = @import("../elements/element.zig");
 
 const StatusText = @This();
 

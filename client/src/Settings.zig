@@ -1,6 +1,8 @@
 const std = @import("std");
-const glfw = @import("zglfw");
 const builtin = @import("builtin");
+
+const glfw = @import("zglfw");
+
 const assets = @import("assets.zig");
 const main = @import("main.zig");
 
@@ -69,8 +71,7 @@ pub fn save(self: Self) !void {
 }
 
 pub fn resetToDefaults(self: *Self) void {
-    inline for (@typeInfo(Self).@"struct".fields) |field| {
+    inline for (@typeInfo(Self).@"struct".fields) |field|
         @field(self, field.name) = @as(*const field.type, @ptrCast(@alignCast(field.default_value orelse
             @panic("All settings need a default value, but it wasn't found")))).*;
-    }
 }

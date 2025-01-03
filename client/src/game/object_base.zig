@@ -1,24 +1,25 @@
 const std = @import("std");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
+
 const assets = @import("../assets.zig");
-const map = @import("map.zig");
-const main = @import("../main.zig");
-const ui_systems = @import("../ui/systems.zig");
-const render = @import("../render.zig");
+const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const size_mult = Camera.size_mult;
-
-const Camera = @import("../Camera.zig");
-const Player = @import("Player.zig");
-const Entity = @import("Entity.zig");
-const Enemy = @import("Enemy.zig");
-const Portal = @import("Portal.zig");
-const Container = @import("Container.zig");
-const Purchasable = @import("Purchasable.zig");
+const main = @import("../main.zig");
+const render = @import("../render.zig");
+const ui_systems = @import("../ui/systems.zig");
 const Ally = @import("Ally.zig");
+const Container = @import("Container.zig");
+const Enemy = @import("Enemy.zig");
+const Entity = @import("Entity.zig");
+const map = @import("map.zig");
+const Player = @import("Player.zig");
+const Portal = @import("Portal.zig");
+const Purchasable = @import("Purchasable.zig");
 
 pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
     const type_name = switch (ObjType) {

@@ -1,17 +1,18 @@
 const std = @import("std");
-const main = @import("../main.zig");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
-const stat_util = @import("stat_util.zig");
-const behavior_logic = @import("../logic/logic.zig");
-const behavior_data = @import("../logic/behavior.zig");
 
-const Entity = @This();
+const behavior_data = @import("../logic/behavior.zig");
+const behavior_logic = @import("../logic/logic.zig");
+const main = @import("../main.zig");
 const World = @import("../World.zig");
 const Ally = @import("Ally.zig");
+const stat_util = @import("stat_util.zig");
 
+const Entity = @This();
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
 x: f32 = 0.0,
@@ -76,8 +77,7 @@ pub fn deinit(self: *Entity) !void {
 
 pub fn applyCondition(self: *Entity, condition: utils.ConditionEnum, duration: i64) !void {
     if (self.conditions_active.getPtr(condition)) |current_duration| {
-        if (duration > current_duration.*)
-            current_duration.* = duration;
+        if (duration > current_duration.*) current_duration.* = duration;
     } else try self.conditions_active.put(main.allocator, condition, duration);
     self.condition.set(condition, true);
 }
@@ -117,10 +117,6 @@ pub fn damage(self: *Entity, owner_type: network_data.ObjectType, owner_id: u32,
         game_data.magicDamage(magic_dmg, self.data.resistance, self.condition) +
         true_dmg;
     self.hp -= dmg;
-    if (self.hp <= 0) {
-        self.delete() catch return;
-        return;
-    }
 
     const map_id = switch (owner_type) {
         .player => owner_id,
@@ -130,6 +126,11 @@ pub fn damage(self: *Entity, owner_type: network_data.ObjectType, owner_id: u32,
 
     const res = self.damages_dealt.getOrPut(main.allocator, map_id) catch return;
     if (res.found_existing) res.value_ptr.* += dmg else res.value_ptr.* = dmg;
+
+    if (self.hp <= 0) {
+        self.delete() catch return;
+        return;
+    }
 }
 
 pub fn exportStats(self: *Entity, cache: *[@typeInfo(network_data.EntityStat).@"union".fields.len]?network_data.EntityStat) ![]u8 {

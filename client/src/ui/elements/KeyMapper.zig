@@ -1,15 +1,15 @@
-const element = @import("element.zig");
-const systems = @import("../systems.zig");
-const tooltip = @import("../tooltips/tooltip.zig");
-const render = @import("../../render.zig");
-const assets = @import("../../assets.zig");
-const input = @import("../../input.zig");
 const glfw = @import("zglfw");
 
+const assets = @import("../../assets.zig");
+const input = @import("../../input.zig");
+const render = @import("../../render.zig");
 const Settings = @import("../../Settings.zig");
-const KeyMapper = @This();
+const systems = @import("../systems.zig");
+const tooltip = @import("../tooltips/tooltip.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const KeyMapper = @This();
 base: ElementBase,
 setKeyCallback: *const fn (*KeyMapper) void,
 image_data: element.InteractableImageData,

@@ -1,15 +1,16 @@
 const std = @import("std");
-const element = @import("element.zig");
-const render = @import("../../render.zig");
-const main = @import("../../main.zig");
+
 const glfw = @import("zglfw");
 
-const ScrollableContainer = @This();
+const main = @import("../../main.zig");
+const render = @import("../../render.zig");
 const Container = @import("Container.zig");
-const Slider = @import("Slider.zig");
-const Image = @import("Image.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
+const Image = @import("Image.zig");
+const Slider = @import("Slider.zig");
 
+const ScrollableContainer = @This();
 base: ElementBase,
 scissor_w: f32,
 scissor_h: f32,

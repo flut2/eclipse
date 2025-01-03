@@ -1,7 +1,9 @@
-const main = @import("main.zig");
 const std = @import("std");
-const map = @import("game/map.zig");
+
 const utils = @import("shared").utils;
+
+const map = @import("game/map.zig");
+const main = @import("main.zig");
 const pad = @import("assets.zig").padding;
 
 pub const px_per_tile = 63;

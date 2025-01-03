@@ -1,24 +1,26 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const uv = shared.uv;
-const main = @import("main.zig");
-const builtin = @import("builtin");
-const db = @import("db.zig");
-const maps = @import("map/maps.zig");
-const command = @import("command.zig");
-const abilities = @import("map/abilities.zig");
 
-const World = @import("World.zig");
-const Entity = @import("map/Entity.zig");
+const command = @import("command.zig");
+const db = @import("db.zig");
+const main = @import("main.zig");
+const abilities = @import("map/abilities.zig");
+const Ally = @import("map/Ally.zig");
+const Container = @import("map/Container.zig");
 const Enemy = @import("map/Enemy.zig");
-const Projectile = @import("map/Projectile.zig");
+const Entity = @import("map/Entity.zig");
+const maps = @import("map/maps.zig");
 const Player = @import("map/Player.zig");
 const Portal = @import("map/Portal.zig");
-const Container = @import("map/Container.zig");
-const Ally = @import("map/Ally.zig");
+const Projectile = @import("map/Projectile.zig");
+const World = @import("World.zig");
+
 const Client = @This();
 
 const WriteRequest = extern struct {
@@ -66,11 +68,13 @@ fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?
 
 pub fn allocBuffer(socket: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
     const client: *Client = @ptrCast(@alignCast(socket.*.data));
-    buf.*.base = @ptrCast(client.arena.allocator().alloc(u8, suggested_size) catch {
-        client.sameThreadShutdown(); // no failure, if we can't alloc it wouldn't go through anyway
-        return;
-    });
-    buf.*.len = @intCast(suggested_size);
+    buf.* = .{
+        .base = @ptrCast(client.arena.allocator().alloc(u8, suggested_size) catch {
+            client.sameThreadShutdown(); // no failure, if we can't alloc it wouldn't go through anyway
+            return;
+        }),
+        .len = @intCast(suggested_size),
+    };
 }
 
 fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.C) void {
@@ -103,22 +107,9 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
 pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const client: *Client = @ptrCast(@alignCast(socket.data));
-    // if (client.ip.len == 0) {
-    //     const sockname_status = uv.uv_tcp_getsockname(@ptrCast(socket), @ptrCast(&address.any), @sizeOf(std.posix.socklen_t));
-    //     if (sockname_status != 0) {
-    //         std.log.err("Failed to get sockname: {s}", .{uv.uv_strerror(sockname_status)});
-    //         uv.uv_close(@ptrCast(socket), closeCallback);
-    //         return;
-    //     }
 
-    //     client.ip = main.getIp(address) catch |e| {
-    //         std.log.err("Failed to parse IP from socket: {}", .{e});
-    //         uv.uv_close(@ptrCast(socket), closeCallback);
-    //         return;
-    //     };
-    // }
     const arena_allocator = client.arena.allocator();
-    var child_arena = std.heap.ArenaAllocator.init(arena_allocator);
+    var child_arena: std.heap.ArenaAllocator = .init(arena_allocator);
     defer child_arena.deinit();
     const child_arena_allocator = child_arena.allocator();
 
@@ -129,8 +120,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
             defer _ = child_arena.reset(.retain_capacity);
 
             const len = reader.read(u16, child_arena_allocator);
-            if (len > bytes_read - reader.index)
-                return;
+            if (len > bytes_read - reader.index) return;
 
             const next_packet_idx = reader.index + len;
             const EnumType = @typeInfo(network_data.C2SPacket).@"union".tag_type.?;
@@ -293,7 +283,7 @@ fn verifySwap(item_id: u16, target_type: game_data.ItemType) bool {
         if (item_id == std.math.maxInt(u16)) break :blk .any;
         break :blk (game_data.item.from_id.get(item_id) orelse return false).item_type;
     };
-    return game_data.ItemType.typesMatch(item_type, target_type);
+    return item_type.typesMatch(target_type);
 }
 
 fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {

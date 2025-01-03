@@ -1,13 +1,15 @@
 const std = @import("std");
-const assets = @import("../assets.zig");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
-const ui_systems = @import("../ui/systems.zig");
-const map = @import("map.zig");
-const main = @import("../main.zig");
 
+const assets = @import("../assets.zig");
+const main = @import("../main.zig");
+const ui_systems = @import("../ui/systems.zig");
 const Entity = @import("Entity.zig");
+const map = @import("map.zig");
+
 const Square = @This();
 
 pub const left_blend_idx = 0;
@@ -78,7 +80,7 @@ pub fn addToMap(square_data: Square) void {
 }
 
 fn parseDir(x: f32, y: f32, square: *Square, current_prio: i32, comptime blend_idx: comptime_int) void {
-    if (map.getSquarePtr(x, y, true)) |other_sq| {
+    if (map.getSquare(x, y, true, .ref)) |other_sq| {
         const opposite_idx = (blend_idx + 2) % 4;
 
         if (other_sq.data_id != editor_tile and other_sq.data_id != empty_tile) {

@@ -23,8 +23,10 @@ pub fn parseMap(data_reader: anytype, arena: *std.heap.ArenaAllocator) !Map {
     var reader = dcp.reader();
 
     const version = try reader.readInt(u8, .little);
-    if (version != 0)
+    if (version != 0) {
         std.log.err("Reading map failed, unsupported version: {}", .{version});
+        return error.UnsupportedVersion;
+    }
 
     var ret: Map = .{
         .x = try reader.readInt(u16, .little),

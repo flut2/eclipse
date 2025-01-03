@@ -1,15 +1,16 @@
-const glfw = @import("zglfw");
 const std = @import("std");
-const map = @import("game/map.zig");
-const main = @import("main.zig");
-const assets = @import("assets.zig");
-const game_data = @import("shared").game_data;
-const ui_systems = @import("ui/systems.zig");
 
+const game_data = @import("shared").game_data;
+const glfw = @import("zglfw");
+
+const assets = @import("assets.zig");
+const map = @import("game/map.zig");
 const Player = @import("game/Player.zig");
-const GameScreen = @import("ui/screens/GameScreen.zig");
-const KeyMapper = @import("ui/elements/KeyMapper.zig");
+const main = @import("main.zig");
 const Input = @import("ui/elements/Input.zig");
+const KeyMapper = @import("ui/elements/KeyMapper.zig");
+const GameScreen = @import("ui/screens/GameScreen.zig");
+const ui_systems = @import("ui/systems.zig");
 
 const press_mappings = .{
     .{ &main.settings.move_up, handleMoveUpPress },

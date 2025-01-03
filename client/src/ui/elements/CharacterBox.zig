@@ -1,12 +1,12 @@
-const element = @import("element.zig");
-const systems = @import("../systems.zig");
-const render = @import("../../render.zig");
-const assets = @import("../../assets.zig");
 const glfw = @import("zglfw");
 
-const CharacterBox = @This();
+const assets = @import("../../assets.zig");
+const render = @import("../../render.zig");
+const systems = @import("../systems.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const CharacterBox = @This();
 base: ElementBase,
 id: u32,
 class_data_id: u16,

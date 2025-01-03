@@ -1,20 +1,22 @@
 const std = @import("std");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const network_data = shared.network_data;
+
 const db = @import("../db.zig");
+const Client = @import("../GameClient.zig");
 const main = @import("../main.zig");
+const World = @import("../World.zig");
+const Ally = @import("Ally.zig");
+const Container = @import("Container.zig");
+const Enemy = @import("Enemy.zig");
+const Entity = @import("Entity.zig");
+const Portal = @import("Portal.zig");
+const Purchasable = @import("Purchasable.zig");
 const stat_util = @import("stat_util.zig");
 
-const Entity = @import("Entity.zig");
-const Enemy = @import("Enemy.zig");
-const Portal = @import("Portal.zig");
-const Container = @import("Container.zig");
-const Purchasable = @import("Purchasable.zig");
-const Ally = @import("Ally.zig");
-const World = @import("../World.zig");
-const Client = @import("../GameClient.zig");
 const Player = @This();
 
 pub const health_stat = 0;
@@ -55,8 +57,8 @@ stat_boosts: [13]i32 = @splat(0),
 inventory: [22]u16 = @splat(std.math.maxInt(u16)),
 selecting_cards: ?[3]u16 = null,
 cards: []u16 = &.{},
-resources: []u32 = &.{},
-talents: []u8 = &.{},
+resources: std.ArrayListUnmanaged(network_data.DataIdWithCount(u32)) = .empty,
+talents: std.ArrayListUnmanaged(network_data.DataIdWithCount(u16)) = .empty,
 muted_until: i64 = 0,
 condition: utils.Condition = .{},
 caches: struct {
@@ -130,14 +132,16 @@ pub fn init(self: *Player) !void {
     self.gold = try self.acc_data.getWithDefault(.gold, 0);
     self.gems = try self.acc_data.getWithDefault(.gems, 0);
     self.crowns = try self.acc_data.getWithDefault(.crowns, 0);
-    self.resources = try main.allocator.dupe(u32, try self.acc_data.getWithDefault(.resources, &.{}));
+    self.resources.clearRetainingCapacity();
+    self.resources.appendSlice(main.allocator, try self.acc_data.getWithDefault(.resources, &.{})) catch main.oomPanic();
 
     self.aether = try self.char_data.getWithDefault(.aether, 1);
     self.spirits_communed = try self.char_data.getWithDefault(.spirits_communed, 0);
     self.hp = try self.char_data.getWithDefault(.hp, 100);
     self.mp = try self.char_data.getWithDefault(.mp, 0);
     self.cards = try main.allocator.dupe(u16, try self.char_data.getWithDefault(.cards, &.{}));
-    self.talents = try main.allocator.dupe(u8, try self.char_data.getWithDefault(.talents, &.{}));
+    self.talents.clearRetainingCapacity();
+    self.talents.appendSlice(main.allocator, try self.char_data.getWithDefault(.talents, &.{})) catch main.oomPanic();
     self.stats = try self.char_data.get(.stats);
     self.inventory = try self.char_data.get(.inventory);
 
@@ -155,18 +159,13 @@ pub fn deinit(self: *Player) !void {
     self.tiles.deinit(main.allocator);
     self.tiles_seen.deinit(main.allocator);
 
-    inline for (@typeInfo(@TypeOf(self.objs)).@"struct".fields) |field| {
-        @field(self.objs, field.name).deinit(main.allocator);
-    }
-
-    inline for (@typeInfo(@TypeOf(self.caches)).@"struct".fields) |field| {
-        @field(self.caches, field.name).deinit(main.allocator);
-    }
+    inline for (@typeInfo(@TypeOf(self.objs)).@"struct".fields) |field| @field(self.objs, field.name).deinit(main.allocator);
+    inline for (@typeInfo(@TypeOf(self.caches)).@"struct".fields) |field| @field(self.caches, field.name).deinit(main.allocator);
 
     main.allocator.free(self.name);
     main.allocator.free(self.cards);
-    main.allocator.free(self.resources);
-    main.allocator.free(self.talents);
+    self.resources.deinit(main.allocator);
+    self.talents.deinit(main.allocator);
     self.stats_writer.list.deinit(main.allocator);
 }
 
@@ -189,8 +188,7 @@ pub fn moveToSpawn(self: *Player) void {
 
 pub fn applyCondition(self: *Player, condition: utils.ConditionEnum, duration: i64) !void {
     if (self.conditions_active.getPtr(condition)) |current_duration| {
-        if (duration > current_duration.*)
-            current_duration.* = duration;
+        if (duration > current_duration.*) current_duration.* = duration;
     } else try self.conditions_active.put(main.allocator, condition, duration);
     self.condition.set(condition, true);
 }
@@ -205,7 +203,7 @@ pub fn save(self: *Player) !void {
     try self.acc_data.set(.{ .gold = self.gold });
     try self.acc_data.set(.{ .gems = self.gems });
     try self.acc_data.set(.{ .crowns = self.crowns });
-    try self.acc_data.set(.{ .resources = self.resources });
+    try self.acc_data.set(.{ .resources = self.resources.items });
 
     try self.char_data.set(.{ .hp = self.hp });
     try self.char_data.set(.{ .mp = self.mp });
@@ -214,7 +212,7 @@ pub fn save(self: *Player) !void {
     try self.char_data.set(.{ .inventory = self.inventory });
     try self.char_data.set(.{ .stats = self.stats });
     try self.char_data.set(.{ .cards = self.cards });
-    try self.char_data.set(.{ .talents = self.talents });
+    try self.char_data.set(.{ .talents = self.talents.items });
 }
 
 pub fn death(self: *Player, killer: []const u8) !void {
@@ -389,13 +387,8 @@ pub fn tick(self: *Player, _: i64, dt: i64) !void {
         }
     }
 
-    inline for (@typeInfo(@TypeOf(self.objs)).@"struct".fields) |field| {
-        @field(self.objs, field.name).clearRetainingCapacity();
-    }
-
-    inline for (.{ Entity, Enemy, Portal, Container, Purchasable, Ally }) |ObjType| {
-        try self.exportObject(ObjType);
-    }
+    inline for (@typeInfo(@TypeOf(self.objs)).@"struct".fields) |field| @field(self.objs, field.name).clearRetainingCapacity();
+    inline for (.{ Entity, Enemy, Portal, Container, Purchasable, Ally }) |ObjType| try self.exportObject(ObjType);
 
     for (self.world.listForType(Player).items) |*player| {
         const x_dt = player.x - self.x;
@@ -473,7 +466,7 @@ pub fn recalculateItems(self: *Player) void {
         if (props.stat_increases) |stat_increases| {
             for (stat_increases) |si| {
                 switch (si) {
-                    inline else => |amount, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(amount),
+                    inline else => |inner, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(inner.amount),
                 }
             }
         }
@@ -506,8 +499,8 @@ pub fn exportStats(
     stat_util.write(T, writer, cache, .{ .condition = self.condition });
     stat_util.write(T, writer, cache, .{ .ability_state = self.ability_state });
     stat_util.write(T, writer, cache, .{ .cards = self.cards });
-    stat_util.write(T, writer, cache, .{ .resources = self.resources });
-    stat_util.write(T, writer, cache, .{ .talents = self.talents });
+    stat_util.write(T, writer, cache, .{ .resources = self.resources.items });
+    stat_util.write(T, writer, cache, .{ .talents = self.talents.items });
 
     if (is_self) {
         stat_util.write(T, writer, cache, .{ .spirits_communed = self.spirits_communed });

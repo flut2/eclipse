@@ -1,19 +1,21 @@
 const std = @import("std");
-const assets = @import("../assets.zig");
-const game_data = @import("shared").game_data;
-const main = @import("../main.zig");
-const map = @import("map.zig");
-const utils = @import("shared").utils;
-const particles = @import("particles.zig");
-const render = @import("../render.zig");
-const px_per_tile = Camera.px_per_tile;
 
+const game_data = @import("shared").game_data;
+const utils = @import("shared").utils;
+
+const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
+const px_per_tile = Camera.px_per_tile;
+const main = @import("../main.zig");
+const render = @import("../render.zig");
 const Ally = @import("Ally.zig");
-const Player = @import("Player.zig");
-const Entity = @import("Entity.zig");
 const Enemy = @import("Enemy.zig");
+const Entity = @import("Entity.zig");
+const map = @import("map.zig");
+const particles = @import("particles.zig");
+const Player = @import("Player.zig");
 const Square = @import("Square.zig");
+
 const Projectile = @This();
 
 x: f32 = 0.0,
@@ -257,7 +259,7 @@ pub fn update(self: *Projectile, time: i64, dt: f32) bool {
 
     self.last_hit_check = time;
 
-    const square = map.getSquare(self.x, self.y, false).?;
+    const square = map.getSquare(self.x, self.y, false, .con).?;
     if (square.data_id == Square.editor_tile or square.data_id == Square.empty_tile) return false;
 
     if (map.findObject(Entity, square.entity_map_id, .con)) |e| {

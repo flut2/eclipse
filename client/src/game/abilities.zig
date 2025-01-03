@@ -1,14 +1,15 @@
 const std = @import("std");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
+
+const map = @import("../game/map.zig");
 const input = @import("../input.zig");
 const main = @import("../main.zig");
-const map = @import("../game/map.zig");
-
+const Enemy = @import("Enemy.zig");
 const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
-const Enemy = @import("Enemy.zig");
 
 pub fn emptyHandler() ![]u8 {
     return &.{};

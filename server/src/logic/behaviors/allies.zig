@@ -1,11 +1,12 @@
 const std = @import("std");
-const logic = @import("../logic.zig");
+
 const utils = @import("shared").utils;
 
-const Metadata = @import("../behavior.zig").BehaviorMetadata;
-const Player = @import("../../map/Player.zig");
 const Ally = @import("../../map/Ally.zig");
+const Player = @import("../../map/Player.zig");
 const World = @import("../../World.zig");
+const Metadata = @import("../behavior.zig").BehaviorMetadata;
+const logic = @import("../logic.zig");
 
 pub const BoulderBuddy = struct {
     pub const data: Metadata = .{

@@ -1,20 +1,19 @@
 const std = @import("std");
-const main = @import("../main.zig");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 
-const Portal = @import("../map/Portal.zig");
+const main = @import("../main.zig");
+const Container = @import("../map/Container.zig");
 const Enemy = @import("../map/Enemy.zig");
 const Entity = @import("../map/Entity.zig");
 const Player = @import("../map/Player.zig");
-const Container = @import("../map/Container.zig");
+const Portal = @import("../map/Portal.zig");
 
 fn verifyType(comptime T: type) void {
     const type_info = @typeInfo(T);
-    if (type_info != .pointer or
-        type_info.pointer.child != Enemy and
-        type_info.pointer.child != Entity)
+    if (type_info != .pointer or type_info.pointer.child != Enemy and type_info.pointer.child != Entity)
         @compileError("Invalid type given. Please use \"Enemy\" or \"Entity\"");
 }
 
@@ -23,82 +22,42 @@ fn nameContains(name_list: []const []const u8, name: []const u8) bool {
     return false;
 }
 
-pub const PortalPoolItem = struct {
-    name: ?[]const u8 = null, // null meaning empty slot, i.e. getting nothing
-    weight: u32,
-};
-
-pub fn dropPortals(host: anytype, comptime items: []const PortalPoolItem) void {
-    verifyType(@TypeOf(host));
-
-    comptime var total_weights = 0;
-    comptime var min_rolls: []const u32 = &.{};
-    comptime var max_rolls: []const u32 = &.{};
-
+pub const PortalLoot = struct { name: []const u8, chance: f32 };
+pub fn dropPortals(host: anytype, comptime loots: []const PortalLoot) void {
     comptime {
-        var has_null = false;
+        verifyType(@TypeOf(host));
         var name_list: []const []const u8 = &.{};
-        for (items) |item| {
-            if (item.name) |name| {
-                if (nameContains(name_list, name))
-                    @compileError("Do not have multiples of the same portal in the pool. Merge their weights instead");
-                name_list = name_list ++ .{name};
-            }
+        for (loots) |loot| {
+            if (loot.chance <= 0.0 or loot.chance > 1.0) @compileError("Invalid chance, keep it ]0.0; 1.0]");
 
-            min_rolls = min_rolls ++ .{total_weights};
-            max_rolls = max_rolls ++ .{total_weights + item.weight};
-            total_weights += item.weight;
-        } else {
-            if (has_null) @compileError("Do not have multiples of empty loot. Merge their weights instead");
-            has_null = true;
+            if (nameContains(name_list, loot.name))
+                @compileError("Do not have multiples of the same portal in the loot table. Increase the chance of the existing one instead");
+            name_list = name_list ++ .{loot.name};
         }
     }
 
-    const roll = utils.rng.random().intRangeAtMost(u32, 0, total_weights);
-    for (items, 0..) |item, i| {
-        if (item.name == null) continue;
-
-        if (min_rolls[i] <= roll and roll <= max_rolls[i]) {
-            const data = game_data.portal.from_name.get(item.name.?) orelse {
-                std.log.err("Portal not found for name \"{s}\"", .{item.name.?});
-                return;
-            };
-            _ = host.world.add(Portal, .{ .x = host.x, .y = host.y, .data_id = data.id }) catch return;
+    inline for (loots) |loot| if (loot.chance >= utils.rng.random().float(f32)) {
+        const data = game_data.portal.from_name.get(loot.name) orelse {
+            std.log.err("Portal not found for name \"{s}\"", .{loot.name});
             return;
-        }
-    }
+        };
+        _ = host.world.add(Portal, .{ .x = host.x, .y = host.y, .data_id = data.id }) catch return;
+        return;
+    };
 }
 
-pub const ItemPoolItem = struct {
-    name: ?[]const u8 = null, // null meaning empty slot, i.e. getting nothing
-    weight: u32,
-    threshold: f32 = 0.0,
-};
-
-pub fn dropItems(host: anytype, rolls: comptime_int, comptime items: []const ItemPoolItem) void {
-    verifyType(@TypeOf(host));
-    comptime var total_weights = 0;
-    comptime var min_rolls: []const u32 = &.{};
-    comptime var max_rolls: []const u32 = &.{};
-
+pub const ItemLoot = struct { name: []const u8, chance: f32, threshold: f32 = 0.0 };
+pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
     comptime {
-        var has_null = false;
+        verifyType(@TypeOf(host));
         var name_list: []const []const u8 = &.{};
-        for (items) |item| {
-            if (item.threshold < 0.0 or item.threshold > 1.0) @compileError("Invalid threshold, keep it [0.0; 1.0]");
+        for (loots) |loot| {
+            if (loot.threshold < 0.0 or loot.threshold > 1.0) @compileError("Invalid threshold, keep it [0.0; 1.0]");
+            if (loot.chance <= 0.0 or loot.chance > 1.0) @compileError("Invalid chance, keep it ]0.0; 1.0]");
 
-            if (item.name) |name| {
-                if (nameContains(name_list, name))
-                    @compileError("Do not have multiples of the same item in the pool. Merge their weights instead");
-                name_list = name_list ++ .{name};
-            }
-
-            min_rolls = min_rolls ++ .{total_weights};
-            max_rolls = max_rolls ++ .{total_weights + item.weight};
-            total_weights += item.weight;
-        } else {
-            if (has_null) @compileError("Do not have multiples of empty loot. Merge their weights instead");
-            has_null = true;
+            if (nameContains(name_list, loot.name))
+                @compileError("Do not have multiples of the same item in the loot table. Increase the chance of the existing one instead");
+            name_list = name_list ++ .{loot.name};
         }
     }
 
@@ -109,35 +68,33 @@ pub fn dropItems(host: anytype, rolls: comptime_int, comptime items: []const Ite
 
         const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
         var max_rarity: game_data.ContainerRarity = .common;
-        var loot: [rolls]u16 = @splat(std.math.maxInt(u16));
-        mainLoop: for (0..rolls) |i| {
-            const roll = utils.rng.random().intRangeAtMost(u32, 0, total_weights);
-            for (items, 0..) |item, j| {
-                if (item.name == null or fdamage / fmax_hp < item.threshold) continue;
+        var received_loot: [loots.len]u16 = @splat(std.math.maxInt(u16));
+        var loot_idx: usize = 0;
+        inline for (loots) |loot| @"continue": {
+            if (fdamage / fmax_hp <= loot.threshold) break :@"continue";
 
-                if (min_rolls[j] <= roll and roll <= max_rolls[j]) {
-                    const data = game_data.item.from_name.get(item.name.?) orelse {
-                        std.log.err("Item not found for name \"{s}\"", .{item.name.?});
-                        return;
-                    };
-                    loot[i] = data.id;
-                    max_rarity = @enumFromInt(@max(@intFromEnum(max_rarity), @intFromEnum(data.rarity)));
-                    continue :mainLoop;
-                }
+            if (loot.chance >= utils.rng.random().float(f32)) {
+                const data = game_data.item.from_name.get(loot.name) orelse {
+                    std.log.err("Item not found for name \"{s}\"", .{loot.name});
+                    return;
+                };
+                received_loot[loot_idx] = data.id;
+                loot_idx += 1;
+                max_rarity = @enumFromInt(@max(@intFromEnum(max_rarity), @intFromEnum(data.rarity)));
             }
         }
 
         const container_data_id: u16 = switch (max_rarity) {
             .common => 0,
-            .rare => 3,
-            .epic => 3,
+            .rare => 1,
+            .epic => 2,
             .legendary => 3,
-            .mythic => 3,
+            .mythic => 4,
         };
 
         var inventory = Container.inv_default;
         var inv_index: usize = 0;
-        for (loot) |data_id| {
+        for (received_loot) |data_id| {
             if (data_id == std.math.maxInt(u16)) continue;
             inventory[inv_index] = data_id;
             inv_index += 1;
@@ -178,107 +135,202 @@ pub fn dropItems(host: anytype, rolls: comptime_int, comptime items: []const Ite
     }
 }
 
-pub const CardPoolItem = struct {
-    name: ?[]const u8 = null, // null meaning empty slot, i.e. getting nothing
-    weight: u32,
-    threshold: f32,
-};
-
-const CardRollState = struct {
-    total_weights: u32,
-    min_rolls: []const u32,
-    max_rolls: []const u32,
-};
-
-fn cardRollState(comptime len_upper_bound: usize, items: []const CardPoolItem) CardRollState {
-    std.debug.assert(len_upper_bound >= items.len);
-
-    var total_weights: u32 = 0;
-    var min_rolls: [len_upper_bound]u32 = undefined;
-    var max_rolls: [len_upper_bound]u32 = undefined;
-
-    for (items, 0..) |item, i| {
-        min_rolls[i] = total_weights;
-        max_rolls[i] = total_weights + item.weight;
-        total_weights += item.weight;
-    }
-    return .{
-        .total_weights = total_weights,
-        .min_rolls = min_rolls[0..items.len],
-        .max_rolls = max_rolls[0..items.len],
-    };
-}
-
-pub fn giveCards(host: anytype, comptime items: []const CardPoolItem) void {
-    verifyType(@TypeOf(host));
+pub const CardLoot = struct { name: []const u8, chance: f32, threshold: f32 };
+pub fn dropCards(host: anytype, comptime loots: []const CardLoot) void {
     comptime {
-        if (items.len < 3) @compileError("It's impossible to receive less than 3 cards, design the loot pool accordingly");
+        verifyType(@TypeOf(host));
+        if (loots.len < 3) @compileError("It's impossible to receive less than 3 cards, design the drop table accordingly");
 
-        var has_null = false;
         var name_list: []const []const u8 = &.{};
-        for (items) |item| {
-            if (item.threshold < 0.0 or item.threshold > 1.0) @compileError("Invalid threshold, keep it [0.0; 1.0]");
+        for (loots) |loot| {
+            if (loot.threshold < 0.0 or loot.threshold > 1.0) @compileError("Invalid threshold, keep it [0.0; 1.0]");
+            if (loot.chance <= 0.0 or loot.chance > 1.0) @compileError("Invalid chance, keep it ]0.0; 1.0]");
 
-            if (item.name) |name| {
-                if (nameContains(name_list, name))
-                    @compileError("Do not have multiples of the same card in the pool. Merge their weights instead");
-                name_list = name_list ++ .{name};
-            } else {
-                if (has_null) @compileError("Do not have multiples of empty loot. Merge their weights instead");
-                has_null = true;
-            }
+            if (nameContains(name_list, loot.name))
+                @compileError("Do not have multiples of the same card in the loot table. Increase the chance of the existing one instead");
+            name_list = name_list ++ .{loot.name};
         }
     }
 
-    var roll_state: CardRollState = undefined;
-    var buf: [@sizeOf(CardPoolItem) * items.len]u8 = undefined;
-    var fba: std.heap.FixedBufferAllocator = .init(&buf);
-    const allocator = fba.allocator();
     var iter = host.damages_dealt.iterator();
     const fmax_hp: f32 = @floatFromInt(host.max_hp);
     playerLoop: while (iter.next()) |entry| {
         const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue :playerLoop;
         if (player.selecting_cards != null or player.cards.len >= player.aether * 5) continue;
 
-        fba.reset();
         const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
-        var cleaned_items: std.ArrayListUnmanaged(CardPoolItem) = .empty;
-        cleaned_items.ensureTotalCapacityPrecise(allocator, items.len) catch main.oomPanic();
-        for (items) |item| {
-            if (item.name == null) {
-                if (fdamage / fmax_hp >= item.threshold) cleaned_items.appendAssumeCapacity(item);
-                continue;
-            }
-            const data = game_data.card.from_name.get(item.name.?) orelse {
-                std.log.err("Card not found for name \"{s}\"", .{item.name.?});
-                return;
-            };
-            if (!data.stackable and std.mem.indexOfScalar(u16, player.cards, data.id) != null) continue;
-            if (fdamage / fmax_hp < item.threshold) continue;
-            cleaned_items.appendAssumeCapacity(item);
-        }
-        if (cleaned_items.items.len < 3) continue;
-        roll_state = cardRollState(items.len, cleaned_items.items);
-
         var cards: [3]u16 = @splat(std.math.maxInt(u16));
-        mainLoop: for (0..3) |i| {
-            const roll = utils.rng.random().intRangeAtMost(u32, 0, roll_state.total_weights);
-            for (cleaned_items.items, 0..) |item, j| {
-                if (item.name == null) continue :playerLoop;
+        var card_idx: usize = 0;
+        cardLoop: inline for (loots) |loot| @"continue": {
+            if (fdamage / fmax_hp <= loot.threshold) break :@"continue";
 
-                if (roll_state.min_rolls[j] <= roll and roll <= roll_state.max_rolls[j]) {
-                    const data = game_data.card.from_name.get(item.name.?) orelse unreachable;
-                    cards[i] = data.id;
-                    _ = cleaned_items.orderedRemove(j);
-                    roll_state = cardRollState(items.len, cleaned_items.items);
-                    continue :mainLoop;
-                }
+            if (loot.chance >= utils.rng.random().float(f32)) {
+                const data = game_data.card.from_name.get(loot.name) orelse {
+                    std.log.err("Card not found for name \"{s}\"", .{loot.name});
+                    return;
+                };
+                cards[card_idx] = data.id;
+                card_idx += 1;
+                if (card_idx == 3) break :cardLoop;
             }
-
-            continue :playerLoop;
         }
 
-        player.selecting_cards = cards;
-        player.client.queuePacket(.{ .card_options = .{ .cards = cards } });
+        if (card_idx == 3) {
+            player.selecting_cards = cards;
+            player.client.queuePacket(.{ .card_options = .{ .cards = cards } });
+        }
+    }
+}
+
+pub const ResourceLoot = struct { name: []const u8, min: u32, max: u32, chance: f32, threshold: f32 };
+pub fn dropResources(host: anytype, comptime loots: []const ResourceLoot) void {
+    comptime {
+        verifyType(@TypeOf(host));
+        var name_list: []const []const u8 = &.{};
+        for (loots) |loot| {
+            if (loot.threshold < 0.0 or loot.threshold > 1.0) @compileError("Invalid threshold, keep it [0.0; 1.0]");
+            if (loot.chance <= 0.0 or loot.chance > 1.0) @compileError("Invalid chance, keep it ]0.0; 1.0]");
+            if (loot.min > loot.max) @compileError("The minimum amount can't be larger than the maximum amount");
+
+            if (nameContains(name_list, loot.name))
+                @compileError("Do not have multiples of the same resource in the loot table. Increase the chance of the existing one instead");
+            name_list = name_list ++ .{loot.name};
+        }
+    }
+
+    // TODO: some vfx
+
+    var buf: [256]u8 = undefined;
+    var rand = utils.rng.random();
+    var iter = host.damages_dealt.iterator();
+    const fmax_hp: f32 = @floatFromInt(host.max_hp);
+    while (iter.next()) |entry| {
+        const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+
+        const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
+        inline for (loots) |loot| @"continue": {
+            if (fdamage / fmax_hp <= loot.threshold) break :@"continue";
+
+            if (loot.chance >= rand.float(f32)) {
+                const data = game_data.resource.from_name.get(loot.name) orelse {
+                    std.log.err("Resource not found for name \"{s}\"", .{loot.name});
+                    return;
+                };
+                const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
+                incrementResource: {
+                    for (player.resources.items) |*res| if (res.data_id == data.id) {
+                        res.count += amount;
+                        break :incrementResource;
+                    };
+                    player.resources.append(main.allocator, .{
+                        .data_id = data.id,
+                        .count = amount,
+                    }) catch main.oomPanic();
+                }
+
+                player.client.queuePacket(.{ .text = .{
+                    .name = "Server",
+                    .obj_type = .entity,
+                    .map_id = std.math.maxInt(u32),
+                    .bubble_time = 0,
+                    .recipient = "",
+                    .text = std.fmt.bufPrint(&buf, "You've received {} " ++ loot.name, .{amount}) catch break :@"continue",
+                    .name_color = 0xCC00CC,
+                    .text_color = 0xFF99FF,
+                } });
+            }
+        }
+    }
+}
+
+pub const CurrencyLoot = struct { type: game_data.Currency, min: u32, max: u32, chance: f32, threshold: f32 };
+pub fn dropCurrency(host: anytype, comptime loots: []const CurrencyLoot) void {
+    comptime {
+        verifyType(@TypeOf(host));
+        for (loots) |loot| {
+            if (loot.threshold < 0.0 or loot.threshold > 1.0) @compileError("Invalid threshold, keep it [0.0; 1.0]");
+            if (loot.chance <= 0.0 or loot.chance > 1.0) @compileError("Invalid chance, keep it ]0.0; 1.0]");
+            if (loot.min > loot.max) @compileError("The minimum amount can't be larger than the maximum amount");
+        }
+    }
+
+    // TODO: some vfx
+
+    var buf: [256]u8 = undefined;
+    var rand = utils.rng.random();
+    var iter = host.damages_dealt.iterator();
+    const fmax_hp: f32 = @floatFromInt(host.max_hp);
+    while (iter.next()) |entry| {
+        const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+
+        const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
+        inline for (loots) |loot| @"continue": {
+            if (fdamage / fmax_hp <= loot.threshold) break :@"continue";
+
+            if (loot.chance >= rand.float(f32)) {
+                const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
+                switch (loot.type) {
+                    .gems => player.gems += amount,
+                    .gold => player.gold += amount,
+                    .crowns => player.crowns += amount,
+                }
+                player.client.queuePacket(.{ .text = .{
+                    .name = "Server",
+                    .obj_type = .entity,
+                    .map_id = std.math.maxInt(u32),
+                    .bubble_time = 0,
+                    .recipient = "",
+                    .text = std.fmt.bufPrint(&buf, "You've received {} " ++ switch (loot.type) {
+                        .gems => "Gems",
+                        .gold => "Gold",
+                        .crowns => "Crowns",
+                    }, .{amount}) catch break :@"continue",
+                    .name_color = 0xCC00CC,
+                    .text_color = 0xFF99FF,
+                } });
+            }
+        }
+    }
+}
+
+pub const SpiritLoot = struct { min: u32, max: u32, chance: f32, threshold: f32 };
+pub fn dropSpirits(host: anytype, comptime loot: SpiritLoot) void {
+    comptime {
+        verifyType(@TypeOf(host));
+        if (loot.threshold < 0.0 or loot.threshold > 1.0) @compileError("Invalid threshold, keep it [0.0; 1.0]");
+        if (loot.chance <= 0.0 or loot.chance > 1.0) @compileError("Invalid chance, keep it ]0.0; 1.0]");
+        if (loot.min > loot.max) @compileError("The minimum amount can't be larger than the maximum amount");
+    }
+
+    // TODO: some vfx
+
+    var buf: [256]u8 = undefined;
+    var rand = utils.rng.random();
+    var iter = host.damages_dealt.iterator();
+    const fmax_hp: f32 = @floatFromInt(host.max_hp);
+    while (iter.next()) |entry| {
+        const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+
+        const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
+        if (fdamage / fmax_hp <= loot.threshold) continue;
+
+        if (loot.chance >= rand.float(f32)) {
+            const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
+            const clamped_spirits = @min(game_data.spiritGoal(player.aether), player.spirits_communed + amount);
+            const spirit_delta = clamped_spirits - player.spirits_communed;
+            if (spirit_delta > 0) {
+                player.client.queuePacket(.{ .text = .{
+                    .name = "Server",
+                    .obj_type = .entity,
+                    .map_id = std.math.maxInt(u32),
+                    .bubble_time = 0,
+                    .recipient = "",
+                    .text = std.fmt.bufPrint(&buf, "You've received {} Spirits", .{spirit_delta}) catch continue,
+                    .name_color = 0xCC00CC,
+                    .text_color = 0xFF99FF,
+                } });
+                player.spirits_communed = clamped_spirits;
+            }
+        }
     }
 }

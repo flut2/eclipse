@@ -1,8 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
+
 const network_data = @import("shared").network_data;
-const main = @import("main.zig");
 const use_dragonfly = @import("options").use_dragonfly;
+
+const main = @import("main.zig");
 
 pub const c = @cImport({
     @cDefine("REDIS_OPT_NONBLOCK", {});
@@ -229,7 +231,7 @@ pub const AccountData = struct {
         next_char_id: u32,
         alive_char_ids: []const u32,
         max_char_slots: u32,
-        resources: []const u32,
+        resources: []const network_data.DataIdWithCount(u32),
     };
 
     acc_id: u32,
@@ -296,7 +298,7 @@ pub const CharacterData = struct {
         hp: i32,
         mp: i32,
         cards: []const u16,
-        talents: []const u8,
+        talents: []const network_data.DataIdWithCount(u16),
     };
 
     acc_id: u32,

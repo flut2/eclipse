@@ -1,9 +1,8 @@
-const element = @import("element.zig");
 const render = @import("../../render.zig");
-
-const Bar = @This();
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const Bar = @This();
 base: ElementBase,
 image_data: element.ImageData,
 text_data: element.TextData,

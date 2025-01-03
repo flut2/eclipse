@@ -1,30 +1,31 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
+const build_options = @import("options");
+const glfw = @import("zglfw");
+const gpu = @import("zgpu");
 const shared = @import("shared");
 const network_data = shared.network_data;
 const game_data = shared.game_data;
 const utils = shared.utils;
 const uv = shared.uv;
-const assets = @import("assets.zig");
-const builtin = @import("builtin");
-const glfw = @import("zglfw");
-const zstbi = @import("zstbi");
-const input = @import("input.zig");
-const map = @import("game/map.zig");
-const element = @import("ui/elements/element.zig");
-const render = @import("render.zig");
-const tracy = if (build_options.enable_tracy) @import("tracy") else {};
 const zaudio = @import("zaudio");
-const ui_systems = @import("ui/systems.zig");
-const dialog = @import("ui/dialogs/dialog.zig");
-const rpmalloc = @import("rpmalloc").RPMalloc(.{});
-const build_options = @import("options");
-const gpu = @import("zgpu");
+const zstbi = @import("zstbi");
 
+const assets = @import("assets.zig");
 const Camera = @import("Camera.zig");
-const Settings = @import("Settings.zig");
+const map = @import("game/map.zig");
 const GameServer = @import("GameServer.zig");
+const input = @import("input.zig");
 const LoginServer = @import("LoginServer.zig");
+const render = @import("render.zig");
+const Settings = @import("Settings.zig");
+const dialog = @import("ui/dialogs/dialog.zig");
+const element = @import("ui/elements/element.zig");
+const ui_systems = @import("ui/systems.zig");
 
+const tracy = if (build_options.enable_tracy) @import("tracy") else {};
+const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 const AccountData = struct {
     email: []const u8,
     token: u128,
@@ -168,18 +169,14 @@ fn renderTick() !void {
 
         defer frames += 1;
         const back_buffer = ctx.swapchain.getCurrentTextureView();
+        defer back_buffer.release();
         const encoder = ctx.device.createCommandEncoder(null);
-
+        defer encoder.release();
         render.draw(current_time, back_buffer, encoder);
-
         const commands = encoder.finish(null);
-        encoder.release();
-
+        defer commands.release();
         ctx.queue.submit(&.{commands});
-        commands.release();
-
         ctx.swapchain.present();
-        back_buffer.release();
 
         if (current_time - fps_time_start > 1 * std.time.us_per_s) {
             try if (settings.stats_enabled) switch (ui_systems.screen) {
@@ -191,8 +188,7 @@ fn renderTick() !void {
         }
 
         minimapUpdate: {
-            if (!tick_frame or ui_systems.screen == .editor)
-                break :minimapUpdate;
+            if (!tick_frame or ui_systems.screen == .editor) break :minimapUpdate;
 
             if (need_minimap_update) {
                 const min_x = @min(map.minimap.width, minimap_update.min_x);
@@ -202,8 +198,7 @@ fn renderTick() !void {
 
                 const w = max_x - min_x;
                 const h = max_y - min_y;
-                if (w <= 0 or h <= 0)
-                    break :minimapUpdate;
+                if (w <= 0 or h <= 0) break :minimapUpdate;
 
                 const comp_len = map.minimap.num_components * map.minimap.bytes_per_component;
 
@@ -286,6 +281,15 @@ pub fn disconnect(has_lock: bool) void {
 
 pub fn oomPanic() noreturn {
     @panic("Out of memory");
+}
+
+pub fn audioFailure() void {
+    settings.sfx_volume = 0.0;
+    settings.music_volume = 0.0;
+    dialog.showDialog(.text, .{ .title = "Audio Error", .body = 
+    \\There was a problem interacting with your audio device. 
+    \\Audio has been turned off, but you can turn it back on in the Options if you believe this to be incorrect or temporary.
+    });
 }
 
 pub fn main() !void {

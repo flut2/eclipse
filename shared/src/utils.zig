@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+
 const game_data = @import("game_data.zig");
 
 // Big endian isn't supported on this
@@ -273,12 +274,12 @@ pub fn halfBound(angle: f32) f32 {
     return if (new_angle > std.math.pi) new_angle - std.math.tau else new_angle;
 }
 
-pub fn distSqr(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
+pub inline fn distSqr(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
     const x_dt = x2 - x1;
     const y_dt = y2 - y1;
     return x_dt * x_dt + y_dt * y_dt;
 }
 
-pub fn dist(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
+pub inline fn dist(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
     return @sqrt(distSqr(x1, y1, x2, y2));
 }

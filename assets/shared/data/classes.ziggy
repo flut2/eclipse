@@ -1,0 +1,394 @@
+[
+{
+    .id = 0,
+    .name = "Demon",
+    .description = "placeholder",
+    .texture = {"players": 0},
+    .item_types = [
+        @ItemType("sword"), 
+        @ItemType("plate"), 
+        @ItemType("boots"), 
+        @ItemType("artifact"),
+    ],
+    .default_items = [
+        "Starter Sword",
+        "Starter Plate",
+        "Starter Boots",
+        "Starter Artifact",
+    ],
+    .stats = {
+        .health = 800,
+        .mana = 800,
+        .strength = 50,
+        .wit = 50,
+        .defense = 50,
+        .resistance = 50,
+        .speed = 50,
+        .stamina = 50,
+        .intelligence = 50,
+        .penetration = 50,
+        .piercing = 50,
+        .haste = 50,
+        .tenacity = 50,
+    },
+    .abilities = [
+        {
+            .name = "Equivalent Exchange",
+            .description = 
+            \\Make your other abilities cost 8% (+8% HST) less for 8 seconds. This includes the hit cost of Premium Protection.
+            ,
+            .health_cost = 350,
+            .cooldown = 17.0,
+            .icon = {"ability_icons": 0},
+        },
+        {
+            .name = "Asset Bubble",
+            .description = 
+            \\Deal 4.4% more damage per 10000 Gold you own for 8 seconds.
+            \\After this effect ends, deal 8.8% less damage per 10000 Gold you own for 17 seconds.
+            \\The damage buff is capped at 44%, while the debuff is capped at 88%.
+            ,
+            .gold_cost = 449,
+            .cooldown = 35.0,
+            .icon = {"ability_icons": 1},
+        },
+        {
+            .name = "Premium Protection",
+            .description = 
+            \\Become immune to damage for &type="bold_it"&col="C45860"8 (+8%&space&img="misc_big,58")&reset seconds, but pay &type="bold_it"&col="FFE770"0.5 Gold&reset for every damage point you would've taken.n&type="med_it"&size="10"&col="736562"This effect only applies to bullets that you can pay for.
+            ,
+            .cooldown = 28.0,
+            .icon = {"ability_icons": 2},
+        },
+        {
+            .name = "Compound Interest",
+            .description = 
+            \\Gain the following until this ability is recast:
+            \\ - &type="bold_it"&col="FFE770"+280% (&col="D65BFF"-8% &img="misc_big,57", &col="FF9670"-8% &img="misc_big,33"&col="FFE770") Damage Taken&reset
+            \\ - &type="bold_it"&col="C45860"-17% &img="misc_big,34"&reset
+            \\ - &type="bold_it"All damage dealt now accumulates Drop Chance, at a rate of &col="C45860"0.8% (+0.8% &img="misc_big,58")&reset&type="bold_it" per 8000 damage dealt.&reset
+            \\Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for &type="bold_it"&col="FFE770"35&reset seconds.
+            \\Currently accumulated Drop Chance: &type="bold_it"&col="FFE770"{0}%
+            \\&type="med_it"&size="10"&col="736562"Switching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
+            \\The Drop Chance increase is capped at &type="bold_it"&col="FFE770"125%.
+            ,
+            .gold_cost = 3599,
+            .cooldown = 125.0,
+            .icon = {"ability_icons": 3},
+        },
+    ],
+    .talents = [],
+},
+{
+    .id = 1,
+    .name = "Golem",
+    .description = "placeholder",
+    .texture = {"players": 1},
+    .item_types = [
+        @ItemType("bow"), 
+        @ItemType("plate"), 
+        @ItemType("boots"), 
+        @ItemType("artifact"),
+    ],    
+    .default_items = [
+        "Starter Bow",
+        "Starter Plate",
+        "Starter Boots",
+        "Starter Artifact",
+    ],
+    .stats = {
+        .health = 800,
+        .mana = 800,
+        .strength = 50,
+        .wit = 50,
+        .defense = 50,
+        .resistance = 50,
+        .speed = 50,
+        .stamina = 50,
+        .intelligence = 50,
+        .penetration = 50,
+        .piercing = 50,
+        .haste = 50,
+        .tenacity = 50,
+    },
+    .abilities = [
+        {
+            .name = "Terrain Expulsion",
+            .description = 
+            \\Shoot a large shard of earth dealing &type="bold_it"&col="FF6C32"1300 (+200%&space&img="misc_big,32") Physical Damage&reset that knocks enemies back and slows them for &type="bold_it"&col="FFE770"5&reset &type="bold_it"&col="FF9670"(+10%&space&img="misc_big,33")&reset &type="bold_it"&col="D65BFF"(+10%&space&img="misc_big,57")&reset seconds.
+            ,
+            .mana_cost = 28,
+            .cooldown = 9.0,
+            .icon = {"ability_icons": 4},
+            .projectiles = [{
+                .textures = [{ "projectiles_big": 0 }, { "projectiles_big": 1 }, { "projectiles_big": 2 },],
+                .phys_dmg = 1300,
+                .speed = 1.5,
+                .duration = 0.4,
+                .knockback = true,
+                .knockback_strength = 3.0,
+                .rotation = 0.33,
+            }]
+        },
+        {
+            .name = "Heart of Stone",
+            .description = 
+            \\Grow in size for &type="bold_it"&col="6080FF"10 (+10%&space&img="misc_big,59")&reset seconds, receiving 15% damage, a much larger hitbox, moving slower and becoming unable to shoot.
+            ,
+            .mana_cost = 120,
+            .cooldown = 49.0,
+            .icon = {"ability_icons": 5},
+        },
+        {
+            .name = "Boulder Buddies",
+            .description = 
+            \\Spawn 3 Boulder Buddies with &type="bold_it"&col="20AC20"3600 (+360%&space&img="misc_big,40") Health&reset, &type="bold_it"&col="FF9670"25 (+15%&space&img="misc_big,33") Defense&reset and &type="bold_it"&col="D65BFF"5 (+10%&space&img="misc_big,57") Resistance&reset each, who follow you, orbit you and can take hits from enemy projectiles for &type="bold_it"&col="6080FF"15 (+10%&space&img="misc_big,59")&reset seconds.
+            ,
+            .mana_cost = 72,
+            .cooldown = 22.0,
+            .icon = {"ability_icons": 6},
+        },
+        {
+            .name = "Placeholder",
+            .description = 
+            \\a
+            ,
+            .cooldown = 0.0,
+            .icon = {"ability_icons": 7},
+        },
+    ],
+    .talents = [],
+},
+{
+    .id = 2,
+    .name = "Chronomancer",
+    .description = "placeholder",
+    .texture = {"players": 2},
+    .item_types = [
+        @ItemType("staff"), 
+        @ItemType("robe"), 
+        @ItemType("boots"), 
+        @ItemType("artifact"),
+    ],
+    .default_items = [
+        "Starter Staff",
+        "Starter Robe",
+        "Starter Boots",
+        "Starter Artifact",
+    ],
+    .stats = {
+        .health = 800,
+        .mana = 800,
+        .strength = 50,
+        .wit = 50,
+        .defense = 50,
+        .resistance = 50,
+        .speed = 50,
+        .stamina = 50,
+        .intelligence = 50,
+        .penetration = 50,
+        .piercing = 50,
+        .haste = 50,
+        .tenacity = 50,
+    },
+    .abilities = [
+        {
+            .name = "Time Dilation",
+            .description = 
+            \\All enemy projectiles within &type="bold_it"&col="A15AFF"3 (+6%&space&img="misc_big,35")&reset tiles of you move 30% slower for &type="bold_it"&col="6080FF"10 (+12% &img="misc_big,59")&reset seconds.
+            ,
+            .mana_cost = 72,
+            .cooldown = 24.0,
+            .icon = {"ability_icons": 0},
+        },
+        {
+            .name = "Rewind",
+            .description = 
+            \\Rewind time by &type="bold_it"&col="FFE770"3 (&col="6080FF"+1% &img="misc_big,59", &col="1C40FF"+0.6% &img="misc_big,39", &col="A15AFF"+1%&space&img="misc_big,35"&col="FFE770")&reset seconds, causing you to return to your old position and Health. (if higher than current)
+            ,
+            .mana_cost = 54,
+            .cooldown = 6.0,
+            .icon = {"ability_icons": 1},
+        },
+        {
+            .name = "Null Pulse",
+            .description = 
+            \\Destroy all enemy projectiles within &type="bold_it"&col="6080FF"3 (+12% &img="misc_big,59")&reset tiles, causing the enemies that created them to take &type="bold_it"&col="A15AFF"5 (+6% &img="misc_big,35")&reset times the damage.
+            ,
+            .mana_cost = 150,
+            .cooldown = 30.0,
+            .icon = {"ability_icons": 2},
+        },
+        {
+            .name = "Time Lock",
+            .description = 
+            \\Become immune to damage, unable to move and shoot for &type="bold_it"&col="6080FF"15 (+12% &img="misc_big,59")&reset seconds, storing all damage taken. nReturn double the damage stored as a Magic Damage blast within &type="bold_it"&col="6080FF"9 (+6%&space&img="misc_big,59")&reset tiles after this effect ends.n&type="med_it"&size="10"&col="736562"Damage is capped at &type="bold_it"&col="A15AFF"30000 (+10000% &img="misc_big,35")&reset.
+            ,
+            .mana_cost = 210,
+            .cooldown = 180.0,
+            .icon = {"ability_icons": 3},
+        },
+    ],
+    .talents = [],
+},
+{
+    .id = 3,
+    .name = "Genie",
+    .description = "placeholder",
+    .texture = {"players": 3},
+    .item_types = [
+        @ItemType("sword"), 
+        @ItemType("leather"), 
+        @ItemType("boots"), 
+        @ItemType("artifact"),
+    ],
+    .default_items = [
+        "Starter Sword",
+        "Starter Leather",
+        "Starter Boots",
+        "Starter Artifact",
+    ],
+    .stats = {
+        .health = 800,
+        .mana = 800,
+        .strength = 50,
+        .wit = 50,
+        .defense = 50,
+        .resistance = 50,
+        .speed = 50,
+        .stamina = 50,
+        .intelligence = 50,
+        .penetration = 50,
+        .piercing = 50,
+        .haste = 50,
+        .tenacity = 50,
+    },
+    .abilities = [
+        {
+            .name = "Equivalent Exchange",
+            .description = 
+            \\Make your other abilities cost 8% (+8% HST) less for 8 seconds. This includes the hit cost of Premium Protection.
+            ,
+            .health_cost = 350,
+            .cooldown = 17.0,
+            .icon = {"ability_icons": 0},
+        },
+        {
+            .name = "Asset Bubble",
+            .description = 
+            \\Deal 4.4% more damage per 10000 Gold you own for 8 seconds.
+            \\After this effect ends, deal 8.8% less damage per 10000 Gold you own for 17 seconds.
+            \\The damage buff is capped at 44%, while the debuff is capped at 88%.
+            ,
+            .gold_cost = 449,
+            .cooldown = 35.0,
+            .icon = {"ability_icons": 1},
+        },
+        {
+            .name = "Premium Protection",
+            .description = 
+            \\Become immune to damage for &type="bold_it"&col="C45860"8 (+8%&space&img="misc_big,58")&reset seconds, but pay &type="bold_it"&col="FFE770"0.5 Gold&reset for every damage point you would've taken.n&type="med_it"&size="10"&col="736562"This effect only applies to bullets that you can pay for.
+            ,
+            .cooldown = 28.0,
+            .icon = {"ability_icons": 2},
+        },
+        {
+            .name = "Compound Interest",
+            .description = 
+            \\Gain the following until this ability is recast:
+            \\ - &type="bold_it"&col="FFE770"+280% (&col="D65BFF"-8% &img="misc_big,57", &col="FF9670"-8% &img="misc_big,33"&col="FFE770") Damage Taken&reset
+            \\ - &type="bold_it"&col="C45860"-17% &img="misc_big,34"&reset
+            \\ - &type="bold_it"All damage dealt now accumulates Drop Chance, at a rate of &col="C45860"0.8% (+0.8% &img="misc_big,58")&reset&type="bold_it" per 8000 damage dealt.&reset
+            \\Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for &type="bold_it"&col="FFE770"35&reset seconds.
+            \\Currently accumulated Drop Chance: &type="bold_it"&col="FFE770"{0}%
+            \\&type="med_it"&size="10"&col="736562"Switching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
+            \\The Drop Chance increase is capped at &type="bold_it"&col="FFE770"125%.
+            ,
+            .gold_cost = 3599,
+            .cooldown = 125.0,
+            .icon = {"ability_icons": 3},
+        },
+    ],
+    .talents = [],
+},
+{
+    .id = 4,
+    .name = "Pixie",
+    .description = "placeholder",
+    .texture = {"players": 4},
+    .item_types = [
+        @ItemType("staff"), 
+        @ItemType("robe"), 
+        @ItemType("boots"), 
+        @ItemType("artifact"),
+    ],
+    .default_items = [
+        "Starter Staff",
+        "Starter Robe",
+        "Starter Boots",
+        "Starter Artifact",
+    ],
+    .stats = {
+        .health = 800,
+        .mana = 800,
+        .strength = 50,
+        .wit = 50,
+        .defense = 50,
+        .resistance = 50,
+        .speed = 50,
+        .stamina = 50,
+        .intelligence = 50,
+        .penetration = 50,
+        .piercing = 50,
+        .haste = 50,
+        .tenacity = 50,
+    },
+    .abilities = [
+        {
+            .name = "Equivalent Exchange",
+            .description = 
+            \\Make your other abilities cost 8% (+8% HST) less for 8 seconds. This includes the hit cost of Premium Protection.
+            ,
+            .health_cost = 350,
+            .cooldown = 17.0,
+            .icon = {"ability_icons": 0},
+        },
+        {
+            .name = "Asset Bubble",
+            .description = 
+            \\Deal 4.4% more damage per 10000 Gold you own for 8 seconds.
+            \\After this effect ends, deal 8.8% less damage per 10000 Gold you own for 17 seconds.
+            \\The damage buff is capped at 44%, while the debuff is capped at 88%.
+            ,
+            .gold_cost = 449,
+            .cooldown = 35.0,
+            .icon = {"ability_icons": 1},
+        },
+        {
+            .name = "Premium Protection",
+            .description = 
+            \\Become immune to damage for &type="bold_it"&col="C45860"8 (+8%&space&img="misc_big,58")&reset seconds, but pay &type="bold_it"&col="FFE770"0.5 Gold&reset for every damage point you would've taken.n&type="med_it"&size="10"&col="736562"This effect only applies to bullets that you can pay for.
+            ,
+            .cooldown = 28.0,
+            .icon = {"ability_icons": 2},
+        },
+        {
+            .name = "Compound Interest",
+            .description = 
+            \\Gain the following until this ability is recast:
+            \\ - &type="bold_it"&col="FFE770"+280% (&col="D65BFF"-8% &img="misc_big,57", &col="FF9670"-8% &img="misc_big,33"&col="FFE770") Damage Taken&reset
+            \\ - &type="bold_it"&col="C45860"-17% &img="misc_big,34"&reset
+            \\ - &type="bold_it"All damage dealt now accumulates Drop Chance, at a rate of &col="C45860"0.8% (+0.8% &img="misc_big,58")&reset&type="bold_it" per 8000 damage dealt.&reset
+            \\Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for &type="bold_it"&col="FFE770"35&reset seconds.
+            \\Currently accumulated Drop Chance: &type="bold_it"&col="FFE770"{0}%
+            \\&type="med_it"&size="10"&col="736562"Switching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
+            \\The Drop Chance increase is capped at &type="bold_it"&col="FFE770"125%.
+            ,
+            .gold_cost = 3599,
+            .cooldown = 125.0,
+            .icon = {"ability_icons": 3},
+        },
+    ],
+    .talents = [],
+},
+]

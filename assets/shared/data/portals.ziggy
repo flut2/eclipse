@@ -1,0 +1,28 @@
+[
+{
+    .id = 0,
+    .name = "Realm",
+    .textures = [{"portals_big": 0}],
+},
+{
+    .id = 1,
+    .name = "Crown Cove",
+    .textures = [{"portals": 0}],
+},
+{
+    .id = 2,
+    .name = "Slimy Ruins",
+    .textures = [{"portals": 5}],
+},
+{
+    .id = 3,
+    .name = "Crimson Chasm",
+    .textures = [{"portals": 2}],
+    .draw_on_ground = true,
+},
+{
+    .id = 4,
+    .name = "Dusty Dune",
+    .textures = [{"portals": 3}],
+},
+]

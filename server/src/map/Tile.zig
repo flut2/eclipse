@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const game_data = @import("shared").game_data;
 
 data_id: u16 = std.math.maxInt(u16),

@@ -1,14 +1,15 @@
 const std = @import("std");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
-const main = @import("../main.zig");
 
+const main = @import("../main.zig");
+const World = @import("../World.zig");
+const Ally = @import("Ally.zig");
+const Enemy = @import("Enemy.zig");
 const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
-const Enemy = @import("Enemy.zig");
-const Ally = @import("Ally.zig");
-const World = @import("../World.zig");
 
 pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.ProjectileData, proj_index: u8, angle: f32) !void {
     const x = player.x + @cos(angle) * 0.25;

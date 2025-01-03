@@ -1,13 +1,14 @@
 const std = @import("std");
-const element = @import("element.zig");
-const glfw = @import("zglfw");
-const tooltip = @import("../tooltips/tooltip.zig");
-const render = @import("../../render.zig");
-const main = @import("../../main.zig");
 
-const Item = @This();
+const glfw = @import("zglfw");
+
+const main = @import("../../main.zig");
+const render = @import("../../render.zig");
+const tooltip = @import("../tooltips/tooltip.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const Item = @This();
 base: ElementBase,
 background_x: f32,
 background_y: f32,
@@ -25,7 +26,7 @@ drag_start_y: f32 = 0,
 drag_offset_x: f32 = 0,
 drag_offset_y: f32 = 0,
 last_click_time: i64 = 0,
-item: u16 = std.math.maxInt(u16),
+data_id: u16 = std.math.maxInt(u16),
 
 pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: glfw.Mods) bool {
     if (!self.base.visible or !self.draggable) return false;
@@ -71,7 +72,7 @@ pub fn mouseMove(self: *Item, x: f32, y: f32, x_offset: f32, y_offset: f32) bool
             tooltip.switchTooltip(.item, .{
                 .x = x + x_offset,
                 .y = y + y_offset,
-                .item = self.item,
+                .item = self.data_id,
             });
             return true;
         }

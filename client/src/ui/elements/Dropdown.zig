@@ -1,17 +1,18 @@
 const std = @import("std");
-const element = @import("element.zig");
-const systems = @import("../systems.zig");
-const utils = @import("shared").utils;
-const assets = @import("../../assets.zig");
-const render = @import("../../render.zig");
-const main = @import("../../main.zig");
+
 const glfw = @import("zglfw");
+const utils = @import("shared").utils;
+
+const assets = @import("../../assets.zig");
+const main = @import("../../main.zig");
+const render = @import("../../render.zig");
+const systems = @import("../systems.zig");
+const DropdownContainer = @import("DropdownContainer.zig");
+const element = @import("element.zig");
+const ElementBase = element.ElementBase;
+const ScrollableContainer = @import("ScrollableContainer.zig");
 
 const Dropdown = @This();
-const ScrollableContainer = @import("ScrollableContainer.zig");
-const DropdownContainer = @import("DropdownContainer.zig");
-const ElementBase = element.ElementBase;
-
 base: ElementBase,
 w: f32,
 container: *ScrollableContainer = undefined,

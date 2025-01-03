@@ -1,0 +1,92 @@
+[
+{
+    .id = 0,
+    .name = "Common Resource 1",
+    .rarity = @ResourceRarity("common"),
+    .icon = {"resources": 0},
+},
+{
+    .id = 1,
+    .name = "Rare Resource 1",
+    .rarity = @ResourceRarity("rare"),
+    .icon = {"resources": 1},
+},
+{
+    .id = 2,
+    .name = "Epic Resource 1",
+    .rarity = @ResourceRarity("epic"),
+    .icon = {"resources": 2},
+},
+{
+    .id = 3,
+    .name = "Common Resource 2",
+    .rarity = @ResourceRarity("common"),
+    .icon = {"resources": 3},
+},
+{
+    .id = 4,
+    .name = "Rare Resource 2",
+    .rarity = @ResourceRarity("rare"),
+    .icon = {"resources": 4},
+},
+{
+    .id = 5,
+    .name = "Epic Resource 2",
+    .rarity = @ResourceRarity("epic"),
+    .icon = {"resources": 5},
+},
+{
+    .id = 6,
+    .name = "Common Resource 3",
+    .rarity = @ResourceRarity("common"),
+    .icon = {"resources": 6},
+},
+{
+    .id = 7,
+    .name = "Rare Resource 3",
+    .rarity = @ResourceRarity("rare"),
+    .icon = {"resources": 7},
+},
+{
+    .id = 8,
+    .name = "Epic Resource 3",
+    .rarity = @ResourceRarity("epic"),
+    .icon = {"resources": 8},
+},
+{
+    .id = 9,
+    .name = "Common Resource 4",
+    .rarity = @ResourceRarity("common"),
+    .icon = {"resources": 9},
+},
+{
+    .id = 10,
+    .name = "Rare Resource 4",
+    .rarity = @ResourceRarity("rare"),
+    .icon = {"resources": 10},
+},
+{
+    .id = 11,
+    .name = "Epic Resource 4",
+    .rarity = @ResourceRarity("epic"),
+    .icon = {"resources": 11},
+},
+{
+    .id = 12,
+    .name = "Common Resource 5",
+    .rarity = @ResourceRarity("common"),
+    .icon = {"resources": 12},
+},
+{
+    .id = 13,
+    .name = "Rare Resource 5",
+    .rarity = @ResourceRarity("rare"),
+    .icon = {"resources": 13},
+},
+{
+    .id = 14,
+    .name = "Epic Resource 5",
+    .rarity = @ResourceRarity("epic"),
+    .icon = {"resources": 14},
+},
+]

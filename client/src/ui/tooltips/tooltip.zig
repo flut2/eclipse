@@ -1,13 +1,15 @@
 const std = @import("std");
-const element = @import("../elements/element.zig");
-const game_data = @import("shared").game_data;
-const main = @import("../../main.zig");
 
+const game_data = @import("shared").game_data;
+
+const main = @import("../../main.zig");
 const Container = @import("../elements/Container.zig");
-const ItemTooltip = @import("ItemTooltip.zig");
-const TextTooltip = @import("TextTooltip.zig");
+const element = @import("../elements/element.zig");
 const AbilityTooltip = @import("AbilityTooltip.zig");
 const CardTooltip = @import("CardTooltip.zig");
+const ItemTooltip = @import("ItemTooltip.zig");
+const TextTooltip = @import("TextTooltip.zig");
+const TalentTooltip = @import("TalentTooltip.zig");
 
 pub const TooltipType = enum {
     none,
@@ -15,6 +17,7 @@ pub const TooltipType = enum {
     text,
     ability,
     card,
+    talent,
 };
 pub const Tooltip = union(TooltipType) {
     none: void,
@@ -22,6 +25,7 @@ pub const Tooltip = union(TooltipType) {
     text: TextTooltip,
     ability: AbilityTooltip,
     card: CardTooltip,
+    talent: TalentTooltip,
 };
 pub const TooltipParams = union(TooltipType) {
     none: void,
@@ -29,6 +33,7 @@ pub const TooltipParams = union(TooltipType) {
     text: struct { x: f32, y: f32, text_data: element.TextData },
     ability: struct { x: f32, y: f32, data: game_data.AbilityData },
     card: struct { x: f32, y: f32, data: game_data.CardData },
+    talent: struct { x: f32, y: f32, data: game_data.TalentData },
 };
 
 pub var map: std.AutoHashMapUnmanaged(TooltipType, *Tooltip) = .empty;

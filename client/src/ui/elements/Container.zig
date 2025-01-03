@@ -1,13 +1,14 @@
 const std = @import("std");
-const main = @import("../../main.zig");
-const element = @import("element.zig");
-const systems = @import("../systems.zig");
-const render = @import("../../render.zig");
+
 const glfw = @import("zglfw");
 
-const Container = @This();
+const main = @import("../../main.zig");
+const render = @import("../../render.zig");
+const systems = @import("../systems.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const Container = @This();
 base: ElementBase,
 draggable: bool = false,
 drag_start_x: f32 = 0,

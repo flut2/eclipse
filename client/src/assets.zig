@@ -1,12 +1,13 @@
-const zstbi = @import("zstbi");
 const std = @import("std");
-const game_data = @import("shared").game_data;
 const builtin = @import("builtin");
-const zaudio = @import("zaudio");
-const main = @import("main.zig");
+
+const game_data = @import("shared").game_data;
 const glfw = @import("zglfw");
 const pack = @import("turbopack");
+const zaudio = @import("zaudio");
+const zstbi = @import("zstbi");
 
+const main = @import("main.zig");
 const Settings = @import("Settings.zig");
 
 // for packing
@@ -62,7 +63,7 @@ const GlyphData = struct {
 
 const InternalFontData = struct {
     atlas: struct {
-        type: enum { sdf, msdf, mtsdf },
+        type: enum { sdf, psdf, msdf, mtsdf },
         distance_range: f32,
         distance_range_middle: f32,
         size: f32,
@@ -129,7 +130,7 @@ const AudioState = struct {
     }
 };
 
-const RGBA = packed struct(u32) {
+const RGBA = packed struct {
     r: u8 = 0,
     g: u8 = 0,
     b: u8 = 0,
@@ -297,8 +298,8 @@ pub const AtlasData = extern struct {
 };
 
 pub var sfx_path_buffer: [256]u8 = undefined;
-pub var audio_state: *AudioState = undefined;
-pub var main_music: *zaudio.Sound = undefined;
+pub var audio_state: ?*AudioState = undefined;
+pub var main_music: ?*zaudio.Sound = undefined;
 pub var arena: std.heap.ArenaAllocator = undefined;
 
 pub var atlas: zstbi.Image = undefined;
@@ -1104,6 +1105,25 @@ fn parseFontData(comptime path: []const u8) !ParsedFontData {
 
 pub fn playSfx(name: []const u8) void {
     if (main.settings.sfx_volume <= 0.0) return;
+    const state = audio_state orelse blk: {
+        audio_state = AudioState.create() catch {
+            main.audioFailure();
+            return;
+        };
+        audio_state.?.engine.start() catch {
+            main.audioFailure();
+            return;
+        };
+
+        initMusic: {
+            main_music = audio_state.?.engine.createSoundFromFile("./assets/music/main_menu.mp3", .{}) catch break :initMusic;
+            main_music.?.setLooping(true);
+            main_music.?.setVolume(main.settings.music_volume);
+            if (main.settings.music_volume > 0.0) main_music.?.start() catch main.audioFailure();
+        }
+
+        break :blk audio_state.?;
+    };
 
     if (sfx_map.get(name)) |audio| {
         if (!audio.isPlaying()) {
@@ -1124,7 +1144,7 @@ pub fn playSfx(name: []const u8) void {
             }
         }
 
-        var new_copy_audio = audio_state.engine.createSoundCopy(audio, .{}, null) catch return;
+        var new_copy_audio = state.engine.createSoundCopy(audio, .{}, null) catch return;
         new_copy_audio.setVolume(main.settings.sfx_volume);
         new_copy_audio.start() catch return;
         audio_copies.?.append(arena.allocator(), new_copy_audio) catch return;
@@ -1135,7 +1155,7 @@ pub fn playSfx(name: []const u8) void {
     const path = std.fmt.bufPrintZ(&sfx_path_buffer, "./assets/sfx/{s}", .{name}) catch return;
 
     if (std.fs.cwd().access(path, .{})) |_| {
-        var audio = audio_state.engine.createSoundFromFile(path, .{}) catch return;
+        var audio = state.engine.createSoundFromFile(path, .{}) catch return;
         audio.setVolume(main.settings.sfx_volume);
         audio.start() catch return;
 
@@ -1147,12 +1167,12 @@ pub fn playSfx(name: []const u8) void {
 }
 
 pub fn deinit() void {
-    main_music.destroy();
+    if (main_music) |music| music.destroy();
     var copy_audio_iter = sfx_copy_map.valueIterator();
     while (copy_audio_iter.next()) |copy_audio_list| for (copy_audio_list.items) |copy_audio| copy_audio.*.destroy();
     var audio_iter = sfx_map.valueIterator();
     while (audio_iter.next()) |audio| audio.*.destroy();
-    audio_state.destroy();
+    if (audio_state) |state| state.destroy();
 
     default_cursor_pressed.destroy();
     default_cursor.destroy();
@@ -1207,13 +1227,23 @@ pub fn init() !void {
     medium_data = try parseFontData("./assets/fonts/amaranth_regular.json");
     medium_italic_data = try parseFontData("./assets/fonts/amaranth_italic.json");
 
-    audio_state = try AudioState.create();
-    try audio_state.engine.start();
+    initAudio: {
+        audio_state = AudioState.create() catch {
+            main.audioFailure();
+            break :initAudio;
+        };
+        audio_state.?.engine.start() catch {
+            main.audioFailure();
+            break :initAudio;
+        };
 
-    main_music = try audio_state.engine.createSoundFromFile("./assets/music/main_menu.mp3", .{});
-    main_music.setLooping(true);
-    main_music.setVolume(main.settings.music_volume);
-    try main_music.start();
+        initMusic: {
+            main_music = audio_state.?.engine.createSoundFromFile("./assets/music/main_menu.mp3", .{}) catch break :initMusic;
+            main_music.?.setLooping(true);
+            main_music.?.setVolume(main.settings.music_volume);
+            if (main.settings.music_volume > 0.0) main_music.?.start() catch main.audioFailure();
+        }
+    }
 
     try addCursors("cursors.png", 32, 32);
 
@@ -1221,7 +1251,7 @@ pub fn init() !void {
     var ctx: pack.Context = try .create(main.allocator, atlas_width, atlas_height, .{ .spaces_to_prealloc = 4096 });
     defer ctx.deinit();
 
-    ui_atlas = try zstbi.Image.createEmpty(ui_atlas_width, ui_atlas_height, 4, .{});
+    ui_atlas = try .createEmpty(ui_atlas_width, ui_atlas_height, 4, .{});
     var ui_ctx: pack.Context = try .create(main.allocator, ui_atlas_width, ui_atlas_height, .{ .spaces_to_prealloc = 4096 });
     defer ui_ctx.deinit();
 
@@ -1230,11 +1260,35 @@ pub fn init() !void {
 
     const game_sheets_file_data = try game_sheets_file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
 
-    for (try std.json.parseFromSliceLeaky([]GameSheet, arena_allocator, game_sheets_file_data, .{ .allocate = .alloc_always })) |game_sheet| {
+    for (try std.json.parseFromSliceLeaky(
+        []GameSheet,
+        arena_allocator,
+        game_sheets_file_data,
+        .{ .allocate = .alloc_always },
+    )) |game_sheet| {
         switch (game_sheet.type) {
-            .image => try addImage(game_sheet.name, game_sheet.path, game_sheet.w, game_sheet.h, game_sheet.dont_trim, &ctx),
-            .anim_enemy => try addAnimEnemy(game_sheet.name, game_sheet.path, game_sheet.w, game_sheet.h, &ctx),
-            .anim_player => try addAnimPlayer(game_sheet.name, game_sheet.path, game_sheet.w, game_sheet.h, &ctx),
+            .image => try addImage(
+                game_sheet.name,
+                game_sheet.path,
+                game_sheet.w,
+                game_sheet.h,
+                game_sheet.dont_trim,
+                &ctx,
+            ),
+            .anim_enemy => try addAnimEnemy(
+                game_sheet.name,
+                game_sheet.path,
+                game_sheet.w,
+                game_sheet.h,
+                &ctx,
+            ),
+            .anim_player => try addAnimPlayer(
+                game_sheet.name,
+                game_sheet.path,
+                game_sheet.w,
+                game_sheet.h,
+                &ctx,
+            ),
         }
     }
 
@@ -1243,15 +1297,33 @@ pub fn init() !void {
 
     const wall_sheets_file_data = try wall_sheets_file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
 
-    for (try std.json.parseFromSliceLeaky([]WallSheet, arena_allocator, wall_sheets_file_data, .{ .allocate = .alloc_always })) |wall_sheet|
-        try addWall(wall_sheet.name, wall_sheet.path, wall_sheet.full_w, wall_sheet.full_h, wall_sheet.w, wall_sheet.h, &ctx);
+    for (try std.json.parseFromSliceLeaky(
+        []WallSheet,
+        arena_allocator,
+        wall_sheets_file_data,
+        .{ .allocate = .alloc_always },
+    )) |wall_sheet|
+        try addWall(
+            wall_sheet.name,
+            wall_sheet.path,
+            wall_sheet.full_w,
+            wall_sheet.full_h,
+            wall_sheet.w,
+            wall_sheet.h,
+            &ctx,
+        );
 
     const ui_sheets_file = try std.fs.cwd().openFile("./assets/ui/ui_sheets.json", .{});
     defer ui_sheets_file.close();
 
     const ui_sheets_file_data = try ui_sheets_file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
 
-    for (try std.json.parseFromSliceLeaky([]UiSheet, arena_allocator, ui_sheets_file_data, .{ .allocate = .alloc_always })) |ui_sheet|
+    for (try std.json.parseFromSliceLeaky(
+        []UiSheet,
+        arena_allocator,
+        ui_sheets_file_data,
+        .{ .allocate = .alloc_always },
+    )) |ui_sheet|
         try addUiImage(ui_sheet.name, ui_sheet.path, ui_sheet.w, ui_sheet.h, &ui_ctx);
 
     if (ui_atlas_data.get("minimap_icons")) |icons| minimap_icons = icons else @panic("minimap_icons not found in UI atlas");
@@ -1309,117 +1381,120 @@ pub fn init() !void {
             .top_outline = error_data,
             .bottom_outline = error_data,
         };
-    } else std.debug.panic("Could not find error_texture in the atlas", .{});
+    } else @panic("Could not find error_texture in the atlas");
 
-    try populateKeyMap();
+    populateKeyMap();
     interact_key_tex = getKeyTexture(main.settings.interact);
 }
 
-fn populateKeyMap() !void {
+fn populateKeyMap() void {
     const arena_allocator = arena.allocator();
-    try key_tex_map.put(arena_allocator, .{ .mouse = .left }, 46);
-    try key_tex_map.put(arena_allocator, .{ .mouse = .right }, 59);
-    try key_tex_map.put(arena_allocator, .{ .mouse = .middle }, 58);
-    try key_tex_map.put(arena_allocator, .{ .mouse = .four }, 108);
-    try key_tex_map.put(arena_allocator, .{ .mouse = .five }, 109);
-    try key_tex_map.put(arena_allocator, .{ .key = .zero }, 0);
-    try key_tex_map.put(arena_allocator, .{ .key = .one }, 4);
-    try key_tex_map.put(arena_allocator, .{ .key = .two }, 5);
-    try key_tex_map.put(arena_allocator, .{ .key = .three }, 6);
-    try key_tex_map.put(arena_allocator, .{ .key = .four }, 7);
-    try key_tex_map.put(arena_allocator, .{ .key = .five }, 8);
-    try key_tex_map.put(arena_allocator, .{ .key = .six }, 16);
-    try key_tex_map.put(arena_allocator, .{ .key = .seven }, 17);
-    try key_tex_map.put(arena_allocator, .{ .key = .eight }, 18);
-    try key_tex_map.put(arena_allocator, .{ .key = .nine }, 19);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_0 }, 91);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_1 }, 92);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_2 }, 93);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_3 }, 94);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_4 }, 95);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_5 }, 96);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_6 }, 97);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_7 }, 98);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_8 }, 99);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_9 }, 100);
-    try key_tex_map.put(arena_allocator, .{ .key = .F1 }, 68);
-    try key_tex_map.put(arena_allocator, .{ .key = .F2 }, 69);
-    try key_tex_map.put(arena_allocator, .{ .key = .F3 }, 70);
-    try key_tex_map.put(arena_allocator, .{ .key = .F4 }, 71);
-    try key_tex_map.put(arena_allocator, .{ .key = .F5 }, 72);
-    try key_tex_map.put(arena_allocator, .{ .key = .F6 }, 73);
-    try key_tex_map.put(arena_allocator, .{ .key = .F7 }, 74);
-    try key_tex_map.put(arena_allocator, .{ .key = .F8 }, 75);
-    try key_tex_map.put(arena_allocator, .{ .key = .F9 }, 76);
-    try key_tex_map.put(arena_allocator, .{ .key = .F10 }, 1);
-    try key_tex_map.put(arena_allocator, .{ .key = .F11 }, 2);
-    try key_tex_map.put(arena_allocator, .{ .key = .F12 }, 3);
-    try key_tex_map.put(arena_allocator, .{ .key = .a }, 20);
-    try key_tex_map.put(arena_allocator, .{ .key = .b }, 34);
-    try key_tex_map.put(arena_allocator, .{ .key = .c }, 39);
-    try key_tex_map.put(arena_allocator, .{ .key = .d }, 50);
-    try key_tex_map.put(arena_allocator, .{ .key = .e }, 52);
-    try key_tex_map.put(arena_allocator, .{ .key = .f }, 84);
-    try key_tex_map.put(arena_allocator, .{ .key = .g }, 85);
-    try key_tex_map.put(arena_allocator, .{ .key = .h }, 86);
-    try key_tex_map.put(arena_allocator, .{ .key = .i }, 88);
-    try key_tex_map.put(arena_allocator, .{ .key = .j }, 63);
-    try key_tex_map.put(arena_allocator, .{ .key = .k }, 74);
-    try key_tex_map.put(arena_allocator, .{ .key = .l }, 75);
-    try key_tex_map.put(arena_allocator, .{ .key = .m }, 76);
-    try key_tex_map.put(arena_allocator, .{ .key = .n }, 61);
-    try key_tex_map.put(arena_allocator, .{ .key = .o }, 65);
-    try key_tex_map.put(arena_allocator, .{ .key = .p }, 66);
-    try key_tex_map.put(arena_allocator, .{ .key = .q }, 25);
-    try key_tex_map.put(arena_allocator, .{ .key = .r }, 28);
-    try key_tex_map.put(arena_allocator, .{ .key = .s }, 29);
-    try key_tex_map.put(arena_allocator, .{ .key = .t }, 73);
-    try key_tex_map.put(arena_allocator, .{ .key = .u }, 67);
-    try key_tex_map.put(arena_allocator, .{ .key = .v }, 31);
-    try key_tex_map.put(arena_allocator, .{ .key = .w }, 10);
-    try key_tex_map.put(arena_allocator, .{ .key = .x }, 12);
-    try key_tex_map.put(arena_allocator, .{ .key = .y }, 13);
-    try key_tex_map.put(arena_allocator, .{ .key = .z }, 14);
-    try key_tex_map.put(arena_allocator, .{ .key = .up }, 32);
-    try key_tex_map.put(arena_allocator, .{ .key = .down }, 22);
-    try key_tex_map.put(arena_allocator, .{ .key = .left }, 23);
-    try key_tex_map.put(arena_allocator, .{ .key = .right }, 24);
-    try key_tex_map.put(arena_allocator, .{ .key = .left_shift }, 15);
-    try key_tex_map.put(arena_allocator, .{ .key = .right_shift }, 9);
-    try key_tex_map.put(arena_allocator, .{ .key = .left_bracket }, 37);
-    try key_tex_map.put(arena_allocator, .{ .key = .right_bracket }, 38);
-    try key_tex_map.put(arena_allocator, .{ .key = .left_control }, 49);
-    try key_tex_map.put(arena_allocator, .{ .key = .right_control }, 49);
-    try key_tex_map.put(arena_allocator, .{ .key = .left_alt }, 21);
-    try key_tex_map.put(arena_allocator, .{ .key = .right_alt }, 21);
-    try key_tex_map.put(arena_allocator, .{ .key = .comma }, 101);
-    try key_tex_map.put(arena_allocator, .{ .key = .period }, 102);
-    try key_tex_map.put(arena_allocator, .{ .key = .slash }, 103);
-    try key_tex_map.put(arena_allocator, .{ .key = .backslash }, 41);
-    try key_tex_map.put(arena_allocator, .{ .key = .semicolon }, 30);
-    try key_tex_map.put(arena_allocator, .{ .key = .minus }, 45);
-    try key_tex_map.put(arena_allocator, .{ .key = .equal }, 42);
-    try key_tex_map.put(arena_allocator, .{ .key = .tab }, 79);
-    try key_tex_map.put(arena_allocator, .{ .key = .space }, 57);
-    try key_tex_map.put(arena_allocator, .{ .key = .backspace }, 35);
-    try key_tex_map.put(arena_allocator, .{ .key = .enter }, 54);
-    try key_tex_map.put(arena_allocator, .{ .key = .delete }, 51);
-    try key_tex_map.put(arena_allocator, .{ .key = .end }, 53);
-    try key_tex_map.put(arena_allocator, .{ .key = .print_screen }, 44);
-    try key_tex_map.put(arena_allocator, .{ .key = .insert }, 62);
-    try key_tex_map.put(arena_allocator, .{ .key = .escape }, 64);
-    try key_tex_map.put(arena_allocator, .{ .key = .home }, 87);
-    try key_tex_map.put(arena_allocator, .{ .key = .page_up }, 89);
-    try key_tex_map.put(arena_allocator, .{ .key = .page_down }, 90);
-    try key_tex_map.put(arena_allocator, .{ .key = .caps_lock }, 40);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_add }, 43);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_subtract }, 107);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_multiply }, 33);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_divide }, 106);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_decimal }, 105);
-    try key_tex_map.put(arena_allocator, .{ .key = .kp_enter }, 56);
-    try key_tex_map.put(arena_allocator, .{ .key = .left_super }, if (builtin.os.tag == .windows) 11 else 48);
-    try key_tex_map.put(arena_allocator, .{ .key = .right_super }, if (builtin.os.tag == .windows) 11 else 48);
+    inline for (.{
+        .{ Settings.Button{ .mouse = .left }, 46 },
+        .{ Settings.Button{ .mouse = .right }, 59 },
+        .{ Settings.Button{ .mouse = .middle }, 58 },
+        .{ Settings.Button{ .mouse = .four }, 108 },
+        .{ Settings.Button{ .mouse = .five }, 109 },
+        .{ Settings.Button{ .key = .zero }, 0 },
+        .{ Settings.Button{ .key = .one }, 4 },
+        .{ Settings.Button{ .key = .two }, 5 },
+        .{ Settings.Button{ .key = .three }, 6 },
+        .{ Settings.Button{ .key = .four }, 7 },
+        .{ Settings.Button{ .key = .five }, 8 },
+        .{ Settings.Button{ .key = .six }, 16 },
+        .{ Settings.Button{ .key = .seven }, 17 },
+        .{ Settings.Button{ .key = .eight }, 18 },
+        .{ Settings.Button{ .key = .nine }, 19 },
+        .{ Settings.Button{ .key = .kp_0 }, 91 },
+        .{ Settings.Button{ .key = .kp_1 }, 92 },
+        .{ Settings.Button{ .key = .kp_2 }, 93 },
+        .{ Settings.Button{ .key = .kp_3 }, 94 },
+        .{ Settings.Button{ .key = .kp_4 }, 95 },
+        .{ Settings.Button{ .key = .kp_5 }, 96 },
+        .{ Settings.Button{ .key = .kp_6 }, 97 },
+        .{ Settings.Button{ .key = .kp_7 }, 98 },
+        .{ Settings.Button{ .key = .kp_8 }, 99 },
+        .{ Settings.Button{ .key = .kp_9 }, 100 },
+        .{ Settings.Button{ .key = .F1 }, 68 },
+        .{ Settings.Button{ .key = .F2 }, 69 },
+        .{ Settings.Button{ .key = .F3 }, 70 },
+        .{ Settings.Button{ .key = .F4 }, 71 },
+        .{ Settings.Button{ .key = .F5 }, 72 },
+        .{ Settings.Button{ .key = .F6 }, 73 },
+        .{ Settings.Button{ .key = .F7 }, 74 },
+        .{ Settings.Button{ .key = .F8 }, 75 },
+        .{ Settings.Button{ .key = .F9 }, 76 },
+        .{ Settings.Button{ .key = .F10 }, 1 },
+        .{ Settings.Button{ .key = .F11 }, 2 },
+        .{ Settings.Button{ .key = .F12 }, 3 },
+        .{ Settings.Button{ .key = .a }, 20 },
+        .{ Settings.Button{ .key = .b }, 34 },
+        .{ Settings.Button{ .key = .c }, 39 },
+        .{ Settings.Button{ .key = .d }, 50 },
+        .{ Settings.Button{ .key = .e }, 52 },
+        .{ Settings.Button{ .key = .f }, 84 },
+        .{ Settings.Button{ .key = .g }, 85 },
+        .{ Settings.Button{ .key = .h }, 86 },
+        .{ Settings.Button{ .key = .i }, 88 },
+        .{ Settings.Button{ .key = .j }, 63 },
+        .{ Settings.Button{ .key = .k }, 74 },
+        .{ Settings.Button{ .key = .l }, 75 },
+        .{ Settings.Button{ .key = .m }, 76 },
+        .{ Settings.Button{ .key = .n }, 61 },
+        .{ Settings.Button{ .key = .o }, 65 },
+        .{ Settings.Button{ .key = .p }, 66 },
+        .{ Settings.Button{ .key = .q }, 25 },
+        .{ Settings.Button{ .key = .r }, 28 },
+        .{ Settings.Button{ .key = .s }, 29 },
+        .{ Settings.Button{ .key = .t }, 73 },
+        .{ Settings.Button{ .key = .u }, 67 },
+        .{ Settings.Button{ .key = .v }, 31 },
+        .{ Settings.Button{ .key = .w }, 10 },
+        .{ Settings.Button{ .key = .x }, 12 },
+        .{ Settings.Button{ .key = .y }, 13 },
+        .{ Settings.Button{ .key = .z }, 14 },
+        .{ Settings.Button{ .key = .up }, 32 },
+        .{ Settings.Button{ .key = .down }, 22 },
+        .{ Settings.Button{ .key = .left }, 23 },
+        .{ Settings.Button{ .key = .right }, 24 },
+        .{ Settings.Button{ .key = .left_shift }, 15 },
+        .{ Settings.Button{ .key = .right_shift }, 9 },
+        .{ Settings.Button{ .key = .left_bracket }, 37 },
+        .{ Settings.Button{ .key = .right_bracket }, 38 },
+        .{ Settings.Button{ .key = .left_control }, 49 },
+        .{ Settings.Button{ .key = .right_control }, 49 },
+        .{ Settings.Button{ .key = .left_alt }, 21 },
+        .{ Settings.Button{ .key = .right_alt }, 21 },
+        .{ Settings.Button{ .key = .comma }, 101 },
+        .{ Settings.Button{ .key = .period }, 102 },
+        .{ Settings.Button{ .key = .slash }, 103 },
+        .{ Settings.Button{ .key = .backslash }, 41 },
+        .{ Settings.Button{ .key = .semicolon }, 30 },
+        .{ Settings.Button{ .key = .minus }, 45 },
+        .{ Settings.Button{ .key = .equal }, 42 },
+        .{ Settings.Button{ .key = .tab }, 79 },
+        .{ Settings.Button{ .key = .space }, 57 },
+        .{ Settings.Button{ .key = .backspace }, 35 },
+        .{ Settings.Button{ .key = .enter }, 54 },
+        .{ Settings.Button{ .key = .delete }, 51 },
+        .{ Settings.Button{ .key = .end }, 53 },
+        .{ Settings.Button{ .key = .print_screen }, 44 },
+        .{ Settings.Button{ .key = .insert }, 62 },
+        .{ Settings.Button{ .key = .escape }, 64 },
+        .{ Settings.Button{ .key = .home }, 87 },
+        .{ Settings.Button{ .key = .page_up }, 89 },
+        .{ Settings.Button{ .key = .page_down }, 90 },
+        .{ Settings.Button{ .key = .caps_lock }, 40 },
+        .{ Settings.Button{ .key = .kp_add }, 43 },
+        .{ Settings.Button{ .key = .kp_subtract }, 107 },
+        .{ Settings.Button{ .key = .kp_multiply }, 33 },
+        .{ Settings.Button{ .key = .kp_divide }, 106 },
+        .{ Settings.Button{ .key = .kp_decimal }, 105 },
+        .{ Settings.Button{ .key = .kp_enter }, 56 },
+        .{ Settings.Button{ .key = .left_super }, if (builtin.os.tag == .windows) 11 else 48 },
+        .{ Settings.Button{ .key = .right_super }, if (builtin.os.tag == .windows) 11 else 48 },
+    }) |key_with_idx|
+        key_tex_map.put(arena_allocator, key_with_idx[0], key_with_idx[1]) catch main.oomPanic();
 }
 
 pub fn getKeyTexture(button: Settings.Button) AtlasData {
@@ -1427,6 +1502,6 @@ pub fn getKeyTexture(button: Settings.Button) AtlasData {
     return tex_list[key_tex_map.get(button) orelse 104];
 }
 
-pub fn getUiData(comptime name: []const u8, idx: usize) AtlasData {
-    return (ui_atlas_data.get(name) orelse @panic("Could not find " ++ name ++ " in the UI atlas"))[idx];
+pub fn getUiData(name: []const u8, idx: u16) AtlasData {
+    return (ui_atlas_data.get(name) orelse std.debug.panic("Could not find {s} in the UI atlas", .{name}))[idx];
 }

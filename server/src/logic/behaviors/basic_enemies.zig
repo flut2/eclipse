@@ -1,10 +1,52 @@
 const std = @import("std");
-const loot = @import("../loot.zig");
-const logic = @import("../logic.zig");
 
-const Metadata = @import("../behavior.zig").BehaviorMetadata;
 const Enemy = @import("../../map/Enemy.zig");
 const Entity = @import("../../map/Entity.zig");
+const Metadata = @import("../behavior.zig").BehaviorMetadata;
+const logic = @import("../logic.zig");
+const loot = @import("../loot.zig");
+
+// TODO: remove this later
+pub const LootTester = struct {
+    pub const data: Metadata = .{
+        .type = .enemy,
+        .name = "Loot Tester",
+    };
+
+    pub fn death(_: *LootTester, host: *Enemy) !void {
+        loot.dropPortals(host, &.{
+            .{ .name = "Crown Cove", .chance = 1.0 / 20.0 },
+            .{ .name = "Crimson Chasm", .chance = 1.0 / 1.0 },
+            .{ .name = "Dusty Dune", .chance = 1.0 / 20.0 },
+        });
+        loot.dropItems(host, &.{
+            .{ .name = "Starter Plate", .chance = 1.0 / 1.0, .threshold = 0.001 },
+            .{ .name = "Starter Bow", .chance = 1.0 / 20.0, .threshold = 0.001 },
+        });
+        loot.dropCards(host, &.{
+            .{ .name = "Heavy Strikes", .chance = 1.0 / 5.0, .threshold = 0.001 },
+            .{ .name = "Titan's Resolve", .chance = 1.0 / 10.0, .threshold = 0.001 },
+            .{ .name = "Deft Hands", .chance = 1.0 / 20.0, .threshold = 0.001 },
+            .{ .name = "Absorption", .chance = 1.0 / 40.0, .threshold = 0.001 },
+            .{ .name = "Veil of Shadows", .chance = 1.0 / 200.0, .threshold = 0.001 },
+        });
+        loot.dropResources(host, &.{
+            .{ .name = "Common Resource 1", .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.001 },
+            .{ .name = "Rare Resource 1", .chance = 1.0 / 20.0, .min = 2, .max = 7, .threshold = 0.001 },
+            .{ .name = "Epic Resource 1", .chance = 1.0 / 1.0, .min = 1, .max = 3, .threshold = 0.001 },
+        });
+        loot.dropCurrency(host, &.{
+            .{ .type = .gems, .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.001 },
+            .{ .type = .gold, .chance = 1.0 / 1.0, .min = 2, .max = 7, .threshold = 0.001 },
+            .{ .type = .crowns, .chance = 1.0 / 80.0, .min = 1, .max = 3, .threshold = 0.001 },
+        });
+        loot.dropSpirits(host, .{ .chance = 1.0 / 1.0, .min = 15, .max = 30, .threshold = 0.001 });
+    }
+
+    pub fn tick(_: *LootTester, host: *Enemy, _: i64, dt: i64) !void {
+        logic.wander(@src(), host, dt, 2.5);
+    }
+};
 
 pub const Crocodile = struct {
     pub const data: Metadata = .{
@@ -13,53 +55,7 @@ pub const Crocodile = struct {
     };
 
     pub fn death(_: *Crocodile, host: *Enemy) !void {
-        loot.dropPortals(host, &.{
-            .{ .weight = 95 },
-            .{
-                .name = "Crown Cove",
-                .weight = 5,
-            },
-        });
-        loot.dropItems(host, 10, &.{
-            .{ .weight = 100 },
-            .{
-                .name = "Starter Bow",
-                .weight = 100,
-                .threshold = 0.001,
-            },
-            .{
-                .name = "Starter Plate",
-                .weight = 1,
-                .threshold = 0.001,
-            },
-        });
-        loot.giveCards(host, &.{
-            .{
-                .name = "Heavy Strikes",
-                .weight = 100,
-                .threshold = 0.001,
-            },
-            .{
-                .name = "Titan's Resolve",
-                .weight = 100,
-                .threshold = 0.001,
-            },
-            .{
-                .name = "Deft Hands",
-                .weight = 100,
-                .threshold = 0.001,
-            },
-            .{
-                .name = "Absorption",
-                .weight = 100,
-                .threshold = 0.001,
-            },
-            .{
-                .name = "Veil of Shadows",
-                .weight = 100,
-                .threshold = 0.001,
-            },
-        });
+        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *Crocodile, host: *Enemy, time: i64, dt: i64) !void {
@@ -94,10 +90,7 @@ pub const SpikeBall = struct {
     };
 
     pub fn death(_: *SpikeBall, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Crown Cove",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *SpikeBall, host: *Enemy, time: i64, dt: i64) !void {
@@ -119,10 +112,7 @@ pub const GoblinGrunt = struct {
     };
 
     pub fn death(_: *GoblinGrunt, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Crown Cove",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *GoblinGrunt, host: *Enemy, time: i64, dt: i64) !void {
@@ -149,10 +139,7 @@ pub const GoblinGuard = struct {
     };
 
     pub fn death(_: *GoblinGuard, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Crown Cove",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *GoblinGuard, host: *Enemy, time: i64, dt: i64) !void {
@@ -196,10 +183,7 @@ pub const Imp = struct {
     };
 
     pub fn death(_: *Imp, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Crimson Chasm",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Crimson Chasm", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *Imp, host: *Enemy, time: i64, dt: i64) !void {
@@ -226,10 +210,7 @@ pub const LivingFlame = struct {
     };
 
     pub fn death(_: *LivingFlame, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Crimson Chasm",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Crimson Chasm", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *LivingFlame, host: *Enemy, time: i64, dt: i64) !void {
@@ -260,10 +241,7 @@ pub const DemonMage = struct {
     };
 
     pub fn death(_: *DemonMage, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Crimson Chasm",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Crimson Chasm", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *DemonMage, host: *Enemy, time: i64, dt: i64) !void {
@@ -291,10 +269,7 @@ pub const DemonArcher = struct {
     };
 
     pub fn death(_: *DemonArcher, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Crimson Chasm",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Crimson Chasm", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *DemonArcher, host: *Enemy, time: i64, dt: i64) !void {
@@ -322,10 +297,7 @@ pub const JackalWarrior = struct {
     };
 
     pub fn death(_: *JackalWarrior, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Dusty Dune",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Dusty Dune", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *JackalWarrior, host: *Enemy, time: i64, dt: i64) !void {
@@ -352,10 +324,7 @@ pub const JackalPriest = struct {
     };
 
     pub fn death(_: *JackalPriest, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Dusty Dune",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Dusty Dune", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *JackalPriest, host: *Enemy, time: i64, dt: i64) !void {
@@ -400,10 +369,7 @@ pub const JackalArcher = struct {
     };
 
     pub fn death(_: *JackalArcher, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Dusty Dune",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Dusty Dune", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *JackalArcher, host: *Enemy, time: i64, dt: i64) !void {
@@ -430,10 +396,7 @@ pub const RegalMummy = struct {
     };
 
     pub fn death(_: *RegalMummy, host: *Enemy) !void {
-        loot.dropPortals(host, &.{ .{
-            .name = "Dusty Dune",
-            .weight = 5,
-        }, .{ .weight = 95 } });
+        loot.dropPortals(host, &.{.{ .name = "Dusty Dune", .chance = 1.0 / 20.0 }});
     }
 
     pub fn tick(_: *RegalMummy, host: *Enemy, _: i64, dt: i64) !void {

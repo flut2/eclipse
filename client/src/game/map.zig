@@ -1,24 +1,25 @@
 const std = @import("std");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const network_data = shared.network_data;
+const zstbi = @import("zstbi");
+
+const assets = @import("../assets.zig");
 const input = @import("../input.zig");
 const main = @import("../main.zig");
-const zstbi = @import("zstbi");
-const particles = @import("particles.zig");
 const systems = @import("../ui/systems.zig");
-const assets = @import("../assets.zig");
-
-const Square = @import("Square.zig");
-const Player = @import("Player.zig");
-const Projectile = @import("Projectile.zig");
-const Entity = @import("Entity.zig");
-const Enemy = @import("Enemy.zig");
-const Container = @import("Container.zig");
-const Portal = @import("Portal.zig");
-const Purchasable = @import("Purchasable.zig");
 const Ally = @import("Ally.zig");
+const Container = @import("Container.zig");
+const Enemy = @import("Enemy.zig");
+const Entity = @import("Entity.zig");
+const particles = @import("particles.zig");
+const Player = @import("Player.zig");
+const Portal = @import("Portal.zig");
+const Projectile = @import("Projectile.zig");
+const Purchasable = @import("Purchasable.zig");
+const Square = @import("Square.zig");
 
 const day_cycle: i32 = 10 * std.time.us_per_min;
 const day_cycle_half: f32 = @as(f32, day_cycle) / 2;
@@ -441,7 +442,7 @@ pub fn validPos(x: u32, y: u32) bool {
 
 // check_validity should always be on, unless you profiled that it causes clear slowdowns in your code.
 // even then, you should be very sure that the input can't ever go wrong or that it going wrong is inconsequential
-pub fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
+pub fn getSquare(x: f32, y: f32, comptime check_validity: bool, comptime constness: Constness) if (constness == .con) ?Square else ?*Square {
     if (check_validity and (x < 0 or y < 0)) {
         @branchHint(.unlikely);
         return null;
@@ -454,43 +455,23 @@ pub fn getSquare(x: f32, y: f32, comptime check_validity: bool) ?Square {
         return null;
     }
 
-    const square = squares[floor_y * info.width + floor_x];
-    if (check_validity and square.data_id == Square.empty_tile)
-        return null;
-
-    return square;
-}
-
-pub fn getSquarePtr(x: f32, y: f32, comptime check_validity: bool) ?*Square {
-    if (check_validity and (x < 0 or y < 0)) {
-        @branchHint(.unlikely);
-        return null;
-    }
-
-    const floor_x: u32 = @intFromFloat(@floor(x));
-    const floor_y: u32 = @intFromFloat(@floor(y));
-    if (check_validity and !validPos(floor_x, floor_y)) {
-        @branchHint(.unlikely);
-        return null;
-    }
-
-    const square = &squares[floor_y * info.width + floor_x];
-    if (check_validity and square.data_id == Square.empty_tile)
-        return null;
-
+    const square = switch (constness) {
+        .con => squares[floor_y * info.width + floor_x],
+        .ref => &squares[floor_y * info.width + floor_x],
+    };
+    if (check_validity and square.data_id == Square.empty_tile) return null;
     return square;
 }
 
 pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
-    if (last_records_clear_time < 0)
-        return;
+    if (last_records_clear_time < 0) return;
 
     const id = getId(time);
-    if (id < 1 or id > 10)
-        return;
+    if (id < 1 or id > 10) return;
 
+    const new_record: network_data.TimedPosition = .{ .time = time, .x = x, .y = y };
     if (move_records.items.len == 0) {
-        move_records.append(main.allocator, .{ .time = time, .x = x, .y = y }) catch |e| std.log.err("Adding move record failed: {}", .{e});
+        move_records.append(main.allocator, new_record) catch main.oomPanic();
         return;
     }
 
@@ -498,17 +479,13 @@ pub fn addMoveRecord(time: i64, x: f32, y: f32) void {
     const curr_record = move_records.items[record_idx];
     const curr_id = getId(curr_record.time);
     if (id != curr_id) {
-        move_records.append(main.allocator, .{ .time = time, .x = x, .y = y }) catch |e| std.log.err("Adding move record failed: {}", .{e});
+        move_records.append(main.allocator, new_record) catch main.oomPanic();
         return;
     }
 
     const score = getScore(id, time);
     const curr_score = getScore(id, curr_record.time);
-    if (score < curr_score) {
-        move_records.items[record_idx].time = time;
-        move_records.items[record_idx].x = x;
-        move_records.items[record_idx].y = y;
-    }
+    if (score < curr_score) move_records.items[record_idx] = new_record;
 }
 
 pub fn clearMoveRecords(time: i64) void {
@@ -561,8 +538,7 @@ pub fn takeDamage(
             if (cond_int & (@as(usize, 1) << @intCast(i)) != 0) {
                 const eff: utils.ConditionEnum = @enumFromInt(i + 1);
                 const cond_str = eff.toString();
-                if (cond_str.len == 0)
-                    continue;
+                if (cond_str.len == 0) continue;
 
                 self.condition.set(eff, true);
 
@@ -574,7 +550,7 @@ pub fn takeDamage(
                         .text = std.fmt.allocPrint(main.allocator, "{s}", .{cond_str}) catch main.oomPanic(),
                         .text_type = .bold,
                         .size = 16,
-                        .color = 0xB02020,
+                        .color = 0xC2C2C2,
                     },
                 }) catch main.oomPanic();
             }
@@ -591,8 +567,8 @@ pub fn takeDamage(
             .size = 16,
             .color = switch (damage_type) {
                 .physical => 0xB02020,
-                .magic => 0xB02020,
-                .true => 0xB02020,
+                .magic => 0x6E15AD,
+                .true => 0xC2C2C2,
             },
         },
     }) catch main.oomPanic();

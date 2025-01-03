@@ -1,10 +1,9 @@
 const assets = @import("../../assets.zig");
-const render = @import("../../render.zig");
 const main = @import("../../main.zig");
-
-const MenuBackground = @This();
+const render = @import("../../render.zig");
 const ElementBase = @import("element.zig").ElementBase;
 
+const MenuBackground = @This();
 base: ElementBase,
 w: f32,
 h: f32,

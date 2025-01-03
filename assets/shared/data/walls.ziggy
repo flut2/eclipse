@@ -1,0 +1,184 @@
+[
+{
+    .id = 1000,
+    .name = "Retrieve Sheet Metal Wall",
+    .textures = [{"walls": 0}],
+    .is_wall = true,
+},
+{
+    .id = 1001,
+    .name = "Retrieve Electronic Wall Off",
+    .textures = [{"walls": 1}],
+    .is_wall = true,
+},
+{
+    .id = 1002,
+    .name = "Retrieve Electronic Wall On",
+    .textures = [{"walls": 2}],
+    .is_wall = true,
+},
+{
+    .id = 1003,
+    .name = "Retrieve Electronic Pillar 1",
+    .textures = [{"walls": 3}],
+    .is_wall = true,
+},
+{
+    .id = 1004,
+    .name = "Retrieve Electronic Pillar 2",
+    .textures = [{"walls": 4}],
+    .is_wall = true,
+},
+{
+    .id = 1005,
+    .name = "Retrieve Electronic Pillar 3",
+    .textures = [{"walls": 5}],
+    .is_wall = true,
+},
+{
+    .id = 1006,
+    .name = "Retrieve Terminal Off",
+    .textures = [{"walls": 6}],
+    .is_wall = true,
+},
+{
+    .id = 1007,
+    .name = "Retrieve Terminal Blue",
+    .textures = [{"walls": 7}],
+    .is_wall = true,
+    .animation = {
+        .period = 3.0,
+        .frames = [
+            { .time = 0.3, .texture = { "walls": 7 } },
+            { .time = 0.3, .texture = { "walls": 8 } },
+            { .time = 0.3, .texture = { "walls": 9 } },
+            { .time = 0.3, .texture = { "walls": 10 } },
+            { .time = 0.3, .texture = { "walls": 11 } },
+            { .time = 0.3, .texture = { "walls": 12 } },
+            { .time = 0.3, .texture = { "walls": 13 } },
+            { .time = 0.3, .texture = { "walls": 14 } },
+            { .time = 0.3, .texture = { "walls": 15 } },
+        ]
+    }
+},
+{
+    .id = 1008,
+    .name = "Retrieve Terminal Green",
+    .textures = [{"walls": 16}],
+    .is_wall = true,
+    .animation = {
+        .period = 3.0,
+        .frames = [
+            { .time = 0.3, .texture = { "walls": 16 } },
+            { .time = 0.3, .texture = { "walls": 17 } },
+            { .time = 0.3, .texture = { "walls": 18 } },
+            { .time = 0.3, .texture = { "walls": 19 } },
+            { .time = 0.3, .texture = { "walls": 20 } },
+            { .time = 0.3, .texture = { "walls": 21 } },
+            { .time = 0.3, .texture = { "walls": 22 } },
+            { .time = 0.3, .texture = { "walls": 23 } },
+            { .time = 0.3, .texture = { "walls": 24 } },
+        ]
+    }
+},
+{
+    .id = 1009,
+    .name = "Retrieve Terminal Red",
+    .textures = [{"walls": 25}],
+    .is_wall = true,
+    .animation = {
+        .period = 3.0,
+        .frames = [
+            { .time = 0.3, .texture = { "walls": 25 } },
+            { .time = 0.3, .texture = { "walls": 26 } },
+            { .time = 0.3, .texture = { "walls": 27 } },
+            { .time = 0.3, .texture = { "walls": 28 } },
+            { .time = 0.3, .texture = { "walls": 29 } },
+            { .time = 0.3, .texture = { "walls": 30 } },
+            { .time = 0.3, .texture = { "walls": 31 } },
+            { .time = 0.3, .texture = { "walls": 32 } },
+            { .time = 0.3, .texture = { "walls": 33 } },
+        ]
+    }
+},
+{
+    .id = 1010,
+    .name = "Retrieve Terminal Error",
+    .textures = [{"walls": 34}],
+    .is_wall = true,
+},
+{
+    .id = 1011,
+    .name = "Crimson Chasm Breakable Wall 1",
+    .textures = [{"walls": 35}],
+    .is_wall = true,
+    .defense = 10,
+    .resistance = 10,
+    .health = 500,
+},
+{
+    .id = 1012,
+    .name = "Crimson Chasm Breakable Wall 2",
+    .textures = [{"walls": 80}],
+    .is_wall = true,
+    .defense = 10,
+    .resistance = 10,
+    .health = 500,
+},
+{
+    .id = 1013,
+    .name = "Crimson Chasm Candle Wall 1",
+    .textures = [{"walls": 36}],
+    .is_wall = true,
+    .animation = {
+        .period = 2.1,
+        .frames = [
+            { .time = 0.3, .texture = { "walls": 36 } },
+            { .time = 0.3, .texture = { "walls": 37 } },
+            { .time = 0.3, .texture = { "walls": 38 } },
+            { .time = 0.3, .texture = { "walls": 39 } },
+            { .time = 0.3, .texture = { "walls": 40 } },
+            { .time = 0.3, .texture = { "walls": 41 } },
+        ]
+    }
+},
+{
+    .id = 1014,
+    .name = "Crimson Chasm Candle Wall 2",
+    .textures = [{"walls": 42}],
+    .is_wall = true,
+    .animation = {
+        .period = 2.1,
+        .frames = [
+            { .time = 0.3, .texture = { "walls": 42 } },
+            { .time = 0.3, .texture = { "walls": 43 } },
+            { .time = 0.3, .texture = { "walls": 44 } },
+            { .time = 0.3, .texture = { "walls": 45 } },
+            { .time = 0.3, .texture = { "walls": 46 } },
+            { .time = 0.3, .texture = { "walls": 47 } },
+        ]
+    }
+},
+{
+    .id = 1015,
+    .name = "Crimson Chasm Wall",
+    .textures = [
+        { "walls": 48 }, { "walls": 49 }, { "walls": 50 }, { "walls": 51 },
+        { "walls": 52 }, { "walls": 53 }, { "walls": 54 }, { "walls": 55 },
+        { "walls": 56 }, { "walls": 57 }, { "walls": 58 }, { "walls": 59 },
+        { "walls": 60 }, { "walls": 61 }, { "walls": 62 }, { "walls": 63 },
+    ],
+    .is_wall = true,
+},
+{
+    .id = 1016,
+    .name = "Crimson Chasm Wall Fiery",
+    .textures = [
+        { "walls": 64 }, { "walls": 65 }, { "walls": 66 }, { "walls": 67 },
+        { "walls": 68 }, { "walls": 69 }, { "walls": 70 }, { "walls": 71 },
+        { "walls": 72 }, { "walls": 73 }, { "walls": 74 }, { "walls": 75 },
+        { "walls": 76 }, { "walls": 77 }, { "walls": 78 }, { "walls": 79 },
+    ],
+    .is_wall = true,
+},
+]

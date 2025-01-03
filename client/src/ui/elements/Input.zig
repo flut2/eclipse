@@ -1,15 +1,16 @@
 const std = @import("std");
-const element = @import("element.zig");
-const systems = @import("../systems.zig");
+
+const glfw = @import("zglfw");
+
+const assets = @import("../../assets.zig");
 const input = @import("../../input.zig");
 const main = @import("../../main.zig");
 const render = @import("../../render.zig");
-const assets = @import("../../assets.zig");
-const glfw = @import("zglfw");
-
-const Input = @This();
+const systems = @import("../systems.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const Input = @This();
 base: ElementBase,
 text_inlay_x: f32,
 text_inlay_y: f32,

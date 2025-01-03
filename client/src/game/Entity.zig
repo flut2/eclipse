@@ -1,19 +1,21 @@
 const std = @import("std");
-const element = @import("../ui/elements/element.zig");
-const ui_systems = @import("../ui/systems.zig");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
-const assets = @import("../assets.zig");
-const particles = @import("particles.zig");
-const map = @import("map.zig");
-const main = @import("../main.zig");
-const base = @import("object_base.zig");
-const render = @import("../render.zig");
-const px_per_tile = Camera.px_per_tile;
 
+const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
+const px_per_tile = Camera.px_per_tile;
+const main = @import("../main.zig");
+const render = @import("../render.zig");
+const element = @import("../ui/elements/element.zig");
 const StatusText = @import("../ui/game/StatusText.zig");
+const ui_systems = @import("../ui/systems.zig");
+const base = @import("object_base.zig");
+const map = @import("map.zig");
+const particles = @import("particles.zig");
+
 const Entity = @This();
 
 map_id: u32 = std.math.maxInt(u32),
@@ -79,7 +81,7 @@ pub fn addToMap(entity_data: Entity) void {
 
     collision: {
         if (self.x >= 0 and self.y >= 0 and (self.data.occupy_square or self.data.full_occupy or self.data.is_wall)) {
-            const square = map.getSquarePtr(self.x, self.y, true) orelse break :collision;
+            const square = map.getSquare(self.x, self.y, true, .ref) orelse break :collision;
             square.entity_map_id = self.map_id;
         }
     }
@@ -88,7 +90,7 @@ pub fn addToMap(entity_data: Entity) void {
         self.x = @floor(self.x);
         self.y = @floor(self.y);
 
-        if (map.getSquare(self.x, self.y - 1, true)) |square| {
+        if (map.getSquare(self.x, self.y - 1, true, .con)) |square| {
             if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
                 if (wall.data.is_wall) {
                     wall.wall_outline_cull.bottom = true;
@@ -97,7 +99,7 @@ pub fn addToMap(entity_data: Entity) void {
             }
         }
 
-        if (map.getSquare(self.x, self.y + 1, true)) |square| {
+        if (map.getSquare(self.x, self.y + 1, true, .con)) |square| {
             if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
                 if (wall.data.is_wall) {
                     wall.wall_outline_cull.top = true;
@@ -106,7 +108,7 @@ pub fn addToMap(entity_data: Entity) void {
             }
         }
 
-        if (map.getSquare(self.x - 1, self.y, true)) |square| {
+        if (map.getSquare(self.x - 1, self.y, true, .con)) |square| {
             if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
                 if (wall.data.is_wall) {
                     wall.wall_outline_cull.right = true;
@@ -115,7 +117,7 @@ pub fn addToMap(entity_data: Entity) void {
             }
         }
 
-        if (map.getSquare(self.x + 1, self.y, true)) |square| {
+        if (map.getSquare(self.x + 1, self.y, true, .con)) |square| {
             if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
                 if (wall.data.is_wall) {
                     wall.wall_outline_cull.left = true;
@@ -132,7 +134,7 @@ pub fn deinit(self: *Entity) void {
     base.deinit(self);
 
     if (self.data.occupy_square or self.data.full_occupy) {
-        if (map.getSquarePtr(self.x, self.y, true)) |square| {
+        if (map.getSquare(self.x, self.y, true, .ref)) |square| {
             if (square.entity_map_id == self.map_id) square.entity_map_id = std.math.maxInt(u32);
         }
     }
@@ -230,7 +232,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
 
     var atlas_data = self.atlas_data;
     var sink: f32 = 1.0;
-    if (map.getSquare(self.x, self.y, true)) |square| sink += if (square.data.sink) 0.75 else 0;
+    if (map.getSquare(self.x, self.y, true, .con)) |square| sink += if (square.data.sink) 0.75 else 0;
     atlas_data.tex_h /= sink;
 
     const w = atlas_data.texWRaw() * size;

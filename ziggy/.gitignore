@@ -1,0 +1,5 @@
+node_modules/
+.zig-cache/
+zig-out/
+release/
+result

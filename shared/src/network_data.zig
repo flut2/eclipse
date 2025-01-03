@@ -1,6 +1,7 @@
 const std = @import("std");
-const utils = @import("utils.zig");
+
 const game_data = @import("game_data.zig");
+const utils = @import("utils.zig");
 
 pub const Rank = enum(u8) {
     default = 0,
@@ -58,8 +59,8 @@ pub const PlayerStat = union(enum) {
     size_mult: f32,
     name: []const u8,
     cards: []const u16,
-    resources: []const u32,
-    talents: []const u8,
+    resources: []const DataIdWithCount(u32),
+    talents: []const DataIdWithCount(u16),
     in_combat: bool,
     aether: u8,
     spirits_communed: u32,
@@ -182,6 +183,10 @@ pub const AllyStat = union(enum) {
     max_hp: i32,
     owner_map_id: u32,
 };
+
+pub fn DataIdWithCount(CountType: type) type {
+    return packed struct { count: CountType, data_id: u16 };
+}
 
 pub const TileData = packed struct {
     x: u16,

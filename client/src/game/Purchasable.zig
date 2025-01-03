@@ -1,17 +1,19 @@
 const std = @import("std");
-const element = @import("../ui/elements/element.zig");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
-const assets = @import("../assets.zig");
-const particles = @import("particles.zig");
-const map = @import("map.zig");
-const main = @import("../main.zig");
-const base = @import("object_base.zig");
-const render = @import("../render.zig");
-const px_per_tile = Camera.px_per_tile;
 
+const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
+const px_per_tile = Camera.px_per_tile;
+const main = @import("../main.zig");
+const render = @import("../render.zig");
+const element = @import("../ui/elements/element.zig");
+const base = @import("object_base.zig");
+const map = @import("map.zig");
+const particles = @import("particles.zig");
+
 const Purchasable = @This();
 
 map_id: u32 = std.math.maxInt(u32),

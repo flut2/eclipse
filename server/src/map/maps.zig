@@ -1,15 +1,16 @@
 const std = @import("std");
+
 const shared = @import("shared");
 const map_data = shared.map_data;
 const game_data = shared.game_data;
-const main = @import("../main.zig");
 
+const main = @import("../main.zig");
 const World = @import("../World.zig");
-const Tile = @import("Tile.zig");
-const Entity = @import("Entity.zig");
-const Enemy = @import("Enemy.zig");
-const Portal = @import("Portal.zig");
 const Container = @import("Container.zig");
+const Enemy = @import("Enemy.zig");
+const Entity = @import("Entity.zig");
+const Portal = @import("Portal.zig");
+const Tile = @import("Tile.zig");
 
 pub const retrieve_id = -1;
 
@@ -244,7 +245,7 @@ pub fn testWorld(data: []const u8) !*World {
     try worlds.put(main.allocator, next_world_id, try .create(map.w, map.h, next_world_id));
     defer next_world_id += 1;
 
-    std.log.info("Added test world (id {})", .{ next_world_id });
+    std.log.info("Added test world (id {})", .{next_world_id});
 
     var new_world = worlds.getPtr(next_world_id).?;
     try new_world.appendMap(map);

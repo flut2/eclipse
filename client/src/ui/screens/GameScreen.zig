@@ -22,6 +22,7 @@ const Container = @import("../../game/Container.zig");
 const Player = @import("../../game/Player.zig");
 const Options = @import("../composed/Options.zig");
 const CardSelection = @import("../composed/CardSelection.zig");
+const TalentView = @import("../composed/TalentView.zig");
 
 pub const Slot = struct {
     idx: u8,
@@ -80,7 +81,7 @@ pub const Slot = struct {
 
     pub fn nextAvailableSlot(screen: GameScreen, item_types: []const game_data.ItemType, item_type: game_data.ItemType) Slot {
         for (0..screen.inventory_items.len) |idx| {
-            if (screen.inventory_items[idx].item == std.math.maxInt(u16) and
+            if (screen.inventory_items[idx].data_id == std.math.maxInt(u16) and
                 (idx >= 4 or item_types[idx].typesMatch(item_type)))
                 return .{ .idx = @intCast(idx) };
         }
@@ -211,7 +212,7 @@ minimap_decor: *Image = undefined,
 
 options: *Options = undefined,
 card_selection: *CardSelection = undefined,
-// talent_view: *TalentView = undefined,
+talent_view: *TalentView = undefined,
 
 inventory_pos_data: [22]utils.Rect = undefined,
 container_pos_data: [9]utils.Rect = undefined,
@@ -548,6 +549,7 @@ pub fn init(self: *GameScreen) !void {
 
     self.options = try .create();
     self.card_selection = try .create();
+    self.talent_view = try .create();
 }
 
 pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_color: u32, text_color: u32) !void {
@@ -670,8 +672,9 @@ pub fn deinit(self: *GameScreen) void {
     for (self.container_items) |item| element.destroy(item);
 
     self.chat_lines.deinit(main.allocator);
-    self.options.deinit();
-    self.card_selection.deinit();
+    self.options.destroy();
+    self.card_selection.destroy();
+    self.talent_view.destroy();
 
     main.allocator.free(self.card_slots);
     main.allocator.destroy(self);
@@ -740,6 +743,7 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
     }
 
     self.options.resize(w, h);
+    self.talent_view.resize(w, h);
 }
 
 pub fn update(self: *GameScreen, time: i64, _: f32) !void {
@@ -986,9 +990,9 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
     const int_id = map.interactive.map_id.load(.acquire);
 
     const start_item = if (start_slot.is_container)
-        self.container_items[start_slot.idx].item
+        self.container_items[start_slot.idx].data_id
     else
-        self.inventory_items[start_slot.idx].item;
+        self.inventory_items[start_slot.idx].data_id;
 
     if (end_slot.idx == 255) {
         if (!start_slot.is_container) {
@@ -1020,15 +1024,15 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
                 } else break :blk local_player.data.item_types;
             };
 
-            if (!game_data.ItemType.typesMatch(start_data.item_type, if (end_slot.idx < 4) end_item_types[end_slot.idx] else .any)) {
+            if (!start_data.item_type.typesMatch(if (end_slot.idx < 4) end_item_types[end_slot.idx] else .any)) {
                 self.swapError(start_slot, start_item);
                 return;
             }
 
             const end_item = if (end_slot.is_container)
-                self.container_items[end_slot.idx].item
+                self.container_items[end_slot.idx].data_id
             else
-                self.inventory_items[end_slot.idx].item;
+                self.inventory_items[end_slot.idx].data_id;
 
             if (start_slot.is_container)
                 self.setContainerItem(end_item, start_slot.idx)
@@ -1058,10 +1062,10 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
 }
 
 fn itemDoubleClickCallback(item: *Item) void {
-    if (item.item < 0) return;
+    if (item.data_id < 0) return;
 
     const start_slot = Slot.findSlotId(systems.screen.game.*, item.base.x + 4, item.base.y + 4);
-    if (game_data.item.from_id.get(@intCast(item.item))) |props| {
+    if (game_data.item.from_id.get(item.data_id)) |props| {
         if (props.consumable and !start_slot.is_container) {
             map.object_lock.lock();
             defer map.object_lock.unlock();
@@ -1084,7 +1088,7 @@ fn itemDoubleClickCallback(item: *Item) void {
     map.object_lock.lock();
     defer map.object_lock.unlock();
     if (map.localPlayer(.con)) |local_player| {
-        if (game_data.item.from_id.get(@intCast(item.item))) |data| {
+        if (game_data.item.from_id.get(item.data_id)) |data| {
             if (start_slot.is_container) {
                 const end_slot = Slot.nextAvailableSlot(systems.screen.game.*, local_player.data.item_types, data.item_type);
                 if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
@@ -1114,6 +1118,7 @@ fn statsCallback(ud: ?*anyopaque) void {
     const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
     screen.stats_container.base.visible = !screen.stats_container.base.visible;
     screen.cards_container.base.visible = false;
+    screen.talent_view.setVisible(false);
     if (screen.stats_container.base.visible) {
         map.object_lock.lock();
         defer map.object_lock.unlock();
@@ -1125,10 +1130,12 @@ fn cardsCallback(ud: ?*anyopaque) void {
     const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
     screen.cards_container.base.visible = !screen.cards_container.base.visible;
     screen.stats_container.base.visible = false;
+    screen.talent_view.setVisible(false);
 }
 
 fn talentsCallback(ud: ?*anyopaque) void {
     const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    screen.talent_view.setVisible(!screen.talent_view.base.base.visible);
     screen.cards_container.base.visible = false;
     screen.stats_container.base.visible = false;
 }
@@ -1169,9 +1176,9 @@ fn itemDragEndCallback(item: *Item) void {
 
         // to update the background image
         if (start_slot.is_container)
-            current_screen.setContainerItem(item.item, start_slot.idx)
+            current_screen.setContainerItem(item.data_id, start_slot.idx)
         else
-            current_screen.setInvItem(item.item, start_slot.idx);
+            current_screen.setInvItem(item.data_id, start_slot.idx);
         return;
     }
 
@@ -1181,12 +1188,12 @@ fn itemDragEndCallback(item: *Item) void {
 }
 
 fn itemShiftClickCallback(item: *Item) void {
-    if (item.item < 0) return;
+    if (item.data_id < 0) return;
 
     const current_screen = systems.screen.game.*;
     const slot = Slot.findSlotId(current_screen, item.base.x + 4, item.base.y + 4);
 
-    if (game_data.item.from_id.get(@intCast(item.item))) |props| {
+    if (game_data.item.from_id.get(@intCast(item.data_id))) |props| {
         if (props.consumable) {
             map.object_lock.lock();
             defer map.object_lock.unlock();
@@ -1213,7 +1220,7 @@ pub fn useItem(self: *GameScreen, idx: u8) void {
 
 pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
     if (item == std.math.maxInt(u16)) {
-        self.container_items[idx].item = std.math.maxInt(u16);
+        self.container_items[idx].data_id = std.math.maxInt(u16);
         self.container_items[idx].base.visible = false;
         return;
     }
@@ -1236,7 +1243,7 @@ pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
                 .common => null,
             };
 
-            self.container_items[idx].item = item;
+            self.container_items[idx].data_id = item;
             self.container_items[idx].image_data.normal.atlas_data = atlas_data;
             self.container_items[idx].base.x = base_x + (pos_w - self.container_items[idx].texWRaw()) / 2 + assets.padding;
             self.container_items[idx].base.y = base_y + (pos_h - self.container_items[idx].texHRaw()) / 2 + assets.padding;
@@ -1245,7 +1252,7 @@ pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
         } else std.log.err("Could not find ui sheet {s} for item with data id {}, index {}", .{ data.texture.sheet, item, idx });
     } else std.log.err("Attempted to populate inventory index {} with item {}, but props was not found", .{ idx, item });
 
-    self.container_items[idx].item = std.math.maxInt(u16);
+    self.container_items[idx].data_id = std.math.maxInt(u16);
     self.container_items[idx].image_data.normal.atlas_data = assets.error_data;
     self.container_items[idx].base.x = self.container_decor.base.x +
         self.container_pos_data[idx].x + (self.container_pos_data[idx].w - self.container_items[idx].texWRaw()) / 2 + assets.padding;
@@ -1256,7 +1263,7 @@ pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
 
 pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
     if (item == std.math.maxInt(u16)) {
-        self.inventory_items[idx].item = std.math.maxInt(u16);
+        self.inventory_items[idx].data_id = std.math.maxInt(u16);
         self.inventory_items[idx].base.visible = false;
         return;
     }
@@ -1289,7 +1296,7 @@ pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
                 };
             }
 
-            self.inventory_items[idx].item = item;
+            self.inventory_items[idx].data_id = item;
             self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
             self.inventory_items[idx].base.x = base_x + (pos_w - self.inventory_items[idx].texWRaw()) / 2 + assets.padding;
             self.inventory_items[idx].base.y = base_y + (pos_h - self.inventory_items[idx].texHRaw()) / 2 + assets.padding;
@@ -1299,7 +1306,7 @@ pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
     } else std.log.err("Attempted to populate inventory index {} with item id {}, but props was not found", .{ idx, item });
 
     const atlas_data = assets.error_data;
-    self.inventory_items[idx].item = std.math.maxInt(u16);
+    self.inventory_items[idx].data_id = std.math.maxInt(u16);
     self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
     self.inventory_items[idx].base.x = self.inventory_decor.base.x + self.inventory_pos_data[idx].x + (self.inventory_pos_data[idx].w - self.inventory_items[idx].texWRaw()) / 2 + assets.padding;
     self.inventory_items[idx].base.y = self.inventory_decor.base.y + self.inventory_pos_data[idx].y + (self.inventory_pos_data[idx].h - self.inventory_items[idx].texHRaw()) / 2 + assets.padding;

@@ -185,6 +185,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     }).module("rpmalloc")) catch @panic("OOM");
 
+    lib.addImport("ziggy", b.dependency("ziggy", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("ziggy"));
+
     const enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false;
     if (enable_tracy) {
         const tracy_dep = b.dependency("ztracy", .{

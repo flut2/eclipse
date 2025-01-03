@@ -1,14 +1,15 @@
 const std = @import("std");
-const assets = @import("../assets.zig");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const network_data = shared.network_data;
-const map = @import("map.zig");
-const render = @import("../render.zig");
-const px_per_tile = @import("../Camera.zig").px_per_tile;
-const main = @import("../main.zig");
 
+const assets = @import("../assets.zig");
+const px_per_tile = @import("../Camera.zig").px_per_tile;
 const GameServer = @import("../GameServer.zig");
+const main = @import("../main.zig");
+const render = @import("../render.zig");
+const map = @import("map.zig");
 
 pub const ThrowParticle = struct {
     x: f32 = 0.0,
@@ -27,13 +28,12 @@ pub const ThrowParticle = struct {
     last_update: i64 = 0,
 
     pub fn addToMap(part: ThrowParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .throw = part }) catch @panic("Adding ThrowParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .throw = part }) catch main.oomPanic();
     }
 
     pub fn update(self: *ThrowParticle, time: i64, dt: f32) bool {
         self.time_left -= dt;
-        if (self.time_left <= 0)
-            return false;
+        if (self.time_left <= 0) return false;
 
         self.z = @sin(self.time_left / self.lifetime * std.math.pi) * 2;
         self.x += self.dx * dt / std.time.us_per_ms;
@@ -77,13 +77,12 @@ pub const SparkerParticle = struct {
     last_update: i64 = 0,
 
     pub fn addToMap(part: SparkerParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .sparker = part }) catch @panic("Adding SparkerParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .sparker = part }) catch main.oomPanic();
     }
 
     pub fn update(self: *SparkerParticle, time: i64, dt: f32) bool {
         self.time_left -= dt;
-        if (self.time_left <= 0)
-            return false;
+        if (self.time_left <= 0) return false;
 
         self.x += self.dx * dt;
         self.y += self.dy * dt;
@@ -125,13 +124,12 @@ pub const SparkParticle = struct {
     dy: f32,
 
     pub fn addToMap(part: SparkParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .spark = part }) catch @panic("Adding SparkParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .spark = part }) catch main.oomPanic();
     }
 
     pub fn update(self: *SparkParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
-        if (self.time_left <= 0)
-            return false;
+        if (self.time_left <= 0) return false;
 
         self.x += self.dx * (dt / std.time.us_per_s);
         self.y += self.dy * (dt / std.time.us_per_s);
@@ -152,13 +150,12 @@ pub const TeleportParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: TeleportParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .teleport = part }) catch @panic("Adding TeleportParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .teleport = part }) catch main.oomPanic();
     }
 
     pub fn update(self: *TeleportParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
-        if (self.time_left <= 0)
-            return false;
+        if (self.time_left <= 0) return false;
 
         const displacement = 8.0 / @as(f32, std.time.us_per_s);
         self.z += self.z_dir * dt * displacement;
@@ -181,13 +178,12 @@ pub const ExplosionParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: ExplosionParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .explosion = part }) catch @panic("Adding ExplosionParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .explosion = part }) catch main.oomPanic();
     }
 
     pub fn update(self: *ExplosionParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
-        if (self.time_left <= 0)
-            return false;
+        if (self.time_left <= 0) return false;
 
         const displacement = 8.0 / @as(f32, std.time.us_per_s);
         self.x += self.x_dir * dt * displacement;
@@ -212,13 +208,12 @@ pub const HitParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: HitParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .hit = part }) catch @panic("Adding HitParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .hit = part }) catch main.oomPanic();
     }
 
     pub fn update(self: *HitParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
-        if (self.time_left <= 0)
-            return false;
+        if (self.time_left <= 0) return false;
 
         const displacement = 8.0 / @as(f32, std.time.us_per_s);
         self.x += self.x_dir * dt * displacement;
@@ -244,13 +239,12 @@ pub const HealParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: HealParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .heal = part }) catch @panic("Adding HealParticle failed");
+        map.addListForType(Particle).append(main.allocator, .{ .heal = part }) catch main.oomPanic();
     }
 
     pub fn update(self: *HealParticle, _: i64, dt: f32) bool {
         self.time_left -= dt;
-        if (self.time_left <= 0)
-            return false;
+        if (self.time_left <= 0) return false;
 
         switch (self.target_obj_type) {
             inline else => |obj_enum| {
@@ -323,7 +317,7 @@ pub const ThrowEffect = struct {
     duration: i64,
 
     pub fn addToMap(effect: ThrowEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .throw = effect }) catch @panic("Adding ThrowEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .throw = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *ThrowEffect, _: i64, _: f32) bool {
@@ -351,7 +345,7 @@ pub const AoeEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: AoeEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .aoe = effect }) catch @panic("Adding AoeEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .aoe = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *AoeEffect, _: i64, _: f32) bool {
@@ -384,7 +378,7 @@ pub const TeleportEffect = struct {
     y: f32,
 
     pub fn addToMap(effect: TeleportEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .teleport = effect }) catch @panic("Adding TeleportEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .teleport = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *TeleportEffect, _: i64, _: f32) bool {
@@ -415,7 +409,7 @@ pub const LineEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: LineEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .line = effect }) catch @panic("Adding LineEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .line = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *LineEffect, _: i64, _: f32) bool {
@@ -448,12 +442,11 @@ pub const ExplosionEffect = struct {
     amount: u32,
 
     pub fn addToMap(effect: ExplosionEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .explosion = effect }) catch @panic("Adding ExplosionEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .explosion = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *ExplosionEffect, _: i64, _: f32) bool {
-        if (self.colors.len == 0)
-            return false;
+        if (self.colors.len == 0) return false;
 
         for (0..self.amount) |_| {
             const duration = (0.2 + utils.rng.random().float(f32) * 0.1) * std.time.us_per_s;
@@ -485,12 +478,11 @@ pub const HitEffect = struct {
     amount: u32,
 
     pub fn addToMap(effect: HitEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .hit = effect }) catch @panic("Adding HitEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .hit = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *HitEffect, _: i64, _: f32) bool {
-        if (self.colors.len == 0)
-            return false;
+        if (self.colors.len == 0) return false;
 
         const cos = self.speed / 600.0 * -@cos(self.angle);
         const sin = self.speed / 600.0 * -@sin(self.angle);
@@ -521,7 +513,7 @@ pub const HealEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: HealEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .heal = effect }) catch @panic("Adding HealEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .heal = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *HealEffect, _: i64, _: f32) bool {
@@ -569,12 +561,11 @@ pub const RingEffect = struct {
     last_activate: i64 = -1,
 
     pub fn addToMap(effect: RingEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .ring = effect }) catch @panic("Adding RingEffect failed");
+        map.addListForType(ParticleEffect).append(main.allocator, .{ .ring = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *RingEffect, time: i64, _: f32) bool {
-        if (self.cooldown > 0 and time < self.last_activate + self.cooldown)
-            return true;
+        if (self.cooldown > 0 and time < self.last_activate + self.cooldown) return true;
 
         const duration = 0.2 * std.time.us_per_s;
         for (0..12) |i| {

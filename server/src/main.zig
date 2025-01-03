@@ -1,21 +1,22 @@
 const std = @import("std");
-const build_options = @import("options");
-const db = @import("db.zig");
 const builtin = @import("builtin");
-const tracy = if (build_options.enable_tracy) @import("tracy") else {};
-const rpmalloc = @import("rpmalloc").RPMalloc(.{});
+
+const build_options = @import("options");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const uv = shared.uv;
-const maps = @import("map/maps.zig");
+
+const db = @import("db.zig");
+const GameClient = @import("GameClient.zig");
 const behavior = @import("logic/behavior.zig");
 const behavior_logic = @import("logic/logic.zig");
-
 const LoginClient = @import("LoginClient.zig");
-const GameClient = @import("GameClient.zig");
+const maps = @import("map/maps.zig");
 const Settings = @import("Settings.zig");
 
+const tracy = if (build_options.enable_tracy) @import("tracy") else {};
+const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 pub const c = @cImport({
     @cDefine("REDIS_OPT_NONBLOCK", {});
     @cDefine("REDIS_OPT_REUSEADDR", {});
@@ -89,7 +90,7 @@ pub fn main() !void {
     var login_server: uv.uv_tcp_t = .{};
     listenToServer(onGameAccept, @ptrCast(&game_server), settings.game_port);
     listenToServer(onLoginAccept, @ptrCast(&login_server), settings.login_port);
-    
+
     const run_status = uv.uv_run(uv.uv_default_loop(), uv.UV_RUN_DEFAULT);
     if (run_status != 0 and run_status != 1) std.log.err("Run failed: {s}", .{uv.uv_strerror(run_status)});
 }

@@ -1,28 +1,30 @@
 const std = @import("std");
-const element = @import("../ui/elements/element.zig");
+const float_us: comptime_float = std.time.us_per_s;
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
-const assets = @import("../assets.zig");
-const abilities = @import("abilities.zig");
-const map = @import("map.zig");
-const main = @import("../main.zig");
-const input = @import("../input.zig");
-const particles = @import("particles.zig");
-const ui_systems = @import("../ui/systems.zig");
-const base = @import("object_base.zig");
-const render = @import("../render.zig");
-const px_per_tile = Camera.px_per_tile;
 
+const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
+const px_per_tile = Camera.px_per_tile;
+const input = @import("../input.zig");
+const main = @import("../main.zig");
+const render = @import("../render.zig");
+const element = @import("../ui/elements/element.zig");
+const StatusText = @import("../ui/game/StatusText.zig");
+const ui_systems = @import("../ui/systems.zig");
+const abilities = @import("abilities.zig");
+const base = @import("object_base.zig");
 const Entity = @import("Entity.zig");
+const map = @import("map.zig");
+const particles = @import("particles.zig");
 const Projectile = @import("Projectile.zig");
 const Square = @import("Square.zig");
-const StatusText = @import("../ui/game/StatusText.zig");
+
 const Player = @This();
 
-const float_us: comptime_float = std.time.us_per_s;
 pub const move_threshold = 0.4;
 pub const min_move_speed = 4.0 / float_us;
 pub const max_move_speed = 9.6 / float_us;
@@ -40,8 +42,8 @@ name: ?[]const u8 = null,
 name_text_data: ?element.TextData = null,
 name_text_data_inited: bool = false,
 cards: []const u16 = &.{},
-resources: []const u32 = &.{},
-talents: []const u8 = &.{},
+resources: []const network_data.DataIdWithCount(u32) = &.{},
+talents: []const network_data.DataIdWithCount(u16) = &.{},
 in_combat: bool = false,
 aether: u8 = 1,
 spirits_communed: u32 = 0,
@@ -151,7 +153,7 @@ pub fn deinit(self: *Player) void {
 }
 
 pub fn onMove(self: *Player) void {
-    if (map.getSquare(self.x, self.y, true)) |square| self.move_multiplier = square.data.speed_mult;
+    if (map.getSquare(self.x, self.y, true, .con)) |square| self.move_multiplier = square.data.speed_mult;
 }
 
 pub fn strengthMult(self: Player) f32 {
@@ -236,14 +238,9 @@ pub fn useAbility(self: *Player, index: comptime_int) void {
     main.game_server.sendPacket(.{ .use_ability = .{ .time = time, .index = index, .data = data } });
 }
 
-pub fn doShoot(
-    self: *Player,
-    time: i64,
-    item_props: *game_data.ItemData,
-    attack_angle: f32,
-) void {
+pub fn doShoot(self: *Player, time: i64, item_props: *game_data.ItemData, attack_angle: f32) void {
     const projs_len = item_props.projectile_count;
-    const arc_gap = std.math.degreesToRadians(item_props.arc_gap);
+    const arc_gap = item_props.arc_gap * std.math.rad_per_deg;
     const total_angle = arc_gap * @as(f32, @floatFromInt(projs_len - 1));
     var angle = attack_angle - total_angle / 2.0;
     const proj_data = item_props.projectile.?;
@@ -279,6 +276,8 @@ pub fn doShoot(
 }
 
 pub fn weaponShoot(self: *Player, angle: f32, time: i64) void {
+    if (self.condition.stunned) return;
+
     const item_data = game_data.item.from_id.getPtr(self.inventory[0]) orelse return;
     if (item_data.projectile == null) return;
 
@@ -301,7 +300,7 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
 
     var atlas_data = self.atlas_data;
     var sink: f32 = 1.0;
-    if (map.getSquare(self.x, self.y, true)) |square| sink += if (square.data.sink) 0.75 else 0;
+    if (map.getSquare(self.x, self.y, true, .con)) |square| sink += if (square.data.sink) 0.75 else 0;
     atlas_data.tex_h /= sink;
 
     const w = atlas_data.texWRaw() * size;
@@ -501,78 +500,80 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
     self.direction = dir;
 
     if (self.map_id == map.info.player_map_id) {
-        if (ui_systems.screen == .editor) {
-            if (!std.math.isNan(self.move_angle)) {
-                const move_angle = self.move_angle;
-                const move_speed = self.moveSpeedMultiplier();
-                const new_x = self.x + move_speed * @cos(move_angle) * dt;
-                const new_y = self.y + move_speed * @sin(move_angle) * dt;
-
-                self.x = @max(0, @min(new_x, @as(f32, @floatFromInt(map.info.width - 1))));
-                self.y = @max(0, @min(new_y, @as(f32, @floatFromInt(map.info.height - 1))));
-            }
-        } else {
-            if (map.getSquare(self.x, self.y, true)) |square| {
-                const slide_amount = square.data.slide_amount;
+        if (!self.condition.paralyzed) {
+            if (ui_systems.screen == .editor) {
                 if (!std.math.isNan(self.move_angle)) {
                     const move_angle = self.move_angle;
                     const move_speed = self.moveSpeedMultiplier();
-                    const vec_x = move_speed * @cos(move_angle);
-                    const vec_y = move_speed * @sin(move_angle);
+                    const new_x = self.x + move_speed * @cos(move_angle) * dt;
+                    const new_y = self.y + move_speed * @sin(move_angle) * dt;
 
-                    if (slide_amount > 0.0) {
-                        self.x_dir *= slide_amount;
-                        self.y_dir *= slide_amount;
+                    self.x = @max(0, @min(new_x, @as(f32, @floatFromInt(map.info.width - 1))));
+                    self.y = @max(0, @min(new_y, @as(f32, @floatFromInt(map.info.height - 1))));
+                }
+            } else {
+                if (map.getSquare(self.x, self.y, true, .con)) |square| {
+                    const slide_amount = square.data.slide_amount;
+                    if (!std.math.isNan(self.move_angle)) {
+                        const move_angle = self.move_angle;
+                        const move_speed = self.moveSpeedMultiplier();
+                        const vec_x = move_speed * @cos(move_angle);
+                        const vec_y = move_speed * @sin(move_angle);
 
-                        const max_move_length = vec_x * vec_x + vec_y * vec_y;
-                        const move_length = self.x_dir * self.x_dir + self.y_dir * self.y_dir;
-                        if (move_length < max_move_length) {
-                            self.x_dir += vec_x * -1.0 * (slide_amount - 1.0);
-                            self.y_dir += vec_y * -1.0 * (slide_amount - 1.0);
+                        if (slide_amount > 0.0) {
+                            self.x_dir *= slide_amount;
+                            self.y_dir *= slide_amount;
+
+                            const max_move_length = vec_x * vec_x + vec_y * vec_y;
+                            const move_length = self.x_dir * self.x_dir + self.y_dir * self.y_dir;
+                            if (move_length < max_move_length) {
+                                self.x_dir += vec_x * -1.0 * (slide_amount - 1.0);
+                                self.y_dir += vec_y * -1.0 * (slide_amount - 1.0);
+                            }
+                        } else {
+                            self.x_dir = vec_x;
+                            self.y_dir = vec_y;
                         }
                     } else {
-                        self.x_dir = vec_x;
-                        self.y_dir = vec_y;
+                        const move_length_sqr = self.x_dir * self.x_dir + self.y_dir * self.y_dir;
+                        const min_move_len_sqr = 0.00012 * 0.00012;
+                        if (move_length_sqr > min_move_len_sqr and slide_amount > 0.0) {
+                            self.x_dir *= slide_amount;
+                            self.y_dir *= slide_amount;
+                        } else {
+                            self.x_dir = 0.0;
+                            self.y_dir = 0.0;
+                        }
                     }
+
+                    if (square.data.push) {
+                        self.x_dir -= square.data.animation.delta_x / 1000.0;
+                        self.y_dir -= square.data.animation.delta_y / 1000.0;
+                    }
+                }
+
+                const dx = self.x_dir * dt;
+                const dy = self.y_dir * dt;
+
+                if (dx < move_threshold and dx > -move_threshold and dy < move_threshold and dy > -move_threshold) {
+                    modifyStep(self, self.x + dx, self.y + dy);
                 } else {
-                    const move_length_sqr = self.x_dir * self.x_dir + self.y_dir * self.y_dir;
-                    const min_move_len_sqr = 0.00012 * 0.00012;
-                    if (move_length_sqr > min_move_len_sqr and slide_amount > 0.0) {
-                        self.x_dir *= slide_amount;
-                        self.y_dir *= slide_amount;
-                    } else {
-                        self.x_dir = 0.0;
-                        self.y_dir = 0.0;
-                    }
-                }
-
-                if (square.data.push) {
-                    self.x_dir -= square.data.animation.delta_x / 1000.0;
-                    self.y_dir -= square.data.animation.delta_y / 1000.0;
+                    const step_size = move_threshold / @max(@abs(dx), @abs(dy));
+                    for (0..@intFromFloat(1.0 / step_size)) |_| modifyStep(self, self.x + dx * step_size, self.y + dy * step_size);
                 }
             }
+        }
 
-            const dx = self.x_dir * dt;
-            const dy = self.y_dir * dt;
-
-            if (dx < move_threshold and dx > -move_threshold and dy < move_threshold and dy > -move_threshold) {
-                modifyStep(self, self.x + dx, self.y + dy);
-            } else {
-                const step_size = move_threshold / @max(@abs(dx), @abs(dy));
-                for (0..@intFromFloat(1.0 / step_size)) |_| modifyStep(self, self.x + dx * step_size, self.y + dy * step_size);
-            }
-
-            if (!self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
-                if (map.getSquare(self.x, self.y, true)) |square| {
-                    const protect = blk: {
-                        const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk false;
-                        break :blk e.data.block_ground_damage;
-                    };
-                    if (square.data.damage > 0 and !protect) {
-                        main.game_server.sendPacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
-                        map.takeDamage(self, square.data.damage, .true, .{}, self.colors);
-                        self.last_ground_damage_time = time;
-                    }
+        if (!self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
+            if (map.getSquare(self.x, self.y, true, .con)) |square| {
+                const protect = blk: {
+                    const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk false;
+                    break :blk e.data.block_ground_damage;
+                };
+                if (square.data.damage > 0 and !protect) {
+                    main.game_server.sendPacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
+                    map.takeDamage(self, square.data.damage, .true, .{}, self.colors);
+                    self.last_ground_damage_time = time;
                 }
             }
         }
@@ -597,7 +598,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
 }
 
 fn isWalkable(x: f32, y: f32) bool {
-    if (map.getSquare(x, y, true)) |square| {
+    if (map.getSquare(x, y, true, .con)) |square| {
         const walkable = !square.data.no_walk;
         const not_occupied = blk: {
             const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk true;
@@ -608,7 +609,7 @@ fn isWalkable(x: f32, y: f32) bool {
 }
 
 fn isFullOccupy(x: f32, y: f32) bool {
-    if (map.getSquare(x, y, true)) |square| {
+    if (map.getSquare(x, y, true, .con)) |square| {
         const e = map.findObject(Entity, square.entity_map_id, .con) orelse return false;
         return e.data.full_occupy or e.data.is_wall;
     } else return true;

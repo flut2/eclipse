@@ -1,17 +1,18 @@
 const std = @import("std");
-const element = @import("../elements/element.zig");
-const assets = @import("../../assets.zig");
-const main = @import("../../main.zig");
-const input = @import("../../input.zig");
-const systems = @import("../systems.zig");
+
 const game_data = @import("shared").game_data;
 
-const CardSelection = @This();
-const Container = @import("../elements/Container.zig");
-const Image = @import("../elements/Image.zig");
+const assets = @import("../../assets.zig");
+const input = @import("../../input.zig");
+const main = @import("../../main.zig");
 const Button = @import("../elements/Button.zig");
+const Container = @import("../elements/Container.zig");
+const element = @import("../elements/element.zig");
+const Image = @import("../elements/Image.zig");
 const Text = @import("../elements/Text.zig");
+const systems = @import("../systems.zig");
 
+const CardSelection = @This();
 const card_w = 300;
 const card_h = 350;
 const card_padding = 30;
@@ -211,7 +212,7 @@ pub fn create() !*CardSelection {
     return self;
 }
 
-pub fn deinit(self: *CardSelection) void {
+pub fn destroy(self: *CardSelection) void {
     element.destroy(self.base);
     main.allocator.destroy(self);
 }

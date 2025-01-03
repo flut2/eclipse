@@ -1,19 +1,20 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
+const build_options = @import("options");
 const shared = @import("shared");
 const network_data = shared.network_data;
-const element = @import("../elements/element.zig");
+
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
 const dialog = @import("../dialogs/dialog.zig");
-const build_options = @import("options");
+const Button = @import("../elements/Button.zig");
+const element = @import("../elements/element.zig");
+const Input = @import("../elements/Input.zig");
+const Text = @import("../elements/Text.zig");
 const ui_systems = @import("../systems.zig");
-const builtin = @import("builtin");
 
 const AccountRegisterScreen = @This();
-const Text = @import("../elements/Text.zig");
-const Input = @import("../elements/Input.zig");
-const Button = @import("../elements/Button.zig");
-
 username_text: *Text = undefined,
 username_input: *Input = undefined,
 email_text: *Text = undefined,

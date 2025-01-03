@@ -1,14 +1,15 @@
 const std = @import("std");
-const element = @import("element.zig");
-const systems = @import("../systems.zig");
-const render = @import("../../render.zig");
+
 const glfw = @import("zglfw");
 
-const DropdownContainer = @This();
-const Dropdown = @import("Dropdown.zig");
+const render = @import("../../render.zig");
+const systems = @import("../systems.zig");
 const Container = @import("Container.zig");
+const Dropdown = @import("Dropdown.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const DropdownContainer = @This();
 base: ElementBase,
 parent: *Dropdown,
 container: Container,

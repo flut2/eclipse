@@ -1,16 +1,17 @@
 const std = @import("std");
-const element = @import("../elements/element.zig");
-const assets = @import("../../assets.zig");
+
 const game_data = @import("shared").game_data;
+
+const assets = @import("../../assets.zig");
 const map = @import("../../game/map.zig");
+const Player = @import("../../game/Player.zig");
+const Container = @import("../elements/Container.zig");
+const element = @import("../elements/element.zig");
+const Image = @import("../elements/Image.zig");
+const Text = @import("../elements/Text.zig");
 const tooltip = @import("tooltip.zig");
 
 const ItemTooltip = @This();
-const Container = @import("../elements/Container.zig");
-const Image = @import("../elements/Image.zig");
-const Text = @import("../elements/Text.zig");
-const Player = @import("../../game/Player.zig");
-
 root: *Container = undefined,
 
 decor: *Image = undefined,
@@ -270,12 +271,12 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
                     .create_portal => |value| std.fmt.bufPrint(
                         self.getMainBuffer(),
                         line_base_inset ++ "Opens the following dungeon: " ++ string_fmt,
-                        .{ text, value },
+                        .{ text, value.name },
                     ),
                     inline .create_enemy, .create_entity => |value| std.fmt.bufPrint(
                         self.getMainBuffer(),
                         line_base_inset ++ "Spawn the following: " ++ string_fmt,
-                        .{ text, value },
+                        .{ text, value.name },
                     ),
                 } catch text;
             }

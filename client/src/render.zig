@@ -1,27 +1,28 @@
 const std = @import("std");
-const map = @import("game/map.zig");
-const assets = @import("assets.zig");
+
+const glfw = @import("zglfw");
 const gpu = @import("zgpu");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const zstbi = @import("zstbi");
-const element = @import("ui/elements/element.zig");
-const main = @import("main.zig");
-const ui_systems = @import("ui/systems.zig");
-const glfw = @import("zglfw");
-const px_per_tile = @import("Camera.zig").px_per_tile;
 
-const Square = @import("game/Square.zig");
+const assets = @import("assets.zig");
+const Ally = @import("game/Ally.zig");
+const Container = @import("game/Container.zig");
+const Enemy = @import("game/Enemy.zig");
+const Entity = @import("game/Entity.zig");
+const map = @import("game/map.zig");
 const Particle = @import("game/particles.zig").Particle;
 const Player = @import("game/Player.zig");
-const Entity = @import("game/Entity.zig");
-const Enemy = @import("game/Enemy.zig");
-const Container = @import("game/Container.zig");
-const Purchasable = @import("game/Purchasable.zig");
-const Ally = @import("game/Ally.zig");
 const Portal = @import("game/Portal.zig");
 const Projectile = @import("game/Projectile.zig");
+const Purchasable = @import("game/Purchasable.zig");
+const Square = @import("game/Square.zig");
+const main = @import("main.zig");
+const px_per_tile = @import("Camera.zig").px_per_tile;
+const element = @import("ui/elements/element.zig");
+const ui_systems = @import("ui/systems.zig");
 
 pub const CameraData = struct {
     minimap_zoom: f32,
@@ -835,7 +836,7 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
                 for (cam_data.min_x..cam_data.max_x) |x| {
                     const float_x: f32 = @floatFromInt(x);
                     const float_y: f32 = @floatFromInt(y);
-                    const square = map.getSquare(float_x, float_y, false).?;
+                    const square = map.getSquare(float_x, float_y, false, .con).?;
                     if (square.data_id == Square.empty_tile) continue;
 
                     const screen_pos = cam_data.worldToScreen(square.x, square.y);

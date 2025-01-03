@@ -1,8 +1,10 @@
 const std = @import("std");
-const main = @import("../main.zig");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
+
+const main = @import("../main.zig");
 
 pub fn write(
     comptime StatType: type,

@@ -1,11 +1,12 @@
 const std = @import("std");
-const utils = @import("shared").utils;
-const assets = @import("../../assets.zig");
-const systems = @import("../systems.zig");
-const render = @import("../../render.zig");
-const main = @import("../../main.zig");
 
+const utils = @import("shared").utils;
+
+const assets = @import("../../assets.zig");
+const main = @import("../../main.zig");
+const render = @import("../../render.zig");
 const Settings = @import("../../Settings.zig");
+const systems = @import("../systems.zig");
 const Bar = @import("Bar.zig");
 const Button = @import("Button.zig");
 const CharacterBox = @import("CharacterBox.zig");

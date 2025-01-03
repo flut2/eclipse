@@ -1,26 +1,28 @@
 const std = @import("std");
+
+const build_options = @import("options");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const uv = shared.uv;
-const main = @import("main.zig");
-const map = @import("game/map.zig");
-const assets = @import("assets.zig");
-const particles = @import("game/particles.zig");
-const ui_systems = @import("ui/systems.zig");
-const dialog = @import("ui/dialogs/dialog.zig");
-const build_options = @import("options");
 
-const Square = @import("game/Square.zig");
-const Player = @import("game/Player.zig");
+const assets = @import("assets.zig");
+const Ally = @import("game/Ally.zig");
+const Container = @import("game/Container.zig");
 const Enemy = @import("game/Enemy.zig");
 const Entity = @import("game/Entity.zig");
-const Container = @import("game/Container.zig");
+const map = @import("game/map.zig");
+const particles = @import("game/particles.zig");
+const Player = @import("game/Player.zig");
 const Portal = @import("game/Portal.zig");
 const Projectile = @import("game/Projectile.zig");
 const Purchasable = @import("game/Purchasable.zig");
-const Ally = @import("game/Ally.zig");
+const Square = @import("game/Square.zig");
+const main = @import("main.zig");
+const dialog = @import("ui/dialogs/dialog.zig");
+const ui_systems = @import("ui/systems.zig");
+
 const Server = @This();
 
 pub fn typeToObjEnum(comptime T: type) network_data.ObjectType {
@@ -121,8 +123,10 @@ fn ObjEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnum
 }
 
 pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
-    buf.*.base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic());
-    buf.*.len = @intCast(suggested_size);
+    buf.* = .{
+        .base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic()),
+        .len = @intCast(suggested_size),
+    };
 }
 
 fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {

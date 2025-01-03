@@ -1,23 +1,24 @@
 const std = @import("std");
+
+const glfw = @import("zglfw");
 const shared = @import("shared");
 const utils = shared.utils;
 const network_data = shared.network_data;
-const element = @import("elements/element.zig");
+
+const assets = @import("../assets.zig");
+const map = @import("../game/map.zig");
 const input = @import("../input.zig");
 const main = @import("../main.zig");
-const map = @import("../game/map.zig");
-const assets = @import("../assets.zig");
-const tooltip = @import("tooltips/tooltip.zig");
 const dialog = @import("dialogs/dialog.zig");
-const glfw = @import("zglfw");
-
+const element = @import("elements/element.zig");
 const MenuBackground = @import("elements/MenuBackground.zig");
 const AccountLoginScreen = @import("screens/AccountLoginScreen.zig");
 const AccountRegisterScreen = @import("screens/AccountRegisterScreen.zig");
 const CharCreateScreen = @import("screens/CharCreateScreen.zig");
 const CharSelectScreen = @import("screens/CharSelectScreen.zig");
-const MapEditorScreen = @import("screens/MapEditorScreen.zig");
 const GameScreen = @import("screens/GameScreen.zig");
+const MapEditorScreen = @import("screens/MapEditorScreen.zig");
+const tooltip = @import("tooltips/tooltip.zig");
 
 pub const ScreenType = enum {
     empty,
@@ -84,9 +85,7 @@ pub fn deinit() void {
 
 pub fn switchScreen(comptime screen_type: ScreenType) void {
     const T = std.meta.TagPayloadByName(Screen, @tagName(screen_type));
-    if (T == void) return;
-
-    if (screen == screen_type) return;
+    if (T == void or screen == screen_type) return;
 
     std.debug.assert(!ui_lock.tryLock());
 

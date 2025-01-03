@@ -1,0 +1,158 @@
+[
+{
+    .id = 65534,
+    .name = "Editor Grid",
+    .textures = [{"ground": 0}],
+},
+{
+    .id = 1,
+    .name = "Water",
+    .textures = [{"ground": 3}],
+    .blend_prio = 99,
+    .sink = true,
+    .speed_mult = 0.7,
+},
+{
+    .id = 2,
+    .name = "Water Dark",
+    .textures = [{"ground": 4}],
+    .no_walk = true,
+},
+{
+    .id = 3,
+    .name = "Grass",
+    .textures = [{"ground": 2}],
+    .blend_prio = 1,
+},
+{
+    .id = 4,
+    .name = "Dirt",
+    .textures = [{"ground": 1}],
+    .blend_prio = 2,
+},
+{
+    .id = 5,
+    .name = "Retrieve Metal Plating 1",
+    .textures = [{ "ground": 5 }, { "ground": 5 }, { "ground": 5 }, { "ground": 6 }],
+    .blend_prio = 1,
+},
+{
+    .id = 6,
+    .name = "Retrieve Metal Plating 2",
+    .textures = [{ "ground": 7 }, { "ground": 8 }, { "ground": 8 }, { "ground": 8 }],
+    .blend_prio = 1,
+},
+{
+    .id = 7,
+    .name = "Retrieve Air Vent",
+    .textures = [{ "ground": 9 }, { "ground": 10 }, { "ground": 10 }, { "ground": 10 }],
+    .blend_prio = 1,
+},
+{
+    .id = 8,
+    .name = "Retrieve Metal Tile",
+    .textures = [
+        { "ground": 11 }, { "ground": 12 }, { "ground": 12 }, { "ground": 12 },
+        { "ground": 12 }, { "ground": 13 }, { "ground": 13 }
+    ],
+    .blend_prio = 1,
+},
+{
+    .id = 9,
+    .name = "Crimson Chasm Gravel",
+    .textures = [
+        { "ground": 22 }, { "ground": 22 }, { "ground": 22 }, { "ground": 22 },
+        { "ground": 23 }, { "ground": 24 }, { "ground": 25 }
+    ],
+    .blend_prio = 2,
+},
+{
+    .id = 10,
+    .name = "Crimson Chasm Path",
+    .textures = [
+        { "ground": 26 }, { "ground": 26 }, { "ground": 27 }, { "ground": 27 },
+        { "ground": 27 }, { "ground": 28 }, { "ground": 29 }, { "ground": 30 },
+        { "ground": 31 },
+    ],
+    .blend_prio = 1,
+},
+{
+    .id = 11,
+    .name = "Crimson Chasm Soil",
+    .textures = [
+        { "ground": 32 }, { "ground": 33 }, { "ground": 34 }, { "ground": 35 },
+        { "ground": 36 }, { "ground": 37 }, { "ground": 38 }, { "ground": 39 },
+        { "ground": 40 }, { "ground": 41 }, { "ground": 42 }, { "ground": 43 },
+        { "ground": 44 }, { "ground": 45 }, { "ground": 46 }, { "ground": 47 },
+        { "ground": 48 }, { "ground": 49 },
+    ],
+    .blend_prio = 1,
+},
+{
+    .id = 12,
+    .name = "Crimson Chasm Checker Tile",
+    .textures = [{"ground": 50}],
+    .blend_prio = 1,
+},
+{
+    .id = 13,
+    .name = "Crimson Chasm Lava",
+    .textures = [{"ground": 51}],
+    .blend_prio = 4,
+    .sink = true,
+    .damage = 50,
+    .light = {
+        .color = "0xFFF4AA",
+        .intensity = 0.165,
+        .radius = 1.0,
+    },
+    .animation = { .type = @GroundAnim("wave"), .delta_x = -0.26, .delta_y = 0.26 },
+},
+{
+    .id = 14,
+    .name = "Crimson Chasm Lava Path",
+    .textures = [{"ground": 52}],
+    .blend_prio = 5,
+    .light = {
+        .color = "0xFFF4AA",
+        .intensity = 0.015,
+        .radius = 0.75,
+    },
+},
+{
+    .id = 15,
+    .name = "T1 Realm Grass Blades Light",
+    .textures = [{"ground": 53}],
+    .blend_prio = 1,
+},
+{
+    .id = 16,
+    .name = "T1 Realm Grass Blades Dark",
+    .textures = [{ "ground": 54 }, { "ground": 55 }],
+    .blend_prio = 2,
+},
+{
+    .id = 17,
+    .name = "T1 Realm Grass Blades Short",
+    .textures = [{ "ground": 56 }, { "ground": 57 }, { "ground": 58 }],
+    .blend_prio = 3,
+},
+{
+    .id = 18,
+    .name = "T1 Realm Grass Blades Light",
+    .textures = [{"ground": 59}],
+    .blend_prio = 1,
+},
+{
+    .id = 19,
+    .name = "T1 Realm Grass Blades Dark",
+    .textures = [{ "ground": 60 }, { "ground": 61 }],
+    .blend_prio = 2,
+},
+{
+    .id = 20,
+    .name = "T1 Realm Grass Blades Short",
+    .textures = [{ "ground": 62 }, { "ground": 63 }, { "ground": 64 }],
+    .blend_prio = 3,
+},
+]

@@ -1,16 +1,34 @@
 const std = @import("std");
+
 const glfw = @import("zglfw");
 const nfd = @import("nfd");
-const assets = @import("../../assets.zig");
-const main = @import("../../main.zig");
-const input = @import("../../input.zig");
-const map = @import("../../game/map.zig");
-const element = @import("../elements/element.zig");
-const dialog = @import("../dialogs/dialog.zig");
 const shared = @import("shared");
 const map_data = shared.map_data;
 const game_data = shared.game_data;
 const utils = shared.utils;
+
+const assets = @import("../../assets.zig");
+const Container = @import("../../game/Container.zig");
+const Enemy = @import("../../game/Enemy.zig");
+const Entity = @import("../../game/Entity.zig");
+const map = @import("../../game/map.zig");
+const Player = @import("../../game/Player.zig");
+const Portal = @import("../../game/Portal.zig");
+const Square = @import("../../game/Square.zig");
+const input = @import("../../input.zig");
+const main = @import("../../main.zig");
+const Settings = @import("../../Settings.zig");
+const dialog = @import("../dialogs/dialog.zig");
+const Button = @import("../elements/Button.zig");
+const UiContainer = @import("../elements/Container.zig");
+const Dropdown = @import("../elements/Dropdown.zig");
+const DropdownContainer = @import("../elements/DropdownContainer.zig");
+const element = @import("../elements/element.zig");
+const Image = @import("../elements/Image.zig");
+const KeyMapper = @import("../elements/KeyMapper.zig");
+const ScrollableContainer = @import("../elements/ScrollableContainer.zig");
+const Slider = @import("../elements/Slider.zig");
+const Text = @import("../elements/Text.zig");
 const ui_systems = @import("../systems.zig");
 
 const MapEditorTile = struct {
@@ -144,25 +162,7 @@ const CommandQueue = struct {
     }
 };
 
-const Settings = @import("../../Settings.zig");
-const Player = @import("../../game/Player.zig");
-const Entity = @import("../../game/Entity.zig");
-const Enemy = @import("../../game/Enemy.zig");
-const Portal = @import("../../game/Portal.zig");
-const Container = @import("../../game/Container.zig");
-const Square = @import("../../game/Square.zig");
-
 const MapEditorScreen = @This();
-const Text = @import("../elements/Text.zig");
-const UiContainer = @import("../elements/Container.zig");
-const Dropdown = @import("../elements/Dropdown.zig");
-const Image = @import("../elements/Image.zig");
-const ScrollableContainer = @import("../elements/ScrollableContainer.zig");
-const Button = @import("../elements/Button.zig");
-const KeyMapper = @import("../elements/KeyMapper.zig");
-const Slider = @import("../elements/Slider.zig");
-const DropdownContainer = @import("../elements/DropdownContainer.zig");
-
 const layers_text = [_][]const u8{ "Tiles", "Entities", "Enemies", "Portal", "Container", "Regions" };
 const layers = [_]Layer{ .ground, .entity, .enemy, .portal, .container, .region };
 

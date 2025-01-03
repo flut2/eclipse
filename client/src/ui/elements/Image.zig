@@ -1,14 +1,14 @@
-const element = @import("element.zig");
-const tooltip = @import("../tooltips/tooltip.zig");
+const game_data = @import("shared").game_data;
+
 const assets = @import("../../assets.zig");
 const map = @import("../../game/map.zig");
-const game_data = @import("shared").game_data;
 const main = @import("../../main.zig");
 const render = @import("../../render.zig");
-
-const Image = @This();
+const tooltip = @import("../tooltips/tooltip.zig");
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const Image = @This();
 base: ElementBase,
 image_data: element.ImageData,
 tooltip_text: ?element.TextData = null,

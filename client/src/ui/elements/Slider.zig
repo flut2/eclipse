@@ -1,14 +1,15 @@
 const std = @import("std");
-const element = @import("element.zig");
+
+const glfw = @import("zglfw");
+const utils = @import("shared").utils;
+
+const render = @import("../../render.zig");
 const systems = @import("../systems.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
-const render = @import("../../render.zig");
-const utils = @import("shared").utils;
-const glfw = @import("zglfw");
-
-const Slider = @This();
+const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const Slider = @This();
 // Event policy will be overwritten
 base: ElementBase,
 w: f32,

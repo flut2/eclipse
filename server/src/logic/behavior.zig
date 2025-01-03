@@ -1,12 +1,13 @@
 const std = @import("std");
-const main = @import("../main.zig");
-const gen_behaviors = @import("../_gen_behavior_file_dont_use.zig");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 
-const Entity = @import("../map/Entity.zig");
+const gen_behaviors = @import("../_gen_behavior_file_dont_use.zig");
+const main = @import("../main.zig");
 const Enemy = @import("../map/Enemy.zig");
+const Entity = @import("../map/Entity.zig");
 
 const BehaviorType = enum { entity, enemy, ally };
 pub const BehaviorMetadata = struct {

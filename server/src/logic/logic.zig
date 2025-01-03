@@ -1,15 +1,16 @@
 const std = @import("std");
-const main = @import("../main.zig");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
 
-const Player = @import("../map/Player.zig");
-const Projectile = @import("../map/Projectile.zig");
+const main = @import("../main.zig");
+const Ally = @import("../map/Ally.zig");
 const Enemy = @import("../map/Enemy.zig");
 const Entity = @import("../map/Entity.zig");
-const Ally = @import("../map/Ally.zig");
+const Player = @import("../map/Player.zig");
+const Projectile = @import("../map/Projectile.zig");
 const World = @import("../World.zig");
 
 pub const Storages = struct {

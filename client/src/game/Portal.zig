@@ -1,17 +1,19 @@
 const std = @import("std");
-const element = @import("../ui/elements/element.zig");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
-const assets = @import("../assets.zig");
-const particles = @import("particles.zig");
-const map = @import("map.zig");
-const main = @import("../main.zig");
-const base = @import("object_base.zig");
-const render = @import("../render.zig");
-const px_per_tile = Camera.px_per_tile;
 
+const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
+const px_per_tile = Camera.px_per_tile;
+const main = @import("../main.zig");
+const render = @import("../render.zig");
+const element = @import("../ui/elements/element.zig");
+const base = @import("object_base.zig");
+const map = @import("map.zig");
+const particles = @import("particles.zig");
+
 const Portal = @This();
 
 map_id: u32 = std.math.maxInt(u32),
@@ -97,7 +99,7 @@ pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_
     var atlas_data = self.atlas_data;
 
     var sink: f32 = 1.0;
-    if (map.getSquare(self.x, self.y, true)) |square| sink += if (square.data.sink) 0.75 else 0;
+    if (map.getSquare(self.x, self.y, true, .con)) |square| sink += if (square.data.sink) 0.75 else 0;
     atlas_data.tex_h /= sink;
 
     const w = atlas_data.texWRaw() * size;

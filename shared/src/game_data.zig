@@ -1,4 +1,7 @@
 const std = @import("std");
+
+const ziggy = @import("ziggy");
+
 const utils = @import("utils.zig");
 
 pub var resource: Maps(ResourceData) = .{};
@@ -27,13 +30,11 @@ fn parseClasses(allocator: std.mem.Allocator, path: []const u8) !void {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    const file_data = try file.readToEndAlloc(allocator, std.math.maxInt(u32));
+    const file_data = try file.readToEndAllocOptions(allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
     defer allocator.free(file_data);
 
-    const json = try std.json.parseFromSlice([]InternalClassData, allocator, file_data, .{});
-    defer json.deinit();
-
-    for (json.value) |int_class| {
+    const classes = try ziggy.parseLeaky([]InternalClassData, allocator, file_data, .{});
+    for (classes) |int_class| {
         const default_items: []u16 = try allocator.alloc(u16, int_class.default_items.len);
         for (default_items, 0..) |*default_item, i| {
             const item_name = int_class.default_items[i];
@@ -76,8 +77,8 @@ fn parseClasses(allocator: std.mem.Allocator, path: []const u8) !void {
             talent.description = try allocator.dupe(u8, int_class.talents[i].description);
             talent.level_costs = try allocator.dupe(TalentLevelCost, int_class.talents[i].level_costs);
             for (talent.level_costs, 0..) |*level_cost, j| {
-                level_cost.resource_costs = try allocator.dupe(ResourceCost, int_class.talents[i].level_costs[j].resource_costs);
-                level_cost.item_costs = try allocator.dupe(ItemCost, int_class.talents[i].level_costs[j].item_costs);
+                level_cost.resources = try allocator.dupe(ResourceCost, int_class.talents[i].level_costs[j].resources);
+                level_cost.items = try allocator.dupe(ItemCost, int_class.talents[i].level_costs[j].items);
             }
             talent.requires = try allocator.dupe(TalentRequirement, int_class.talents[i].requires);
         }
@@ -109,10 +110,10 @@ fn parseGeneric(allocator: std.mem.Allocator, path: []const u8, comptime DataTyp
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    const file_data = try file.readToEndAlloc(allocator, std.math.maxInt(u32));
+    const file_data = try file.readToEndAllocOptions(allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
     defer allocator.free(file_data);
 
-    const data_slice = try std.json.parseFromSliceLeaky([]DataType, allocator, file_data, .{ .allocate = .alloc_always });
+    const data_slice = try ziggy.parseLeaky([]DataType, allocator, file_data, .{});
     for (data_slice) |data| {
         try data_maps.from_id.put(allocator, data.id, data);
         try data_maps.from_name.put(allocator, data.name, data);
@@ -135,6 +136,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
             &region,
             &purchasable,
             &ally,
+            &resource,
         }) |data_maps| {
             if (data_maps.from_id.capacity() > 0) data_maps.from_id.rehash(dummy_id_ctx);
             if (data_maps.from_name.capacity() > 0) data_maps.from_name.rehash(dummy_name_ctx);
@@ -144,20 +146,21 @@ pub fn init(allocator: std.mem.Allocator) !void {
     arena = .init(allocator);
     const arena_allocator = arena.allocator();
 
-    try parseGeneric(arena_allocator, "./assets/data/cards.json", CardData, &card);
-    try parseGeneric(arena_allocator, "./assets/data/items.json", ItemData, &item);
-    try parseGeneric(arena_allocator, "./assets/data/containers.json", ContainerData, &container);
-    try parseGeneric(arena_allocator, "./assets/data/enemies.json", EnemyData, &enemy);
-    try parseGeneric(arena_allocator, "./assets/data/entities.json", EntityData, &entity);
-    try parseGeneric(arena_allocator, "./assets/data/walls.json", EntityData, &entity);
-    try parseGeneric(arena_allocator, "./assets/data/ground.json", GroundData, &ground);
-    try parseGeneric(arena_allocator, "./assets/data/portals.json", PortalData, &portal);
-    try parseGeneric(arena_allocator, "./assets/data/regions.json", RegionData, &region);
-    try parseGeneric(arena_allocator, "./assets/data/purchasables.json", PurchasableData, &purchasable);
-    try parseGeneric(arena_allocator, "./assets/data/allies.json", AllyData, &ally);
+    try parseGeneric(arena_allocator, "./assets/data/cards.ziggy", CardData, &card);
+    try parseGeneric(arena_allocator, "./assets/data/items.ziggy", ItemData, &item);
+    try parseGeneric(arena_allocator, "./assets/data/containers.ziggy", ContainerData, &container);
+    try parseGeneric(arena_allocator, "./assets/data/enemies.ziggy", EnemyData, &enemy);
+    try parseGeneric(arena_allocator, "./assets/data/entities.ziggy", EntityData, &entity);
+    try parseGeneric(arena_allocator, "./assets/data/walls.ziggy", EntityData, &entity);
+    try parseGeneric(arena_allocator, "./assets/data/ground.ziggy", GroundData, &ground);
+    try parseGeneric(arena_allocator, "./assets/data/portals.ziggy", PortalData, &portal);
+    try parseGeneric(arena_allocator, "./assets/data/regions.ziggy", RegionData, &region);
+    try parseGeneric(arena_allocator, "./assets/data/purchasables.ziggy", PurchasableData, &purchasable);
+    try parseGeneric(arena_allocator, "./assets/data/allies.ziggy", AllyData, &ally);
+    try parseGeneric(arena_allocator, "./assets/data/resources.ziggy", ResourceData, &resource);
 
     // Must be last to resolve item name->id
-    try parseClasses(arena_allocator, "./assets/data/classes.json");
+    try parseClasses(arena_allocator, "./assets/data/classes.ziggy");
 }
 
 pub fn deinit() void {
@@ -374,6 +377,17 @@ pub const AnimationData = struct {
 const TextureData = struct {
     sheet: []const u8,
     index: u16,
+
+    pub const ziggy_options = struct {
+        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) ziggy.Parser.Error!TextureData {
+            const map = try parser.parseValue(ziggy.dynamic.Map(u16), first_tok);
+            switch (map.fields.count()) {
+                0 => @panic("You can't provide an empty map"),
+                1 => return .{ .sheet = map.fields.keys()[0], .index = map.fields.values()[0] },
+                else => @panic("You can only map one value in a TextureData"),
+            }
+        }
+    };
 };
 
 pub const LightData = struct {
@@ -422,27 +436,18 @@ pub const ResourceRarity = enum { common, rare, epic };
 pub const ResourceData = struct {
     id: u16,
     name: []const u8,
-    description: []const u8,
     rarity: ResourceRarity,
     icon: TextureData,
 };
 
-pub const ResourceCost = struct { index: u16, cost: u32 };
-pub const ItemCost = struct { data_id: u16, amount: u8 };
+pub const ResourceCost = struct { name: []const u8, amount: u32 };
+pub const ItemCost = struct { name: []const u8, amount: u8 };
 
-pub const TalentType = enum { minor, major, keystone };
-pub const TalentLevelCost = struct {
-    resource_costs: []ResourceCost,
-    item_costs: []ItemCost,
-};
-pub const TalentRequirement = struct {
-    index: u16,
-    level: u8,
-};
+pub const TalentLevelCost = struct { resources: []ResourceCost, items: []ItemCost = &.{} };
+pub const TalentRequirement = struct { index: u16, level: u8 };
 pub const TalentData = struct {
     name: []const u8,
     description: []const u8,
-    type: TalentType,
     icon: TextureData,
     max_level: u8,
     level_costs: []TalentLevelCost,
@@ -616,19 +621,19 @@ pub const GroundData = struct {
 };
 
 pub const StatIncreaseData = union(enum) {
-    max_hp: u16,
-    max_mp: u16,
-    strength: u16,
-    wit: u16,
-    defense: u16,
-    resistance: u16,
-    speed: u16,
-    stamina: u16,
-    intelligence: u16,
-    penetration: u16,
-    piercing: u16,
-    haste: u16,
-    tenacity: u16,
+    max_hp: struct { amount: u16 },
+    max_mp: struct { amount: u16 },
+    strength: struct { amount: u16 },
+    wit: struct { amount: u16 },
+    defense: struct { amount: u16 },
+    resistance: struct { amount: u16 },
+    speed: struct { amount: u16 },
+    stamina: struct { amount: u16 },
+    intelligence: struct { amount: u16 },
+    penetration: struct { amount: u16 },
+    piercing: struct { amount: u16 },
+    haste: struct { amount: u16 },
+    tenacity: struct { amount: u16 },
 
     pub fn toString(self: StatIncreaseData) []const u8 {
         return switch (self) {
@@ -668,7 +673,7 @@ pub const StatIncreaseData = union(enum) {
 
     pub fn amount(self: StatIncreaseData) u16 {
         return switch (self) {
-            inline else => |inner| inner,
+            inline else => |inner| inner.amount,
         };
     }
 };
@@ -679,11 +684,11 @@ pub const TimedCondition = struct {
 };
 
 pub const ActivationData = union(enum) {
-    heal: i32,
-    magic: i32,
-    create_entity: []const u8,
-    create_enemy: []const u8,
-    create_portal: []const u8,
+    heal: struct { amount: i32 },
+    magic: struct { amount: i32 },
+    create_entity: struct { name: []const u8 },
+    create_enemy: struct { name: []const u8 },
+    create_portal: struct { name: []const u8 },
     heal_nova: struct { amount: i32, radius: f32 },
     magic_nova: struct { amount: i32, radius: f32 },
     stat_boost_self: struct { stat_incr: StatIncreaseData, amount: i16, duration: f32 },

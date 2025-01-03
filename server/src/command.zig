@@ -1,19 +1,20 @@
 const std = @import("std");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
+
+const Client = @import("GameClient.zig");
 const db = @import("db.zig");
 const main = @import("main.zig");
-
-const Entity = @import("map/Entity.zig");
-const Enemy = @import("map/Enemy.zig");
-const Portal = @import("map/Portal.zig");
-const Container = @import("map/Container.zig");
-const Purchasable = @import("map/Purchasable.zig");
 const Ally = @import("map/Ally.zig");
+const Container = @import("map/Container.zig");
+const Enemy = @import("map/Enemy.zig");
+const Entity = @import("map/Entity.zig");
 const Player = @import("map/Player.zig");
-const Client = @import("GameClient.zig");
+const Portal = @import("map/Portal.zig");
+const Purchasable = @import("map/Purchasable.zig");
 
 fn h(str: []const u8) u64 {
     return std.hash.Wyhash.hash(0, str);

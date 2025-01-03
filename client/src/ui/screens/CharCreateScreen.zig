@@ -1,13 +1,14 @@
 const std = @import("std");
-const element = @import("../elements/element.zig");
+
+const game_data = @import("shared").game_data;
+
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
-const game_data = @import("shared").game_data;
+const CharacterBox = @import("../elements/CharacterBox.zig");
+const element = @import("../elements/element.zig");
 const systems = @import("../systems.zig");
 
 const CharCreateScreen = @This();
-const CharacterBox = @import("../elements/CharacterBox.zig");
-
 boxes: std.ArrayListUnmanaged(*CharacterBox) = .empty,
 
 pub fn init(self: *CharCreateScreen) !void {

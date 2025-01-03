@@ -1,12 +1,14 @@
 const std = @import("std");
-const main = @import("../main.zig");
+
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
+
+const main = @import("../main.zig");
+const World = @import("../World.zig");
 const stat_util = @import("stat_util.zig");
 
-const World = @import("../World.zig");
 const Purchasable = @This();
 
 map_id: u32 = std.math.maxInt(u32),

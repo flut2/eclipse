@@ -1,15 +1,16 @@
 const std = @import("std");
-const element = @import("../elements/element.zig");
-const assets = @import("../../assets.zig");
+
 const game_data = @import("shared").game_data;
+
+const assets = @import("../../assets.zig");
 const map = @import("../../game/map.zig");
+const Container = @import("../elements/Container.zig");
+const element = @import("../elements/element.zig");
+const Image = @import("../elements/Image.zig");
+const Text = @import("../elements/Text.zig");
 const tooltip = @import("tooltip.zig");
 
 const AbilityTooltip = @This();
-const Container = @import("../elements/Container.zig");
-const Image = @import("../elements/Image.zig");
-const Text = @import("../elements/Text.zig");
-
 root: *Container = undefined,
 
 decor: *Image = undefined,

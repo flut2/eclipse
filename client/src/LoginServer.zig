@@ -1,16 +1,18 @@
 const std = @import("std");
+
+const build_options = @import("options");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const uv = shared.uv;
-const main = @import("main.zig");
-const map = @import("game/map.zig");
+
 const assets = @import("assets.zig");
+const map = @import("game/map.zig");
 const particles = @import("game/particles.zig");
-const ui_systems = @import("ui/systems.zig");
+const main = @import("main.zig");
 const dialog = @import("ui/dialogs/dialog.zig");
-const build_options = @import("options");
+const ui_systems = @import("ui/systems.zig");
 
 const Server = @This();
 
@@ -39,8 +41,10 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacketLogin).@"union".tag_t
 }
 
 pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
-    buf.*.base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic());
-    buf.*.len = @intCast(suggested_size);
+    buf.* = .{
+        .base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic()),
+        .len = @intCast(suggested_size),
+    };
 }
 
 fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
