@@ -11,6 +11,7 @@ const utils = shared.utils;
 const uv = shared.uv;
 const zaudio = @import("zaudio");
 const zstbi = @import("zstbi");
+const ziggy = @import("ziggy");
 
 const assets = @import("assets.zig");
 const Camera = @import("Camera.zig");
@@ -31,26 +32,20 @@ const AccountData = struct {
     token: u128,
 
     pub fn load() !AccountData {
-        const file = try std.fs.cwd().openFile("login_data_do_not_share.json", .{});
+        const file = try std.fs.cwd().openFile("login_data_do_not_share.ziggy", .{});
         defer file.close();
 
-        const file_data = try file.readToEndAlloc(account_arena_allocator, std.math.maxInt(u32));
+        const file_data = try file.readToEndAllocOptions(account_arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
         defer account_arena_allocator.free(file_data);
 
-        return try std.json.parseFromSliceLeaky(
-            AccountData,
-            account_arena_allocator,
-            file_data,
-            .{ .ignore_unknown_fields = true, .allocate = .alloc_always },
-        );
+        return try ziggy.parseLeaky(AccountData, account_arena_allocator, file_data, .{});
     }
 
     pub fn save(self: AccountData) !void {
-        const file = try std.fs.cwd().createFile("login_data_do_not_share.json", .{});
+        const file = try std.fs.cwd().createFile("login_data_do_not_share.ziggy", .{});
         defer file.close();
 
-        const json = try std.json.stringifyAlloc(account_arena_allocator, self, .{ .whitespace = .indent_4 });
-        try file.writeAll(json);
+        try ziggy.stringify(self, .{ .whitespace = .space_4 }, file.writer());
     }
 };
 

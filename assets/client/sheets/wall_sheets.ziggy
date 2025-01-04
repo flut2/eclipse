@@ -1,0 +1,10 @@
+[
+{
+    .name = "walls",
+    .path = "walls.png",
+    .full_w = 11,
+    .full_h = 20,
+    .w = 9,
+    .h = 18,
+},
+]

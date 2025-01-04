@@ -5,6 +5,7 @@ const game_data = @import("shared").game_data;
 const glfw = @import("zglfw");
 const pack = @import("turbopack");
 const zaudio = @import("zaudio");
+const ziggy = @import("ziggy");
 const zstbi = @import("zstbi");
 
 const main = @import("main.zig");
@@ -1072,12 +1073,10 @@ fn parseFontData(comptime path: []const u8) !ParsedFontData {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    const file_data = try file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+    const file_data = try file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
     defer arena_allocator.free(file_data);
 
-    const font_data = try std.json.parseFromSlice(InternalFontData, arena_allocator, file_data, .{});
-    defer font_data.deinit();
-    const font_data_value = font_data.value;
+    const font_data = try ziggy.parseLeaky(InternalFontData, arena_allocator, file_data, .{});
 
     const empty_char: CharacterData = .{
         .x_advance = 0.0,
@@ -1092,14 +1091,14 @@ fn parseFontData(comptime path: []const u8) !ParsedFontData {
     };
     var ret: ParsedFontData = .{
         .characters = @splat(empty_char),
-        .size = font_data_value.atlas.size,
+        .size = font_data.atlas.size,
         .padding = 8.0,
-        .px_range = font_data_value.atlas.distance_range,
-        .line_height = font_data_value.metrics.line_height,
-        .width = font_data_value.atlas.width,
-        .height = font_data_value.atlas.height,
+        .px_range = font_data.atlas.distance_range,
+        .line_height = font_data.metrics.line_height,
+        .width = font_data.atlas.width,
+        .height = font_data.atlas.height,
     };
-    for (font_data_value.glyphs) |glyph| ret.characters[glyph.unicode] = try CharacterData.parse(glyph, ret.size, ret.width, ret.height);
+    for (font_data.glyphs) |glyph| ret.characters[glyph.unicode] = try .parse(glyph, ret.size, ret.width, ret.height);
     return ret;
 }
 
@@ -1222,10 +1221,10 @@ pub fn init() !void {
     medium_atlas = try .loadFromFile("./assets/fonts/amaranth_regular.png", 4);
     medium_italic_atlas = try .loadFromFile("./assets/fonts/amaranth_italic.png", 4);
 
-    bold_data = try parseFontData("./assets/fonts/amaranth_bold.json");
-    bold_italic_data = try parseFontData("./assets/fonts/amaranth_bold_italic.json");
-    medium_data = try parseFontData("./assets/fonts/amaranth_regular.json");
-    medium_italic_data = try parseFontData("./assets/fonts/amaranth_italic.json");
+    bold_data = try parseFontData("./assets/fonts/amaranth_bold.ziggy");
+    bold_italic_data = try parseFontData("./assets/fonts/amaranth_bold_italic.ziggy");
+    medium_data = try parseFontData("./assets/fonts/amaranth_regular.ziggy");
+    medium_italic_data = try parseFontData("./assets/fonts/amaranth_italic.ziggy");
 
     initAudio: {
         audio_state = AudioState.create() catch {
@@ -1255,17 +1254,12 @@ pub fn init() !void {
     var ui_ctx: pack.Context = try .create(main.allocator, ui_atlas_width, ui_atlas_height, .{ .spaces_to_prealloc = 4096 });
     defer ui_ctx.deinit();
 
-    const game_sheets_file = try std.fs.cwd().openFile("./assets/sheets/game_sheets.json", .{});
-    defer game_sheets_file.close();
+    const game_sheets_data = try std.fs.cwd().openFile("./assets/sheets/game_sheets.ziggy", .{});
+    defer game_sheets_data.close();
 
-    const game_sheets_file_data = try game_sheets_file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+    const game_sheets_file_data = try game_sheets_data.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
 
-    for (try std.json.parseFromSliceLeaky(
-        []GameSheet,
-        arena_allocator,
-        game_sheets_file_data,
-        .{ .allocate = .alloc_always },
-    )) |game_sheet| {
+    for (try ziggy.parseLeaky([]GameSheet, arena_allocator, game_sheets_file_data, .{})) |game_sheet| {
         switch (game_sheet.type) {
             .image => try addImage(
                 game_sheet.name,
@@ -1292,17 +1286,12 @@ pub fn init() !void {
         }
     }
 
-    const wall_sheets_file = try std.fs.cwd().openFile("./assets/sheets/wall_sheets.json", .{});
+    const wall_sheets_file = try std.fs.cwd().openFile("./assets/sheets/wall_sheets.ziggy", .{});
     defer wall_sheets_file.close();
 
-    const wall_sheets_file_data = try wall_sheets_file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+    const wall_sheets_file_data = try wall_sheets_file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
 
-    for (try std.json.parseFromSliceLeaky(
-        []WallSheet,
-        arena_allocator,
-        wall_sheets_file_data,
-        .{ .allocate = .alloc_always },
-    )) |wall_sheet|
+    for (try ziggy.parseLeaky([]WallSheet, arena_allocator, wall_sheets_file_data, .{})) |wall_sheet|
         try addWall(
             wall_sheet.name,
             wall_sheet.path,
@@ -1313,17 +1302,12 @@ pub fn init() !void {
             &ctx,
         );
 
-    const ui_sheets_file = try std.fs.cwd().openFile("./assets/ui/ui_sheets.json", .{});
-    defer ui_sheets_file.close();
+    const ui_sheets_data = try std.fs.cwd().openFile("./assets/ui/ui_sheets.ziggy", .{});
+    defer ui_sheets_data.close();
 
-    const ui_sheets_file_data = try ui_sheets_file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+    const ui_sheets_file_data = try ui_sheets_data.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
 
-    for (try std.json.parseFromSliceLeaky(
-        []UiSheet,
-        arena_allocator,
-        ui_sheets_file_data,
-        .{ .allocate = .alloc_always },
-    )) |ui_sheet|
+    for (try ziggy.parseLeaky([]UiSheet, arena_allocator, ui_sheets_file_data, .{})) |ui_sheet|
         try addUiImage(ui_sheet.name, ui_sheet.path, ui_sheet.w, ui_sheet.h, &ui_ctx);
 
     if (ui_atlas_data.get("minimap_icons")) |icons| minimap_icons = icons else @panic("minimap_icons not found in UI atlas");

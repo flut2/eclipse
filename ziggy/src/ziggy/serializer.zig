@@ -84,13 +84,13 @@ pub fn stringifyInner(
 
         .null => try writer.writeAll("null"),
 
-        .enum_literal => try writer.print("\"{s}\"", .{@tagName(value)}),
+        .enum_literal => try writer.print("@Any(\"{s}\")", .{@tagName(value)}),
 
         .@"enum" => {
             if (@hasDecl(T, "ziggy_options") and @hasDecl(T.ziggy_options, "stringify")) {
                 try T.ziggy_options.stringify(value, opts, indent_level, depth, writer);
             } else {
-                try writer.print("\"{s}\"", .{@tagName(value)});
+                try writer.print("@Any(\"{s}\")", .{@tagName(value)});
             }
         },
 
@@ -238,35 +238,16 @@ fn stringifyStructInner(writer: anytype, strct: anytype, indent_level: usize, de
 fn stringifyUnion(writer: anytype, un: anytype, indent_level: usize, depth: usize, opts: StringifyOptions) !void {
     const T = @typeInfo(@TypeOf(un)).@"union";
     if (T.tag_type == null) @compileError("Union '" ++ @typeName(@TypeOf(un)) ++ "' must be tagged!");
-    var opts_ = opts;
-    opts_.omit_top_level_curly = false;
-    const at = std.meta.activeTag(un);
-    try writer.print("{s}", .{@tagName(at)});
+    var opts_mod = opts;
+    opts_mod.omit_top_level_curly = false;
+    const active_tag = std.meta.activeTag(un);
+    try writer.print("{s}", .{@tagName(active_tag)});
     if (opts.whitespace != .minified) try writer.writeAll(" ");
-    inline for (T.fields) |field| {
-        if (std.mem.eql(u8, field.name, @tagName(at))) {
-            switch (@typeInfo(field.type)) {
-                .@"struct" => try stringifyInner(@field(un, field.name), opts_, indent_level, depth, writer),
-                else => {
-                    const value_field: std.builtin.Type.StructField = .{
-                        .name = "value",
-                        .type = field.type,
-                        .default_value = null,
-                        .is_comptime = false,
-                        .alignment = @alignOf(field.type),
-                    };
-                    const St = @Type(.{ .Struct = .{
-                        .layout = .auto,
-                        .fields = &.{value_field},
-                        .decls = &.{},
-                        .is_tuple = false,
-                    } });
-                    const v: St = .{ .value = @field(un, field.name) };
-                    try stringifyInner(v, opts_, indent_level, depth, writer);
-                },
-            }
-        }
-    }
+    try writer.writeAll("{ ");
+    inline for (T.fields) |field|
+        if (std.mem.eql(u8, field.name, @tagName(active_tag)))
+            try stringifyInner(@field(un, field.name), opts_mod, indent_level, depth, writer);
+    try writer.writeAll(" }");
 }
 
 fn testStringify(value: anytype, opts: StringifyOptions, expected_output: []const u8) !void {

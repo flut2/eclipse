@@ -3,6 +3,7 @@ const std = @import("std");
 const shared = @import("shared");
 const map_data = shared.map_data;
 const game_data = shared.game_data;
+const ziggy = @import("ziggy");
 
 const main = @import("../main.zig");
 const World = @import("../World.zig");
@@ -19,12 +20,6 @@ pub const LightData = struct {
     intensity: f32 = 0.0,
     day_intensity: f32 = 0.0,
     night_intensity: f32 = 0.0,
-
-    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!@This() {
-        return game_data.jsonParseWithHex(@This(), allocator, source, options);
-    }
-
-    pub const jsonStringify = @compileError("Not supported");
 };
 
 pub const MapType = enum { default, realm, @"test" };
@@ -168,13 +163,13 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
 }
 
 pub fn init() !void {
-    const file = try std.fs.cwd().openFile("./assets/worlds/maps.json", .{});
+    const file = try std.fs.cwd().openFile("./assets/worlds/maps.ziggy", .{});
     defer file.close();
 
-    const file_data = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
+    const file_data = try file.readToEndAllocOptions(main.allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
     defer main.allocator.free(file_data);
 
-    for (try std.json.parseFromSliceLeaky([]MapDetails, main.allocator, file_data, .{})) |details| {
+    for (try ziggy.parseLeaky([]MapDetails, main.allocator, file_data, .{})) |details| {
         const path = try std.fmt.allocPrint(main.allocator, "./assets/worlds/{s}", .{details.file});
         defer main.allocator.free(path);
 

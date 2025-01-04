@@ -185,6 +185,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     }).module("rpmalloc")) catch @panic("OOM");
 
+    b.modules.put(b.dupe("ziggy"), b.dependency("ziggy", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("ziggy")) catch @panic("OOM");
+
     lib.addImport("ziggy", b.dependency("ziggy", .{
         .target = target,
         .optimize = optimize,

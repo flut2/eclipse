@@ -1,4 +1,5 @@
 const std = @import("std");
+const ziggy = @import("ziggy");
 
 const Settings = @This();
 
@@ -17,13 +18,13 @@ pub fn init(allocator: std.mem.Allocator) !Settings {
     arena = std.heap.ArenaAllocator.init(allocator);
     const arena_allocator = arena.allocator();
 
-    const file = std.fs.cwd().openFile("assets/settings.json", .{}) catch @panic("Settings file not found");
+    const file = std.fs.cwd().openFile("assets/settings.ziggy", .{}) catch @panic("Settings file not found");
     defer file.close();
 
-    const file_data = try file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+    const file_data = try file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
     defer arena_allocator.free(file_data);
 
-    return try std.json.parseFromSliceLeaky(Settings, arena_allocator, file_data, .{ .ignore_unknown_fields = true, .allocate = .alloc_always });
+    return try ziggy.parseLeaky(Settings, arena_allocator, file_data, .{});
 }
 
 pub fn deinit() void {

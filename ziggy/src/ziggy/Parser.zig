@@ -184,9 +184,12 @@ fn parseUnion(
 
         for (info.fields) |f| {
             switch (@typeInfo(f.type)) {
-                .@"struct" => {},
+                .@"struct", .@"union", .@"enum", .optional, .array, .bool, .int, .float => {},
+                .pointer => |p| {
+                    if (p.size == .C or p.size == .Many) @compileError("Many/C pointers are not supported");
+                },
                 else => {
-                    @compileError("all the cases of union '" ++ @typeName(T) ++ "' must be of struct type");
+                    @compileError("Unhandled union case for '" ++ @typeName(T) ++ "': " ++ f.type);
                 },
             }
         }
@@ -195,15 +198,15 @@ fn parseUnion(
     // TODO: check identifier for conformance
     try self.must(first_tok, .identifier);
     const case_name = first_tok.loc.src(self.code);
-
-    inline for (info.fields) |f| {
-        if (std.mem.eql(u8, f.name, case_name)) {
-            return @unionInit(
-                T,
-                f.name,
-                try self.parseStruct(f.type, self.next()),
-            );
-        }
+    inline for (info.fields) |field| {
+        if (std.mem.eql(u8, field.name, case_name)) switch (@typeInfo(field.type)) {
+            .@"struct" => return @unionInit(T, field.name, try self.parseValue(field.type, self.next())),
+            else => {
+                try self.must(self.next(), .lb);
+                defer self.must(self.next(), .rb) catch @panic("cba doing this properly");
+                return @unionInit(T, field.name, try self.parseValue(field.type, self.next()));
+            },
+        };
     }
 
     return self.addError(.{

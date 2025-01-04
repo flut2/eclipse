@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const ziggy = @import("ziggy");
 
 const glfw = @import("zglfw");
 
@@ -44,13 +45,13 @@ pub fn init(allocator: std.mem.Allocator) !Self {
     arena = .init(allocator);
     const arena_allocator = arena.allocator();
 
-    const file = std.fs.cwd().openFile("settings.json", .{}) catch return .{};
+    const file = std.fs.cwd().openFile("settings.ziggy", .{}) catch return .{};
     defer file.close();
 
-    const file_data = try file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+    const file_data = try file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
     defer arena_allocator.free(file_data);
 
-    return try std.json.parseFromSliceLeaky(Self, arena_allocator, file_data, .{ .ignore_unknown_fields = true });
+    return try ziggy.parseLeaky(Self, arena_allocator, file_data, .{});
 }
 
 pub fn deinit(self: Self) void {
@@ -63,11 +64,10 @@ pub fn deinit(self: Self) void {
 }
 
 pub fn save(self: Self) !void {
-    const file = try std.fs.cwd().createFile("settings.json", .{});
+    const file = try std.fs.cwd().createFile("settings.ziggy", .{});
     defer file.close();
 
-    const settings_json = try std.json.stringifyAlloc(arena.allocator(), self, .{ .whitespace = .indent_4 });
-    try file.writeAll(settings_json);
+    try ziggy.stringify(self, .{ .whitespace = .space_4 }, file.writer());
 }
 
 pub fn resetToDefaults(self: *Self) void {

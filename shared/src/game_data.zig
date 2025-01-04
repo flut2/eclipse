@@ -167,107 +167,6 @@ pub fn deinit() void {
     arena.deinit();
 }
 
-fn isNumberFormattedLikeAnInteger(value: []const u8) bool {
-    if (std.mem.eql(u8, value, "-0")) return false;
-    return std.mem.indexOfAny(u8, value, ".eE") == null;
-}
-
-fn sliceToInt(comptime T: type, slice: []const u8) !T {
-    if (isNumberFormattedLikeAnInteger(slice))
-        return std.fmt.parseInt(T, slice, 0);
-    // Try to coerce a float to an integer.
-    const float = try std.fmt.parseFloat(f128, slice);
-    if (@round(float) != float) return error.InvalidNumber;
-    if (float > std.math.maxInt(T) or float < std.math.minInt(T)) return error.Overflow;
-    return @as(T, @intCast(@as(i128, @intFromFloat(float))));
-}
-
-fn freeAllocated(allocator: std.mem.Allocator, token: std.json.Token) void {
-    switch (token) {
-        .allocated_number, .allocated_string => |slice| {
-            allocator.free(slice);
-        },
-        else => {},
-    }
-}
-
-pub fn jsonParseWithHex(comptime T: type, allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!T {
-    const struct_info = @typeInfo(T).@"struct";
-
-    if (.object_begin != try source.next()) return error.UnexpectedToken;
-
-    var r: T = undefined;
-    var fields_seen = [_]bool{false} ** struct_info.fields.len;
-
-    while (true) {
-        var name_token: ?std.json.Token = try source.nextAllocMax(allocator, .alloc_if_needed, options.max_value_len.?);
-        const field_name = switch (name_token.?) {
-            inline .string, .allocated_string => |slice| slice,
-            .object_end => { // No more fields.
-                break;
-            },
-            else => {
-                return error.UnexpectedToken;
-            },
-        };
-
-        inline for (struct_info.fields, 0..) |field, i| {
-            if (field.is_comptime) @compileError("comptime fields are not supported: " ++ @typeName(LightData) ++ "." ++ field.name);
-            if (std.mem.eql(u8, field.name, field_name)) {
-                // Free the name token now in case we're using an allocator that optimizes freeing the last allocated object.
-                // (Recursing into innerParse() might trigger more allocations.)
-                freeAllocated(allocator, name_token.?);
-                name_token = null;
-                if (fields_seen[i]) {
-                    switch (options.duplicate_field_behavior) {
-                        .use_first => {
-                            // Parse and ignore the redundant value.
-                            // We don't want to skip the value, because we want type checking.
-                            _ = try std.json.innerParse(field.type, allocator, source, options);
-                            break;
-                        },
-                        .@"error" => return error.DuplicateField,
-                        .use_last => {},
-                    }
-                }
-                @field(r, field.name) = switch (@typeInfo(field.type)) {
-                    .int, .comptime_int => blk: {
-                        const token = try source.nextAllocMax(allocator, .alloc_if_needed, options.max_value_len.?);
-                        defer freeAllocated(allocator, token);
-                        const slice = switch (token) {
-                            inline .number, .allocated_number, .string, .allocated_string => |slice| slice,
-                            else => return error.UnexpectedToken,
-                        };
-                        break :blk try sliceToInt(field.type, slice);
-                    },
-                    else => try std.json.innerParse(field.type, allocator, source, options),
-                };
-                fields_seen[i] = true;
-                break;
-            }
-        } else {
-            // Didn't match anything.
-            freeAllocated(allocator, name_token.?);
-            if (options.ignore_unknown_fields) {
-                try source.skipValue();
-            } else {
-                return error.UnknownField;
-            }
-        }
-    }
-    inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
-        if (!fields_seen[i]) {
-            if (field.default_value) |default_ptr| {
-                const default = @as(*align(1) const field.type, @ptrCast(default_ptr)).*;
-                @field(r, field.name) = default;
-            } else {
-                return error.MissingField;
-            }
-        }
-    }
-    return r;
-}
-
 pub fn spiritGoal(aether: u8) u32 {
     return switch (aether) {
         1 => 2800,
@@ -396,12 +295,6 @@ pub const LightData = struct {
     radius: f32 = 1.0,
     pulse: f32 = 0.0,
     pulse_speed: f32 = 0.0,
-
-    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!LightData {
-        return jsonParseWithHex(LightData, allocator, source, options);
-    }
-
-    pub const jsonStringify = @compileError("Not supported");
 };
 
 const ClassStats = struct {
@@ -745,12 +638,6 @@ pub const RegionData = struct {
     id: u16,
     name: []const u8,
     color: u32,
-
-    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!RegionData {
-        return jsonParseWithHex(RegionData, allocator, source, options);
-    }
-
-    pub const jsonStringify = @compileError("Not supported");
 };
 
 pub const StringContext = struct {

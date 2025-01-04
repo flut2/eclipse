@@ -134,7 +134,13 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
 
     server.initialized = true;
     if (server.needs_verify) {
-        if (main.current_account) |acc| server.sendPacket(.{ .verify = .{ .email = acc.email, .token = acc.token } });
+        if (main.current_account) |acc| {
+            server.sendPacket(.{ .verify = .{ .email = acc.email, .token = acc.token } });
+        } else {
+            ui_systems.ui_lock.lock();
+            defer ui_systems.ui_lock.unlock();
+            ui_systems.switchScreen(.main_menu);
+        }
         server.needs_verify = false;
     }
 

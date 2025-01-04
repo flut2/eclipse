@@ -49,6 +49,7 @@ pub fn buildWithoutDupes(
         exe.root_module.addImport("shared", shared_dep.module("shared"));
         exe.root_module.addImport("rpmalloc", shared_dep.module("rpmalloc"));
         if (enable_tracy) exe.root_module.addImport("tracy", shared_dep.module("tracy"));
+        exe.root_module.addImport("ziggy", shared_dep.module("ziggy"));
 
         const hiredis = b.dependency("hiredis", .{});
         const hiredis_path = hiredis.path(".");
