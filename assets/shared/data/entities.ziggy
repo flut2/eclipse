@@ -89,4 +89,39 @@
     .textures = [{"props": 4}, {"props": 5}, {"props": 6}],
     .draw_on_ground = true,
 },
+{
+    .id = 11,
+    .name = "T1 Realm Deco Bench",
+    .textures = [{"props":61}, {"props":62}],
+    .occupy_square = false,
+},
+{
+    .id = 12,
+    .name = "T1 Realm Deco Table",
+    .textures = [{"props":63}],
+    .occupy_square = true,
+},
+{
+    .id = 13,
+    .name = "T1 Realm Deco Bed",
+    .textures = [{"props":64}],
+    .occupy_square = true,
+},
+{
+    .id = 14,
+    .name = "T1 Realm Flowers",
+    .textures = [{"props":89}, {"props":90}, {"props":91}, {"props":92}, {"props":93}, {"props":94}, {"props":95}, {"props":96}, {"props":97}, {"props":98}, {"props":99}, {"props":100}, {"props":101}, {"props":102}, {"props":103}, {"props":104}, {"props":105}, {"props":106}, {"props":107}, {"props":108}, {"props":109}, {"props":110}, {"props":111}, {"props":112}, {"props":113}, {"props":114}, {"props":115}],
+    .occupy_square = false,
+},
+{
+    .id = 15,
+    .name = "T1 Realm Dead Trees",
+    .textures = [{"props": 116}, {"props": 117}, {"props": 118}, {"props": 119}, {"props": 120}, {"props": 121}, {"props": 122}, {"props": 123}],
+    .occupy_square = true,
+},
+{
+    .id = 16,
+    .name = "T1 Realm Bushes",
+    .textures = [{"props": 124}, {"props": 125}, {"props": 126}, {"props": 127}, {"props": 128}, {"props": 129}, {"props": 0}, {"props": 3}],
+}
 ]
