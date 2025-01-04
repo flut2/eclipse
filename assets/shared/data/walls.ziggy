@@ -131,7 +131,7 @@
     .textures = [{"walls": 36}],
     .is_wall = true,
     .animation = {
-        .period = 2.1,
+        .period = 1.8,
         .frames = [
             { .time = 0.3, .texture = { "walls": 36 } },
             { .time = 0.3, .texture = { "walls": 37 } },
@@ -148,7 +148,7 @@
     .textures = [{"walls": 42}],
     .is_wall = true,
     .animation = {
-        .period = 2.1,
+        .period = 1.8,
         .frames = [
             { .time = 0.3, .texture = { "walls": 42 } },
             { .time = 0.3, .texture = { "walls": 43 } },
