@@ -317,7 +317,7 @@ pub const AbilityData = struct {
     cooldown: f32,
     icon: TextureData,
     projectiles: ?[]ProjectileData = null,
-    sound: []const u8 = "",
+    sound: []const u8 = "Unknown.mp3",
 };
 
 pub const ResourceRarity = enum { common, rare, epic };
@@ -350,8 +350,8 @@ const InternalClassData = struct {
     item_types: []const ItemType,
     default_items: []const []const u8,
     stats: ClassStats,
-    hit_sound: []const u8 = "Unknown",
-    death_sound: []const u8 = "Unknown",
+    hit_sound: []const u8 = "Unknown.mp3",
+    death_sound: []const u8 = "Unknown.mp3",
     rpc_name: []const u8 = "Unknown",
     abilities: [4]AbilityData,
     light: LightData = .{},
@@ -366,8 +366,8 @@ pub const ClassData = struct {
     item_types: []const ItemType,
     default_items: []const u16,
     stats: ClassStats,
-    hit_sound: []const u8,
-    death_sound: []const u8,
+    hit_sound: []const u8 = "Unknown.mp3",
+    death_sound: []const u8 = "Unknown.mp3",
     rpc_name: []const u8,
     abilities: [4]AbilityData,
     light: LightData,
@@ -436,8 +436,8 @@ pub const EnemyData = struct {
     projectiles: ?[]const ProjectileData = null,
     size_mult: f32 = 1.0,
     light: LightData = .{},
-    hit_sound: []const u8 = "Unknown",
-    death_sound: []const u8 = "Unknown",
+    hit_sound: []const u8 = "Unknown.mp3",
+    death_sound: []const u8 = "Unknown.mp3",
     show_name: bool = false,
     draw_on_ground: bool = false,
 };
@@ -459,8 +459,8 @@ pub const EntityData = struct {
     block_ground_damage: bool = false,
     block_sink: bool = false,
     is_wall: bool = false,
-    hit_sound: []const u8 = "Unknown",
-    death_sound: []const u8 = "Unknown",
+    hit_sound: []const u8 = "Unknown.mp3",
+    death_sound: []const u8 = "Unknown.mp3",
     animations: ?[]FrameData = null,
 };
 
@@ -485,8 +485,8 @@ pub const AllyData = struct {
     light: LightData = .{},
     show_name: bool = false,
     draw_on_ground: bool = false,
-    hit_sound: []const u8 = "Unknown",
-    death_sound: []const u8 = "Unknown",
+    hit_sound: []const u8 = "Unknown.mp3",
+    death_sound: []const u8 = "Unknown.mp3",
 };
 
 pub const GroundData = struct {
@@ -606,7 +606,7 @@ pub const ItemData = struct {
     consumable: bool = false,
     untradeable: bool = false,
     bag_type: enum { brown, purple, blue, white } = .brown,
-    sound: []const u8 = "Unknown",
+    sound: []const u8 = "Unknown.mp3",
 };
 
 pub const CardRarity = enum { common, rare, epic, legendary, mythic };

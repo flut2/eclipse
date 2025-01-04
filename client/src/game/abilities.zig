@@ -11,10 +11,6 @@ const Enemy = @import("Enemy.zig");
 const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
 
-pub fn emptyHandler() ![]u8 {
-    return &.{};
-}
-
 pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.ProjectileData) ![]u8 {
     // TODO: needs VFX
     const proj_index = player.next_proj_index;

@@ -728,7 +728,7 @@ fn handleUseAbility(self: *Client, data: PacketData(.use_ability)) void {
                 return;
             }),
         ),
-        hash("Heart Of Stone") => abilities.handleHeartOfStone(player),
+        hash("Heart of Stone") => abilities.handleHeartOfStone(player),
         hash("Boulder Buddies") => abilities.handleBoulderBuddies(player),
         hash("Placeholder") => abilities.handlePlaceholder(),
         hash("Time Dilation") => abilities.handleTimeDilation(player),
