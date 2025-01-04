@@ -31,6 +31,8 @@ const Slider = @import("../elements/Slider.zig");
 const Text = @import("../elements/Text.zig");
 const ui_systems = @import("../systems.zig");
 
+const press_delay_ms = 25;
+
 const MapEditorTile = struct {
     // map ids
     entity: u32 = std.math.maxInt(u32),
@@ -229,6 +231,8 @@ fill_key: Settings.Button = .{ .key = .f },
 
 start_x_override: u16 = std.math.maxInt(u16),
 start_y_override: u16 = std.math.maxInt(u16),
+
+last_press: i64 = -1,
 
 pub fn nextMapIdForType(self: *MapEditorScreen, comptime T: type) *u32 {
     return switch (T) {
@@ -1208,58 +1212,56 @@ pub fn resize(self: *MapEditorScreen, w: f32, _: f32) void {
 }
 
 pub fn onMousePress(self: *MapEditorScreen, button: glfw.MouseButton) void {
-    if (self.undo_key == .mouse and button == self.undo_key.mouse)
-        self.action = .undo
-    else if (self.redo_key == .mouse and button == self.redo_key.mouse)
-        self.action = .redo
-    else if (self.place_key == .mouse and button == self.place_key.mouse)
+    if (self.place_key == .mouse and button == self.place_key.mouse)
         self.action = .place
     else if (self.erase_key == .mouse and button == self.erase_key.mouse)
-        self.action = .erase
+        self.action = .erase;
+
+    (if (self.undo_key == .mouse and button == self.undo_key.mouse)
+        self.handleAction(.undo)
+    else if (self.redo_key == .mouse and button == self.redo_key.mouse)
+        self.handleAction(.redo)
     else if (self.sample_key == .mouse and button == self.sample_key.mouse)
-        self.action = .sample
+        self.handleAction(.sample)
     else if (self.random_key == .mouse and button == self.random_key.mouse)
-        self.action = .random
+        self.handleAction(.random)
     else if (self.fill_key == .mouse and button == self.fill_key.mouse)
-        self.action = .fill;
+        self.handleAction(.fill)) catch |e| {
+        std.log.err("Editor mouse press error: {}", .{e});
+        return;
+    };
 }
 
 pub fn onMouseRelease(self: *MapEditorScreen, button: glfw.MouseButton) void {
-    if (self.undo_key == .mouse and button == self.undo_key.mouse or
-        self.redo_key == .mouse and button == self.redo_key.mouse or
-        self.place_key == .mouse and button == self.place_key.mouse or
-        self.erase_key == .mouse and button == self.erase_key.mouse or
-        self.sample_key == .mouse and button == self.sample_key.mouse or
-        self.random_key == .mouse and button == self.random_key.mouse or
-        self.fill_key == .mouse and button == self.fill_key.mouse)
+    if (self.place_key == .mouse and button == self.place_key.mouse or
+        self.erase_key == .mouse and button == self.erase_key.mouse)
         self.action = .none;
 }
 
 pub fn onKeyPress(self: *MapEditorScreen, key: glfw.Key) void {
-    if (self.undo_key == .key and key == self.undo_key.key)
-        self.action = .undo
-    else if (self.redo_key == .key and key == self.redo_key.key)
-        self.action = .redo
-    else if (self.place_key == .key and key == self.place_key.key)
+    if (self.place_key == .key and key == self.place_key.key)
         self.action = .place
     else if (self.erase_key == .key and key == self.erase_key.key)
-        self.action = .erase
+        self.action = .erase;
+
+    (if (self.undo_key == .key and key == self.undo_key.key)
+        self.handleAction(.undo)
+    else if (self.redo_key == .key and key == self.redo_key.key)
+        self.handleAction(.redo)
     else if (self.sample_key == .key and key == self.sample_key.key)
-        self.action = .sample
+        self.handleAction(.sample)
     else if (self.random_key == .key and key == self.random_key.key)
-        self.action = .random
+        self.handleAction(.random)
     else if (self.fill_key == .key and key == self.fill_key.key)
-        self.action = .fill;
+        self.handleAction(.fill)) catch |e| {
+        std.log.err("Editor key press error: {}", .{e});
+        return;
+    };
 }
 
 pub fn onKeyRelease(self: *MapEditorScreen, key: glfw.Key) void {
-    if (self.undo_key == .key and key == self.undo_key.key or
-        self.redo_key == .key and key == self.redo_key.key or
-        self.place_key == .key and key == self.place_key.key or
-        self.erase_key == .key and key == self.erase_key.key or
-        self.sample_key == .key and key == self.sample_key.key or
-        self.random_key == .key and key == self.random_key.key or
-        self.fill_key == .key and key == self.fill_key.key)
+    if (self.place_key == .key and key == self.place_key.key or
+        self.erase_key == .key and key == self.erase_key.key)
         self.action = .none;
 }
 
@@ -1411,46 +1413,54 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
             const dx = center_x - fx;
             const dy = center_y - fy;
             if (dx * dx + dy * dy <= size_sqr) {
-                if (place_type == .random and utils.rng.random().float(f32) > self.random_chance)
-                    continue;
+                if (place_type == .random and utils.rng.random().float(f32) > self.random_chance) continue;
+
+                const old_id = blk: {
+                    const tile = self.map_tile_data[y * self.map_size + x];
+                    switch (self.active_layer) {
+                        .ground => break :blk tile.ground,
+                        .region => break :blk tile.region,
+                        .entity => break :blk lockBlk: {
+                            map.object_lock.lock();
+                            defer map.object_lock.unlock();
+                            break :lockBlk if (map.findObject(Entity, tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
+                        },
+                        .enemy => break :blk lockBlk: {
+                            map.object_lock.lock();
+                            defer map.object_lock.unlock();
+                            break :lockBlk if (map.findObject(Enemy, tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
+                        },
+                        .portal => break :blk lockBlk: {
+                            map.object_lock.lock();
+                            defer map.object_lock.unlock();
+                            break :lockBlk if (map.findObject(Portal, tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
+                        },
+                        .container => break :blk lockBlk: {
+                            map.object_lock.lock();
+                            defer map.object_lock.unlock();
+                            break :lockBlk if (map.findObject(Container, tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
+                        },
+                    }
+
+                    break :blk defaultType(self.active_layer);
+                };
+                
+                if (sel_type == old_id) continue;
 
                 try places.append(main.allocator, .{
                     .x = @intCast(x),
                     .y = @intCast(y),
                     .new_id = sel_type,
-                    .old_id = blk: {
-                        const tile = self.map_tile_data[y * self.map_size + x];
-                        switch (self.active_layer) {
-                            .ground => break :blk tile.ground,
-                            .region => break :blk tile.region,
-                            .entity => break :blk lockBlk: {
-                                map.object_lock.lock();
-                                defer map.object_lock.unlock();
-                                break :lockBlk if (map.findObject(Entity, tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
-                            },
-                            .enemy => break :blk lockBlk: {
-                                map.object_lock.lock();
-                                defer map.object_lock.unlock();
-                                break :lockBlk if (map.findObject(Enemy, tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
-                            },
-                            .portal => break :blk lockBlk: {
-                                map.object_lock.lock();
-                                defer map.object_lock.unlock();
-                                break :lockBlk if (map.findObject(Portal, tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
-                            },
-                            .container => break :blk lockBlk: {
-                                map.object_lock.lock();
-                                defer map.object_lock.unlock();
-                                break :lockBlk if (map.findObject(Container, tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
-                            },
-                        }
-
-                        break :blk defaultType(self.active_layer);
-                    },
+                    .old_id = old_id,
                     .layer = self.active_layer,
                 });
             }
         }
+    }
+
+    if (places.items.len == 0) {
+        places.deinit(main.allocator);
+        return;
     }
 
     if (places.items.len <= 1) {
@@ -1527,8 +1537,7 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
     };
 
     const current_id = typeAt(layer, screen, x, y);
-    if (current_id == target_id or target_id == defaultType(layer))
-        return;
+    if (current_id == target_id or target_id == defaultType(layer)) return;
 
     var stack: std.ArrayListUnmanaged(FillData) = .empty;
     defer stack.deinit(main.allocator);
@@ -1591,8 +1600,24 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
 }
 
 pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
-    if (self.map_tile_data.len <= 0)
-        return;
+    if (self.map_tile_data.len <= 0) return;
+    const world_point = main.camera.screenToWorld(input.mouse_x, input.mouse_y);
+    const size: f32 = @floatFromInt(self.map_size - 1);
+    const x = @floor(@max(0, @min(world_point.x, size)));
+    const y = @floor(@max(0, @min(world_point.y, size)));
+    switch (self.action) {
+        .place => try place(self, x, y, .place),
+        .erase => try place(self, x, y, .erase),
+        .none => {},
+        else => @panic("Unimplemented"),
+    }
+}
+
+pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
+    if (self.map_tile_data.len <= 0) return;
+
+    if (main.current_time - self.last_press < press_delay_ms * std.time.us_per_ms) return;
+    defer self.last_press = main.current_time;
 
     const world_point = main.camera.screenToWorld(input.mouse_x, input.mouse_y);
     const size: f32 = @floatFromInt(self.map_size - 1);
@@ -1602,7 +1627,7 @@ pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
     const uy: u16 = @intFromFloat(y);
     const map_tile = self.getTile(ux, uy);
 
-    switch (self.action) {
+    switch (action) {
         .place => try place(self, x, y, .place),
         .erase => try place(self, x, y, .erase),
         .random => try place(self, x, y, .random),

@@ -13,31 +13,31 @@ const GameScreen = @import("ui/screens/GameScreen.zig");
 const ui_systems = @import("ui/systems.zig");
 
 const press_mappings = .{
-    .{ &main.settings.move_up, handleMoveUpPress },
-    .{ &main.settings.move_down, handleMoveDownPress },
-    .{ &main.settings.move_left, handleMoveLeftPress },
-    .{ &main.settings.move_right, handleMoveRightPress },
-    .{ &main.settings.walk, handleWalkPress },
-    .{ &main.settings.shoot, handleShootPress },
-    .{ &main.settings.options, handleOptions },
-    .{ &main.settings.escape, handleEscape },
-    .{ &main.settings.interact, handleInteract },
-    .{ &main.settings.chat, handleChat },
-    .{ &main.settings.chat_cmd, handleChatCmd },
-    .{ &main.settings.toggle_perf_stats, handleTogglePerfStats },
-    .{ &main.settings.ability_1, handleAbility1 },
-    .{ &main.settings.ability_2, handleAbility2 },
-    .{ &main.settings.ability_3, handleAbility3 },
-    .{ &main.settings.ability_4, handleAbility4 },
+    .{ &main.settings.move_up, handleMoveUpPress, true },
+    .{ &main.settings.move_down, handleMoveDownPress, true },
+    .{ &main.settings.move_left, handleMoveLeftPress, true },
+    .{ &main.settings.move_right, handleMoveRightPress, true },
+    .{ &main.settings.walk, handleWalkPress, true },
+    .{ &main.settings.shoot, handleShootPress, false },
+    .{ &main.settings.options, handleOptions, false },
+    .{ &main.settings.escape, handleEscape, false },
+    .{ &main.settings.interact, handleInteract, false },
+    .{ &main.settings.chat, handleChat, false },
+    .{ &main.settings.chat_cmd, handleChatCmd, false },
+    .{ &main.settings.toggle_perf_stats, handleTogglePerfStats, true },
+    .{ &main.settings.ability_1, handleAbility1, false },
+    .{ &main.settings.ability_2, handleAbility2, false },
+    .{ &main.settings.ability_3, handleAbility3, false },
+    .{ &main.settings.ability_4, handleAbility4, false },
 };
 
 const release_mappings = .{
-    .{ &main.settings.move_up, handleMoveUpRelease },
-    .{ &main.settings.move_down, handleMoveDownRelease },
-    .{ &main.settings.move_left, handleMoveLeftRelease },
-    .{ &main.settings.move_right, handleMoveRightRelease },
-    .{ &main.settings.walk, handleWalkRelease },
-    .{ &main.settings.shoot, handleShootRelease },
+    .{ &main.settings.move_up, handleMoveUpRelease, true },
+    .{ &main.settings.move_down, handleMoveDownRelease, true },
+    .{ &main.settings.move_left, handleMoveLeftRelease, true },
+    .{ &main.settings.move_right, handleMoveRightRelease, true },
+    .{ &main.settings.walk, handleWalkRelease, true },
+    .{ &main.settings.shoot, handleShootRelease, false },
 };
 
 var move_up: f32 = 0.0;
@@ -295,12 +295,14 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
 
         const is_editor = ui_systems.screen == .editor;
         if ((ui_systems.screen == .game or is_editor) and !disable_input)
-            inline for (press_mappings) |mapping| if (mapping[0].* == .key and mapping[0].key == key) mapping[1]();
+            inline for (press_mappings) |mapping|
+                if ((mapping[2] or !is_editor) and mapping[0].* == .key and mapping[0].key == key) mapping[1]();
         if (is_editor) ui_systems.screen.editor.onKeyPress(key);
     } else if (action == .release) {
         const is_editor = ui_systems.screen == .editor;
         if ((ui_systems.screen == .game or is_editor) and !disable_input)
-            inline for (release_mappings) |mapping| if (mapping[0].* == .key and mapping[0].key == key) mapping[1]();
+            inline for (release_mappings) |mapping|
+                if ((mapping[2] or !is_editor) and mapping[0].* == .key and mapping[0].key == key) mapping[1]();
         if (is_editor) ui_systems.screen.editor.onKeyRelease(key);
     }
 
