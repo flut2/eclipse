@@ -16,10 +16,6 @@ const Player = @import("map/Player.zig");
 const Portal = @import("map/Portal.zig");
 const Purchasable = @import("map/Purchasable.zig");
 
-fn h(str: []const u8) u64 {
-    return std.hash.Wyhash.hash(0, str);
-}
-
 fn checkRank(player: *Player, comptime rank: network_data.Rank) bool {
     if (@intFromEnum(player.rank) >= @intFromEnum(rank)) return true;
     player.client.sendMessage("You don't meet the rank requirements");
@@ -28,17 +24,21 @@ fn checkRank(player: *Player, comptime rank: network_data.Rank) bool {
 
 pub fn handle(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     const command_name = iter.next() orelse return;
-    switch (h(command_name)) {
-        h("/spawn") => if (checkRank(player, .admin)) handleSpawn(iter, player),
-        h("/clearspawn") => if (checkRank(player, .admin)) handleClearSpawn(player),
-        h("/give") => if (checkRank(player, .admin)) handleGive(iter, player),
-        h("/ban") => if (checkRank(player, .mod)) handleBan(iter, player),
-        h("/unban") => if (checkRank(player, .mod)) handleUnban(iter, player),
-        h("/mute") => if (checkRank(player, .mod)) handleMute(iter, player),
-        h("/unmute") => if (checkRank(player, .mod)) handleUnmute(iter, player),
-        h("/cond"), h("/condition") => if (checkRank(player, .mod)) handleCond(iter, player),
-        else => player.client.sendMessage("Unknown command"),
-    }
+    inline for (.{
+        .{ "/spawn", network_data.Rank.admin, handleSpawn },
+        .{ "/clearspawn", network_data.Rank.admin, handleClearSpawn },
+        .{ "/give", network_data.Rank.admin, handleGive },
+        .{ "/ban", network_data.Rank.mod, handleBan },
+        .{ "/unban", network_data.Rank.mod, handleUnban },
+        .{ "/mute", network_data.Rank.mod, handleMute },
+        .{ "/unmute", network_data.Rank.mod, handleUnmute },
+        .{ "/cond", network_data.Rank.mod, handleCond },
+    }) |mappings| if (std.mem.eql(u8, mappings[0], command_name) and checkRank(player, mappings[1])) {
+        mappings[2](iter, player);
+        return;
+    };
+
+    player.client.sendMessage("Unknown command");
 }
 
 fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
@@ -111,7 +111,7 @@ fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     player.client.sendMessage("You don't have enough space");
 }
 
-fn handleClearSpawn(player: *Player) void {
+fn handleClearSpawn(_: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     var count: usize = 0;
     inline for (.{ Entity, Enemy, Portal, Container }) |ObjType| {
         for (player.world.listForType(ObjType).items) |*obj| {

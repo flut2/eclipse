@@ -30,15 +30,12 @@
     },
     .static = true,
     .occupy_square = true,
-    .animation = {
-        .period = 1.6,
-        .frames = [
-            { .time = 0.4, .texture = {"props_big": 2} },
-            { .time = 0.4, .texture = {"props_big": 3} },
-            { .time = 0.4, .texture = {"props_big": 4} },
-            { .time = 0.4, .texture = {"props_big": 2} },
-        ]
-    },
+    .animations = [
+        { .time = 0.4, .texture = {"props_big": 2} },
+        { .time = 0.4, .texture = {"props_big": 3} },
+        { .time = 0.4, .texture = {"props_big": 4} },
+        { .time = 0.4, .texture = {"props_big": 2} },
+    ],
 },
 {
     .id = 2,

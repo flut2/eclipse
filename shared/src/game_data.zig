@@ -263,14 +263,9 @@ pub const Currency = enum {
     }
 };
 
-pub const AnimationData = struct {
-    probability: f32 = 1.0,
-    period: f32,
-    period_jitter: f32 = 0.0,
-    frames: []struct {
-        time: f32,
-        texture: TextureData,
-    },
+pub const FrameData = struct {
+    time: f32,
+    texture: TextureData,
 };
 
 const TextureData = struct {
@@ -390,7 +385,7 @@ pub const ContainerData = struct {
     light: LightData = .{},
     show_name: bool = false,
     draw_on_ground: bool = false,
-    animation: ?AnimationData = null,
+    animations: ?[]FrameData = null,
 };
 
 pub const ProjectileData = struct {
@@ -466,7 +461,7 @@ pub const EntityData = struct {
     is_wall: bool = false,
     hit_sound: []const u8 = "Unknown",
     death_sound: []const u8 = "Unknown",
-    animation: ?AnimationData = null,
+    animations: ?[]FrameData = null,
 };
 
 pub const PurchasableData = struct {
@@ -631,7 +626,7 @@ pub const PortalData = struct {
     light: LightData = .{},
     size_mult: f32 = 1.0,
     show_name: bool = true,
-    animation: ?AnimationData = null,
+    animations: ?[]FrameData = null,
 };
 
 pub const RegionData = struct {

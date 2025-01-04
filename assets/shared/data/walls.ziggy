@@ -46,60 +46,51 @@
     .name = "Retrieve Terminal Blue",
     .textures = [{"walls": 7}],
     .is_wall = true,
-    .animation = {
-        .period = 3.0,
-        .frames = [
-            { .time = 0.3, .texture = { "walls": 7 } },
-            { .time = 0.3, .texture = { "walls": 8 } },
-            { .time = 0.3, .texture = { "walls": 9 } },
-            { .time = 0.3, .texture = { "walls": 10 } },
-            { .time = 0.3, .texture = { "walls": 11 } },
-            { .time = 0.3, .texture = { "walls": 12 } },
-            { .time = 0.3, .texture = { "walls": 13 } },
-            { .time = 0.3, .texture = { "walls": 14 } },
-            { .time = 0.3, .texture = { "walls": 15 } },
-        ]
-    }
+    .animations = [
+        { .time = 0.3, .texture = { "walls": 7 } },
+        { .time = 0.3, .texture = { "walls": 8 } },
+        { .time = 0.3, .texture = { "walls": 9 } },
+        { .time = 0.3, .texture = { "walls": 10 } },
+        { .time = 0.3, .texture = { "walls": 11 } },
+        { .time = 0.3, .texture = { "walls": 12 } },
+        { .time = 0.3, .texture = { "walls": 13 } },
+        { .time = 0.3, .texture = { "walls": 14 } },
+        { .time = 0.3, .texture = { "walls": 15 } },
+    ],
 },
 {
     .id = 1008,
     .name = "Retrieve Terminal Green",
     .textures = [{"walls": 16}],
     .is_wall = true,
-    .animation = {
-        .period = 3.0,
-        .frames = [
-            { .time = 0.3, .texture = { "walls": 16 } },
-            { .time = 0.3, .texture = { "walls": 17 } },
-            { .time = 0.3, .texture = { "walls": 18 } },
-            { .time = 0.3, .texture = { "walls": 19 } },
-            { .time = 0.3, .texture = { "walls": 20 } },
-            { .time = 0.3, .texture = { "walls": 21 } },
-            { .time = 0.3, .texture = { "walls": 22 } },
-            { .time = 0.3, .texture = { "walls": 23 } },
-            { .time = 0.3, .texture = { "walls": 24 } },
-        ]
-    }
+    .animations = [
+        { .time = 0.3, .texture = { "walls": 16 } },
+        { .time = 0.3, .texture = { "walls": 17 } },
+        { .time = 0.3, .texture = { "walls": 18 } },
+        { .time = 0.3, .texture = { "walls": 19 } },
+        { .time = 0.3, .texture = { "walls": 20 } },
+        { .time = 0.3, .texture = { "walls": 21 } },
+        { .time = 0.3, .texture = { "walls": 22 } },
+        { .time = 0.3, .texture = { "walls": 23 } },
+        { .time = 0.3, .texture = { "walls": 24 } },
+    ],
 },
 {
     .id = 1009,
     .name = "Retrieve Terminal Red",
     .textures = [{"walls": 25}],
     .is_wall = true,
-    .animation = {
-        .period = 3.0,
-        .frames = [
-            { .time = 0.3, .texture = { "walls": 25 } },
-            { .time = 0.3, .texture = { "walls": 26 } },
-            { .time = 0.3, .texture = { "walls": 27 } },
-            { .time = 0.3, .texture = { "walls": 28 } },
-            { .time = 0.3, .texture = { "walls": 29 } },
-            { .time = 0.3, .texture = { "walls": 30 } },
-            { .time = 0.3, .texture = { "walls": 31 } },
-            { .time = 0.3, .texture = { "walls": 32 } },
-            { .time = 0.3, .texture = { "walls": 33 } },
-        ]
-    }
+    .animations = [
+        { .time = 0.3, .texture = { "walls": 25 } },
+        { .time = 0.3, .texture = { "walls": 26 } },
+        { .time = 0.3, .texture = { "walls": 27 } },
+        { .time = 0.3, .texture = { "walls": 28 } },
+        { .time = 0.3, .texture = { "walls": 29 } },
+        { .time = 0.3, .texture = { "walls": 30 } },
+        { .time = 0.3, .texture = { "walls": 31 } },
+        { .time = 0.3, .texture = { "walls": 32 } },
+        { .time = 0.3, .texture = { "walls": 33 } },
+    ],
 },
 {
     .id = 1010,
@@ -130,34 +121,28 @@
     .name = "Crimson Chasm Candle Wall 1",
     .textures = [{"walls": 36}],
     .is_wall = true,
-    .animation = {
-        .period = 1.8,
-        .frames = [
-            { .time = 0.3, .texture = { "walls": 36 } },
-            { .time = 0.3, .texture = { "walls": 37 } },
-            { .time = 0.3, .texture = { "walls": 38 } },
-            { .time = 0.3, .texture = { "walls": 39 } },
-            { .time = 0.3, .texture = { "walls": 40 } },
-            { .time = 0.3, .texture = { "walls": 41 } },
-        ]
-    }
+    .animations = [
+        { .time = 0.3, .texture = { "walls": 36 } },
+        { .time = 0.3, .texture = { "walls": 37 } },
+        { .time = 0.3, .texture = { "walls": 38 } },
+        { .time = 0.3, .texture = { "walls": 39 } },
+        { .time = 0.3, .texture = { "walls": 40 } },
+        { .time = 0.3, .texture = { "walls": 41 } },
+    ],
 },
 {
     .id = 1014,
     .name = "Crimson Chasm Candle Wall 2",
     .textures = [{"walls": 42}],
     .is_wall = true,
-    .animation = {
-        .period = 1.8,
-        .frames = [
-            { .time = 0.3, .texture = { "walls": 42 } },
-            { .time = 0.3, .texture = { "walls": 43 } },
-            { .time = 0.3, .texture = { "walls": 44 } },
-            { .time = 0.3, .texture = { "walls": 45 } },
-            { .time = 0.3, .texture = { "walls": 46 } },
-            { .time = 0.3, .texture = { "walls": 47 } },
-        ]
-    }
+    .animations = [
+        { .time = 0.3, .texture = { "walls": 42 } },
+        { .time = 0.3, .texture = { "walls": 43 } },
+        { .time = 0.3, .texture = { "walls": 44 } },
+        { .time = 0.3, .texture = { "walls": 45 } },
+        { .time = 0.3, .texture = { "walls": 46 } },
+        { .time = 0.3, .texture = { "walls": 47 } },
+    ],
 },
 {
     .id = 1015,

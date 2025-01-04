@@ -121,15 +121,15 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
         else => @compileError("Invalid type"),
     };
 
-    if (self.data.animation) |animation| {
+    if (self.data.animations) |animations| {
         if (time >= self.next_anim) {
-            const frame_len = animation.frames.len;
+            const frame_len = animations.len;
             if (frame_len < 2) {
                 std.log.err("The amount of frames ({}) was not enough for {s} with data id {}", .{ frame_len, type_name, self.data_id });
                 return;
             }
 
-            const frame_data = animation.frames[self.anim_idx];
+            const frame_data = animations[self.anim_idx];
             const tex_data = frame_data.texture;
             if (@hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall) {
                 if (assets.walls.get(tex_data.sheet)) |tex| {
