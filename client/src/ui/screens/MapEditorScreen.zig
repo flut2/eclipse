@@ -71,7 +71,7 @@ const Layer = enum(u8) {
     region,
 };
 
-const Place = packed struct {
+const Place = struct {
     x: u16,
     y: u16,
     new_id: u16,
@@ -1444,7 +1444,7 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
 
                     break :blk defaultType(self.active_layer);
                 };
-                
+
                 if (sel_type == old_id) continue;
 
                 try places.append(main.allocator, .{
