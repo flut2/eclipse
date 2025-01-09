@@ -166,4 +166,92 @@
     ],
     .is_wall = true,
 },
+{
+    .id = 1017,
+    .name = "T1 Realm Brown Stone Wall Cracked",
+    .textures = [{"walls": 81}],
+    .is_wall = true,
+},
+{
+    .id = 1018,
+    .name = "T1 Realm Brown Stone Wall",
+    .textures = [{"walls": 82}, {"walls": 83}, {"walls": 83}, {"walls": 83}],
+    .is_wall = true,
+},
+{
+    .id = 1019,
+    .name = "T1 Realm Brown Candle Wall",
+    .textures = [{"walls": 84}],
+    .is_wall = true,
+    .animations = [
+        { .time = 0.5, .texture = { "walls": 84 } },
+        { .time = 0.5, .texture = { "walls": 85 } },
+    ],
+},
+{
+    .id = 1020,
+    .name = "T1 Realm Grey Stone Wall Cracked",
+    .textures = [{"walls": 86}],
+    .is_wall = true,
+},
+{
+    .id = 1021,
+    .name = "T1 Realm Grey Stone Wall",
+    .textures = [{"walls": 87}, {"walls": 88}, {"walls": 88}, {"walls": 88}],
+    .is_wall = true,
+},
+{
+    .id = 1022,
+    .name = "T1 Realm Grey Candle Wall",
+    .textures = [{"walls": 89}],
+    .is_wall = true,
+    .animations = [
+        { .time = 0.5, .texture = { "walls": 89 } },
+        { .time = 0.5, .texture = { "walls": 90 } },
+    ],
+},
+{
+    .id = 1023,
+    .name = "T1 Realm Green Stone Wall Cracked",
+    .textures = [{"walls": 91}],
+    .is_wall = true,
+},
+{
+    .id = 1024,
+    .name = "T1 Realm Green Stone Wall",
+    .textures = [{"walls": 92}, {"walls": 93}, {"walls": 93}, {"walls": 93}],
+    .is_wall = true,
+},
+{
+    .id = 1025,
+    .name = "T1 Realm Green Candle Wall",
+    .textures = [{"walls": 94}],
+    .is_wall = true,
+    .animations = [
+        { .time = 0.5, .texture = { "walls": 94 } },
+        { .time = 0.5, .texture = { "walls": 95 } },
+    ],
+},
+{
+    .id = 1026,
+    .name = "T1 Realm Bookshelf Empty",
+    .textures = [{"walls": 96}],
+    .is_wall = true
+},
+{
+    .id = 1027,
+    .name = "T1 Realm Rotten Bookshelf Empty",
+    .textures = [{"walls": 97}],
+    .is_wall = true
+},
+{
+    .id = 1028,
+    .name = "T1 Realm Bookshelf",
+    .textures = [
+        { "walls": 98 }, { "walls": 99 }, { "walls": 100 }, { "walls": 101 },
+        { "walls": 102 }, { "walls": 103 }, { "walls": 103 }, { "walls": 104 },
+        { "walls": 105 }, { "walls": 106 }, { "walls": 107 }, { "walls": 108 },
+    ],
+    .is_wall = true,
+},
 ]

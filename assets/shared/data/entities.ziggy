@@ -123,5 +123,112 @@
     .id = 16,
     .name = "T1 Realm Bushes",
     .textures = [{"props": 124}, {"props": 125}, {"props": 126}, {"props": 127}, {"props": 128}, {"props": 129}, {"props": 0}, {"props": 3}],
+},
+{
+    .id = 17,
+    .name = "T1 Realm Small Trees",
+    .textures = [{"props": 130}, {"props": 131}, {"props": 132}, {"props": 133}, {"props": 134}, {"props": 135}, {"props": 136}, {"props": 137}, {"props": 138}, {"props": 139}, {"props": 140}, {"props": 141}, {"props": 142}, {"props": 143}, {"props": 144}, {"props": 145}, {"props": 146}, {"props": 147}],
+},
+{
+    .id = 18,
+    .name = "T1 Realm Dry Bushes",
+    .textures = [{"props": 148}, {"props": 149}, {"props": 150}, {"props": 151}, {"props": 152}, {"props": 153}, {"props": 154}, {"props": 155}],
+},
+{
+    .id = 19,
+    .name = "T1 Realm Small Dry Trees",
+    .textures = [{"props": 156}, {"props": 157}, {"props": 158}, {"props": 159}, {"props": 160}, {"props": 161}, {"props": 162}, {"props": 163}, {"props": 164}, {"props": 165}, {"props": 166}, {"props": 164}, {"props": 165}, {"props": 166}, {"props": 165}, {"props": 168}, {"props": 169}, {"props": 170}, {"props": 171}, {"props": 172}, {"props": 173}],
+},
+{
+    .id = 20,
+    .name = "T1 Realm Mushrooms",
+    .textures = [{"props": 174}, {"props": 175}, {"props": 176}, {"props": 177}, {"props": 178}, {"props": 179}, {"props": 180}, {"props": 181}, {"props": 182}],
+},
+{
+    .id = 21,
+    .name = "T1 Realm Grey Rocks",
+    .textures = [{"props": 183}, {"props": 184}, {"props": 185}, {"props": 186}, {"props": 187}],
+},
+{
+    .id = 22,
+    .name = "T1 Realm Brown Rocks",
+    .textures = [{"props": 188}, {"props": 189}, {"props": 190}, {"props": 191}, {"props": 192}],
+},
+{
+    .id = 23,
+    .name = "T1 Realm Green Rocks",
+    .textures = [{"props": 193}, {"props": 194}, {"props": 195}, {"props": 196}, {"props": 197}],
+},
+{
+    .id = 24,
+    .name = "T1 Realm Deco Crates",
+    .textures = [{"props": 198}, {"props": 199}, {"props": 200}, {"props": 201}],
+    .health = 500,
+    .defense = 10,
+    .occupy_square = true,
+},
+{
+    .id = 25,
+    .name = "T1 Realm Deco Crates Rotten",
+    .textures = [{"props": 202}, {"props": 203}],
+    .health = 200,
+    .defense = 5
+},
+{
+    .id = 26,
+    .name = "T1 Realm Deco Barrels",
+    .textures = [{"props": 204}, {"props": 205}, {"props": 206}],
+    .health = 500,
+    .defense = 10,
+    .occupy_square = true,
+},
+{
+    .id = 27,
+    .name = "T1 Realm Deco Barrels Rotten",
+    .textures = [{"props": 207}, {"props": 208}],
+    .health = 200,
+    .defense = 5
+},
+{
+    .id = 28,
+    .name = "T1 Realm Deco Chest Closed",
+    .textures = [{"props": 209}],
+    .health = 1000,
+    .defense = 20,
+    .occupy_square = true,
+},
+{
+    .id = 29,
+    .name = "T1 Realm Deco Chest Closed",
+    .textures = [{"props": 210}],
+},
+{
+    .id = 30,
+    .name = "T1 Realm Deco Rotten Chest Closed",
+    .textures = [{"props": 211}],
+    .health = 750,
+    .defense = 15,
+    .occupy_square = true,
+},
+{
+    .id = 31,
+    .name = "T1 Realm Deco Chest Closed",
+    .textures = [{"props": 212}],
+},
+{
+    .id = 32,
+    .name = "T1 Realm Deco Bed Front",
+    .textures = [{"props":213}],
+    .occupy_square = true,
+},
+{
+    .id = 33,
+    .name = "T1 Realm Deco Sword Stand",
+    .textures = [{"props":214}],
+},
+{
+    .id = 34,
+    .name = "T1 Realm Deco Cross",
+    .textures = [{"props":215}],
 }
 ]
