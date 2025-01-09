@@ -45,7 +45,8 @@ struct InstanceData {
     top_blend_uv: vec2<f32>,
     right_blend_uv: vec2<f32>,
     bottom_blend_uv: vec2<f32>,
-    padding: vec2<f32>,
+    rotation: f32,
+    padding: f32,
 }
 
 struct VertexData {
@@ -63,9 +64,12 @@ fn vertexMain(vertex: VertexData) -> FragmentData {
     let instance_id = vertex.vert_id / 6;
     let sub_vert_id = vertex.vert_id % 6;
     let instance = instances[instance_id];
+    let cos = cos(instance.rotation);
+    let sin = sin(instance.rotation);
+    let rot_mat = mat2x2<f32>(cos, sin, -sin, cos);
 
     var out: FragmentData;
-    out.position = vec4((pos[sub_vert_id] * scaled_size * uniforms.scale + instance.pos + uniforms.clip_offset) 
+    out.position = vec4((pos[sub_vert_id] * rot_mat * scaled_size * uniforms.scale + instance.pos + uniforms.clip_offset) 
         * uniforms.clip_scale * invert_y, 0.0, 1.0);
     out.uv_offset = uv[sub_vert_id] / uniforms.atlas_size * base_size;
     out.instance_id = instance_id;

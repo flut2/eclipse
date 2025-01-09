@@ -118,7 +118,8 @@ pub const GroundData = extern struct {
     top_blend_uv: [2]f32,
     right_blend_uv: [2]f32,
     bottom_blend_uv: [2]f32,
-    padding: [2]f32 = .{ 0.0, 0.0 },
+    rotation: f32,
+    padding: f32 = 0.0,
 };
 
 pub const GenericUniformData = extern struct {
@@ -864,6 +865,7 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
                         .top_blend_uv = @bitCast(square.blends[1]),
                         .right_blend_uv = @bitCast(square.blends[2]),
                         .bottom_blend_uv = @bitCast(square.blends[3]),
+                        .rotation = square.rotation,
                     }) catch main.oomPanic();
                 }
             }
