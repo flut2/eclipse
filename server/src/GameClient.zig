@@ -367,7 +367,8 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
         try player.char_data.set(.{ .mp = class_data.stats.mana });
         try player.char_data.set(.{ .stats = stats });
         var starting_inventory: [22]u16 = @splat(std.math.maxInt(u16));
-        for (class_data.default_items, 0..) |item, i| starting_inventory[i] = item;
+        for (class_data.default_items, 0..) |item, i| 
+            starting_inventory[i] = (game_data.item.from_name.get(item) orelse return error.UnknownStartItem).id;
         try player.char_data.set(.{ .inventory = starting_inventory });
     } else return error.InvalidCharId;
 }

@@ -32,6 +32,7 @@ const Text = @import("../elements/Text.zig");
 const ui_systems = @import("../systems.zig");
 
 const press_delay_ms = 25;
+const update_delay_ms = 10;
 
 const MapEditorTile = struct {
     // map ids
@@ -233,6 +234,7 @@ start_x_override: u16 = std.math.maxInt(u16),
 start_y_override: u16 = std.math.maxInt(u16),
 
 last_press: i64 = -1,
+last_update: i64 = -1,
 
 pub fn nextMapIdForType(self: *MapEditorScreen, comptime T: type) *u32 {
     return switch (T) {
@@ -1472,14 +1474,8 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
 }
 
 fn placesContain(places: []Place, x: i32, y: i32) bool {
-    if (x < 0 or y < 0)
-        return false;
-
-    for (places) |p| {
-        if (p.x == x and p.y == y)
-            return true;
-    }
-
+    if (x < 0 or y < 0) return false;
+    for (places) |p| if (p.x == x and p.y == y) return true;
     return false;
 }
 
@@ -1491,8 +1487,7 @@ fn defaultType(layer: Layer) u16 {
 }
 
 fn typeAt(layer: Layer, screen: *MapEditorScreen, x: u16, y: u16) u16 {
-    if (x < 0 or y < 0)
-        return defaultType(layer);
+    if (x < 0 or y < 0) return defaultType(layer);
 
     const map_tile = screen.getTile(x, y);
     return switch (layer) {
@@ -1601,6 +1596,10 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
 
 pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
     if (self.map_tile_data.len <= 0) return;
+
+    if (main.current_time - self.last_update < press_delay_ms * std.time.us_per_ms) return;
+    defer self.last_update = main.current_time;
+
     const world_point = main.camera.screenToWorld(input.mouse_x, input.mouse_y);
     const size: f32 = @floatFromInt(self.map_size - 1);
     const x = @floor(@max(0, @min(world_point.x, size)));

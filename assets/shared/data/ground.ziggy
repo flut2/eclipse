@@ -244,5 +244,16 @@
     .name = "T1 Realm Green Stone Road",
     .textures = [{ "ground": 81 }, { "ground": 82 }],
     .blend_prio = 1,
+},
+{
+    .id = 36,
+    .name = "Rug Example",
+    .textures = [{ "ground": 83 }, { "ground": 84 }, { "ground": 85 }],
+    .rug_textures = {
+        .corners = [{ "ground": 86 }],
+        .inner_corners = [{ "ground": 87 }],
+        .edges = [{ "ground": 88 }, { "ground": 89 }, { "ground": 90 }],
+    },
+    .blend_prio = 1,
 }
 ]

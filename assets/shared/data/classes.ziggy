@@ -69,7 +69,7 @@
             \\ - &type="bold_it"All damage dealt now accumulates Drop Chance, at a rate of &col="C45860"0.8% (+0.8% &img="misc_big,58")&reset&type="bold_it" per 8000 damage dealt.&reset
             \\Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for &type="bold_it"&col="FFE770"35&reset seconds.
             \\Currently accumulated Drop Chance: &type="bold_it"&col="FFE770"{0}%
-            \\&type="med_it"&size="10"&col="736562"Switching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
+            \\$footnotetxtSwitching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
             \\The Drop Chance increase is capped at &type="bold_it"&col="FFE770"125%.
             ,
             .gold_cost = 3599,
@@ -115,7 +115,7 @@
         {
             .name = "Terrain Expulsion",
             .description = 
-            \\Shoot a large shard of earth dealing &type="bold_it"&col="FF6C32"1300 (+200%&space&img="misc_big,32") Physical Damage&reset that knocks enemies back and slows them for &type="bold_it"&col="FFE770"5&reset &type="bold_it"&col="FF9670"(+10%&space&img="misc_big,33")&reset &type="bold_it"&col="D65BFF"(+10%&space&img="misc_big,57")&reset seconds.
+            \\Shoot a large shard of earth dealing $strtxt1300 (+200%$stricon) Physical Damage&reset that knocks enemies back and slows them for $multitxt5&reset ($deftxt+10%$deficon, $restxt+10%$resicon$multitxt)&reset seconds.
             ,
             .mana_cost = 28,
             .cooldown = 9.0,
@@ -133,7 +133,7 @@
         {
             .name = "Heart of Stone",
             .description = 
-            \\Grow in size for &type="bold_it"&col="6080FF"10 (+10%&space&img="misc_big,59")&reset seconds, receiving 15% damage, a much larger hitbox, moving slower and becoming unable to shoot.
+            \\Grow in size for $inttxt10 (+10%$inticon)&reset seconds, receiving 15% damage, a much larger hitbox, moving slower and becoming unable to shoot.
             ,
             .mana_cost = 120,
             .cooldown = 49.0,
@@ -142,18 +142,23 @@
         {
             .name = "Boulder Buddies",
             .description = 
-            \\Spawn 3 Boulder Buddies with &type="bold_it"&col="20AC20"3600 (+360%&space&img="misc_big,40") Health&reset, &type="bold_it"&col="FF9670"25 (+15%&space&img="misc_big,33") Defense&reset and &type="bold_it"&col="D65BFF"5 (+10%&space&img="misc_big,57") Resistance&reset each, who follow you, orbit you and can take hits from enemy projectiles for &type="bold_it"&col="6080FF"15 (+10%&space&img="misc_big,59")&reset seconds.
+            \\Spawn 3 Boulder Buddies with $hptxt3600 (+360%$hpicon) Health&reset, $deftxt25 (+15%$deficon) Defense&reset and $restxt5 (+10%$resicon) Resistance&reset each, who follow you, orbit you and can take hits from enemy projectiles for $inttxt15 (+10%$inticon)&reset seconds.
             ,
             .mana_cost = 72,
             .cooldown = 22.0,
             .icon = {"ability_icons": 6},
         },
         {
-            .name = "Placeholder",
+            .name = "Earthen Prison",
             .description = 
-            \\a
+            \\Plant an Obelisk of Binding into the ground for $hsttxt15 (+20%$hsticon) seconds, causing enemies within $inttxt9 (+10%$inticon) tiles&reset to be encased in stone, and linked to you and your Boulder Buddies.
+            \\The enemies become unable to shoot or move while encased in stone, but they redirect $multitxt5% ($deftxt-1%$deficon, $restxt-1$resicon)&reset of damage received back to you and your Boulder Buddies.
+            \\$footnotetxtThe damage is received by your Boulder Buddies first (if they exist) and to you second.
+            \\The Obelisk of Binding will be destroyed early if you fall below 10% Health, or if you would fall below 10% Health due to this effect.
             ,
-            .cooldown = 0.0,
+            .mana_cost = 100,
+            .health_cost = 300,
+            .cooldown = 170.0,
             .icon = {"ability_icons": 7},
         },
     ],
@@ -195,7 +200,7 @@
         {
             .name = "Time Dilation",
             .description = 
-            \\All enemy projectiles within &type="bold_it"&col="A15AFF"3 (+6%&space&img="misc_big,35")&reset tiles of you move 30% slower for &type="bold_it"&col="6080FF"10 (+12% &img="misc_big,59")&reset seconds.
+            \\All enemy projectiles within $wittxt3 (+6%$witicon)&reset tiles of you move 30% slower for $inttxt10 (+12%$inticon)&reset seconds.
             ,
             .mana_cost = 72,
             .cooldown = 24.0,
@@ -204,7 +209,7 @@
         {
             .name = "Rewind",
             .description = 
-            \\Rewind time by &type="bold_it"&col="FFE770"3 (&col="6080FF"+1% &img="misc_big,59", &col="1C40FF"+0.6% &img="misc_big,39", &col="A15AFF"+1%&space&img="misc_big,35"&col="FFE770")&reset seconds, causing you to return to your old position and Health. (if higher than current)
+            \\Rewind time by $multitxt3 ($inttxt+1%$inticon, $manatxt+0.6%$manaicon, $wittxt+1%$witicon$multitxt)&reset seconds, causing you to return to your old position and Health. (if higher than current)
             ,
             .mana_cost = 54,
             .cooldown = 6.0,
@@ -213,7 +218,7 @@
         {
             .name = "Null Pulse",
             .description = 
-            \\Destroy all enemy projectiles within &type="bold_it"&col="6080FF"3 (+12% &img="misc_big,59")&reset tiles, causing the enemies that created them to take &type="bold_it"&col="A15AFF"5 (+6% &img="misc_big,35")&reset times the damage.
+            \\Destroy all enemy projectiles within $inttxt3 (+12%$inticon)&reset tiles, causing the enemies that created them to take $wittxt5 (+6%$witicon)&reset times the damage.
             ,
             .mana_cost = 150,
             .cooldown = 30.0,
@@ -222,7 +227,9 @@
         {
             .name = "Time Lock",
             .description = 
-            \\Become immune to damage, unable to move and shoot for &type="bold_it"&col="6080FF"15 (+12% &img="misc_big,59")&reset seconds, storing all damage taken. nReturn double the damage stored as a Magic Damage blast within &type="bold_it"&col="6080FF"9 (+6%&space&img="misc_big,59")&reset tiles after this effect ends.n&type="med_it"&size="10"&col="736562"Damage is capped at &type="bold_it"&col="A15AFF"30000 (+10000% &img="misc_big,35")&reset.
+            \\Become immune to damage, unable to move and shoot for $inttxt15 (+12%$inticon)&reset seconds, storing all damage taken. 
+            \\Return double the damage stored as a Magic Damage blast within $inttxt9 (+6%$inticon)&reset tiles after this effect ends.
+            \\$footnotetxtDamage is capped at $wittxt30000 (+10000%$witicon)&reset.
             ,
             .mana_cost = 210,
             .cooldown = 180.0,
@@ -267,7 +274,7 @@
         {
             .name = "Equivalent Exchange",
             .description = 
-            \\Make your other abilities cost 8% (+8% HST) less for 8 seconds. This includes the hit cost of Premium Protection.
+            \\Make your other abilities cost $hsttxt8% (+8%$hsticon) less for 8 seconds. This includes the hit cost of Premium Protection.
             ,
             .health_cost = 350,
             .cooldown = 17.0,
@@ -296,13 +303,13 @@
             .name = "Compound Interest",
             .description = 
             \\Gain the following until this ability is recast:
-            \\ - &type="bold_it"&col="FFE770"+280% (&col="D65BFF"-8% &img="misc_big,57", &col="FF9670"-8% &img="misc_big,33"&col="FFE770") Damage Taken&reset
+            \\ - $multitxt+280% (&col="D65BFF"-8% &img="misc_big,57", &col="FF9670"-8% &img="misc_big,33"&col="FFE770") Damage Taken&reset
             \\ - &type="bold_it"&col="C45860"-17% &img="misc_big,34"&reset
             \\ - &type="bold_it"All damage dealt now accumulates Drop Chance, at a rate of &col="C45860"0.8% (+0.8% &img="misc_big,58")&reset&type="bold_it" per 8000 damage dealt.&reset
-            \\Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for &type="bold_it"&col="FFE770"35&reset seconds.
-            \\Currently accumulated Drop Chance: &type="bold_it"&col="FFE770"{0}%
-            \\&type="med_it"&size="10"&col="736562"Switching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
-            \\The Drop Chance increase is capped at &type="bold_it"&col="FFE770"125%.
+            \\Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for $multitxt35&reset seconds.
+            \\Currently accumulated Drop Chance: $multitxt{0}%
+            \\$footnotetxtSwitching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
+            \\The Drop Chance increase is capped at $multitxt125%.
             ,
             .gold_cost = 3599,
             .cooldown = 125.0,

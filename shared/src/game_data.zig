@@ -26,86 +26,6 @@ pub fn Maps(comptime T: type) type {
     };
 }
 
-fn parseClasses(allocator: std.mem.Allocator, path: []const u8) !void {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-
-    const file_data = try file.readToEndAllocOptions(allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
-    defer allocator.free(file_data);
-
-    const classes = try ziggy.parseLeaky([]InternalClassData, allocator, file_data, .{});
-    for (classes) |int_class| {
-        const default_items: []u16 = try allocator.alloc(u16, int_class.default_items.len);
-        for (default_items, 0..) |*default_item, i| {
-            const item_name = int_class.default_items[i];
-            if (item_name.len == 0) {
-                default_item.* = std.math.maxInt(u16);
-                continue;
-            }
-            default_item.* = (item.from_name.get(item_name) orelse @panic("Invalid item given to ClassData")).id;
-        }
-
-        var abilities_copy: [4]AbilityData = undefined;
-        for (&abilities_copy, int_class.abilities) |*abil_data, old_abil| {
-            abil_data.* = .{
-                .name = try allocator.dupe(u8, old_abil.name),
-                .description = try allocator.dupe(u8, old_abil.description),
-                .mana_cost = old_abil.mana_cost,
-                .health_cost = old_abil.health_cost,
-                .gold_cost = old_abil.gold_cost,
-                .cooldown = old_abil.cooldown,
-                .icon = .{
-                    .sheet = try allocator.dupe(u8, old_abil.icon.sheet),
-                    .index = old_abil.icon.index,
-                },
-                .projectiles = if (old_abil.projectiles) |projs| try allocator.dupe(ProjectileData, projs) else null,
-            };
-            if (old_abil.projectiles) |projs| {
-                const new_projs = try allocator.dupe(ProjectileData, projs);
-                for (new_projs) |*proj| {
-                    const new_textures = try allocator.dupe(TextureData, proj.textures);
-                    for (new_textures) |*tex| tex.sheet = try allocator.dupe(u8, tex.sheet);
-                    proj.textures = new_textures;
-                }
-                abil_data.projectiles = new_projs;
-            }
-        }
-
-        const talents_copy = try allocator.dupe(TalentData, int_class.talents);
-        for (talents_copy, 0..) |*talent, i| {
-            talent.name = try allocator.dupe(u8, int_class.talents[i].name);
-            talent.description = try allocator.dupe(u8, int_class.talents[i].description);
-            talent.level_costs = try allocator.dupe(TalentLevelCost, int_class.talents[i].level_costs);
-            for (talent.level_costs, 0..) |*level_cost, j| {
-                level_cost.resources = try allocator.dupe(ResourceCost, int_class.talents[i].level_costs[j].resources);
-                level_cost.items = try allocator.dupe(ItemCost, int_class.talents[i].level_costs[j].items);
-            }
-            talent.requires = try allocator.dupe(TalentRequirement, int_class.talents[i].requires);
-        }
-
-        const class_data: ClassData = .{
-            .id = int_class.id,
-            .name = try allocator.dupe(u8, int_class.name),
-            .description = try allocator.dupe(u8, int_class.description),
-            .texture = .{
-                .sheet = try allocator.dupe(u8, int_class.texture.sheet),
-                .index = int_class.texture.index,
-            },
-            .item_types = int_class.item_types,
-            .default_items = default_items,
-            .stats = int_class.stats,
-            .hit_sound = try allocator.dupe(u8, int_class.hit_sound),
-            .death_sound = try allocator.dupe(u8, int_class.death_sound),
-            .rpc_name = try allocator.dupe(u8, int_class.rpc_name),
-            .abilities = abilities_copy,
-            .light = int_class.light,
-            .talents = talents_copy,
-        };
-        try class.from_id.put(allocator, class_data.id, class_data);
-        try class.from_name.put(allocator, class_data.name, class_data);
-    }
-}
-
 fn parseGeneric(allocator: std.mem.Allocator, path: []const u8, comptime DataType: type, data_maps: *Maps(DataType)) !void {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
@@ -158,9 +78,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try parseGeneric(arena_allocator, "./assets/data/purchasables.ziggy", PurchasableData, &purchasable);
     try parseGeneric(arena_allocator, "./assets/data/allies.ziggy", AllyData, &ally);
     try parseGeneric(arena_allocator, "./assets/data/resources.ziggy", ResourceData, &resource);
-
-    // Must be last to resolve item name->id
-    try parseClasses(arena_allocator, "./assets/data/classes.ziggy");
+    try parseGeneric(arena_allocator, "./assets/data/classes.ziggy", ClassData, &class);
 }
 
 pub fn deinit() void {
@@ -268,7 +186,7 @@ pub const FrameData = struct {
     texture: TextureData,
 };
 
-const TextureData = struct {
+pub const TextureData = struct {
     sheet: []const u8,
     index: u16,
 
@@ -342,7 +260,7 @@ pub const TalentData = struct {
     requires: []TalentRequirement = &.{},
 };
 
-const InternalClassData = struct {
+pub const ClassData = struct {
     id: u16,
     name: []const u8,
     description: []const u8,
@@ -355,22 +273,6 @@ const InternalClassData = struct {
     rpc_name: []const u8 = "Unknown",
     abilities: [4]AbilityData,
     light: LightData = .{},
-    talents: []TalentData,
-};
-
-pub const ClassData = struct {
-    id: u16,
-    name: []const u8,
-    description: []const u8,
-    texture: TextureData,
-    item_types: []const ItemType,
-    default_items: []const u16,
-    stats: ClassStats,
-    hit_sound: []const u8 = "Unknown.mp3",
-    death_sound: []const u8 = "Unknown.mp3",
-    rpc_name: []const u8,
-    abilities: [4]AbilityData,
-    light: LightData,
     talents: []TalentData,
 };
 
@@ -493,6 +395,11 @@ pub const GroundData = struct {
     id: u16,
     name: []const u8,
     textures: []const TextureData,
+    rug_textures: ?struct {
+        corners: []const TextureData,
+        inner_corners: []const TextureData,
+        edges: []const TextureData,
+    } = null,
     light: LightData = .{},
     animation: struct {
         type: enum { unset, flow, wave } = .unset,
@@ -644,10 +551,7 @@ pub const StringContext = struct {
     pub fn eql(_: @This(), a: []const u8, b: []const u8) bool {
         if (a.len != b.len) return false;
         if (a.len == 0 or a.ptr == b.ptr) return true;
-
-        for (a, b) |a_elem, b_elem| {
-            if (a_elem != b_elem and a_elem != std.ascii.toLower(b_elem)) return false;
-        }
+        for (a, b) |a_elem, b_elem| if (a_elem != b_elem and a_elem != std.ascii.toLower(b_elem)) return false;
         return true;
     }
 };

@@ -27,8 +27,7 @@
     .id = 3,
     .name = "Absorption",
     .rarity = @CardRarity("legendary"),
-    .description = \\Release a &type="bold_it"&col="20AC20"10 (+1%&space&img="misc_big,40") Health&reset Healing Blast 
-    \\when receiving Physical or Magic Damage above 100 in a single hit
+    .description = \\Release a &type="bold_it"&col="20AC20"10 (+1%&space&img="misc_big,40") Health&reset Healing Blast when receiving Physical or Magic Damage above 100 in a single hit
     ,
 },
 {
