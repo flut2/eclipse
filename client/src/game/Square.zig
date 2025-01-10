@@ -78,8 +78,8 @@ pub fn addToMap(square_data: Square) void {
         }
     }
 
-    self.update();
     map.squares[floor_y * map.info.width + floor_x] = self;
+    map.squares[floor_y * map.info.width + floor_x].update();
 }
 
 fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, comptime blend_dir: comptime_int) void {
@@ -125,42 +125,40 @@ pub fn update(square: *Square) void {
 
     const current_prio = square.data.blend_prio;
     const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
-    const right_sq = map.getSquare(square.x, square.y - 1, true, .ref);
-    const bottom_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
-    const top_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
+    const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
+    const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
+    const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
     updateBlendAtDir(square, left_sq, current_prio, left_blend_dir);
     updateBlendAtDir(square, top_sq, current_prio, top_blend_dir);
     updateBlendAtDir(square, right_sq, current_prio, right_blend_dir);
     updateBlendAtDir(square, bottom_sq, current_prio, bottom_blend_dir);
-    if (square.data.rug_textures != null) {
-        square.updateRugs();
-        if (left_sq) |sq| sq.updateRugs();
-        if (right_sq) |sq| sq.updateRugs();
-        if (bottom_sq) |sq| sq.updateRugs();
-        if (top_sq) |sq| sq.updateRugs();
-        const top_left_sq = map.getSquare(square.x - 1, square.y - 1, true, .ref);
-        const top_right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y - 1, true, .ref) else null;
-        const bottom_left_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x - 1, square.y + 1, true, .ref) else null;
-        const bottom_right_sq = if (square.x < std.math.maxInt(u32) and square.y < std.math.maxInt(u32))
-            map.getSquare(square.x + 1, square.y + 1, true, .ref)
-        else
-            null;
-        if (top_left_sq) |sq| sq.updateRugs();
-        if (top_right_sq) |sq| sq.updateRugs();
-        if (bottom_left_sq) |sq| sq.updateRugs();
-        if (bottom_right_sq) |sq| sq.updateRugs();
-    }
+    const current_data_id = square.data_id;
+    square.updateRugs(current_data_id);
+    if (left_sq) |sq| sq.updateRugs(current_data_id);
+    if (top_sq) |sq| sq.updateRugs(current_data_id);
+    if (right_sq) |sq| sq.updateRugs(current_data_id);
+    if (bottom_sq) |sq| sq.updateRugs(current_data_id);
+    const top_left_sq = map.getSquare(square.x - 1, square.y - 1, true, .ref);
+    const top_right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y - 1, true, .ref) else null;
+    const bottom_left_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x - 1, square.y + 1, true, .ref) else null;
+    const bottom_right_sq = if (square.x < std.math.maxInt(u32) and square.y < std.math.maxInt(u32))
+        map.getSquare(square.x + 1, square.y + 1, true, .ref)
+    else
+        null;
+    if (top_left_sq) |sq| sq.updateRugs(current_data_id);
+    if (top_right_sq) |sq| sq.updateRugs(current_data_id);
+    if (bottom_left_sq) |sq| sq.updateRugs(current_data_id);
+    if (bottom_right_sq) |sq| sq.updateRugs(current_data_id);
 }
 
-fn updateRugs(square: *Square) void {
+fn updateRugs(square: *Square, current_data_id: u16) void {
     const rug_tex = square.data.rug_textures orelse return;
 
     const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
-    const right_sq = map.getSquare(square.x, square.y - 1, true, .ref);
-    const bottom_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
-    const top_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
+    const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
+    const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
+    const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
 
-    const current_data_id = square.data_id;
     const top_left_sq = map.getSquare(square.x - 1, square.y - 1, true, .ref);
     const top_right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y - 1, true, .ref) else null;
     const bottom_left_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x - 1, square.y + 1, true, .ref) else null;
@@ -177,78 +175,66 @@ fn updateRugs(square: *Square) void {
     const bottom_left_eq = equals(bottom_left_sq, current_data_id);
     const bottom_right_eq = equals(bottom_right_sq, current_data_id);
 
-    if (!top_eq and !left_eq and bottom_eq and right_eq) {
-        square.selectTexture(rug_tex.corners);
+    square.selectTexture(square.data.textures);
+    square.rotation = std.math.degreesToRadians(0);
+
+    if (!top_eq) {
+        square.selectTexture(rug_tex.edges);
         square.rotation = std.math.degreesToRadians(0);
-        return;
     }
 
-    if (!top_eq and !right_eq and bottom_eq and left_eq) {
-        square.selectTexture(rug_tex.corners);
+    if (!left_eq) {
+        square.selectTexture(rug_tex.edges);
         square.rotation = std.math.degreesToRadians(90);
-        return;
     }
 
-    if (top_eq and left_eq and !bottom_eq and !right_eq) {
-        square.selectTexture(rug_tex.corners);
-        square.rotation = std.math.degreesToRadians(180);
-        return;
-    }
-
-    if (top_eq and right_eq and !bottom_eq and !left_eq) {
-        square.selectTexture(rug_tex.corners);
+    if (!right_eq) {
+        square.selectTexture(rug_tex.edges);
         square.rotation = std.math.degreesToRadians(270);
-        return;
     }
 
-    if (top_eq and left_eq and !top_left_eq) {
+    if (!bottom_eq) {
+        square.selectTexture(rug_tex.edges);
+        square.rotation = std.math.degreesToRadians(180);
+    }
+
+    if (left_eq and top_eq and !top_left_eq) {
         square.selectTexture(rug_tex.inner_corners);
         square.rotation = std.math.degreesToRadians(0);
-        return;
     }
 
     if (top_eq and right_eq and !top_right_eq) {
         square.selectTexture(rug_tex.inner_corners);
-        square.rotation = std.math.degreesToRadians(90);
-        return;
+        square.rotation = std.math.degreesToRadians(270);
     }
 
-    if (bottom_eq and right_eq and !bottom_right_eq) {
+    if (right_eq and bottom_eq and !bottom_right_eq) {
         square.selectTexture(rug_tex.inner_corners);
         square.rotation = std.math.degreesToRadians(180);
-        return;
     }
 
-    if (bottom_eq and left_eq and !bottom_left_eq) {
+    if (left_eq and bottom_eq and !bottom_left_eq) {
         square.selectTexture(rug_tex.inner_corners);
-        square.rotation = std.math.degreesToRadians(270);
-        return;
+        square.rotation = std.math.degreesToRadians(90);
     }
 
-    if (!top_eq and (left_eq or right_eq)) {
-        square.selectTexture(rug_tex.edges);
+    if (!left_eq and !top_eq) {
+        square.selectTexture(rug_tex.corners);
         square.rotation = std.math.degreesToRadians(0);
-        return;
     }
 
-    if (!right_eq and (top_eq or bottom_eq)) {
-        square.selectTexture(rug_tex.edges);
-        square.rotation = std.math.degreesToRadians(90);
-        return;
-    }
-
-    if (!bottom_eq and (left_eq or right_eq)) {
-        square.selectTexture(rug_tex.edges);
-        square.rotation = std.math.degreesToRadians(180);
-        return;
-    }
-
-    if (!left_eq and (top_eq or bottom_eq)) {
-        square.selectTexture(rug_tex.edges);
+    if (!top_eq and !right_eq) {
+        square.selectTexture(rug_tex.corners);
         square.rotation = std.math.degreesToRadians(270);
-        return;
     }
 
-    square.selectTexture(square.data.textures);
-    square.rotation = std.math.degreesToRadians(0);
+    if (!right_eq and !bottom_eq) {
+        square.selectTexture(rug_tex.corners);
+        square.rotation = std.math.degreesToRadians(180);
+    }
+
+    if (!left_eq and !bottom_eq) {
+        square.selectTexture(rug_tex.corners);
+        square.rotation = std.math.degreesToRadians(90);
+    }
 }

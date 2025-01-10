@@ -61,7 +61,6 @@
     .path = "light.png",
     .w = 128,
     .h = 128,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -69,7 +68,6 @@
     .path = "bars.png",
     .w = 26,
     .h = 8,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -77,7 +75,6 @@
     .path = "conditions.png",
     .w = 16,
     .h = 16,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -85,7 +82,6 @@
     .path = "error_texture.png",
     .w = 8,
     .h = 8,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -93,7 +89,6 @@
     .path = "items.png",
     .w = 10,
     .h = 10,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -101,7 +96,6 @@
     .path = "basic_items.png",
     .w = 8,
     .h = 8,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -109,7 +103,6 @@
     .path = "particles.png",
     .w = 8,
     .h = 8,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -117,7 +110,6 @@
     .path = "misc.png",
     .w = 10,
     .h = 10,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -125,7 +117,6 @@
     .path = "misc_big.png",
     .w = 18,
     .h = 18,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -133,7 +124,6 @@
     .path = "portals.png",
     .w = 10,
     .h = 10,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -141,7 +131,6 @@
     .path = "portals_big.png",
     .w = 18,
     .h = 18,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -149,7 +138,6 @@
     .path = "props.png",
     .w = 10,
     .h = 10,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -157,7 +145,6 @@
     .path = "props_big.png",
     .w = 18,
     .h = 18,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("anim_enemy"),
@@ -165,7 +152,6 @@
     .path = "misc_chars.png",
     .w = 10,
     .h = 10,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("anim_enemy"),
@@ -173,7 +159,6 @@
     .path = "low_realm.png",
     .w = 10,
     .h = 10,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("anim_enemy"),
@@ -181,7 +166,6 @@
     .path = "low_realm_big.png",
     .w = 18,
     .h = 18,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("anim_enemy"),
@@ -189,7 +173,6 @@
     .path = "mid_realm.png",
     .w = 8,
     .h = 8,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("anim_enemy"),
@@ -197,7 +180,6 @@
     .path = "mid_realm_big.png",
     .w = 16,
     .h = 16,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("anim_player"),
@@ -205,7 +187,6 @@
     .path = "players.png",
     .w = 10,
     .h = 10,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -213,7 +194,6 @@
     .path = "containers.png",
     .w = 18,
     .h = 18,
-    .dont_trim = false,
 },
 {
     .type = @SheetType("image"),
@@ -221,6 +201,5 @@
     .path = "resources.png",
     .w = 24,
     .h = 24,
-    .dont_trim = false,
 },
 ]
