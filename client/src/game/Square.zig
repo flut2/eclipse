@@ -70,10 +70,12 @@ pub fn addToMap(square_data: Square) void {
                 const base_data_idx: usize = @intCast(floor_y * map.minimap.num_components * map.minimap.width + floor_x * map.minimap.num_components);
                 @memcpy(map.minimap.data[base_data_idx .. base_data_idx + 4], &@as([4]u8, @bitCast(color)));
 
-                main.minimap_update.min_x = @min(main.minimap_update.min_x, floor_x);
-                main.minimap_update.max_x = @max(main.minimap_update.max_x, floor_x);
-                main.minimap_update.min_y = @min(main.minimap_update.min_y, floor_y);
-                main.minimap_update.max_y = @max(main.minimap_update.max_y, floor_y);
+                main.minimap_update = .{
+                    .min_x = @min(main.minimap_update.min_x, floor_x),
+                    .max_x = @max(main.minimap_update.max_x, floor_x),
+                    .min_y = @min(main.minimap_update.min_y, floor_y),
+                    .max_y = @max(main.minimap_update.max_y, floor_y),
+                };
             }
         }
     }

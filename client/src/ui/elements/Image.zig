@@ -14,12 +14,6 @@ image_data: element.ImageData,
 tooltip_text: ?element.TextData = null,
 ability_data: ?game_data.AbilityData = null,
 card_data: ?game_data.CardData = null,
-// hack
-is_minimap_decor: bool = false,
-minimap_offset_x: f32 = 0.0,
-minimap_offset_y: f32 = 0.0,
-minimap_width: f32 = 0.0,
-minimap_height: f32 = 0.0,
 
 pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
     if (!self.base.visible) return false;
@@ -69,42 +63,9 @@ pub fn deinit(self: *Image) void {
     if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: Image, cam_data: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(self: Image, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
-
     self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
-
-    if (self.is_minimap_decor) {
-        const fw: f32 = @floatFromInt(map.info.width);
-        const fh: f32 = @floatFromInt(map.info.height);
-        const fminimap_w: f32 = @floatFromInt(map.minimap.width);
-        const fminimap_h: f32 = @floatFromInt(map.minimap.height);
-        const zoom = cam_data.minimap_zoom;
-        const uv_size = .{ fw / zoom / fminimap_w, fh / zoom / fminimap_h };
-        render.generics.append(main.allocator, .{
-            .render_type = .minimap,
-            .pos = .{
-                self.base.x + self.minimap_offset_x + x_offset + assets.padding,
-                self.base.y + self.minimap_offset_y + y_offset + assets.padding,
-            },
-            .size = .{ self.minimap_width, self.minimap_height },
-            .uv = .{ cam_data.x / fminimap_w - uv_size[0] / 2.0, cam_data.y / fminimap_h - uv_size[1] / 2.0 },
-            .uv_size = uv_size,
-        }) catch main.oomPanic();
-
-        const player_icon = assets.minimap_icons[0];
-        const scale = 2.0;
-        const player_icon_w = player_icon.texWRaw() * scale;
-        const player_icon_h = player_icon.texHRaw() * scale;
-        render.drawQuad(
-            self.base.x + self.minimap_offset_x + x_offset + (self.minimap_width - player_icon_w) / 2.0,
-            self.base.y + self.minimap_offset_y + y_offset + (self.minimap_height - player_icon_h) / 2.0,
-            player_icon_w,
-            player_icon_h,
-            player_icon,
-            .{ .shadow_texel_mult = 0.5, .scissor = self.base.scissor },
-        );
-    }
 }
 
 pub fn width(self: Image) f32 {

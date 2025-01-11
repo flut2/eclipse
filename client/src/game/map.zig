@@ -299,6 +299,8 @@ pub fn update(time: i64, dt: f32) void {
     object_lock.lock();
     defer object_lock.unlock();
 
+    defer if (systems.screen == .game) systems.screen.game.minimap.update(time);
+
     inline for (.{
         Entity,
         Enemy,

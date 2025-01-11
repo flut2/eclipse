@@ -18,6 +18,7 @@ const UiContainer = @import("../elements/Container.zig");
 const Bar = @import("../elements/Bar.zig");
 const Button = @import("../elements/Button.zig");
 const Item = @import("../elements/Item.zig");
+const Minimap = @import("../elements/Minimap.zig");
 const Container = @import("../../game/Container.zig");
 const Player = @import("../../game/Player.zig");
 const Options = @import("../composed/Options.zig");
@@ -208,7 +209,7 @@ inventory_items: [22]*Item = undefined,
 container_decor: *Image = undefined,
 container_name: *Text = undefined,
 container_items: [9]*Item = undefined,
-minimap_decor: *Image = undefined,
+minimap: *Minimap = undefined,
 
 options: *Options = undefined,
 card_selection: *CardSelection = undefined,
@@ -235,15 +236,14 @@ pub fn init(self: *GameScreen) !void {
     const inventory_data = assets.getUiData("player_inventory", 0);
     self.parseItemRects();
 
-    const minimap_data = assets.getUiData("minimap", 0);
-    self.minimap_decor = try element.create(Image, .{
-        .base = .{ .x = main.camera.width - minimap_data.width() + 10, .y = -10 },
-        .image_data = .{ .normal = .{ .atlas_data = minimap_data } },
-        .is_minimap_decor = true,
-        .minimap_offset_x = 21.0,
-        .minimap_offset_y = 21.0,
-        .minimap_width = 212.0,
-        .minimap_height = 212.0,
+    const minimap_decor = assets.getUiData("minimap", 0);
+    self.minimap = try element.create(Minimap, .{
+        .base = .{ .x = main.camera.width - minimap_decor.width() + 10, .y = -10 },
+        .decor = .{ .normal = .{ .atlas_data = minimap_decor } },
+        .offset_x = 21.0,
+        .offset_y = 21.0,
+        .map_width = 212.0,
+        .map_height = 212.0,
     });
 
     self.inventory_decor = try element.create(Image, .{
@@ -534,15 +534,15 @@ pub fn init(self: *GameScreen) !void {
 
     self.fps_text = try element.create(Text, .{
         .base = .{
-            .x = self.minimap_decor.base.x,
-            .y = self.minimap_decor.base.y + self.minimap_decor.height() - 10,
+            .x = self.minimap.base.x,
+            .y = self.minimap.base.y + self.minimap.height() - 10,
         },
         .text_data = .{
             .text = "",
             .size = 12,
             .text_type = .bold,
             .hori_align = .middle,
-            .max_width = self.minimap_decor.width(),
+            .max_width = self.minimap.width(),
             .max_chars = 256,
         },
     });
@@ -650,7 +650,7 @@ fn addStatText(container: *UiContainer, text: **Text, idx: *f32) !void {
 }
 
 pub fn deinit(self: *GameScreen) void {
-    element.destroy(self.minimap_decor);
+    element.destroy(self.minimap);
     element.destroy(self.inventory_decor);
     element.destroy(self.container_decor);
     element.destroy(self.container_name);
@@ -681,9 +681,9 @@ pub fn deinit(self: *GameScreen) void {
 }
 
 pub fn resize(self: *GameScreen, w: f32, h: f32) void {
-    self.minimap_decor.base.x = w - self.minimap_decor.width() + 10;
-    self.fps_text.base.x = self.minimap_decor.base.x;
-    self.fps_text.base.y = self.minimap_decor.base.y + self.minimap_decor.height() - 10;
+    self.minimap.base.x = w - self.minimap.width() + 10;
+    self.fps_text.base.x = self.minimap.base.x;
+    self.fps_text.base.y = self.minimap.base.y + self.minimap.height() - 10;
     self.inventory_decor.base.x = w - self.inventory_decor.width() + 10;
     self.inventory_decor.base.y = h - self.inventory_decor.height() + 10;
     self.container_decor.base.x = self.inventory_decor.base.x - self.container_decor.width() + 10;

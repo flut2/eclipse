@@ -22,6 +22,7 @@ const ScrollableContainer = @import("ScrollableContainer.zig");
 const Slider = @import("Slider.zig");
 const Text = @import("Text.zig");
 const Toggle = @import("Toggle.zig");
+const Minimap = @import("Minimap.zig");
 
 pub const UiElement = union(enum) {
     bar: *Bar,
@@ -40,6 +41,7 @@ pub const UiElement = union(enum) {
     slider: *Slider,
     text: *Text,
     toggle: *Toggle,
+    minimap: *Minimap,
 
     pub fn draw(self: UiElement, cam_data: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
         switch (self) {
