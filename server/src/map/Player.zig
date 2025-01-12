@@ -99,6 +99,7 @@ chunked_tick_id: u8 = 0,
 /// Reused for multiple abilities, this means different things depending on class. Chrono being Time Lock, Genie being Compound Interest
 stored_damage: u32 = 0,
 last_ability_use: [4]i64 = @splat(-1),
+last_lock_update: i64 = -1,
 damage_multiplier: f32 = 1.0,
 hit_multiplier: f32 = 1.0,
 ability_state: network_data.AbilityState = .{},
@@ -152,6 +153,7 @@ pub fn init(self: *Player) !void {
 
 pub fn deinit(self: *Player) !void {
     try self.save();
+    try self.acc_data.set(.{ .locked_until = 0 });
 
     self.char_data.deinit();
     self.acc_data.deinit();
@@ -312,8 +314,14 @@ fn exportObject(self: *Player, comptime T: type) !void {
     }
 }
 
-pub fn tick(self: *Player, _: i64, dt: i64) !void {
+pub fn tick(self: *Player, time: i64, dt: i64) !void {
     if (self.x < 0.0 or self.y < 0.0) return;
+
+    if (time - self.last_lock_update >= 60 * std.time.us_per_s) {
+        const ms_time = @divFloor(time, 1000);
+        try self.acc_data.set(.{ .locked_until = @intCast(ms_time + 90 * std.time.ms_per_s) });
+        self.last_lock_update = time;
+    }
 
     const scaled_dt = @as(f32, @floatFromInt(dt)) / std.time.us_per_s;
 

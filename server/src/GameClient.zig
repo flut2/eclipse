@@ -367,7 +367,7 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
         try player.char_data.set(.{ .mp = class_data.stats.mana });
         try player.char_data.set(.{ .stats = stats });
         var starting_inventory: [22]u16 = @splat(std.math.maxInt(u16));
-        for (class_data.default_items, 0..) |item, i| 
+        for (class_data.default_items, 0..) |item, i|
             starting_inventory[i] = (game_data.item.from_name.get(item) orelse return error.UnknownStartItem).id;
         try player.char_data.set(.{ .inventory = starting_inventory });
     } else return error.InvalidCharId;
@@ -408,7 +408,17 @@ fn handleHello(self: *Client, data: PacketData(.hello)) void {
         return;
     }
 
+    const locked_until = player.acc_data.get(.locked_until) catch {
+        self.sendError(.message_with_disconnect, "Failed to acquire lock");
+        return;
+    };
+
     const timestamp: u64 = @intCast(std.time.milliTimestamp());
+    if (locked_until > timestamp) {
+        self.sendError(.message_with_disconnect, "Account is locked");
+        return;
+    }
+    
     if (data.class_id != std.math.maxInt(u16)) {
         createChar(&player, data.class_id, timestamp) catch {
             self.sendError(.message_with_disconnect, "Character creation failed");
@@ -419,6 +429,10 @@ fn handleHello(self: *Client, data: PacketData(.hello)) void {
     self.char_id = player.char_data.char_id;
     player.char_data.set(.{ .last_login_timestamp = timestamp }) catch {
         self.sendError(.message_with_disconnect, "Database error (login)");
+        return;
+    };
+    player.acc_data.set(.{ .locked_until = timestamp + 300 * std.time.ms_per_s }) catch {
+        self.sendError(.message_with_disconnect, "Could not interact with database");
         return;
     };
 
@@ -651,10 +665,23 @@ fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
         return;
     }
 
+    const locked_until = player.acc_data.get(.locked_until) catch {
+        self.sendError(.message_with_disconnect, "Failed to acquire lock");
+        return;
+    };
+
     const timestamp: u64 = @intCast(std.time.milliTimestamp());
+    if (locked_until > timestamp) {
+        self.sendError(.message_with_disconnect, "Account is locked");
+        return;
+    }
 
     self.char_id = player.char_data.char_id;
     player.char_data.set(.{ .last_login_timestamp = timestamp }) catch {
+        self.sendError(.message_with_disconnect, "Could not interact with database");
+        return;
+    };
+    player.acc_data.set(.{ .locked_until = timestamp + 300 * std.time.ms_per_s }) catch {
         self.sendError(.message_with_disconnect, "Could not interact with database");
         return;
     };

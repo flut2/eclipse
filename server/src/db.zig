@@ -232,6 +232,7 @@ pub const AccountData = struct {
         alive_char_ids: []const u32,
         max_char_slots: u32,
         resources: []const network_data.DataIdWithCount(u32),
+        locked_until: u64,
     };
 
     acc_id: u32,

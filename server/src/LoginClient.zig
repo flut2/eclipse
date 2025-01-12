@@ -361,6 +361,10 @@ fn handleRegister(self: *Client, data: PacketData(.register)) void {
         self.databaseError();
         return;
     };
+    acc_data.set(.{ .locked_until = 0 }) catch {
+        self.databaseError();
+        return;
+    };
 
     const list: network_data.CharacterListData = .{
         .name = acc_data.get(.name) catch {

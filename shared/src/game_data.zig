@@ -95,8 +95,7 @@ pub fn spiritGoal(aether: u8) u32 {
 }
 
 pub fn physDamage(dmg: i32, defense: i32, condition: utils.Condition) i32 {
-    if (dmg == 0 or condition.invulnerable)
-        return 0;
+    if (dmg == 0 or condition.invulnerable) return 0;
 
     const def = if (condition.armor_broken)
         0
@@ -109,9 +108,7 @@ pub fn physDamage(dmg: i32, defense: i32, condition: utils.Condition) i32 {
 }
 
 pub fn magicDamage(dmg: i32, resistance: i32, condition: utils.Condition) i32 {
-    if (dmg == 0 or condition.invulnerable)
-        return 0;
-
+    if (dmg == 0 or condition.invulnerable) return 0;
     return @max(@divFloor(dmg, 5), dmg - resistance);
 }
 
@@ -165,18 +162,9 @@ pub const Currency = enum {
 
     pub fn icon(self: Currency) TextureData {
         return switch (self) {
-            .gold => .{
-                .sheet = "misc",
-                .index = 20,
-            },
-            .gems => .{
-                .sheet = "misc",
-                .index = 21,
-            },
-            .crowns => .{
-                .sheet = "misc_big",
-                .index = 50,
-            },
+            .gold => .{ .sheet = "misc", .index = 20 },
+            .gems => .{ .sheet = "misc", .index = 21 },
+            .crowns => .{ .sheet = "misc_big", .index = 50 },
         };
     }
 };
