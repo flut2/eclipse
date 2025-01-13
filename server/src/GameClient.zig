@@ -501,6 +501,7 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
         self.sendError(.message_with_disconnect, "Player does not exist");
         return;
     };
+    player.clearEphemerals();
     player.save() catch {
         self.sendError(.message_with_disconnect, "Player save failed");
         return;
@@ -593,6 +594,7 @@ fn handleEscape(self: *Client, _: PacketData(.escape)) void {
         self.sendError(.message_with_disconnect, "Player does not exist");
         return;
     };
+    player.clearEphemerals();
     player.save() catch {
         self.sendError(.message_with_disconnect, "Player save failed");
         return;

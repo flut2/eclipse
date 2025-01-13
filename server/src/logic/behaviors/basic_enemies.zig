@@ -184,6 +184,7 @@ pub const Imp = struct {
 
     pub fn death(_: *Imp, host: *Enemy) !void {
         loot.dropPortals(host, &.{.{ .name = "Crimson Chasm", .chance = 1.0 / 20.0 }});
+        loot.dropItems(host, &.{.{ .name = "Staff of Solstice", .chance = 1.0 / 1.0, .threshold = 0.001 }});
     }
 
     pub fn tick(_: *Imp, host: *Enemy, time: i64, dt: i64) !void {

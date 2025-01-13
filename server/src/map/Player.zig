@@ -152,6 +152,7 @@ pub fn init(self: *Player) !void {
 }
 
 pub fn deinit(self: *Player) !void {
+    self.clearEphemerals();
     try self.save();
     try self.acc_data.set(.{ .locked_until = 0 });
 
@@ -169,6 +170,21 @@ pub fn deinit(self: *Player) !void {
     self.resources.deinit(main.allocator);
     self.talents.deinit(main.allocator);
     self.stats_writer.list.deinit(main.allocator);
+}
+
+pub fn clearEphemerals(self: *Player) void {
+    for (&self.inventory) |*item| {
+        const data = game_data.item.from_id.get(item.*) orelse continue;
+        if (data.ephemeral) {
+            sendMessage: {
+                var buf: [256]u8 = undefined;
+                const message = std.fmt.bufPrint(&buf, "Your \"{s}\" has vanished from your inventory", .{data.name}) catch break :sendMessage;
+                self.client.sendMessage(message);
+            }
+
+            item.* = std.math.maxInt(u16);
+        }
+    }
 }
 
 pub fn moveToSpawn(self: *Player) void {

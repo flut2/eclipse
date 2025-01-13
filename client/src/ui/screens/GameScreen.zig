@@ -255,17 +255,18 @@ pub fn init(self: *GameScreen) !void {
     });
 
     for (0..self.inventory_items.len) |i| {
+        const scale: f32 = if (i < 4) 4.0 else 3.0;
         self.inventory_items[i] = try element.create(Item, .{
             .base = .{
                 .x = self.inventory_decor.base.x + self.inventory_pos_data[i].x +
-                    (self.inventory_pos_data[i].w - assets.error_data.texWRaw() * 4.0) / 2 + assets.padding,
+                    (self.inventory_pos_data[i].w - assets.error_data.texWRaw() * scale) / 2 + assets.padding,
                 .y = self.inventory_decor.base.y + self.inventory_pos_data[i].y +
-                    (self.inventory_pos_data[i].h - assets.error_data.texHRaw() * 4.0) / 2 + assets.padding,
+                    (self.inventory_pos_data[i].h - assets.error_data.texHRaw() * scale) / 2 + assets.padding,
                 .visible = false,
             },
             .background_x = self.inventory_decor.base.x + self.inventory_pos_data[i].x,
             .background_y = self.inventory_decor.base.y + self.inventory_pos_data[i].y,
-            .image_data = .{ .normal = .{ .scale_x = 4.0, .scale_y = 4.0, .atlas_data = assets.error_data, .glow = true } },
+            .image_data = .{ .normal = .{ .scale_x = scale, .scale_y = scale, .atlas_data = assets.error_data, .glow = true } },
             .draggable = true,
             .drag_start_callback = itemDragStartCallback,
             .drag_end_callback = itemDragEndCallback,
@@ -300,14 +301,14 @@ pub fn init(self: *GameScreen) !void {
         self.container_items[i] = try element.create(Item, .{
             .base = .{
                 .x = self.container_decor.base.x + self.container_pos_data[i].x +
-                    (self.container_pos_data[i].w - assets.error_data.texWRaw() * 4.0) / 2 + assets.padding,
+                    (self.container_pos_data[i].w - assets.error_data.texWRaw() * 3.0) / 2 + assets.padding,
                 .y = self.container_decor.base.y + self.container_pos_data[i].y +
-                    (self.container_pos_data[i].h - assets.error_data.texHRaw() * 4.0) / 2 + assets.padding,
+                    (self.container_pos_data[i].h - assets.error_data.texHRaw() * 3.0) / 2 + assets.padding,
                 .visible = false,
             },
             .background_x = self.container_decor.base.x + self.container_pos_data[i].x,
             .background_y = self.container_decor.base.y + self.container_pos_data[i].y,
-            .image_data = .{ .normal = .{ .scale_x = 4.0, .scale_y = 4.0, .atlas_data = assets.error_data, .glow = true } },
+            .image_data = .{ .normal = .{ .scale_x = 3.0, .scale_y = 3.0, .atlas_data = assets.error_data, .glow = true } },
             .draggable = true,
             .drag_start_callback = itemDragStartCallback,
             .drag_end_callback = itemDragEndCallback,
@@ -1268,7 +1269,10 @@ pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
         return;
     }
 
+    const scale: f32 = if (idx < 4) 4.0 else 3.0;
     self.inventory_items[idx].base.visible = true;
+    self.inventory_items[idx].image_data.normal.scale_x = scale;
+    self.inventory_items[idx].image_data.normal.scale_y = scale;
 
     if (game_data.item.from_id.get(@intCast(item))) |data| {
         if (assets.atlas_data.get(data.texture.sheet)) |tex| {

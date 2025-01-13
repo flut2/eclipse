@@ -312,7 +312,8 @@ pub const ProjectileData = struct {
     knockback_strength: f32 = 1.0,
 
     pub fn range(self: ProjectileData) f32 {
-        return self.speed * self.duration * 10.0;
+        const base_range = self.speed * self.duration * 10.0;
+        return if (self.boomerang) base_range / 2.0 else base_range;
     }
 };
 
@@ -500,6 +501,8 @@ pub const ItemData = struct {
     cooldown: f32 = 0.0,
     consumable: bool = false,
     untradeable: bool = false,
+    ephemeral: bool = false,
+    level_transform_item: ?[]const u8 = null,
     bag_type: enum { brown, purple, blue, white } = .brown,
     sound: []const u8 = "Unknown.mp3",
 };

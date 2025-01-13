@@ -56,7 +56,7 @@ pub fn init(self: *ItemTooltip) !void {
 
     const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top", 0);
     self.line_break_one = try self.root.createChild(Image, .{
-        .base = .{ .x = 20, .y = self.image.base.y + 40 },
+        .base = .{ .x = 20, .y = self.image.base.y + 45 },
         .image_data = .{
             .nine_slice = .fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0),
         },
@@ -101,30 +101,20 @@ pub fn deinit(self: *ItemTooltip) void {
 
 fn getMainBuffer(self: *ItemTooltip) []u8 {
     const buffer_len_half = @divExact(self.main_text.text_data.backing_buffer.len, 2);
-    const back_buffer = self.main_text.text_data.backing_buffer[0..buffer_len_half];
-    const front_buffer = self.main_text.text_data.backing_buffer[buffer_len_half..];
-
-    if (self.main_buffer_front) {
-        self.main_buffer_front = false;
-        return front_buffer;
-    } else {
-        self.main_buffer_front = true;
-        return back_buffer;
-    }
+    defer self.main_buffer_front = !self.main_buffer_front;
+    return if (self.main_buffer_front) 
+        self.main_text.text_data.backing_buffer[buffer_len_half..] 
+    else 
+        self.main_text.text_data.backing_buffer[0..buffer_len_half];
 }
 
 fn getFooterBuffer(self: *ItemTooltip) []u8 {
     const buffer_len_half = @divExact(self.footer.text_data.backing_buffer.len, 2);
-    const back_buffer = self.footer.text_data.backing_buffer[0..buffer_len_half];
-    const front_buffer = self.footer.text_data.backing_buffer[buffer_len_half..];
-
-    if (self.footer_buffer_front) {
-        self.footer_buffer_front = false;
-        return front_buffer;
-    } else {
-        self.footer_buffer_front = true;
-        return back_buffer;
-    }
+    defer self.footer_buffer_front = !self.footer_buffer_front;
+    return if (self.footer_buffer_front) 
+        self.footer.text_data.backing_buffer[buffer_len_half..] 
+    else 
+        self.footer.text_data.backing_buffer[0..buffer_len_half];
 }
 
 pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
@@ -134,7 +124,6 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     self.root.base.y = if (up_y < 0) params.y + 15 else up_y;
 
     if (self.item == params.item) return;
-
     self.item = params.item;
 
     if (game_data.item.from_id.get(@intCast(params.item))) |data| {
@@ -215,7 +204,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
 
         self.item_name.text_data.setText(data.name);
 
-        self.line_break_one.base.y = self.image.base.y + 40;
+        self.line_break_one.base.y = self.image.base.y + 45;
         self.main_text.base.y = self.line_break_one.base.y - 10;
 
         const line_base = "{s}\n";
@@ -292,25 +281,20 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
                 text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "True Damage: " ++ decimal_fmt, .{ text, proj.true_dmg }) catch text;
             text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Range: " ++ float_fmt, .{ text, proj.range() }) catch text;
 
-            if (proj.conditions) |conditions| {
-                for (conditions, 0..) |cond, i| {
-                    if (i == 0)
-                        text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Shot effect:", .{text}) catch text;
-                    text = std.fmt.bufPrint(
-                        self.getMainBuffer(),
-                        line_base_inset ++ "Inflict " ++ string_fmt ++ " for " ++ float_fmt ++ " seconds",
-                        .{ text, cond.type.toString(), cond.duration },
-                    ) catch text;
-                }
-            }
+            if (proj.conditions) |conditions| for (conditions, 0..) |cond, i| {
+                if (i == 0) text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Shot effect:", .{text}) catch text;
+                text = std.fmt.bufPrint(
+                    self.getMainBuffer(),
+                    line_base_inset ++ "Inflict " ++ string_fmt ++ " for " ++ float_fmt ++ " seconds",
+                    .{ text, cond.type.toString(), cond.duration },
+                ) catch text;
+            };
 
             if (data.fire_rate != 1.0)
                 text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Rate of Fire: " ++ float_fmt ++ "%", .{ text, data.fire_rate * 100 }) catch text;
 
-            if (proj.piercing)
-                text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Projectiles pierce", .{text}) catch text;
-            if (proj.boomerang)
-                text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Projectiles boomerang", .{text}) catch text;
+            if (proj.piercing) text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Projectiles pierce", .{text}) catch text;
+            if (proj.boomerang) text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Projectiles boomerang", .{text}) catch text;
         }
 
         if (data.stat_increases) |stat_increases| {
@@ -349,6 +333,8 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         var footer_text: []u8 = "";
         if (data.untradeable)
             footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Can not be traded", .{footer_text}) catch footer_text;
+        if (data.ephemeral)
+            footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "This item will disappear on map switch", .{footer_text}) catch footer_text;
 
         if (data.item_type == .boots or data.item_type == .artifact) {
             footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Usable by: " ++ string_fmt, .{ footer_text, "All Classes" }) catch footer_text;
