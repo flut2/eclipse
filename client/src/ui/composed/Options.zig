@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const f32i = @import("shared").utils.f32i;
+
 const assets = @import("../../assets.zig");
 const input = @import("../../input.zig");
 const main = @import("../../main.zig");
@@ -327,8 +329,8 @@ fn positionElements(container: *Container) void {
         switch (elem) {
             .scrollable_container, .container => {},
             inline else => |inner| {
-                inner.base.x = @as(f32, @floatFromInt(@divFloor(i, 6))) * (main.camera.width / 4.0);
-                inner.base.y = @as(f32, @floatFromInt(@mod(i, 6))) * (main.camera.height / 9.0);
+                inner.base.x = f32i(@divFloor(i, 6)) * (main.camera.width / 4.0);
+                inner.base.y = f32i(@mod(i, 6)) * (main.camera.height / 9.0);
             },
         }
     }

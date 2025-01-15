@@ -1,7 +1,9 @@
 const std = @import("std");
 
-const game_data = @import("shared").game_data;
 const glfw = @import("zglfw");
+const shared = @import("shared");
+const game_data = shared.game_data;
+const f32i = shared.utils.f32i;
 
 const assets = @import("assets.zig");
 const map = @import("game/map.zig");
@@ -378,8 +380,8 @@ pub fn scrollEvent(_: *glfw.Window, x_offset: f64, y_offset: f64) callconv(.C) v
         switch (ui_systems.screen) {
             .game => {
                 const size = @max(map.info.width, map.info.height);
-                const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
-                const scroll_speed = @as(f32, @floatFromInt(size)) / 1280;
+                const max_zoom = f32i(@divFloor(size, 32));
+                const scroll_speed = f32i(size) / 1280;
 
                 main.camera.lock.lock();
                 defer main.camera.lock.unlock();

@@ -3,6 +3,7 @@ const std = @import("std");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
+const int = shared.utils.int;
 
 const main = @import("../main.zig");
 const World = @import("../World.zig");
@@ -37,7 +38,7 @@ pub fn delete(self: *Projectile) !void {
 }
 
 pub fn tick(self: *Projectile, time: i64, _: i64) !void {
-    if (time - self.start_time >= @as(i64, @intFromFloat(self.data.duration + 0.25 * std.time.us_per_s))) {
+    if (time - self.start_time >= int(i64, self.data.duration + 0.25 * std.time.us_per_s)) {
         try self.delete();
         return;
     }

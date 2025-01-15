@@ -6,6 +6,8 @@ const shared = @import("shared");
 const map_data = shared.map_data;
 const game_data = shared.game_data;
 const utils = shared.utils;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const assets = @import("../../assets.zig");
 const Container = @import("../../game/Container.zig");
@@ -580,8 +582,8 @@ pub fn init(self: *MapEditorScreen) !void {
 
         _ = try self.palette_containers.ground.createChild(Button, .{
             .base = .{
-                .x = @floatFromInt(@mod(i, 5) * 34),
-                .y = @floatFromInt(@divFloor(i, 5) * 34),
+                .x = f32i(@mod(i, 5) * 34),
+                .y = f32i(@divFloor(i, 5) * 34),
             },
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = 4.0, .scale_y = 4.0 } } },
             .userdata = entry.key_ptr,
@@ -670,7 +672,7 @@ pub fn init(self: *MapEditorScreen) !void {
     i = 0;
     while (region_iter.next()) |entry| : (i += 1) {
         _ = try self.palette_containers.region.createChild(Button, .{
-            .base = .{ .x = @floatFromInt(@mod(i, 5) * 34), .y = @floatFromInt(@divFloor(i, 5) * 34) },
+            .base = .{ .x = f32i(@mod(i, 5) * 34), .y = f32i(@divFloor(i, 5) * 34) },
             .image_data = .{ .base = .{ .normal = .{
                 .atlas_data = assets.generic_8x8,
                 .scale_x = 4.0,
@@ -826,8 +828,8 @@ fn addObjectContainer(
 
         _ = try container.*.createChild(Button, .{
             .base = .{
-                .x = @as(f32, @floatFromInt(@mod(i, 5) * 32)) + (32 - atlas_data.width() * scale) / 2.0,
-                .y = @as(f32, @floatFromInt(@divFloor(i, 5) * 32)) + (32 - atlas_data.height() * scale) / 2.0,
+                .x = f32i(@mod(i, 5) * 32) + (32 - atlas_data.width() * scale) / 2.0,
+                .y = f32i(@divFloor(i, 5) * 32) + (32 - atlas_data.height() * scale) / 2.0,
             },
             .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = scale, .scale_y = scale } } },
             .userdata = entry.key_ptr,
@@ -897,23 +899,23 @@ fn initialize(self: *MapEditorScreen) void {
 
     @memset(self.map_tile_data, MapEditorTile{});
 
-    const center = @as(f32, @floatFromInt(self.map_size)) / 2.0;
+    const center = f32i(self.map_size) / 2.0;
 
     {
         map.square_lock.lock();
         defer map.square_lock.unlock();
         for (0..self.map_size) |y| for (0..self.map_size) |x|
             Square.addToMap(.{
-                .x = @as(f32, @floatFromInt(x)) + 0.5,
-                .y = @as(f32, @floatFromInt(y)) + 0.5,
+                .x = f32i(x) + 0.5,
+                .y = f32i(y) + 0.5,
                 .data_id = Square.editor_tile,
             });
     }
 
     map.info.player_map_id = std.math.maxInt(u32) - 1;
     Player.addToMap(.{
-        .x = if (self.start_x_override == std.math.maxInt(u16)) center else @floatFromInt(self.start_x_override),
-        .y = if (self.start_y_override == std.math.maxInt(u16)) center else @floatFromInt(self.start_y_override),
+        .x = if (self.start_x_override == std.math.maxInt(u16)) center else f32i(self.start_x_override),
+        .y = if (self.start_y_override == std.math.maxInt(u16)) center else f32i(self.start_y_override),
         .map_id = map.info.player_map_id,
         .data_id = 0,
         .speed = 300,
@@ -1289,8 +1291,8 @@ fn setTile(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
     map.square_lock.lock();
     defer map.square_lock.unlock();
     Square.addToMap(.{
-        .x = @as(f32, @floatFromInt(x)) + 0.5,
-        .y = @as(f32, @floatFromInt(y)) + 0.5,
+        .x = f32i(x) + 0.5,
+        .y = f32i(y) + 0.5,
         .data_id = data_id,
     });
 }
@@ -1322,8 +1324,8 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
 
         const duped_name = main.allocator.dupe(u8, data.name) catch main.oomPanic();
         var indicator: Entity = .{
-            .x = @as(f32, @floatFromInt(x)) + 0.5,
-            .y = @as(f32, @floatFromInt(y)) + 0.5,
+            .x = f32i(x) + 0.5,
+            .y = f32i(y) + 0.5,
             .map_id = next_map_id.*,
             .data_id = 0xFFFE,
             .name = duped_name,
@@ -1385,8 +1387,8 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
         if (needs_lock) map.object_lock.lock();
         defer if (needs_lock) map.object_lock.unlock();
         ObjType.addToMap(.{
-            .x = @as(f32, @floatFromInt(x)) + 0.5,
-            .y = @as(f32, @floatFromInt(y)) + 0.5,
+            .x = f32i(x) + 0.5,
+            .y = f32i(y) + 0.5,
             .map_id = next_map_id.*,
             .data_id = data_id,
         });
@@ -1403,15 +1405,15 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
 
     if (place_type != .erase and sel_type == defaultType(self.active_layer)) return;
 
-    const size: f32 = @floatFromInt(self.map_size - 1);
-    const y_left: usize = @intFromFloat(@max(0, @floor(center_y - self.brush_size)));
-    const y_right: usize = @intFromFloat(@min(size, @ceil(center_y + self.brush_size)));
-    const x_left: usize = @intFromFloat(@max(0, @floor(center_x - self.brush_size)));
-    const x_right: usize = @intFromFloat(@min(size, @ceil(center_x + self.brush_size)));
+    const size: f32 = f32i(self.map_size - 1);
+    const y_left = int(usize, @max(0, @floor(center_y - self.brush_size)));
+    const y_right = int(usize, @min(size, @ceil(center_y + self.brush_size)));
+    const x_left = int(usize, @max(0, @floor(center_x - self.brush_size)));
+    const x_right = int(usize, @min(size, @ceil(center_x + self.brush_size)));
     for (y_left..y_right) |y| {
         for (x_left..x_right) |x| {
-            const fx: f32 = @floatFromInt(x);
-            const fy: f32 = @floatFromInt(y);
+            const fx: f32 = f32i(x);
+            const fy: f32 = f32i(y);
             const dx = center_x - fx;
             const dy = center_y - fy;
             if (dx * dx + dy * dy <= size_sqr) {
@@ -1601,7 +1603,7 @@ pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
     defer self.last_update = main.current_time;
 
     const world_point = main.camera.screenToWorld(input.mouse_x, input.mouse_y);
-    const size: f32 = @floatFromInt(self.map_size - 1);
+    const size: f32 = f32i(self.map_size - 1);
     const x = @floor(@max(0, @min(world_point.x, size)));
     const y = @floor(@max(0, @min(world_point.y, size)));
     switch (self.action) {
@@ -1619,11 +1621,11 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
     defer self.last_press = main.current_time;
 
     const world_point = main.camera.screenToWorld(input.mouse_x, input.mouse_y);
-    const size: f32 = @floatFromInt(self.map_size - 1);
+    const size: f32 = f32i(self.map_size - 1);
     const x = @floor(@max(0, @min(world_point.x, size)));
     const y = @floor(@max(0, @min(world_point.y, size)));
-    const ux: u16 = @intFromFloat(x);
-    const uy: u16 = @intFromFloat(y);
+    const ux = int(u16, x);
+    const uy = int(u16, y);
     const map_tile = self.getTile(ux, uy);
 
     switch (action) {

@@ -3,6 +3,7 @@ const std = @import("std");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
+const f32i = utils.f32i;
 
 const assets = @import("../../assets.zig");
 const map = @import("../../game/map.zig");
@@ -49,10 +50,10 @@ pub fn draw(self: *Minimap, cam_data: render.CameraData, x_offset: f32, y_offset
 
     self.decor.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
 
-    const fw: f32 = @floatFromInt(map.info.width);
-    const fh: f32 = @floatFromInt(map.info.height);
-    const fminimap_w: f32 = @floatFromInt(map.minimap.width);
-    const fminimap_h: f32 = @floatFromInt(map.minimap.height);
+    const fw = f32i(map.info.width);
+    const fh = f32i(map.info.height);
+    const fminimap_w = f32i(map.minimap.width);
+    const fminimap_h = f32i(map.minimap.height);
     const zoom = cam_data.minimap_zoom;
     const uv_size = .{ fw / zoom / fminimap_w, fh / zoom / fminimap_h };
     render.generics.append(main.allocator, .{
@@ -105,8 +106,8 @@ pub fn update(self: *Minimap, time: i64) void {
 
     self.icons.clearRetainingCapacity();
 
-    const fw: f32 = @floatFromInt(map.info.width);
-    const fh: f32 = @floatFromInt(map.info.height);
+    const fw = f32i(map.info.width);
+    const fh = f32i(map.info.height);
     main.camera.lock.lock();
     const zoom = main.camera.minimap_zoom;
     const x = main.camera.x;

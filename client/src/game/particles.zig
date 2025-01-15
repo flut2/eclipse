@@ -3,6 +3,8 @@ const std = @import("std");
 const shared = @import("shared");
 const utils = shared.utils;
 const network_data = shared.network_data;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const assets = @import("../assets.zig");
 const px_per_tile = @import("../Camera.zig").px_per_tile;
@@ -321,7 +323,7 @@ pub const ThrowEffect = struct {
     }
 
     pub fn update(self: *ThrowEffect, _: i64, _: f32) bool {
-        const duration: f32 = @floatFromInt((if (self.duration == 0) 1500 else self.duration) * std.time.us_per_ms);
+        const duration: f32 = f32i((if (self.duration == 0) 1500 else self.duration) * std.time.us_per_ms);
         ThrowParticle.addToMap(.{
             .size = 2.0,
             .initial_size = 2.0,
@@ -350,8 +352,8 @@ pub const AoeEffect = struct {
 
     pub fn update(self: *AoeEffect, _: i64, _: f32) bool {
         const part_num = 4 + self.radius * 2;
-        for (0..@intFromFloat(part_num)) |i| {
-            const float_i: f32 = @floatFromInt(i);
+        for (0..int(usize, part_num)) |i| {
+            const float_i: f32 = f32i(i);
             const angle = (float_i * 2.0 * std.math.pi) / part_num;
             const end_x = self.x + self.radius * @cos(angle);
             const end_y = self.y + self.radius * @sin(angle);
@@ -415,7 +417,7 @@ pub const LineEffect = struct {
     pub fn update(self: *LineEffect, _: i64, _: f32) bool {
         const duration = 0.7 * std.time.us_per_s;
         for (0..30) |i| {
-            const f = @as(f32, @floatFromInt(i)) / 30;
+            const f = f32i(i) / 30.0;
             SparkParticle.addToMap(.{
                 .size = 1.0,
                 .initial_size = 1.0,
@@ -524,7 +526,7 @@ pub const HealEffect = struct {
                 defer map.object_lock.unlock();
                 if (map.findObject(T, self.target_map_id, .con)) |obj| {
                     for (0..10) |i| {
-                        const float_i: f32 = @floatFromInt(i);
+                        const float_i: f32 = f32i(i);
                         const angle = std.math.tau * (float_i / 10.0);
                         const radius = 0.3 + 0.4 * utils.rng.random().float(f32);
                         HealParticle.addToMap(.{
@@ -569,7 +571,7 @@ pub const RingEffect = struct {
 
         const duration = 0.2 * std.time.us_per_s;
         for (0..12) |i| {
-            const float_i: f32 = @floatFromInt(i);
+            const float_i: f32 = f32i(i);
             const angle = (float_i * 2.0 * std.math.pi) / 12.0;
             const cos_angle = @cos(angle);
             const sin_angle = @sin(angle);

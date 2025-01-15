@@ -1,9 +1,11 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const game_data = @import("shared").game_data;
 const glfw = @import("zglfw");
 const pack = @import("turbopack");
+const shared = @import("shared");
+const game_data = shared.game_data;
+const f32i = shared.utils.f32i;
 const zaudio = @import("zaudio");
 const ziggy = @import("ziggy");
 const zstbi = @import("zstbi");
@@ -258,7 +260,7 @@ pub const AtlasData = extern struct {
     }
 
     pub fn fromRaw(u: c_int, v: c_int, w: c_int, h: c_int, ui: AtlasType) AtlasData {
-        return fromRawF32(@floatFromInt(u), @floatFromInt(v), @floatFromInt(w), @floatFromInt(h), ui);
+        return fromRawF32(f32i(u), f32i(v), f32i(w), f32i(h), ui);
     }
 
     pub fn fromRawF32(u: f32, v: f32, w: f32, h: f32, atlas_type: AtlasType) AtlasData {
@@ -460,8 +462,8 @@ fn addWall(
 ) !void {
     if (walls.contains(sheet_name)) std.debug.panic("\"{s}\" is already present in wall data", .{sheet_name});
 
-    const x_off = @as(f32, @floatFromInt(full_cut_width - base_cut_width)) / 2.0;
-    const y_off = @as(f32, @floatFromInt(full_cut_height - base_cut_height)) / 2.0;
+    const x_off = f32i(full_cut_width - base_cut_width) / 2.0;
+    const y_off = f32i(full_cut_height - base_cut_height) / 2.0;
     if (x_off < 0 or y_off < 0) @panic("Invalid base cut w/h");
     if (std.mem.indexOf(u8, image_path, "..") != null) {
         std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
@@ -570,10 +572,10 @@ fn addWall(
             }
         }
 
-        const fx: f32 = @floatFromInt(rect.x);
-        const fy: f32 = @floatFromInt(rect.y);
-        const fw: f32 = @floatFromInt(rect.w);
-        const fh: f32 = @floatFromInt(rect.h);
+        const fx = f32i(rect.x);
+        const fy = f32i(rect.y);
+        const fw = f32i(rect.w);
+        const fh = f32i(rect.h);
         const base_w = fw - x_off * 2.0;
         const base_h = fh - y_off * 2.0;
         const base_atlas_data: AtlasData = .fromRawF32(fx + x_off, fy + y_off, base_w, base_h, .base);

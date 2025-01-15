@@ -3,6 +3,7 @@ const std = @import("std");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
+const int = utils.int;
 
 const assets = @import("../assets.zig");
 const main = @import("../main.zig");
@@ -51,8 +52,8 @@ pub fn addToMap(square_data: Square) void {
     std.debug.assert(!map.square_lock.tryLock());
 
     var self = square_data;
-    const floor_y: u32 = @intFromFloat(@floor(self.y));
-    const floor_x: u32 = @intFromFloat(@floor(self.x));
+    const floor_y = int(u32, @floor(self.y));
+    const floor_x = int(u32, @floor(self.x));
 
     self.data = game_data.ground.from_id.getPtr(self.data_id) orelse {
         std.log.err("Could not find data for square with data id {}, returning", .{self.data_id});

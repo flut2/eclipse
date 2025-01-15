@@ -4,6 +4,8 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const network_data = shared.network_data;
+const f32i = utils.f32i;
+const int = utils.int;
 const zstbi = @import("zstbi");
 
 const assets = @import("../assets.zig");
@@ -179,7 +181,7 @@ pub fn dispose() void {
 pub fn getLightIntensity(time: i64) f32 {
     if (info.day_intensity == 0 and info.night_intensity == 0) return info.bg_intensity;
 
-    const server_time_clamped: f32 = @floatFromInt(@mod(time + info.server_time, day_cycle));
+    const server_time_clamped = f32i(@mod(time + info.server_time, day_cycle));
     const intensity_delta = info.day_intensity - info.night_intensity;
     if (server_time_clamped <= day_cycle_half)
         return info.night_intensity + intensity_delta * (server_time_clamped / day_cycle_half)
@@ -202,7 +204,7 @@ pub fn setMapInfo(data: network_data.MapInfo) void {
     }
 
     const size = @max(data.width, data.height);
-    const max_zoom: f32 = @floatFromInt(@divFloor(size, 32));
+    const max_zoom = f32i(@divFloor(size, 32));
     main.camera.lock.lock();
     defer main.camera.lock.unlock();
     main.camera.minimap_zoom = @max(1, @min(max_zoom, main.camera.minimap_zoom));
@@ -291,10 +293,10 @@ pub fn update(time: i64, dt: f32) void {
 
     const cam_x = main.camera.x;
     const cam_y = main.camera.y;
-    const cam_min_x: f32 = @floatFromInt(main.camera.min_x);
-    const cam_max_x: f32 = @floatFromInt(main.camera.max_x);
-    const cam_min_y: f32 = @floatFromInt(main.camera.min_y);
-    const cam_max_y: f32 = @floatFromInt(main.camera.max_y);
+    const cam_min_x = f32i(main.camera.min_x);
+    const cam_max_x = f32i(main.camera.max_x);
+    const cam_min_y = f32i(main.camera.min_y);
+    const cam_max_y = f32i(main.camera.max_y);
 
     object_lock.lock();
     defer object_lock.unlock();
@@ -450,8 +452,8 @@ pub fn getSquare(x: f32, y: f32, comptime check_validity: bool, comptime constne
         return null;
     }
 
-    const floor_x: u32 = @intFromFloat(x);
-    const floor_y: u32 = @intFromFloat(y);
+    const floor_x = int(u32, x);
+    const floor_y = int(u32, y);
     if (check_validity and !validPos(floor_x, floor_y)) {
         @branchHint(.unlikely);
         return null;

@@ -2,6 +2,7 @@ const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
 const render = @import("../../render.zig");
 const ElementBase = @import("element.zig").ElementBase;
+const f32i = @import("shared").utils.f32i;
 
 const MenuBackground = @This();
 base: ElementBase,
@@ -20,17 +21,17 @@ pub fn draw(self: MenuBackground, _: render.CameraData, x_offset: f32, y_offset:
 }
 
 pub fn width(_: MenuBackground) f32 {
-    return @floatFromInt(assets.menu_background.width);
+    return f32i(assets.menu_background.width);
 }
 
 pub fn height(_: MenuBackground) f32 {
-    return @floatFromInt(assets.menu_background.height);
+    return f32i(assets.menu_background.height);
 }
 
 pub fn texWRaw(_: MenuBackground) f32 {
-    return @floatFromInt(assets.menu_background.width);
+    return f32i(assets.menu_background.width);
 }
 
 pub fn texHRaw(_: MenuBackground) f32 {
-    return @floatFromInt(assets.menu_background.height);
+    return f32i(assets.menu_background.height);
 }

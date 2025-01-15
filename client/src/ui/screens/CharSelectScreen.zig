@@ -1,7 +1,9 @@
 const std = @import("std");
 
 const build_options = @import("options");
-const game_data = @import("shared").game_data;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const f32i = shared.utils.f32i;
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
@@ -33,7 +35,7 @@ pub fn init(self: *CharSelectScreen) !void {
                 const box = try element.create(CharacterBox, .{
                     .base = .{
                         .x = (main.camera.width - button_data_base.width()) / 2,
-                        .y = @floatFromInt(50 * i),
+                        .y = f32i(50 * i),
                     },
                     .id = char.char_id,
                     .class_data_id = char.class_id,
@@ -53,7 +55,7 @@ pub fn init(self: *CharSelectScreen) !void {
     self.new_char_button = try element.create(Button, .{
         .base = .{
             .x = (main.camera.width - button_data_base.width()) / 2,
-            .y = @floatFromInt(50 * (counter + 1)),
+            .y = f32i(50 * (counter + 1)),
             .visible = false,
         },
         .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, button_width, button_height, 26, 19, 1, 1, 1.0),

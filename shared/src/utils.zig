@@ -209,7 +209,7 @@ pub fn currentMemoryUse(time: i64) !f32 {
     switch (builtin.os.tag) {
         .windows => {
             const mem_info = try std.os.windows.GetProcessMemoryInfo(std.os.windows.self_process_handle);
-            memory_value = @as(f32, @floatFromInt(mem_info.WorkingSetSize)) / 1024.0 / 1024.0;
+            memory_value = f32i(mem_info.WorkingSetSize) / 1024.0 / 1024.0;
         },
         .linux => {
             const file = try std.fs.cwd().openFile("/proc/self/statm", .{});
@@ -220,7 +220,7 @@ pub fn currentMemoryUse(time: i64) !f32 {
 
             var split_iter = std.mem.splitScalar(u8, buf[0..size], ' ');
             _ = split_iter.next(); // total size
-            const rss: f32 = @floatFromInt(try std.fmt.parseInt(u32, split_iter.next().?, 0));
+            const rss = f32i(try std.fmt.parseInt(u32, split_iter.next().?, 0));
             memory_value = rss / 1024.0;
         },
         else => memory_value = 0,
@@ -229,26 +229,6 @@ pub fn currentMemoryUse(time: i64) !f32 {
     last_memory_access = time;
     last_memory_value = memory_value;
     return memory_value;
-}
-
-pub fn toRoman(int: u12) []const u8 {
-    if (int > 3999)
-        return "Invalid";
-
-    const value = [_]u12{ 1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1 };
-    const roman = [_][]const u8{ "M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I" };
-
-    var buf: [32]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&buf);
-    var num = int;
-    for (0..value.len) |i| {
-        while (num >= value[i]) {
-            num -= value[i];
-            stream.writer().writeAll(roman[i]) catch continue;
-        }
-    }
-
-    return buf[0..stream.pos];
 }
 
 pub fn nextPowerOfTwo(value: u16) u16 {
@@ -282,4 +262,12 @@ pub inline fn distSqr(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
 
 pub inline fn dist(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
     return @sqrt(distSqr(x1, y1, x2, y2));
+}
+
+pub inline fn f32i(i: anytype) f32 {
+    return @floatFromInt(i);
+}
+
+pub inline fn int(comptime T: type, f: anytype) T {
+    return @intFromFloat(f);
 }

@@ -4,6 +4,8 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const network_data = shared.network_data;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const db = @import("../db.zig");
 const Client = @import("../GameClient.zig");
@@ -202,8 +204,8 @@ pub fn moveToSpawn(self: *Player) void {
         std.log.err("Spawn point {} was not walkable for player with data id {}", .{ rand_point, self.data_id });
         return;
     }
-    self.x = @as(f32, @floatFromInt(rand_point.x)) + 0.5;
-    self.y = @as(f32, @floatFromInt(rand_point.y)) + 0.5;
+    self.x = f32i(rand_point.x) + 0.5;
+    self.y = f32i(rand_point.y) + 0.5;
 }
 
 pub fn applyCondition(self: *Player, condition: utils.ConditionEnum, duration: i64) !void {
@@ -342,19 +344,19 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
         self.last_lock_update = time;
     }
 
-    const scaled_dt = @as(f32, @floatFromInt(dt)) / std.time.us_per_s;
+    const scaled_dt = f32i(dt) / std.time.us_per_s;
 
-    const fstam: f32 = @floatFromInt(self.stats[stamina_stat] + self.stat_boosts[stamina_stat]);
+    const fstam = f32i(self.stats[stamina_stat] + self.stat_boosts[stamina_stat]);
     self.hp_regen += (1.0 + fstam * 0.12) * scaled_dt;
-    const hp_regen_whole: i32 = @intFromFloat(self.hp_regen);
+    const hp_regen_whole = int(i32, self.hp_regen);
     self.hp = @min(self.stats[health_stat] + self.stat_boosts[health_stat], self.hp + hp_regen_whole);
-    self.hp_regen -= @floatFromInt(hp_regen_whole);
+    self.hp_regen -= f32i(hp_regen_whole);
 
-    const fint: f32 = @floatFromInt(self.stats[intelligence_stat] + self.stat_boosts[intelligence_stat]);
+    const fint = f32i(self.stats[intelligence_stat] + self.stat_boosts[intelligence_stat]);
     self.mp_regen += (0.5 + fint * 0.06) * scaled_dt;
-    const mp_regen_whole: i32 = @intFromFloat(self.mp_regen);
+    const mp_regen_whole = int(i32, self.mp_regen);
     self.mp = @min(self.stats[mana_stat] + self.stat_boosts[mana_stat], self.mp + mp_regen_whole);
-    self.mp_regen -= @floatFromInt(mp_regen_whole);
+    self.mp_regen -= f32i(mp_regen_whole);
 
     if (self.hp <= 0) try self.death("Unknown");
 
@@ -379,8 +381,8 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
         _ = self.conditions_active.swapRemove(c);
     }
 
-    const ux: u16 = @intFromFloat(self.x);
-    const uy: u16 = @intFromFloat(self.y);
+    const ux = int(u16, self.x);
+    const uy = int(u16, self.y);
     const iux: i64 = ux;
     const iuy: i64 = uy;
 

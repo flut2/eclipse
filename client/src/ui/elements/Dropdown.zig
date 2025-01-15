@@ -1,7 +1,9 @@
 const std = @import("std");
 
 const glfw = @import("zglfw");
-const utils = @import("shared").utils;
+const shared = @import("shared");
+const utils = shared.utils;
+const f32i = utils.f32i;
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
@@ -212,7 +214,7 @@ pub fn createChild(self: *Dropdown, pressCallback: *const fn (*DropdownContainer
 
     const scroll_vis_pre = self.container.scroll_bar.base.visible;
 
-    const next_idx: f32 = @floatFromInt(self.next_index);
+    const next_idx = f32i(self.next_index);
     const ret = try self.container.createChild(DropdownContainer, .{
         .base = .{
             .x = 0,

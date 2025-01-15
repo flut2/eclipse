@@ -3,6 +3,8 @@ const std = @import("std");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -64,8 +66,8 @@ pub fn addToMap(entity_data: Entity) void {
         const tex = self.data.textures[utils.rng.next() % self.data.textures.len];
         if (ui_systems.screen != .editor and self.data.static and self.data.occupy_square) {
             if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
-                const floor_y: u32 = @intFromFloat(@floor(self.y));
-                const floor_x: u32 = @intFromFloat(@floor(self.x));
+                const floor_y = int(u32, @floor(self.y));
+                const floor_x = int(u32, @floor(self.x));
 
                 const color = color_data[tex.index];
                 const base_data_idx: usize = @intCast(floor_y * map.minimap.num_components * map.minimap.width + floor_x * map.minimap.num_components);
@@ -297,8 +299,8 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
             .{ .shadow_texel_mult = 0.5, .sort_extra = -0.0001 },
         );
 
-        const float_hp: f32 = @floatFromInt(self.hp);
-        const float_max_hp: f32 = @floatFromInt(self.max_hp);
+        const float_hp = f32i(self.hp);
+        const float_max_hp = f32i(self.max_hp);
         const hp_perc = 1.0 / (float_hp / float_max_hp);
         var hp_bar_data = assets.hp_bar_data;
         hp_bar_data.tex_w /= hp_perc;
@@ -317,7 +319,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
 
     base.drawStatusTexts(
         self,
-        @as(i64, @intFromFloat(float_time_ms)) * std.time.us_per_ms,
+        int(i64, float_time_ms) * std.time.us_per_ms,
         screen_pos.x,
         screen_pos.y,
         cam_data.scale,

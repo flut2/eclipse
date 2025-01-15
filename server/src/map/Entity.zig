@@ -4,6 +4,7 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
+const int = utils.int;
 
 const behavior_data = @import("../logic/behavior.zig");
 const behavior_logic = @import("../logic/logic.zig");
@@ -47,8 +48,8 @@ pub fn init(self: *Entity) !void {
     };
 
     if (self.data.occupy_square or self.data.full_occupy) {
-        const ux: u32 = @intFromFloat(self.x);
-        const uy: u32 = @intFromFloat(self.y);
+        const ux = int(u32, self.x);
+        const uy = int(u32, self.y);
         self.world.tiles[uy * self.world.w + ux].occupied = true;
     }
 
@@ -66,8 +67,8 @@ pub fn deinit(self: *Entity) !void {
     }
 
     if (self.data.occupy_square or self.data.full_occupy) {
-        const ux: u32 = @intFromFloat(self.x);
-        const uy: u32 = @intFromFloat(self.y);
+        const ux = int(u32, self.x);
+        const uy = int(u32, self.y);
         self.world.tiles[uy * self.world.w + ux].occupied = false;
     }
 

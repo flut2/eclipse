@@ -3,6 +3,8 @@ const std = @import("std");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const map = @import("../game/map.zig");
 const input = @import("../input.zig");
@@ -20,7 +22,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
     const x = player.x + @cos(attack_angle) * 0.25;
     const y = player.y + @sin(attack_angle) * 0.25;
 
-    const fstr: f32 = @floatFromInt(player.strength + player.strength_bonus);
+    const fstr = f32i(player.strength + player.strength_bonus);
     Projectile.addToMap(.{
         .x = x,
         .y = y,
@@ -28,7 +30,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
         .angle = attack_angle,
         .index = proj_index,
         .owner_map_id = player.map_id,
-        .phys_dmg = @intFromFloat(1300.0 + fstr * 2.0),
+        .phys_dmg = int(i32, 1300.0 + fstr * 2.0),
     });
 
     var buf: [5]u8 = undefined;
@@ -57,8 +59,8 @@ pub fn handleRewind() ![]u8 {
 
 pub fn handleNullPulse(player: *Player) ![]u8 {
     // TODO: needs VFX
-    const fint: f32 = @floatFromInt(player.intelligence + player.intelligence_bonus);
-    const fwit: f32 = @floatFromInt(player.wit + player.wit_bonus);
+    const fint = f32i(player.intelligence + player.intelligence_bonus);
+    const fwit = f32i(player.wit + player.wit_bonus);
     const radius = 3.0 + fint * 0.12;
     const radius_sqr = radius * radius;
     const damage_mult = 5.0 + fwit * 0.06;
@@ -71,9 +73,9 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
     for (proj_list.items, 0..) |*p, i| {
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
             if (map.findObject(Enemy, p.owner_map_id, .ref)) |e| {
-                const phys_dmg: i32 = @intFromFloat(@as(f32, @floatFromInt(game_data.physDamage(p.phys_dmg, e.defense, e.condition))) * damage_mult);
-                const magic_dmg: i32 = @intFromFloat(@as(f32, @floatFromInt(game_data.magicDamage(p.magic_dmg, e.resistance, e.condition))) * damage_mult);
-                const true_dmg: i32 = @intFromFloat(@as(f32, @floatFromInt(p.phys_dmg)) * damage_mult);
+                const phys_dmg = int(i32, f32i(game_data.physDamage(p.phys_dmg, e.defense, e.condition)) * damage_mult);
+                const magic_dmg = int(i32, f32i(game_data.magicDamage(p.magic_dmg, e.resistance, e.condition)) * damage_mult);
+                const true_dmg = int(i32, f32i(p.phys_dmg) * damage_mult);
                 if (phys_dmg > 0) map.takeDamage(e, phys_dmg, .physical, .{}, p.colors);
                 if (magic_dmg > 0) map.takeDamage(e, magic_dmg, .magic, .{}, p.colors);
                 if (true_dmg > 0) map.takeDamage(e, true_dmg, .true, .{}, p.colors);

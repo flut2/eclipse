@@ -4,6 +4,8 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const main = @import("main.zig");
 const Ally = @import("map/Ally.zig");
@@ -207,7 +209,7 @@ pub fn moveToward(host: anytype, x: f32, y: f32, speed: f32, dt: i64) void {
     const dist = @sqrt(dx * dx + dy * dy);
     if (dist <= 0.01) return;
 
-    const fdt: f32 = @floatFromInt(dt);
+    const fdt = f32i(dt);
     const travel_dist = speed * (fdt / std.time.us_per_s);
 
     if (dist > travel_dist) {
@@ -219,8 +221,8 @@ pub fn moveToward(host: anytype, x: f32, y: f32, speed: f32, dt: i64) void {
 pub fn validatedMove(self: anytype, x: f32, y: f32) void {
     if (x < 0.0 or y < 0.0) return;
 
-    const ux: u32 = @intFromFloat(x);
-    const uy: u32 = @intFromFloat(y);
+    const ux = int(u32, x);
+    const uy = int(u32, y);
     if (ux >= self.world.w or uy >= self.world.h) return;
 
     const tile = self.world.tiles[uy * self.world.w + ux];

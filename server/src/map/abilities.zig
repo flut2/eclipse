@@ -3,6 +3,8 @@ const std = @import("std");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const main = @import("../main.zig");
 const World = @import("../World.zig");
@@ -38,8 +40,8 @@ fn heartOfStoneCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 }
 
 pub fn handleHeartOfStone(player: *Player) !void {
-    const fint: f32 = @floatFromInt(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const duration: i64 = @intFromFloat((10.0 + fint * 0.1) * std.time.us_per_s);
+    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
+    const duration = int(i64, (10.0 + fint * 0.1) * std.time.us_per_s);
 
     player.hit_multiplier = 0.15;
     player.ability_state.heart_of_stone = true;
@@ -57,8 +59,8 @@ pub fn handleHeartOfStone(player: *Player) !void {
 
 pub fn handleBoulderBuddies(player: *Player) !void {
     for (0..3) |_| {
-        const fint: f32 = @floatFromInt(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-        const duration: i64 = @intFromFloat((15.0 + fint * 0.1) * std.time.us_per_s);
+        const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
+        const duration = int(i64, (15.0 + fint * 0.1) * std.time.us_per_s);
         const angle = utils.rng.random().float(f32) * std.math.tau;
         const radius = utils.rng.random().float(f32) * 2.0;
         const x = player.x + radius * @cos(angle);
@@ -72,14 +74,14 @@ pub fn handleBoulderBuddies(player: *Player) !void {
             .disappear_time = main.current_time + duration,
         });
 
-        const fhp: f32 = @floatFromInt(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat]);
-        const fdef: f32 = @floatFromInt(player.stats[Player.defense_stat] + player.stat_boosts[Player.defense_stat]);
-        const fres: f32 = @floatFromInt(player.stats[Player.resistance_stat] + player.stat_boosts[Player.resistance_stat]);
+        const fhp = f32i(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat]);
+        const fdef = f32i(player.stats[Player.defense_stat] + player.stat_boosts[Player.defense_stat]);
+        const fres = f32i(player.stats[Player.resistance_stat] + player.stat_boosts[Player.resistance_stat]);
         if (player.world.find(Ally, map_id, .ref)) |ally| {
-            ally.max_hp = @intFromFloat(3600.0 + fhp * 3.6);
+            ally.max_hp = int(i32, 3600.0 + fhp * 3.6);
             ally.hp = ally.max_hp;
-            ally.defense = @intFromFloat(25.0 + fdef * 0.15);
-            ally.resistance = @intFromFloat(5.0 + fres * 0.1);
+            ally.defense = int(i32, 25.0 + fdef * 0.15);
+            ally.resistance = int(i32, 5.0 + fres * 0.1);
         } else return;
 
         player.client.queuePacket(.{ .show_effect = .{
@@ -106,8 +108,8 @@ fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 }
 
 pub fn handleTimeDilation(player: *Player) !void {
-    const fint: f32 = @floatFromInt(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const duration: i64 = @intFromFloat((10.0 + fint * 0.12) * std.time.us_per_s);
+    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
+    const duration = int(i64, (10.0 + fint * 0.12) * std.time.us_per_s);
 
     player.ability_state.time_dilation = true;
 
@@ -121,10 +123,10 @@ pub fn handleTimeDilation(player: *Player) !void {
 }
 
 pub fn handleRewind(player: *Player) !void {
-    const fint: f32 = @floatFromInt(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const fmana: f32 = @floatFromInt(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat]);
-    const fwit: f32 = @floatFromInt(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
-    const duration: i64 = @intFromFloat((3.0 + fint * 0.01 + fmana * 0.006 + fwit * 0.01) * std.time.us_per_s);
+    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
+    const fmana = f32i(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat]);
+    const fwit = f32i(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
+    const duration = int(i64, (3.0 + fint * 0.01 + fmana * 0.006 + fwit * 0.01) * std.time.us_per_s);
     if (duration <= 0 or duration > 25 * std.time.us_per_s) {
         player.client.sendError(.message_with_disconnect, "Too many/little seconds elapsed");
         return;
@@ -138,8 +140,8 @@ pub fn handleRewind(player: *Player) !void {
 }
 
 pub fn handleNullPulse(player: *Player) !void {
-    const fint: f32 = @floatFromInt(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const fwit: f32 = @floatFromInt(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
+    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
+    const fwit = f32i(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
     const radius = 3.0 + fint * 0.12;
     const radius_sqr = radius * radius;
     const damage_mult = 5.0 + fwit * 0.06;
@@ -148,9 +150,9 @@ pub fn handleNullPulse(player: *Player) !void {
     for (player.world.listForType(Projectile).items, 0..) |*p, i| {
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
             if (player.world.find(Enemy, p.owner_map_id, .ref)) |e| {
-                const phys_dmg: i32 = @intFromFloat(@as(f32, @floatFromInt(p.phys_dmg)) * damage_mult);
-                const magic_dmg: i32 = @intFromFloat(@as(f32, @floatFromInt(p.magic_dmg)) * damage_mult);
-                const true_dmg: i32 = @intFromFloat(@as(f32, @floatFromInt(p.true_dmg)) * damage_mult);
+                const phys_dmg = int(i32, f32i(p.phys_dmg) * damage_mult);
+                const magic_dmg = int(i32, f32i(p.magic_dmg) * damage_mult);
+                const true_dmg = int(i32, f32i(p.true_dmg) * damage_mult);
                 e.damage(.player, player.map_id, phys_dmg, magic_dmg, true_dmg);
             }
             try p.deinit();
@@ -165,10 +167,10 @@ fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
     if (world.find(Player, player_map_id.*, .ref)) |player| {
-        const fint: f32 = @floatFromInt(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
+        const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
         const radius = 9.0 + fint * 0.06;
         player.world.aoe(Enemy, player.x, player.x, .player, player.map_id, radius, .{
-            .magic_dmg = @intCast(@min(@as(u32, @intFromFloat(30000.0 + fint * 100.0)), player.stored_damage)),
+            .magic_dmg = @intCast(@min(int(u32, 30000.0 + fint * 100.0), player.stored_damage)),
             .aoe_color = 0x0FE9EB,
         });
         player.ability_state.time_lock = false;
@@ -177,8 +179,8 @@ fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 }
 
 pub fn handleTimeLock(player: *Player) !void {
-    const fint: f32 = @floatFromInt(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const duration: i64 = @intFromFloat((15.0 + fint * 0.12) * std.time.us_per_s);
+    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
+    const duration = int(i64, (15.0 + fint * 0.12) * std.time.us_per_s);
 
     player.ability_state.time_lock = true;
     try player.applyCondition(.stunned, duration);
@@ -252,8 +254,8 @@ fn premiumProtectionCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 }
 
 pub fn handlePremiumProtection(player: *Player) !void {
-    const fhst: f32 = @floatFromInt(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
-    const duration: i64 = @intFromFloat((8.0 + fhst * 0.08) * std.time.us_per_s);
+    const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
+    const duration = int(i64, (8.0 + fhst * 0.08) * std.time.us_per_s);
 
     player.ability_state.premium_protection = true;
 

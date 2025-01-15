@@ -3,6 +3,7 @@ const std = @import("std");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
+const f32i = utils.f32i;
 
 const main = @import("../main.zig");
 const Container = @import("../map/Container.zig");
@@ -62,11 +63,11 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
     }
 
     var iter = host.damages_dealt.iterator();
-    const fmax_hp: f32 = @floatFromInt(host.max_hp);
+    const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
         const player = host.world.find(Player, entry.key_ptr.*, .con) orelse continue;
 
-        const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
+        const fdamage = f32i(entry.value_ptr.*);
         var max_rarity: game_data.ContainerRarity = .common;
         var received_loot: [loots.len]u16 = @splat(std.math.maxInt(u16));
         var loot_idx: usize = 0;
@@ -153,12 +154,12 @@ pub fn dropCards(host: anytype, comptime loots: []const CardLoot) void {
     }
 
     var iter = host.damages_dealt.iterator();
-    const fmax_hp: f32 = @floatFromInt(host.max_hp);
+    const fmax_hp = f32i(host.max_hp);
     playerLoop: while (iter.next()) |entry| {
         const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue :playerLoop;
         if (player.selecting_cards != null or player.cards.len >= player.aether * 5) continue;
 
-        const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
+        const fdamage = f32i(entry.value_ptr.*);
         var cards: [3]u16 = @splat(std.math.maxInt(u16));
         var card_idx: usize = 0;
         cardLoop: inline for (loots) |loot| @"continue": {
@@ -203,11 +204,11 @@ pub fn dropResources(host: anytype, comptime loots: []const ResourceLoot) void {
     var buf: [256]u8 = undefined;
     var rand = utils.rng.random();
     var iter = host.damages_dealt.iterator();
-    const fmax_hp: f32 = @floatFromInt(host.max_hp);
+    const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
         const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue;
 
-        const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
+        const fdamage = f32i(entry.value_ptr.*);
         inline for (loots) |loot| @"continue": {
             if (fdamage / fmax_hp <= loot.threshold) break :@"continue";
 
@@ -259,11 +260,11 @@ pub fn dropCurrency(host: anytype, comptime loots: []const CurrencyLoot) void {
     var buf: [256]u8 = undefined;
     var rand = utils.rng.random();
     var iter = host.damages_dealt.iterator();
-    const fmax_hp: f32 = @floatFromInt(host.max_hp);
+    const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
         const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue;
 
-        const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
+        const fdamage = f32i(entry.value_ptr.*);
         inline for (loots) |loot| @"continue": {
             if (fdamage / fmax_hp <= loot.threshold) break :@"continue";
 
@@ -307,11 +308,11 @@ pub fn dropSpirits(host: anytype, comptime loot: SpiritLoot) void {
     var buf: [256]u8 = undefined;
     var rand = utils.rng.random();
     var iter = host.damages_dealt.iterator();
-    const fmax_hp: f32 = @floatFromInt(host.max_hp);
+    const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
         const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue;
 
-        const fdamage: f32 = @floatFromInt(entry.value_ptr.*);
+        const fdamage = f32i(entry.value_ptr.*);
         if (fdamage / fmax_hp <= loot.threshold) continue;
 
         if (loot.chance >= rand.float(f32)) {

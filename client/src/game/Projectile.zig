@@ -1,7 +1,9 @@
 const std = @import("std");
 
-const game_data = @import("shared").game_data;
-const utils = @import("shared").utils;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const utils = shared.utils;
+const f32i = utils.f32i;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -212,7 +214,7 @@ pub fn draw(self: *Projectile, cam_data: render.CameraData, float_time_ms: f32) 
     const screen_pos = cam_data.worldToScreen(self.x, self.y);
     const z_offset = self.z * -px_per_tile - h + assets.padding * size;
     const rotation = self.data.rotation;
-    const angle_correction = @as(f32, @floatFromInt(self.data.angle_correction)) * std.math.degreesToRadians(45);
+    const angle_correction = f32i(self.data.angle_correction) * std.math.degreesToRadians(45);
     const angle = -(self.visual_angle + angle_correction +
         (if (rotation == 0.0) 0.0 else std.math.degreesToRadians(float_time_ms / (1 / rotation))));
 
@@ -235,7 +237,7 @@ pub fn draw(self: *Projectile, cam_data: render.CameraData, float_time_ms: f32) 
 }
 
 pub fn update(self: *Projectile, time: i64, dt: f32) bool {
-    const elapsed_sec = @as(f32, @floatFromInt(time - self.start_time)) / std.time.us_per_s;
+    const elapsed_sec = f32i(time - self.start_time) / std.time.us_per_s;
     const dt_sec = dt / std.time.us_per_s;
     if (elapsed_sec >= self.data.duration) return false;
 
@@ -244,7 +246,7 @@ pub fn update(self: *Projectile, time: i64, dt: f32) bool {
 
     self.updatePosition(elapsed_sec, dt_sec * @as(f32, if (self.time_dilation_active) 0.7 else 1.0));
     if (self.x < 0 or self.y < 0 or
-        self.x >= @as(f32, @floatFromInt(map.info.width - 1)) or self.y >= @as(f32, @floatFromInt(map.info.height - 1)))
+        self.x >= f32i(map.info.width - 1) or self.y >= f32i(map.info.height - 1))
         return false;
 
     if (last_x == 0 and last_y == 0) {

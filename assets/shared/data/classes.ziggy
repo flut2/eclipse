@@ -3,7 +3,7 @@
     .id = 0,
     .name = "Demon",
     .description = "placeholder",
-    .texture = {"players": 0},
+    .texture = {"players": 2},
     .item_types = [
         @ItemType("sword"), 
         @ItemType("plate"), 

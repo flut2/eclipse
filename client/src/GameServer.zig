@@ -6,6 +6,8 @@ const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const uv = shared.uv;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const assets = @import("assets.zig");
 const Ally = @import("game/Ally.zig");
@@ -350,7 +352,7 @@ fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
             .owner_map_id = player.map_id,
         });
 
-        const attack_period: i64 = @intFromFloat(1.0 / (Player.attack_frequency * item_data.?.fire_rate));
+        const attack_period = int(i64, 1.0 / (Player.attack_frequency * item_data.?.fire_rate));
         player.attack_period = attack_period;
         player.attack_angle = data.angle;
         player.attack_start = main.current_time;
@@ -404,7 +406,7 @@ fn handleEnemyProjectile(_: *Server, data: PacketData(.enemy_projectile)) void {
     if (owner_data == null or owner_data.?.projectiles == null or data.proj_data_id >= owner_data.?.projectiles.?.len)
         return;
 
-    const total_angle = data.angle_incr * @as(f32, @floatFromInt(data.num_projs - 1));
+    const total_angle = data.angle_incr * f32i(data.num_projs - 1);
     var current_angle = data.angle - total_angle / 2.0;
 
     for (0..data.num_projs) |i| {
@@ -660,15 +662,13 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
         }
     }
 
-    {
-        map.square_lock.lock();
-        defer map.square_lock.unlock();
-        for (data.tiles) |tile| Square.addToMap(.{
-            .data_id = tile.data_id,
-            .x = @as(f32, @floatFromInt(tile.x)) + 0.5,
-            .y = @as(f32, @floatFromInt(tile.y)) + 0.5,
-        });
-    }
+    map.square_lock.lock();
+    defer map.square_lock.unlock();
+    for (data.tiles) |tile| Square.addToMap(.{
+        .data_id = tile.data_id,
+        .x = f32i(tile.x) + 0.5,
+        .y = f32i(tile.y) + 0.5,
+    });
 
     main.need_minimap_update = data.tiles.len > 0;
 }

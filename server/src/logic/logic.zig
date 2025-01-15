@@ -4,6 +4,8 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const main = @import("../main.zig");
 const Ally = @import("../map/Ally.zig");
@@ -139,7 +141,7 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
             const dy = host.y - p.y;
             storage.target_x = p.x;
             storage.target_y = p.y;
-            storage.time = @intFromFloat(@sqrt(dx * dx + dy * dy) / opts.speed * std.time.us_per_s);
+            storage.time = int(i64, @sqrt(dx * dx + dy * dy) / opts.speed * std.time.us_per_s);
         }
 
         return false;
@@ -162,7 +164,7 @@ pub fn orbit(host: anytype, dt: i64, opts: struct {
         if (std.mem.eql(u8, opts.target_name, e.data.name) and
             dx * dx + dy * dy <= acq_sqr)
         {
-            const angle = std.math.atan2(dy, dx) + @mod(@as(f32, @floatFromInt(dt)) / std.time.us_per_s * opts.rotate_speed, std.math.tau);
+            const angle = std.math.atan2(dy, dx) + @mod(f32i(dt) / std.time.us_per_s * opts.rotate_speed, std.math.tau);
             World.moveToward(host, e.x + opts.radius * @cos(angle), e.y + opts.radius * @sin(angle), opts.speed, dt);
             return true;
         }
@@ -185,7 +187,7 @@ pub fn orbitPlayer(host: anytype, dt: i64, opts: struct {
         const dx = host.x - p.x;
         const dy = host.y - p.y;
         if (dx * dx + dy * dy <= acq_sqr) {
-            const angle = std.math.atan2(dy, dx) + @mod(@as(f32, @floatFromInt(dt)) / std.time.us_per_s * opts.rotate_speed, std.math.tau);
+            const angle = std.math.atan2(dy, dx) + @mod(f32i(dt) / std.time.us_per_s * opts.rotate_speed, std.math.tau);
             World.moveToward(host, p.x + opts.radius * @cos(angle), p.y + opts.radius * @sin(angle), opts.speed, dt);
             return true;
         }
@@ -276,7 +278,7 @@ pub fn wander(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
         storage.rem_dist = utils.rng.random().float(f32);
     }
 
-    const fdt: f32 = @floatFromInt(dt);
+    const fdt = f32i(dt);
     const dist = speed * (fdt / std.time.us_per_s);
     World.validatedMove(host, host.x + dist * storage.move_cos, host.y + dist * storage.move_sin);
     storage.rem_dist -= dist;
@@ -327,13 +329,13 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
     storage.rotate_count += 1.0;
 
     const shoot_angle_deg = std.math.degreesToRadians(opts.shoot_angle);
-    const fcount: f32 = @floatFromInt(opts.count);
+    const fcount = f32i(opts.count);
     const start_angle = angle - shoot_angle_deg * (fcount - 1.0) / 2.0;
     const proj_index_start = host.next_proj_index;
     const proj_data = host.data.projectiles.?[opts.proj_index];
 
     for (0..opts.count) |i| {
-        const fi: f32 = @floatFromInt(i);
+        const fi = f32i(i);
 
         const map_id = host.world.add(Projectile, .{
             .owner_obj_type = .enemy,

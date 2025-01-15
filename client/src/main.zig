@@ -9,9 +9,10 @@ const network_data = shared.network_data;
 const game_data = shared.game_data;
 const utils = shared.utils;
 const uv = shared.uv;
+const f32i = utils.f32i;
 const zaudio = @import("zaudio");
-const zstbi = @import("zstbi");
 const ziggy = @import("ziggy");
+const zstbi = @import("zstbi");
 
 const assets = @import("assets.zig");
 const Camera = @import("Camera.zig");
@@ -82,8 +83,8 @@ pub var settings: Settings = .{};
 pub var main_loop: *uv.uv_loop_t = undefined;
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
-    const float_w: f32 = @floatFromInt(w);
-    const float_h: f32 = @floatFromInt(h);
+    const float_w = f32i(w);
+    const float_h = f32i(h);
 
     {
         camera.lock.lock();
@@ -246,7 +247,7 @@ fn gameTick(_: [*c]uv.uv_idle_t) callconv(.C) void {
         .windows => @as(i64, @intCast(@divFloor(instant.timestamp * std.time.us_per_s, win_freq))),
         else => @divFloor(instant.timestamp.nsec, std.time.ns_per_us) + instant.timestamp.sec * std.time.us_per_s,
     } - start_time;
-    const dt: f32 = @floatFromInt(if (current_time > 0) time - current_time else 0);
+    const dt = f32i(if (current_time > 0) time - current_time else 0);
     current_time = time;
 
     if (tick_frame or editing_map) map.update(time, dt);

@@ -1,6 +1,8 @@
 const std = @import("std");
 
-const utils = @import("shared").utils;
+const shared = @import("shared");
+const utils = shared.utils;
+const int = utils.int;
 
 const map = @import("game/map.zig");
 const main = @import("main.zig");
@@ -57,12 +59,12 @@ pub fn update(self: *@This(), target_x: f32, target_y: f32, dt: f32) void {
     const max_dist = @ceil(@sqrt(w_half * w_half + h_half * h_half) + 1);
 
     const min_x_dt = tx - max_dist;
-    self.min_x = @max(0, if (min_x_dt < 0) 0 else @as(u32, @intFromFloat(min_x_dt)));
-    self.max_x = @min(map_w - 1, @as(u32, @intFromFloat(tx + max_dist)));
+    self.min_x = @max(0, if (min_x_dt < 0) 0 else int(u32, min_x_dt));
+    self.max_x = @min(map_w - 1, int(u32, tx + max_dist));
 
     const min_y_dt = ty - max_dist;
-    self.min_y = @max(0, if (min_y_dt < 0) 0 else @as(u32, @intFromFloat(min_y_dt)));
-    self.max_y = @min(map_h - 1, @as(u32, @intFromFloat(ty + max_dist)));
+    self.min_y = @max(0, if (min_y_dt < 0) 0 else int(u32, min_y_dt));
+    self.max_y = @min(map_h - 1, int(u32, ty + max_dist));
 }
 
 pub fn screenToWorld(self: @This(), x_in: f32, y_in: f32) struct { x: f32, y: f32 } {

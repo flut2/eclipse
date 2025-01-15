@@ -5,6 +5,8 @@ const gpu = @import("zgpu");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
+const f32i = utils.f32i;
+const int = utils.int;
 const zstbi = @import("zstbi");
 
 const assets = @import("assets.zig");
@@ -55,8 +57,8 @@ pub const CameraData = struct {
             y_in > std.math.maxInt(u32))
             return false;
 
-        const floor_x: u32 = @intFromFloat(@floor(x_in));
-        const floor_y: u32 = @intFromFloat(@floor(y_in));
+        const floor_x = int(u32, @floor(x_in));
+        const floor_y = int(u32, @floor(y_in));
         return !(floor_x < self.min_x or floor_x > self.max_x or floor_y < self.min_y or floor_y > self.max_y);
     }
 };
@@ -824,9 +826,9 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
 
     if ((main.tick_frame or main.editing_map) and
         cam_data.x >= 0 and cam_data.y >= 0 and
-        map.validPos(@intFromFloat(cam_data.x), @intFromFloat(cam_data.y)))
+        map.validPos(int(u32, cam_data.x), int(u32, cam_data.y)))
     {
-        const float_time_ms = @as(f32, @floatFromInt(time)) / std.time.us_per_ms;
+        const float_time_ms = f32i(time) / std.time.us_per_ms;
         grounds.clearRetainingCapacity();
         lights.clearRetainingCapacity();
 
@@ -835,8 +837,8 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
             defer map.square_lock.unlock();
             for (cam_data.min_y..cam_data.max_y) |y| {
                 for (cam_data.min_x..cam_data.max_x) |x| {
-                    const float_x: f32 = @floatFromInt(x);
-                    const float_y: f32 = @floatFromInt(y);
+                    const float_x = f32i(x);
+                    const float_y = f32i(y);
                     const square = map.getSquare(float_x, float_y, false, .con).?;
                     if (square.data_id == Square.empty_tile) continue;
 

@@ -1,6 +1,8 @@
 const std = @import("std");
 
-const game_data = @import("shared").game_data;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const f32i = shared.utils.f32i;
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
@@ -24,7 +26,7 @@ pub fn init(self: *CharCreateScreen) !void {
         const box = element.create(CharacterBox, .{
             .base = .{
                 .x = (main.camera.width - button_data_base.width()) / 2,
-                .y = @floatFromInt(50 * i),
+                .y = f32i(50 * i),
             },
             .id = 0,
             .class_data_id = char.id,

@@ -1,6 +1,8 @@
 const std = @import("std");
 
-const game_data = @import("shared").game_data;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const f32i = shared.utils.f32i;
 
 const assets = @import("../../assets.zig");
 const input = @import("../../input.zig");
@@ -181,7 +183,7 @@ pub fn create() !*CardSelection {
     const comptime_len = @typeInfo(@TypeOf(self.selectable_cards)).array.len;
     const start_x = (w - (card_w * comptime_len + card_padding * (comptime_len - 1))) / 2.0;
     inline for (0..comptime_len) |i| {
-        const x = start_x + @as(f32, @floatFromInt((card_w + card_padding) * i));
+        const x = start_x + f32i((card_w + card_padding) * i);
         const y = 100 + ((h - 200) - card_h) / 2.0;
         self.selectable_cards[i] = try .create(self, self.base, x, y, switch (i) {
             0 => select1Callback,

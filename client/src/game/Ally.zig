@@ -3,6 +3,8 @@ const std = @import("std");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -129,8 +131,8 @@ pub fn draw(self: *Ally, cam_data: render.CameraData, float_time_ms: f32) void {
             .{ .shadow_texel_mult = 0.5, .sort_extra = -0.0001 },
         );
 
-        const float_hp: f32 = @floatFromInt(self.hp);
-        const float_max_hp: f32 = @floatFromInt(self.max_hp);
+        const float_hp = f32i(self.hp);
+        const float_max_hp = f32i(self.max_hp);
         const hp_perc = 1.0 / (float_hp / float_max_hp);
         var hp_bar_data = assets.hp_bar_data;
         hp_bar_data.tex_w /= hp_perc;
@@ -155,7 +157,7 @@ pub fn draw(self: *Ally, cam_data: render.CameraData, float_time_ms: f32) void {
 
     base.drawStatusTexts(
         self,
-        @as(i64, @intFromFloat(float_time_ms)) * std.time.us_per_ms,
+        int(i64, float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y,
         cam_data.scale,
@@ -168,7 +170,7 @@ pub fn update(self: *Ally, time: i64, dt: f32) void {
     var float_period: f32 = 0.0;
     var action: assets.Action = .stand;
     if (!std.math.isNan(self.move_angle)) {
-        const float_time: f32 = @floatFromInt(time);
+        const float_time = f32i(time);
         float_period = @mod(float_time, move_period) / move_period;
         self.facing = self.move_angle;
         action = .walk;
@@ -182,12 +184,12 @@ pub fn update(self: *Ally, time: i64, dt: f32) void {
     else
         utils.halfBound(self.facing) / (std.math.pi / 4.0);
 
-    const dir: assets.Direction = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
+    const dir: assets.Direction = switch (int(u8, @round(angle + 4)) % 8) {
         2...5 => .right,
         else => .left,
     };
 
-    const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);
+    const anim_idx = int(u8, @max(0, @min(0.99999, float_period)) * 2.0);
     const dir_idx: u8 = @intFromEnum(dir);
     const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimEnemyData.walk_actions];
 

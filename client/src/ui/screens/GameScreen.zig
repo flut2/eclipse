@@ -1,30 +1,33 @@
 const std = @import("std");
-const element = @import("../elements/element.zig");
-const assets = @import("../../assets.zig");
-const main = @import("../../main.zig");
+
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
+const f32i = utils.f32i;
+const int = utils.int;
+
+const assets = @import("../../assets.zig");
+const Container = @import("../../game/Container.zig");
 const map = @import("../../game/map.zig");
+const Player = @import("../../game/Player.zig");
 const input = @import("../../input.zig");
+const main = @import("../../main.zig");
+const CardSelection = @import("../composed/CardSelection.zig");
+const Options = @import("../composed/Options.zig");
+const TalentView = @import("../composed/TalentView.zig");
+const Bar = @import("../elements/Bar.zig");
+const Button = @import("../elements/Button.zig");
+const UiContainer = @import("../elements/Container.zig");
+const element = @import("../elements/element.zig");
+const Image = @import("../elements/Image.zig");
+const Input = @import("../elements/Input.zig");
+const Item = @import("../elements/Item.zig");
+const Minimap = @import("../elements/Minimap.zig");
+const ScrollableContainer = @import("../elements/ScrollableContainer.zig");
+const Text = @import("../elements/Text.zig");
 const systems = @import("../systems.zig");
 
 const GameScreen = @This();
-const Text = @import("../elements/Text.zig");
-const Input = @import("../elements/Input.zig");
-const Image = @import("../elements/Image.zig");
-const ScrollableContainer = @import("../elements/ScrollableContainer.zig");
-const UiContainer = @import("../elements/Container.zig");
-const Bar = @import("../elements/Bar.zig");
-const Button = @import("../elements/Button.zig");
-const Item = @import("../elements/Item.zig");
-const Minimap = @import("../elements/Minimap.zig");
-const Container = @import("../../game/Container.zig");
-const Player = @import("../../game/Player.zig");
-const Options = @import("../composed/Options.zig");
-const CardSelection = @import("../composed/CardSelection.zig");
-const TalentView = @import("../composed/TalentView.zig");
-
 pub const Slot = struct {
     idx: u8,
     is_container: bool = false,
@@ -590,7 +593,7 @@ pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_c
 }
 
 fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !void {
-    const fidx: f32 = @floatFromInt(idx);
+    const fidx = f32i(idx);
 
     if (assets.ui_atlas_data.get(ability.icon.sheet)) |data| {
         const index = ability.icon.index;
@@ -784,9 +787,9 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
             }
 
             const time_elapsed = time - local_player.last_ability_use[i];
-            const cooldown_us = @as(i64, @intFromFloat(local_player.data.abilities[i].cooldown)) * std.time.us_per_s;
+            const cooldown_us = int(i64, local_player.data.abilities[i].cooldown) * std.time.us_per_s;
             if (time_elapsed < cooldown_us) {
-                const cooldown_left = @as(f32, @floatFromInt(cooldown_us - time_elapsed)) / std.time.us_per_s;
+                const cooldown_left = f32i(cooldown_us - time_elapsed) / std.time.us_per_s;
 
                 self.ability_overlays[i].image_data = .{ .normal = .{ .atlas_data = assets.getUiData("on_cooldown_slot", 0) } };
                 self.ability_overlays[i].image_data.normal.scissor.max_x =
@@ -824,7 +827,7 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
                     const paged_idx = i % 5;
                     const x = 24 + @divFloor(paged_idx, 3) * 108;
                     const y = 45 + paged_idx % 3 * 30;
-                    self.card_slots[i] = try .create(self.cards_container, @floatFromInt(x), @floatFromInt(y));
+                    self.card_slots[i] = try .create(self.cards_container, f32i(x), f32i(y));
                     if (current_page != self.card_page) self.card_slots[i].base.base.visible = false;
                 };
             }
@@ -847,7 +850,7 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
 
         if (self.last_spirits_communed != local_player.spirits_communed or aether_changed) {
             const spirit_goal = game_data.spiritGoal(local_player.aether);
-            const spirit_perc = @as(f32, @floatFromInt(local_player.spirits_communed)) / @as(f32, @floatFromInt(spirit_goal));
+            const spirit_perc = f32i(local_player.spirits_communed) / f32i(spirit_goal);
             self.spirit_bar.base.scissor.max_x = self.spirit_bar.texWRaw() * spirit_perc;
 
             var spirit_text_data = &self.spirit_bar.text_data;
@@ -862,7 +865,7 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
         }
 
         if (self.last_hp != local_player.hp or self.last_max_hp != local_player.max_hp or self.last_max_hp_bonus != local_player.max_hp_bonus) {
-            const hp_perc = @as(f32, @floatFromInt(local_player.hp)) / @as(f32, @floatFromInt(local_player.max_hp + local_player.max_hp_bonus));
+            const hp_perc = f32i(local_player.hp) / f32i(local_player.max_hp + local_player.max_hp_bonus);
             self.health_bar.base.scissor.max_x = self.health_bar.texWRaw() * hp_perc;
 
             var health_text_data = &self.health_bar.text_data;
@@ -888,7 +891,7 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
         }
 
         if (self.last_mp != local_player.mp or self.last_max_mp != local_player.max_mp or self.last_max_mp_bonus != local_player.max_mp_bonus) {
-            const mp_perc = @as(f32, @floatFromInt(local_player.mp)) / @as(f32, @floatFromInt(local_player.max_mp + local_player.max_mp_bonus));
+            const mp_perc = f32i(local_player.mp) / f32i(local_player.max_mp + local_player.max_mp_bonus);
             self.mana_bar.base.scissor.max_x = self.mana_bar.texWRaw() * mp_perc;
 
             var mana_text_data = &self.mana_bar.text_data;
@@ -960,18 +963,18 @@ pub fn updateFpsText(self: *GameScreen, fps: usize, mem: f32) !void {
 fn parseItemRects(self: *GameScreen) void {
     for (0..22) |i| {
         if (i < 4) {
-            const hori_idx: f32 = @floatFromInt(@mod(i, 4));
+            const hori_idx = f32i(@mod(i, 4));
             self.inventory_pos_data[i] = .{ .x = 113 + hori_idx * 56, .y = 15, .w = 56, .h = 56, .w_pad = 0, .h_pad = 0 };
         } else {
-            const hori_idx: f32 = @floatFromInt(@mod(i - 4, 6));
-            const vert_idx: f32 = @floatFromInt(@divFloor(i - 4, 6));
+            const hori_idx = f32i(@mod(i - 4, 6));
+            const vert_idx = f32i(@divFloor(i - 4, 6));
             self.inventory_pos_data[i] = .{ .x = 15 + hori_idx * 46, .y = 75 + vert_idx * 46, .w = 46, .h = 46, .w_pad = 0, .h_pad = 0 };
         }
     }
 
     for (0..9) |i| {
-        const hori_idx: f32 = @floatFromInt(@mod(i, 3));
-        const vert_idx: f32 = @floatFromInt(@divFloor(i, 3));
+        const hori_idx = f32i(@mod(i, 3));
+        const vert_idx = f32i(@divFloor(i, 3));
         self.container_pos_data[i] = .{ .x = 15 + hori_idx * 46, .y = 15 + vert_idx * 46, .w = 46, .h = 46, .w_pad = 0, .h_pad = 0 };
     }
 }

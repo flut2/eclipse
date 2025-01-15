@@ -6,6 +6,7 @@ const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const uv = shared.uv;
+const int = utils.int;
 
 const command = @import("command.zig");
 const db = @import("db.zig");
@@ -247,7 +248,7 @@ fn handleMove(self: *Client, data: PacketData(.move)) void {
     };
     if (player.condition.paralyzed) return;
 
-    const idx = @as(u32, @intFromFloat(data.y)) * @as(u32, self.world.w) + @as(u32, @intFromFloat(data.x));
+    const idx = int(u32, data.y) * @as(u32, self.world.w) + int(u32, data.x);
     if (idx > self.world.tiles.len) {
         self.sendError(.message_with_disconnect, "Invalid position");
         return;
@@ -551,8 +552,8 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
 fn handleBuy(_: *Client, _: PacketData(.buy)) void {}
 
 fn handleGroundDamage(self: *Client, data: PacketData(.ground_damage)) void {
-    const ux: u16 = @intFromFloat(data.x);
-    const uy: u16 = @intFromFloat(data.y);
+    const ux = int(u16, data.x);
+    const uy = int(u16, data.y);
     const tile = self.world.tiles[uy * self.world.w + ux];
     if (tile.data_id == std.math.maxInt(u16)) return;
 
@@ -740,7 +741,7 @@ fn handleUseAbility(self: *Client, data: PacketData(.use_ability)) void {
 
     const abil_data = player.data.abilities[data.index];
     const time = main.current_time;
-    if (time - player.last_ability_use[data.index] < @as(i64, @intFromFloat(abil_data.cooldown)) * std.time.us_per_s) {
+    if (time - player.last_ability_use[data.index] < int(i64, abil_data.cooldown) * std.time.us_per_s) {
         self.sendError(.message_with_disconnect, "Ability on cooldown");
         return;
     }

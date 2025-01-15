@@ -5,6 +5,8 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
+const f32i = utils.f32i;
+const int = utils.int;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -160,22 +162,19 @@ pub fn onMove(self: *Player) void {
 pub fn strengthMult(self: Player) f32 {
     if (self.condition.weak) return 0.5;
 
-    const fstr: f32 = @floatFromInt(self.strength + self.strength_bonus);
-    var mult = 0.5 + fstr / 75.0;
+    var mult = 0.5 + f32i(self.strength + self.strength_bonus) / 75.0;
     if (self.condition.damaging) mult *= 1.5;
     return mult;
 }
 
 pub fn witMult(self: Player) f32 {
-    const fwit: f32 = @floatFromInt(self.wit + self.wit_bonus);
-    return 0.5 + fwit / 75.0;
+    return 0.5 + f32i(self.wit + self.wit_bonus) / 75.0;
 }
 
 pub fn moveSpeedMultiplier(self: Player) f32 {
     if (self.condition.slowed) return min_move_speed * self.move_multiplier * self.walk_speed_multiplier;
 
-    const float_speed: f32 = @floatFromInt(self.speed + self.speed_bonus);
-    var move_speed = min_move_speed + float_speed / 75.0 * (max_move_speed - min_move_speed);
+    var move_speed = min_move_speed + f32i(self.speed + self.speed_bonus) / 75.0 * (max_move_speed - min_move_speed);
     if (self.condition.speedy) move_speed *= 1.5;
 
     return move_speed * self.move_multiplier * self.walk_speed_multiplier;
@@ -189,7 +188,7 @@ pub fn useAbility(self: *Player, index: comptime_int) void {
     if (index < 0 or index >= 4) @compileError("Invalid index");
     const abil_data = self.data.abilities[index];
     const time = main.current_time;
-    if (time - self.last_ability_use[index] < @as(i64, @intFromFloat(abil_data.cooldown)) * std.time.us_per_s) {
+    if (time - self.last_ability_use[index] < int(i64, abil_data.cooldown) * std.time.us_per_s) {
         assets.playSfx("error.mp3");
         return;
     }
@@ -260,7 +259,7 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
         return;
     };
 
-    const attack_delay: i64 = @intFromFloat(1.0 / (item_data.fire_rate * attack_frequency));
+    const attack_delay = int(i64, 1.0 / (item_data.fire_rate * attack_frequency));
     if (time < self.attack_start + attack_delay) return;
 
     assets.playSfx(item_data.sound);
@@ -271,7 +270,7 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
 
     const projs_len = item_data.projectile_count;
     const arc_gap = item_data.arc_gap * std.math.rad_per_deg;
-    const total_angle = arc_gap * @as(f32, @floatFromInt(projs_len - 1));
+    const total_angle = arc_gap * f32i(projs_len - 1);
     var angle = angle_base - total_angle / 2.0;
     const proj_data = item_data.projectile.?;
 
@@ -288,9 +287,9 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
             .angle = angle,
             .index = proj_index,
             .owner_map_id = self.map_id,
-            .phys_dmg = @intFromFloat(@as(f32, @floatFromInt(proj_data.phys_dmg)) * self.strengthMult()),
-            .magic_dmg = @intFromFloat(@as(f32, @floatFromInt(proj_data.magic_dmg)) * self.witMult()),
-            .true_dmg = @intFromFloat(@as(f32, @floatFromInt(proj_data.true_dmg))),
+            .phys_dmg = int(i32, f32i(proj_data.phys_dmg) * self.strengthMult()),
+            .magic_dmg = int(i32, f32i(proj_data.magic_dmg) * self.witMult()),
+            .true_dmg = int(i32, f32i(proj_data.true_dmg)),
         });
 
         main.game_server.sendPacket(.{ .player_projectile = .{
@@ -382,8 +381,8 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
             .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos - 0.0001 },
         );
 
-        const float_hp: f32 = @floatFromInt(self.hp);
-        const float_max_hp: f32 = @floatFromInt(self.max_hp);
+        const float_hp = f32i(self.hp);
+        const float_max_hp = f32i(self.max_hp);
         const left_pad = 2.0;
         const w_no_pad = 20.0;
         const total_w = 24.0;
@@ -418,8 +417,8 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
             .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos - 0.0001 },
         );
 
-        const float_mp: f32 = @floatFromInt(self.mp);
-        const float_max_mp: f32 = @floatFromInt(self.max_mp);
+        const float_mp = f32i(self.mp);
+        const float_max_mp = f32i(self.max_mp);
         const left_pad = 2.0;
         const w_no_pad = 20.0;
         const total_w = 24.0;
@@ -448,7 +447,7 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
 
     base.drawStatusTexts(
         self,
-        @as(i64, @intFromFloat(float_time_ms)) * std.time.us_per_ms,
+        int(i64, float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y,
         cam_data.scale,
@@ -460,21 +459,21 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
     var action: assets.Action = .stand;
 
     if (time < self.attack_start + self.attack_period) {
-        const time_dt: f32 = @floatFromInt(time - self.attack_start);
-        float_period = @floatFromInt(self.attack_period);
+        const time_dt = f32i(time - self.attack_start);
+        float_period = f32i(self.attack_period);
         float_period = @mod(time_dt, float_period) / float_period;
         self.facing = self.attack_angle;
         action = .attack;
     } else if (map.info.player_map_id == self.map_id) {
         if (self.x_dir != 0.0 or self.y_dir != 0.0) {
-            const float_time: f32 = @floatFromInt(time);
+            const float_time = f32i(time);
             float_period = 3.5 / self.moveSpeedMultiplier();
             float_period = @mod(float_time, float_period) / float_period;
             self.facing = std.math.atan2(self.y_dir, self.x_dir);
             action = .walk;
         }
     } else if (!std.math.isNan(self.move_angle)) {
-        const float_time: f32 = @floatFromInt(time);
+        const float_time = f32i(time);
         float_period = 3.5 / self.moveSpeedMultiplier();
         float_period = @mod(float_time, float_period) / float_period;
         self.facing = self.move_angle;
@@ -490,7 +489,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
     else
         0;
 
-    const dir: assets.Direction = switch (@as(u8, @intFromFloat(@round(angle + 4))) % 8) {
+    const dir: assets.Direction = switch (int(u8, @round(angle + 4)) % 8) {
         0, 7 => .left,
         1, 2 => .up,
         3, 4 => .right,
@@ -498,7 +497,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
         else => @panic("Invalid direction in player update"),
     };
 
-    const anim_idx: u8 = @intFromFloat(@max(0, @min(0.99999, float_period)) * 2.0);
+    const anim_idx = int(u8, @max(0, @min(0.99999, float_period)) * 2.0);
     const dir_idx: u8 = @intFromEnum(dir);
 
     const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions];
@@ -520,8 +519,8 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
                     const new_x = self.x + move_speed * @cos(move_angle) * dt;
                     const new_y = self.y + move_speed * @sin(move_angle) * dt;
 
-                    self.x = @max(0, @min(new_x, @as(f32, @floatFromInt(map.info.width - 1))));
-                    self.y = @max(0, @min(new_y, @as(f32, @floatFromInt(map.info.height - 1))));
+                    self.x = @max(0, @min(new_x, f32i(map.info.width - 1)));
+                    self.y = @max(0, @min(new_y, f32i(map.info.height - 1)));
                 }
             } else {
                 if (map.getSquare(self.x, self.y, true, .con)) |square| {
@@ -571,7 +570,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
                     modifyStep(self, self.x + dx, self.y + dy);
                 } else {
                     const step_size = move_threshold / @max(@abs(dx), @abs(dy));
-                    for (0..@intFromFloat(1.0 / step_size)) |_| modifyStep(self, self.x + dx * step_size, self.y + dy * step_size);
+                    for (0..int(usize, 1.0 / step_size)) |_| modifyStep(self, self.x + dx * step_size, self.y + dy * step_size);
                 }
             }
         }
@@ -599,8 +598,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
     }
 
     if (self.ability_state.time_dilation) {
-        const wit: f32 = @floatFromInt(self.wit + self.wit_bonus);
-        const radius = 3.0 + wit * 0.06;
+        const radius = 3.0 + f32i(self.wit + self.wit_bonus) * 0.06;
         const radius_sqr = radius * radius;
 
         for (map.listForType(Projectile).items) |*p| {
