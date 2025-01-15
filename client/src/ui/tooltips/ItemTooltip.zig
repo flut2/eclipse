@@ -102,18 +102,18 @@ pub fn deinit(self: *ItemTooltip) void {
 fn getMainBuffer(self: *ItemTooltip) []u8 {
     const buffer_len_half = @divExact(self.main_text.text_data.backing_buffer.len, 2);
     defer self.main_buffer_front = !self.main_buffer_front;
-    return if (self.main_buffer_front) 
-        self.main_text.text_data.backing_buffer[buffer_len_half..] 
-    else 
+    return if (self.main_buffer_front)
+        self.main_text.text_data.backing_buffer[buffer_len_half..]
+    else
         self.main_text.text_data.backing_buffer[0..buffer_len_half];
 }
 
 fn getFooterBuffer(self: *ItemTooltip) []u8 {
     const buffer_len_half = @divExact(self.footer.text_data.backing_buffer.len, 2);
     defer self.footer_buffer_front = !self.footer_buffer_front;
-    return if (self.footer_buffer_front) 
-        self.footer.text_data.backing_buffer[buffer_len_half..] 
-    else 
+    return if (self.footer_buffer_front)
+        self.footer.text_data.backing_buffer[buffer_len_half..]
+    else
         self.footer.text_data.backing_buffer[0..buffer_len_half];
 }
 
@@ -297,30 +297,51 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
             if (proj.boomerang) text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Projectiles boomerang", .{text}) catch text;
         }
 
-        if (data.stat_increases) |stat_increases| {
-            for (stat_increases, 0..) |incr, i| {
-                if (i == 0)
-                    text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "On Equip: ", .{text}) catch text;
+        if (data.stat_increases) |stat_increases| for (stat_increases, 0..) |incr, i| {
+            if (i == 0) text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "On Equip: ", .{text}) catch text;
 
-                const amount = incr.amount();
-                if (amount > 0) {
-                    text = std.fmt.bufPrint(
-                        self.getMainBuffer(),
-                        "{s}+" ++ decimal_fmt ++ " {s}{s}",
-                        .{ text, amount, incr.toControlCode(), if (i == stat_increases.len - 1) "" else ", " },
-                    ) catch text;
-                } else {
-                    text = std.fmt.bufPrint(
-                        self.getMainBuffer(),
-                        "{s}" ++ decimal_fmt ++ " {s}{s}",
-                        .{ text, amount, incr.toControlCode(), if (i == stat_increases.len - 1) "" else ", " },
-                    ) catch text;
-                }
+            const amount = incr.amount();
+            if (amount > 0) {
+                text = std.fmt.bufPrint(
+                    self.getMainBuffer(),
+                    "{s}+" ++ decimal_fmt ++ " {s}{s}",
+                    .{ text, amount, incr.toControlCode(), if (i == stat_increases.len - 1) "" else ", " },
+                ) catch text;
+            } else {
+                text = std.fmt.bufPrint(
+                    self.getMainBuffer(),
+                    "{s}" ++ decimal_fmt ++ " {s}{s}",
+                    .{ text, amount, incr.toControlCode(), if (i == stat_increases.len - 1) "" else ", " },
+                ) catch text;
             }
+        };
+
+        if (data.mana_cost) |cost| {
+            const mana_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_mp = undefined });
+            text = std.fmt.bufPrint(
+                self.getMainBuffer(),
+                line_base ++ float_fmt ++ "% chance to consume " ++ decimal_fmt ++ "&space{s}",
+                .{ text, cost.chance * 100.0, cost.amount, mana_icon },
+            ) catch text;
         }
 
-        if (data.mana_cost != 0)
-            text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Cost: " ++ decimal_fmt ++ " MP", .{ text, data.mana_cost }) catch text;
+        if (data.health_cost) |cost| {
+            const health_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_hp = undefined });
+            text = std.fmt.bufPrint(
+                self.getMainBuffer(),
+                line_base ++ float_fmt ++ "% chance to consume " ++ decimal_fmt ++ "&space{s}",
+                .{ text, cost.chance * 100.0, cost.amount, health_icon },
+            ) catch text;
+        }
+
+        if (data.gold_cost) |cost| {
+            const gold_icon = "&img=\"misc,20\"";
+            text = std.fmt.bufPrint(
+                self.getMainBuffer(),
+                line_base ++ float_fmt ++ "% chance to consume " ++ decimal_fmt ++ "&space{s}",
+                .{ text, cost.chance * 100.0, cost.amount, gold_icon },
+            ) catch text;
+        }
 
         if (data.activations != null and data.cooldown > 0.0)
             text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Cooldown: " ++ float_fmt ++ " seconds", .{ text, data.cooldown }) catch text;

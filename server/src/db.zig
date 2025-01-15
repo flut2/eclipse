@@ -296,6 +296,7 @@ pub const CharacterData = struct {
         spirits_communed: u32,
         stats: [13]i32,
         inventory: [22]u16,
+        item_data: [22]network_data.ItemData,
         hp: i32,
         mp: i32,
         cards: []const u16,

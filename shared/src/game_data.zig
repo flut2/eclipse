@@ -112,6 +112,60 @@ pub fn magicDamage(dmg: i32, resistance: i32, condition: utils.Condition) i32 {
     return @max(@divFloor(dmg, 5), dmg - resistance);
 }
 
+// TODO: this is garbage
+fn processMacros(allocator: std.mem.Allocator, text: []const u8) ![]const u8 {
+    const size = @min(8192, text.len * 3);
+    var front_buf = try allocator.alloc(u8, size);
+    defer allocator.free(front_buf);
+    @memset(front_buf, 0);
+    @memcpy(front_buf[0..text.len], text);
+    var back_buf = try allocator.alloc(u8, size);
+    defer allocator.free(back_buf);
+    @memset(back_buf, 0);
+    @memcpy(back_buf[0..text.len], text);
+    var front = true;
+    inline for (.{
+        .{ "$hptxt", "&type=\"bold_it\"&col=\"20AC20\"" },
+        .{ "$mptxt", "&type=\"bold_it\"&col=\"1C40FF\"" },
+        .{ "$strtxt", "&type=\"bold_it\"&col=\"FF6C32\"" },
+        .{ "$deftxt", "&type=\"bold_it\"&col=\"FF9670\"" },
+        .{ "$pentxt", "&type=\"bold_it\"&col=\"BC6332\"" },
+        .{ "$wittxt", "&type=\"bold_it\"&col=\"A15AFF\"" },
+        .{ "$restxt", "&type=\"bold_it\"&col=\"D65BFF\"" },
+        .{ "$prctxt", "&type=\"bold_it\"&col=\"FF5BC0\"" },
+        .{ "$statxt", "&type=\"bold_it\"&col=\"C45860\"" },
+        .{ "$inttxt", "&type=\"bold_it\"&col=\"6080FF\"" },
+        .{ "$spdtxt", "&type=\"bold_it\"&col=\"C45860\"" },
+        .{ "$hsttxt", "&type=\"bold_it\"&col=\"60FFAC\"" },
+        .{ "$tentxt", "&type=\"bold_it\"&col=\"87A5C1\"" },
+        .{ "$multitxt", "&type=\"bold_it\"&col=\"FFE770\"" },
+        .{ "$footnotetxt", "&type=\"med_it\"&size=\"10\"&col=\"736562\"" },
+        .{ "$hpicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .max_hp = undefined }) },
+        .{ "$mpicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .max_mp = undefined }) },
+        .{ "$stricon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .strength = undefined }) },
+        .{ "$deficon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .defense = undefined }) },
+        .{ "$penicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .penetration = undefined }) },
+        .{ "$witicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .wit = undefined }) },
+        .{ "$resicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .resistance = undefined }) },
+        .{ "$prcicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .piercing = undefined }) },
+        .{ "$staicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .stamina = undefined }) },
+        .{ "$inticon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .intelligence = undefined }) },
+        .{ "$spdicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .speed = undefined }) },
+        .{ "$hsticon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .haste = undefined }) },
+        .{ "$tenicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .tenacity = undefined }) },
+    }) |replace| {
+        _ = std.mem.replace(
+            u8,
+            std.mem.sliceTo(if (front) front_buf else back_buf, 0),
+            replace[0],
+            replace[1],
+            if (front) back_buf else front_buf,
+        );
+        front = !front;
+    }
+    return try allocator.dupe(u8, std.mem.sliceTo(if (front) front_buf else back_buf, 0));
+}
+
 pub const ItemType = enum {
     const weapon_types = [_]ItemType{ .sword, .bow, .staff };
     const armor_types = [_]ItemType{ .leather, .plate, .robe };
@@ -217,13 +271,21 @@ const ClassStats = struct {
 pub const AbilityData = struct {
     name: []const u8,
     description: []const u8,
-    mana_cost: i16 = 0,
-    health_cost: i16 = 0,
-    gold_cost: i16 = 0,
+    mana_cost: u16 = 0,
+    health_cost: u16 = 0,
+    gold_cost: u16 = 0,
     cooldown: f32,
     icon: TextureData,
     projectiles: ?[]ProjectileData = null,
     sound: []const u8 = "Unknown.mp3",
+
+    pub const ziggy_options = struct {
+        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !AbilityData {
+            var ability = try parser.parseStruct(AbilityData, first_tok);
+            ability.description = try processMacros(parser.gpa, ability.description);
+            return ability;
+        }
+    };
 };
 
 pub const ResourceRarity = enum { common, rare, epic };
@@ -482,6 +544,7 @@ pub const ActivationData = union(enum) {
 };
 
 pub const ItemRarity = enum { common, rare, epic, legendary, mythic };
+pub const ItemResourceCost = struct { chance: f32, amount: u16 };
 pub const ItemData = struct {
     id: u16,
     name: []const u8,
@@ -495,16 +558,23 @@ pub const ItemData = struct {
     stat_increases: ?[]const StatIncreaseData = null,
     activations: ?[]const ActivationData = null,
     arc_gap: f32 = 5.0,
-    mana_cost: i16 = 0,
-    health_cost: i16 = 0,
-    gold_cost: i16 = 0,
+    mana_cost: ?ItemResourceCost = null,
+    health_cost: ?ItemResourceCost = null,
+    gold_cost: ?ItemResourceCost = null,
     cooldown: f32 = 0.0,
     consumable: bool = false,
     untradeable: bool = false,
     ephemeral: bool = false,
     level_transform_item: ?[]const u8 = null,
-    bag_type: enum { brown, purple, blue, white } = .brown,
     sound: []const u8 = "Unknown.mp3",
+
+    pub const ziggy_options = struct {
+        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !ItemData {
+            var item_data = try parser.parseStruct(ItemData, first_tok);
+            item_data.description = try processMacros(parser.gpa, item_data.description);
+            return item_data;
+        }
+    };
 };
 
 pub const CardRarity = enum { common, rare, epic, legendary, mythic };
@@ -513,7 +583,15 @@ pub const CardData = struct {
     name: []const u8,
     rarity: CardRarity,
     description: []const u8,
-    stackable: bool = false,
+    max_stack: u16 = 0,
+
+    pub const ziggy_options = struct {
+        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !CardData {
+            var card_data = try parser.parseStruct(CardData, first_tok);
+            card_data.description = try processMacros(parser.gpa, card_data.description);
+            return card_data;
+        }
+    };
 };
 
 pub const PortalData = struct {

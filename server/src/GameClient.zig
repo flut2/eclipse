@@ -208,6 +208,17 @@ fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) v
     const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
     if (player.condition.stunned) return;
     const item_data = game_data.item.from_id.getPtr(player.inventory[0]) orelse return;
+
+    if (item_data.mana_cost) |cost| if (player.mp >= cost.amount) {
+        if (utils.rng.random().float(f32) <= cost.chance) player.mp = @intCast(@max(0, player.mp - cost.amount));
+    } else return;
+    if (item_data.health_cost) |cost| if (player.hp > cost.amount) {
+        if (utils.rng.random().float(f32) <= cost.chance) player.hp = @intCast(@max(0, player.hp - cost.amount));
+    } else return;
+    if (item_data.gold_cost) |cost| if (player.gold >= cost.amount) {
+        if (utils.rng.random().float(f32) <= cost.chance) player.gold = @intCast(@max(0, player.gold - cost.amount));
+    } else return;
+    
     const proj_data = item_data.projectile orelse return;
 
     const map_id = self.world.add(Projectile, .{
@@ -370,6 +381,7 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
         for (class_data.default_items, 0..) |item, i|
             starting_inventory[i] = (game_data.item.from_name.get(item) orelse return error.UnknownStartItem).id;
         try player.char_data.set(.{ .inventory = starting_inventory });
+        try player.char_data.set(.{ .item_data = @splat(@bitCast(@as(u32, 0))) });
     } else return error.InvalidCharId;
 }
 

@@ -48,9 +48,9 @@ in_combat: bool = false,
 aether: u8 = 1,
 spirits_communed: u32 = 0,
 muted_until: i64 = 0,
-gold: i32 = 0,
-gems: i32 = 0,
-crowns: i32 = 0,
+gold: u32 = 0,
+gems: u32 = 0,
+crowns: u32 = 0,
 damage_mult: f32 = 1.0,
 hit_mult: f32 = 1.0,
 size_mult: f32 = 1.0,
@@ -86,6 +86,7 @@ hit_multiplier: f32 = 1.0,
 damage_multiplier: f32 = 1.0,
 condition: utils.Condition = .{},
 inventory: [22]u16 = @splat(std.math.maxInt(u16)),
+inv_data: [22]network_data.ItemData = @splat(@bitCast(@as(u32, 0))),
 attack_start: i64 = 0,
 attack_period: i64 = 0,
 attack_angle: f32 = 0,
@@ -238,23 +239,52 @@ pub fn useAbility(self: *Player, index: comptime_int) void {
     main.game_server.sendPacket(.{ .use_ability = .{ .time = time, .index = index, .data = data } });
 }
 
-pub fn doShoot(self: *Player, time: i64, item_props: *game_data.ItemData, attack_angle: f32) void {
-    const projs_len = item_props.projectile_count;
-    const arc_gap = item_props.arc_gap * std.math.rad_per_deg;
+pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
+    if (self.condition.stunned) return;
+
+    const item_data = game_data.item.from_id.getPtr(self.inventory[0]) orelse return;
+    if (item_data.projectile == null) return;
+
+    if (item_data.mana_cost) |cost| if (self.mp < cost.amount) {
+        assets.playSfx("error.mp3");
+        return;
+    };
+
+    if (item_data.health_cost) |cost| if (self.hp <= cost.amount) {
+        assets.playSfx("error.mp3");
+        return;
+    };
+
+    if (item_data.gold_cost) |cost| if (self.gold < cost.amount) {
+        assets.playSfx("error.mp3");
+        return;
+    };
+
+    const attack_delay: i64 = @intFromFloat(1.0 / (item_data.fire_rate * attack_frequency));
+    if (time < self.attack_start + attack_delay) return;
+
+    assets.playSfx(item_data.sound);
+
+    self.attack_period = attack_delay;
+    self.attack_angle = angle_base;
+    self.attack_start = time;
+
+    const projs_len = item_data.projectile_count;
+    const arc_gap = item_data.arc_gap * std.math.rad_per_deg;
     const total_angle = arc_gap * @as(f32, @floatFromInt(projs_len - 1));
-    var angle = attack_angle - total_angle / 2.0;
-    const proj_data = item_props.projectile.?;
+    var angle = angle_base - total_angle / 2.0;
+    const proj_data = item_data.projectile.?;
 
     for (0..projs_len) |_| {
         const proj_index = self.next_proj_index;
         self.next_proj_index +%= 1;
-        const x = self.x + @cos(attack_angle) * 0.25;
-        const y = self.y + @sin(attack_angle) * 0.25;
+        const x = self.x + @cos(angle_base) * 0.25;
+        const y = self.y + @sin(angle_base) * 0.25;
 
         Projectile.addToMap(.{
             .x = x,
             .y = y,
-            .data = &item_props.projectile.?,
+            .data = &item_data.projectile.?,
             .angle = angle,
             .index = proj_index,
             .owner_map_id = self.map_id,
@@ -273,24 +303,6 @@ pub fn doShoot(self: *Player, time: i64, item_props: *game_data.ItemData, attack
 
         angle += arc_gap;
     }
-}
-
-pub fn weaponShoot(self: *Player, angle: f32, time: i64) void {
-    if (self.condition.stunned) return;
-
-    const item_data = game_data.item.from_id.getPtr(self.inventory[0]) orelse return;
-    if (item_data.projectile == null) return;
-
-    const attack_delay: i64 = @intFromFloat(1.0 / (item_data.fire_rate * attack_frequency));
-    if (time < self.attack_start + attack_delay) return;
-
-    assets.playSfx(item_data.sound);
-
-    self.attack_period = attack_delay;
-    self.attack_angle = angle;
-    self.attack_start = time;
-
-    self.doShoot(self.attack_start, item_data, angle);
 }
 
 pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void {

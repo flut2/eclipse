@@ -55,6 +55,7 @@ mp_regen: f32 = 0.0,
 stats: [13]i32 = @splat(0),
 stat_boosts: [13]i32 = @splat(0),
 inventory: [22]u16 = @splat(std.math.maxInt(u16)),
+inv_data: [22]network_data.ItemData = @splat(@bitCast(@as(u32, 0))),
 selecting_cards: ?[3]u16 = null,
 cards: []u16 = &.{},
 resources: std.ArrayListUnmanaged(network_data.DataIdWithCount(u32)) = .empty,
@@ -145,6 +146,7 @@ pub fn init(self: *Player) !void {
     self.talents.appendSlice(main.allocator, try self.char_data.getWithDefault(.talents, &.{})) catch main.oomPanic();
     self.stats = try self.char_data.get(.stats);
     self.inventory = try self.char_data.get(.inventory);
+    self.inv_data = try self.char_data.get(.item_data);
 
     self.recalculateItems();
 
@@ -228,6 +230,7 @@ pub fn save(self: *Player) !void {
     try self.char_data.set(.{ .aether = self.aether });
     try self.char_data.set(.{ .spirits_communed = self.spirits_communed });
     try self.char_data.set(.{ .inventory = self.inventory });
+    try self.char_data.set(.{ .item_data = self.inv_data });
     try self.char_data.set(.{ .stats = self.stats });
     try self.char_data.set(.{ .cards = self.cards });
     try self.char_data.set(.{ .talents = self.talents.items });
@@ -487,13 +490,10 @@ pub fn recalculateItems(self: *Player) void {
     @memset(&self.stat_boosts, 0);
     for (self.inventory[0..4]) |item_id| {
         const props = game_data.item.from_id.get(item_id) orelse continue;
-        if (props.stat_increases) |stat_increases| {
-            for (stat_increases) |si| {
-                switch (si) {
-                    inline else => |inner, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(inner.amount),
-                }
-            }
-        }
+        if (props.stat_increases) |stat_increases| for (stat_increases) |si|
+            switch (si) {
+                inline else => |inner, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(inner.amount),
+            };
     }
 }
 
@@ -520,6 +520,9 @@ pub fn exportStats(
     stat_util.write(T, writer, cache, .{ .max_mp = self.stats[mana_stat] });
     stat_util.write(T, writer, cache, .{ .max_mp_bonus = self.stat_boosts[mana_stat] });
     stat_util.write(T, writer, cache, .{ .mp = self.mp });
+    stat_util.write(T, writer, cache, .{ .gold = self.gold });
+    stat_util.write(T, writer, cache, .{ .gems = self.gems });
+    stat_util.write(T, writer, cache, .{ .crowns = self.crowns });
     stat_util.write(T, writer, cache, .{ .condition = self.condition });
     stat_util.write(T, writer, cache, .{ .ability_state = self.ability_state });
     stat_util.write(T, writer, cache, .{ .cards = self.cards });
@@ -558,6 +561,9 @@ pub fn exportStats(
             const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
                 @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_0) + @as(u8, i));
             stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_tag), self.inventory[i]));
+            const inv_data_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
+                @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_data_0) + @as(u8, i));
+            stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_data_tag), self.inv_data[i]));
         }
     }
 

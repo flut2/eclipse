@@ -3,6 +3,7 @@ const std = @import("std");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
+const network_data = shared.network_data;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -28,6 +29,7 @@ size_mult: f32 = 0,
 atlas_data: assets.AtlasData = .default,
 data: *const game_data.ContainerData = undefined,
 inventory: [9]u16 = @splat(std.math.maxInt(u16)),
+inv_data: [9]network_data.ItemData = @splat(@bitCast(@as(u32, 0))),
 anim_idx: u8 = 0,
 next_anim: i64 = -1,
 

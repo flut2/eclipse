@@ -216,7 +216,7 @@ fn parseUnion(
         },
     });
 }
-fn parseStruct(
+pub fn parseStruct(
     self: *Parser,
     comptime T: type,
     first_tok: Token,

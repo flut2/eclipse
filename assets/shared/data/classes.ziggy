@@ -209,7 +209,7 @@
         {
             .name = "Rewind",
             .description = 
-            \\Rewind time by $multitxt3 ($inttxt+1%$inticon, $manatxt+0.6%$manaicon, $wittxt+1%$witicon$multitxt)&reset seconds, causing you to return to your old position and Health. (if higher than current)
+            \\Rewind time by $multitxt3 ($inttxt+1%$inticon, $mptxt+0.6%$mpicon, $wittxt+1%$witicon$multitxt)&reset seconds, causing you to return to your old position and Health. (if higher than current)
             ,
             .mana_cost = 54,
             .cooldown = 6.0,

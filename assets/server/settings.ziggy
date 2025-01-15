@@ -5,4 +5,4 @@
 .public_ip = "127.0.0.1",
 .server_name = "Eclipse",
 .build_version = "1.0",
-.tps = 30,
+.tps = 20,

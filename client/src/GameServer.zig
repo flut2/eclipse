@@ -616,10 +616,9 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
     if (data.map_id != std.math.maxInt(u32)) {
         switch (data.obj_type) {
             inline else => |inner| {
-                const T = ObjEnumToType(inner);
                 map.object_lock.lock();
                 defer map.object_lock.unlock();
-                if (map.findObject(T, data.map_id, .con) == null) return;
+                if (map.findObject(ObjEnumToType(inner), data.map_id, .con) == null) return;
             },
         }
     }
@@ -890,6 +889,34 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
             if (is_self and ui_systems.screen == .game)
                 ui_systems.screen.game.setInvItem(val, inv_idx);
         },
+        .inv_data_0,
+        .inv_data_1,
+        .inv_data_2,
+        .inv_data_3,
+        .inv_data_4,
+        .inv_data_5,
+        .inv_data_6,
+        .inv_data_7,
+        .inv_data_8,
+        .inv_data_9,
+        .inv_data_10,
+        .inv_data_11,
+        .inv_data_12,
+        .inv_data_13,
+        .inv_data_14,
+        .inv_data_15,
+        .inv_data_16,
+        .inv_data_17,
+        .inv_data_18,
+        .inv_data_19,
+        .inv_data_20,
+        .inv_data_21,
+        => |val| {
+            const inv_idx = @intFromEnum(stat) - @intFromEnum(network_data.PlayerStat.inv_data_0);
+            player.inv_data[inv_idx] = val;
+            // if (is_self and ui_systems.screen == .game)
+            //     ui_systems.screen.game.setInvItemData(val, inv_idx);
+        },
         .name => |val| parseNameStat(player, val),
     }
 }
@@ -934,6 +961,23 @@ fn parseContainerStat(container: *Container, stat: network_data.ContainerStat) v
             const int_id = map.interactive.map_id.load(.acquire);
             if (container.map_id == int_id and ui_systems.screen == .game)
                 ui_systems.screen.game.setContainerItem(val, inv_idx);
+        },
+        .inv_data_0,
+        .inv_data_1,
+        .inv_data_2,
+        .inv_data_3,
+        .inv_data_4,
+        .inv_data_5,
+        .inv_data_6,
+        .inv_data_7,
+        .inv_data_8,
+        => |val| {
+            const inv_idx = @intFromEnum(stat) - @intFromEnum(network_data.ContainerStat.inv_data_0);
+            container.inv_data[inv_idx] = val;
+
+            // const int_id = map.interactive.map_id.load(.acquire);
+            // if (container.map_id == int_id and ui_systems.screen == .game)
+            //     ui_systems.screen.game.setContainerItemData(val, inv_idx);
         },
         .name => |val| {
             const int_id = map.interactive.map_id.load(.acquire);

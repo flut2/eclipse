@@ -3,31 +3,31 @@
     .id = 0,
     .name = "Heavy Strikes",
     .rarity = @CardRarity("common"),
-    .description = \\Gain +4% STR
+    .description = \\Gain $strtxt+4%$stricon
     ,
-    .stackable = true,
+    .max_stack = 5,
 },
 {
     .id = 1,
     .name = "Titan's Resolve",
     .rarity = @CardRarity("rare"),
-    .description = \\Gain +15% STA, +15% INT
+    .description = \\Gain $statxt+15%$staicon&reset, $inttxt+15%$inticon
     ,
-    .stackable = true,
+    .max_stack = 3,
 },
 {
     .id = 2,
     .name = "Deft Hands",
     .rarity = @CardRarity("epic"),
-    .description = \\All weapons gain +10% Rate of Fire (additive)
+    .description = \\All weapons gain $multitxt+10% Rate of Fire&reset (additive)
     ,
-    .stackable = true,
+    .max_stack = 2,
 },
 {
     .id = 3,
     .name = "Absorption",
     .rarity = @CardRarity("legendary"),
-    .description = \\Release a &type="bold_it"&col="20AC20"10 (+1%&space&img="misc_big,40") Health&reset Healing Blast when receiving Physical or Magic Damage above 100 in a single hit
+    .description = \\Release a $hptxt10 (+1%$hpicon) Health&reset Healing Blast when receiving Physical or Magic Damage above 100 in a single hit
     ,
 },
 {
