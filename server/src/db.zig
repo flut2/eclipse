@@ -22,7 +22,7 @@ inline fn anyToBytes(val: anytype) []const u8 {
     const type_info = @typeInfo(T);
     return switch (type_info) {
         .array => std.mem.sliceAsBytes(&val),
-        .pointer => if (type_info.pointer.size != .Slice)
+        .pointer => if (type_info.pointer.size != .slice)
             @compileError("You can not serialize a non-slice pointer")
         else
             std.mem.sliceAsBytes(val),
@@ -34,7 +34,7 @@ inline fn bytesToAny(comptime T: type, bytes: []const u8) T {
     const type_info = @typeInfo(T);
     return switch (type_info) {
         .array => std.mem.bytesAsSlice(type_info.array.child, bytes)[0..type_info.array.len].*,
-        .pointer => if (type_info.pointer.size != .Slice)
+        .pointer => if (type_info.pointer.size != .slice)
             @compileError("You can not serialize a non-slice pointer")
         else
             @alignCast(std.mem.bytesAsSlice(type_info.pointer.child, bytes)),

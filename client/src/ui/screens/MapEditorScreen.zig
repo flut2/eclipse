@@ -1046,7 +1046,7 @@ fn tileBounds(tiles: []MapEditorTile) struct { min_x: u16, max_x: u16, min_y: u1
                 if (comptime std.mem.eql(u8, field.name, "object_id"))
                     continue;
 
-                if (@field(map_tile, field.name) != @as(*const field.type, @ptrCast(@alignCast(field.default_value.?))).*) {
+                if (@field(map_tile, field.name) != @as(*const field.type, @ptrCast(@alignCast(field.default_value_ptr.?))).*) {
                     const ux: u16 = @intCast(x);
                     const uy: u16 = @intCast(y);
 

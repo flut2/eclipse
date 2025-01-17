@@ -96,11 +96,11 @@ pub fn parseValue(
 
     switch (info) {
         .pointer => |ptr| switch (ptr.size) {
-            .Slice => switch (ptr.child) {
+            .slice => switch (ptr.child) {
                 u8 => return self.parseBytes(T, first_tok),
                 else => return self.parseArray(T, first_tok),
             },
-            .One => {
+            .one => {
                 const v: T = try self.gpa.create(ptr.child);
                 errdefer self.gpa.destroy(v);
 
@@ -312,7 +312,7 @@ fn finalizeStruct(
 ) Error!void {
     inline for (info.fields, 0..) |field, idx| {
         if (fields_seen[idx] == null) {
-            if (field.default_value) |ptr| {
+            if (field.default_value_ptr) |ptr| {
                 const dv_ptr: *const field.type = @alignCast(@ptrCast(ptr));
                 @field(val, field.name) = dv_ptr.*;
             } else {
@@ -423,7 +423,7 @@ fn parseStaticArray(self: *Parser, comptime T: type, lsb: Token) !T {
 
 fn parseArray(self: *Parser, comptime T: type, lsb: Token) !T {
     const info = @typeInfo(T).pointer;
-    assert(info.size == .Slice);
+    assert(info.size == .slice);
 
     try self.must(lsb, .lsb);
 
