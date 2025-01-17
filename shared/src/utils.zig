@@ -264,10 +264,54 @@ pub inline fn dist(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
     return @sqrt(distSqr(x1, y1, x2, y2));
 }
 
+pub inline fn f16i(i: anytype) f16 {
+    return @floatFromInt(i);
+}
+
 pub inline fn f32i(i: anytype) f32 {
     return @floatFromInt(i);
 }
 
-pub inline fn int(comptime T: type, f: anytype) T {
+pub inline fn f64i(i: anytype) f64 {
+    return @floatFromInt(i);
+}
+
+pub inline fn i8f(f: anytype) i8 {
+    return @intFromFloat(f);
+}
+
+pub inline fn u8f(f: anytype) u8 {
+    return @intFromFloat(f);
+}
+
+pub inline fn i16f(f: anytype) i16 {
+    return @intFromFloat(f);
+}
+
+pub inline fn u16f(f: anytype) u16 {
+    return @intFromFloat(f);
+}
+
+pub inline fn i32f(f: anytype) i32 {
+    return @intFromFloat(f);
+}
+
+pub inline fn u32f(f: anytype) u32 {
+    return @intFromFloat(f);
+}
+
+pub inline fn i64f(f: anytype) i64 {
+    return @intFromFloat(f);
+}
+
+pub inline fn u64f(f: anytype) u64 {
+    return @intFromFloat(f);
+}
+
+pub inline fn isizef(f: anytype) isize {
+    return @intFromFloat(f);
+}
+
+pub inline fn usizef(f: anytype) usize {
     return @intFromFloat(f);
 }

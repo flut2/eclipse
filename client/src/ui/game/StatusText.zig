@@ -3,7 +3,7 @@ const std = @import("std");
 const shared = @import("shared");
 const utils = shared.utils;
 const f32i = utils.f32i;
-const int = utils.int;
+const i64f = utils.i64f;
 
 const main = @import("../../main.zig");
 const render = @import("../../render.zig");
@@ -13,7 +13,7 @@ const StatusText = @This();
 
 text_data: element.TextData,
 initial_size: f32 = 22.0,
-duration: i64 = int(i64, 0.5 * std.time.us_per_s),
+duration: i64 = i64f(0.5 * std.time.us_per_s),
 show_at: i64 = 0,
 dispose_text: bool = false,
 

@@ -4,7 +4,8 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const f32i = utils.f32i;
-const int = utils.int;
+const u32f = utils.u32f;
+const i64f = utils.i64f;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -66,8 +67,8 @@ pub fn addToMap(entity_data: Entity) void {
         const tex = self.data.textures[utils.rng.next() % self.data.textures.len];
         if (ui_systems.screen != .editor and self.data.static and self.data.occupy_square) {
             if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
-                const floor_y = int(u32, @floor(self.y));
-                const floor_x = int(u32, @floor(self.x));
+                const floor_y = u32f(self.y);
+                const floor_x = u32f(self.x);
 
                 const color = color_data[tex.index];
                 const base_data_idx: usize = @intCast(floor_y * map.minimap.num_components * map.minimap.width + floor_x * map.minimap.num_components);
@@ -319,7 +320,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
 
     base.drawStatusTexts(
         self,
-        int(i64, float_time_ms) * std.time.us_per_ms,
+        i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x,
         screen_pos.y,
         cam_data.scale,

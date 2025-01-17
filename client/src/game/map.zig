@@ -5,7 +5,7 @@ const game_data = shared.game_data;
 const utils = shared.utils;
 const network_data = shared.network_data;
 const f32i = utils.f32i;
-const int = utils.int;
+const u32f = utils.u32f;
 const zstbi = @import("zstbi");
 
 const assets = @import("../assets.zig");
@@ -452,8 +452,8 @@ pub fn getSquare(x: f32, y: f32, comptime check_validity: bool, comptime constne
         return null;
     }
 
-    const floor_x = int(u32, x);
-    const floor_y = int(u32, y);
+    const floor_x = u32f(x);
+    const floor_y = u32f(y);
     if (check_validity and !validPos(floor_x, floor_y)) {
         @branchHint(.unlikely);
         return null;

@@ -6,7 +6,8 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
-const int = utils.int;
+const u32f = utils.u32f;
+
 const zstbi = @import("zstbi");
 
 const assets = @import("assets.zig");
@@ -57,8 +58,8 @@ pub const CameraData = struct {
             y_in > std.math.maxInt(u32))
             return false;
 
-        const floor_x = int(u32, @floor(x_in));
-        const floor_y = int(u32, @floor(y_in));
+        const floor_x = u32f(x_in);
+        const floor_y = u32f(y_in);
         return !(floor_x < self.min_x or floor_x > self.max_x or floor_y < self.min_y or floor_y > self.max_y);
     }
 };
@@ -826,7 +827,7 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
 
     if ((main.tick_frame or main.editing_map) and
         cam_data.x >= 0 and cam_data.y >= 0 and
-        map.validPos(int(u32, cam_data.x), int(u32, cam_data.y)))
+        map.validPos(u32f(cam_data.x), u32f(cam_data.y)))
     {
         const float_time_ms = f32i(time) / std.time.us_per_ms;
         grounds.clearRetainingCapacity();

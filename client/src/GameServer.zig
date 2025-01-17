@@ -7,7 +7,7 @@ const game_data = shared.game_data;
 const network_data = shared.network_data;
 const uv = shared.uv;
 const f32i = utils.f32i;
-const int = utils.int;
+const i64f = utils.i64f;
 
 const assets = @import("assets.zig");
 const Ally = @import("game/Ally.zig");
@@ -352,7 +352,7 @@ fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
             .owner_map_id = player.map_id,
         });
 
-        const attack_period = int(i64, 1.0 / (Player.attack_frequency * item_data.?.fire_rate));
+        const attack_period = i64f(1.0 / (Player.attack_frequency * item_data.?.fire_rate));
         player.attack_period = attack_period;
         player.attack_angle = data.angle;
         player.attack_start = main.current_time;

@@ -4,7 +4,7 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
-const int = utils.int;
+const u32f = utils.u32f;
 
 const behavior_data = @import("../logic/behavior.zig");
 const behavior_logic = @import("../logic/logic.zig");
@@ -48,8 +48,8 @@ pub fn init(self: *Entity) !void {
     };
 
     if (self.data.occupy_square or self.data.full_occupy) {
-        const ux = int(u32, self.x);
-        const uy = int(u32, self.y);
+        const ux = u32f(self.x);
+        const uy = u32f(self.y);
         self.world.tiles[uy * self.world.w + ux].occupied = true;
     }
 
@@ -67,8 +67,8 @@ pub fn deinit(self: *Entity) !void {
     }
 
     if (self.data.occupy_square or self.data.full_occupy) {
-        const ux = int(u32, self.x);
-        const uy = int(u32, self.y);
+        const ux = u32f(self.x);
+        const uy = u32f(self.y);
         self.world.tiles[uy * self.world.w + ux].occupied = false;
     }
 
@@ -76,10 +76,10 @@ pub fn deinit(self: *Entity) !void {
     self.stats_writer.list.deinit(main.allocator);
 }
 
-pub fn applyCondition(self: *Entity, condition: utils.ConditionEnum, duration: i64) !void {
+pub fn applyCondition(self: *Entity, condition: utils.ConditionEnum, duration: i64) void {
     if (self.conditions_active.getPtr(condition)) |current_duration| {
         if (duration > current_duration.*) current_duration.* = duration;
-    } else try self.conditions_active.put(main.allocator, condition, duration);
+    } else self.conditions_active.put(main.allocator, condition, duration) catch main.oomPanic();
     self.condition.set(condition, true);
 }
 
@@ -94,7 +94,7 @@ pub fn tick(self: *Entity, time: i64, dt: i64) !void {
     self.conditions_to_remove.clearRetainingCapacity();
     for (self.conditions_active.values(), self.conditions_active.keys()) |*d, k| {
         if (d.* <= dt) {
-            try self.conditions_to_remove.append(main.allocator, k);
+            self.conditions_to_remove.append(main.allocator, k) catch main.oomPanic();
             continue;
         }
 

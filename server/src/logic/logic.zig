@@ -5,7 +5,7 @@ const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
-const int = utils.int;
+const i64f = utils.i64f;
 
 const main = @import("../main.zig");
 const Ally = @import("../map/Ally.zig");
@@ -141,7 +141,7 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
             const dy = host.y - p.y;
             storage.target_x = p.x;
             storage.target_y = p.y;
-            storage.time = int(i64, @sqrt(dx * dx + dy * dy) / opts.speed * std.time.us_per_s);
+            storage.time = i64f(@sqrt(dx * dx + dy * dy) / opts.speed * std.time.us_per_s);
         }
 
         return false;

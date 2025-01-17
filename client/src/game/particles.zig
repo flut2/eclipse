@@ -4,7 +4,7 @@ const shared = @import("shared");
 const utils = shared.utils;
 const network_data = shared.network_data;
 const f32i = utils.f32i;
-const int = utils.int;
+const usizef = utils.usizef;
 
 const assets = @import("../assets.zig");
 const px_per_tile = @import("../Camera.zig").px_per_tile;
@@ -352,7 +352,7 @@ pub const AoeEffect = struct {
 
     pub fn update(self: *AoeEffect, _: i64, _: f32) bool {
         const part_num = 4 + self.radius * 2;
-        for (0..int(usize, part_num)) |i| {
+        for (0..usizef(part_num)) |i| {
             const float_i: f32 = f32i(i);
             const angle = (float_i * 2.0 * std.math.pi) / part_num;
             const end_x = self.x + self.radius * @cos(angle);

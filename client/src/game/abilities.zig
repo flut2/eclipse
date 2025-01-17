@@ -4,7 +4,7 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
-const int = utils.int;
+const i32f = utils.i32f;
 
 const map = @import("../game/map.zig");
 const input = @import("../input.zig");
@@ -30,7 +30,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
         .angle = attack_angle,
         .index = proj_index,
         .owner_map_id = player.map_id,
-        .phys_dmg = int(i32, 1300.0 + fstr * 2.0),
+        .phys_dmg = i32f(1300.0 + fstr * 2.0),
     });
 
     var buf: [5]u8 = undefined;
@@ -73,9 +73,9 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
     for (proj_list.items, 0..) |*p, i| {
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
             if (map.findObject(Enemy, p.owner_map_id, .ref)) |e| {
-                const phys_dmg = int(i32, f32i(game_data.physDamage(p.phys_dmg, e.defense, e.condition)) * damage_mult);
-                const magic_dmg = int(i32, f32i(game_data.magicDamage(p.magic_dmg, e.resistance, e.condition)) * damage_mult);
-                const true_dmg = int(i32, f32i(p.phys_dmg) * damage_mult);
+                const phys_dmg = i32f(f32i(game_data.physDamage(p.phys_dmg, e.defense, e.condition)) * damage_mult);
+                const magic_dmg = i32f(f32i(game_data.magicDamage(p.magic_dmg, e.resistance, e.condition)) * damage_mult);
+                const true_dmg = i32f(f32i(p.phys_dmg) * damage_mult);
                 if (phys_dmg > 0) map.takeDamage(e, phys_dmg, .physical, .{}, p.colors);
                 if (magic_dmg > 0) map.takeDamage(e, magic_dmg, .magic, .{}, p.colors);
                 if (true_dmg > 0) map.takeDamage(e, true_dmg, .true, .{}, p.colors);

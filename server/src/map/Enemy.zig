@@ -69,10 +69,10 @@ pub fn deinit(self: *Enemy) !void {
     self.stats_writer.list.deinit(main.allocator);
 }
 
-pub fn applyCondition(self: *Enemy, condition: utils.ConditionEnum, duration: i64) !void {
+pub fn applyCondition(self: *Enemy, condition: utils.ConditionEnum, duration: i64) void {
     if (self.conditions_active.getPtr(condition)) |current_duration| {
         if (duration > current_duration.*) current_duration.* = duration;
-    } else try self.conditions_active.put(main.allocator, condition, duration);
+    } else self.conditions_active.put(main.allocator, condition, duration) catch main.oomPanic();
     self.condition.set(condition, true);
 }
 
@@ -91,7 +91,7 @@ pub fn tick(self: *Enemy, time: i64, dt: i64) !void {
     self.conditions_to_remove.clearRetainingCapacity();
     for (self.conditions_active.values(), self.conditions_active.keys()) |*d, k| {
         if (d.* <= dt) {
-            try self.conditions_to_remove.append(main.allocator, k);
+            self.conditions_to_remove.append(main.allocator, k) catch main.oomPanic();
             continue;
         }
 

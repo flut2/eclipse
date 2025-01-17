@@ -4,7 +4,7 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const f32i = utils.f32i;
-const int = utils.int;
+const i64f = utils.i64f;
 
 const assets = @import("../../assets.zig");
 const Container = @import("../../game/Container.zig");
@@ -787,7 +787,7 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
             }
 
             const time_elapsed = time - local_player.last_ability_use[i];
-            const cooldown_us = int(i64, local_player.data.abilities[i].cooldown) * std.time.us_per_s;
+            const cooldown_us = i64f(local_player.data.abilities[i].cooldown) * std.time.us_per_s;
             if (time_elapsed < cooldown_us) {
                 const cooldown_left = f32i(cooldown_us - time_elapsed) / std.time.us_per_s;
 

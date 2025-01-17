@@ -7,7 +7,8 @@ const map_data = shared.map_data;
 const game_data = shared.game_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
-const int = utils.int;
+const u16f = utils.u16f;
+const usizef = utils.usizef;
 
 const assets = @import("../../assets.zig");
 const Container = @import("../../game/Container.zig");
@@ -1406,10 +1407,10 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
     if (place_type != .erase and sel_type == defaultType(self.active_layer)) return;
 
     const size: f32 = f32i(self.map_size - 1);
-    const y_left = int(usize, @max(0, @floor(center_y - self.brush_size)));
-    const y_right = int(usize, @min(size, @ceil(center_y + self.brush_size)));
-    const x_left = int(usize, @max(0, @floor(center_x - self.brush_size)));
-    const x_right = int(usize, @min(size, @ceil(center_x + self.brush_size)));
+    const y_left = usizef(@max(0, center_y - self.brush_size));
+    const y_right = usizef(@min(size, @ceil(center_y + self.brush_size)));
+    const x_left = usizef(@max(0, center_x - self.brush_size));
+    const x_right = usizef(@min(size, @ceil(center_x + self.brush_size)));
     for (y_left..y_right) |y| {
         for (x_left..x_right) |x| {
             const fx: f32 = f32i(x);
@@ -1624,8 +1625,8 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
     const size: f32 = f32i(self.map_size - 1);
     const x = @floor(@max(0, @min(world_point.x, size)));
     const y = @floor(@max(0, @min(world_point.y, size)));
-    const ux = int(u16, x);
-    const uy = int(u16, y);
+    const ux = u16f(x);
+    const uy = u16f(y);
     const map_tile = self.getTile(ux, uy);
 
     switch (action) {

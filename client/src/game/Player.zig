@@ -6,7 +6,10 @@ const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const f32i = utils.f32i;
-const int = utils.int;
+const u8f = utils.u8f;
+const i64f = utils.i64f;
+const i32f = utils.i32f;
+const usizef = utils.usizef;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -188,7 +191,7 @@ pub fn useAbility(self: *Player, index: comptime_int) void {
     if (index < 0 or index >= 4) @compileError("Invalid index");
     const abil_data = self.data.abilities[index];
     const time = main.current_time;
-    if (time - self.last_ability_use[index] < int(i64, abil_data.cooldown) * std.time.us_per_s) {
+    if (time - self.last_ability_use[index] < i64f(abil_data.cooldown) * std.time.us_per_s) {
         assets.playSfx("error.mp3");
         return;
     }
@@ -259,7 +262,7 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
         return;
     };
 
-    const attack_delay = int(i64, 1.0 / (item_data.fire_rate * attack_frequency));
+    const attack_delay = i64f(1.0 / (item_data.fire_rate * attack_frequency));
     if (time < self.attack_start + attack_delay) return;
 
     assets.playSfx(item_data.sound);
@@ -287,9 +290,9 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
             .angle = angle,
             .index = proj_index,
             .owner_map_id = self.map_id,
-            .phys_dmg = int(i32, f32i(proj_data.phys_dmg) * self.strengthMult()),
-            .magic_dmg = int(i32, f32i(proj_data.magic_dmg) * self.witMult()),
-            .true_dmg = int(i32, f32i(proj_data.true_dmg)),
+            .phys_dmg = i32f(f32i(proj_data.phys_dmg) * self.strengthMult()),
+            .magic_dmg = i32f(f32i(proj_data.magic_dmg) * self.witMult()),
+            .true_dmg = i32f(f32i(proj_data.true_dmg)),
         });
 
         main.game_server.sendPacket(.{ .player_projectile = .{
@@ -447,7 +450,7 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
 
     base.drawStatusTexts(
         self,
-        int(i64, float_time_ms) * std.time.us_per_ms,
+        i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y,
         cam_data.scale,
@@ -489,7 +492,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
     else
         0;
 
-    const dir: assets.Direction = switch (int(u8, @round(angle + 4)) % 8) {
+    const dir: assets.Direction = switch (u8f(@round(angle + 4)) % 8) {
         0, 7 => .left,
         1, 2 => .up,
         3, 4 => .right,
@@ -497,7 +500,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
         else => @panic("Invalid direction in player update"),
     };
 
-    const anim_idx = int(u8, @max(0, @min(0.99999, float_period)) * 2.0);
+    const anim_idx = u8f(@max(0, @min(0.99999, float_period)) * 2.0);
     const dir_idx: u8 = @intFromEnum(dir);
 
     const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions];
@@ -570,7 +573,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
                     modifyStep(self, self.x + dx, self.y + dy);
                 } else {
                     const step_size = move_threshold / @max(@abs(dx), @abs(dy));
-                    for (0..int(usize, 1.0 / step_size)) |_| modifyStep(self, self.x + dx * step_size, self.y + dy * step_size);
+                    for (0..usizef(1.0 / step_size)) |_| modifyStep(self, self.x + dx * step_size, self.y + dy * step_size);
                 }
             }
         }

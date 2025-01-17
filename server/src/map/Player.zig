@@ -5,7 +5,8 @@ const game_data = shared.game_data;
 const utils = shared.utils;
 const network_data = shared.network_data;
 const f32i = utils.f32i;
-const int = utils.int;
+const i32f = utils.i32f;
+const u16f = utils.u16f;
 
 const db = @import("../db.zig");
 const Client = @import("../GameClient.zig");
@@ -208,10 +209,10 @@ pub fn moveToSpawn(self: *Player) void {
     self.y = f32i(rand_point.y) + 0.5;
 }
 
-pub fn applyCondition(self: *Player, condition: utils.ConditionEnum, duration: i64) !void {
+pub fn applyCondition(self: *Player, condition: utils.ConditionEnum, duration: i64) void {
     if (self.conditions_active.getPtr(condition)) |current_duration| {
         if (duration > current_duration.*) current_duration.* = duration;
-    } else try self.conditions_active.put(main.allocator, condition, duration);
+    } else self.conditions_active.put(main.allocator, condition, duration) catch main.oomPanic();
     self.condition.set(condition, true);
 }
 
@@ -348,13 +349,13 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
 
     const fstam = f32i(self.stats[stamina_stat] + self.stat_boosts[stamina_stat]);
     self.hp_regen += (1.0 + fstam * 0.12) * scaled_dt;
-    const hp_regen_whole = int(i32, self.hp_regen);
+    const hp_regen_whole = i32f(self.hp_regen);
     self.hp = @min(self.stats[health_stat] + self.stat_boosts[health_stat], self.hp + hp_regen_whole);
     self.hp_regen -= f32i(hp_regen_whole);
 
     const fint = f32i(self.stats[intelligence_stat] + self.stat_boosts[intelligence_stat]);
     self.mp_regen += (0.5 + fint * 0.06) * scaled_dt;
-    const mp_regen_whole = int(i32, self.mp_regen);
+    const mp_regen_whole = i32f(self.mp_regen);
     self.mp = @min(self.stats[mana_stat] + self.stat_boosts[mana_stat], self.mp + mp_regen_whole);
     self.mp_regen -= f32i(mp_regen_whole);
 
@@ -381,8 +382,8 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
         _ = self.conditions_active.swapRemove(c);
     }
 
-    const ux = int(u16, self.x);
-    const uy = int(u16, self.y);
+    const ux = u16f(self.x);
+    const uy = u16f(self.y);
     const iux: i64 = ux;
     const iuy: i64 = uy;
 

@@ -4,7 +4,8 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
-const int = utils.int;
+const usizef = utils.usizef;
+const i64f = utils.i64f;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -140,7 +141,7 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
                     }
                     self.wall_data = tex[tex_data.index];
                     self.anim_idx = @intCast((self.anim_idx + 1) % frame_len);
-                    self.next_anim = time + int(i64, frame_data.time * std.time.us_per_s);
+                    self.next_anim = time + i64f(frame_data.time * std.time.us_per_s);
                 } else {
                     std.log.err("Could not find sheet {s} for anim on {s} with data id {}", .{ tex_data.sheet, type_name, self.data_id });
                     return;
@@ -154,7 +155,7 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
                     self.atlas_data = tex[tex_data.index];
                     if (self.data.draw_on_ground) self.atlas_data.removePadding();
                     self.anim_idx = @intCast((self.anim_idx + 1) % frame_len);
-                    self.next_anim = time + int(i64, frame_data.time * std.time.us_per_s);
+                    self.next_anim = time + i64f(frame_data.time * std.time.us_per_s);
                 } else {
                     std.log.err("Could not find sheet {s} for anim on {s} with data id {}", .{ tex_data.sheet, type_name, self.data_id });
                     return;
@@ -176,7 +177,7 @@ pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_int
         if (cond_int & (@as(usize, 1) << @intCast(i)) != 0) {
             const data = render.condition_rects[i];
             if (data.len > 0) {
-                const frame_new_idx = int(usize, float_time_ms / (0.5 * std.time.us_per_s));
+                const frame_new_idx = usizef(float_time_ms / (0.5 * std.time.us_per_s));
                 const current_frame = data[@mod(frame_new_idx, data.len)];
                 const cond_w = current_frame.texWRaw() * scale;
                 const cond_h = current_frame.texHRaw() * scale;

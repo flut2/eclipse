@@ -5,7 +5,7 @@ const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const f32i = utils.f32i;
-const int = utils.int;
+const u32f = utils.u32f;
 
 const main = @import("main.zig");
 const Ally = @import("map/Ally.zig");
@@ -221,8 +221,8 @@ pub fn moveToward(host: anytype, x: f32, y: f32, speed: f32, dt: i64) void {
 pub fn validatedMove(self: anytype, x: f32, y: f32) void {
     if (x < 0.0 or y < 0.0) return;
 
-    const ux = int(u32, x);
-    const uy = int(u32, y);
+    const ux = u32f(x);
+    const uy = u32f(y);
     if (ux >= self.world.w or uy >= self.world.h) return;
 
     const tile = self.world.tiles[uy * self.world.w + ux];
@@ -258,6 +258,6 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
     for (self.listForType(T).items) |*obj| {
         if (utils.distSqr(obj.x, obj.y, x, y) > radius_sqr) continue;
         obj.damage(owner_type, owner_id, opts.phys_dmg, opts.magic_dmg, opts.true_dmg);
-        if (opts.effect) |eff| obj.applyCondition(eff, opts.effect_duration) catch continue;
+        if (opts.effect) |eff| obj.applyCondition(eff, opts.effect_duration);
     }
 }

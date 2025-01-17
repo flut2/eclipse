@@ -4,7 +4,8 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const f32i = utils.f32i;
-const int = utils.int;
+const i64f = utils.i64f;
+const u8f = utils.u8f;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -157,7 +158,7 @@ pub fn draw(self: *Ally, cam_data: render.CameraData, float_time_ms: f32) void {
 
     base.drawStatusTexts(
         self,
-        int(i64, float_time_ms) * std.time.us_per_ms,
+        i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y,
         cam_data.scale,
@@ -184,12 +185,12 @@ pub fn update(self: *Ally, time: i64, dt: f32) void {
     else
         utils.halfBound(self.facing) / (std.math.pi / 4.0);
 
-    const dir: assets.Direction = switch (int(u8, @round(angle + 4)) % 8) {
+    const dir: assets.Direction = switch (u8f(@round(angle + 4)) % 8) {
         2...5 => .right,
         else => .left,
     };
 
-    const anim_idx = int(u8, @max(0, @min(0.99999, float_period)) * 2.0);
+    const anim_idx = u8f(@max(0, @min(0.99999, float_period)) * 2.0);
     const dir_idx: u8 = @intFromEnum(dir);
     const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimEnemyData.walk_actions];
 
