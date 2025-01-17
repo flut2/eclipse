@@ -1612,11 +1612,9 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
         var places_to_remove: std.ArrayListUnmanaged(usize) = .empty;
         defer places_to_remove.deinit(main.allocator);
 
-        var idx: usize = 0;
-        placeIter: for (places.items) |p| {
+        placeIter: for (places.items, 0..) |p, i| {
             for (self.selected_tiles) |pos| if (p.x == pos.x and p.y == pos.y) continue :placeIter;
-            places_to_remove.append(main.allocator, idx) catch main.oomPanic();
-            idx += 1;
+            places_to_remove.append(main.allocator, i) catch main.oomPanic();
         }
 
         var iter = std.mem.reverseIterator(places_to_remove.items);
@@ -1679,17 +1677,17 @@ fn inside(screen: *MapEditorScreen, places: []Place, x: i32, y: i32, layer: Laye
         !placesContain(places, x, y) and typeAt(layer, screen, @intCast(x), @intCast(y)) == current_type;
 }
 
-fn fill(screen: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
+fn fill(self: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
     const FillData = struct { x1: i32, x2: i32, y: i32, dy: i32 };
 
     var places: std.ArrayListUnmanaged(Place) = .empty;
 
-    const layer = screen.active_layer;
-    const target_id = switch (screen.active_layer) {
-        inline else => |tag| @field(screen.selected, @tagName(tag)),
+    const layer = self.active_layer;
+    const target_id = switch (self.active_layer) {
+        inline else => |tag| @field(self.selected, @tagName(tag)),
     };
 
-    const current_id = typeAt(layer, screen, x, y);
+    const current_id = typeAt(layer, self, x, y);
     if (!selection and (current_id == target_id or target_id == defaultType(layer))) return;
 
     var stack: std.ArrayListUnmanaged(FillData) = .empty;
@@ -1702,8 +1700,8 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
         const pop = stack.pop();
         var px = pop.x1;
 
-        if (inside(screen, places.items, px, pop.y, layer, current_id)) {
-            while (inside(screen, places.items, px - 1, pop.y, layer, current_id)) {
+        if (inside(self, places.items, px, pop.y, layer, current_id)) {
+            while (inside(self, places.items, px - 1, pop.y, layer, current_id)) {
                 places.append(main.allocator, .{
                     .x = @intCast(px - 1),
                     .y = @intCast(pop.y),
@@ -1720,7 +1718,7 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
 
         var x1 = pop.x1;
         while (x1 <= pop.x2) {
-            while (inside(screen, places.items, x1, pop.y, layer, current_id)) {
+            while (inside(self, places.items, x1, pop.y, layer, current_id)) {
                 places.append(main.allocator, .{
                     .x = @intCast(x1),
                     .y = @intCast(pop.y),
@@ -1738,7 +1736,7 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
                 stack.append(main.allocator, .{ .x1 = pop.x2 + 1, .x2 = x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy }) catch main.oomPanic();
 
             x1 += 1;
-            while (x1 < pop.x2 and !inside(screen, places.items, x1, pop.y, layer, current_id))
+            while (x1 < pop.x2 and !inside(self, places.items, x1, pop.y, layer, current_id))
                 x1 += 1;
             px = x1;
         }
@@ -1749,15 +1747,13 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
         return;
     }
 
-    if (screen.selected_tiles.len > 0) {
+    if (self.selected_tiles.len > 0) {
         var places_to_remove: std.ArrayListUnmanaged(usize) = .empty;
         defer places_to_remove.deinit(main.allocator);
 
-        var idx: usize = 0;
-        placeIter: for (places.items) |p| {
-            for (screen.selected_tiles) |pos| if (p.x == pos.x and p.y == pos.y) continue :placeIter;
-            places_to_remove.append(main.allocator, idx) catch main.oomPanic();
-            idx += 1;
+        placeIter: for (places.items, 0..) |p, i| {
+            for (self.selected_tiles) |pos| if (p.x == pos.x and p.y == pos.y) continue :placeIter;
+            places_to_remove.append(main.allocator, i) catch main.oomPanic();
         }
 
         var iter = std.mem.reverseIterator(places_to_remove.items);
@@ -1767,16 +1763,16 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
     if (selection) {
         var positions: std.ArrayListUnmanaged(Position) = .empty;
         for (places.items) |p| positions.append(main.allocator, .{ .x = p.x, .y = p.y }) catch main.oomPanic();
-        screen.selected_tiles = positions.toOwnedSlice(main.allocator) catch main.oomPanic();
+        self.selected_tiles = positions.toOwnedSlice(main.allocator) catch main.oomPanic();
         places.deinit(main.allocator);
         return;
     }
 
     if (places.items.len <= 1) {
-        if (places.items.len == 1) screen.command_queue.addCommand(.{ .place = places.items[0] });
+        if (places.items.len == 1) self.command_queue.addCommand(.{ .place = places.items[0] });
         places.deinit(main.allocator);
     } else {
-        screen.command_queue.addCommand(.{ .multi_place = .{ .places = places.toOwnedSlice(main.allocator) catch main.oomPanic() } });
+        self.command_queue.addCommand(.{ .multi_place = .{ .places = places.toOwnedSlice(main.allocator) catch main.oomPanic() } });
     }
 }
 
