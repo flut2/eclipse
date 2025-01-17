@@ -33,47 +33,45 @@
     },
     .abilities = [
         {
-            .name = "Equivalent Exchange",
+            .name = "Ethereal Harvest",
             .description = 
-            \\Make your other abilities cost 8% (+8% HST) less for 8 seconds. This includes the hit cost of Premium Protection.
+            \\Gain the ability to see into the spirit world, allowing you to see the Souls of dead enemies.
+            \\When this ability is cast within 3 tiles of a Soul: Collect all souls within $prctxt5 (+5%$prcicon) tiles&reset, powering this ability up, with stronger Souls granting more power.
+            \\When cast otherwise: You grant a $strtxtStrength&reset and $wittxtWit&reset buff to yourself and up to 5 allies within 4 tiles, scaling based on the amount and the value of Souls consumed.
+            \\Current buffs: {0}$stricon, {1}$witicon
             ,
-            .health_cost = 350,
-            .cooldown = 17.0,
+            .health_cost = 100,
+            .cooldown = 8.0,
             .icon = {"ability_icons": 0},
         },
         {
-            .name = "Asset Bubble",
+            .name = "Space Shift",
             .description = 
-            \\Deal 4.4% more damage per 10000 Gold you own for 8 seconds.
-            \\After this effect ends, deal 8.8% less damage per 10000 Gold you own for 17 seconds.
-            \\The damage buff is capped at 44%, while the debuff is capped at 88%.
+            \\Tear a Rift within space-time for $statxt10 (+10%$staicon) seconds&reset, allowing ally Demons to join you in the fight, and granting yourself and your allies up to $mptxt10 (+1%$mpicon)&reset every second, with this regeneration becoming weaker the further they are from the Rift.
             ,
-            .gold_cost = 449,
-            .cooldown = 35.0,
+            .mana_cost = 150,
+            .health_cost = 200,
+            .cooldown = 28.0,
             .icon = {"ability_icons": 1},
         },
         {
-            .name = "Premium Protection",
+            .name = "Bloodfont",
             .description = 
-            \\Become immune to damage for &type="bold_it"&col="C45860"8 (+8%&space&img="misc_big,58")&reset seconds, but pay &type="bold_it"&col="FFE770"0.5 Gold&reset for every damage point you would've taken.n&type="med_it"&size="10"&col="736562"This effect only applies to bullets that you can pay for.
+            \\Delay all damage received for $hptxt13 (+1%$hpicon) seconds&reset, after which you receive all the stored damage excluding the damage received from enemies that are now dead.
+            \\$footnotetxtYou can not die from this ability, you will be set to 1 HP after the effect if it would've killed you.
             ,
+            .mana_cost = 100,
             .cooldown = 28.0,
             .icon = {"ability_icons": 2},
         },
         {
-            .name = "Compound Interest",
+            .name = "Ravenous Hunger",
             .description = 
-            \\Gain the following until this ability is recast:
-            \\ - &type="bold_it"&col="FFE770"+280% (&col="D65BFF"-8% &img="misc_big,57", &col="FF9670"-8% &img="misc_big,33"&col="FFE770") Damage Taken&reset
-            \\ - &type="bold_it"&col="C45860"-17% &img="misc_big,34"&reset
-            \\ - &type="bold_it"All damage dealt now accumulates Drop Chance, at a rate of &col="C45860"0.8% (+0.8% &img="misc_big,58")&reset&type="bold_it" per 8000 damage dealt.&reset
-            \\Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for &type="bold_it"&col="FFE770"35&reset seconds.
-            \\Currently accumulated Drop Chance: &type="bold_it"&col="FFE770"{0}%
-            \\$footnotetxtSwitching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
-            \\The Drop Chance increase is capped at &type="bold_it"&col="FFE770"125%.
+            \\Select and execute a monster below or at 10% HP, and gain its shot patterns at the time of its death as your own for $hsttxt20 (+10%$hsticon) seconds&reset.
             ,
-            .gold_cost = 3599,
-            .cooldown = 125.0,
+            .health_cost = 300,
+            .mana_cost = 200,
+            .cooldown = 80.0,
             .icon = {"ability_icons": 3},
         },
     ],
@@ -227,7 +225,7 @@
         {
             .name = "Time Lock",
             .description = 
-            \\Become immune to damage, unable to move and shoot for $inttxt15 (+12%$inticon)&reset seconds, storing all damage taken. 
+            \\Become immune to damage and slowed for $inttxt15 (+12%$inticon)&reset seconds, storing all damage taken. 
             \\Return double the damage stored as a Magic Damage blast within $inttxt9 (+6%$inticon)&reset tiles after this effect ends.
             \\$footnotetxtDamage is capped at $wittxt30000 (+10000%$witicon)&reset.
             ,

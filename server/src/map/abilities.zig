@@ -185,8 +185,7 @@ pub fn handleTimeLock(player: *Player) !void {
     const duration = i64f((15.0 + fint * 0.12) * std.time.us_per_s);
 
     player.ability_state.time_lock = true;
-    player.applyCondition(.stunned, duration);
-    player.applyCondition(.paralyzed, duration);
+    player.applyCondition(.slowed, duration);
 
     const map_id_copy = try main.allocator.create(u32);
     map_id_copy.* = player.map_id;
