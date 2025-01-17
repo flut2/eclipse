@@ -190,7 +190,30 @@ pub const Condition = packed struct {
     }
 };
 
-pub const Rect = struct { x: f32, y: f32, w: f32, h: f32, w_pad: f32, h_pad: f32 };
+pub const Rect = struct {
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    w_pad: f32,
+    h_pad: f32,
+};
+
+pub const RGBA = extern struct {
+    r: u8 = 0,
+    g: u8 = 0,
+    b: u8 = 0,
+    a: u8 = 0,
+
+    pub fn fromColor(rgb: u24, alpha: f32) RGBA {
+        return .{
+            .r = (rgb >> 16) & 255,
+            .g = (rgb >> 8) & 255,
+            .b = rgb & 255,
+            .a = u8f(std.math.maxInt(u8) * alpha),
+        };
+    }
+};
 
 pub var rng: std.Random.DefaultPrng = .init(0);
 

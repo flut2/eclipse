@@ -7,7 +7,6 @@ const game_data = shared.game_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
 const u32f = utils.u32f;
-
 const zstbi = @import("zstbi");
 
 const assets = @import("assets.zig");
@@ -122,7 +121,7 @@ pub const GroundData = extern struct {
     right_blend_uv: [2]f32,
     bottom_blend_uv: [2]f32,
     rotation: f32,
-    padding: f32 = 0.0,
+    color: utils.RGBA,
 };
 
 pub const GenericUniformData = extern struct {
@@ -836,42 +835,8 @@ pub fn draw(time: i64, back_buffer: gpu.wgpu.TextureView, encoder: gpu.wgpu.Comm
         {
             map.square_lock.lock();
             defer map.square_lock.unlock();
-            for (cam_data.min_y..cam_data.max_y) |y| {
-                for (cam_data.min_x..cam_data.max_x) |x| {
-                    const float_x = f32i(x);
-                    const float_y = f32i(y);
-                    const square = map.getSquare(float_x, float_y, false, .con).?;
-                    if (square.data_id == Square.empty_tile) continue;
-
-                    const screen_pos = cam_data.worldToScreen(square.x, square.y);
-
-                    if (main.settings.enable_lights) drawLight(square.data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
-
-                    const time_sec = float_time_ms / std.time.ms_per_s;
-                    const u_offset, const v_offset = switch (square.data.animation.type) {
-                        .wave => .{
-                            @sin(square.data.animation.delta_x * time_sec) * assets.base_texel_w,
-                            @sin(square.data.animation.delta_y * time_sec) * assets.base_texel_h,
-                        },
-                        .flow => .{
-                            (square.data.animation.delta_x * time_sec) * assets.base_texel_w,
-                            (square.data.animation.delta_y * time_sec) * assets.base_texel_h,
-                        },
-                        .unset => .{ 0.0, 0.0 },
-                    };
-
-                    grounds.append(main.allocator, .{
-                        .pos = .{ screen_pos.x, screen_pos.y },
-                        .uv = .{ square.atlas_data.tex_u, square.atlas_data.tex_v },
-                        .offset_uv = .{ u_offset, v_offset },
-                        .left_blend_uv = @bitCast(square.blends[0]),
-                        .top_blend_uv = @bitCast(square.blends[1]),
-                        .right_blend_uv = @bitCast(square.blends[2]),
-                        .bottom_blend_uv = @bitCast(square.blends[3]),
-                        .rotation = square.rotation,
-                    }) catch main.oomPanic();
-                }
-            }
+            for (cam_data.min_y..cam_data.max_y) |y| for (cam_data.min_x..cam_data.max_x) |x|
+                map.getSquare(f32i(x), f32i(y), false, .con).?.draw(cam_data, float_time_ms);
         }
 
         {

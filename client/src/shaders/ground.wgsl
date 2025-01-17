@@ -46,7 +46,8 @@ struct InstanceData {
     right_blend_uv: vec2<f32>,
     bottom_blend_uv: vec2<f32>,
     rotation: f32,
-    padding: f32,
+    // r u8, g u8, b u8, a u8
+    color: u32,
 }
 
 struct VertexData {
@@ -81,28 +82,58 @@ fn fragmentMain(fragment: FragmentData) -> @location(0) vec4<f32> {
     let instance = instances[fragment.instance_id];
     let dx = dpdx(fragment.uv_offset);
     let dy = dpdy(fragment.uv_offset);
+    let rgba = unpackColor(instance.color);
 
     if (instance.left_blend_uv.x > 0.0 || instance.left_blend_uv.y > 0.0) &&
         textureSampleGrad(tex, default_sampler, uniforms.left_mask_uv + fragment.uv_offset, dx, dy).a == 1.0 {
-        return textureSampleGrad(tex, default_sampler, instance.left_blend_uv + fragment.uv_offset, dx, dy);
+        let tex = textureSampleGrad(tex, default_sampler, instance.left_blend_uv + fragment.uv_offset, dx, dy);
+        if rgba.a <= 0.0 {
+            return tex;
+        }
+        return vec4(mix(tex.rgb, rgba.rgb, rgba.a), tex.a);
     }
 
     if (instance.top_blend_uv.x > 0.0 || instance.top_blend_uv.y > 0.0) &&
         textureSampleGrad(tex, default_sampler, uniforms.top_mask_uv + fragment.uv_offset, dx, dy).a == 1.0 {
-        return textureSampleGrad(tex, default_sampler, instance.top_blend_uv + fragment.uv_offset, dx, dy);
+        let tex = textureSampleGrad(tex, default_sampler, instance.top_blend_uv + fragment.uv_offset, dx, dy);
+        if rgba.a <= 0.0 {
+            return tex;
+        }
+        return vec4(mix(tex.rgb, rgba.rgb, rgba.a), tex.a);
     }
 
     if (instance.right_blend_uv.x > 0.0 || instance.right_blend_uv.y > 0.0) &&
         textureSampleGrad(tex, default_sampler, uniforms.right_mask_uv + fragment.uv_offset, dx, dy).a == 1.0 {
-        return textureSampleGrad(tex, default_sampler, instance.right_blend_uv + fragment.uv_offset, dx, dy);
+        let tex = textureSampleGrad(tex, default_sampler, instance.right_blend_uv + fragment.uv_offset, dx, dy);
+        if rgba.a <= 0.0 {
+            return tex;
+        }
+        return vec4(mix(tex.rgb, rgba.rgb, rgba.a), tex.a);
     }
 
     if (instance.bottom_blend_uv.x > 0.0 || instance.bottom_blend_uv.y > 0.0) &&
         textureSampleGrad(tex, default_sampler, uniforms.bottom_mask_uv + fragment.uv_offset, dx, dy).a == 1.0 {
-        return textureSampleGrad(tex, default_sampler, instance.bottom_blend_uv + fragment.uv_offset, dx, dy);
+        let tex = textureSampleGrad(tex, default_sampler, instance.bottom_blend_uv + fragment.uv_offset, dx, dy);
+        if rgba.a <= 0.0 {
+            return tex;
+        }
+        return vec4(mix(tex.rgb, rgba.rgb, rgba.a), tex.a);
     }
 
     let dims = base_size / uniforms.atlas_size;
     let clamp_uv = (fragment.uv_offset + instance.offset_uv + dims) % dims;
-    return textureSampleGrad(tex, default_sampler, clamp_uv + instance.uv, dx, dy);
+    let tex = textureSampleGrad(tex, default_sampler, clamp_uv + instance.uv, dx, dy);
+    if rgba.a <= 0.0 {
+        return tex;
+    }
+    return vec4(mix(tex.rgb, rgba.rgb, rgba.a), tex.a);
+}
+
+fn unpackColor(color: u32) -> vec4<f32> {
+    return vec4<f32>(
+        f32(color & 255) / 255.0,
+        f32((color >> 8) & 255) / 255.0,
+        f32((color >> 16) & 255) / 255.0,
+        f32((color >> 24) & 255) / 255.0,
+    );
 }

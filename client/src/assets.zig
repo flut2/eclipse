@@ -5,13 +5,15 @@ const glfw = @import("zglfw");
 const pack = @import("turbopack");
 const shared = @import("shared");
 const game_data = shared.game_data;
-const f32i = shared.utils.f32i;
+const utils = shared.utils;
+const f32i = utils.f32i;
 const zaudio = @import("zaudio");
 const ziggy = @import("ziggy");
 const zstbi = @import("zstbi");
 
 const main = @import("main.zig");
 const Settings = @import("Settings.zig");
+const RGBA = utils.RGBA;
 
 // for packing
 const Position = struct { x: u16, y: u16 };
@@ -131,13 +133,6 @@ const AudioState = struct {
         audio.engine.destroy();
         audio.device.destroy();
     }
-};
-
-const RGBA = packed struct {
-    r: u8 = 0,
-    g: u8 = 0,
-    b: u8 = 0,
-    a: u8 = 0,
 };
 
 pub const padding = 0;

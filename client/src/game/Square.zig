@@ -10,6 +10,7 @@ const main = @import("../main.zig");
 const ui_systems = @import("../ui/systems.zig");
 const Entity = @import("Entity.zig");
 const map = @import("map.zig");
+const render = @import("../render.zig");
 
 const Square = @This();
 
@@ -26,6 +27,7 @@ pub const Blend = extern struct { u: f32, v: f32 };
 data_id: u16 = empty_tile,
 x: f32 = 0.0,
 y: f32 = 0.0,
+color: utils.RGBA = .{},
 atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
 blends: [4]Blend = @splat(.{ .u = -1.0, .v = -1.0 }),
 rotation: f32 = 0.0,
@@ -115,6 +117,39 @@ fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, 
     }
 
     square.blends[blend_dir] = .{ .u = -1.0, .v = -1.0 };
+}
+
+pub fn draw(self: Square, cam_data: render.CameraData, float_time_ms: f32) void {
+    if (self.data_id == Square.empty_tile) return;
+
+    const screen_pos = cam_data.worldToScreen(self.x, self.y);
+
+    if (main.settings.enable_lights) render.drawLight(self.data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
+
+    const time_sec = float_time_ms / std.time.ms_per_s;
+    const u_offset, const v_offset = switch (self.data.animation.type) {
+        .wave => .{
+            @sin(self.data.animation.delta_x * time_sec) * assets.base_texel_w,
+            @sin(self.data.animation.delta_y * time_sec) * assets.base_texel_h,
+        },
+        .flow => .{
+            (self.data.animation.delta_x * time_sec) * assets.base_texel_w,
+            (self.data.animation.delta_y * time_sec) * assets.base_texel_h,
+        },
+        .unset => .{ 0.0, 0.0 },
+    };
+
+    render.grounds.append(main.allocator, .{
+        .pos = .{ screen_pos.x, screen_pos.y },
+        .uv = .{ self.atlas_data.tex_u, self.atlas_data.tex_v },
+        .offset_uv = .{ u_offset, v_offset },
+        .left_blend_uv = @bitCast(self.blends[0]),
+        .top_blend_uv = @bitCast(self.blends[1]),
+        .right_blend_uv = @bitCast(self.blends[2]),
+        .bottom_blend_uv = @bitCast(self.blends[3]),
+        .rotation = self.rotation,
+        .color = self.color,
+    }) catch main.oomPanic();
 }
 
 fn equals(square: ?*Square, data_id: u16) bool {
