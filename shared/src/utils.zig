@@ -207,9 +207,9 @@ pub const RGBA = extern struct {
 
     pub fn fromColor(rgb: u24, alpha: f32) RGBA {
         return .{
-            .r = (rgb >> 16) & 255,
-            .g = (rgb >> 8) & 255,
-            .b = rgb & 255,
+            .r = @intCast((rgb >> 16) & 255),
+            .g = @intCast((rgb >> 8) & 255),
+            .b = @intCast(rgb & 255),
             .a = u8f(std.math.maxInt(u8) * alpha),
         };
     }
@@ -225,8 +225,7 @@ pub fn typeId(comptime T: type) u32 {
 }
 
 pub fn currentMemoryUse(time: i64) !f32 {
-    if (time - last_memory_access < 5 * std.time.us_per_s)
-        return last_memory_value;
+    if (time - last_memory_access < 5 * std.time.us_per_s) return last_memory_value;
 
     var memory_value: f32 = -1.0;
     switch (builtin.os.tag) {

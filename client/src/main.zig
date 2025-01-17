@@ -175,7 +175,7 @@ fn renderTick() !void {
         ctx.swapchain.present();
 
         if (current_time - fps_time_start > 1 * std.time.us_per_s) {
-            try if (settings.stats_enabled) switch (ui_systems.screen) {
+            if (settings.stats_enabled) switch (ui_systems.screen) {
                 inline .game, .editor => |screen| screen.updateFpsText(frames, try utils.currentMemoryUse(current_time)),
                 else => {},
             };

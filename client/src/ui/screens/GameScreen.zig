@@ -952,12 +952,14 @@ pub fn updateStats(self: *GameScreen) void {
     }
 }
 
-pub fn updateFpsText(self: *GameScreen, fps: usize, mem: f32) !void {
-    const fmt =
+pub fn updateFpsText(self: *GameScreen, fps: usize, mem: f32) void {
+    self.fps_text.text_data.setText(std.fmt.bufPrint(
+        self.fps_text.text_data.backing_buffer,
         \\FPS: {}
         \\Memory: {d:.1} MB
-    ;
-    self.fps_text.text_data.setText(try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, fmt, .{ fps, mem }));
+        ,
+        .{ fps, mem },
+    ) catch "Buffer out of memory");
 }
 
 fn parseItemRects(self: *GameScreen) void {

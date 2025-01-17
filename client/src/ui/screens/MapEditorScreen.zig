@@ -64,6 +64,8 @@ const EditorAction = enum {
     redo,
     sample,
     fill,
+    wand,
+    unselect,
 };
 
 const Layer = enum(u8) {
@@ -168,6 +170,8 @@ const CommandQueue = struct {
     }
 };
 
+const Position = struct { x: u16, y: u16 };
+
 const MapEditorScreen = @This();
 const layers_text = [_][]const u8{ "Tiles", "Entities", "Enemies", "Portal", "Container", "Regions" };
 const layers = [_]Layer{ .ground, .entity, .enemy, .portal, .container, .region };
@@ -176,7 +180,7 @@ const sizes_text = [_][]const u8{ "64x64", "128x128", "256x256", "512x512", "102
 const sizes = [_]u16{ 64, 128, 256, 512, 1024, 2048 };
 
 const control_decor_w = 220;
-const control_decor_h = 400;
+const control_decor_h = 440;
 
 const palette_decor_w = 200;
 const palette_decor_h = 400;
@@ -207,6 +211,7 @@ selected: struct {
     ground: u16 = defaultType(.ground),
     region: u16 = defaultType(.region),
 } = .{},
+selected_tiles: []Position = &.{},
 
 brush_size: f32 = 0.5,
 random_chance: f32 = 0.01,
@@ -232,6 +237,9 @@ random_key: Settings.Button = .{ .key = .t },
 undo_key: Settings.Button = .{ .key = .u },
 redo_key: Settings.Button = .{ .key = .r },
 fill_key: Settings.Button = .{ .key = .f },
+wand_key: Settings.Button = .{ .key = .m },
+curve_key: Settings.Button = .{ .key = .l },
+unselect_key: Settings.Button = .{ .key = .l },
 
 start_x_override: u16 = std.math.maxInt(u16),
 start_y_override: u16 = std.math.maxInt(u16),
@@ -474,6 +482,42 @@ pub fn init(self: *MapEditorScreen) !void {
         .setKeyCallback = noAction,
     });
 
+    _ = try self.controls_container.createChild(KeyMapper, .{
+        .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + (button_pad_h + button_height) * 5 },
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
+        .title_text_data = .{
+            .text = "Wand",
+            .size = 12,
+            .text_type = .bold,
+        },
+        .settings_button = &self.wand_key,
+        .setKeyCallback = noAction,
+    });
+
+    _ = try self.controls_container.createChild(KeyMapper, .{
+        .base = .{ .x = button_inset, .y = button_inset + (button_pad_h + button_height) * 6 },
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
+        .title_text_data = .{
+            .text = "Curve",
+            .size = 12,
+            .text_type = .bold,
+        },
+        .settings_button = &self.curve_key,
+        .setKeyCallback = noAction,
+    });
+
+    _ = try self.controls_container.createChild(KeyMapper, .{
+        .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + (button_pad_h + button_height) * 6 },
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
+        .title_text_data = .{
+            .text = "Unselect",
+            .size = 12,
+            .text_type = .bold,
+        },
+        .settings_button = &self.unselect_key,
+        .setKeyCallback = noAction,
+    });
+
     const slider_background_data = assets.getUiData("slider_background", 0);
     const knob_data_base = assets.getUiData("slider_knob_base", 0);
     const knob_data_hover = assets.getUiData("slider_knob_hover", 0);
@@ -484,7 +528,7 @@ pub fn init(self: *MapEditorScreen) !void {
     const knob_size = button_height - 5;
 
     _ = try self.controls_container.createChild(Slider, .{
-        .base = .{ .x = button_inset + 2, .y = (button_pad_h + button_height) * 7 },
+        .base = .{ .x = button_inset + 2, .y = (button_pad_h + button_height) * 8 },
         .w = slider_w,
         .h = slider_h,
         .min_value = 0.5,
@@ -506,7 +550,7 @@ pub fn init(self: *MapEditorScreen) !void {
     });
 
     _ = try self.controls_container.createChild(Slider, .{
-        .base = .{ .x = button_inset + 2, .y = (button_pad_h + button_height) * 8 + 20 },
+        .base = .{ .x = button_inset + 2, .y = (button_pad_h + button_height) * 9 + 20 },
         .w = slider_w,
         .h = slider_h,
         .min_value = 0.01,
@@ -1222,7 +1266,11 @@ pub fn onMousePress(self: *MapEditorScreen, button: glfw.MouseButton) void {
     else if (self.erase_key == .mouse and button == self.erase_key.mouse)
         self.action = .erase;
 
-    (if (self.undo_key == .mouse and button == self.undo_key.mouse)
+    (if (self.unselect_key == .mouse and button == self.unselect_key.mouse)
+        self.handleAction(.unselect)
+    else if (self.wand_key == .mouse and button == self.wand_key.mouse)
+        self.handleAction(.wand)
+    else if (self.undo_key == .mouse and button == self.undo_key.mouse)
         self.handleAction(.undo)
     else if (self.redo_key == .mouse and button == self.redo_key.mouse)
         self.handleAction(.redo)
@@ -1249,7 +1297,11 @@ pub fn onKeyPress(self: *MapEditorScreen, key: glfw.Key) void {
     else if (self.erase_key == .key and key == self.erase_key.key)
         self.action = .erase;
 
-    (if (self.undo_key == .key and key == self.undo_key.key)
+    (if (self.unselect_key == .key and key == self.unselect_key.key)
+        self.handleAction(.unselect)
+    else if (self.wand_key == .key and key == self.wand_key.key)
+        self.handleAction(.wand)
+    else if (self.undo_key == .key and key == self.undo_key.key)
         self.handleAction(.undo)
     else if (self.redo_key == .key and key == self.redo_key.key)
         self.handleAction(.redo)
@@ -1396,7 +1448,7 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
     }
 }
 
-fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_type: enum { place, erase, random }) !void {
+fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_type: enum { place, erase, random }) void {
     var places: std.ArrayListUnmanaged(Place) = .empty;
 
     const size_sqr = self.brush_size * self.brush_size;
@@ -1411,68 +1463,81 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
     const y_right = usizef(@min(size, @ceil(center_y + self.brush_size)));
     const x_left = usizef(@max(0, center_x - self.brush_size));
     const x_right = usizef(@min(size, @ceil(center_x + self.brush_size)));
-    for (y_left..y_right) |y| {
-        for (x_left..x_right) |x| {
-            const fx: f32 = f32i(x);
-            const fy: f32 = f32i(y);
-            const dx = center_x - fx;
-            const dy = center_y - fy;
-            if (dx * dx + dy * dy <= size_sqr) {
-                if (place_type == .random and utils.rng.random().float(f32) > self.random_chance) continue;
+    for (y_left..y_right) |y| for (x_left..x_right) |x| {
+        const fx = f32i(x);
+        const fy = f32i(y);
+        const dx = center_x - fx;
+        const dy = center_y - fy;
+        if (dx * dx + dy * dy <= size_sqr) {
+            if (place_type == .random and utils.rng.random().float(f32) > self.random_chance) continue;
 
-                const old_id = blk: {
-                    const tile = self.map_tile_data[y * self.map_size + x];
-                    switch (self.active_layer) {
-                        .ground => break :blk tile.ground,
-                        .region => break :blk tile.region,
-                        .entity => break :blk lockBlk: {
-                            map.object_lock.lock();
-                            defer map.object_lock.unlock();
-                            break :lockBlk if (map.findObject(Entity, tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
-                        },
-                        .enemy => break :blk lockBlk: {
-                            map.object_lock.lock();
-                            defer map.object_lock.unlock();
-                            break :lockBlk if (map.findObject(Enemy, tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
-                        },
-                        .portal => break :blk lockBlk: {
-                            map.object_lock.lock();
-                            defer map.object_lock.unlock();
-                            break :lockBlk if (map.findObject(Portal, tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
-                        },
-                        .container => break :blk lockBlk: {
-                            map.object_lock.lock();
-                            defer map.object_lock.unlock();
-                            break :lockBlk if (map.findObject(Container, tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
-                        },
-                    }
+            const old_id = blk: {
+                const tile = self.map_tile_data[y * self.map_size + x];
+                switch (self.active_layer) {
+                    .ground => break :blk tile.ground,
+                    .region => break :blk tile.region,
+                    .entity => break :blk lockBlk: {
+                        map.object_lock.lock();
+                        defer map.object_lock.unlock();
+                        break :lockBlk if (map.findObject(Entity, tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
+                    },
+                    .enemy => break :blk lockBlk: {
+                        map.object_lock.lock();
+                        defer map.object_lock.unlock();
+                        break :lockBlk if (map.findObject(Enemy, tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
+                    },
+                    .portal => break :blk lockBlk: {
+                        map.object_lock.lock();
+                        defer map.object_lock.unlock();
+                        break :lockBlk if (map.findObject(Portal, tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
+                    },
+                    .container => break :blk lockBlk: {
+                        map.object_lock.lock();
+                        defer map.object_lock.unlock();
+                        break :lockBlk if (map.findObject(Container, tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
+                    },
+                }
 
-                    break :blk defaultType(self.active_layer);
-                };
+                break :blk defaultType(self.active_layer);
+            };
 
-                if (sel_type == old_id) continue;
+            if (sel_type == old_id) continue;
 
-                try places.append(main.allocator, .{
-                    .x = @intCast(x),
-                    .y = @intCast(y),
-                    .new_id = sel_type,
-                    .old_id = old_id,
-                    .layer = self.active_layer,
-                });
-            }
+            places.append(main.allocator, .{
+                .x = @intCast(x),
+                .y = @intCast(y),
+                .new_id = sel_type,
+                .old_id = old_id,
+                .layer = self.active_layer,
+            }) catch main.oomPanic();
         }
-    }
+    };
 
     if (places.items.len == 0) {
         places.deinit(main.allocator);
         return;
     }
 
+    if (self.selected_tiles.len > 0) {
+        var places_to_remove: std.ArrayListUnmanaged(usize) = .empty;
+        defer places_to_remove.deinit(main.allocator);
+
+        var idx: usize = 0;
+        placeIter: for (places.items) |p| {
+            for (self.selected_tiles) |pos| if (p.x == pos.x and p.y == pos.y) continue :placeIter;
+            places_to_remove.append(main.allocator, idx) catch main.oomPanic();
+            idx += 1;
+        }
+
+        var iter = std.mem.reverseIterator(places_to_remove.items);
+        while (iter.next()) |i| _ = places.orderedRemove(i);
+    }
+
     if (places.items.len <= 1) {
         if (places.items.len == 1) self.command_queue.addCommand(.{ .place = places.items[0] });
         places.deinit(main.allocator);
     } else {
-        self.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice(main.allocator) } });
+        self.command_queue.addCommand(.{ .multi_place = .{ .places = places.toOwnedSlice(main.allocator) catch main.oomPanic() } });
     }
 }
 
@@ -1524,7 +1589,7 @@ fn inside(screen: *MapEditorScreen, places: []Place, x: i32, y: i32, layer: Laye
         !placesContain(places, x, y) and typeAt(layer, screen, @intCast(x), @intCast(y)) == current_type;
 }
 
-fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
+fn fill(screen: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
     const FillData = struct { x1: i32, x2: i32, y: i32, dy: i32 };
 
     var places: std.ArrayListUnmanaged(Place) = .empty;
@@ -1535,13 +1600,13 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
     };
 
     const current_id = typeAt(layer, screen, x, y);
-    if (current_id == target_id or target_id == defaultType(layer)) return;
+    if (!selection and (current_id == target_id or target_id == defaultType(layer))) return;
 
     var stack: std.ArrayListUnmanaged(FillData) = .empty;
     defer stack.deinit(main.allocator);
 
-    try stack.append(main.allocator, .{ .x1 = x, .x2 = x, .y = y, .dy = 1 });
-    try stack.append(main.allocator, .{ .x1 = x, .x2 = x, .y = y - 1, .dy = -1 });
+    stack.append(main.allocator, .{ .x1 = x, .x2 = x, .y = y, .dy = 1 }) catch main.oomPanic();
+    stack.append(main.allocator, .{ .x1 = x, .x2 = x, .y = y - 1, .dy = -1 }) catch main.oomPanic();
 
     while (stack.items.len > 0) {
         const pop = stack.pop();
@@ -1549,38 +1614,38 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
 
         if (inside(screen, places.items, px, pop.y, layer, current_id)) {
             while (inside(screen, places.items, px - 1, pop.y, layer, current_id)) {
-                try places.append(main.allocator, .{
+                places.append(main.allocator, .{
                     .x = @intCast(px - 1),
                     .y = @intCast(pop.y),
                     .new_id = target_id,
                     .old_id = current_id,
                     .layer = layer,
-                });
+                }) catch main.oomPanic();
                 px -= 1;
             }
 
             if (px < pop.x1)
-                try stack.append(main.allocator, .{ .x1 = px, .x2 = pop.x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
+                stack.append(main.allocator, .{ .x1 = px, .x2 = pop.x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy }) catch main.oomPanic();
         }
 
         var x1 = pop.x1;
         while (x1 <= pop.x2) {
             while (inside(screen, places.items, x1, pop.y, layer, current_id)) {
-                try places.append(main.allocator, .{
+                places.append(main.allocator, .{
                     .x = @intCast(x1),
                     .y = @intCast(pop.y),
                     .old_id = current_id,
                     .new_id = target_id,
                     .layer = layer,
-                });
+                }) catch main.oomPanic();
                 x1 += 1;
             }
 
             if (x1 > px)
-                try stack.append(main.allocator, .{ .x1 = px, .x2 = x1 - 1, .y = pop.y + pop.dy, .dy = pop.dy });
+                stack.append(main.allocator, .{ .x1 = px, .x2 = x1 - 1, .y = pop.y + pop.dy, .dy = pop.dy }) catch main.oomPanic();
 
             if (x1 - 1 > pop.x2)
-                try stack.append(main.allocator, .{ .x1 = pop.x2 + 1, .x2 = x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy });
+                stack.append(main.allocator, .{ .x1 = pop.x2 + 1, .x2 = x1 - 1, .y = pop.y - pop.dy, .dy = -pop.dy }) catch main.oomPanic();
 
             x1 += 1;
             while (x1 < pop.x2 and !inside(screen, places.items, x1, pop.y, layer, current_id))
@@ -1589,16 +1654,50 @@ fn fill(screen: *MapEditorScreen, x: u16, y: u16) !void {
         }
     }
 
+    if (places.items.len == 0) {
+        places.deinit(main.allocator);
+        return;
+    }
+
+    if (screen.selected_tiles.len > 0) {
+        var places_to_remove: std.ArrayListUnmanaged(usize) = .empty;
+        defer places_to_remove.deinit(main.allocator);
+
+        var idx: usize = 0;
+        placeIter: for (places.items) |p| {
+            for (screen.selected_tiles) |pos| if (p.x == pos.x and p.y == pos.y) continue :placeIter;
+            places_to_remove.append(main.allocator, idx) catch main.oomPanic();
+            idx += 1;
+        }
+
+        var iter = std.mem.reverseIterator(places_to_remove.items);
+        while (iter.next()) |i| _ = places.orderedRemove(i);
+    }
+
+    if (selection) {
+        var positions: std.ArrayListUnmanaged(Position) = .empty;
+        for (places.items) |p| positions.append(main.allocator, .{ .x = p.x, .y = p.y }) catch main.oomPanic();
+        screen.selected_tiles = positions.toOwnedSlice(main.allocator) catch main.oomPanic();
+        places.deinit(main.allocator);
+        return;
+    }
+
     if (places.items.len <= 1) {
         if (places.items.len == 1) screen.command_queue.addCommand(.{ .place = places.items[0] });
         places.deinit(main.allocator);
     } else {
-        screen.command_queue.addCommand(.{ .multi_place = .{ .places = try places.toOwnedSlice(main.allocator) } });
+        screen.command_queue.addCommand(.{ .multi_place = .{ .places = places.toOwnedSlice(main.allocator) catch main.oomPanic() } });
     }
 }
 
-pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
+pub fn update(self: *MapEditorScreen, time: i64, _: f32) !void {
     if (self.map_tile_data.len <= 0) return;
+
+    const time_sec = f32i(time) / std.time.us_per_s * 2;
+    for (self.selected_tiles) |pos| {
+        const square = map.getSquare(f32i(pos.x), f32i(pos.y), true, .ref) orelse continue;
+        square.color = .fromColor(0xFF00FF, (@sin(time_sec) + 1) * 0.25);
+    }
 
     if (main.current_time - self.last_update < press_delay_ms * std.time.us_per_ms) return;
     defer self.last_update = main.current_time;
@@ -1608,8 +1707,8 @@ pub fn update(self: *MapEditorScreen, _: i64, _: f32) !void {
     const x = @floor(@max(0, @min(world_point.x, size)));
     const y = @floor(@max(0, @min(world_point.y, size)));
     switch (self.action) {
-        .place => try place(self, x, y, .place),
-        .erase => try place(self, x, y, .erase),
+        .place => place(self, x, y, .place),
+        .erase => place(self, x, y, .erase),
         .none => {},
         else => @panic("Unimplemented"),
     }
@@ -1630,9 +1729,9 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
     const map_tile = self.getTile(ux, uy);
 
     switch (action) {
-        .place => try place(self, x, y, .place),
-        .erase => try place(self, x, y, .erase),
-        .random => try place(self, x, y, .random),
+        .place => place(self, x, y, .place),
+        .erase => place(self, x, y, .erase),
+        .random => place(self, x, y, .random),
         .undo => self.command_queue.undo(),
         .redo => self.command_queue.redo(),
         .sample => switch (self.active_layer) {
@@ -1659,11 +1758,27 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
                 break :blk if (map.findObject(Container, map_tile.entity, .con)) |c| c.data_id else std.math.maxInt(u16);
             },
         },
-        .fill => try fill(self, ux, uy),
+        .fill => fill(self, ux, uy, false),
+        .wand => fill(self, ux, uy, true),
+        .unselect => {
+            for (self.selected_tiles) |pos| {
+                const square = map.getSquare(f32i(pos.x), f32i(pos.y), true, .ref) orelse continue;
+                square.color = .{};
+            }
+
+            main.allocator.free(self.selected_tiles);
+            self.selected_tiles = &.{};
+        },
         .none => {},
     }
 }
 
-pub fn updateFpsText(self: *MapEditorScreen, fps: usize, mem: f32) !void {
-    self.fps_text.text_data.setText(try std.fmt.bufPrint(self.fps_text.text_data.backing_buffer, "FPS: {}\nMemory: {d:.1} MB", .{ fps, mem }));
+pub fn updateFpsText(self: *MapEditorScreen, fps: usize, mem: f32) void {
+    self.fps_text.text_data.setText(std.fmt.bufPrint(
+        self.fps_text.text_data.backing_buffer,
+        \\FPS: {}
+        \\Memory: {d:.1} MB
+    ,
+        .{ fps, mem },
+    ) catch "Buffer out of memory");
 }
