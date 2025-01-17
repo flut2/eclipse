@@ -73,20 +73,31 @@ pub fn deinit() void {
     input_history.deinit(main.allocator);
 }
 
+fn cancelEditorSelection() void {
+    if (ui_systems.screen == .editor and ui_systems.screen.editor.selection_start_point != null) {
+        ui_systems.screen.editor.hideRectSelect();
+        ui_systems.screen.editor.clearSelection();
+    }
+}
+
 fn handleMoveUpPress() void {
     move_up = 1.0;
+    cancelEditorSelection();
 }
 
 fn handleMoveDownPress() void {
     move_down = 1.0;
+    cancelEditorSelection();
 }
 
 fn handleMoveLeftPress() void {
     move_left = 1.0;
+    cancelEditorSelection();
 }
 
 fn handleMoveRightPress() void {
     move_right = 1.0;
+    cancelEditorSelection();
 }
 
 fn handleWalkPress() void {
@@ -373,6 +384,7 @@ pub fn mouseMoveEvent(_: *glfw.Window, x_pos: f64, y_pos: f64) callconv(.C) void
     mouse_y = @floatCast(y_pos);
 
     _ = ui_systems.mouseMove(mouse_x, mouse_y);
+    if (ui_systems.screen == .editor) ui_systems.screen.editor.onMouseMove(mouse_x, mouse_y);
 }
 
 pub fn scrollEvent(_: *glfw.Window, x_offset: f64, y_offset: f64) callconv(.C) void {

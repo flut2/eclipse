@@ -356,6 +356,10 @@
     .path = "talents/player_talent_tree_view.png",
 },
 {
+    .name = "editor_selection",
+    .path = "editor_selection.png",
+},
+{
     .name = "text_input",
     .path = "elements/text_input.png",
     .w = 107,

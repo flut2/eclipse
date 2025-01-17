@@ -36,6 +36,7 @@ const ui_systems = @import("../systems.zig");
 
 const press_delay_ms = 25;
 const update_delay_ms = 10;
+const move_select_delay_ms = 15;
 
 const MapEditorTile = struct {
     // map ids
@@ -216,6 +217,9 @@ selected_tiles: []Position = &.{},
 brush_size: f32 = 0.5,
 random_chance: f32 = 0.01,
 
+selection_image: *Image = undefined,
+selection_start_point: ?Position = null,
+selection_end_point: ?Position = null,
 fps_text: *Text = undefined,
 controls_container: *UiContainer = undefined,
 map_size_dropdown: *Dropdown = undefined,
@@ -246,6 +250,7 @@ start_y_override: u16 = std.math.maxInt(u16),
 
 last_press: i64 = -1,
 last_update: i64 = -1,
+last_move_select: i64 = -1,
 
 pub fn nextMapIdForType(self: *MapEditorScreen, comptime T: type) *u32 {
     return switch (T) {
@@ -270,6 +275,22 @@ pub fn init(self: *MapEditorScreen) !void {
 
     const key_mapper_width = 35.0;
     const key_mapper_height = 35.0;
+
+    const selection = assets.getUiData("editor_selection", 0);
+    self.selection_image = try element.create(Image, .{
+        .base = .{
+            .x = 0,
+            .y = 0,
+            .visible = false,
+            .event_policy = .{
+                .pass_press = false,
+                .pass_release = false,
+                .pass_move = false,
+                .pass_scroll = false,
+            },
+        },
+        .image_data = .{ .nine_slice = .fromAtlasData(selection, 0, 0, 1, 1, 1, 1, 1.0) },
+    });
 
     self.fps_text = try element.create(Text, .{
         .base = .{ .x = 5 + control_decor_w + 5, .y = 5 },
@@ -1229,6 +1250,7 @@ fn testCallback(ud: ?*anyopaque) void {
 pub fn deinit(self: *MapEditorScreen) void {
     self.command_queue.deinit();
 
+    element.destroy(self.selection_image);
     element.destroy(self.fps_text);
     element.destroy(self.palette_decor);
     inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field| {
@@ -1259,6 +1281,42 @@ pub fn resize(self: *MapEditorScreen, w: f32, _: f32) void {
     self.layer_dropdown.container.base.x = palette_x + self.layer_dropdown.container_inlay_x;
     self.layer_dropdown.container.container.base.x = palette_x + self.layer_dropdown.container_inlay_x;
     self.layer_dropdown.base.y = self.palette_decor.base.y + self.palette_decor.height() + 5;
+}
+
+pub fn hideRectSelect(self: *MapEditorScreen) void {
+    self.selection_image.image_data.scaleWidth(0);
+    self.selection_image.image_data.scaleHeight(0);
+    self.selection_image.base.x = 0;
+    self.selection_image.base.y = 0;
+    self.selection_image.base.visible = false;
+    self.selection_start_point = null;
+    self.selection_end_point = null;
+}
+
+pub fn clearSelection(self: *MapEditorScreen) void {
+    for (self.selected_tiles) |pos| {
+        const square = map.getSquare(f32i(pos.x), f32i(pos.y), true, .ref) orelse continue;
+        square.color = .{};
+    }
+
+    main.allocator.free(self.selected_tiles);
+    self.selected_tiles = &.{};
+}
+
+fn processRectSelect(self: *MapEditorScreen) void {
+    const start_point = self.selection_start_point orelse return;
+    const end_point = self.selection_end_point orelse return;
+
+    const min_y = @min(end_point.y, start_point.y);
+    const max_y = @max(end_point.y, start_point.y);
+    const min_x = @min(end_point.x, start_point.x);
+    const max_x = @max(end_point.x, start_point.x);
+
+    var positions: std.ArrayListUnmanaged(Position) = .empty;
+    for (min_y..max_y + 1) |y| for (min_x..max_x + 1) |x|
+        positions.append(main.allocator, .{ .x = @intCast(x), .y = @intCast(y) }) catch main.oomPanic();
+    self.clearSelection();
+    self.selected_tiles = positions.toOwnedSlice(main.allocator) catch main.oomPanic();
 }
 
 pub fn onMousePress(self: *MapEditorScreen, button: glfw.MouseButton) void {
@@ -1292,11 +1350,35 @@ pub fn onMouseRelease(self: *MapEditorScreen, button: glfw.MouseButton) void {
         self.action = .none;
 }
 
+pub fn onMouseMove(self: *MapEditorScreen, mouse_x: f32, mouse_y: f32) void {
+    if (self.selection_start_point == null) return;
+
+    self.selection_image.image_data.scaleWidth(mouse_x - self.selection_image.base.x);
+    self.selection_image.image_data.scaleHeight(mouse_y - self.selection_image.base.y);
+    const world_point = main.camera.screenToWorld(mouse_x, mouse_y);
+    self.selection_end_point = .{ .x = u16f(world_point.x), .y = u16f(world_point.y) };
+
+    if (main.current_time - self.last_move_select < move_select_delay_ms * std.time.us_per_ms) return;
+    defer self.last_move_select = main.current_time;
+
+    self.processRectSelect();
+}
+
 pub fn onKeyPress(self: *MapEditorScreen, key: glfw.Key) void {
     if (self.place_key == .key and key == self.place_key.key)
         self.action = .place
     else if (self.erase_key == .key and key == self.erase_key.key)
         self.action = .erase;
+
+    if (key == .left_shift or key == .right_shift) {
+        self.selection_image.image_data.scaleWidth(3);
+        self.selection_image.image_data.scaleHeight(3);
+        self.selection_image.base.x = input.mouse_x;
+        self.selection_image.base.y = input.mouse_y;
+        self.selection_image.base.visible = true;
+        const world_point = main.camera.screenToWorld(input.mouse_x, input.mouse_y);
+        self.selection_start_point = .{ .x = u16f(world_point.x), .y = u16f(world_point.y) };
+    }
 
     (if (self.unselect_key == .key and key == self.unselect_key.key)
         self.handleAction(.unselect)
@@ -1321,6 +1403,13 @@ pub fn onKeyRelease(self: *MapEditorScreen, key: glfw.Key) void {
     if (self.place_key == .key and key == self.place_key.key or
         self.erase_key == .key and key == self.erase_key.key)
         self.action = .none;
+
+    if (key == .left_shift or key == .right_shift) {
+        const world_point = main.camera.screenToWorld(input.mouse_x, input.mouse_y);
+        self.selection_end_point = .{ .x = u16f(world_point.x), .y = u16f(world_point.y) };
+        self.processRectSelect();
+        self.hideRectSelect();
+    }
 }
 
 fn getTile(self: *MapEditorScreen, x: usize, y: usize) MapEditorTile {
@@ -1761,15 +1850,7 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
         },
         .fill => fill(self, ux, uy, false),
         .wand => fill(self, ux, uy, true),
-        .unselect => {
-            for (self.selected_tiles) |pos| {
-                const square = map.getSquare(f32i(pos.x), f32i(pos.y), true, .ref) orelse continue;
-                square.color = .{};
-            }
-
-            main.allocator.free(self.selected_tiles);
-            self.selected_tiles = &.{};
-        },
+        .unselect => self.clearSelection(),
         .none => {},
     }
 }
