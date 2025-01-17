@@ -831,10 +831,7 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         .crowns => |val| player.crowns = val,
         .muted_until => |val| player.muted_until = val,
         .max_hp => |val| player.max_hp = val,
-        .hp => |val| {
-            player.hp = val;
-            if (val > 0) player.dead = false;
-        },
+        .hp => |val| player.hp = val,
         .max_mp => |val| player.max_mp = val,
         .mp => |val| player.mp = val,
         .strength => |val| player.strength = val,
@@ -926,10 +923,7 @@ fn parseEnemyStat(enemy: *Enemy, stat: network_data.EnemyStat) void {
         .x => |val| enemy.x = val,
         .y => |val| enemy.y = val,
         .max_hp => |val| enemy.max_hp = val,
-        .hp => |val| {
-            enemy.hp = val;
-            if (val > 0) enemy.dead = false;
-        },
+        .hp => |val| enemy.hp = val,
         .size_mult => |val| enemy.size_mult = val,
         .condition => |val| enemy.condition = val,
         .name => |val| parseNameStat(enemy, val),
@@ -940,10 +934,7 @@ fn parseEntityStat(entity: *Entity, stat: network_data.EntityStat) void {
     switch (stat) {
         .x => |val| entity.x = val,
         .y => |val| entity.y = val,
-        .hp => |val| {
-            entity.hp = val;
-            if (val > 0) entity.dead = false;
-        },
+        .hp => |val| entity.hp = val,
         .size_mult => |val| entity.size_mult = val,
         .name => |val| parseNameStat(entity, val),
     }
@@ -1014,10 +1005,7 @@ fn parseAllyStat(ally: *Ally, stat: network_data.AllyStat) void {
         .y => |val| ally.y = val,
         .size_mult => |val| ally.size_mult = val,
         .max_hp => |val| ally.max_hp = val,
-        .hp => |val| {
-            ally.hp = val;
-            if (val > 0) ally.dead = false;
-        },
+        .hp => |val| ally.hp = val,
         .condition => |val| ally.condition = val,
         .owner_map_id => |val| ally.owner_map_id = val,
     }

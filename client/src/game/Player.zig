@@ -38,7 +38,6 @@ pub const max_sink_level = 18.0;
 
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
-dead: bool = false,
 x: f32 = 0.0,
 y: f32 = 0.0,
 z: f32 = 0.0,
@@ -308,7 +307,7 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
 }
 
 pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void {
-    if (ui_systems.screen == .editor or self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
+    if (ui_systems.screen == .editor or !cam_data.visibleInCamera(self.x, self.y)) return;
 
     const size = Camera.size_mult * cam_data.scale * self.size_mult;
 

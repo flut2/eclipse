@@ -33,7 +33,6 @@ target_x: f32 = 0.0,
 target_y: f32 = 0.0,
 hp: i32 = 0,
 max_hp: i32 = 0,
-dead: bool = false,
 condition: utils.Condition = .{},
 owner_map_id: u32 = std.math.maxInt(u32),
 anim_data: assets.AnimEnemyData = undefined,
@@ -57,7 +56,7 @@ pub fn deinit(self: *Ally) void {
 }
 
 pub fn draw(self: *Ally, cam_data: render.CameraData, float_time_ms: f32) void {
-    if (self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
+    if (!cam_data.visibleInCamera(self.x, self.y)) return;
 
     var screen_pos = cam_data.worldToScreen(self.x, self.y);
     const size = Camera.size_mult * cam_data.scale * self.size_mult;

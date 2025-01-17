@@ -23,7 +23,6 @@ const Entity = @This();
 
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
-dead: bool = false,
 x: f32 = 0.0,
 y: f32 = 0.0,
 z: f32 = 0.0,
@@ -149,7 +148,7 @@ pub fn deinit(self: *Entity) void {
 }
 
 pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void {
-    if (self.dead or !cam_data.visibleInCamera(self.x, self.y)) return;
+    if (!cam_data.visibleInCamera(self.x, self.y)) return;
 
     var screen_pos = cam_data.worldToScreen(self.x, self.y);
     const size = Camera.size_mult * cam_data.scale * self.size_mult;

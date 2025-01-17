@@ -512,11 +512,7 @@ pub fn takeDamage(
     conditions: utils.Condition,
     proj_colors: []const u32,
 ) void {
-    if (self.dead) return;
-
     if (damage >= self.hp) {
-        self.dead = true;
-
         assets.playSfx(self.data.death_sound);
         particles.ExplosionEffect.addToMap(.{
             .x = self.x,
