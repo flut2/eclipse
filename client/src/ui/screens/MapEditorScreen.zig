@@ -1239,6 +1239,7 @@ pub fn deinit(self: *MapEditorScreen) void {
     element.destroy(self.map_size_dropdown);
 
     main.allocator.free(self.map_tile_data);
+    main.allocator.free(self.selected_tiles);
 
     main.editing_map = false;
     map.dispose();
