@@ -326,12 +326,10 @@ pub const ClassData = struct {
     talents: []TalentData,
 };
 
-pub const ContainerRarity = enum { common, rare, epic, legendary, mythic };
 pub const ContainerData = struct {
     id: u16,
     name: []const u8,
     textures: []const TextureData,
-    rarity: ContainerRarity = .common,
     size_mult: f32 = 1.0,
     item_types: [8]ItemType = @splat(.any),
     light: LightData = .{},
@@ -532,6 +530,7 @@ pub const TimedCondition = struct {
 pub const ActivationData = union(enum) {
     heal: struct { amount: i32 },
     magic: struct { amount: i32 },
+    create_ally: struct { name: []const u8 },
     create_entity: struct { name: []const u8 },
     create_enemy: struct { name: []const u8 },
     create_portal: struct { name: []const u8 },
@@ -543,7 +542,23 @@ pub const ActivationData = union(enum) {
     condition_effect_aura: struct { cond: TimedCondition, radius: f32 },
 };
 
-pub const ItemRarity = enum { common, rare, epic, legendary, mythic };
+pub const ItemRarity = enum {
+    common,
+    rare,
+    epic,
+    legendary,
+    mythic,
+
+    pub fn containerDataId(self: ItemRarity) u16 {
+        return switch (self) {
+            .common => 0,
+            .rare => 1,
+            .epic => 2,
+            .legendary => 3,
+            .mythic => 4,
+        };
+    }
+};
 pub const ItemResourceCost = struct { chance: f32, amount: u16 };
 pub const ItemData = struct {
     id: u16,
@@ -562,9 +577,9 @@ pub const ItemData = struct {
     health_cost: ?ItemResourceCost = null,
     gold_cost: ?ItemResourceCost = null,
     cooldown: f32 = 0.0,
-    consumable: bool = false,
     untradeable: bool = false,
     ephemeral: bool = false,
+    max_stack: u16 = 0,
     level_transform_item: ?[]const u8 = null,
     sound: []const u8 = "Unknown.mp3",
 

@@ -252,7 +252,7 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
     true_dmg: i32 = 0,
     effect: ?utils.ConditionEnum = null,
     effect_duration: i64 = 1 * std.time.us_per_s,
-    aoe_color: u32 = 0xFFFFFF,
+    aoe_color: u32 = 0xFFFFFFFF,
 }) void {
     const radius_sqr = radius * radius;
     for (self.listForType(T).items) |*obj| {
@@ -260,4 +260,18 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
         obj.damage(owner_type, owner_id, opts.phys_dmg, opts.magic_dmg, opts.true_dmg);
         if (opts.effect) |eff| obj.applyCondition(eff, opts.effect_duration);
     }
+
+    if (T == Enemy and opts.aoe_color != 0xFFFFFFFF) for (self.listForType(Player).items) |*player| {
+        player.client.queuePacket(.{ .show_effect = .{
+            .obj_type = owner_type,
+            .map_id = owner_id,
+            .eff_type = .area_blast,
+            .x1 = x,
+            .y1 = y,
+            .x2 = radius,
+            .y2 = 0.0,
+            .color = opts.aoe_color,
+        } });
+    };
+        
 }

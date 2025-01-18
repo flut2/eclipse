@@ -155,6 +155,13 @@
 },
 {
     .type = @SheetType("anim_enemy"),
+    .name = "misc_chars_big",
+    .path = "misc_chars_big.png",
+    .w = 18,
+    .h = 18,
+},
+{
+    .type = @SheetType("anim_enemy"),
     .name = "low_realm",
     .path = "low_realm.png",
     .w = 10,

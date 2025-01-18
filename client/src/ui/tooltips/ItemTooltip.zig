@@ -18,6 +18,7 @@ decor: *Image = undefined,
 image: *Image = undefined,
 item_name: *Text = undefined,
 rarity: *Text = undefined,
+description: *Text = undefined,
 line_break_one: *Image = undefined,
 main_text: *Text = undefined,
 line_break_two: *Image = undefined,
@@ -54,9 +55,21 @@ pub fn init(self: *ItemTooltip) !void {
         },
     });
 
+    self.description = try self.root.createChild(Text, .{
+        .base = .{ .x = 10, .y = self.rarity.base.y + self.rarity.text_data.height + 10 },
+        .text_data = .{
+            .text = "",
+            .size = 12,
+            .max_width = self.decor.width() - 20,
+            .color = 0xB3B3B3,
+            .max_chars = 64,
+            .text_type = .medium,
+        },
+    });
+
     const tooltip_line_spacer_top_data = assets.getUiData("tooltip_line_spacer_top", 0);
     self.line_break_one = try self.root.createChild(Image, .{
-        .base = .{ .x = 20, .y = self.image.base.y + 45 },
+        .base = .{ .x = 20, .y = self.description.base.y + self.description.height() + 10 },
         .image_data = .{
             .nine_slice = .fromAtlasData(tooltip_line_spacer_top_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0),
         },
@@ -203,8 +216,9 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         }
 
         self.item_name.text_data.setText(data.name);
+        self.description.text_data.setText(data.description);
 
-        self.line_break_one.base.y = self.image.base.y + 45;
+        self.line_break_one.base.y = self.description.base.y + self.description.height() + 10;
         self.main_text.base.y = self.line_break_one.base.y - 10;
 
         const line_base = "{s}\n";
@@ -260,6 +274,11 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
                     .create_portal => |value| std.fmt.bufPrint(
                         self.getMainBuffer(),
                         line_base_inset ++ "Opens the following dungeon: " ++ string_fmt,
+                        .{ text, value.name },
+                    ),
+                    .create_ally => |value| std.fmt.bufPrint(
+                        self.getMainBuffer(),
+                        line_base_inset ++ "Bring an ally to battle: " ++ string_fmt,
                         .{ text, value.name },
                     ),
                     inline .create_enemy, .create_entity => |value| std.fmt.bufPrint(
@@ -410,7 +429,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
             }
         }
 
-        if (data.consumable)
+        if (data.item_type == .consumable)
             footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Consumed on use", .{footer_text}) catch footer_text;
 
         self.footer.text_data.setText(footer_text);

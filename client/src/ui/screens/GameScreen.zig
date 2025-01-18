@@ -957,7 +957,7 @@ pub fn updateFpsText(self: *GameScreen, fps: usize, mem: f32) void {
         self.fps_text.text_data.backing_buffer,
         \\FPS: {}
         \\Memory: {d:.1} MB
-        ,
+    ,
         .{ fps, mem },
     ) catch "Buffer out of memory");
 }
@@ -1071,52 +1071,44 @@ fn itemDoubleClickCallback(item: *Item) void {
     if (item.data_id < 0) return;
 
     const start_slot = Slot.findSlotId(systems.screen.game.*, item.base.x + 4, item.base.y + 4);
-    if (game_data.item.from_id.get(item.data_id)) |props| {
-        if (props.consumable and !start_slot.is_container) {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
-            if (map.localPlayer(.con)) |local_player| {
-                main.game_server.sendPacket(.{ .use_item = .{
-                    .obj_type = .player,
-                    .map_id = map.info.player_map_id,
-                    .slot_id = start_slot.idx,
-                    .x = local_player.x,
-                    .y = local_player.y,
-                    .time = main.current_time,
-                } });
-                assets.playSfx("consume.mp3");
-            }
-
-            return;
-        }
-    }
-
+    const data = game_data.item.from_id.get(item.data_id) orelse return;
     map.object_lock.lock();
     defer map.object_lock.unlock();
-    if (map.localPlayer(.con)) |local_player| {
-        if (game_data.item.from_id.get(item.data_id)) |data| {
-            if (start_slot.is_container) {
-                const end_slot = Slot.nextAvailableSlot(systems.screen.game.*, local_player.data.item_types, data.item_type);
-                if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
-                    item.base.x = item.drag_start_x;
-                    item.base.y = item.drag_start_y;
-                    return;
-                }
+    const local_player = map.localPlayer(.con) orelse return;
 
-                systems.screen.game.swapSlots(start_slot, end_slot);
-            } else {
-                const end_slot = Slot.nextEquippableSlot(local_player.data.item_types, data.item_type);
-                if (end_slot.idx == 255 or // we don't want to drop
-                    start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container)
-                {
-                    item.base.x = item.drag_start_x;
-                    item.base.y = item.drag_start_y;
-                    return;
-                }
+    if (data.item_type == .consumable and !start_slot.is_container) {
+        main.game_server.sendPacket(.{ .use_item = .{
+            .obj_type = .player,
+            .map_id = map.info.player_map_id,
+            .slot_id = start_slot.idx,
+            .x = local_player.x,
+            .y = local_player.y,
+            .time = main.current_time,
+        } });
+        assets.playSfx("consume.mp3");
+        return;
+    }
 
-                systems.screen.game.swapSlots(start_slot, end_slot);
-            }
+    if (start_slot.is_container) {
+        const end_slot = Slot.nextAvailableSlot(systems.screen.game.*, local_player.data.item_types, data.item_type);
+        if (start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container) {
+            item.base.x = item.drag_start_x;
+            item.base.y = item.drag_start_y;
+            return;
         }
+
+        systems.screen.game.swapSlots(start_slot, end_slot);
+    } else {
+        const end_slot = Slot.nextEquippableSlot(local_player.data.item_types, data.item_type);
+        if (end_slot.idx == 255 or // we don't want to drop
+            start_slot.idx == end_slot.idx and start_slot.is_container == end_slot.is_container)
+        {
+            item.base.x = item.drag_start_x;
+            item.base.y = item.drag_start_y;
+            return;
+        }
+
+        systems.screen.game.swapSlots(start_slot, end_slot);
     }
 }
 
@@ -1198,26 +1190,22 @@ fn itemShiftClickCallback(item: *Item) void {
 
     const current_screen = systems.screen.game.*;
     const slot = Slot.findSlotId(current_screen, item.base.x + 4, item.base.y + 4);
+    const data = game_data.item.from_id.get(@intCast(item.data_id)) orelse return;
+    if (data.item_type != .consumable) return;
 
-    if (game_data.item.from_id.get(@intCast(item.data_id))) |props| {
-        if (props.consumable) {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
-            if (map.localPlayer(.con)) |local_player| {
-                main.game_server.sendPacket(.{ .use_item = .{
-                    .obj_type = if (slot.is_container) .container else .player,
-                    .map_id = if (slot.is_container) current_screen.container_id else map.info.player_map_id,
-                    .slot_id = slot.idx,
-                    .x = local_player.x,
-                    .y = local_player.y,
-                    .time = main.current_time,
-                } });
-                assets.playSfx("consume.mp3");
-            }
+    map.object_lock.lock();
+    defer map.object_lock.unlock();
+    const local_player = map.localPlayer(.con) orelse return;
 
-            return;
-        }
-    }
+    main.game_server.sendPacket(.{ .use_item = .{
+        .obj_type = if (slot.is_container) .container else .player,
+        .map_id = if (slot.is_container) current_screen.container_id else map.info.player_map_id,
+        .slot_id = slot.idx,
+        .x = local_player.x,
+        .y = local_player.y,
+        .time = main.current_time,
+    } });
+    assets.playSfx("consume.mp3");
 }
 
 pub fn useItem(self: *GameScreen, idx: u8) void {

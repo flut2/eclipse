@@ -7,4 +7,12 @@
     .resistance = 5,
     .textures = [{ "misc_chars": 7 }, { "misc_chars": 8 }, { "misc_chars": 9 }],
 },
+{
+    .id = 1,
+    .name = "Dwarven Coil",
+    .health = 5000,
+    .defense = 35,
+    .resistance = 25,
+    .textures = [{ "misc_chars_big": 0 }],
+},
 ]

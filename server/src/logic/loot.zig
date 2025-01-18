@@ -68,7 +68,7 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
         const player = host.world.find(Player, entry.key_ptr.*, .con) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
-        var max_rarity: game_data.ContainerRarity = .common;
+        var max_rarity: game_data.ItemRarity = .common;
         var received_loot: [loots.len]u16 = @splat(std.math.maxInt(u16));
         var loot_idx: usize = 0;
         inline for (loots) |loot| @"continue": {
@@ -85,13 +85,7 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
             }
         }
 
-        const container_data_id: u16 = switch (max_rarity) {
-            .common => 0,
-            .rare => 1,
-            .epic => 2,
-            .legendary => 3,
-            .mythic => 4,
-        };
+        const container_data_id = max_rarity.containerDataId();
 
         var inventory = Container.inv_default;
         var inv_index: usize = 0;

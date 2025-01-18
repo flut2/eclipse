@@ -6,9 +6,11 @@ const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const uv = shared.uv;
+const f32i = utils.f32i;
 const u32f = utils.u32f;
 const u16f = utils.u16f;
 const i64f = utils.i64f;
+const i32f = utils.i32f;
 
 const command = @import("command.zig");
 const db = @import("db.zig");
@@ -207,21 +209,24 @@ pub fn sendError(self: *Client, error_type: network_data.ErrorType, message: []c
     self.queuePacket(.{ .@"error" = .{ .type = error_type, .description = message } });
 }
 
+fn processItemCosts(player: *Player, data: game_data.ItemData) void {
+    if (data.mana_cost) |cost| if (player.mp >= cost.amount) {
+        if (utils.rng.random().float(f32) <= cost.chance) player.mp = @intCast(@max(0, player.mp - cost.amount));
+    } else return;
+    if (data.health_cost) |cost| if (player.hp > cost.amount) {
+        if (utils.rng.random().float(f32) <= cost.chance) player.hp = @intCast(@max(0, player.hp - cost.amount));
+    } else return;
+    if (data.gold_cost) |cost| if (player.gold >= cost.amount) {
+        if (utils.rng.random().float(f32) <= cost.chance) player.gold = @intCast(@max(0, player.gold - cost.amount));
+    } else return;
+}
+
 fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) void {
     const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
     if (player.condition.stunned) return;
     const item_data = game_data.item.from_id.getPtr(player.inventory[0]) orelse return;
+    processItemCosts(player, item_data.*);
 
-    if (item_data.mana_cost) |cost| if (player.mp >= cost.amount) {
-        if (utils.rng.random().float(f32) <= cost.chance) player.mp = @intCast(@max(0, player.mp - cost.amount));
-    } else return;
-    if (item_data.health_cost) |cost| if (player.hp > cost.amount) {
-        if (utils.rng.random().float(f32) <= cost.chance) player.hp = @intCast(@max(0, player.hp - cost.amount));
-    } else return;
-    if (item_data.gold_cost) |cost| if (player.gold >= cost.amount) {
-        if (utils.rng.random().float(f32) <= cost.chance) player.gold = @intCast(@max(0, player.gold - cost.amount));
-    } else return;
-    
     const proj_data = item_data.projectile orelse return;
 
     const map_id = self.world.add(Projectile, .{
@@ -344,7 +349,48 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
     }
 }
 
-fn handleUseItem(_: *Client, _: PacketData(.use_item)) void {}
+fn processActivations(player: *Player, activations: []const game_data.ActivationData) void {
+    for (activations) |activation| switch (activation) {
+        .create_ally => |val| {
+            const data = game_data.ally.from_name.get(val.name) orelse continue;
+
+            const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
+            const duration = i64f((10.0 + fhst * 0.2) * std.time.us_per_s);
+            const angle = utils.rng.random().float(f32) * std.math.tau;
+            const radius = utils.rng.random().float(f32) * 2.0;
+            const x = player.x + radius * @cos(angle);
+            const y = player.y + radius * @sin(angle);
+
+            _ = player.world.add(Ally, .{
+                .x = x,
+                .y = y,
+                .data_id = data.id,
+                .owner_map_id = player.map_id,
+                .disappear_time = main.current_time + duration,
+            }) catch continue; // TODO
+        },
+        else => {},
+    };
+}
+
+fn handleUseItem(self: *Client, data: PacketData(.use_item)) void {
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
+    switch (data.obj_type) {
+        .player => {
+            defer player.inventory[data.slot_id] = std.math.maxInt(u16);
+            const item_data = game_data.item.from_id.get(player.inventory[data.slot_id]) orelse return;
+            if (item_data.activations) |activations| processActivations(player, activations);
+            processItemCosts(player, item_data);
+        },
+        .container => if (self.world.find(Container, data.map_id, .ref)) |cont| {
+            defer cont.inventory[data.slot_id] = std.math.maxInt(u16);
+            const item_data = game_data.item.from_id.get(cont.inventory[data.slot_id]) orelse return;
+            if (item_data.activations) |activations| processActivations(player, activations);
+            processItemCosts(player, item_data);
+        } else return,
+        else => return,
+    }
+}
 
 fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
     if (game_data.class.from_id.get(class_id)) |class_data| {
@@ -433,7 +479,7 @@ fn handleHello(self: *Client, data: PacketData(.hello)) void {
         self.sendError(.message_with_disconnect, "Account is locked");
         return;
     }
-    
+
     if (data.class_id != std.math.maxInt(u16)) {
         createChar(&player, data.class_id, timestamp) catch {
             self.sendError(.message_with_disconnect, "Character creation failed");
@@ -481,7 +527,7 @@ fn handleInvDrop(self: *Client, data: PacketData(.inv_drop)) void {
     _ = self.world.add(Container, .{
         .x = player.x,
         .y = player.y,
-        .data_id = game_data.container.from_name.get("Brown Bag").?.id,
+        .data_id = game_data.item.from_id.get(inventory[0]).?.rarity.containerDataId(),
         .name = main.allocator.dupe(u8, player.name) catch main.oomPanic(),
         .free_name = true,
         .inventory = inventory,
