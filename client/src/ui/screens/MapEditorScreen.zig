@@ -254,7 +254,7 @@ redo_key: Settings.Button = .{ .key = .r },
 fill_key: Settings.Button = .{ .key = .f },
 wand_key: Settings.Button = .{ .key = .m },
 curve_key: Settings.Button = .{ .key = .l },
-unselect_key: Settings.Button = .{ .key = .l },
+unselect_key: Settings.Button = .{ .key = .c },
 
 start_x_override: u16 = std.math.maxInt(u16),
 start_y_override: u16 = std.math.maxInt(u16),
