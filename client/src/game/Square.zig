@@ -120,7 +120,8 @@ fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, 
 }
 
 pub fn draw(self: Square, cam_data: render.CameraData, float_time_ms: f32) void {
-    if (self.data_id == Square.empty_tile) return;
+    if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_ground_layer or
+        self.data_id == Square.empty_tile) return;
 
     const screen_pos = cam_data.worldToScreen(self.x, self.y);
 

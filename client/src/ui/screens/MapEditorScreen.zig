@@ -32,6 +32,7 @@ const KeyMapper = @import("../elements/KeyMapper.zig");
 const ScrollableContainer = @import("../elements/ScrollableContainer.zig");
 const Slider = @import("../elements/Slider.zig");
 const Text = @import("../elements/Text.zig");
+const Toggle = @import("../elements/Toggle.zig");
 const ui_systems = @import("../systems.zig");
 
 const press_delay_ms = 25;
@@ -186,6 +187,9 @@ const control_decor_h = 440;
 const palette_decor_w = 200;
 const palette_decor_h = 400;
 
+const layer_decor_w = 200;
+const layer_decor_h = 400;
+
 const dropdown_w = 200;
 const dropdown_h = 130;
 
@@ -233,6 +237,13 @@ palette_containers: struct {
     region: *ScrollableContainer,
 } = undefined,
 layer_dropdown: *Dropdown = undefined,
+layer_toggle_decor: *Image = undefined,
+ground_layer_toggle: *Toggle = undefined,
+entity_layer_toggle: *Toggle = undefined,
+enemy_layer_toggle: *Toggle = undefined,
+portal_layer_toggle: *Toggle = undefined,
+container_layer_toggle: *Toggle = undefined,
+region_layer_toggle: *Toggle = undefined,
 
 place_key: Settings.Button = .{ .mouse = .left },
 sample_key: Settings.Button = .{ .mouse = .middle },
@@ -247,6 +258,13 @@ unselect_key: Settings.Button = .{ .key = .l },
 
 start_x_override: u16 = std.math.maxInt(u16),
 start_y_override: u16 = std.math.maxInt(u16),
+
+show_ground_layer: bool = true,
+show_entity_layer: bool = true,
+show_enemy_layer: bool = true,
+show_portal_layer: bool = true,
+show_container_layer: bool = true,
+show_region_layer: bool = true,
 
 last_press: i64 = -1,
 last_update: i64 = -1,
@@ -302,6 +320,42 @@ pub fn init(self: *MapEditorScreen) !void {
             .max_width = control_decor_w,
             .max_chars = 64,
             .color = 0x6F573F,
+        },
+    });
+
+    const background_decor = assets.getUiData("tooltip_background", 0);
+    self.layer_toggle_decor = try element.create(Image, .{
+        .base = .{ .x = main.camera.width - palette_decor_w - layer_decor_w - 10, .y = 5 },
+        .image_data = .{ .nine_slice = .fromAtlasData(background_decor, layer_decor_w, layer_decor_h, 34, 34, 1, 1, 1.0) },
+    });
+
+    inline for (.{
+        .{ &self.ground_layer_toggle, &self.show_ground_layer, "Ground" },
+        .{ &self.entity_layer_toggle, &self.show_entity_layer, "Entity" },
+        .{ &self.enemy_layer_toggle, &self.show_enemy_layer, "Enemy" },
+        .{ &self.portal_layer_toggle, &self.show_portal_layer, "Portal" },
+        .{ &self.container_layer_toggle, &self.show_container_layer, "Container" },
+        .{ &self.region_layer_toggle, &self.show_region_layer, "Region" },
+    }, 0..) |mapping, i| mapping[0].* = try element.create(Toggle, .{
+        .base = .{
+            .x = self.layer_toggle_decor.base.x + 5,
+            .y = self.layer_toggle_decor.base.y + 5 + i * 63,
+        },
+        .off_image_data = .fromImageData(
+            assets.getUiData("unchecked_box_base", 0),
+            assets.getUiData("unchecked_box_hover", 0),
+            assets.getUiData("unchecked_box_press", 0),
+        ),
+        .on_image_data = .fromImageData(
+            assets.getUiData("checked_box_base", 0),
+            assets.getUiData("checked_box_hover", 0),
+            assets.getUiData("checked_box_press", 0),
+        ),
+        .toggled = mapping[1],
+        .text_data = .{
+            .text = mapping[2],
+            .size = 16,
+            .text_type = .bold_italic,
         },
     });
 
@@ -370,7 +424,6 @@ pub fn init(self: *MapEditorScreen) !void {
         });
     }
 
-    const background_decor = assets.getUiData("tooltip_background", 0);
     _ = try self.controls_container.createChild(Image, .{
         .base = .{ .x = 0, .y = 0 },
         .image_data = .{ .nine_slice = .fromAtlasData(background_decor, control_decor_w, control_decor_h, 34, 34, 1, 1, 1.0) },
@@ -1259,6 +1312,13 @@ pub fn deinit(self: *MapEditorScreen) void {
     element.destroy(self.layer_dropdown);
     element.destroy(self.controls_container);
     element.destroy(self.map_size_dropdown);
+    element.destroy(self.layer_toggle_decor);
+    element.destroy(self.ground_layer_toggle);
+    element.destroy(self.entity_layer_toggle);
+    element.destroy(self.enemy_layer_toggle);
+    element.destroy(self.portal_layer_toggle);
+    element.destroy(self.container_layer_toggle);
+    element.destroy(self.region_layer_toggle);
 
     main.allocator.free(self.map_tile_data);
     main.allocator.free(self.selected_tiles);

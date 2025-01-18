@@ -148,7 +148,10 @@ pub fn deinit(self: *Entity) void {
 }
 
 pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void {
-    if (!cam_data.visibleInCamera(self.x, self.y)) return;
+    if (ui_systems.screen == .editor and 
+        (!ui_systems.screen.editor.show_entity_layer or 
+            self.data_id == 0xFFFE and !ui_systems.screen.editor.show_region_layer) or
+        !cam_data.visibleInCamera(self.x, self.y)) return;
 
     var screen_pos = cam_data.worldToScreen(self.x, self.y);
     const size = Camera.size_mult * cam_data.scale * self.size_mult;

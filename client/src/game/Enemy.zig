@@ -13,6 +13,7 @@ const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
 const render = @import("../render.zig");
 const element = @import("../ui/elements/element.zig");
+const ui_systems = @import("../ui/systems.zig");
 const StatusText = @import("../ui/game/StatusText.zig");
 const base = @import("object_base.zig");
 const map = @import("map.zig");
@@ -61,7 +62,8 @@ pub fn deinit(self: *Enemy) void {
 }
 
 pub fn draw(self: *Enemy, cam_data: render.CameraData, float_time_ms: f32) void {
-    if (!cam_data.visibleInCamera(self.x, self.y)) return;
+    if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_enemy_layer or
+        !cam_data.visibleInCamera(self.x, self.y)) return;
 
     var screen_pos = cam_data.worldToScreen(self.x, self.y);
     const size = Camera.size_mult * cam_data.scale * self.size_mult;
