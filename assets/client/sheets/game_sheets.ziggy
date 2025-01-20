@@ -96,6 +96,7 @@
     .path = "basic_items.png",
     .w = 10,
     .h = 10,
+    .dont_trim = true,
 },
 {
     .type = @SheetType("image"),
