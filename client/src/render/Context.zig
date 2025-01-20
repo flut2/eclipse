@@ -4,6 +4,8 @@ const build_options = @import("options");
 const glfw = @import("glfw");
 const vk = @import("vulkan");
 
+const main = @import("../main.zig");
+
 const required_layers: []const [*:0]const u8 =
     // zig fmt: off
     if (build_options.enable_validation_layers)
@@ -69,7 +71,6 @@ pub const Queue = struct {
 const Context = @This();
 pub const CommandBuffer = vk.CommandBufferProxy(apis);
 
-allocator: std.mem.Allocator,
 base_dispatch: BaseDispatch,
 instance: Instance,
 surface: vk.SurfaceKHR,
@@ -83,9 +84,8 @@ present_queue: Queue,
 pub const VkProc = *const anyopaque;
 extern fn glfwGetInstanceProcAddress(instance: vk.Instance, procname: [*:0]const u8) ?VkProc;
 
-pub fn init(allocator: std.mem.Allocator, window: *glfw.Window) !Context {
+pub fn init(window: *glfw.Window) !Context {
     var self: Context = undefined;
-    self.allocator = allocator;
     self.base_dispatch = try .load(glfwGetInstanceProcAddress);
 
     const glfw_exts = try glfw.getRequiredInstanceExtensions();
@@ -106,8 +106,8 @@ pub fn init(allocator: std.mem.Allocator, window: *glfw.Window) !Context {
         .pp_enabled_extension_names = @ptrCast(glfw_exts),
     }, null);
 
-    const vki = try allocator.create(InstanceDispatch);
-    errdefer allocator.destroy(vki);
+    const vki = try main.allocator.create(InstanceDispatch);
+    errdefer main.allocator.destroy(vki);
     vki.* = try .load(instance, self.base_dispatch.dispatch.vkGetInstanceProcAddr);
     self.instance = .init(instance, vki);
     errdefer self.instance.destroyInstance(null);
@@ -115,14 +115,14 @@ pub fn init(allocator: std.mem.Allocator, window: *glfw.Window) !Context {
     self.surface = try createSurface(self.instance, window);
     errdefer self.instance.destroySurfaceKHR(self.surface, null);
 
-    const candidate = try pickPhysicalDevice(self.instance, allocator, self.surface);
+    const candidate = try pickPhysicalDevice(self.instance, self.surface);
     self.phys_device = candidate.phys_device;
     self.device_props = candidate.props;
 
     const dev = try initializeCandidate(self.instance, candidate);
 
-    const vkd = try allocator.create(DeviceDispatch);
-    errdefer allocator.destroy(vkd);
+    const vkd = try main.allocator.create(DeviceDispatch);
+    errdefer main.allocator.destroy(vkd);
     vkd.* = try .load(dev, self.instance.wrapper.dispatch.vkGetDeviceProcAddr);
     self.device = .init(dev, vkd);
     errdefer self.device.destroyDevice(null);
@@ -139,8 +139,8 @@ pub fn deinit(self: Context) void {
     self.device.destroyDevice(null);
     self.instance.destroySurfaceKHR(self.surface, null);
     self.instance.destroyInstance(null);
-    self.allocator.destroy(self.device.wrapper);
-    self.allocator.destroy(self.instance.wrapper);
+    main.allocator.destroy(self.device.wrapper);
+    main.allocator.destroy(self.instance.wrapper);
 }
 
 pub fn deviceName(self: *const Context) []const u8 {
@@ -195,27 +195,22 @@ fn initializeCandidate(instance: Instance, candidate: DeviceCandidate) !vk.Devic
     }, null);
 }
 
-fn pickPhysicalDevice(instance: Instance, allocator: std.mem.Allocator, surface: vk.SurfaceKHR) !DeviceCandidate {
-    const pdevs = try instance.enumeratePhysicalDevicesAlloc(allocator);
-    defer allocator.free(pdevs);
+fn pickPhysicalDevice(instance: Instance, surface: vk.SurfaceKHR) !DeviceCandidate {
+    const phys_devices = try instance.enumeratePhysicalDevicesAlloc(main.allocator);
+    defer main.allocator.free(phys_devices);
 
-    for (pdevs) |pdev| if (try checkSuitable(instance, pdev, allocator, surface)) |candidate|
+    for (phys_devices) |phys_device| if (try checkSuitable(instance, phys_device, surface)) |candidate|
         return candidate;
 
     return error.NoSuitableDevice;
 }
 
-fn checkSuitable(
-    instance: Instance,
-    phys_device: vk.PhysicalDevice,
-    allocator: std.mem.Allocator,
-    surface: vk.SurfaceKHR,
-) !?DeviceCandidate {
-    if (!try checkExtensionSupport(instance, phys_device, allocator) or
+fn checkSuitable(instance: Instance, phys_device: vk.PhysicalDevice, surface: vk.SurfaceKHR) !?DeviceCandidate {
+    if (!try checkExtensionSupport(instance, phys_device) or
         !try checkSurfaceSupport(instance, phys_device, surface))
         return null;
 
-    if (try allocateQueues(instance, phys_device, allocator, surface)) |allocation| {
+    if (try allocateQueues(instance, phys_device, surface)) |allocation| {
         const props = instance.getPhysicalDeviceProperties(phys_device);
         return .{
             .phys_device = phys_device,
@@ -227,9 +222,9 @@ fn checkSuitable(
     return null;
 }
 
-fn allocateQueues(instance: Instance, pdev: vk.PhysicalDevice, allocator: std.mem.Allocator, surface: vk.SurfaceKHR) !?QueueAllocation {
-    const families = try instance.getPhysicalDeviceQueueFamilyPropertiesAlloc(pdev, allocator);
-    defer allocator.free(families);
+fn allocateQueues(instance: Instance, phys_device: vk.PhysicalDevice, surface: vk.SurfaceKHR) !?QueueAllocation {
+    const families = try instance.getPhysicalDeviceQueueFamilyPropertiesAlloc(phys_device, main.allocator);
+    defer main.allocator.free(families);
 
     var graphics_family: ?u32 = null;
     var present_family: ?u32 = null;
@@ -237,7 +232,8 @@ fn allocateQueues(instance: Instance, pdev: vk.PhysicalDevice, allocator: std.me
     for (families, 0..) |properties, i| {
         const family: u32 = @intCast(i);
         if (graphics_family == null and properties.queue_flags.graphics_bit) graphics_family = family;
-        if (present_family == null and (try instance.getPhysicalDeviceSurfaceSupportKHR(pdev, family, surface)) == vk.TRUE) present_family = family;
+        if (present_family == null and (try instance.getPhysicalDeviceSurfaceSupportKHR(phys_device, family, surface)) == vk.TRUE) 
+            present_family = family;
     }
 
     if (graphics_family != null and present_family != null) return .{
@@ -256,9 +252,9 @@ fn checkSurfaceSupport(instance: Instance, pdev: vk.PhysicalDevice, surface: vk.
     return format_count > 0 and present_mode_count > 0;
 }
 
-fn checkExtensionSupport(instance: Instance, pdev: vk.PhysicalDevice, allocator: std.mem.Allocator) !bool {
-    const propsv = try instance.enumerateDeviceExtensionPropertiesAlloc(pdev, null, allocator);
-    defer allocator.free(propsv);
+fn checkExtensionSupport(instance: Instance, pdev: vk.PhysicalDevice) !bool {
+    const propsv = try instance.enumerateDeviceExtensionPropertiesAlloc(pdev, null, main.allocator);
+    defer main.allocator.free(propsv);
 
     for (required_device_extensions) |ext| {
         for (propsv) |props| {

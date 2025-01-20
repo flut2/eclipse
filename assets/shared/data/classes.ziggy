@@ -42,7 +42,7 @@
             ,
             .health_cost = 100,
             .cooldown = 8.0,
-            .icon = {"ability_icons": 0},
+            .icon = {"ability_icons": 8},
         },
         {
             .name = "Space Shift",
@@ -52,7 +52,7 @@
             .mana_cost = 150,
             .health_cost = 200,
             .cooldown = 28.0,
-            .icon = {"ability_icons": 1},
+            .icon = {"ability_icons": 9},
         },
         {
             .name = "Bloodfont",
@@ -62,7 +62,7 @@
             ,
             .mana_cost = 100,
             .cooldown = 28.0,
-            .icon = {"ability_icons": 2},
+            .icon = {"ability_icons": 10},
         },
         {
             .name = "Ravenous Hunger",
@@ -72,7 +72,7 @@
             .health_cost = 300,
             .mana_cost = 200,
             .cooldown = 80.0,
-            .icon = {"ability_icons": 3},
+            .icon = {"ability_icons": 11},
         },
     ],
     .talents = [],

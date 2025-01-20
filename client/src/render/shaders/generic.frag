@@ -40,6 +40,16 @@ layout(std140, set = 1, binding = 0) readonly buffer InstanceBuffer {
     InstanceData data[];
 } instance_buffer;
 
+layout(std140, set = 1, binding = 1) readonly buffer UiInstanceBuffer {
+    InstanceData data[];
+} ui_instance_buffer;
+
+layout(std140, push_constant) uniform PushConstants {
+    vec2 clip_scale;
+    vec2 clip_offset;
+    uint is_ui;
+} constants;
+
 layout(set = 0, binding = 0) uniform sampler2D game_tex;
 layout(set = 0, binding = 1) uniform sampler2D ui_tex;
 layout(set = 0, binding = 2) uniform sampler2D medium_text_tex;
@@ -69,9 +79,8 @@ float sampleMsdf(vec4 tex, float dist_factor, float width) {
     return clamp((median(tex.r, tex.g, tex.b) - 0.5) * dist_factor + 0.5 + width, 0.0, 1.0);
 }
 
-
 void main() {
-    InstanceData instance = instance_buffer.data[instance_id];
+    InstanceData instance = constants.is_ui == 1 ? ui_instance_buffer.data[instance_id] : instance_buffer.data[instance_id];
     vec2 dx = dFdx(in_uv);
     vec2 dy = dFdy(in_uv);
 

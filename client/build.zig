@@ -22,7 +22,7 @@ pub fn buildWithoutDupes(
     optimize: std.builtin.OptimizeMode,
     enable_tracy: bool,
 ) !void {
-    const enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse (optimize == .Debug);
+    const enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse (optimize != .Debug);
     const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
     const version = b.option([]const u8, "version", "Build version, for the version text and client-server version checks") orelse "1.0";
     const login_server_ip = b.option([]const u8, "login_server_ip", "The IP of the login server") orelse "127.0.0.1";
@@ -74,10 +74,10 @@ pub fn buildWithoutDupes(
         exe.linkSystemLibrary(if (target.result.os.tag == .windows) "vulkan-1" else "vulkan");
         exe.addIncludePath(b.path("libs/vma"));
         const env_map = try std.process.getEnvMap(b.allocator);
-        inline for (.{ "VULKAN_SDK", "VK_SDK_PATH" }) |env_var| if (env_map.get(env_var)) |path| {
+        if (env_map.get("VULKAN_SDK")) |path| {
             exe.addLibraryPath(.{ .cwd_relative = b.pathJoin(&.{ path, "lib" }) });
             exe.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ path, "include" }) });
-        };
+        } else @panic("Could not find Vulkan SDK");
         exe.addCSourceFile(.{ .file = b.path("libs/vma/vk_mem_alloc.cpp") });
 
         inline for (.{

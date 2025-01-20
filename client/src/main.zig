@@ -83,7 +83,7 @@ pub var camera: Camera = .{};
 pub var settings: Settings = .{};
 pub var main_loop: *uv.uv_loop_t = undefined;
 pub var window: *glfw.Window = undefined;
-pub var renderer: *Renderer = undefined;
+pub var renderer: Renderer = undefined;
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
     const float_w = f32i(w);
@@ -151,12 +151,8 @@ fn renderTick() !void {
     };
     defer rpmalloc.deinitThread(true);
 
-    renderer = allocator.create(Renderer) catch oomPanic();
-    renderer.* = try .create(if (settings.enable_vsync) .fifo_khr else .immediate_khr);
-    defer {
-        renderer.destroy();
-        allocator.destroy(renderer);
-    }
+    renderer = try .create(if (settings.enable_vsync) .fifo_khr else .immediate_khr);
+    defer renderer.destroy();
 
     var last_vsync = settings.enable_vsync;
     var fps_time_start: i64 = 0;
@@ -166,7 +162,7 @@ fn renderTick() !void {
             camera.lock.lock();
             const extent: vk.Extent2D = .{ .width = u32f(camera.width), .height = u32f(camera.height) };
             camera.lock.unlock();
-            try renderer.swapchain.recreate(extent, if (settings.enable_vsync) .fifo_khr else .immediate_khr);
+            try renderer.swapchain.recreate(renderer.context, extent, if (settings.enable_vsync) .fifo_khr else .immediate_khr);
             renderer.destroyFrameAndCmdBuffers();
             try renderer.createFrameAndCmdBuffers();
             last_vsync = settings.enable_vsync;

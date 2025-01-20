@@ -101,6 +101,7 @@ pub const GroundData = extern struct {
 pub const GenericPushConstants = extern struct {
     clip_scale: [2]f32,
     clip_offset: [2]f32,
+    is_ui: u32,
 };
 
 pub const GroundPushConstants = extern struct {
@@ -116,7 +117,7 @@ pub const GroundPushConstants = extern struct {
 };
 
 comptime {
-    for (.{ GroundData, GroundPushConstants, GenericData, GenericPushConstants }) |T| {
+    for (.{ GroundData, GenericData }) |T| {
         const missing_bytes = @mod(@sizeOf(T), 16);
         if (missing_bytes != 0)
             @compileError(std.fmt.comptimePrint(
@@ -134,6 +135,15 @@ const Buffer = struct {
     size: vk.DeviceSize = 0,
 
     pub fn destroy(self: Buffer, vk_allocator: vma.Allocator) void {
+        vk_allocator.destroyBuffer(self.buffer.handle, self.buffer.allocation);
+    }
+};
+
+const StagingBuffer = struct {
+    buffer: vma.AllocatedBuffer = .{ .handle = .null_handle, .allocation = null },
+    alloc_info: vma.AllocationInfo = .{},
+
+    pub fn destroy(self: StagingBuffer, vk_allocator: vma.Allocator) void {
         vk_allocator.destroyBuffer(self.buffer.handle, self.buffer.allocation);
     }
 };
@@ -165,7 +175,8 @@ const Material = struct {
 };
 
 pub const ground_size = 5000;
-pub const generic_size = 10000;
+pub const generic_size = 20000;
+pub const ui_size = 2000;
 
 medium_text: Texture = .{},
 medium_italic_text: Texture = .{},
@@ -181,6 +192,11 @@ ground_material: Material = .{},
 
 generic_buffer: Buffer = .{},
 ground_buffer: Buffer = .{},
+ui_buffer: Buffer = .{},
+
+generic_staging_buffer: StagingBuffer = .{},
+ground_staging_buffer: StagingBuffer = .{},
+ui_staging_buffer: StagingBuffer = .{},
 
 nearest_sampler: vk.Sampler = .null_handle,
 linear_sampler: vk.Sampler = .null_handle,
@@ -238,12 +254,12 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
     self.enter_text_data = .{ .text = undefined, .text_type = .bold, .size = 12 };
     self.enter_text_data.setText("Enter");
 
-    self.context = try .init(main.allocator, main.window);
+    self.context = try .init(main.window);
 
     main.camera.lock.lock();
     const extent: vk.Extent2D = .{ .width = u32f(main.camera.width), .height = u32f(main.camera.height) };
     main.camera.lock.unlock();
-    self.swapchain = try .init(&self.context, main.allocator, extent, present_mode);
+    self.swapchain = try .init(self.context, extent, present_mode);
 
     self.vk_allocator = try .create(&.{
         .physical_device = self.context.phys_device,
@@ -299,6 +315,77 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
         .size = ground_buf_size,
     };
 
+    const ui_buf_size = @sizeOf(GenericData) * ui_size;
+    self.ui_buffer = .{
+        .buffer = try self.vk_allocator.createBuffer(
+            &.{
+                .size = ui_buf_size,
+                .usage = .{ .storage_buffer_bit = true, .transfer_dst_bit = true },
+                .sharing_mode = .exclusive,
+            },
+            &.{
+                .usage = .gpu_only,
+                .required_flags = .{ .device_local_bit = true },
+            },
+            null,
+        ),
+        .size = ui_buf_size,
+    };
+
+    var generic_alloc_info: vma.AllocationInfo = undefined;
+    const generic_staging_buffer = try self.vk_allocator.createBuffer(
+        &.{
+            .size = generic_buf_size,
+            .usage = .{ .transfer_src_bit = true },
+            .sharing_mode = .exclusive,
+        },
+        &.{
+            .usage = .cpu_only,
+            .flags = .{ .host_access_sequential_write_bit = true, .mapped_bit = true },
+        },
+        &generic_alloc_info,
+    );
+    self.generic_staging_buffer = .{
+        .buffer = generic_staging_buffer,
+        .alloc_info = generic_alloc_info,
+    };
+
+    var ui_alloc_info: vma.AllocationInfo = undefined;
+    const ui_staging_buffer = try self.vk_allocator.createBuffer(
+        &.{
+            .size = ui_buf_size,
+            .usage = .{ .transfer_src_bit = true },
+            .sharing_mode = .exclusive,
+        },
+        &.{
+            .usage = .cpu_only,
+            .flags = .{ .host_access_sequential_write_bit = true, .mapped_bit = true },
+        },
+        &ui_alloc_info,
+    );
+    self.ui_staging_buffer = .{
+        .buffer = ui_staging_buffer,
+        .alloc_info = ui_alloc_info,
+    };
+
+    var ground_alloc_info: vma.AllocationInfo = undefined;
+    const ground_staging_buffer = try self.vk_allocator.createBuffer(
+        &.{
+            .size = ground_buf_size,
+            .usage = .{ .transfer_src_bit = true },
+            .sharing_mode = .exclusive,
+        },
+        &.{
+            .usage = .cpu_only,
+            .flags = .{ .host_access_sequential_write_bit = true, .mapped_bit = true },
+        },
+        &ground_alloc_info,
+    );
+    self.ground_staging_buffer = .{
+        .buffer = ground_staging_buffer,
+        .alloc_info = ground_alloc_info,
+    };
+
     self.nearest_sampler = try self.context.device.createSampler(&.{
         .mag_filter = .nearest,
         .min_filter = .nearest,
@@ -339,23 +426,31 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
     try self.createFrameAndCmdBuffers();
 
     inline for (.{
-        .{ &self.medium_text, assets.medium_atlas },
-        .{ &self.medium_italic_text, assets.medium_italic_atlas },
-        .{ &self.bold_text, assets.bold_atlas },
-        .{ &self.bold_italic_text, assets.bold_italic_atlas },
-        .{ &self.default, assets.atlas },
-        .{ &self.ui, assets.ui_atlas },
-        .{ &self.menu_bg, assets.menu_background },
-        .{ &self.minimap, map.minimap },
+        .{ &self.medium_text, assets.medium_atlas, true },
+        .{ &self.medium_italic_text, assets.medium_italic_atlas, true },
+        .{ &self.bold_text, assets.bold_atlas, true },
+        .{ &self.bold_italic_text, assets.bold_italic_atlas, true },
+        .{ &self.default, assets.atlas, false },
+        .{ &self.ui, assets.ui_atlas, false },
+        .{ &self.menu_bg, assets.menu_background, false },
+        .{ &self.minimap, map.minimap, false },
     }) |mapping| mapping[0].* = try createTexture(
         self.context,
         self.cmd_pool,
         self.vk_allocator,
         .{ .depth = 1, .width = mapping[1].width, .height = mapping[1].height },
-        .r8g8b8a8_srgb,
+        if (mapping[2]) .r8g8b8a8_unorm else .r8g8b8a8_srgb,
         .{ .transfer_dst_bit = true, .sampled_bit = true },
         mapping[1].data,
     );
+
+    assets.medium_atlas.deinit();
+    assets.medium_italic_atlas.deinit();
+    assets.bold_atlas.deinit();
+    assets.bold_italic_atlas.deinit();
+    assets.atlas.deinit();
+    assets.ui_atlas.deinit();
+    assets.menu_background.deinit();
 
     try self.createGenericMaterial();
     try self.createGroundMaterial();
@@ -364,7 +459,7 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
 }
 
 pub fn destroy(self: *Renderer) void {
-    self.swapchain.waitForAllFences() catch @panic("TODO");
+    self.swapchain.waitForAllFences(self.context) catch @panic("TODO");
     self.context.device.deviceWaitIdle() catch @panic("TODO");
 
     self.medium_text.destroy(self.context, self.vk_allocator);
@@ -381,6 +476,11 @@ pub fn destroy(self: *Renderer) void {
 
     self.generic_buffer.destroy(self.vk_allocator);
     self.ground_buffer.destroy(self.vk_allocator);
+    self.ui_buffer.destroy(self.vk_allocator);
+
+    self.generic_staging_buffer.destroy(self.vk_allocator);
+    self.ground_staging_buffer.destroy(self.vk_allocator);
+    self.ui_staging_buffer.destroy(self.vk_allocator);
 
     self.context.device.destroySampler(self.nearest_sampler, null);
     self.context.device.destroySampler(self.linear_sampler, null);
@@ -393,11 +493,11 @@ pub fn destroy(self: *Renderer) void {
     self.enter_text_data.deinit();
     for (self.condition_rects) |rects| main.allocator.free(rects);
 
+    self.destroyFrameAndCmdBuffers();
     self.context.device.destroyRenderPass(self.render_pass, null);
     self.context.device.destroyCommandPool(self.cmd_pool, null);
     self.context.device.destroyDescriptorPool(self.descriptor_pool, null);
-    self.destroyFrameAndCmdBuffers();
-    self.swapchain.deinit();
+    self.swapchain.deinit(self.context);
     self.vk_allocator.destroy();
     self.context.deinit();
 }
@@ -405,37 +505,38 @@ pub fn destroy(self: *Renderer) void {
 fn writeToBuffer(
     ctx: Context,
     cmd_pool: vk.CommandPool,
-    vk_allocator: vma.Allocator,
+    staging_buffer: StagingBuffer,
     dst_buffer: vk.Buffer,
     comptime T: type,
     data: []const T,
 ) !void {
     const size = @sizeOf(T) * data.len;
     if (size == 0) return;
+    @memcpy(@as([*]u8, @ptrCast(staging_buffer.alloc_info.p_mapped_data.?)), std.mem.sliceAsBytes(data));
+    try copyBuffer(ctx, cmd_pool, staging_buffer.buffer.handle, dst_buffer, size);
+}
 
-    const staging_buffer = try vk_allocator.createBuffer(
-        &.{
-            .size = size,
-            .usage = .{ .transfer_src_bit = true },
-            .sharing_mode = .exclusive,
-        },
-        &.{
-            .usage = .cpu_only,
-            .flags = .{ .host_access_sequential_write_bit = true },
-        },
-        null,
-    );
-    defer vk_allocator.destroyBuffer(staging_buffer.handle, staging_buffer.allocation);
-    {
-        const mapped_data = try vk_allocator.mapMemory(staging_buffer.allocation);
-        defer vk_allocator.unmapMemory(staging_buffer.allocation);
-        @memcpy(@as([*]u8, @ptrCast(mapped_data.?)), std.mem.sliceAsBytes(data));
-    }
-    try copyBuffer(ctx, cmd_pool, staging_buffer.handle, dst_buffer, size);
+fn writeToBufferSimple(
+    ctx: Context,
+    cmd_buffer: vk.CommandBuffer,
+    staging_buffer: StagingBuffer,
+    dst_buffer: vk.Buffer,
+    comptime T: type,
+    data: []const T,
+) void {
+    const size = @sizeOf(T) * data.len;
+    if (size == 0) return;
+    @memcpy(@as([*]u8, @ptrCast(staging_buffer.alloc_info.p_mapped_data.?)), std.mem.sliceAsBytes(data));
+    copySimple(ctx, cmd_buffer, staging_buffer.buffer.handle, dst_buffer, size);
 }
 
 pub fn createFrameAndCmdBuffers(self: *Renderer) !void {
     self.cmd_buffers = main.allocator.alloc(vk.CommandBuffer, self.swapchain.swap_images.len) catch main.oomPanic();
+    try self.context.device.allocateCommandBuffers(&.{
+        .command_pool = self.cmd_pool,
+        .level = .primary,
+        .command_buffer_count = @intCast(self.cmd_buffers.len),
+    }, self.cmd_buffers.ptr);
     self.framebuffers = main.allocator.alloc(vk.Framebuffer, self.swapchain.swap_images.len) catch main.oomPanic();
     for (self.swapchain.swap_images, self.framebuffers) |swap_img, *framebuffer|
         framebuffer.* = try self.context.device.createFramebuffer(&.{
@@ -453,6 +554,7 @@ pub fn destroyFrameAndCmdBuffers(self: *Renderer) void {
         self.context.device.destroyFramebuffer(framebuffer, null);
     main.allocator.free(self.framebuffers);
     self.framebuffers = &.{};
+    self.context.device.freeCommandBuffers(self.cmd_pool, @intCast(self.cmd_buffers.len), self.cmd_buffers.ptr);
     main.allocator.free(self.cmd_buffers);
     self.cmd_buffers = &.{};
 }
@@ -478,8 +580,25 @@ fn destroyImmediateSubmit(ctx: Context, cmd_pool: vk.CommandPool, cmd_buffer: vk
     ctx.device.freeCommandBuffers(cmd_pool, 1, @ptrCast(&cmd_buffer));
 }
 
-fn copyBuffer(ctx: Context, cmd_pool: vk.CommandPool, src_buffer: vk.Buffer, dst_buffer: vk.Buffer, size: vk.DeviceSize) !void {
+fn copyBuffer(
+    ctx: Context,
+    cmd_pool: vk.CommandPool,
+    src_buffer: vk.Buffer,
+    dst_buffer: vk.Buffer,
+    size: vk.DeviceSize,
+) !void {
     const cmd_buffer = try createImmediateSubmit(ctx, cmd_pool);
+    copySimple(ctx, cmd_buffer, src_buffer, dst_buffer, size);
+    try destroyImmediateSubmit(ctx, cmd_pool, cmd_buffer);
+}
+
+fn copySimple(
+    ctx: Context,
+    cmd_buffer: vk.CommandBuffer,
+    src_buffer: vk.Buffer,
+    dst_buffer: vk.Buffer,
+    size: vk.DeviceSize,
+) void {
     ctx.device.cmdCopyBuffer(
         cmd_buffer,
         src_buffer,
@@ -491,7 +610,6 @@ fn copyBuffer(ctx: Context, cmd_pool: vk.CommandPool, src_buffer: vk.Buffer, dst
             .size = size,
         }},
     );
-    try destroyImmediateSubmit(ctx, cmd_pool, cmd_buffer);
 }
 
 fn transitionImageLayout(
@@ -763,6 +881,12 @@ fn createGenericMaterial(self: *Renderer) !void {
             .descriptor_count = 1,
             .stage_flags = .{ .vertex_bit = true, .fragment_bit = true },
         },
+        .{
+            .binding = 1,
+            .descriptor_type = .storage_buffer,
+            .descriptor_count = 1,
+            .stage_flags = .{ .vertex_bit = true, .fragment_bit = true },
+        },
     };
     const descriptor_layout_two = try self.context.device.createDescriptorSetLayout(&.{
         .binding_count = @intCast(descriptor_bindings_two.len),
@@ -772,7 +896,7 @@ fn createGenericMaterial(self: *Renderer) !void {
     const push_constant_range: vk.PushConstantRange = .{
         .offset = 0,
         .size = @sizeOf(GenericPushConstants),
-        .stage_flags = .{ .vertex_bit = true },
+        .stage_flags = .{ .vertex_bit = true, .fragment_bit = true },
     };
 
     const descriptor_layouts: [2]vk.DescriptorSetLayout = .{ descriptor_layout_one, descriptor_layout_two };
@@ -791,7 +915,7 @@ fn createGenericMaterial(self: *Renderer) !void {
         .p_set_layouts = @ptrCast(&descriptor_layouts),
     }, @ptrCast(&descriptor_sets));
 
-    self.context.device.updateDescriptorSets(9, &.{
+    self.context.device.updateDescriptorSets(10, &.{
         .{
             .dst_set = descriptor_sets[0],
             .dst_binding = 0,
@@ -915,6 +1039,20 @@ fn createGenericMaterial(self: *Renderer) !void {
                 .buffer = self.generic_buffer.buffer.handle,
                 .offset = 0,
                 .range = @sizeOf(GenericData) * generic_size,
+            }},
+            .p_texel_buffer_view = undefined,
+        },
+        .{
+            .dst_set = descriptor_sets[1],
+            .dst_binding = 1,
+            .dst_array_element = 0,
+            .descriptor_count = 1,
+            .descriptor_type = .storage_buffer,
+            .p_image_info = undefined,
+            .p_buffer_info = &.{.{
+                .buffer = self.ui_buffer.buffer.handle,
+                .offset = 0,
+                .range = @sizeOf(GenericData) * ui_size,
             }},
             .p_texel_buffer_view = undefined,
         },
@@ -1461,14 +1599,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
     inline for (@typeInfo(CameraData).@"struct".fields) |field| @field(cam_data, field.name) = @field(main.camera, field.name);
     main.camera.lock.unlock();
 
-    try self.context.device.allocateCommandBuffers(&.{
-        .command_pool = self.cmd_pool,
-        .level = .primary,
-        .command_buffer_count = @intCast(self.cmd_buffers.len),
-    }, self.cmd_buffers.ptr);
-    defer self.context.device.freeCommandBuffers(self.cmd_pool, @intCast(self.cmd_buffers.len), self.cmd_buffers.ptr);
-
-    const clear: vk.ClearValue = .{ .color = .{ .float_32 = .{ 0, 0, 0, 1 } } };
+    const clear: vk.ClearValue = .{ .color = .{ .float_32 = .{ 0.0, 0.0, 0.0, 1.0 } } };
 
     const viewport: vk.Viewport = .{
         .x = 0,
@@ -1485,16 +1616,19 @@ pub fn draw(self: *Renderer, time: i64) !void {
     };
 
     const cmd_buffer = self.cmd_buffers[self.swapchain.image_index];
-    try self.context.device.beginCommandBuffer(cmd_buffer, &.{ .flags = .{ .one_time_submit_bit = true } });
+    try self.context.device.resetCommandBuffer(cmd_buffer, .{});
+    try self.context.device.beginCommandBuffer(cmd_buffer, &.{ .flags = .{} });
     self.context.device.cmdSetViewport(cmd_buffer, 0, 1, @ptrCast(&viewport));
     self.context.device.cmdSetScissor(cmd_buffer, 0, 1, @ptrCast(&scissor));
+    const render_area: vk.Rect2D = .{
+        .offset = .{ .x = 0, .y = 0 },
+        .extent = self.swapchain.extent,
+    };
+
     self.context.device.cmdBeginRenderPass(cmd_buffer, &.{
         .render_pass = self.render_pass,
         .framebuffer = self.framebuffers[self.swapchain.image_index],
-        .render_area = .{
-            .offset = .{ .x = 0, .y = 0 },
-            .extent = self.swapchain.extent,
-        },
+        .render_area = render_area,
         .clear_value_count = 1,
         .p_clear_values = @ptrCast(&clear),
     }, .@"inline");
@@ -1529,49 +1663,6 @@ pub fn draw(self: *Renderer, time: i64) !void {
         }
     }
 
-    const ground_len: u32 = @min(self.grounds.items.len, ground_size);
-    if (ground_len > 0) {
-        try writeToBuffer(
-            self.context,
-            self.cmd_pool,
-            self.vk_allocator,
-            self.ground_buffer.buffer.handle,
-            GroundData,
-            self.grounds.items[0..ground_len],
-        );
-
-        const ground_push_constants: GroundPushConstants = .{
-            .scale = cam_data.scale,
-            .left_mask_uv = assets.left_mask_uv,
-            .top_mask_uv = assets.top_mask_uv,
-            .right_mask_uv = assets.right_mask_uv,
-            .bottom_mask_uv = assets.bottom_mask_uv,
-            .clip_scale = cam_data.clip_scale,
-            .clip_offset = cam_data.clip_offset,
-            .atlas_size = .{ assets.atlas_width, assets.atlas_height },
-        };
-        self.context.device.cmdPushConstants(
-            cmd_buffer,
-            self.ground_material.pipeline_layout,
-            .{ .vertex_bit = true, .fragment_bit = true },
-            0,
-            @sizeOf(GroundPushConstants),
-            @ptrCast(&ground_push_constants),
-        );
-        self.context.device.cmdBindPipeline(cmd_buffer, .graphics, self.ground_material.pipeline);
-        self.context.device.cmdBindDescriptorSets(
-            cmd_buffer,
-            .graphics,
-            self.ground_material.pipeline_layout,
-            0,
-            2,
-            @ptrCast(&self.ground_material.descriptor_sets),
-            0,
-            null,
-        );
-        self.context.device.cmdDraw(cmd_buffer, ground_len * 6, 1, 0, 0);
-    }
-
     if (main.settings.enable_lights) {
         self.sortGenerics();
 
@@ -1592,28 +1683,78 @@ pub fn draw(self: *Renderer, time: i64) !void {
         );
     } else self.sortGenerics();
 
+    const ground_push_constants: GroundPushConstants = .{
+        .scale = cam_data.scale,
+        .left_mask_uv = assets.left_mask_uv,
+        .top_mask_uv = assets.top_mask_uv,
+        .right_mask_uv = assets.right_mask_uv,
+        .bottom_mask_uv = assets.bottom_mask_uv,
+        .clip_scale = cam_data.clip_scale,
+        .clip_offset = cam_data.clip_offset,
+        .atlas_size = .{ assets.atlas_width, assets.atlas_height },
+    };
+    const ground_len: u32 = @min(self.grounds.items.len, ground_size);
+    if (ground_len > 0) {
+        try writeToBuffer(
+            self.context,
+            self.cmd_pool,
+            self.ground_staging_buffer,
+            self.ground_buffer.buffer.handle,
+            GroundData,
+            self.grounds.items[0..ground_len],
+        );
+
+        self.context.device.cmdPushConstants(
+            cmd_buffer,
+            self.ground_material.pipeline_layout,
+            .{ .vertex_bit = true, .fragment_bit = true },
+            0,
+            @sizeOf(GroundPushConstants),
+            &ground_push_constants,
+        );
+        self.context.device.cmdBindPipeline(cmd_buffer, .graphics, self.ground_material.pipeline);
+        self.context.device.cmdBindDescriptorSets(
+            cmd_buffer,
+            .graphics,
+            self.ground_material.pipeline_layout,
+            0,
+            2,
+            @ptrCast(&self.ground_material.descriptor_sets),
+            0,
+            null,
+        );
+        self.context.device.cmdDraw(cmd_buffer, ground_len * 6, 1, 0, 0);
+    }
+
+    const ui_off: GenericPushConstants = .{
+        .clip_scale = cam_data.clip_scale,
+        .clip_offset = cam_data.clip_offset,
+        .is_ui = 0,
+    };
+    const ui_on: GenericPushConstants = .{
+        .clip_scale = cam_data.clip_scale,
+        .clip_offset = cam_data.clip_offset,
+        .is_ui = 1,
+    };
+
     const game_len: u32 = @min(self.generics.items.len, generic_size);
     if (game_len > 0) {
         try writeToBuffer(
             self.context,
             self.cmd_pool,
-            self.vk_allocator,
+            self.generic_staging_buffer,
             self.generic_buffer.buffer.handle,
             GenericData,
             self.generics.items[0..game_len],
         );
 
-        const generic_push_constants: GenericPushConstants = .{
-            .clip_scale = cam_data.clip_scale,
-            .clip_offset = cam_data.clip_offset,
-        };
         self.context.device.cmdPushConstants(
             cmd_buffer,
             self.generic_material.pipeline_layout,
-            .{ .vertex_bit = true },
+            .{ .vertex_bit = true, .fragment_bit = true },
             0,
             @sizeOf(GenericPushConstants),
-            @ptrCast(&generic_push_constants),
+            &ui_off,
         );
         self.context.device.cmdBindPipeline(cmd_buffer, .graphics, self.generic_material.pipeline);
         self.context.device.cmdBindDescriptorSets(
@@ -1642,25 +1783,22 @@ pub fn draw(self: *Renderer, time: i64) !void {
         try writeToBuffer(
             self.context,
             self.cmd_pool,
-            self.vk_allocator,
-            self.generic_buffer.buffer.handle,
+            self.ui_staging_buffer,
+            self.ui_buffer.buffer.handle,
             GenericData,
             self.generics.items[0..ui_len],
         );
 
+        self.context.device.cmdPushConstants(
+            cmd_buffer,
+            self.generic_material.pipeline_layout,
+            .{ .vertex_bit = true, .fragment_bit = true },
+            0,
+            @sizeOf(GenericPushConstants),
+            &ui_on,
+        );
+
         if (game_len == 0) {
-            const generic_push_constants: GenericPushConstants = .{
-                .clip_scale = cam_data.clip_scale,
-                .clip_offset = cam_data.clip_offset,
-            };
-            self.context.device.cmdPushConstants(
-                cmd_buffer,
-                self.generic_material.pipeline_layout,
-                .{ .vertex_bit = true },
-                0,
-                @sizeOf(GenericPushConstants),
-                @ptrCast(&generic_push_constants),
-            );
             self.context.device.cmdBindPipeline(cmd_buffer, .graphics, self.generic_material.pipeline);
             self.context.device.cmdBindDescriptorSets(
                 cmd_buffer,
@@ -1680,13 +1818,14 @@ pub fn draw(self: *Renderer, time: i64) !void {
     self.context.device.cmdEndRenderPass(cmd_buffer);
     try self.context.device.endCommandBuffer(cmd_buffer);
 
-    const state: Swapchain.PresentState = self.swapchain.present(cmd_buffer) catch |err| switch (err) {
+    const state: Swapchain.PresentState = self.swapchain.present(self.context, cmd_buffer) catch |err| switch (err) {
         error.OutOfDateKHR => .suboptimal,
         else => |e| return e,
     };
 
     if (state == .suboptimal) {
         try self.swapchain.recreate(
+            self.context,
             .{ .width = u32f(cam_data.width), .height = u32f(cam_data.height) },
             if (main.settings.enable_vsync) .fifo_khr else .immediate_khr,
         );

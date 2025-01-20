@@ -44,15 +44,20 @@ layout(std140, set = 1, binding = 0) readonly buffer InstanceBuffer {
     InstanceData data[];
 } instance_buffer;
 
+layout(std140, set = 1, binding = 1) readonly buffer UiInstanceBuffer {
+    InstanceData data[];
+} ui_instance_buffer;
+
 layout(std140, push_constant) uniform PushConstants {
     vec2 clip_scale;
     vec2 clip_offset;
+    uint is_ui;
 } constants;
 
 void main() {
     instance_id = gl_VertexIndex / 6;
     int sub_vert_id = gl_VertexIndex % 6;
-    InstanceData instance = instance_buffer.data[instance_id];
+    InstanceData instance = constants.is_ui == 1 ? ui_instance_buffer.data[instance_id] : instance_buffer.data[instance_id];
     float c = cos(instance.rotation);
     float s = sin(instance.rotation);
     mat2x2 rot_mat = mat2x2(c, s, -s, c);
