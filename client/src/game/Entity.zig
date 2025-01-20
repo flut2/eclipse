@@ -11,7 +11,7 @@ const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
-const render = @import("../render.zig");
+const CameraData = @import("../render/CameraData.zig");
 const element = @import("../ui/elements/element.zig");
 const StatusText = @import("../ui/game/StatusText.zig");
 const ui_systems = @import("../ui/systems.zig");
@@ -147,10 +147,10 @@ pub fn deinit(self: *Entity) void {
     self.status_texts.deinit(main.allocator);
 }
 
-pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void {
-    if (ui_systems.screen == .editor and 
-        (!ui_systems.screen.editor.show_entity_layer or 
-            self.data_id == 0xFFFE and !ui_systems.screen.editor.show_region_layer) or
+pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
+    if (ui_systems.screen == .editor and
+        (!ui_systems.screen.editor.show_entity_layer or
+        self.data_id == 0xFFFE and !ui_systems.screen.editor.show_region_layer) or
         !cam_data.visibleInCamera(self.x, self.y)) return;
 
     var screen_pos = cam_data.worldToScreen(self.x, self.y);
@@ -162,11 +162,11 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
         const base_h = self.wall_data.base.texHRaw() * wall_size_mult;
         const base_x = screen_pos.x;
         const base_y = screen_pos.y - @max(base_h / 2.0, (self.wall_data.base.texHRaw() - 9.0) * wall_size_mult / 2.0);
-        render.drawQuad(base_x, base_y, base_w, base_h, self.wall_data.base, .{});
+        main.renderer.drawQuad(base_x, base_y, base_w, base_h, self.wall_data.base, .{});
 
         if (!self.wall_outline_cull.left) {
             const left_outline_w = self.wall_data.left_outline.texWRaw() * wall_size_mult;
-            render.drawQuad(
+            main.renderer.drawQuad(
                 base_x - left_outline_w,
                 base_y,
                 left_outline_w,
@@ -177,7 +177,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
         }
 
         if (!self.wall_outline_cull.right) {
-            render.drawQuad(
+            main.renderer.drawQuad(
                 base_x + base_w,
                 base_y,
                 self.wall_data.right_outline.texWRaw() * wall_size_mult,
@@ -189,7 +189,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
 
         if (!self.wall_outline_cull.top) {
             const top_outline_h = self.wall_data.top_outline.texHRaw() * wall_size_mult;
-            render.drawQuad(
+            main.renderer.drawQuad(
                 base_x,
                 base_y - top_outline_h,
                 self.wall_data.top_outline.texWRaw() * wall_size_mult,
@@ -200,7 +200,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
         }
 
         if (!self.wall_outline_cull.bottom) {
-            render.drawQuad(
+            main.renderer.drawQuad(
                 base_x,
                 base_y + base_h,
                 self.wall_data.bottom_outline.texWRaw() * wall_size_mult,
@@ -217,7 +217,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
         const tile_size = @as(f32, px_per_tile) * cam_data.scale;
         const h_half = tile_size / 2.0;
 
-        render.drawQuad(
+        main.renderer.drawQuad(
             screen_pos.x - tile_size / 2.0,
             screen_pos.y - h_half,
             tile_size,
@@ -226,7 +226,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
             .{ .alpha_mult = self.alpha, .sort_extra = -4096 },
         );
 
-        if (self.name_text_data) |*data| render.drawText(
+        if (self.name_text_data) |*data| main.renderer.drawText(
             screen_pos.x - data.width * cam_data.scale / 2,
             screen_pos.y - h_half - data.height * cam_data.scale - 5,
             cam_data.scale,
@@ -259,11 +259,11 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
 
     if (main.settings.enable_lights) {
         const tile_pos = cam_data.worldToScreen(@floor(self.x), @floor(self.y));
-        render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
     if (self.data.show_name) {
-        if (self.name_text_data) |*data| render.drawText(
+        if (self.name_text_data) |*data| main.renderer.drawText(
             screen_pos.x - data.width * cam_data.scale / 2,
             screen_pos.y - data.height * cam_data.scale - 5,
             cam_data.scale,
@@ -272,7 +272,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
         );
     }
 
-    render.drawQuad(
+    main.renderer.drawQuad(
         screen_pos.x - w / 2.0,
         screen_pos.y,
         w,
@@ -293,7 +293,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
         const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * cam_data.scale;
         const hp_bar_y = screen_pos.y + h + y_pos;
 
-        render.drawQuad(
+        main.renderer.drawQuad(
             screen_pos.x - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w,
@@ -308,7 +308,7 @@ pub fn draw(self: *Entity, cam_data: render.CameraData, float_time_ms: f32) void
         var hp_bar_data = assets.hp_bar_data;
         hp_bar_data.tex_w /= hp_perc;
 
-        render.drawQuad(
+        main.renderer.drawQuad(
             screen_pos.x - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w / hp_perc,

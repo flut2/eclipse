@@ -8,7 +8,7 @@ const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
-const render = @import("../render.zig");
+const CameraData = @import("../render/CameraData.zig");
 const element = @import("../ui/elements/element.zig");
 const base = @import("object_base.zig");
 const map = @import("map.zig");
@@ -39,6 +39,6 @@ pub fn deinit(self: *Purchasable) void {
     base.deinit(self);
 }
 
-pub fn draw(_: *Purchasable, _: render.CameraData, _: f32) void {}
+pub fn draw(_: *Purchasable, _: CameraData, _: f32) void {}
 
 pub fn update(_: *Purchasable, _: i64) void {}

@@ -4,7 +4,8 @@ const utils = @import("shared").utils;
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
-const render = @import("../../render.zig");
+const CameraData = @import("../../render/CameraData.zig");
+const QuadOptions = @import("../../render/Renderer.zig").QuadOptions;
 const Settings = @import("../../Settings.zig");
 const systems = @import("../systems.zig");
 const Bar = @import("Bar.zig");
@@ -18,11 +19,11 @@ const Input = @import("Input.zig");
 const Item = @import("Item.zig");
 const KeyMapper = @import("KeyMapper.zig");
 const MenuBackground = @import("MenuBackground.zig");
+const Minimap = @import("Minimap.zig");
 const ScrollableContainer = @import("ScrollableContainer.zig");
 const Slider = @import("Slider.zig");
 const Text = @import("Text.zig");
 const Toggle = @import("Toggle.zig");
-const Minimap = @import("Minimap.zig");
 
 pub const UiElement = union(enum) {
     bar: *Bar,
@@ -43,7 +44,7 @@ pub const UiElement = union(enum) {
     toggle: *Toggle,
     minimap: *Minimap,
 
-    pub fn draw(self: UiElement, cam_data: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
+    pub fn draw(self: UiElement, cam_data: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
         switch (self) {
             inline else => |elem| elem.draw(cam_data, x_offset, y_offset, time),
         }
@@ -394,7 +395,7 @@ pub const NineSliceImageData = struct {
 
     pub fn draw(self: NineSliceImageData, x: f32, y: f32, scissor_override: ?ScissorRect) void {
         const scissor = if (scissor_override) |s| s else self.scissor;
-        var opts: render.QuadOptions = .{
+        var opts: QuadOptions = .{
             .alpha_mult = self.alpha,
             .color = self.color,
             .color_intensity = self.color_intensity,
@@ -407,13 +408,13 @@ pub const NineSliceImageData = struct {
         const top_left = self.topLeft();
         const top_left_w = top_left.texWRaw();
         const top_left_h = top_left.texHRaw();
-        render.drawQuad(x, y, top_left_w, top_left_h, top_left, opts);
+        main.renderer.drawQuad(x, y, top_left_w, top_left_h, top_left, opts);
 
         const top_right = self.topRight();
         const top_right_w = top_right.texWRaw();
         if (scissor.min_x != ScissorRect.dont_scissor) opts.scissor.min_x = scissor.min_x - (w - top_right_w);
         if (scissor.max_x != ScissorRect.dont_scissor) opts.scissor.max_x = scissor.max_x - (w - top_right_w);
-        render.drawQuad(x + (w - top_right_w), y, top_right_w, top_right.texHRaw(), top_right, opts);
+        main.renderer.drawQuad(x + (w - top_right_w), y, top_right_w, top_right.texHRaw(), top_right, opts);
 
         const bottom_left = self.bottomLeft();
         const bottom_left_w = bottom_left.texWRaw();
@@ -422,7 +423,7 @@ pub const NineSliceImageData = struct {
         opts.scissor.max_x = scissor.max_x;
         if (scissor.min_y != ScissorRect.dont_scissor) opts.scissor.min_y = scissor.min_y - (h - bottom_left_h);
         if (scissor.max_y != ScissorRect.dont_scissor) opts.scissor.max_y = scissor.max_y - (h - bottom_left_h);
-        render.drawQuad(x, y + (h - bottom_left_h), bottom_left_w, bottom_left_h, bottom_left, opts);
+        main.renderer.drawQuad(x, y + (h - bottom_left_h), bottom_left_w, bottom_left_h, bottom_left, opts);
 
         const bottom_right = self.bottomRight();
         const bottom_right_w = bottom_right.texWRaw();
@@ -443,7 +444,7 @@ pub const NineSliceImageData = struct {
             scissor.max_y - (h - bottom_left_h)
         else
             ScissorRect.dont_scissor;
-        render.drawQuad(x + (w - bottom_right_w), y + (h - bottom_right_h), bottom_right_w, bottom_right_h, bottom_right, opts);
+        main.renderer.drawQuad(x + (w - bottom_right_w), y + (h - bottom_right_h), bottom_right_w, bottom_right_h, bottom_right, opts);
 
         const top_center = self.topCenter();
         opts.scissor.min_x = if (scissor.min_x != ScissorRect.dont_scissor)
@@ -456,7 +457,7 @@ pub const NineSliceImageData = struct {
             ScissorRect.dont_scissor;
         opts.scissor.min_y = scissor.min_y;
         opts.scissor.max_y = scissor.max_y;
-        render.drawQuad(x + top_left_w, y, w - top_left_w - top_right_w, top_center.texHRaw(), top_center, opts);
+        main.renderer.drawQuad(x + top_left_w, y, w - top_left_w - top_right_w, top_center.texHRaw(), top_center, opts);
 
         const bottom_center = self.bottomCenter();
         const bottom_center_h = bottom_center.texHRaw();
@@ -476,7 +477,7 @@ pub const NineSliceImageData = struct {
             scissor.max_y - (h - bottom_center_h)
         else
             ScissorRect.dont_scissor;
-        render.drawQuad(x + bottom_left_w, y + (h - bottom_center_h), w - bottom_left_w - bottom_right_w, bottom_center_h, bottom_center, opts);
+        main.renderer.drawQuad(x + bottom_left_w, y + (h - bottom_center_h), w - bottom_left_w - bottom_right_w, bottom_center_h, bottom_center, opts);
 
         const middle_center = self.middleCenter();
         opts.scissor.min_x = if (scissor.min_x != ScissorRect.dont_scissor)
@@ -495,7 +496,7 @@ pub const NineSliceImageData = struct {
             scissor.max_y - top_left_h
         else
             ScissorRect.dont_scissor;
-        render.drawQuad(x + top_left_w, y + top_left_h, w - top_left_w - top_right_w, h - top_left_h - bottom_left_h, middle_center, opts);
+        main.renderer.drawQuad(x + top_left_w, y + top_left_h, w - top_left_w - top_right_w, h - top_left_h - bottom_left_h, middle_center, opts);
 
         const middle_left = self.middleLeft();
         opts.scissor.min_x = scissor.min_x;
@@ -508,7 +509,7 @@ pub const NineSliceImageData = struct {
             scissor.max_y - top_left_h
         else
             ScissorRect.dont_scissor;
-        render.drawQuad(x, y + top_left_h, middle_left.texWRaw(), h - top_left_h - bottom_left_h, middle_left, opts);
+        main.renderer.drawQuad(x, y + top_left_h, middle_left.texWRaw(), h - top_left_h - bottom_left_h, middle_left, opts);
 
         const middle_right = self.middleRight();
         const middle_right_w = middle_right.texWRaw();
@@ -528,7 +529,7 @@ pub const NineSliceImageData = struct {
             scissor.max_y - top_left_h
         else
             ScissorRect.dont_scissor;
-        render.drawQuad(x + (w - middle_right_w), y + top_left_h, middle_right_w, h - top_left_h - bottom_left_h, middle_right, opts);
+        main.renderer.drawQuad(x + (w - middle_right_w), y + top_left_h, middle_right_w, h - top_left_h - bottom_left_h, middle_right, opts);
     }
 
     pub fn topLeft(self: NineSliceImageData) AtlasData {
@@ -579,14 +580,14 @@ pub const NormalImageData = struct {
     atlas_data: assets.AtlasData,
 
     pub fn draw(self: NormalImageData, x: f32, y: f32, scissor_override: ?ScissorRect) void {
-        const opts: render.QuadOptions = .{
+        const opts: QuadOptions = .{
             .alpha_mult = self.alpha,
             .scissor = if (scissor_override) |s| s else self.scissor,
             .color = self.color,
             .color_intensity = self.color_intensity,
             .shadow_texel_mult = if (self.glow) 2.0 / @max(self.scale_x, self.scale_y) else 0.0,
         };
-        render.drawQuad(x, y, self.texWRaw(), self.texHRaw(), self.atlas_data, opts);
+        main.renderer.drawQuad(x, y, self.texWRaw(), self.texHRaw(), self.atlas_data, opts);
     }
 
     pub fn width(self: NormalImageData) f32 {

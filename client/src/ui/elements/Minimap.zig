@@ -6,17 +6,16 @@ const utils = shared.utils;
 const f32i = utils.f32i;
 
 const assets = @import("../../assets.zig");
+const Camera = @import("../../Camera.zig");
+const Enemy = @import("../../game/Enemy.zig");
 const map = @import("../../game/map.zig");
+const Player = @import("../../game/Player.zig");
+const Portal = @import("../../game/Portal.zig");
 const main = @import("../../main.zig");
-const render = @import("../../render.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
-
-const Camera = @import("../../Camera.zig");
-const Portal = @import("../../game/Portal.zig");
-const Player = @import("../../game/Player.zig");
-const Enemy = @import("../../game/Enemy.zig");
 
 const MinimapIcon = struct {
     const self_id = 0;
@@ -45,7 +44,7 @@ pub fn deinit(self: *Minimap) void {
     self.icons.deinit(main.allocator);
 }
 
-pub fn draw(self: *Minimap, cam_data: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(self: *Minimap, cam_data: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
 
     self.decor.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
@@ -56,7 +55,7 @@ pub fn draw(self: *Minimap, cam_data: render.CameraData, x_offset: f32, y_offset
     const fminimap_h = f32i(map.minimap.height);
     const zoom = cam_data.minimap_zoom;
     const uv_size = .{ fw / zoom / fminimap_w, fh / zoom / fminimap_h };
-    render.generics.append(main.allocator, .{
+    main.renderer.generics.append(main.allocator, .{
         .render_type = .minimap,
         .pos = .{
             self.base.x + self.offset_x + x_offset + assets.padding,
@@ -71,7 +70,7 @@ pub fn draw(self: *Minimap, cam_data: render.CameraData, x_offset: f32, y_offset
     const scale = 2.0;
     const player_icon_w = player_icon.texWRaw() * scale;
     const player_icon_h = player_icon.texHRaw() * scale;
-    render.drawQuad(
+    main.renderer.drawQuad(
         self.base.x + self.offset_x + x_offset + (self.map_width - player_icon_w) / 2.0,
         self.base.y + self.offset_y + y_offset + (self.map_height - player_icon_h) / 2.0,
         player_icon_w,
@@ -86,7 +85,7 @@ pub fn draw(self: *Minimap, cam_data: render.CameraData, x_offset: f32, y_offset
         const icon_data = assets.minimap_icons[icon.id];
         const icon_w = icon_data.width() * scale;
         const icon_h = icon_data.height() * scale;
-        render.drawQuad(
+        main.renderer.drawQuad(
             self.base.x + self.offset_x + x_offset + icon.x - icon_w / 2.0,
             self.base.y + self.offset_y + y_offset + icon.y - icon_h / 2.0,
             icon_w,

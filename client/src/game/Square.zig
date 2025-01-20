@@ -7,10 +7,10 @@ const u32f = utils.u32f;
 
 const assets = @import("../assets.zig");
 const main = @import("../main.zig");
+const CameraData = @import("../render/CameraData.zig");
 const ui_systems = @import("../ui/systems.zig");
 const Entity = @import("Entity.zig");
 const map = @import("map.zig");
-const render = @import("../render.zig");
 
 const Square = @This();
 
@@ -119,13 +119,13 @@ fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, 
     square.blends[blend_dir] = .{ .u = -1.0, .v = -1.0 };
 }
 
-pub fn draw(self: Square, cam_data: render.CameraData, float_time_ms: f32) void {
+pub fn draw(self: Square, cam_data: CameraData, float_time_ms: f32) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_ground_layer or
         self.data_id == Square.empty_tile) return;
 
     const screen_pos = cam_data.worldToScreen(self.x, self.y);
 
-    if (main.settings.enable_lights) render.drawLight(self.data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
+    if (main.settings.enable_lights) main.renderer.drawLight(self.data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
 
     const time_sec = float_time_ms / std.time.ms_per_s;
     const u_offset, const v_offset = switch (self.data.animation.type) {
@@ -140,7 +140,7 @@ pub fn draw(self: Square, cam_data: render.CameraData, float_time_ms: f32) void 
         .unset => .{ 0.0, 0.0 },
     };
 
-    render.grounds.append(main.allocator, .{
+    main.renderer.grounds.append(main.allocator, .{
         .pos = .{ screen_pos.x, screen_pos.y },
         .uv = .{ self.atlas_data.tex_u, self.atlas_data.tex_v },
         .offset_uv = .{ u_offset, v_offset },

@@ -6,7 +6,7 @@ const f32i = utils.f32i;
 const i64f = utils.i64f;
 
 const main = @import("../../main.zig");
-const render = @import("../../render.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const element = @import("../elements/element.zig");
 
 const StatusText = @This();
@@ -31,7 +31,7 @@ pub fn draw(self: *StatusText, time: i64, obj_x: f32, obj_y: f32, scale: f32) bo
     const y = obj_y - self.text_data.height - frac * 40;
     self.text_data.lock.unlock();
 
-    render.drawText(x, y, scale, &self.text_data, .{});
+    main.renderer.drawText(x, y, scale, &self.text_data, .{});
     return true;
 }
 

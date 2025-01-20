@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const build_options = @import("options");
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 const gpu = @import("zgpu");
 const shared = @import("shared");
 const network_data = shared.network_data;
@@ -10,6 +10,8 @@ const game_data = shared.game_data;
 const utils = shared.utils;
 const uv = shared.uv;
 const f32i = utils.f32i;
+const u32f = utils.u32f;
+const vk = @import("vulkan");
 const zaudio = @import("zaudio");
 const ziggy = @import("ziggy");
 const zstbi = @import("zstbi");
@@ -20,7 +22,7 @@ const map = @import("game/map.zig");
 const GameServer = @import("GameServer.zig");
 const input = @import("input.zig");
 const LoginServer = @import("LoginServer.zig");
-const render = @import("render.zig");
+const Renderer = @import("render/Renderer.zig");
 const Settings = @import("Settings.zig");
 const dialog = @import("ui/dialogs/dialog.zig");
 const element = @import("ui/elements/element.zig");
@@ -28,6 +30,7 @@ const ui_systems = @import("ui/systems.zig");
 
 const tracy = if (build_options.enable_tracy) @import("tracy") else {};
 const rpmalloc = @import("rpmalloc").RPMalloc(.{});
+
 const AccountData = struct {
     email: []const u8,
     token: u128,
@@ -53,8 +56,6 @@ const AccountData = struct {
 pub export var NvOptimusEnablement: c_int = 1;
 pub export var AmdPowerXpressRequestHighPerformance: c_int = 1;
 
-pub var ctx: *gpu.GraphicsContext = undefined;
-pub var window: *glfw.Window = undefined;
 pub var account_arena_allocator: std.mem.Allocator = undefined;
 pub var current_account: ?AccountData = null;
 pub var character_list: ?network_data.CharacterListData = null;
@@ -81,6 +82,8 @@ pub var login_server: LoginServer = undefined;
 pub var camera: Camera = .{};
 pub var settings: Settings = .{};
 pub var main_loop: *uv.uv_loop_t = undefined;
+pub var window: *glfw.Window = undefined;
+pub var renderer: *Renderer = undefined;
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
     const float_w = f32i(w);
@@ -148,31 +151,30 @@ fn renderTick() !void {
     };
     defer rpmalloc.deinitThread(true);
 
+    renderer = allocator.create(Renderer) catch oomPanic();
+    renderer.* = try .create(if (settings.enable_vsync) .fifo_khr else .immediate_khr);
+    defer {
+        renderer.destroy();
+        allocator.destroy(renderer);
+    }
+
     var last_vsync = settings.enable_vsync;
     var fps_time_start: i64 = 0;
     var frames: usize = 0;
     while (tick_render) : (std.atomic.spinLoopHint()) {
         if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
-            ctx.swapchain.release();
-            const framebuffer_size = ctx.window_provider.fn_getFramebufferSize(ctx.window_provider.window);
-            ctx.swapchain_descriptor.width = framebuffer_size[0];
-            ctx.swapchain_descriptor.height = framebuffer_size[1];
-            ctx.swapchain_descriptor.present_mode = if (settings.enable_vsync) .fifo else .immediate;
-            ctx.swapchain = ctx.device.createSwapChain(ctx.surface, ctx.swapchain_descriptor);
+            camera.lock.lock();
+            const extent: vk.Extent2D = .{ .width = u32f(camera.width), .height = u32f(camera.height) };
+            camera.lock.unlock();
+            try renderer.swapchain.recreate(extent, if (settings.enable_vsync) .fifo_khr else .immediate_khr);
+            renderer.destroyFrameAndCmdBuffers();
+            try renderer.createFrameAndCmdBuffers();
             last_vsync = settings.enable_vsync;
             need_swap_chain_update = false;
         }
 
         defer frames += 1;
-        const back_buffer = ctx.swapchain.getCurrentTextureView();
-        defer back_buffer.release();
-        const encoder = ctx.device.createCommandEncoder(null);
-        defer encoder.release();
-        render.draw(current_time, back_buffer, encoder);
-        const commands = encoder.finish(null);
-        defer commands.release();
-        ctx.queue.submit(&.{commands});
-        ctx.swapchain.present();
+        try renderer.draw(current_time);
 
         if (current_time - fps_time_start > 1 * std.time.us_per_s) {
             if (settings.stats_enabled) switch (ui_systems.screen) {
@@ -206,24 +208,24 @@ fn renderTick() !void {
                     );
                 }
 
-                ctx.queue.writeTexture(
-                    .{ .texture = render.minimap.texture, .origin = .{ .x = min_x, .y = min_y } },
-                    .{ .bytes_per_row = comp_len * w, .rows_per_image = h },
-                    .{ .width = w, .height = h },
-                    u8,
-                    map.minimap_copy[0 .. w * h * comp_len],
-                );
+                // ctx.queue.writeTexture(
+                //     .{ .texture = render.minimap.texture, .origin = .{ .x = min_x, .y = min_y } },
+                //     .{ .bytes_per_row = comp_len * w, .rows_per_image = h },
+                //     .{ .width = w, .height = h },
+                //     u8,
+                //     map.minimap_copy[0 .. w * h * comp_len],
+                // );
 
                 need_minimap_update = false;
                 minimap_update = .{};
             } else if (need_force_update) {
-                ctx.queue.writeTexture(
-                    .{ .texture = render.minimap.texture },
-                    .{ .bytes_per_row = map.minimap.bytes_per_row, .rows_per_image = map.minimap.height },
-                    .{ .width = map.minimap.width, .height = map.minimap.height },
-                    u8,
-                    map.minimap.data,
-                );
+                // ctx.queue.writeTexture(
+                //     .{ .texture = render.minimap.texture },
+                //     .{ .bytes_per_row = map.minimap.bytes_per_row, .rows_per_image = map.minimap.height },
+                //     .{ .width = map.minimap.width, .height = map.minimap.height },
+                //     u8,
+                //     map.minimap.data,
+                // );
                 need_force_update = false;
             }
         }
@@ -325,8 +327,14 @@ pub fn main() !void {
     current_account = AccountData.load() catch null;
     defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
 
+    glfw.Hint.set(.platform, 0x00060004); // X11
     try glfw.init();
     defer glfw.terminate();
+
+    if (!glfw.isVulkanSupported()) {
+        std.log.err("GLFW could not find libvulkan", .{});
+        return error.NoVulkan;
+    }
 
     zstbi.init(allocator);
     defer zstbi.deinit();
@@ -354,6 +362,7 @@ pub fn main() !void {
     glfw.windowHintTyped(.client_api, .no_api);
     window = try glfw.Window.create(1280, 720, "Eclipse", null);
     defer window.destroy();
+
     window.setSizeLimits(1280, 720, -1, -1);
     window.setCursor(switch (settings.cursor_type) {
         .basic => assets.default_cursor,
@@ -365,35 +374,12 @@ pub fn main() !void {
         .target_ally => assets.target_ally_cursor,
     });
 
-    ctx = gpu.GraphicsContext.create(
-        allocator,
-        .{
-            .window = window,
-            .fn_getTime = @ptrCast(&glfw.getTime),
-            .fn_getFramebufferSize = @ptrCast(&glfw.Window.getFramebufferSize),
-            .fn_getWin32Window = @ptrCast(&glfw.getWin32Window),
-            .fn_getX11Display = @ptrCast(&glfw.getX11Display),
-            .fn_getX11Window = @ptrCast(&glfw.getX11Window),
-            .fn_getWaylandDisplay = @ptrCast(&glfw.getWaylandDisplay),
-            .fn_getWaylandSurface = @ptrCast(&glfw.getWaylandWindow),
-            .fn_getCocoaWindow = @ptrCast(&glfw.getCocoaWindow),
-        },
-        .{ .present_mode = if (settings.enable_vsync) .fifo else .immediate },
-    ) catch |e| {
-        std.log.err("Failed to create graphics context: {any}", .{e});
-        return;
-    };
-    defer ctx.destroy(allocator);
-
     _ = window.setKeyCallback(input.keyEvent);
     _ = window.setCharCallback(input.charEvent);
     _ = window.setCursorPosCallback(input.mouseMoveEvent);
     _ = window.setMouseButtonCallback(input.mouseEvent);
     _ = window.setScrollCallback(input.scrollEvent);
     _ = window.setFramebufferSizeCallback(onResize);
-
-    try render.init(ctx);
-    defer render.deinit();
 
     render_thread = try .spawn(.{ .allocator = allocator }, renderTick, .{});
     defer {

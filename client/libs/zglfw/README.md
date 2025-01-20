@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
 
 Now in your code you may import and use `zglfw`:
 ```zig
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 
 pub fn main() !void {
     try glfw.init();

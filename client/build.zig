@@ -22,7 +22,7 @@ pub fn buildWithoutDupes(
     optimize: std.builtin.OptimizeMode,
     enable_tracy: bool,
 ) !void {
-    const dawn_debug_mode = b.option(bool, "dawn_debug_mode", "Whether to have Dawn validation errors and to use the debug binary") orelse true;
+    const enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse (optimize != .Debug);
     const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
     const version = b.option([]const u8, "version", "Build version, for the version text and client-server version checks") orelse "1.0";
     const login_server_ip = b.option([]const u8, "login_server_ip", "The IP of the login server") orelse "127.0.0.1";
@@ -36,8 +36,8 @@ pub fn buildWithoutDupes(
             .target = target,
             .optimize = optimize,
             .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
-            // .use_lld = check or optimize != .Debug,
-            // .use_llvm = check or optimize != .Debug,
+            .use_lld = !check, // and optimize != .Debug,
+            .use_llvm = !check, // and optimize != .Debug,
         });
 
         if (check) check_step.dependOn(&exe.step);
@@ -48,6 +48,7 @@ pub fn buildWithoutDupes(
         options.addOption([]const u8, "version", version);
         options.addOption([]const u8, "login_server_ip", login_server_ip);
         options.addOption(u16, "login_server_port", login_server_port);
+        options.addOption(bool, "enable_validation_layers", enable_validation_layers);
         exe.root_module.addOptions("options", options);
 
         const shared_dep = b.dependency("shared", .{
@@ -67,17 +68,35 @@ pub fn buildWithoutDupes(
             .optimize = optimize,
         }).module("turbopack"));
 
-        @import("system_sdk").addLibraryPathsTo(exe);
-        @import("zgpu").link(root_add ++ "libs/zgpu/", exe, dawn_debug_mode);
-        const zgpu = b.dependency("zgpu", .{ .debug_mode = dawn_debug_mode });
-        exe.root_module.addImport("zgpu", zgpu.module("root"));
-        exe.linkLibrary(zgpu.artifact("zdawn"));
+        const vulkan = b.dependency("vulkan_zig", .{ .registry = b.path("libs/vk.xml") }).module("vulkan-zig");
+        exe.root_module.addImport("vulkan", vulkan);
+        exe.linkLibCpp();
+        exe.linkSystemLibrary(if (target.result.os.tag == .windows) "vulkan-1" else "vulkan");
+        exe.addIncludePath(b.path("libs/vma"));
+        const env_map = try std.process.getEnvMap(b.allocator);
+        inline for (.{ "VULKAN_SDK", "VK_SDK_PATH" }) |env_var| if (env_map.get(env_var)) |path| {
+            exe.addLibraryPath(.{ .cwd_relative = b.pathJoin(&.{ path, "lib" }) });
+            exe.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ path, "include" }) });
+        };
+        exe.addCSourceFile(.{ .file = b.path("libs/vma/vk_mem_alloc.cpp") });
+
+        inline for (.{
+            .{ "generic.vert", "generic_vert.spv", "generic_vert" },
+            .{ "generic.frag", "generic_frag.spv", "generic_frag" },
+            .{ "ground.vert", "ground_vert.spv", "ground_vert" },
+            .{ "ground.frag", "ground_frag.spv", "ground_frag" },
+        }) |names| {
+            const comp_cmd = b.addSystemCommand(&.{ "glslc", "--target-env=vulkan1.0", "-o" });
+            const spv = comp_cmd.addOutputFileArg(names[1]);
+            comp_cmd.addFileArg(b.path("src/render/shaders/" ++ names[0]));
+            exe.root_module.addAnonymousImport(names[2], .{ .root_source_file = spv });
+        }
 
         const zglfw_dep = b.dependency("zglfw", .{
             .target = target,
             .optimize = optimize,
         });
-        exe.root_module.addImport("zglfw", zglfw_dep.module("root"));
+        exe.root_module.addImport("glfw", zglfw_dep.module("root"));
         exe.linkLibrary(zglfw_dep.artifact("glfw"));
 
         const zstbi_dep = b.dependency("zstbi", .{
@@ -87,6 +106,7 @@ pub fn buildWithoutDupes(
         exe.root_module.addImport("zstbi", zstbi_dep.module("root"));
         exe.linkLibrary(zstbi_dep.artifact("zstbi"));
 
+        @import("system_sdk").addLibraryPathsTo(exe);
         const zaudio_dep = b.dependency("zaudio", .{
             .target = target,
             .optimize = optimize,

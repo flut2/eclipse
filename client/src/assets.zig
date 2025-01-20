@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 const pack = @import("turbopack");
 const shared = @import("shared");
 const game_data = shared.game_data;

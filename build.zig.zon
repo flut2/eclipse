@@ -8,11 +8,14 @@
         .zaudio = .{ .path = "client/libs/zaudio" },
         .zstbi = .{ .path = "client/libs/zstbi" },
         .zglfw = .{ .path = "client/libs/zglfw" },
-        .zgpu = .{ .path = "client/libs/zgpu" },
         .hiredis = .{ .path = "server/libs/hiredis" },
         .turbopack = .{
             .url = "git+https://github.com/flut2/turbopack.git#afeb5e792e19043aea738ff0315e07047dc64dd6",
             .hash = "1220436f7fbbe4886f98313128e2fc0291bba801229429e8ad0a3de47360851761fe",
+        },
+        .vulkan_zig = .{
+            .url = "git+https://github.com/Snektron/vulkan-zig.git#bb470f16dabd8195155ba9e3714dc62d7ad69add",
+            .hash = "12205f4e25c7102242d99dfc4f022a9c667bf4c5058b3919364f89fd882b6845d721",
         },
     },
     .paths = .{

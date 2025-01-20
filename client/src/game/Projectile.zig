@@ -9,7 +9,7 @@ const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
-const render = @import("../render.zig");
+const CameraData = @import("../render/CameraData.zig");
 const Ally = @import("Ally.zig");
 const Enemy = @import("Enemy.zig");
 const Entity = @import("Entity.zig");
@@ -203,7 +203,7 @@ fn updatePosition(self: *Projectile, elapsed: f32, dt: f32) void {
     }
 }
 
-pub fn draw(self: *Projectile, cam_data: render.CameraData, float_time_ms: f32) void {
+pub fn draw(self: *Projectile, cam_data: CameraData, float_time_ms: f32) void {
     defer self.time_dilation_active = false;
 
     if (!cam_data.visibleInCamera(self.x, self.y)) return;
@@ -220,13 +220,13 @@ pub fn draw(self: *Projectile, cam_data: render.CameraData, float_time_ms: f32) 
 
     if (main.settings.enable_lights) {
         const tile_pos = cam_data.worldToScreen(self.x, self.y);
-        render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
     const color: u32 = if (self.time_dilation_active) 0x0000FF else 0x000000;
     const color_intensity: f32 = if (self.time_dilation_active) 0.33 else 0.0;
 
-    render.drawQuad(
+    main.renderer.drawQuad(
         screen_pos.x - w / 2.0,
         screen_pos.y + z_offset,
         w,

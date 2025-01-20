@@ -3,7 +3,7 @@ const game_data = @import("shared").game_data;
 const assets = @import("../../assets.zig");
 const map = @import("../../game/map.zig");
 const main = @import("../../main.zig");
-const render = @import("../../render.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -63,7 +63,7 @@ pub fn deinit(self: *Image) void {
     if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: Image, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(self: Image, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
     self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
 }

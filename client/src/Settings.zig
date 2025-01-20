@@ -1,10 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
+
 const ziggy = @import("ziggy");
 
-const glfw = @import("zglfw");
-
 const assets = @import("assets.zig");
+const glfw = @import("glfw");
 const main = @import("main.zig");
 
 const Self = @This();

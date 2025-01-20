@@ -1,8 +1,9 @@
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 
 const assets = @import("../../assets.zig");
 const input = @import("../../input.zig");
-const render = @import("../../render.zig");
+const main = @import("../../main.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const Settings = @import("../../Settings.zig");
 const systems = @import("../systems.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
@@ -87,7 +88,7 @@ pub fn deinit(self: *KeyMapper) void {
     if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: *KeyMapper, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(self: *KeyMapper, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
     const image_data = self.image_data.current(self.state);
     const w, const h = switch (image_data) {
@@ -95,7 +96,7 @@ pub fn draw(self: *KeyMapper, _: render.CameraData, x_offset: f32, y_offset: f32
         .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
     };
 
-    render.drawQuad(
+    main.renderer.drawQuad(
         self.base.x + x_offset,
         self.base.y + y_offset,
         w,
@@ -103,7 +104,7 @@ pub fn draw(self: *KeyMapper, _: render.CameraData, x_offset: f32, y_offset: f32
         assets.getKeyTexture(self.settings_button.*),
         .{ .scissor = self.base.scissor },
     );
-    if (self.title_text_data) |*text_data| render.drawText(
+    if (self.title_text_data) |*text_data| main.renderer.drawText(
         self.base.x + w + 5 + x_offset,
         self.base.y + (h - text_data.height) / 2 + y_offset,
         1.0,

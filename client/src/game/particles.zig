@@ -10,7 +10,7 @@ const assets = @import("../assets.zig");
 const px_per_tile = @import("../Camera.zig").px_per_tile;
 const GameServer = @import("../GameServer.zig");
 const main = @import("../main.zig");
-const render = @import("../render.zig");
+const CameraData = @import("../render/CameraData.zig");
 const map = @import("map.zig");
 
 pub const ThrowParticle = struct {
@@ -282,7 +282,7 @@ pub const Particle = union(enum) {
         };
     }
 
-    pub fn draw(self: Particle, cam_data: render.CameraData) void {
+    pub fn draw(self: Particle, cam_data: CameraData) void {
         switch (self) {
             inline else => |particle| {
                 if (!cam_data.visibleInCamera(particle.x, particle.y)) return;
@@ -292,7 +292,7 @@ pub const Particle = union(enum) {
                 const screen_pos = cam_data.worldToScreen(particle.x, particle.y);
                 const z_off = particle.z * (-px_per_tile * cam_data.scale) - h - assets.padding * particle.size * cam_data.scale;
 
-                render.drawQuad(
+                main.renderer.drawQuad(
                     screen_pos.x - w / 2.0,
                     screen_pos.y + z_off,
                     w,

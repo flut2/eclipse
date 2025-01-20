@@ -1,11 +1,11 @@
 const std = @import("std");
 
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 
 const assets = @import("../../assets.zig");
 const input = @import("../../input.zig");
 const main = @import("../../main.zig");
-const render = @import("../../render.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const systems = @import("../systems.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -86,14 +86,14 @@ pub fn deinit(self: *Input) void {
     self.text_data.deinit();
 }
 
-pub fn draw(self: *Input, _: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
+pub fn draw(self: *Input, _: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
     if (!self.base.visible) return;
 
     self.image_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
 
     const text_x = self.base.x + self.text_inlay_x + assets.padding + x_offset + self.x_offset;
     const text_y = self.base.y + self.text_inlay_y + assets.padding + y_offset;
-    render.drawText(text_x, text_y, 1.0, &self.text_data, self.base.scissor);
+    main.renderer.drawText(text_x, text_y, 1.0, &self.text_data, self.base.scissor);
 
     const flash_delay = 500 * std.time.us_per_ms;
     if (self.last_input != -1 and (time - self.last_input < flash_delay or @mod(@divFloor(time, flash_delay), 2) == 0)) {

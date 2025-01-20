@@ -8,7 +8,7 @@ const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
-const render = @import("../render.zig");
+const CameraData = @import("../render/CameraData.zig");
 const element = @import("../ui/elements/element.zig");
 const ui_systems = @import("../ui/systems.zig");
 const base = @import("object_base.zig");
@@ -39,7 +39,7 @@ pub fn deinit(self: *Portal) void {
     base.deinit(self);
 }
 
-pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_id: u32) void {
+pub fn draw(self: *Portal, cam_data: CameraData, float_time_ms: f32, int_id: u32) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_portal_layer or
         !cam_data.visibleInCamera(self.x, self.y)) return;
 
@@ -48,14 +48,14 @@ pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_
 
     if (main.settings.enable_lights) {
         const tile_pos = cam_data.worldToScreen(self.x, self.y);
-        render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
     if (self.data.draw_on_ground) {
         const tile_size = @as(f32, px_per_tile) * cam_data.scale;
         const h_half = tile_size / 2.0;
 
-        render.drawQuad(
+        main.renderer.drawQuad(
             screen_pos.x - tile_size / 2.0,
             screen_pos.y - h_half,
             tile_size * cam_data.scale,
@@ -64,7 +64,7 @@ pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_
             .{ .alpha_mult = self.alpha, .sort_extra = -4096 },
         );
 
-        if (self.name_text_data) |*data| render.drawText(
+        if (self.name_text_data) |*data| main.renderer.drawText(
             screen_pos.x - data.width * cam_data.scale / 2,
             screen_pos.y - h_half - data.height * cam_data.scale - 5,
             cam_data.scale,
@@ -75,9 +75,9 @@ pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_
         if (int_id == self.map_id) {
             const button_w = 100.0 / 5.0;
             const button_h = 100.0 / 5.0;
-            const total_w = render.enter_text_data.width * cam_data.scale + button_w;
+            const total_w = main.renderer.enter_text_data.width * cam_data.scale + button_w;
 
-            render.drawQuad(
+            main.renderer.drawQuad(
                 screen_pos.x - total_w / 2,
                 screen_pos.y + h_half + 5,
                 button_w * cam_data.scale,
@@ -86,11 +86,11 @@ pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_
                 .{},
             );
 
-            render.drawText(
+            main.renderer.drawText(
                 screen_pos.x - total_w / 2 + button_w,
                 screen_pos.y + h_half + 5,
                 cam_data.scale,
-                &render.enter_text_data,
+                &main.renderer.enter_text_data,
                 .{},
             );
         }
@@ -116,7 +116,7 @@ pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_
     _ = &color_intensity;
     // flash
 
-    if (self.name_text_data) |*data| render.drawText(
+    if (self.name_text_data) |*data| main.renderer.drawText(
         screen_pos.x - data.width * cam_data.scale / 2,
         screen_pos.y - data.height * cam_data.scale - 5,
         cam_data.scale,
@@ -127,9 +127,9 @@ pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_
     if (int_id == self.map_id) {
         const button_w = 100.0 / 5.0;
         const button_h = 100.0 / 5.0;
-        const total_w = render.enter_text_data.width * cam_data.scale + button_w;
+        const total_w = main.renderer.enter_text_data.width * cam_data.scale + button_w;
 
-        render.drawQuad(
+        main.renderer.drawQuad(
             screen_pos.x - total_w / 2,
             screen_pos.y + h + 5,
             button_w * cam_data.scale,
@@ -138,16 +138,16 @@ pub fn draw(self: *Portal, cam_data: render.CameraData, float_time_ms: f32, int_
             .{},
         );
 
-        render.drawText(
+        main.renderer.drawText(
             screen_pos.x - total_w / 2 + button_w,
             screen_pos.y + h + 5,
             cam_data.scale,
-            &render.enter_text_data,
+            &main.renderer.enter_text_data,
             .{},
         );
     }
 
-    render.drawQuad(
+    main.renderer.drawQuad(
         screen_pos.x - w / 2.0,
         screen_pos.y,
         w,

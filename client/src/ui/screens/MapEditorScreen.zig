@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 const nfd = @import("nfd");
 const shared = @import("shared");
 const map_data = shared.map_data;

@@ -12,7 +12,7 @@ const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const size_mult = Camera.size_mult;
 const main = @import("../main.zig");
-const render = @import("../render.zig");
+const CameraData = @import("../render/CameraData.zig");
 const ui_systems = @import("../ui/systems.zig");
 const Ally = @import("Ally.zig");
 const Container = @import("Container.zig");
@@ -169,20 +169,20 @@ pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_int
     var cond_len: f32 = 0.0;
     for (0..@bitSizeOf(utils.Condition)) |i| {
         if (cond_int & (@as(usize, 1) << @intCast(i)) != 0)
-            cond_len += if (render.condition_rects[i].len > 0) 1.0 else 0.0;
+            cond_len += if (main.renderer.condition_rects[i].len > 0) 1.0 else 0.0;
     }
 
     var cond_new_idx: f32 = 0.0;
     for (0..@bitSizeOf(utils.Condition)) |i| {
         if (cond_int & (@as(usize, 1) << @intCast(i)) != 0) {
-            const data = render.condition_rects[i];
+            const data = main.renderer.condition_rects[i];
             if (data.len > 0) {
                 const frame_new_idx = usizef(float_time_ms / (0.5 * std.time.us_per_s));
                 const current_frame = data[@mod(frame_new_idx, data.len)];
                 const cond_w = current_frame.texWRaw() * scale;
                 const cond_h = current_frame.texHRaw() * scale;
 
-                render.drawQuad(
+                main.renderer.drawQuad(
                     x - cond_len * (cond_w + 2) / 2 + cond_new_idx * (cond_w + 2),
                     y,
                     cond_w,

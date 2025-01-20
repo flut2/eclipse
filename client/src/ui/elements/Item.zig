@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 
 const main = @import("../../main.zig");
-const render = @import("../../render.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -85,7 +85,7 @@ pub fn mouseMove(self: *Item, x: f32, y: f32, x_offset: f32, y_offset: f32) bool
     return !(self.base.event_policy.pass_move or !in_bounds);
 }
 
-pub fn draw(self: Item, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(self: Item, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
     if (self.background_image_data) |background_image_data| background_image_data.draw(self.background_x + x_offset, self.background_y + y_offset, self.base.scissor);
     self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);

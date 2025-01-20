@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 const shared = @import("shared");
 const utils = shared.utils;
 const network_data = shared.network_data;

@@ -1,6 +1,5 @@
 const builtin = @import("builtin");
 const std = @import("std");
-const vk = @import("vulkan");
 
 const options = @import("zglfw_options");
 
@@ -18,8 +17,8 @@ pub const Hint = enum(i32) {
     x11_xcb_vulkan_surface = 0x00052001,
     wayland_libdecor = 0x00053001,
 
-    pub fn set(hint: Hint, value: bool) void {
-        glfwInitHint(hint, @intFromBool(value));
+    pub fn set(hint: Hint, value: i32) void {
+        glfwInitHint(hint, value);
     }
     extern fn glfwInitHint(hint: Hint, value: i32) void;
 };
@@ -149,11 +148,6 @@ pub fn getProcAddress(procname: [*:0]const u8) ?GlProc {
 }
 extern fn glfwGetProcAddress(procname: [*:0]const u8) ?GlProc;
 
-pub const VkProc = *const anyopaque;
-pub fn getInstanceProcAddress(instance: vk.Instance, procname: [*:0]const u8) ?VkProc {
-    return glfwGetInstanceProcAddress(instance, procname);
-}
-extern fn glfwGetInstanceProcAddress(instance: vk.Instance, procname: [*:0]const u8) ?VkProc;
 //--------------------------------------------------------------------------------------------------
 //
 // Keyboard/Mouse
@@ -865,11 +859,6 @@ pub const Window = opaque {
         glfwShowWindow(window);
     }
     extern fn glfwShowWindow(window: *Window) void;
-
-    pub fn createSurface(self: *Window, instance: vk.Instance, surface: *vk.SurfaceKHR) vk.Result {
-        return glfwCreateWindowSurface(instance, self, null, surface);
-    }
-    extern fn glfwCreateWindowSurface(instance: vk.Instance, window: *Window, allocator: ?*const vk.AllocationCallbacks, surface: *vk.SurfaceKHR) vk.Result;
 };
 
 pub const WindowHint = enum(i32) {

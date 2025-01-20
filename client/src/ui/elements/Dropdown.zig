@@ -1,13 +1,13 @@
 const std = @import("std");
 
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 const shared = @import("shared");
 const utils = shared.utils;
 const f32i = utils.f32i;
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
-const render = @import("../../render.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const systems = @import("../systems.zig");
 const DropdownContainer = @import("DropdownContainer.zig");
 const element = @import("element.zig");
@@ -165,7 +165,7 @@ pub fn deinit(self: *Dropdown) void {
     main.allocator.destroy(self.container);
 }
 
-pub fn draw(self: *Dropdown, cam_data: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
+pub fn draw(self: *Dropdown, cam_data: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
     if (!self.base.visible) return;
 
     const base_x = self.base.x + x_offset;
@@ -176,7 +176,7 @@ pub fn draw(self: *Dropdown, cam_data: render.CameraData, x_offset: f32, y_offse
     };
     self.title_data.draw(base_x, base_y, self.base.scissor);
 
-    render.drawText(base_x, base_y, 1.0, &self.title_text, self.base.scissor);
+    main.renderer.drawText(base_x, base_y, 1.0, &self.title_text, self.base.scissor);
 
     const toggled = self.toggled;
     const button_image_data = (if (toggled) self.button_data_extended else self.button_data_collapsed).current(self.button_state);

@@ -16,7 +16,7 @@ const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const input = @import("../input.zig");
 const main = @import("../main.zig");
-const render = @import("../render.zig");
+const CameraData = @import("../render/CameraData.zig");
 const element = @import("../ui/elements/element.zig");
 const StatusText = @import("../ui/game/StatusText.zig");
 const ui_systems = @import("../ui/systems.zig");
@@ -306,7 +306,7 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
     }
 }
 
-pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void {
+pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
     if (ui_systems.screen == .editor or !cam_data.visibleInCamera(self.x, self.y)) return;
 
     const size = Camera.size_mult * cam_data.scale * self.size_mult;
@@ -339,12 +339,12 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
 
     if (main.settings.enable_lights) {
         const tile_pos = cam_data.worldToScreen(self.x, self.y);
-        render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
     if (self.name_text_data) |*data| {
         data.sort_extra = -data.height;
-        render.drawText(
+        main.renderer.drawText(
             screen_pos.x - x_offset - data.width / 2 - assets.padding * 2,
             screen_pos.y - data.height - 5,
             cam_data.scale,
@@ -353,7 +353,7 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
         );
     }
 
-    render.drawQuad(
+    main.renderer.drawQuad(
         screen_pos.x - w / 2.0,
         screen_pos.y,
         w,
@@ -374,7 +374,7 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
         const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * cam_data.scale;
         const hp_bar_y = screen_pos.y + h + y_pos;
 
-        render.drawQuad(
+        main.renderer.drawQuad(
             screen_pos.x - x_offset - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w,
@@ -393,7 +393,7 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
         var hp_bar_data = assets.hp_bar_data;
         hp_bar_data.tex_w *= hp_perc;
 
-        render.drawQuad(
+        main.renderer.drawQuad(
             screen_pos.x - x_offset - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w * hp_perc,
@@ -410,7 +410,7 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
         const mp_bar_h = assets.mp_bar_data.height() * 2 * cam_data.scale;
         const mp_bar_y = screen_pos.y + h + y_pos;
 
-        render.drawQuad(
+        main.renderer.drawQuad(
             screen_pos.x - x_offset - mp_bar_w / 2.0,
             mp_bar_y,
             mp_bar_w,
@@ -429,7 +429,7 @@ pub fn draw(self: *Player, cam_data: render.CameraData, float_time_ms: f32) void
         var mp_bar_data = assets.mp_bar_data;
         mp_bar_data.tex_w *= mp_perc;
 
-        render.drawQuad(
+        main.renderer.drawQuad(
             screen_pos.x - x_offset - mp_bar_w / 2.0,
             mp_bar_y,
             mp_bar_w * mp_perc,

@@ -1,7 +1,8 @@
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 
 const assets = @import("../../assets.zig");
-const render = @import("../../render.zig");
+const main = @import("../../main.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const systems = @import("../systems.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
@@ -81,7 +82,7 @@ pub fn deinit(self: *Toggle) void {
     if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: *Toggle, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(self: *Toggle, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
     const image_data = if (self.toggled.*)
         self.on_image_data.current(self.state)
@@ -93,7 +94,7 @@ pub fn draw(self: *Toggle, _: render.CameraData, x_offset: f32, y_offset: f32, _
     };
 
     image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
-    if (self.text_data) |*text_data| render.drawText(
+    if (self.text_data) |*text_data| main.renderer.drawText(
         self.base.x + w + 5 + x_offset,
         self.base.y + (h - text_data.height) / 2 + y_offset,
         1.0,

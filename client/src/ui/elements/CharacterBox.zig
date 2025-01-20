@@ -1,7 +1,8 @@
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 
 const assets = @import("../../assets.zig");
-const render = @import("../../render.zig");
+const main = @import("../../main.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const systems = @import("../systems.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -62,7 +63,7 @@ pub fn deinit(self: *CharacterBox) void {
     if (self.text_data) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: *CharacterBox, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(self: *CharacterBox, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
     const image_data = self.image_data.current(self.state);
     const w, const h = switch (image_data) {
@@ -71,7 +72,7 @@ pub fn draw(self: *CharacterBox, _: render.CameraData, x_offset: f32, y_offset: 
     };
 
     image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
-    if (self.text_data) |*text_data| render.drawText(
+    if (self.text_data) |*text_data| main.renderer.drawText(
         self.base.x + (w - text_data.width) / 2 + x_offset,
         self.base.y + (h - text_data.height) / 2 + y_offset,
         1.0,

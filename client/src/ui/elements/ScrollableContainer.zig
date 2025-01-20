@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 
 const main = @import("../../main.zig");
-const render = @import("../../render.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const Container = @import("Container.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -143,7 +143,7 @@ pub fn deinit(self: *ScrollableContainer) void {
     }
 }
 
-pub fn draw(self: ScrollableContainer, cam_data: render.CameraData, x_offset: f32, y_offset: f32, time: i64) void {
+pub fn draw(self: ScrollableContainer, cam_data: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
     if (!self.base.visible) return;
     self.container.draw(cam_data, x_offset, y_offset, time);
     self.scroll_bar.draw(cam_data, x_offset, y_offset, time);

@@ -1,9 +1,10 @@
 const std = @import("std");
 
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 const utils = @import("shared").utils;
 
-const render = @import("../../render.zig");
+const main = @import("../../main.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const systems = @import("../systems.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
@@ -227,7 +228,7 @@ pub fn deinit(self: *Slider) void {
     if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: *Slider, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(self: *Slider, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
     self.decor_image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
 
@@ -240,7 +241,7 @@ pub fn draw(self: *Slider, _: render.CameraData, x_offset: f32, y_offset: f32, _
     };
     knob_image_data.draw(knob_x, knob_y, self.base.scissor);
 
-    if (self.title_text_data) |*text_data| render.drawText(
+    if (self.title_text_data) |*text_data| main.renderer.drawText(
         self.base.x + x_offset,
         self.base.y + y_offset - self.title_offset,
         1.0,
@@ -248,7 +249,7 @@ pub fn draw(self: *Slider, _: render.CameraData, x_offset: f32, y_offset: f32, _
         self.base.scissor,
     );
 
-    if (self.value_text_data) |*text_data| render.drawText(
+    if (self.value_text_data) |*text_data| main.renderer.drawText(
         knob_x + if (self.vertical) knob_w else 0,
         knob_y + if (self.vertical) 0 else knob_h,
         1.0,

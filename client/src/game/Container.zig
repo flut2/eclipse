@@ -9,7 +9,7 @@ const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
-const render = @import("../render.zig");
+const CameraData = @import("../render/CameraData.zig");
 const element = @import("../ui/elements/element.zig");
 const ui_systems = @import("../ui/systems.zig");
 const base = @import("object_base.zig");
@@ -42,7 +42,7 @@ pub fn deinit(self: *Container) void {
     base.deinit(self);
 }
 
-pub fn draw(self: *Container, cam_data: render.CameraData, float_time_ms: f32) void {
+pub fn draw(self: *Container, cam_data: CameraData, float_time_ms: f32) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_container_layer or
         !cam_data.visibleInCamera(self.x, self.y)) return;
 
@@ -69,11 +69,11 @@ pub fn draw(self: *Container, cam_data: render.CameraData, float_time_ms: f32) v
 
     if (main.settings.enable_lights) {
         const tile_pos = cam_data.worldToScreen(self.x, self.y);
-        render.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
     if (self.data.show_name) {
-        if (self.name_text_data) |*data| render.drawText(
+        if (self.name_text_data) |*data| main.renderer.drawText(
             screen_pos.x - data.width * cam_data.scale / 2,
             screen_pos.y - data.height * cam_data.scale - 5,
             cam_data.scale,
@@ -82,7 +82,7 @@ pub fn draw(self: *Container, cam_data: render.CameraData, float_time_ms: f32) v
         );
     }
 
-    render.drawQuad(
+    main.renderer.drawQuad(
         screen_pos.x - w / 2.0,
         screen_pos.y,
         w,

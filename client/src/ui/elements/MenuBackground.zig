@@ -1,17 +1,18 @@
+const f32i = @import("shared").utils.f32i;
+
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
-const render = @import("../../render.zig");
+const CameraData = @import("../../render/CameraData.zig");
 const ElementBase = @import("element.zig").ElementBase;
-const f32i = @import("shared").utils.f32i;
 
 const MenuBackground = @This();
 base: ElementBase,
 w: f32,
 h: f32,
 
-pub fn draw(self: MenuBackground, _: render.CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(self: MenuBackground, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
-    render.generics.append(main.allocator, .{
+    main.renderer.generics.append(main.allocator, .{
         .render_type = .menu_bg,
         .pos = .{ self.base.x + x_offset, self.base.y + y_offset },
         .size = .{ self.w, self.h },

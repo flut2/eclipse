@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("zglfw");
+const glfw = @import("glfw");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const f32i = shared.utils.f32i;
