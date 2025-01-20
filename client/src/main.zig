@@ -327,7 +327,6 @@ pub fn main() !void {
     current_account = AccountData.load() catch null;
     defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
 
-    glfw.Hint.set(.platform, 0x00060004); // X11
     try glfw.init();
     defer glfw.terminate();
 

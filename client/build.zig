@@ -86,7 +86,7 @@ pub fn buildWithoutDupes(
             .{ "ground.vert", "ground_vert.spv", "ground_vert" },
             .{ "ground.frag", "ground_frag.spv", "ground_frag" },
         }) |names| {
-            const comp_cmd = b.addSystemCommand(&.{ "glslc", "--target-env=vulkan1.0", "-o" });
+            const comp_cmd = b.addSystemCommand(&.{ "glslc", "--target-env=vulkan1.2", "-o" });
             const spv = comp_cmd.addOutputFileArg(names[1]);
             comp_cmd.addFileArg(b.path("src/render/shaders/" ++ names[0]));
             exe.root_module.addAnonymousImport(names[2], .{ .root_source_file = spv });

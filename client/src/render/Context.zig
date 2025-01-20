@@ -95,7 +95,7 @@ pub fn init(allocator: std.mem.Allocator, window: *glfw.Window) !Context {
         .application_version = vk.makeApiVersion(1, 1, 0, 0),
         .p_engine_name = "Eclipse",
         .engine_version = vk.makeApiVersion(1, 1, 0, 0),
-        .api_version = vk.API_VERSION_1_0,
+        .api_version = vk.API_VERSION_1_2,
     };
 
     const instance = try self.base_dispatch.createInstance(&.{
