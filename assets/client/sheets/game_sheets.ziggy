@@ -94,8 +94,8 @@
     .type = @SheetType("image"),
     .name = "basic_items",
     .path = "basic_items.png",
-    .w = 8,
-    .h = 8,
+    .w = 10,
+    .h = 10,
 },
 {
     .type = @SheetType("image"),
