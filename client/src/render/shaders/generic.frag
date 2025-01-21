@@ -65,10 +65,24 @@ vec4 premultiply(vec4 tex) {
 
 vec3 unpackColor(uint color) {
     return vec3(
-        float((color & 0xFF0000) >> 16) / 255.0, 
-        float((color & 0x00FF00) >> 8) / 255.0, 
+        float((color & 0xFF0000) >> 16) / 255.0,
+        float((color & 0x00FF00) >> 8) / 255.0,
         float(color & 0x0000FF) / 255.0
     );
+}
+
+// This is the correct formula, but it doesn't seem like the font had gamma correction
+// baked in properly... TODO find a closer match later
+float srgbToLinear(float value) {
+    return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4);
+}
+
+// Most fonts have the gamma correction baked in already (including ours),
+// and the swapchain applies gamma correction due to it being sRGB.
+// This results in double gamma correction, and thus horrible looking characters,
+// unless we reverse the gamma correction on the fonts
+vec4 reverseGammaCorrection(vec4 color) {
+    return vec4(srgbToLinear(color.r), srgbToLinear(color.g), srgbToLinear(color.b), color.a);
 }
 
 float median(float r, float g, float b) {
@@ -84,82 +98,100 @@ void main() {
     vec2 dx = dFdx(in_uv);
     vec2 dy = dFdy(in_uv);
 
-    if (clamp(in_uv.x, instance.scissor.x, instance.scissor.y) != in_uv.x || 
-        clamp(in_uv.y, instance.scissor.z, instance.scissor.w) != in_uv.y) {
+    if (clamp(in_uv.x, instance.scissor.x, instance.scissor.y) != in_uv.x ||
+            clamp(in_uv.y, instance.scissor.z, instance.scissor.w) != in_uv.y) {
         discard;
     }
 
     switch (instance.render_type) {
-        default: {
-            color = vec4(0.0, 0.0, 0.0, 1.0);
-            return;
-        }
+        default:
+        discard;
 
-        case quad_render_type: {
+        case quad_render_type:
+        {
             vec4 pixel = textureGrad(game_tex, in_uv, dx, dy);
             color = premultiply(vec4(mix(pixel.rgb, unpackColor(instance.base_color), instance.color_intensity), pixel.a * instance.alpha_mult));
             return;
         }
 
-        case ui_quad_render_type: {
+        case ui_quad_render_type:
+        {
             vec4 pixel = textureGrad(ui_tex, in_uv, dx, dy);
             color = premultiply(vec4(mix(pixel.rgb, unpackColor(instance.base_color), instance.color_intensity), pixel.a * instance.alpha_mult));
             return;
         }
 
-        case minimap_render_type: {
+        case minimap_render_type:
+        {
             color = premultiply(textureGrad(minimap_tex, in_uv, dx, dy));
             return;
         }
 
-        case menu_bg_render_type: {
+        case menu_bg_render_type:
+        {
             color = premultiply(textureGrad(menu_bg_tex, in_uv, dx, dy));
             return;
         }
 
-        case text_normal_render_type: {
+        case text_normal_render_type:
+        {
             vec4 tex = vec4(0.0, 0.0, 0.0, 0.0);
             switch (instance.text_type) {
-                default: discard;
-                case medium_text_type: tex = textureGrad(medium_text_tex, in_uv, dx, dy); break;
-                case medium_italic_text_type: tex = textureGrad(medium_italic_text_tex, in_uv, dx, dy); break;
-                case bold_text_type: tex = textureGrad(bold_text_tex, in_uv, dx, dy); break;
-                case bold_italic_text_type: tex = textureGrad(bold_italic_text_tex, in_uv, dx, dy); break;
+                default:
+                discard;
+                case medium_text_type:
+                tex = textureGrad(medium_text_tex, in_uv, dx, dy);
+                break;
+                case medium_italic_text_type:
+                tex = textureGrad(medium_italic_text_tex, in_uv, dx, dy);
+                break;
+                case bold_text_type:
+                tex = textureGrad(bold_text_tex, in_uv, dx, dy);
+                break;
+                case bold_italic_text_type:
+                tex = textureGrad(bold_italic_text_tex, in_uv, dx, dy);
+                break;
             }
 
             float alpha = sampleMsdf(tex, instance.text_dist_factor, 0.0);
             vec4 base_pixel = vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult);
             if (instance.outline_width <= 0.0) {
-                color = base_pixel;
+                color = reverseGammaCorrection(premultiply(base_pixel));
                 return;
             }
 
             float outline_alpha = sampleMsdf(tex, instance.text_dist_factor, instance.outline_width);
-            color = premultiply(mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult));
+            color = reverseGammaCorrection(premultiply(mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult)));
             return;
         }
 
-        case text_drop_shadow_render_type: {
+        case text_drop_shadow_render_type:
+        {
             vec4 tex = vec4(0.0, 0.0, 0.0, 0.0);
             vec4 tex_offset = vec4(0.0, 0.0, 0.0, 0.0);
             switch (instance.text_type) {
-                default: discard;
-                case medium_text_type: {
+                default:
+                discard;
+                case medium_text_type:
+                {
                     tex = textureGrad(medium_text_tex, in_uv, dx, dy);
                     tex_offset = textureGrad(medium_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
                     break;
                 }
-                case medium_italic_text_type: {
+                case medium_italic_text_type:
+                {
                     tex = textureGrad(medium_italic_text_tex, in_uv, dx, dy);
                     tex_offset = textureGrad(medium_italic_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
                     break;
                 }
-                case bold_text_type: {
+                case bold_text_type:
+                {
                     tex = textureGrad(bold_text_tex, in_uv, dx, dy);
                     tex_offset = textureGrad(bold_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
                     break;
                 }
-                case bold_italic_text_type: {
+                case bold_italic_text_type:
+                {
                     tex = textureGrad(bold_italic_text_tex, in_uv, dx, dy);
                     tex_offset = textureGrad(bold_italic_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
                     break;
@@ -173,18 +205,17 @@ void main() {
             vec4 offset_pixel = vec4(unpackColor(instance.shadow_color), offset_opacity * instance.alpha_mult);
 
             if (instance.outline_width <= 0.0) {
-                color = mix(offset_pixel, base_pixel, alpha);
+                color = reverseGammaCorrection(premultiply(mix(offset_pixel, base_pixel, alpha)));
                 return;
             }
 
             float outline_alpha = sampleMsdf(tex, instance.text_dist_factor, instance.outline_width);
             vec4 outlined_pixel = mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult);
 
-            color = premultiply(mix(offset_pixel, outlined_pixel, outline_alpha));
+            color = reverseGammaCorrection(premultiply(mix(offset_pixel, outlined_pixel, outline_alpha)));
             return;
         }
     }
 
-    color = premultiply(vec4(0.0, 1.0, 0.0, 1.0));
-    return;
+    discard;
 }
