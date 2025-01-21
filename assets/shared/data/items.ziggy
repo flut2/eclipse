@@ -110,7 +110,7 @@
 },
 {
     .id = 8,
-    .name = "Officer Staff",
+    .name = "Officer's Staff",
     .description = "A ruby-tipped golden staff used by the officers of the Magic Corp.",
     .rarity = @ItemRarity("rare"),
     .item_type = @ItemType("staff"),
@@ -205,7 +205,7 @@
     .description = "A moderately powerful healing nanobot powered by a ruby gemstone.",
     .rarity = @ItemRarity("rare"),
     .item_type = @ItemType("artifact"),
-    .texture = { "basic_items": 20 },
+    .texture = { "basic_items": 21 },
     .stat_increases = [ strength { .amount = 10 } ],
 },
 {
