@@ -118,6 +118,8 @@ pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_d
         .class_id = class_data_id,
     } };
 
+    settings.last_char_id = char_id;
+
     game_server.connect(selected_server.ip, selected_server.port) catch |e| {
         std.log.err("Connection failed: {}", .{e});
         return;

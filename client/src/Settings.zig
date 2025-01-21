@@ -40,6 +40,7 @@ enable_lights: bool = true,
 stats_enabled: bool = true,
 remember_login: bool = true,
 cursor_type: CursorType = .aztec,
+last_char_id: u32 = std.math.maxInt(u32),
 
 pub fn init(allocator: std.mem.Allocator) !Self {
     arena = .init(allocator);

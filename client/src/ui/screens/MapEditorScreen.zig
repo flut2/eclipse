@@ -1294,6 +1294,11 @@ fn testCallback(ud: ?*anyopaque) void {
             ui_systems.last_map_data = data;
             ui_systems.is_testing = true;
 
+            for (list.characters) |char| if (char.char_id == main.settings.last_char_id) {
+                main.enterTest(list.servers[0], char.char_id, data);
+                return;
+            };
+
             main.enterTest(list.servers[0], list.characters[0].char_id, data);
             return;
         }

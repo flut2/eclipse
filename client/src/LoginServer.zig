@@ -320,6 +320,12 @@ fn handleVerifyResponse(_: *Server, data: PacketData(.verify_response)) void {
         defer ui_systems.ui_lock.unlock();
         ui_systems.switchScreen(.game);
     }
+
+    for (main.character_list.?.characters) |char| if (char.char_id == main.settings.last_char_id) {
+        main.enterGame(main.character_list.?.servers[0], char.char_id, std.math.maxInt(u16));
+        return;
+    };
+    
     main.enterGame(main.character_list.?.servers[0], main.character_list.?.characters[0].char_id, std.math.maxInt(u16));
 }
 
