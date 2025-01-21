@@ -182,6 +182,7 @@ bars_decor: *Image = undefined,
 stats_button: *Button = undefined,
 cards_button: *Button = undefined,
 talents_button: *Button = undefined,
+resources_button: *Button = undefined,
 stats_container: *UiContainer = undefined,
 cards_container: *UiContainer = undefined,
 ability_container: *UiContainer = undefined,
@@ -214,6 +215,8 @@ container_decor: *Image = undefined,
 container_name: *Text = undefined,
 container_items: [9]*Item = undefined,
 minimap: *Minimap = undefined,
+gold_text: *Text = undefined,
+gems_text: *Text = undefined,
 
 options: *Options = undefined,
 card_selection: *CardSelection = undefined,
@@ -235,6 +238,8 @@ last_max_mp: i32 = -1,
 last_max_mp_bonus: i32 = -1,
 last_in_combat: bool = false,
 last_card_count: i32 = -1,
+last_gold: u32 = std.math.maxInt(u32),
+last_gems: u32 = std.math.maxInt(u32),
 
 pub fn init(self: *GameScreen) !void {
     const inventory_data = assets.getUiData("player_inventory", 0);
@@ -248,6 +253,32 @@ pub fn init(self: *GameScreen) !void {
         .offset_y = 21.0,
         .map_width = 212.0,
         .map_height = 212.0,
+    });
+
+    self.gold_text = try element.create(Text, .{
+        .base = .{ .x = self.minimap.base.x + 47, .y = self.minimap.base.y + 244 },
+        .text_data = .{
+            .text = "",
+            .size = 10,
+            .max_chars = 32,
+            .vert_align = .middle,
+            .hori_align = .middle,
+            .max_width = 75,
+            .max_height = 22,
+        },
+    });
+
+    self.gems_text = try element.create(Text, .{
+        .base = .{ .x = self.minimap.base.x + 159, .y = self.minimap.base.y + 244 },
+        .text_data = .{
+            .text = "",
+            .size = 10,
+            .max_chars = 32,
+            .vert_align = .middle,
+            .hori_align = .middle,
+            .max_width = 75,
+            .max_height = 22,
+        },
     });
 
     self.inventory_decor = try element.create(Image, .{
@@ -324,7 +355,7 @@ pub fn init(self: *GameScreen) !void {
     const bars_data = assets.getUiData("player_abilities_bars", 0);
     self.bars_decor = try element.create(Image, .{
         .base = .{
-            .x = (main.camera.width - bars_data.width()) / 2,
+            .x = (main.camera.width - bars_data.width()) / 2 - 44,
             .y = main.camera.height - bars_data.height() + 10,
         },
         .image_data = .{ .normal = .{ .atlas_data = bars_data } },
@@ -332,7 +363,7 @@ pub fn init(self: *GameScreen) !void {
 
     const health_bar_data = assets.getUiData("player_health_bar", 0);
     self.health_bar = try element.create(Bar, .{
-        .base = .{ .x = self.bars_decor.base.x + 70, .y = self.bars_decor.base.y + 102 },
+        .base = .{ .x = self.bars_decor.base.x + 114, .y = self.bars_decor.base.y + 102 },
         .image_data = .{ .normal = .{ .atlas_data = health_bar_data } },
         .text_data = .{
             .text = "",
@@ -344,7 +375,7 @@ pub fn init(self: *GameScreen) !void {
 
     const mana_bar_data = assets.getUiData("player_mana_bar", 0);
     self.mana_bar = try element.create(Bar, .{
-        .base = .{ .x = self.bars_decor.base.x + 70, .y = self.bars_decor.base.y + 132 },
+        .base = .{ .x = self.bars_decor.base.x + 114, .y = self.bars_decor.base.y + 132 },
         .image_data = .{ .normal = .{ .atlas_data = mana_bar_data } },
         .text_data = .{
             .text = "",
@@ -356,7 +387,7 @@ pub fn init(self: *GameScreen) !void {
 
     const xp_bar_data = assets.getUiData("player_xp_bar", 0);
     self.spirit_bar = try element.create(Bar, .{
-        .base = .{ .x = self.bars_decor.base.x + 70, .y = self.bars_decor.base.y + 22 },
+        .base = .{ .x = self.bars_decor.base.x + 114, .y = self.bars_decor.base.y + 22 },
         .image_data = .{ .normal = .{ .atlas_data = xp_bar_data } },
         .text_data = .{
             .text = "",
@@ -367,34 +398,53 @@ pub fn init(self: *GameScreen) !void {
     });
 
     const talents_button_base = assets.getUiData("talent_view_button", 0);
-    const talents_button_hover = assets.getUiData("talent_view_button", 1);
-    const talents_button_press = assets.getUiData("talent_view_button", 2);
     self.talents_button = try element.create(Button, .{
         .base = .{
-            .x = self.bars_decor.base.x + 21 + (32 - talents_button_base.width() + assets.padding * 2) / 2.0,
-            .y = self.bars_decor.base.y + 29 + (32 - talents_button_base.height() + assets.padding * 2) / 2.0,
+            .x = self.bars_decor.base.x + 65 + (32 - talents_button_base.width() + assets.padding * 2) / 2.0,
+            .y = self.bars_decor.base.y + 73 + (32 - talents_button_base.height() + assets.padding * 2) / 2.0,
         },
-        .image_data = .fromImageData(talents_button_base, talents_button_hover, talents_button_press),
+        .image_data = .fromImageData(
+            talents_button_base,
+            assets.getUiData("talent_view_button", 1),
+            assets.getUiData("talent_view_button", 2),
+        ),
         .userdata = self,
         .pressCallback = talentsCallback,
     });
 
+    const resources_button_base = assets.getUiData("resource_view_button", 0);
+    self.resources_button = try element.create(Button, .{
+        .base = .{
+            .x = self.bars_decor.base.x + 65 + (32 - resources_button_base.width() + assets.padding * 2) / 2.0,
+            .y = self.bars_decor.base.y + 117 + (32 - resources_button_base.height() + assets.padding * 2) / 2.0,
+        },
+        .image_data = .fromImageData(
+            resources_button_base,
+            assets.getUiData("resource_view_button", 1),
+            assets.getUiData("resource_view_button", 2),
+        ),
+        .userdata = self,
+        .pressCallback = resourcesCallback,
+    });
+
     const cards_button_base = assets.getUiData("cards_button", 0);
-    const cards_button_hover = assets.getUiData("cards_button", 1);
-    const cards_button_press = assets.getUiData("cards_button", 2);
     self.cards_button = try element.create(Button, .{
         .base = .{
-            .x = self.bars_decor.base.x + 21 + (32 - cards_button_base.width() + assets.padding * 2) / 2.0,
+            .x = self.bars_decor.base.x + 22 + (32 - cards_button_base.width() + assets.padding * 2) / 2.0,
             .y = self.bars_decor.base.y + 73 + (32 - cards_button_base.height() + assets.padding * 2) / 2.0,
         },
-        .image_data = .fromImageData(cards_button_base, cards_button_hover, cards_button_press),
+        .image_data = .fromImageData(
+            cards_button_base,
+            assets.getUiData("cards_button", 1),
+            assets.getUiData("cards_button", 2),
+        ),
         .userdata = self,
         .pressCallback = cardsCallback,
     });
 
     const cards_decor_data = assets.getUiData("card_panel_bg", 0);
     self.cards_container = try element.create(UiContainer, .{ .base = .{
-        .x = self.bars_decor.base.x + 63 - 15,
+        .x = self.bars_decor.base.x + 107 - 15,
         .y = self.bars_decor.base.y + 15 - cards_decor_data.height(),
         .visible = false,
     } });
@@ -447,7 +497,7 @@ pub fn init(self: *GameScreen) !void {
     const stats_button_press = assets.getUiData("stats_button", 2);
     self.stats_button = try element.create(Button, .{
         .base = .{
-            .x = self.bars_decor.base.x + 21 + (32 - stats_button_base.width() + assets.padding * 2) / 2.0,
+            .x = self.bars_decor.base.x + 22 + (32 - stats_button_base.width() + assets.padding * 2) / 2.0,
             .y = self.bars_decor.base.y + 117 + (32 - stats_button_base.height() + assets.padding * 2) / 2.0,
         },
         .image_data = .fromImageData(stats_button_base, stats_button_hover, stats_button_press),
@@ -457,7 +507,7 @@ pub fn init(self: *GameScreen) !void {
 
     const stats_decor_data = assets.getUiData("player_stats", 0);
     self.stats_container = try element.create(UiContainer, .{ .base = .{
-        .x = self.bars_decor.base.x + 63 - 15,
+        .x = self.bars_decor.base.x + 107 - 15,
         .y = self.bars_decor.base.y + 15 - stats_decor_data.height(),
         .visible = false,
     } });
@@ -481,7 +531,7 @@ pub fn init(self: *GameScreen) !void {
     try addStatText(self.stats_container, &self.tenacity_stat_text, &idx);
 
     self.ability_container = try element.create(UiContainer, .{ .base = .{
-        .x = self.bars_decor.base.x + 69,
+        .x = self.bars_decor.base.x + 113,
         .y = self.bars_decor.base.y + 45,
     } });
 
@@ -656,10 +706,13 @@ fn addStatText(container: *UiContainer, text: **Text, idx: *f32) !void {
 
 pub fn deinit(self: *GameScreen) void {
     element.destroy(self.minimap);
+    element.destroy(self.gold_text);
+    element.destroy(self.gems_text);
     element.destroy(self.inventory_decor);
     element.destroy(self.container_decor);
     element.destroy(self.container_name);
     element.destroy(self.bars_decor);
+    element.destroy(self.resources_button);
     element.destroy(self.talents_button);
     element.destroy(self.cards_button);
     element.destroy(self.cards_container);
@@ -687,6 +740,10 @@ pub fn deinit(self: *GameScreen) void {
 
 pub fn resize(self: *GameScreen, w: f32, h: f32) void {
     self.minimap.base.x = w - self.minimap.width() + 10;
+    self.gold_text.base.x = self.minimap.base.x + 47;
+    self.gold_text.base.y = self.minimap.base.y + 244;
+    self.gems_text.base.x = self.minimap.base.x + 159;
+    self.gems_text.base.y = self.minimap.base.y + 244;
     self.fps_text.base.x = self.minimap.base.x;
     self.fps_text.base.y = self.minimap.base.y + self.minimap.height() - 10;
     self.inventory_decor.base.x = w - self.inventory_decor.width() + 10;
@@ -697,23 +754,25 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
     self.container_name.base.y = self.container_decor.base.y + 159;
     self.bars_decor.base.x = (w - self.bars_decor.width()) / 2;
     self.bars_decor.base.y = h - self.bars_decor.height() + 10;
-    self.stats_container.base.x = self.bars_decor.base.x + 63 - 15;
+    self.stats_container.base.x = self.bars_decor.base.x + 108 - 15;
     self.stats_container.base.y = self.bars_decor.base.y + 15 - self.stats_decor.height();
-    self.cards_container.base.x = self.bars_decor.base.x + 63 - 15;
+    self.cards_container.base.x = self.bars_decor.base.x + 108 - 15;
     self.cards_container.base.y = self.bars_decor.base.y + 15 - self.cards_decor.height();
-    self.ability_container.base.x = self.bars_decor.base.x + 69;
+    self.ability_container.base.x = self.bars_decor.base.x + 113;
     self.ability_container.base.y = self.bars_decor.base.y + 45;
-    self.talents_button.base.x = self.bars_decor.base.x + 21 + (32 - self.talents_button.width() + assets.padding * 2) / 2.0;
-    self.talents_button.base.y = self.bars_decor.base.y + 29 + (32 - self.talents_button.height() + assets.padding * 2) / 2.0;
-    self.cards_button.base.x = self.bars_decor.base.x + 21 + (32 - self.cards_button.width() + assets.padding * 2) / 2.0;
+    self.talents_button.base.x = self.bars_decor.base.x + 65 + (32 - self.talents_button.width() + assets.padding * 2) / 2.0;
+    self.talents_button.base.y = self.bars_decor.base.y + 73 + (32 - self.talents_button.height() + assets.padding * 2) / 2.0;
+    self.resources_button.base.x = self.bars_decor.base.x + 65 + (32 - self.resources_button.width() + assets.padding * 2) / 2.0;
+    self.resources_button.base.y = self.bars_decor.base.y + 117 + (32 - self.resources_button.height() + assets.padding * 2) / 2.0;
+    self.cards_button.base.x = self.bars_decor.base.x + 22 + (32 - self.cards_button.width() + assets.padding * 2) / 2.0;
     self.cards_button.base.y = self.bars_decor.base.y + 73 + (32 - self.cards_button.height() + assets.padding * 2) / 2.0;
-    self.stats_button.base.x = self.bars_decor.base.x + 21 + (32 - self.stats_button.width() + assets.padding * 2) / 2.0;
+    self.stats_button.base.x = self.bars_decor.base.x + 22 + (32 - self.stats_button.width() + assets.padding * 2) / 2.0;
     self.stats_button.base.y = self.bars_decor.base.y + 117 + (32 - self.stats_button.height() + assets.padding * 2) / 2.0;
-    self.health_bar.base.x = self.bars_decor.base.x + 70;
+    self.health_bar.base.x = self.bars_decor.base.x + 114;
     self.health_bar.base.y = self.bars_decor.base.y + 102;
-    self.mana_bar.base.x = self.bars_decor.base.x + 70;
+    self.mana_bar.base.x = self.bars_decor.base.x + 114;
     self.mana_bar.base.y = self.bars_decor.base.y + 132;
-    self.spirit_bar.base.x = self.bars_decor.base.x + 70;
+    self.spirit_bar.base.x = self.bars_decor.base.x + 114;
     self.spirit_bar.base.y = self.bars_decor.base.y + 22;
     const chat_decor_h = self.chat_decor.height();
     self.chat_decor.base.y = h - chat_decor_h - self.chat_input.image_data.current(self.chat_input.state).normal.height() + 15;
@@ -811,8 +870,21 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
             self.ability_overlay_texts[i].base.visible = false;
         }
 
-        const aether_changed = self.last_aether != local_player.aether;
+        if (self.last_gold != local_player.gold) {
+            self.gold_text.text_data.setText(
+                try std.fmt.bufPrint(self.gold_text.text_data.backing_buffer, "{}", .{local_player.gold}),
+            );
+            self.last_gold = local_player.gold;
+        }
 
+        if (self.last_gems != local_player.gems) {
+            self.gems_text.text_data.setText(
+                try std.fmt.bufPrint(self.gems_text.text_data.backing_buffer, "{}", .{local_player.gems}),
+            );
+            self.last_gems = local_player.gems;
+        }
+
+        const aether_changed = self.last_aether != local_player.aether;
         if (self.last_card_count != local_player.cards.len or aether_changed) {
             const old_cards_len = if (self.last_aether == std.math.maxInt(u8)) 0 else self.last_aether * 5;
             const new_cards_len = local_player.aether * 5;
@@ -1157,6 +1229,13 @@ fn talentsCallback(ud: ?*anyopaque) void {
     screen.talent_view.setVisible(!screen.talent_view.base.base.visible);
     screen.cards_container.base.visible = false;
     screen.stats_container.base.visible = false;
+}
+
+fn resourcesCallback(ud: ?*anyopaque) void {
+    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    screen.cards_container.base.visible = false;
+    screen.stats_container.base.visible = false;
+    screen.talent_view.setVisible(false);
 }
 
 fn leftCardFlipperCallback(ud: ?*anyopaque) void {

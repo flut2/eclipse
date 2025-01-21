@@ -404,6 +404,12 @@
     .h = 18,
 },
 {
+    .name = "resource_view_button",
+    .path = "resources/resource_view_button.png",
+    .w = 24,
+    .h = 24,
+},
+{
     .name = "tooltip_background",
     .path = "elements/tooltip_background.png",
     .w = 69,

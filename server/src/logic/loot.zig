@@ -343,6 +343,7 @@ pub fn dropSpirits(host: anytype, comptime loot: SpiritLoot) void {
                                 next_data.name,
                             }) catch continue,
                         );
+                        player.recalculateItems();
                         total_recv[i] = 0;
                     } else {
                         player.inv_data[i].amount = new_spirits;
