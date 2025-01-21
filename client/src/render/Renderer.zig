@@ -1599,7 +1599,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
     inline for (@typeInfo(CameraData).@"struct".fields) |field| @field(cam_data, field.name) = @field(main.camera, field.name);
     main.camera.lock.unlock();
 
-    const clear: vk.ClearValue = .{ .color = .{ .float_32 = .{ 0.0, 0.0, 0.0, 1.0 } } };
+    const clear: vk.ClearValue = .{ .color = .{ .float_32 = .{ 0.0, 0.0, 0.0, 0.0 } } };
 
     const viewport: vk.Viewport = .{
         .x = 0,
