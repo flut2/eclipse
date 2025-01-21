@@ -9,6 +9,7 @@
     .projectile_count = 2,
     .projectile = {
         .textures = [{ "basic_projectiles": 0 }],
+        .angle_correction = 1,
         .speed = 1.5,
         .duration = 0.7,
         .magic_dmg = 130,
@@ -118,6 +119,7 @@
     .projectile_count = 2,
     .projectile = {
         .textures = [{ "basic_projectiles": 1 }],
+        .angle_correction = 1,
         .speed = 1.5,
         .duration = 0.7,
         .magic_dmg = 250,
