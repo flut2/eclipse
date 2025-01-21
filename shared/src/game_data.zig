@@ -580,7 +580,7 @@ pub const ItemData = struct {
     untradeable: bool = false,
     ephemeral: bool = false,
     max_stack: u16 = 0,
-    level_spirits: u32 = 0,
+    level_spirits: u16 = 0,
     level_transform_item: ?[]const u8 = null,
     sound: []const u8 = "Unknown.mp3",
 

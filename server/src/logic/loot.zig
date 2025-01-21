@@ -311,19 +311,59 @@ pub fn dropSpirits(host: anytype, comptime loot: SpiritLoot) void {
 
         if (loot.chance >= rand.float(f32)) {
             const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
-            const clamped_spirits = @min(game_data.spiritGoal(player.aether), player.spirits_communed + amount);
+            var total_item_spirits = amount / 2;
+            const aether_spirits = amount - total_item_spirits;
+            var total_recv: [4]u32 = @splat(0);
+            while (total_item_spirits > 0) {
+                var ways_to_slice: u8 = 0;
+                for (player.inventory[0..4]) |item| {
+                    if (item == std.math.maxInt(u16)) continue;
+                    const data = game_data.item.from_id.get(item) orelse continue;
+                    if (data.level_spirits == 0) continue;
+                    ways_to_slice += 1;
+                }
+                if (ways_to_slice == 0) break;
+
+                const slice_amount = total_item_spirits / ways_to_slice;
+                for (player.inventory[0..4], 0..) |item, i| {
+                    if (item == std.math.maxInt(u16)) continue;
+                    const data = game_data.item.from_id.get(item) orelse continue;
+                    if (data.level_spirits == 0) continue;
+                    const old_spirits = data.level_spirits;
+                    const new_spirits = @min(data.level_spirits, player.inv_data[i].amount + slice_amount);
+                    const spirit_delta = new_spirits - old_spirits;
+                    total_item_spirits -= spirit_delta;
+                    if (new_spirits == data.level_spirits) {
+                        const next_data = game_data.item.from_name.get(data.level_transform_item.?).?;
+                        player.inventory[i] = next_data.id;
+                        player.inv_data[i].amount = 0;
+                        player.client.sendMessage(
+                            std.fmt.bufPrint(&buf, "Your \"{s}\" has leveled up, transforming into \"{s}\"", .{
+                                data.name,
+                                next_data.name,
+                            }) catch continue,
+                        );
+                        total_recv[i] = 0;
+                    } else {
+                        player.inv_data[i].amount = new_spirits;
+                        total_recv[i] += spirit_delta;
+                    }
+                }
+            }
+
+            for (total_recv, 0..) |recv, i| if (recv > 0) {
+                const data = game_data.item.from_id.get(player.inventory[i]) orelse continue;
+                player.client.sendMessage(
+                    std.fmt.bufPrint(&buf, "Your \"{s}\" has received {} Spirits", .{ data.name, recv }) catch continue,
+                );
+            };
+
+            const clamped_spirits = @min(game_data.spiritGoal(player.aether), player.spirits_communed + aether_spirits + total_item_spirits);
             const spirit_delta = clamped_spirits - player.spirits_communed;
             if (spirit_delta > 0) {
-                player.client.queuePacket(.{ .text = .{
-                    .name = "Server",
-                    .obj_type = .entity,
-                    .map_id = std.math.maxInt(u32),
-                    .bubble_time = 0,
-                    .recipient = "",
-                    .text = std.fmt.bufPrint(&buf, "You've received {} Spirits", .{spirit_delta}) catch continue,
-                    .name_color = 0xCC00CC,
-                    .text_color = 0xFF99FF,
-                } });
+                player.client.sendMessage(
+                    std.fmt.bufPrint(&buf, "You've received {} Spirits", .{spirit_delta}) catch continue,
+                );
                 player.spirits_communed = clamped_spirits;
             }
         }
