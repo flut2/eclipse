@@ -71,20 +71,6 @@ vec3 unpackColor(uint color) {
     );
 }
 
-// This is the correct formula, but it doesn't seem like the font had gamma correction
-// baked in properly... TODO find a closer match later
-float srgbToLinear(float value) {
-    return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4);
-}
-
-// Most fonts have the gamma correction baked in already (including ours),
-// and the swapchain applies gamma correction due to it being sRGB.
-// This results in double gamma correction, and thus horrible looking characters,
-// unless we reverse the gamma correction on the fonts
-vec4 reverseGammaCorrection(vec4 color) {
-    return vec4(srgbToLinear(color.r), srgbToLinear(color.g), srgbToLinear(color.b), color.a);
-}
-
 float median(float r, float g, float b) {
     return max(min(r, g), min(max(r, g), b));
 }
@@ -151,14 +137,14 @@ void main() {
             }
 
             float alpha = sampleMsdf(tex, instance.text_dist_factor, 0.0);
-            vec4 base_pixel = reverseGammaCorrection(vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult));
+            vec4 base_pixel = vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult);
             if (instance.outline_width <= 0.0) {
                 color = premultiply(base_pixel);
                 return;
             }
 
             float outline_alpha = sampleMsdf(tex, instance.text_dist_factor, instance.outline_width);
-            color = premultiply(mix(reverseGammaCorrection(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult)), base_pixel, alpha * instance.alpha_mult));
+            color = premultiply(mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult));
             return;
         }
 
@@ -193,10 +179,10 @@ void main() {
             }
 
             float alpha = sampleMsdf(tex, instance.text_dist_factor, 0.0);
-            vec4 base_pixel = reverseGammaCorrection(vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult));
+            vec4 base_pixel = vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult);
 
             float offset_opacity = sampleMsdf(tex_offset, instance.text_dist_factor, instance.outline_width);
-            vec4 offset_pixel = reverseGammaCorrection(vec4(unpackColor(instance.shadow_color), offset_opacity * instance.alpha_mult));
+            vec4 offset_pixel = vec4(unpackColor(instance.shadow_color), offset_opacity * instance.alpha_mult);
 
             if (instance.outline_width <= 0.0) {
                 color = premultiply(mix(offset_pixel, base_pixel, alpha));
