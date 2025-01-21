@@ -459,8 +459,7 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
 }
 
 pub fn destroy(self: *Renderer) void {
-    self.swapchain.waitForAllFences(self.context) catch @panic("TODO");
-    self.context.device.deviceWaitIdle() catch @panic("TODO");
+    self.waitIdle();
 
     self.medium_text.destroy(self.context, self.vk_allocator);
     self.medium_italic_text.destroy(self.context, self.vk_allocator);
@@ -500,6 +499,11 @@ pub fn destroy(self: *Renderer) void {
     self.swapchain.deinit(self.context);
     self.vk_allocator.destroy();
     self.context.deinit();
+}
+
+pub fn waitIdle(self: Renderer) void {
+    self.swapchain.waitForAllFences(self.context) catch @panic("TODO");
+    self.context.device.deviceWaitIdle() catch @panic("TODO");
 }
 
 fn writeToBuffer(
@@ -1616,7 +1620,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
     };
 
     const cmd_buffer = self.cmd_buffers[self.swapchain.image_index];
-    try self.context.device.resetCommandBuffer(cmd_buffer, .{});
+    // try self.context.device.resetCommandBuffer(cmd_buffer, .{});
     try self.context.device.beginCommandBuffer(cmd_buffer, &.{ .flags = .{} });
     self.context.device.cmdSetViewport(cmd_buffer, 0, 1, @ptrCast(&viewport));
     self.context.device.cmdSetScissor(cmd_buffer, 0, 1, @ptrCast(&scissor));
@@ -1824,6 +1828,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
     };
 
     if (state == .suboptimal) {
+        self.waitIdle();
         try self.swapchain.recreate(
             self.context,
             .{ .width = u32f(cam_data.width), .height = u32f(cam_data.height) },

@@ -162,6 +162,7 @@ fn renderTick() !void {
             camera.lock.lock();
             const extent: vk.Extent2D = .{ .width = u32f(camera.width), .height = u32f(camera.height) };
             camera.lock.unlock();
+            renderer.waitIdle();
             try renderer.swapchain.recreate(renderer.context, extent, if (settings.enable_vsync) .fifo_khr else .immediate_khr);
             renderer.destroyFrameAndCmdBuffers();
             try renderer.createFrameAndCmdBuffers();
