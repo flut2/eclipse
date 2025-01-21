@@ -1,14 +1,110 @@
 [
 {
     .id = 0,
-    .name = "Heavy Strikes",
+    .name = "Thick Plating",
     .rarity = @CardRarity("common"),
-    .description = \\Gain $strtxt+4%$stricon
+    .description = \\Gain $deftxt+3%$deficon
     ,
     .max_stack = 5,
 },
 {
     .id = 1,
+    .name = "Inpenetrable Ward",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $restxt+3%$resicon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 2,
+    .name = "Heavy Strikes",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $strtxt+5%$stricon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 3,
+    .name = "Arcane Incantations",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $wittxt+5%$witicon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 4,
+    .name = "Vital Essence",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $hptxt+5%$hpicon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 5,
+    .name = "Font of Magic",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $mptxt+5%$mpicon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 6,
+    .name = "Nimble Feet",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $spdtxt+7%$spdicon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 7,
+    .name = "Time Distortion",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $hsttxt+10%$hsticon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 8,
+    .name = "Enhanced Fortitude",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $statxt+10%$staicon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 9,
+    .name = "Boundless Aptitude",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $inttxt+10%$inticon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 10,
+    .name = "Unstoppable Will",
+    .rarity = @CardRarity("common"),
+    .description = \\Gain $tentxt+10%$tenicon
+    ,
+    .max_stack = 5,
+},
+{
+    .id = 11,
+    .name = "Warrior's Spirit",
+    .rarity = @CardRarity("rare"),
+    .description = \\Gain $deftxt+7%$deficon&reset, $restxt+7%$resicon
+    ,
+    .max_stack = 3,
+},
+{
+    .id = 12,
+    .name = "Champion's Glory",
+    .rarity = @CardRarity("rare"),
+    .description = \\Gain $strtxt+10%$stricon&reset, $wittxt+10%$witicon
+    ,
+    .max_stack = 3,
+},
+{
+    .id = 13,
     .name = "Titan's Resolve",
     .rarity = @CardRarity("rare"),
     .description = \\Gain $statxt+15%$staicon&reset, $inttxt+15%$inticon
@@ -16,26 +112,40 @@
     .max_stack = 3,
 },
 {
-    .id = 2,
+    .id = 14,
+    .name = "Corrosive Weaponry",
+    .rarity = @CardRarity("rare"),
+    .description = \\Gain $pentct+20%$penicon&reset, $prcicon+20%$prcicon
+    ,
+    .max_stack = 3,
+},
+{
+    .id = 15,
     .name = "Deft Hands",
     .rarity = @CardRarity("epic"),
-    .description = \\All weapons gain $multitxt+10% Rate of Fire&reset (additive)
+    .description = \\All weapons gain $multitxt+10%&reset Fire Rate (additive)
     ,
     .max_stack = 2,
 },
 {
-    .id = 3,
-    .name = "Absorption",
-    .rarity = @CardRarity("legendary"),
-    .description = \\Release a $hptxt10 (+1%$hpicon) Health&reset Healing Blast when receiving Physical or Magic Damage above 100 in a single hit
+    .id = 16,
+    .name = "Vampiric Enchantment",
+    .rarity = @CardRarity("epic"),
+    .description = \\Steal $hptxt1 Health&reset upon the death of an enemy for every 1000 damage dealt, up to $hptxt200 Health&reset
     ,
 },
 {
-    .id = 4,
-    .name = "Veil of Shadows",
-    .rarity = @CardRarity("mythic"),
-    .description = \\Receive Invisibility after 90 seconds of not attacking and not taking damage.
-    \\Doing either breaks this effect and resets the timer
+    .id = 17,
+    .name = "Ritual Sacrifice",
+    .rarity = @CardRarity("epic"),
+    .description = \\Steal $mptxt1 Mana&reset upon the death of an enemy for every 4000 damage dealt, up to $mptxt100 Mana&reset
+    ,
+},
+{
+    .id = 18,
+    .name = "Absorption",
+    .rarity = @CardRarity("legendary"),
+    .description = \\Release a $hptxt10 (+1%$hpicon) Health&reset Healing Blast when receiving Physical or Magic Damage above 70 in a single hit
     ,
 },
 ]
