@@ -69,7 +69,7 @@
     .level_transform_item = "Officer's Robe",
 },
 {
-    .id = 5,
+    .id = 4,
     .name = "Worn-out Hide",
     .description = "An armor made out of tanned cowhide that's well past its prime.",
     .item_type = @ItemType("leather"),
@@ -209,7 +209,7 @@
     .stat_increases = [ strength { .amount = 10 } ],
 },
 {
-    .id = 15,
+    .id = 16,
     .name = "Dwarven Coil",
     .description = "A sturdy dwarven invention that zaps enemies for $wittxt300 (+200%$witicon) Magic Damage&reset every second within $inttxt3 (+5%$inticon) tiles&reset for $hsttxt10 (+20%$hsticon) seconds&reset.",
     .rarity = @ItemRarity("epic"),

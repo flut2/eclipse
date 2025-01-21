@@ -191,7 +191,7 @@
 },
 {
     .id = 28,
-    .name = "T1 Realm Deco Chest Closed",
+    .name = "T1 Realm Deco Chest Closed 1",
     .textures = [{"props": 209}],
     .health = 1000,
     .defense = 20,
@@ -199,7 +199,7 @@
 },
 {
     .id = 29,
-    .name = "T1 Realm Deco Chest Closed",
+    .name = "T1 Realm Deco Chest Closed 2",
     .textures = [{"props": 210}],
 },
 {

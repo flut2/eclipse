@@ -35,8 +35,19 @@ fn parseGeneric(allocator: std.mem.Allocator, path: []const u8, comptime DataTyp
 
     const data_slice = try ziggy.parseLeaky([]DataType, allocator, file_data, .{});
     for (data_slice) |data| {
-        try data_maps.from_id.put(allocator, data.id, data);
-        try data_maps.from_name.put(allocator, data.name, data);
+        const id_res = try data_maps.from_id.getOrPut(allocator, data.id);
+        if (id_res.found_existing) {
+            std.log.err("Duplicate id for {s}: wanted to override {s}", .{data.name, id_res.value_ptr.name});
+            std.posix.exit(0);
+        }
+        id_res.value_ptr.* = data;
+
+        const name_res = try data_maps.from_name.getOrPut(allocator, data.name);
+        if (name_res.found_existing) {
+            std.log.err("Duplicate name for {s}", .{data.name});
+            std.posix.exit(0);
+        }
+        name_res.value_ptr.* = data;
     }
 }
 
