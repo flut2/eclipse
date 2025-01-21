@@ -9,9 +9,19 @@
             "command": "cd client && zig build -Doptimize=Debug -freference-trace",
         },
         {
+            "label": "Debug Client (Validation)",
+            "type": "shell",
+            "command": "cd client && zig build -Doptimize=Debug -Denable_validation_layers=true -freference-trace",
+        },
+        {
             "label": "Debug Client (Windows)",
             "type": "shell",
             "command": "cd client ; zig build -Doptimize=Debug -freference-trace",
+        },
+        {
+            "label": "Debug Client (Windows, Validation)",
+            "type": "shell",
+            "command": "cd client ; zig build -Doptimize=Debug -Denable_validation_layers=true -freference-trace",
         },
         {
             "label": "Debug Server",

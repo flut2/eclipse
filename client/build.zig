@@ -22,7 +22,7 @@ pub fn buildWithoutDupes(
     optimize: std.builtin.OptimizeMode,
     enable_tracy: bool,
 ) !void {
-    const enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse (optimize != .Debug);
+    const enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse false;
     const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
     const version = b.option([]const u8, "version", "Build version, for the version text and client-server version checks") orelse "1.0";
     const login_server_ip = b.option([]const u8, "login_server_ip", "The IP of the login server") orelse "127.0.0.1";

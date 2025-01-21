@@ -11,6 +11,15 @@
             "preLaunchTask": "Debug Client"
         },
         {
+            "name": "Debug Client (Validation)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/client/zig-out/bin/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/client/zig-out/bin",
+            "preLaunchTask": "Debug Client (Validation)"
+        },
+        {
             "name": "Debug Client (Windows)",
             "type": "cppvsdbg",
             "request": "launch",
@@ -18,6 +27,15 @@
             "args": [],
             "cwd": "${workspaceFolder}/client/zig-out/bin",
             "preLaunchTask": "Debug Client (Windows)"
+        },
+        {
+            "name": "Debug Client (Windows, Validation)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/client/zig-out/bin/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/client/zig-out/bin",
+            "preLaunchTask": "Debug Client (Windows, Validation)"
         },
         {
             "name": "Debug Server",
