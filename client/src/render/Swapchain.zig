@@ -83,6 +83,7 @@ pub fn initRecycle(
 
     const surface_format = try findSurfaceFormat(ctx);
     const final_present_mode = try findPresentMode(ctx, present_mode);
+    std.log.err("Selected present mode: {}", .{final_present_mode});
 
     var image_count = caps.min_image_count + 1;
     if (caps.max_image_count > 0) image_count = @min(image_count, caps.max_image_count);
@@ -231,8 +232,6 @@ fn findPresentMode(ctx: Context, present_mode: vk.PresentModeKHR) !vk.PresentMod
     const present_modes = try ctx.instance.getPhysicalDeviceSurfacePresentModesAllocKHR(ctx.phys_device, ctx.surface, main.allocator);
     defer main.allocator.free(present_modes);
     if (std.mem.indexOfScalar(vk.PresentModeKHR, present_modes, present_mode) != null) return present_mode;
-    inline for (.{ .mailbox_khr, .immediate_khr }) |mode|
-        if (std.mem.indexOfScalar(vk.PresentModeKHR, present_modes, mode) != null) return mode;
     return .fifo_khr;
 }
 
