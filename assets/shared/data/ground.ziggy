@@ -103,7 +103,7 @@
     .damage = 50,
     .light = {
         .color = "0xFFF4AA",
-        .intensity = 0.165,
+        .intensity = 0.1,
         .radius = 1.0,
     },
     .animation = { .type = @GroundAnim("wave"), .delta_x = -0.26, .delta_y = 0.26 },
