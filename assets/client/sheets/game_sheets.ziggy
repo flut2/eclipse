@@ -35,8 +35,8 @@
     .type = @SheetType("image"),
     .name = "basic_projectiles",
     .path = "basic_projectiles.png",
-    .w = 8,
-    .h = 8,
+    .w = 10,
+    .h = 10,
     .dont_trim = true,
 },
 {
@@ -96,7 +96,6 @@
     .path = "basic_items.png",
     .w = 10,
     .h = 10,
-    .dont_trim = true,
 },
 {
     .type = @SheetType("image"),

@@ -22,7 +22,7 @@ pub fn buildWithoutDupes(
     optimize: std.builtin.OptimizeMode,
     enable_tracy: bool,
 ) !void {
-    const enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse (optimize == .Debug);
+    const enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse (optimize != .Debug);
     const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
     const version = b.option([]const u8, "version", "Build version, for the version text and client-server version checks") orelse "1.0";
     const login_server_ip = b.option([]const u8, "login_server_ip", "The IP of the login server") orelse "127.0.0.1";
@@ -36,8 +36,8 @@ pub fn buildWithoutDupes(
             .target = target,
             .optimize = optimize,
             .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
-            .use_lld = !check, // and optimize != .Debug,
-            .use_llvm = !check, // and optimize != .Debug,
+            // .use_lld = !check and optimize != .Debug,
+            // .use_llvm = !check and optimize != .Debug,
         });
 
         if (check) check_step.dependOn(&exe.step);
@@ -68,17 +68,17 @@ pub fn buildWithoutDupes(
             .optimize = optimize,
         }).module("turbopack"));
 
-        const vulkan = b.dependency("vulkan_zig", .{ .registry = b.path("libs/vk.xml") }).module("vulkan-zig");
+        const vulkan = b.dependency("vulkan_zig", .{ .registry = b.path(root_add ++ "libs/vk.xml") }).module("vulkan-zig");
         exe.root_module.addImport("vulkan", vulkan);
         exe.linkLibCpp();
         exe.linkSystemLibrary(if (target.result.os.tag == .windows) "vulkan-1" else "vulkan");
-        exe.addIncludePath(b.path("libs/vma"));
+        exe.addIncludePath(b.path(root_add ++ "libs/vma"));
         const env_map = try std.process.getEnvMap(b.allocator);
         if (env_map.get("VULKAN_SDK")) |path| {
             exe.addLibraryPath(.{ .cwd_relative = b.pathJoin(&.{ path, "lib" }) });
             exe.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ path, "include" }) });
         } else @panic("Could not find Vulkan SDK");
-        exe.addCSourceFile(.{ .file = b.path("libs/vma/vk_mem_alloc.cpp") });
+        exe.addCSourceFile(.{ .file = b.path(root_add ++ "libs/vma/vk_mem_alloc.cpp") });
 
         inline for (.{
             .{ "generic.vert", "generic_vert.spv", "generic_vert" },
@@ -88,7 +88,7 @@ pub fn buildWithoutDupes(
         }) |names| {
             const comp_cmd = b.addSystemCommand(&.{ "glslc", "--target-env=vulkan1.2", "-o" });
             const spv = comp_cmd.addOutputFileArg(names[1]);
-            comp_cmd.addFileArg(b.path("src/render/shaders/" ++ names[0]));
+            comp_cmd.addFileArg(b.path(root_add ++ "src/render/shaders/" ++ names[0]));
             exe.root_module.addAnonymousImport(names[2], .{ .root_source_file = spv });
         }
 
