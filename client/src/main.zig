@@ -205,24 +205,34 @@ fn renderTick() !void {
                     );
                 }
 
-                // ctx.queue.writeTexture(
-                //     .{ .texture = render.minimap.texture, .origin = .{ .x = min_x, .y = min_y } },
-                //     .{ .bytes_per_row = comp_len * w, .rows_per_image = h },
-                //     .{ .width = w, .height = h },
-                //     u8,
-                //     map.minimap_copy[0 .. w * h * comp_len],
-                // );
+                renderer.waitIdle();
+                try Renderer.updateTexture(
+                    renderer.context,
+                    renderer.cmd_pool,
+                    renderer.vk_allocator,
+                    renderer.minimap,
+                    map.minimap_copy[0 .. w * h * comp_len],
+                    w,
+                    h,
+                    @intCast(min_x),
+                    @intCast(min_y),
+                );
 
                 need_minimap_update = false;
                 minimap_update = .{};
             } else if (need_force_update) {
-                // ctx.queue.writeTexture(
-                //     .{ .texture = render.minimap.texture },
-                //     .{ .bytes_per_row = map.minimap.bytes_per_row, .rows_per_image = map.minimap.height },
-                //     .{ .width = map.minimap.width, .height = map.minimap.height },
-                //     u8,
-                //     map.minimap.data,
-                // );
+                renderer.waitIdle();
+                try Renderer.updateTexture(
+                    renderer.context,
+                    renderer.cmd_pool,
+                    renderer.vk_allocator,
+                    renderer.minimap,
+                    map.minimap.data,
+                    map.minimap.width,
+                    map.minimap.height,
+                    0,
+                    0,
+                );
                 need_force_update = false;
             }
         }

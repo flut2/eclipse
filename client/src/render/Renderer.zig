@@ -673,7 +673,16 @@ fn transitionImageLayout(
     try destroyImmediateSubmit(ctx, cmd_pool, cmd_buffer);
 }
 
-fn copyBufferToTexture(ctx: Context, cmd_pool: vk.CommandPool, buffer: vk.Buffer, texture: Texture, w: u32, h: u32) !void {
+fn copyBufferToTexture(
+    ctx: Context,
+    cmd_pool: vk.CommandPool,
+    buffer: vk.Buffer,
+    texture: Texture,
+    w: u32,
+    h: u32,
+    offset_x: i32,
+    offset_y: i32,
+) !void {
     const cmd_buffer = try createImmediateSubmit(ctx, cmd_pool);
     ctx.device.cmdCopyBufferToImage(
         cmd_buffer,
@@ -686,7 +695,7 @@ fn copyBufferToTexture(ctx: Context, cmd_pool: vk.CommandPool, buffer: vk.Buffer
             .buffer_image_height = 0,
             .buffer_row_length = 0,
             .image_extent = .{ .depth = 1, .width = w, .height = h },
-            .image_offset = .{ .x = 0, .y = 0, .z = 0 },
+            .image_offset = .{ .x = offset_x, .y = offset_y, .z = 0 },
             .image_subresource = .{
                 .aspect_mask = if (texture.format == .d32_sfloat) .{ .depth_bit = true } else .{ .color_bit = true },
                 .mip_level = 0,
@@ -745,12 +754,12 @@ fn createTexture(
         }, null),
     };
 
-    try updateTexture(ctx, cmd_pool, vk_allocator, tex, image_data, size.width, size.height);
+    try updateTexture(ctx, cmd_pool, vk_allocator, tex, image_data, size.width, size.height, 0, 0);
 
     return tex;
 }
 
-fn updateTexture(
+pub fn updateTexture(
     ctx: Context,
     cmd_pool: vk.CommandPool,
     vk_allocator: vma.Allocator,
@@ -758,6 +767,8 @@ fn updateTexture(
     image_data: []const u8,
     w: u32,
     h: u32,
+    offset_x: i32,
+    offset_y: i32,
 ) !void {
     const staging_buffer = try vk_allocator.createBuffer(
         &.{
@@ -779,7 +790,7 @@ fn updateTexture(
     }
 
     try transitionImageLayout(ctx, cmd_pool, tex, .undefined, .transfer_dst_optimal);
-    try copyBufferToTexture(ctx, cmd_pool, staging_buffer.handle, tex, w, h);
+    try copyBufferToTexture(ctx, cmd_pool, staging_buffer.handle, tex, w, h, offset_x, offset_y);
     try transitionImageLayout(ctx, cmd_pool, tex, .transfer_dst_optimal, .shader_read_only_optimal);
 }
 
