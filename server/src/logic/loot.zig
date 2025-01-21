@@ -77,7 +77,7 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
             if (loot.chance >= utils.rng.random().float(f32)) {
                 const data = game_data.item.from_name.get(loot.name) orelse {
                     std.log.err("Item not found for name \"{s}\"", .{loot.name});
-                    return;
+                    break :@"continue";
                 };
                 received_loot[loot_idx] = data.id;
                 loot_idx += 1;
@@ -324,12 +324,12 @@ pub fn dropSpirits(host: anytype, comptime loot: SpiritLoot) void {
                 }
                 if (ways_to_slice == 0) break;
 
-                const slice_amount = total_item_spirits / ways_to_slice;
+                const slice_amount = @max(1, total_item_spirits / ways_to_slice);
                 for (player.inventory[0..4], 0..) |item, i| {
-                    if (item == std.math.maxInt(u16)) continue;
+                    if (item == std.math.maxInt(u16) or total_item_spirits <= 0) continue;
                     const data = game_data.item.from_id.get(item) orelse continue;
                     if (data.level_spirits == 0) continue;
-                    const old_spirits = data.level_spirits;
+                    const old_spirits = player.inv_data[i].amount;
                     const new_spirits = @min(data.level_spirits, player.inv_data[i].amount + slice_amount);
                     const spirit_delta = new_spirits - old_spirits;
                     total_item_spirits -= spirit_delta;

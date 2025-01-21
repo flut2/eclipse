@@ -111,7 +111,7 @@
 {
     .id = 8,
     .name = "Officer's Staff",
-    .description = "A ruby-tipped golden staff used by the officers of the Magic Corp.",
+    .description = "A ruby-tipped golden staff used by the officers of Magic Corp.",
     .rarity = @ItemRarity("rare"),
     .item_type = @ItemType("staff"),
     .texture = { "basic_items": 1 },
@@ -166,7 +166,7 @@
 {
     .id = 11,
     .name = "Officer's Robe",
-    .description = "A gold trimmed enchanted robe used by the officers of the Magic Corp.",
+    .description = "A gold trimmed enchanted robe used by the officers of Magic Corp.",
     .rarity = @ItemRarity("rare"),
     .item_type = @ItemType("robe"),
     .texture = { "basic_items": 5 },

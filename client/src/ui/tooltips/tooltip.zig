@@ -1,6 +1,8 @@
 const std = @import("std");
 
-const game_data = @import("shared").game_data;
+const shared = @import("shared");
+const game_data = shared.game_data;
+const network_data = shared.network_data;
 
 const main = @import("../../main.zig");
 const Container = @import("../elements/Container.zig");
@@ -29,7 +31,7 @@ pub const Tooltip = union(TooltipType) {
 };
 pub const TooltipParams = union(TooltipType) {
     none: void,
-    item: struct { x: f32, y: f32, item: u16 },
+    item: struct { x: f32, y: f32, item: u16, item_data: network_data.ItemData },
     text: struct { x: f32, y: f32, text_data: element.TextData },
     ability: struct { x: f32, y: f32, data: game_data.AbilityData },
     card: struct { x: f32, y: f32, data: game_data.CardData },

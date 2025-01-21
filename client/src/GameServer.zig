@@ -911,8 +911,8 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         => |val| {
             const inv_idx = @intFromEnum(stat) - @intFromEnum(network_data.PlayerStat.inv_data_0);
             player.inv_data[inv_idx] = val;
-            // if (is_self and ui_systems.screen == .game)
-            //     ui_systems.screen.game.setInvItemData(val, inv_idx);
+            if (is_self and ui_systems.screen == .game)
+                ui_systems.screen.game.setInvItemData(val, inv_idx);
         },
         .name => |val| parseNameStat(player, val),
     }

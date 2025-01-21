@@ -14,21 +14,11 @@ pub const LootTester = struct {
     };
 
     pub fn death(_: *LootTester, host: *Enemy) !void {
-        loot.dropPortals(host, &.{
-            .{ .name = "Crown Cove", .chance = 1.0 / 20.0 },
-            .{ .name = "Crimson Chasm", .chance = 1.0 / 1.0 },
-            .{ .name = "Dusty Dune", .chance = 1.0 / 20.0 },
-        });
-        loot.dropItems(host, &.{
-            .{ .name = "Starter Plate", .chance = 1.0 / 1.0, .threshold = 0.001 },
-            .{ .name = "Starter Bow", .chance = 1.0 / 20.0, .threshold = 0.001 },
-        });
         loot.dropCards(host, &.{
             .{ .name = "Heavy Strikes", .chance = 1.0 / 5.0, .threshold = 0.001 },
             .{ .name = "Titan's Resolve", .chance = 1.0 / 10.0, .threshold = 0.001 },
             .{ .name = "Deft Hands", .chance = 1.0 / 20.0, .threshold = 0.001 },
             .{ .name = "Absorption", .chance = 1.0 / 40.0, .threshold = 0.001 },
-            .{ .name = "Veil of Shadows", .chance = 1.0 / 200.0, .threshold = 0.001 },
         });
         loot.dropResources(host, &.{
             .{ .name = "Common Resource 1", .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.001 },
@@ -40,7 +30,7 @@ pub const LootTester = struct {
             .{ .type = .gold, .chance = 1.0 / 1.0, .min = 2, .max = 7, .threshold = 0.001 },
             .{ .type = .crowns, .chance = 1.0 / 80.0, .min = 1, .max = 3, .threshold = 0.001 },
         });
-        loot.dropSpirits(host, .{ .chance = 1.0 / 1.0, .min = 15, .max = 30, .threshold = 0.001 });
+        loot.dropSpirits(host, .{ .chance = 1.0 / 1.0, .min = 50, .max = 100, .threshold = 0.001 });
     }
 
     pub fn tick(_: *LootTester, host: *Enemy, _: i64, dt: i64) !void {

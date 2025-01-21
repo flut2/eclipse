@@ -8,6 +8,8 @@ const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
+const ItemData = @import("shared").network_data.ItemData;
+
 const Item = @This();
 base: ElementBase,
 background_x: f32,
@@ -27,6 +29,7 @@ drag_offset_x: f32 = 0,
 drag_offset_y: f32 = 0,
 last_click_time: i64 = 0,
 data_id: u16 = std.math.maxInt(u16),
+item_data: ItemData = .{},
 
 pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: glfw.Mods) bool {
     if (!self.base.visible or !self.draggable) return false;
@@ -73,6 +76,7 @@ pub fn mouseMove(self: *Item, x: f32, y: f32, x_offset: f32, y_offset: f32) bool
                 .x = x + x_offset,
                 .y = y + y_offset,
                 .item = self.data_id,
+                .item_data = self.item_data,
             });
             return true;
         }

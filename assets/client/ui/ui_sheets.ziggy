@@ -360,6 +360,14 @@
     .path = "editor_selection.png",
 },
 {
+    .name = "tooltip_level_bar_background",
+    .path = "elements/tooltip_level_bar_background.png",
+},
+{
+    .name = "tooltip_level_bar",
+    .path = "elements/tooltip_level_bar.png",
+},
+{
     .name = "text_input",
     .path = "elements/text_input.png",
     .w = 107,

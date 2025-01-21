@@ -63,8 +63,8 @@ pub const AbilityState = packed struct(u8) {
 };
 
 pub const ItemData = packed struct(u32) {
-    amount: u16, // reuse for level progress
-    unused: u16,
+    amount: u16 = 0, // reuse for level progress
+    unused: u16 = 0,
 };
 
 pub const PlayerStat = union(enum) {

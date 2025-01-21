@@ -5,6 +5,7 @@ const utils = shared.utils;
 const game_data = shared.game_data;
 const f32i = utils.f32i;
 const i64f = utils.i64f;
+const ItemData = shared.network_data.ItemData;
 
 const assets = @import("../../assets.zig");
 const Container = @import("../../game/Container.zig");
@@ -981,11 +982,14 @@ fn parseItemRects(self: *GameScreen) void {
     }
 }
 
-fn swapError(self: *GameScreen, start_slot: Slot, start_item: u16) void {
-    if (start_slot.is_container)
-        self.setContainerItem(start_item, start_slot.idx)
-    else
+fn swapError(self: *GameScreen, start_slot: Slot, start_item: u16, start_item_data: ItemData) void {
+    if (start_slot.is_container) {
+        self.setContainerItem(start_item, start_slot.idx);
+        self.setContainerItemData(start_item_data, start_slot.idx);
+    } else {
         self.setInvItem(start_item, start_slot.idx);
+        self.setInvItemData(start_item_data, start_slot.idx);
+    }
 
     assets.playSfx("error.mp3");
 }
@@ -1000,21 +1004,27 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
     else
         self.inventory_items[start_slot.idx].data_id;
 
+    const start_item_data = if (start_slot.is_container)
+        self.container_items[start_slot.idx].item_data
+    else
+        self.inventory_items[start_slot.idx].item_data;
+
     if (end_slot.idx == 255) {
         if (!start_slot.is_container) {
             self.setInvItem(std.math.maxInt(u16), start_slot.idx);
+            self.setInvItemData(.{}, start_slot.idx);
             main.game_server.sendPacket(.{ .inv_drop = .{
                 .player_map_id = map.info.player_map_id,
                 .slot_id = start_slot.idx,
             } });
         } else {
-            self.swapError(start_slot, start_item);
+            self.swapError(start_slot, start_item, start_item_data);
             return;
         }
     } else {
         if (map.localPlayer(.con)) |local_player| {
             const start_data = game_data.item.from_id.get(start_item) orelse {
-                self.swapError(start_slot, start_item);
+                self.swapError(start_slot, start_item, start_item_data);
                 return;
             };
 
@@ -1023,7 +1033,7 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
                     map.object_lock.lock();
                     defer map.object_lock.unlock();
                     const container = map.findObject(Container, self.container_id, .con) orelse {
-                        self.swapError(start_slot, start_item);
+                        self.swapError(start_slot, start_item, start_item_data);
                         return;
                     };
                     break :blk &container.data.item_types;
@@ -1031,7 +1041,7 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
             };
 
             if (!start_data.item_type.typesMatch(if (end_slot.idx < 4) end_item_types[end_slot.idx] else .any)) {
-                self.swapError(start_slot, start_item);
+                self.swapError(start_slot, start_item, start_item_data);
                 return;
             }
 
@@ -1040,15 +1050,26 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
             else
                 self.inventory_items[end_slot.idx].data_id;
 
-            if (start_slot.is_container)
-                self.setContainerItem(end_item, start_slot.idx)
+            const end_item_data = if (end_slot.is_container)
+                self.container_items[end_slot.idx].item_data
             else
-                self.setInvItem(end_item, start_slot.idx);
+                self.inventory_items[end_slot.idx].item_data;
 
-            if (end_slot.is_container)
-                self.setContainerItem(start_item, end_slot.idx)
-            else
+            if (start_slot.is_container) {
+                self.setContainerItem(end_item, start_slot.idx);
+                self.setContainerItemData(end_item_data, start_slot.idx);
+            } else {
+                self.setInvItem(end_item, start_slot.idx);
+                self.setInvItemData(end_item_data, start_slot.idx);
+            }
+
+            if (end_slot.is_container) {
+                self.setContainerItem(start_item, end_slot.idx);
+                self.setContainerItemData(start_item_data, end_slot.idx);
+            } else {
                 self.setInvItem(start_item, end_slot.idx);
+                self.setInvItemData(start_item_data, end_slot.idx);
+            }
 
             main.game_server.sendPacket(.{ .inv_swap = .{
                 .time = main.current_time,
@@ -1172,11 +1193,13 @@ fn itemDragEndCallback(item: *Item) void {
         item.base.x = item.drag_start_x;
         item.base.y = item.drag_start_y;
 
-        // to update the background image
-        if (start_slot.is_container)
-            current_screen.setContainerItem(item.data_id, start_slot.idx)
-        else
+        if (start_slot.is_container) {
+            current_screen.setContainerItem(item.data_id, start_slot.idx);
+            current_screen.setContainerItemData(item.item_data, start_slot.idx);
+        } else {
             current_screen.setInvItem(item.data_id, start_slot.idx);
+            current_screen.setInvItemData(item.item_data, start_slot.idx);
+        }
         return;
     }
 
@@ -1255,6 +1278,14 @@ pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
     self.container_items[idx].background_image_data = null;
 }
 
+pub fn setContainerItemData(self: *GameScreen, item_data: ItemData, idx: u8) void {
+    const data = game_data.item.from_id.get(self.container_items[idx].data_id) orelse return;
+    self.container_items[idx].item_data = item_data;
+    if (data.level_spirits == 0) {
+        // TODO: amount text
+    }
+}
+
 pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
     if (item == std.math.maxInt(u16)) {
         self.inventory_items[idx].data_id = std.math.maxInt(u16);
@@ -1308,6 +1339,14 @@ pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
     self.inventory_items[idx].base.x = self.inventory_decor.base.x + self.inventory_pos_data[idx].x + (self.inventory_pos_data[idx].w - self.inventory_items[idx].texWRaw()) / 2 + assets.padding;
     self.inventory_items[idx].base.y = self.inventory_decor.base.y + self.inventory_pos_data[idx].y + (self.inventory_pos_data[idx].h - self.inventory_items[idx].texHRaw()) / 2 + assets.padding;
     self.inventory_items[idx].background_image_data = null;
+}
+
+pub fn setInvItemData(self: *GameScreen, item_data: ItemData, idx: u8) void {
+    const data = game_data.item.from_id.get(self.inventory_items[idx].data_id) orelse return;
+    self.inventory_items[idx].item_data = item_data;
+    if (data.level_spirits == 0) {
+        // TODO: amount text
+    }
 }
 
 pub fn setContainerVisible(self: *GameScreen, visible: bool) void {
