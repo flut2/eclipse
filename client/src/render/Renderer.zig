@@ -1572,7 +1572,7 @@ pub fn drawText(
             .shadow_color = text_data.shadow_color,
             .alpha_mult = text_data.alpha,
             .outline_color = text_data.outline_color,
-            .outline_width = text_data.outline_width,
+            .outline_width = text_data.outline_width * current_size,
             .base_color = current_color,
             .color_intensity = 1.0,
             .pos = pos,

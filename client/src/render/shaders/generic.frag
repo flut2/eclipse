@@ -151,14 +151,14 @@ void main() {
             }
 
             float alpha = sampleMsdf(tex, instance.text_dist_factor, 0.0);
-            vec4 base_pixel = vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult);
+            vec4 base_pixel = reverseGammaCorrection(vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult));
             if (instance.outline_width <= 0.0) {
-                color = reverseGammaCorrection(premultiply(base_pixel));
+                color = premultiply(base_pixel);
                 return;
             }
 
             float outline_alpha = sampleMsdf(tex, instance.text_dist_factor, instance.outline_width);
-            color = reverseGammaCorrection(premultiply(mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult)));
+            color = premultiply(mix(reverseGammaCorrection(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult)), base_pixel, alpha * instance.alpha_mult));
             return;
         }
 
@@ -193,20 +193,20 @@ void main() {
             }
 
             float alpha = sampleMsdf(tex, instance.text_dist_factor, 0.0);
-            vec4 base_pixel = vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult);
+            vec4 base_pixel = reverseGammaCorrection(vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult));
 
             float offset_opacity = sampleMsdf(tex_offset, instance.text_dist_factor, instance.outline_width);
-            vec4 offset_pixel = vec4(unpackColor(instance.shadow_color), offset_opacity * instance.alpha_mult);
+            vec4 offset_pixel = reverseGammaCorrection(vec4(unpackColor(instance.shadow_color), offset_opacity * instance.alpha_mult));
 
             if (instance.outline_width <= 0.0) {
-                color = reverseGammaCorrection(premultiply(mix(offset_pixel, base_pixel, alpha)));
+                color = premultiply(mix(offset_pixel, base_pixel, alpha));
                 return;
             }
 
             float outline_alpha = sampleMsdf(tex, instance.text_dist_factor, instance.outline_width);
             vec4 outlined_pixel = mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult);
 
-            color = reverseGammaCorrection(premultiply(mix(offset_pixel, outlined_pixel, outline_alpha)));
+            color = premultiply(mix(offset_pixel, outlined_pixel, outline_alpha));
             return;
         }
     }
