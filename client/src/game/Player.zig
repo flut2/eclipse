@@ -384,7 +384,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         );
 
         const float_hp = f32i(self.hp);
-        const float_max_hp = f32i(self.max_hp);
+        const float_max_hp = f32i(self.max_hp + self.max_hp_bonus);
         const left_pad = 2.0;
         const w_no_pad = 20.0;
         const total_w = 24.0;
@@ -420,7 +420,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         );
 
         const float_mp = f32i(self.mp);
-        const float_max_mp = f32i(self.max_mp);
+        const float_max_mp = f32i(self.max_mp + self.max_mp_bonus);
         const left_pad = 2.0;
         const w_no_pad = 20.0;
         const total_w = 24.0;
