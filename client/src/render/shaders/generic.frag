@@ -99,58 +99,55 @@ void main() {
     vec2 dy = dFdy(in_uv);
 
     if (clamp(in_uv.x, instance.scissor.x, instance.scissor.y) != in_uv.x ||
-            clamp(in_uv.y, instance.scissor.z, instance.scissor.w) != in_uv.y) {
+        clamp(in_uv.y, instance.scissor.z, instance.scissor.w) != in_uv.y) {
         discard;
     }
 
     switch (instance.render_type) {
-        default:
-        discard;
+        default: discard;
 
-        case quad_render_type:
-        {
+        case quad_render_type: {
             vec4 pixel = textureGrad(game_tex, in_uv, dx, dy);
             color = premultiply(vec4(mix(pixel.rgb, unpackColor(instance.base_color), instance.color_intensity), pixel.a * instance.alpha_mult));
             return;
         }
 
-        case ui_quad_render_type:
-        {
+        case ui_quad_render_type: {
             vec4 pixel = textureGrad(ui_tex, in_uv, dx, dy);
             color = premultiply(vec4(mix(pixel.rgb, unpackColor(instance.base_color), instance.color_intensity), pixel.a * instance.alpha_mult));
             return;
         }
 
-        case minimap_render_type:
-        {
+        case minimap_render_type: {
             color = premultiply(textureGrad(minimap_tex, in_uv, dx, dy));
             return;
         }
 
-        case menu_bg_render_type:
-        {
+        case menu_bg_render_type: {
             color = premultiply(textureGrad(menu_bg_tex, in_uv, dx, dy));
             return;
         }
 
-        case text_normal_render_type:
-        {
+        case text_normal_render_type: {
             vec4 tex = vec4(0.0, 0.0, 0.0, 0.0);
             switch (instance.text_type) {
-                default:
-                discard;
+                default: discard;
+
                 case medium_text_type:
-                tex = textureGrad(medium_text_tex, in_uv, dx, dy);
-                break;
+                    tex = textureGrad(medium_text_tex, in_uv, dx, dy);
+                    break;
+
                 case medium_italic_text_type:
-                tex = textureGrad(medium_italic_text_tex, in_uv, dx, dy);
-                break;
+                    tex = textureGrad(medium_italic_text_tex, in_uv, dx, dy);
+                    break;
+
                 case bold_text_type:
-                tex = textureGrad(bold_text_tex, in_uv, dx, dy);
-                break;
+                    tex = textureGrad(bold_text_tex, in_uv, dx, dy);
+                    break;
+                
                 case bold_italic_text_type:
-                tex = textureGrad(bold_italic_text_tex, in_uv, dx, dy);
-                break;
+                    tex = textureGrad(bold_italic_text_tex, in_uv, dx, dy);
+                    break;
             }
 
             float alpha = sampleMsdf(tex, instance.text_dist_factor, 0.0);
@@ -165,33 +162,30 @@ void main() {
             return;
         }
 
-        case text_drop_shadow_render_type:
-        {
+        case text_drop_shadow_render_type: {
             vec4 tex = vec4(0.0, 0.0, 0.0, 0.0);
             vec4 tex_offset = vec4(0.0, 0.0, 0.0, 0.0);
             switch (instance.text_type) {
-                default:
-                discard;
-                case medium_text_type:
-                {
+                default: discard;
+
+                case medium_text_type: {
                     tex = textureGrad(medium_text_tex, in_uv, dx, dy);
                     tex_offset = textureGrad(medium_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
                     break;
                 }
-                case medium_italic_text_type:
-                {
+                case medium_italic_text_type: {
                     tex = textureGrad(medium_italic_text_tex, in_uv, dx, dy);
                     tex_offset = textureGrad(medium_italic_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
                     break;
                 }
-                case bold_text_type:
-                {
+
+                case bold_text_type: {
                     tex = textureGrad(bold_text_tex, in_uv, dx, dy);
                     tex_offset = textureGrad(bold_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
                     break;
                 }
-                case bold_italic_text_type:
-                {
+
+                case bold_italic_text_type: {
                     tex = textureGrad(bold_italic_text_tex, in_uv, dx, dy);
                     tex_offset = textureGrad(bold_italic_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
                     break;
