@@ -162,7 +162,7 @@ fn renderTick() !void {
             camera.lock.lock();
             const extent: vk.Extent2D = .{ .width = u32f(camera.width), .height = u32f(camera.height) };
             camera.lock.unlock();
-            renderer.waitIdle();
+            try renderer.context.device.queueWaitIdle(renderer.context.graphics_queue.handle);
             try renderer.swapchain.recreate(renderer.context, extent, if (settings.enable_vsync) .fifo_khr else .immediate_khr);
             renderer.destroyFrameAndCmdBuffers();
             try renderer.createFrameAndCmdBuffers();
@@ -205,7 +205,6 @@ fn renderTick() !void {
                     );
                 }
 
-                renderer.waitIdle();
                 try Renderer.updateTexture(
                     renderer.context,
                     renderer.cmd_pool,
@@ -221,7 +220,6 @@ fn renderTick() !void {
                 need_minimap_update = false;
                 minimap_update = .{};
             } else if (need_force_update) {
-                renderer.waitIdle();
                 try Renderer.updateTexture(
                     renderer.context,
                     renderer.cmd_pool,

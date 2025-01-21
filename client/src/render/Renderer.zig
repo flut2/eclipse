@@ -459,7 +459,8 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
 }
 
 pub fn destroy(self: *Renderer) void {
-    self.waitIdle();
+    self.swapchain.waitForAllFences(self.context) catch @panic("TODO");
+    self.context.device.deviceWaitIdle() catch @panic("TODO");
 
     self.medium_text.destroy(self.context, self.vk_allocator);
     self.medium_italic_text.destroy(self.context, self.vk_allocator);
@@ -499,11 +500,6 @@ pub fn destroy(self: *Renderer) void {
     self.swapchain.deinit(self.context);
     self.vk_allocator.destroy();
     self.context.deinit();
-}
-
-pub fn waitIdle(self: Renderer) void {
-    self.swapchain.waitForAllFences(self.context) catch @panic("TODO");
-    self.context.device.deviceWaitIdle() catch @panic("TODO");
 }
 
 fn writeToBuffer(
@@ -1839,7 +1835,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
     };
 
     if (state == .suboptimal) {
-        self.waitIdle();
+        try self.context.device.queueWaitIdle(self.context.graphics_queue.handle);
         try self.swapchain.recreate(
             self.context,
             .{ .width = u32f(cam_data.width), .height = u32f(cam_data.height) },
