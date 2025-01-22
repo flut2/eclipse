@@ -134,7 +134,26 @@ pub fn destroyElement(self: *Container, elem: anytype) void {
 
 pub fn deinit(self: *Container) void {
     for (self.elements.items) |*elem| switch (elem.*) {
-        inline else => |inner_elem| self.destroyElement(inner_elem),
+        inline else => |inner_elem| {
+            comptime var field_name: []const u8 = "";
+            inline for (@typeInfo(element.UiElement).@"union".fields) |field| {
+                if (field.type == @TypeOf(inner_elem)) {
+                    field_name = field.name;
+                    break;
+                }
+            }
+
+            if (field_name.len == 0) @compileError("Could not find field name");
+
+            const tag = std.meta.stringToEnum(std.meta.Tag(element.UiElement), field_name);
+            if (systems.hover_target != null and
+                std.meta.activeTag(systems.hover_target.?) == tag and
+                inner_elem == @field(systems.hover_target.?, field_name))
+                systems.hover_target = null;
+
+            if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "deinit")) inner_elem.deinit();
+            main.allocator.destroy(inner_elem);
+        },
     };
     self.elements.deinit(main.allocator);
 }
