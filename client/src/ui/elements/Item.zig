@@ -15,10 +15,10 @@ base: ElementBase,
 background_x: f32,
 background_y: f32,
 image_data: element.ImageData,
-drag_start_callback: *const fn (*Item) void,
-drag_end_callback: *const fn (*Item) void,
-double_click_callback: *const fn (*Item) void,
-shift_click_callback: *const fn (*Item) void,
+dragStartCallback: *const fn (*Item) void,
+dragEndCallback: *const fn (*Item) void,
+doubleClickCallback: *const fn (*Item) void,
+shiftClickCallback: *const fn (*Item) void,
 draggable: bool = false,
 // don't set this to anything, it's used for item rarity backgrounds
 background_image_data: ?element.ImageData = null,
@@ -37,12 +37,12 @@ pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: glfw.Mods) 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
         if (mods.shift) {
-            self.shift_click_callback(self);
+            self.shiftClickCallback(self);
             return true;
         }
 
         if (self.last_click_time + 333 * std.time.us_per_ms > main.current_time) {
-            self.double_click_callback(self);
+            self.doubleClickCallback(self);
             return true;
         }
 
@@ -52,7 +52,7 @@ pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: glfw.Mods) 
         self.drag_offset_x = self.base.x - x;
         self.drag_offset_y = self.base.y - y;
         self.last_click_time = main.current_time;
-        self.drag_start_callback(self);
+        self.dragStartCallback(self);
         return true;
     }
 
@@ -62,7 +62,7 @@ pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: glfw.Mods) 
 pub fn mouseRelease(self: *Item, x: f32, y: f32, _: f32, _: f32) bool {
     if (!self.is_dragging) return false;
     self.is_dragging = false;
-    self.drag_end_callback(self);
+    self.dragEndCallback(self);
     return !(self.base.event_policy.pass_release or !element.intersects(self, x, y));
 }
 

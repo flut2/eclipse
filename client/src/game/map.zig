@@ -275,7 +275,7 @@ pub fn update(time: i64, dt: f32) void {
         interactive.type.store(.unset, .release);
     };
 
-    var should_unset_container = true;
+    var should_unset_container = systems.screen.game.container_visible;
     defer if (should_unset_container) {
         systems.ui_lock.lock();
         defer systems.ui_lock.unlock();
@@ -343,28 +343,31 @@ pub fn update(time: i64, dt: f32) void {
 
             switch (ObjType) {
                 Container => {
-                    {
+                    containerUpdate: {
                         systems.ui_lock.lock();
                         defer systems.ui_lock.unlock();
-                        if (systems.screen == .game) {
-                            const screen = systems.screen.game;
-                            const dt_x = cam_x - obj.x;
-                            const dt_y = cam_y - obj.y;
-                            if (dt_x * dt_x + dt_y * dt_y < 1) {
-                                interactive.map_id.store(obj.map_id, .release);
-                                interactive.type.store(.container, .release);
 
-                                if (screen.container_id != obj.map_id) {
-                                    inline for (0..8) |idx| screen.setContainerItem(obj.inventory[idx], idx);
-                                    if (obj.name) |name| screen.container_name.text_data.setText(name);
-                                }
+                        if (systems.screen != .game) break :containerUpdate;
+                        const screen = systems.screen.game;
 
-                                screen.container_id = obj.map_id;
-                                screen.setContainerVisible(true);
-                                should_unset_interactive = false;
-                                should_unset_container = false;
-                            }
+                        const dt_x = cam_x - obj.x;
+                        const dt_y = cam_y - obj.y;
+                        if (dt_x * dt_x + dt_y * dt_y > 1) break :containerUpdate;
+
+                        should_unset_interactive = false;
+                        should_unset_container = false;
+                        if (screen.container_id == obj.map_id) break :containerUpdate;
+
+                        interactive.map_id.store(obj.map_id, .release);
+                        interactive.type.store(.container, .release);
+
+                        if (screen.container_id != obj.map_id) {
+                            inline for (0..8) |idx| screen.setContainerItem(obj.inventory[idx], idx);
+                            if (obj.name) |name| screen.container_name.text_data.setText(name);
                         }
+
+                        screen.container_id = obj.map_id;
+                        screen.setContainerVisible(true);
                     }
 
                     obj.update(time);

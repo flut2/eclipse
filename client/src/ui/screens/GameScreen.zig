@@ -303,10 +303,10 @@ pub fn init(self: *GameScreen) !void {
             .background_y = self.inventory_decor.base.y + self.inventory_pos_data[i].y,
             .image_data = .{ .normal = .{ .scale_x = scale, .scale_y = scale, .atlas_data = assets.error_data, .glow = true } },
             .draggable = true,
-            .drag_start_callback = itemDragStartCallback,
-            .drag_end_callback = itemDragEndCallback,
-            .double_click_callback = itemDoubleClickCallback,
-            .shift_click_callback = itemShiftClickCallback,
+            .dragStartCallback = itemDragStartCallback,
+            .dragEndCallback = itemDragEndCallback,
+            .doubleClickCallback = itemDoubleClickCallback,
+            .shiftClickCallback = itemShiftClickCallback,
         });
     }
 
@@ -345,10 +345,10 @@ pub fn init(self: *GameScreen) !void {
             .background_y = self.container_decor.base.y + self.container_pos_data[i].y,
             .image_data = .{ .normal = .{ .scale_x = 3.0, .scale_y = 3.0, .atlas_data = assets.error_data, .glow = true } },
             .draggable = true,
-            .drag_start_callback = itemDragStartCallback,
-            .drag_end_callback = itemDragEndCallback,
-            .double_click_callback = itemDoubleClickCallback,
-            .shift_click_callback = itemShiftClickCallback,
+            .dragStartCallback = itemDragStartCallback,
+            .dragEndCallback = itemDragEndCallback,
+            .doubleClickCallback = itemDoubleClickCallback,
+            .shiftClickCallback = itemShiftClickCallback,
         });
     }
 
@@ -1102,8 +1102,6 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
 
             const end_item_types = blk: {
                 if (end_slot.is_container) {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
                     const container = map.findObject(Container, self.container_id, .con) orelse {
                         self.swapError(start_slot, start_item, start_item_data);
                         return;
