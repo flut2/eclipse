@@ -3,9 +3,10 @@ const std = @import("std");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
+const network_data = shared.network_data;
 const f32i = utils.f32i;
 const i64f = utils.i64f;
-const ItemData = shared.network_data.ItemData;
+const ItemData = network_data.ItemData;
 
 const assets = @import("../../assets.zig");
 const Container = @import("../../game/Container.zig");
@@ -15,6 +16,7 @@ const input = @import("../../input.zig");
 const main = @import("../../main.zig");
 const CardSelection = @import("../composed/CardSelection.zig");
 const Options = @import("../composed/Options.zig");
+const ResourceView = @import("../composed/ResourceView.zig");
 const TalentView = @import("../composed/TalentView.zig");
 const Bar = @import("../elements/Bar.zig");
 const Button = @import("../elements/Button.zig");
@@ -29,6 +31,16 @@ const Text = @import("../elements/Text.zig");
 const systems = @import("../systems.zig");
 
 const GameScreen = @This();
+
+pub const ItemRect = struct {
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    w_pad: f32,
+    h_pad: f32,
+};
+
 pub const Slot = struct {
     idx: u8,
     is_container: bool = false,
@@ -221,9 +233,10 @@ gems_text: *Text = undefined,
 options: *Options = undefined,
 card_selection: *CardSelection = undefined,
 talent_view: *TalentView = undefined,
+resource_view: *ResourceView = undefined,
 
-inventory_pos_data: [22]utils.Rect = undefined,
-container_pos_data: [9]utils.Rect = undefined,
+inventory_pos_data: [22]ItemRect = undefined,
+container_pos_data: [9]ItemRect = undefined,
 container_visible: bool = false,
 container_id: u32 = std.math.maxInt(u32),
 abilities_inited: bool = false,
@@ -240,6 +253,7 @@ last_in_combat: bool = false,
 last_card_count: i32 = -1,
 last_gold: u32 = std.math.maxInt(u32),
 last_gems: u32 = std.math.maxInt(u32),
+last_resources: []const network_data.DataIdWithCount(u32) = &.{},
 
 pub fn init(self: *GameScreen) !void {
     const inventory_data = assets.getUiData("player_inventory", 0);
@@ -605,6 +619,7 @@ pub fn init(self: *GameScreen) !void {
     self.options = try .create();
     self.card_selection = try .create();
     self.talent_view = try .create();
+    self.resource_view = try .create();
 }
 
 pub fn addChatLine(self: *GameScreen, name: []const u8, text: []const u8, name_color: u32, text_color: u32) !void {
@@ -733,6 +748,7 @@ pub fn deinit(self: *GameScreen) void {
     self.options.destroy();
     self.card_selection.destroy();
     self.talent_view.destroy();
+    self.resource_view.destroy();
 
     main.allocator.free(self.card_slots);
     main.allocator.destroy(self);
@@ -807,7 +823,9 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
     }
 
     self.options.resize(w, h);
+    self.card_selection.resize(w, h);
     self.talent_view.resize(w, h);
+    self.resource_view.resize(w, h);
 }
 
 pub fn update(self: *GameScreen, time: i64, _: f32) !void {
@@ -868,6 +886,11 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
 
             self.ability_overlays[i].base.visible = false;
             self.ability_overlay_texts[i].base.visible = false;
+        }
+
+        if (!std.mem.eql(network_data.DataIdWithCount(u32), self.last_resources, local_player.resources)) {
+            try self.resource_view.update(local_player.resources);
+            self.last_resources = local_player.resources;
         }
 
         if (self.last_gold != local_player.gold) {
@@ -1208,6 +1231,7 @@ fn statsCallback(ud: ?*anyopaque) void {
     screen.stats_container.base.visible = !screen.stats_container.base.visible;
     screen.cards_container.base.visible = false;
     screen.talent_view.setVisible(false);
+    screen.resource_view.setVisible(false);
     if (screen.stats_container.base.visible) {
         map.object_lock.lock();
         defer map.object_lock.unlock();
@@ -1220,6 +1244,7 @@ fn cardsCallback(ud: ?*anyopaque) void {
     screen.cards_container.base.visible = !screen.cards_container.base.visible;
     screen.stats_container.base.visible = false;
     screen.talent_view.setVisible(false);
+    screen.resource_view.setVisible(false);
 }
 
 fn talentsCallback(ud: ?*anyopaque) void {
@@ -1227,10 +1252,12 @@ fn talentsCallback(ud: ?*anyopaque) void {
     screen.talent_view.setVisible(!screen.talent_view.base.base.visible);
     screen.cards_container.base.visible = false;
     screen.stats_container.base.visible = false;
+    screen.resource_view.setVisible(false);
 }
 
 fn resourcesCallback(ud: ?*anyopaque) void {
     const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    screen.resource_view.setVisible(!screen.resource_view.base.base.visible);
     screen.cards_container.base.visible = false;
     screen.stats_container.base.visible = false;
     screen.talent_view.setVisible(false);
@@ -1312,40 +1339,7 @@ pub fn useItem(self: *GameScreen, idx: u8) void {
     itemDoubleClickCallback(self.inventory_items[idx]);
 }
 
-pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
-    if (item == std.math.maxInt(u16)) {
-        self.container_items[idx].data_id = std.math.maxInt(u16);
-        self.container_items[idx].base.visible = false;
-        return;
-    }
-
-    self.container_items[idx].base.visible = true;
-
-    if (game_data.item.from_id.get(@intCast(item))) |data| {
-        if (assets.atlas_data.get(data.texture.sheet)) |tex| {
-            const atlas_data = tex[data.texture.index];
-            const base_x = self.container_decor.base.x + self.container_pos_data[idx].x;
-            const base_y = self.container_decor.base.y + self.container_pos_data[idx].y;
-            const pos_w = self.container_pos_data[idx].w;
-            const pos_h = self.container_pos_data[idx].h;
-
-            self.container_items[idx].background_image_data = switch (data.rarity) {
-                .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } },
-                .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } },
-                .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } },
-                .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } },
-                .common => null,
-            };
-
-            self.container_items[idx].data_id = item;
-            self.container_items[idx].image_data.normal.atlas_data = atlas_data;
-            self.container_items[idx].base.x = base_x + (pos_w - self.container_items[idx].texWRaw()) / 2 + assets.padding;
-            self.container_items[idx].base.y = base_y + (pos_h - self.container_items[idx].texHRaw()) / 2 + assets.padding;
-
-            return;
-        } else std.log.err("Could not find ui sheet {s} for item with data id {}, index {}", .{ data.texture.sheet, item, idx });
-    } else std.log.err("Attempted to populate inventory index {} with item {}, but props was not found", .{ idx, item });
-
+fn containerFailure(self: *GameScreen, idx: u8) void {
     self.container_items[idx].data_id = std.math.maxInt(u16);
     self.container_items[idx].image_data.normal.atlas_data = assets.error_data;
     self.container_items[idx].base.x = self.container_decor.base.x +
@@ -1355,12 +1349,62 @@ pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
     self.container_items[idx].background_image_data = null;
 }
 
+pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
+    if (item == std.math.maxInt(u16)) {
+        self.container_items[idx].data_id = std.math.maxInt(u16);
+        self.container_items[idx].base.visible = false;
+        return;
+    }
+
+    self.container_items[idx].base.visible = true;
+
+    const data = game_data.item.from_id.get(@intCast(item)) orelse {
+        std.log.err("Attempted to populate container index {} with item id {}, but props was not found", .{ idx, item });
+        self.itemFailure(idx);
+        return;
+    };
+
+    const tex = assets.atlas_data.get(data.texture.sheet) orelse {
+        std.log.err("Could not find ui sheet {s} for item with data id {}, index {}", .{ data.texture.sheet, item, idx });
+        self.itemFailure(idx);
+        return;
+    };
+
+    const atlas_data = tex[data.texture.index];
+    const base_x = self.container_decor.base.x + self.container_pos_data[idx].x;
+    const base_y = self.container_decor.base.y + self.container_pos_data[idx].y;
+    const pos_w = self.container_pos_data[idx].w;
+    const pos_h = self.container_pos_data[idx].h;
+
+    self.container_items[idx].background_image_data = switch (data.rarity) {
+        .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } },
+        .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } },
+        .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } },
+        .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } },
+        .common => null,
+    };
+
+    self.container_items[idx].data_id = item;
+    self.container_items[idx].image_data.normal.atlas_data = atlas_data;
+    self.container_items[idx].base.x = base_x + (pos_w - self.container_items[idx].texWRaw()) / 2 + assets.padding;
+    self.container_items[idx].base.y = base_y + (pos_h - self.container_items[idx].texHRaw()) / 2 + assets.padding;
+}
+
 pub fn setContainerItemData(self: *GameScreen, item_data: ItemData, idx: u8) void {
     const data = game_data.item.from_id.get(self.container_items[idx].data_id) orelse return;
     self.container_items[idx].item_data = item_data;
     if (data.level_spirits == 0) {
         // TODO: amount text
     }
+}
+
+fn itemFailure(self: *GameScreen, idx: u8) void {
+    const atlas_data = assets.error_data;
+    self.inventory_items[idx].data_id = std.math.maxInt(u16);
+    self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
+    self.inventory_items[idx].base.x = self.inventory_decor.base.x + self.inventory_pos_data[idx].x + (self.inventory_pos_data[idx].w - self.inventory_items[idx].texWRaw()) / 2 + assets.padding;
+    self.inventory_items[idx].base.y = self.inventory_decor.base.y + self.inventory_pos_data[idx].y + (self.inventory_pos_data[idx].h - self.inventory_items[idx].texHRaw()) / 2 + assets.padding;
+    self.inventory_items[idx].background_image_data = null;
 }
 
 pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
@@ -1375,47 +1419,46 @@ pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
     self.inventory_items[idx].image_data.normal.scale_x = scale;
     self.inventory_items[idx].image_data.normal.scale_y = scale;
 
-    if (game_data.item.from_id.get(@intCast(item))) |data| {
-        if (assets.atlas_data.get(data.texture.sheet)) |tex| {
-            const atlas_data = tex[data.texture.index];
-            const base_x = self.inventory_decor.base.x + self.inventory_pos_data[idx].x;
-            const base_y = self.inventory_decor.base.y + self.inventory_pos_data[idx].y;
-            const pos_w = self.inventory_pos_data[idx].w;
-            const pos_h = self.inventory_pos_data[idx].h;
+    const data = game_data.item.from_id.get(@intCast(item)) orelse {
+        std.log.err("Attempted to populate inventory index {} with item id {}, but props was not found", .{ idx, item });
+        self.itemFailure(idx);
+        return;
+    };
 
-            if (idx < 4) {
-                self.inventory_items[idx].background_image_data = switch (data.rarity) {
-                    .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot_equip", 0) } },
-                    .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot_equip", 0) } },
-                    .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot_equip", 0) } },
-                    .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot_equip", 0) } },
-                    .common => null,
-                };
-            } else {
-                self.inventory_items[idx].background_image_data = switch (data.rarity) {
-                    .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } },
-                    .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } },
-                    .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } },
-                    .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } },
-                    .common => null,
-                };
-            }
+    const tex = assets.atlas_data.get(data.texture.sheet) orelse {
+        std.log.err("Could not find ui sheet {s} for item with data id {}, index {}", .{ data.texture.sheet, item, idx });
+        self.itemFailure(idx);
+        return;
+    };
 
-            self.inventory_items[idx].data_id = item;
-            self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
-            self.inventory_items[idx].base.x = base_x + (pos_w - self.inventory_items[idx].texWRaw()) / 2 + assets.padding;
-            self.inventory_items[idx].base.y = base_y + (pos_h - self.inventory_items[idx].texHRaw()) / 2 + assets.padding;
+    const atlas_data = tex[data.texture.index];
+    const base_x = self.inventory_decor.base.x + self.inventory_pos_data[idx].x;
+    const base_y = self.inventory_decor.base.y + self.inventory_pos_data[idx].y;
+    const pos_w = self.inventory_pos_data[idx].w;
+    const pos_h = self.inventory_pos_data[idx].h;
 
-            return;
-        } else std.log.err("Could not find ui sheet {s} for item with data id {}, index {}", .{ data.texture.sheet, item, idx });
-    } else std.log.err("Attempted to populate inventory index {} with item id {}, but props was not found", .{ idx, item });
+    if (idx < 4) {
+        self.inventory_items[idx].background_image_data = switch (data.rarity) {
+            .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot_equip", 0) } },
+            .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot_equip", 0) } },
+            .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot_equip", 0) } },
+            .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot_equip", 0) } },
+            .common => null,
+        };
+    } else {
+        self.inventory_items[idx].background_image_data = switch (data.rarity) {
+            .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } },
+            .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } },
+            .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } },
+            .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } },
+            .common => null,
+        };
+    }
 
-    const atlas_data = assets.error_data;
-    self.inventory_items[idx].data_id = std.math.maxInt(u16);
+    self.inventory_items[idx].data_id = item;
     self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
-    self.inventory_items[idx].base.x = self.inventory_decor.base.x + self.inventory_pos_data[idx].x + (self.inventory_pos_data[idx].w - self.inventory_items[idx].texWRaw()) / 2 + assets.padding;
-    self.inventory_items[idx].base.y = self.inventory_decor.base.y + self.inventory_pos_data[idx].y + (self.inventory_pos_data[idx].h - self.inventory_items[idx].texHRaw()) / 2 + assets.padding;
-    self.inventory_items[idx].background_image_data = null;
+    self.inventory_items[idx].base.x = base_x + (pos_w - self.inventory_items[idx].texWRaw()) / 2 + assets.padding;
+    self.inventory_items[idx].base.y = base_y + (pos_h - self.inventory_items[idx].texHRaw()) / 2 + assets.padding;
 }
 
 pub fn setInvItemData(self: *GameScreen, item_data: ItemData, idx: u8) void {

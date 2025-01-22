@@ -143,7 +143,7 @@ pub const base_texel_w = 1.0 / @as(comptime_float, atlas_width);
 pub const base_texel_h = 1.0 / @as(comptime_float, atlas_height);
 
 pub const ui_atlas_width = 2048;
-pub const ui_atlas_height = 1024;
+pub const ui_atlas_height = 2048;
 pub const ui_texel_w = 1.0 / @as(comptime_float, ui_atlas_width);
 pub const ui_texel_h = 1.0 / @as(comptime_float, ui_atlas_height);
 

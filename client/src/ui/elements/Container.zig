@@ -103,28 +103,38 @@ pub fn mouseScroll(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f3
     return !(self.base.event_policy.pass_scroll or !element.intersects(self, x, y));
 }
 
+pub fn destroyElement(self: *Container, elem: anytype) void {
+    comptime var field_name: []const u8 = "";
+    inline for (@typeInfo(element.UiElement).@"union".fields) |field| {
+        if (field.type == @TypeOf(elem)) {
+            field_name = field.name;
+            break;
+        }
+    }
+
+    if (field_name.len == 0) @compileError("Could not find field name");
+
+    const tag = std.meta.stringToEnum(std.meta.Tag(element.UiElement), field_name);
+
+    if (systems.hover_target != null and
+        std.meta.activeTag(systems.hover_target.?) == tag and
+        elem == @field(systems.hover_target.?, field_name))
+        systems.hover_target = null;
+
+    std.debug.assert(!systems.ui_lock.tryLock());
+
+    removeFromList: for (self.elements.items, 0..) |rem_elem, i| if (rem_elem == tag.? and @field(rem_elem, field_name) == elem) {
+        _ = self.elements.orderedRemove(i);
+        break :removeFromList;
+    };
+
+    if (std.meta.hasFn(@typeInfo(@TypeOf(elem)).pointer.child, "deinit")) elem.deinit();
+    main.allocator.destroy(elem);
+}
+
 pub fn deinit(self: *Container) void {
     for (self.elements.items) |*elem| switch (elem.*) {
-        inline else => |inner_elem| {
-            comptime var field_name: []const u8 = "";
-            inline for (@typeInfo(element.UiElement).@"union".fields) |field| {
-                if (field.type == @TypeOf(inner_elem)) {
-                    field_name = field.name;
-                    break;
-                }
-            }
-
-            if (field_name.len == 0) @compileError("Could not find field name");
-
-            const tag = std.meta.stringToEnum(std.meta.Tag(element.UiElement), field_name);
-            if (systems.hover_target != null and
-                std.meta.activeTag(systems.hover_target.?) == tag and
-                inner_elem == @field(systems.hover_target.?, field_name))
-                systems.hover_target = null;
-
-            if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "deinit")) inner_elem.deinit();
-            main.allocator.destroy(inner_elem);
-        },
+        inline else => |inner_elem| self.destroyElement(inner_elem),
     };
     self.elements.deinit(main.allocator);
 }

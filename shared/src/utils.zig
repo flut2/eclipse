@@ -190,15 +190,6 @@ pub const Condition = packed struct {
     }
 };
 
-pub const Rect = struct {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    w_pad: f32,
-    h_pad: f32,
-};
-
 pub const RGBA = extern struct {
     r: u8 = 0,
     g: u8 = 0,

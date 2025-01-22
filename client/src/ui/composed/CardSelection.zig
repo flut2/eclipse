@@ -227,8 +227,8 @@ pub fn resize(self: *CardSelection, w: f32, h: f32) void {
     const comptime_len = @typeInfo(@TypeOf(self.selectable_cards)).array.len;
     const start_x = (w - (card_w * comptime_len + card_padding * (comptime_len - 1))) / 2.0;
     for (0..comptime_len) |i| {
-        self.selectable_cards[i].base.x = start_x + (card_w + card_padding) * i;
-        self.selectable_cards[i].base.y = 100 + ((h - 200) - card_h) / 2.0;
+        self.selectable_cards[i].base.base.x = start_x + f32i((card_w + card_padding) * i);
+        self.selectable_cards[i].base.base.y = 100 + ((h - 200) - card_h) / 2.0;
     }
     self.skip_button.base.x = (w - self.skip_button.width()) / 2.0;
     self.skip_button.base.y = h - 100 + (100 - self.skip_button.height()) / 2.0;
