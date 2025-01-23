@@ -249,14 +249,13 @@ fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) v
     for (self.world.listForType(Player).items) |*world_player| {
         if (world_player.map_id == self.player_map_id) continue;
 
-        if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
+        if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16)
             world_player.client.queuePacket(.{ .ally_projectile = .{
                 .player_map_id = self.player_map_id,
                 .angle = data.angle,
                 .item_data_id = item_data_id,
                 .proj_index = data.proj_index,
             } });
-        }
     }
 }
 
@@ -297,7 +296,7 @@ fn handlePlayerText(self: *Client, data: PacketData(.player_text)) void {
 
     if (player.muted_until >= main.current_time) return;
 
-    for (self.world.listForType(Player).items) |*other_player| {
+    for (self.world.listForType(Player).items) |*other_player|
         other_player.client.queuePacket(.{ .text = .{
             .name = player.name,
             .obj_type = .player,
@@ -308,7 +307,6 @@ fn handlePlayerText(self: *Client, data: PacketData(.player_text)) void {
             .name_color = if (@intFromEnum(player.rank) >= @intFromEnum(network_data.Rank.mod)) 0xF2CA46 else 0xEBEBEB,
             .text_color = if (@intFromEnum(player.rank) >= @intFromEnum(network_data.Rank.mod)) 0xD4AF37 else 0xB0B0B0,
         } });
-    }
 }
 
 fn verifySwap(item_id: u16, target_type: game_data.ItemType) bool {
@@ -321,10 +319,16 @@ fn verifySwap(item_id: u16, target_type: game_data.ItemType) bool {
 
 fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
     switch (data.from_obj_type) {
-        .player => if (self.world.find(Player, data.from_map_id, .ref)) |player| {
+        .player => if (data.from_map_id != self.player_map_id) {
+            self.sendError(.message_with_disconnect, "Invalid swap");
+            return;
+        } else if (self.world.find(Player, data.from_map_id, .ref)) |player| {
             const start = player.inventory[data.from_slot_id];
             switch (data.to_obj_type) {
-                .player => {
+                .player => if (data.to_map_id != self.player_map_id) {
+                    self.sendError(.message_with_disconnect, "Invalid swap");
+                    return;
+                } else {
                     if (!verifySwap(start, if (data.to_slot_id < 4) player.data.item_types[data.to_slot_id] else .any) or
                         !verifySwap(player.inventory[data.to_slot_id], if (data.from_slot_id < 4) player.data.item_types[data.from_slot_id] else .any))
                         return;
@@ -345,7 +349,10 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
         .container => if (self.world.find(Container, data.from_map_id, .ref)) |cont| {
             const start = cont.inventory[data.from_slot_id];
             switch (data.to_obj_type) {
-                .player => if (self.world.find(Player, data.to_map_id, .ref)) |player| {
+                .player => if (data.to_map_id != self.player_map_id) {
+                    self.sendError(.message_with_disconnect, "Invalid swap");
+                    return;
+                } else if (self.world.find(Player, data.to_map_id, .ref)) |player| {
                     if (!verifySwap(start, if (data.to_slot_id < 4) player.data.item_types[data.to_slot_id] else .any))
                         return;
                     cont.inventory[data.from_slot_id] = player.inventory[data.to_slot_id];
@@ -363,13 +370,142 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
     }
 }
 
-fn processActivations(player: *Player, activations: []const game_data.ActivationData) void {
+fn processActivations(player: *Player, activations: []const game_data.ActivationData, item_name: []const u8) void {
     for (activations) |activation| switch (activation) {
+        .heal => |val| {
+            const old_hp = player.hp;
+            const new_hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + val.amount);
+            if (new_hp <= old_hp) continue;
+            player.hp = new_hp;
+
+            var buf: [32]u8 = undefined;
+            player.client.queuePacket(.{ .show_effect = .{
+                .eff_type = .potion,
+                .color = 0xFFFFFF,
+                .map_id = player.map_id,
+                .obj_type = .player,
+                .x1 = 0,
+                .x2 = 0,
+                .y1 = 0,
+                .y2 = 0,
+            } });
+
+            player.client.queuePacket(.{ .notification = .{
+                .message = std.fmt.bufPrint(&buf, "+{}", .{new_hp - old_hp}) catch continue,
+                .color = 0x00FF00,
+                .map_id = player.map_id,
+                .obj_type = .player,
+            } });
+        },
+        .magic => |val| {
+            const old_mp = player.mp;
+            const new_mp = @min(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat], player.mp + val.amount);
+            if (new_mp <= old_mp) continue;
+            player.mp = new_mp;
+
+            var buf: [32]u8 = undefined;
+            player.client.queuePacket(.{ .show_effect = .{
+                .eff_type = .potion,
+                .color = 0xFFFFFF,
+                .map_id = player.map_id,
+                .obj_type = .player,
+                .x1 = 0,
+                .x2 = 0,
+                .y1 = 0,
+                .y2 = 0,
+            } });
+
+            player.client.queuePacket(.{ .notification = .{
+                .message = std.fmt.bufPrint(&buf, "+{}", .{new_mp - old_mp}) catch continue,
+                .color = 0x9000FF,
+                .map_id = player.map_id,
+                .obj_type = .player,
+            } });
+        },
+        .heal_nova => |val| {
+            for (player.world.listForType(Player).items) |world_player|
+                if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
+                    const old_hp = player.hp;
+                    const new_hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + val.amount);
+                    if (new_hp <= old_hp) continue;
+                    player.hp = new_hp;
+
+                    var buf: [32]u8 = undefined;
+                    player.client.queuePacket(.{ .show_effect = .{
+                        .eff_type = .potion,
+                        .color = 0xFFFFFF,
+                        .map_id = player.map_id,
+                        .obj_type = .player,
+                        .x1 = 0,
+                        .x2 = 0,
+                        .y1 = 0,
+                        .y2 = 0,
+                    } });
+
+                    player.client.queuePacket(.{ .notification = .{
+                        .message = std.fmt.bufPrint(&buf, "+{}", .{new_hp - old_hp}) catch continue,
+                        .color = 0x00FF00,
+                        .map_id = player.map_id,
+                        .obj_type = .player,
+                    } });
+                };
+        },
+        .magic_nova => |val| {
+            for (player.world.listForType(Player).items) |world_player|
+                if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
+                    const old_mp = player.mp;
+                    const new_mp = @min(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat], player.mp + val.amount);
+                    if (new_mp <= old_mp) continue;
+                    player.mp = new_mp;
+
+                    var buf: [32]u8 = undefined;
+                    player.client.queuePacket(.{ .show_effect = .{
+                        .eff_type = .potion,
+                        .color = 0xFFFFFF,
+                        .map_id = player.map_id,
+                        .obj_type = .player,
+                        .x1 = 0,
+                        .x2 = 0,
+                        .y1 = 0,
+                        .y2 = 0,
+                    } });
+
+                    player.client.queuePacket(.{ .notification = .{
+                        .message = std.fmt.bufPrint(&buf, "+{}", .{new_mp - old_mp}) catch continue,
+                        .color = 0x9000FF,
+                        .map_id = player.map_id,
+                        .obj_type = .player,
+                    } });
+                };
+        },
+        .create_portal => |val| {
+            const data = game_data.portal.from_name.get(val.name) orelse continue;
+
+            const angle = utils.rng.random().float(f32) * std.math.tau;
+            const radius = utils.rng.random().float(f32) * 2.0;
+            const x = player.x + radius * @cos(angle);
+            const y = player.y + radius * @sin(angle);
+
+            _ = player.world.add(Portal, .{
+                .x = x,
+                .y = y,
+                .data_id = data.id,
+            }) catch |e| {
+                var buf: [256]u8 = undefined;
+                player.client.sendMessage(
+                    std.fmt.bufPrint(&buf, "Spawning portal \"{s}\" failed: {}", .{ val.name, e }) catch "Spawning a portal has failed",
+                );
+            };
+        },
         .create_ally => |val| {
             const data = game_data.ally.from_name.get(val.name) orelse continue;
 
-            const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
-            const duration = i64f((10.0 + fhst * 0.2) * std.time.us_per_s);
+            const duration = blk: {
+                if (std.mem.eql(u8, item_name, "Dwarven Coil")) {
+                    const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
+                    break :blk i64f((10.0 + fhst * 0.2) * std.time.us_per_s);
+                } else break :blk std.math.maxInt(i64) - main.current_time;
+            };
             const angle = utils.rng.random().float(f32) * std.math.tau;
             const radius = utils.rng.random().float(f32) * 2.0;
             const x = player.x + radius * @cos(angle);
@@ -381,9 +517,13 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                 .data_id = data.id,
                 .owner_map_id = player.map_id,
                 .disappear_time = main.current_time + duration,
-            }) catch continue; // TODO
+            }) catch |e| {
+                var buf: [256]u8 = undefined;
+                player.client.sendMessage(
+                    std.fmt.bufPrint(&buf, "Spawning ally \"{s}\" failed: {}", .{ val.name, e }) catch "Spawning an ally has failed",
+                );
+            };
         },
-        else => {},
     };
 }
 
@@ -391,15 +531,19 @@ fn handleUseItem(self: *Client, data: PacketData(.use_item)) void {
     const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
     switch (data.obj_type) {
         .player => {
+            if (data.map_id != self.player_map_id) {
+                self.sendError(.message_with_disconnect, "Invalid item use");
+                return;
+            }
             defer player.inventory[data.slot_id] = std.math.maxInt(u16);
             const item_data = game_data.item.from_id.get(player.inventory[data.slot_id]) orelse return;
-            if (item_data.activations) |activations| processActivations(player, activations);
+            if (item_data.activations) |activations| processActivations(player, activations, item_data.name);
             processItemCosts(player, item_data);
         },
         .container => if (self.world.find(Container, data.map_id, .ref)) |cont| {
             defer cont.inventory[data.slot_id] = std.math.maxInt(u16);
             const item_data = game_data.item.from_id.get(cont.inventory[data.slot_id]) orelse return;
-            if (item_data.activations) |activations| processActivations(player, activations);
+            if (item_data.activations) |activations| processActivations(player, activations, item_data.name);
             processItemCosts(player, item_data);
         } else return,
         else => return,
@@ -623,14 +767,13 @@ fn handleGroundDamage(self: *Client, data: PacketData(.ground_damage)) void {
     for (self.world.listForType(Player).items) |world_player| {
         if (world_player.map_id == self.player_map_id) continue;
 
-        if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
+        if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16)
             self.queuePacket(.{ .damage = .{
                 .player_map_id = self.player_map_id,
                 .effects = .{},
                 .damage_type = .true,
                 .amount = @intCast(tile.data.damage),
             } });
-        }
     }
 
     player.hp -= tile.data.damage;

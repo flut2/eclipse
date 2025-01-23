@@ -541,16 +541,10 @@ pub const TimedCondition = struct {
 pub const ActivationData = union(enum) {
     heal: struct { amount: i32 },
     magic: struct { amount: i32 },
-    create_ally: struct { name: []const u8 },
-    create_entity: struct { name: []const u8 },
-    create_enemy: struct { name: []const u8 },
-    create_portal: struct { name: []const u8 },
     heal_nova: struct { amount: i32, radius: f32 },
     magic_nova: struct { amount: i32, radius: f32 },
-    stat_boost_self: struct { stat_incr: StatIncreaseData, amount: i16, duration: f32 },
-    stat_boost_aura: struct { stat_incr: StatIncreaseData, amount: i16, duration: f32, radius: f32 },
-    condition_effect_self: TimedCondition,
-    condition_effect_aura: struct { cond: TimedCondition, radius: f32 },
+    create_ally: struct { name: []const u8 },
+    create_portal: struct { name: []const u8 },
 };
 
 pub const ItemRarity = enum {

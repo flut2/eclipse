@@ -303,8 +303,16 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
             }
 
             text = switch (activation) {
-                .heal => |value| std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Restores " ++ decimal_fmt ++ " HP", .{ text, value }),
-                .magic => |value| std.fmt.bufPrint(self.getMainBuffer(), line_base_inset ++ "Restores " ++ decimal_fmt ++ " MP", .{ text, value }),
+                .heal => |value| std.fmt.bufPrint(
+                    self.getMainBuffer(),
+                    line_base_inset ++ "Restores " ++ decimal_fmt ++ " HP",
+                    .{ text, value },
+                ),
+                .magic => |value| std.fmt.bufPrint(
+                    self.getMainBuffer(),
+                    line_base_inset ++ "Restores " ++ decimal_fmt ++ " MP",
+                    .{ text, value },
+                ),
                 .heal_nova => |value| std.fmt.bufPrint(
                     self.getMainBuffer(),
                     line_base_inset ++ "Restores " ++ decimal_fmt ++ " HP within " ++ float_fmt ++ " tiles",
@@ -315,27 +323,6 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
                     line_base_inset ++ "Restores " ++ decimal_fmt ++ " HP within " ++ float_fmt ++ " tiles",
                     .{ text, value.amount, value.radius },
                 ),
-                .stat_boost_self => |value| std.fmt.bufPrint(
-                    self.getMainBuffer(),
-                    line_base_inset ++ "Gain +" ++ decimal_fmt ++ " " ++ string_fmt ++ " for " ++ float_fmt ++ " seconds",
-                    .{ text, value.stat_incr.amount(), value.stat_incr.toString(), value.duration },
-                ),
-                .stat_boost_aura => |value| std.fmt.bufPrint(
-                    self.getMainBuffer(),
-                    line_base_inset ++ "Grant players +" ++ decimal_fmt ++ " " ++ string_fmt ++ " within " ++ float_fmt ++
-                        " tiles for " ++ float_fmt ++ " seconds",
-                    .{ text, value.stat_incr.amount(), value.stat_incr.toString(), value.radius, value.duration },
-                ),
-                .condition_effect_self => |value| std.fmt.bufPrint(
-                    self.getMainBuffer(),
-                    line_base_inset ++ "Grant yourself " ++ string_fmt ++ " for " ++ float_fmt ++ " seconds",
-                    .{ text, value.type.toString(), value.duration },
-                ),
-                .condition_effect_aura => |value| std.fmt.bufPrint(
-                    self.getMainBuffer(),
-                    line_base_inset ++ "Grant players " ++ string_fmt ++ " within " ++ float_fmt ++ " tiles for " ++ float_fmt ++ " seconds",
-                    .{ text, value.cond.type.toString(), value.radius, value.cond.duration },
-                ),
                 .create_portal => |value| std.fmt.bufPrint(
                     self.getMainBuffer(),
                     line_base_inset ++ "Opens the following dungeon: " ++ string_fmt,
@@ -344,11 +331,6 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
                 .create_ally => |value| std.fmt.bufPrint(
                     self.getMainBuffer(),
                     line_base_inset ++ "Bring an ally to battle: " ++ string_fmt,
-                    .{ text, value.name },
-                ),
-                inline .create_enemy, .create_entity => |value| std.fmt.bufPrint(
-                    self.getMainBuffer(),
-                    line_base_inset ++ "Spawn the following: " ++ string_fmt,
                     .{ text, value.name },
                 ),
             } catch text;
