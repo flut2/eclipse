@@ -1294,10 +1294,11 @@ fn testCallback(ud: ?*anyopaque) void {
             ui_systems.last_map_data = data;
             ui_systems.is_testing = true;
 
-            for (list.characters) |char| if (char.char_id == main.settings.last_char_id) {
-                main.enterTest(list.servers[0], char.char_id, data);
-                return;
-            };
+            if (main.settings.char_ids_login_sort.len > 0)
+                for (list.characters) |char| if (char.char_id == main.settings.char_ids_login_sort[0]) {
+                    main.enterTest(list.servers[0], char.char_id, data);
+                    return;
+                };
 
             main.enterTest(list.servers[0], list.characters[0].char_id, data);
             return;

@@ -105,6 +105,25 @@ fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
     need_swap_chain_update = true;
 }
 
+fn updateCharIdSort(selected_char_id: u32) void {
+    const char_list = character_list orelse return;
+    var char_list_ids: std.ArrayListUnmanaged(u32) = .empty;
+    for (char_list.characters) |char_data| char_list_ids.append(allocator, char_data.char_id) catch oomPanic();
+    var new_list: std.ArrayListUnmanaged(u32) = .empty;
+    new_list.append(allocator, selected_char_id) catch oomPanic();
+    for (settings.char_ids_login_sort) |char_id|
+        if (std.mem.indexOfScalar(u32, new_list.items, char_id) == null and
+            std.mem.indexOfScalar(u32, char_list_ids.items, char_id) != null)
+            new_list.append(allocator, char_id) catch oomPanic();
+    for (char_list_ids.items) |char_id|
+        if (std.mem.indexOfScalar(u32, new_list.items, char_id) == null)
+            new_list.append(allocator, char_id) catch oomPanic();
+    if (Settings.needs_char_id_dispose) allocator.free(settings.char_ids_login_sort);
+    settings.char_ids_login_sort = new_list.toOwnedSlice(allocator) catch oomPanic();
+    Settings.needs_char_id_dispose = true;
+    char_list_ids.deinit(allocator);
+}
+
 // lock ui_systems.ui_lock before calling (UI already does this implicitly)
 pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_data_id: u16) void {
     if (current_account == null) return;
@@ -118,7 +137,7 @@ pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_d
         .class_id = class_data_id,
     } };
 
-    settings.last_char_id = char_id;
+    updateCharIdSort(char_id);
 
     game_server.connect(selected_server.ip, selected_server.port) catch |e| {
         std.log.err("Connection failed: {}", .{e});
@@ -137,6 +156,8 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
         .char_id = char_id,
         .map = test_map,
     } };
+
+    updateCharIdSort(char_id);
 
     game_server.connect(selected_server.ip, selected_server.port) catch |e| {
         std.log.err("Connection failed: {}", .{e});
