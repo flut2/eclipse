@@ -342,17 +342,17 @@ fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
     defer map.object_lock.unlock();
 
     if (map.findObject(Player, data.player_map_id, .ref)) |player| {
-        const item_data = game_data.item.from_id.getPtr(data.item_data_id);
+        const item_data = game_data.item.from_id.getPtr(data.item_data_id) orelse return;
         Projectile.addToMap(.{
             .x = player.x,
             .y = player.y,
-            .data = &item_data.?.projectile.?,
+            .data = &item_data.projectile.?,
             .angle = data.angle,
             .index = @intCast(data.proj_index),
             .owner_map_id = player.map_id,
         });
 
-        const attack_period = i64f(1.0 / (Player.attack_frequency * item_data.?.fire_rate));
+        const attack_period = i64f(1.0 / (Player.attack_frequency * item_data.fire_rate));
         player.attack_period = attack_period;
         player.attack_angle = data.angle;
         player.attack_start = main.current_time;

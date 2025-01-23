@@ -224,7 +224,8 @@ fn processItemCosts(player: *Player, data: game_data.ItemData) void {
 fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) void {
     const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
     if (player.condition.stunned) return;
-    const item_data = game_data.item.from_id.getPtr(player.inventory[0]) orelse return;
+    const item_data_id = player.inventory[0];
+    const item_data = game_data.item.from_id.getPtr(item_data_id) orelse return;
     processItemCosts(player, item_data.*);
 
     const proj_data = item_data.projectile orelse return;
@@ -244,6 +245,19 @@ fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) v
     }) catch return;
 
     player.projectiles[data.proj_index] = map_id;
+
+    for (self.world.listForType(Player).items) |*world_player| {
+        if (world_player.map_id == self.player_map_id) continue;
+
+        if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
+            world_player.client.queuePacket(.{ .ally_projectile = .{
+                .player_map_id = self.player_map_id,
+                .angle = data.angle,
+                .item_data_id = item_data_id,
+                .proj_index = data.proj_index,
+            } });
+        }
+    }
 }
 
 fn handleMove(self: *Client, data: PacketData(.move)) void {

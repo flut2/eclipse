@@ -126,15 +126,16 @@ fn updatePosition(self: *Projectile, elapsed: f32, dt: f32) void {
         var target_y: f32 = -1.0;
 
         if (self.damage_players) {
-            if (findTargetPlayer(self.x, self.y, self.data.heat_seek_radius * self.data.heat_seek_radius)) |player| {
+            if (findTargetAlly(self.x, self.y, self.data.heat_seek_radius * self.data.heat_seek_radius)) |ally| {
+                target_x = ally.x;
+                target_y = ally.y;
+            } else if (findTargetPlayer(self.x, self.y, self.data.heat_seek_radius * self.data.heat_seek_radius)) |player| {
                 target_x = player.x;
                 target_y = player.y;
             }
-        } else {
-            if (findTargetEnemy(self.x, self.y, self.data.heat_seek_radius * self.data.heat_seek_radius)) |enemy| {
-                target_x = enemy.x;
-                target_y = enemy.y;
-            }
+        } else if (findTargetEnemy(self.x, self.y, self.data.heat_seek_radius * self.data.heat_seek_radius)) |enemy| {
+            target_x = enemy.x;
+            target_y = enemy.y;
         }
 
         if (target_x > 0 and target_y > 0) {
@@ -144,9 +145,8 @@ fn updatePosition(self: *Projectile, elapsed: f32, dt: f32) void {
     }
 
     var angle_change: f32 = 0.0;
-    if (self.data.angle_change != 0 and elapsed < self.data.angle_change_end and elapsed >= self.data.angle_change_delay) {
+    if (self.data.angle_change != 0 and elapsed < self.data.angle_change_end and elapsed >= self.data.angle_change_delay)
         angle_change += dt * std.math.degreesToRadians(self.data.angle_change);
-    }
 
     if (self.data.angle_change_accel != 0 and elapsed >= self.data.angle_change_accel_delay) {
         const time_in_accel = elapsed - self.data.angle_change_accel_delay;
@@ -159,30 +159,22 @@ fn updatePosition(self: *Projectile, elapsed: f32, dt: f32) void {
             const clamped_change = @min(angle_change, clamp_dt);
             self.total_angle_change += clamped_change;
             self.angle += clamped_change;
-        } else {
-            self.angle += angle_change;
-        }
+        } else self.angle += angle_change;
     }
 
     var dist: f32 = 0.0;
     const uses_zero_vel = self.data.zero_velocity_delay > 0;
     if (!uses_zero_vel or self.data.zero_velocity_delay > elapsed) {
-        if (self.data.accel == 0.0 or elapsed < self.data.accel_delay) {
-            dist = dt * self.data.speed * 10.0;
-        } else {
+        if (self.data.accel != 0.0 and elapsed >= self.data.accel_delay) {
             const time_in_accel = elapsed - self.data.accel_delay;
             const accel_dist = dt * (self.data.speed * 10.0 + self.data.accel * 10.0 * time_in_accel);
-            if (self.data.speed_clamp == 0.0) {
-                dist = accel_dist;
-            } else {
+            if (self.data.speed_clamp != 0.0) {
                 const clamp_dist = dt * self.data.speed_clamp * 10.0;
                 dist = if (self.data.accel > 0) @min(accel_dist, clamp_dist) else @max(accel_dist, clamp_dist);
-            }
-        }
+            } else dist = accel_dist;
+        } else dist = dt * self.data.speed * 10.0;
     } else {
-        if (self.zero_vel_dist == -1.0) {
-            self.zero_vel_dist = utils.dist(self.start_x, self.start_y, self.x, self.y);
-        }
+        if (self.zero_vel_dist == -1.0) self.zero_vel_dist = utils.dist(self.start_x, self.start_y, self.x, self.y);
 
         self.x = self.start_x + self.zero_vel_dist * @cos(self.angle);
         self.y = self.start_y + self.zero_vel_dist * @sin(self.angle);
@@ -249,13 +241,11 @@ pub fn update(self: *Projectile, time: i64, dt: f32) bool {
         self.x >= f32i(map.info.width - 1) or self.y >= f32i(map.info.height - 1))
         return false;
 
-    if (last_x == 0 and last_y == 0) {
-        self.visual_angle = self.angle;
-    } else {
+    if (last_x != 0 or last_y != 0) {
         const y_dt: f32 = self.y - last_y;
         const x_dt: f32 = self.x - last_x;
         self.visual_angle = std.math.atan2(y_dt, x_dt);
-    }
+    } else self.visual_angle = self.angle;
 
     if (time - self.last_hit_check < 16 * std.time.us_per_ms) return true;
 
@@ -264,7 +254,7 @@ pub fn update(self: *Projectile, time: i64, dt: f32) bool {
     const square = map.getSquare(self.x, self.y, false, .con).?;
     if (square.data_id == Square.editor_tile or square.data_id == Square.empty_tile) return false;
 
-    if (map.findObject(Entity, square.entity_map_id, .con)) |e| {
+    if (map.findObject(Entity, square.entity_map_id, .con)) |e|
         if (e.data.occupy_square or e.data.full_occupy or e.data.is_wall) {
             particles.HitEffect.addToMap(.{
                 .x = self.x,
@@ -276,8 +266,7 @@ pub fn update(self: *Projectile, time: i64, dt: f32) bool {
                 .amount = 3,
             });
             return false;
-        }
-    }
+        };
 
     if (self.damage_players) {
         if (findTargetAlly(self.x, self.y, 0.6)) |ally| return self.hit(Ally, ally, time);
@@ -338,7 +327,7 @@ fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
         else => @compileError("Invalid type"),
     }
 
-    const cond = utils.Condition.fromCondSlice(self.data.conditions);
+    const cond: utils.Condition = .fromCondSlice(self.data.conditions);
     if (phys_dmg > 0) map.takeDamage(obj, phys_dmg, .physical, cond, self.colors);
     if (magic_dmg > 0) map.takeDamage(obj, magic_dmg, .magic, cond, self.colors);
     if (true_dmg > 0) map.takeDamage(obj, true_dmg, .true, cond, self.colors);
