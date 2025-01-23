@@ -373,10 +373,15 @@ pub fn update(time: i64, dt: f32) void {
                     obj.update(time);
                 },
                 Player => {
-                    obj.walk_speed_multiplier = input.walking_speed_multiplier;
-                    obj.move_angle = input.move_angle;
+                    const is_self = obj.map_id == info.player_map_id;
+                    if (is_self) {
+                        obj.walk_speed_multiplier = input.walking_speed_multiplier;
+                        obj.move_angle = input.move_angle;
+                    }
+
                     obj.update(time, dt);
-                    if (obj.map_id == info.player_map_id) {
+                    
+                    if (is_self) {
                         main.camera.update(obj.x, obj.y, dt);
                         addMoveRecord(time, obj.x, obj.y);
                         if (input.attacking) {

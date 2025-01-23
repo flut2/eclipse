@@ -1312,9 +1312,8 @@ pub fn deinit(self: *MapEditorScreen) void {
     element.destroy(self.selection_image);
     element.destroy(self.fps_text);
     element.destroy(self.palette_decor);
-    inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field| {
+    inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field|
         element.destroy(@field(self.palette_containers, field.name));
-    }
     element.destroy(self.layer_dropdown);
     element.destroy(self.controls_container);
     element.destroy(self.map_size_dropdown);

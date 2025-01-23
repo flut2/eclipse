@@ -737,8 +737,9 @@ fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
 
             switch (T) {
                 Player => {
-                    if (object.map_id != map.info.player_map_id) updateMove(object, pre_x, pre_y, tick_time);
-                    if (object.map_id == map.info.player_map_id and ui_systems.screen == .game) ui_systems.screen.game.updateStats();
+                    if (object.map_id != map.info.player_map_id) {
+                        updateMove(object, pre_x, pre_y, tick_time);
+                    } else if (ui_systems.screen == .game) ui_systems.screen.game.updateStats();
                 },
                 Enemy, Ally => updateMove(object, pre_x, pre_y, tick_time),
                 else => {},
@@ -755,6 +756,7 @@ fn updateMove(obj: anytype, pre_x: f32, pre_y: f32, tick_time: f32) void {
     const y_dt = obj.y - pre_y;
     const x_dt = obj.x - pre_x;
 
+    obj.move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
     if (!std.math.isNan(obj.move_angle)) {
         const dist_sqr = y_dt * y_dt + x_dt * x_dt;
         obj.move_step = @sqrt(dist_sqr) / tick_time;
@@ -763,8 +765,6 @@ fn updateMove(obj: anytype, pre_x: f32, pre_y: f32, tick_time: f32) void {
         obj.x = pre_x;
         obj.y = pre_y;
     }
-
-    obj.move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
 }
 
 fn parseObjectStat(

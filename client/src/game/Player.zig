@@ -516,10 +516,9 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
         if (!self.condition.paralyzed) {
             if (ui_systems.screen == .editor) {
                 if (!std.math.isNan(self.move_angle)) {
-                    const move_angle = self.move_angle;
                     const move_speed = self.moveSpeedMultiplier();
-                    const new_x = self.x + move_speed * @cos(move_angle) * dt;
-                    const new_y = self.y + move_speed * @sin(move_angle) * dt;
+                    const new_x = self.x + move_speed * @cos(self.move_angle) * dt;
+                    const new_y = self.y + move_speed * @sin(self.move_angle) * dt;
 
                     self.x = @max(0, @min(new_x, f32i(map.info.width - 1)));
                     self.y = @max(0, @min(new_y, f32i(map.info.height - 1)));
@@ -528,10 +527,9 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
                 if (map.getSquare(self.x, self.y, true, .con)) |square| {
                     const slide_amount = square.data.slide_amount;
                     if (!std.math.isNan(self.move_angle)) {
-                        const move_angle = self.move_angle;
                         const move_speed = self.moveSpeedMultiplier();
-                        const vec_x = move_speed * @cos(move_angle);
-                        const vec_y = move_speed * @sin(move_angle);
+                        const vec_x = move_speed * @cos(self.move_angle);
+                        const vec_y = move_speed * @sin(self.move_angle);
 
                         if (slide_amount > 0.0) {
                             self.x_dir *= slide_amount;
@@ -597,6 +595,12 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
         const next_y = self.y + dt * self.move_step * sin_angle;
         self.x = if (cos_angle > 0.0) @min(self.target_x, next_x) else @max(self.target_x, next_x);
         self.y = if (sin_angle > 0.0) @min(self.target_y, next_y) else @max(self.target_y, next_y);
+        if (@abs(self.x - self.target_x) < 0.01 and @abs(self.y - self.target_y) < 0.01) {
+            self.move_angle = std.math.nan(f32);
+            self.move_step = 0.0;
+            self.target_x = 0.0;
+            self.target_y = 0.0;
+        }
     }
 
     if (self.ability_state.time_dilation) {
