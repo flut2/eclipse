@@ -238,13 +238,8 @@ palette_containers: struct {
     region: *ScrollableContainer,
 } = undefined,
 layer_dropdown: *Dropdown = undefined,
-layer_toggle_decor: *Image = undefined,
-ground_layer_toggle: *Toggle = undefined,
-entity_layer_toggle: *Toggle = undefined,
-enemy_layer_toggle: *Toggle = undefined,
-portal_layer_toggle: *Toggle = undefined,
-container_layer_toggle: *Toggle = undefined,
-region_layer_toggle: *Toggle = undefined,
+layer_container: *UiContainer = undefined,
+layer_button: *Button = undefined,
 
 place_key: Settings.Button = .{ .mouse = .left },
 sample_key: Settings.Button = .{ .mouse = .middle },
@@ -326,24 +321,37 @@ pub fn init(self: *MapEditorScreen) !void {
         },
     });
 
-    const background_decor = assets.getUiData("tooltip_background", 0);
-    self.layer_toggle_decor = try element.create(Image, .{
+    self.layer_button = try element.create(Button, .{
         .base = .{ .x = main.camera.width - palette_decor_w - layer_decor_w - 10, .y = 5 },
+        .userdata = self,
+        .pressCallback = layerToggleCallback,
+        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, layer_decor_w, 40, 26, 19, 1, 1, 1.0),
+        .text_data = .{
+            .text = "Show Layer Toggle",
+            .size = 16,
+            .text_type = .bold,
+        },
+    });
+
+    self.layer_container = try element.create(UiContainer, .{
+        .base = .{ .x = main.camera.width - palette_decor_w - layer_decor_w - 10, .y = 5, .visible = false },
+    });
+
+    const background_decor = assets.getUiData("tooltip_background", 0);
+    _ = try self.layer_container.createChild(Image, .{
+        .base = .{ .x = 0, .y = 0 },
         .image_data = .{ .nine_slice = .fromAtlasData(background_decor, layer_decor_w, layer_decor_h, 34, 34, 1, 1, 1.0) },
     });
 
     inline for (.{
-        .{ &self.ground_layer_toggle, &self.show_ground_layer, "Ground" },
-        .{ &self.entity_layer_toggle, &self.show_entity_layer, "Entity" },
-        .{ &self.enemy_layer_toggle, &self.show_enemy_layer, "Enemy" },
-        .{ &self.portal_layer_toggle, &self.show_portal_layer, "Portal" },
-        .{ &self.container_layer_toggle, &self.show_container_layer, "Container" },
-        .{ &self.region_layer_toggle, &self.show_region_layer, "Region" },
-    }, 0..) |mapping, i| mapping[0].* = try element.create(Toggle, .{
-        .base = .{
-            .x = self.layer_toggle_decor.base.x + 5,
-            .y = self.layer_toggle_decor.base.y + 5 + i * 63,
-        },
+        .{ &self.show_ground_layer, "Ground" },
+        .{ &self.show_entity_layer, "Entity" },
+        .{ &self.show_enemy_layer, "Enemy" },
+        .{ &self.show_portal_layer, "Portal" },
+        .{ &self.show_container_layer, "Container" },
+        .{ &self.show_region_layer, "Region" },
+    }, 0..) |mapping, i| _ = try self.layer_container.createChild(Toggle, .{
+        .base = .{ .x = 5, .y = 5 + i * 63 },
         .off_image_data = .fromImageData(
             assets.getUiData("unchecked_box_base", 0),
             assets.getUiData("unchecked_box_hover", 0),
@@ -354,9 +362,9 @@ pub fn init(self: *MapEditorScreen) !void {
             assets.getUiData("checked_box_hover", 0),
             assets.getUiData("checked_box_press", 0),
         ),
-        .toggled = mapping[1],
+        .toggled = mapping[0],
         .text_data = .{
-            .text = mapping[2],
+            .text = mapping[1],
             .size = 16,
             .text_type = .bold_italic,
         },
@@ -965,6 +973,19 @@ fn addObjectContainer(
     }
 }
 
+fn layerToggleCallback(ud: ?*anyopaque) void {
+    const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
+    screen.layer_container.base.visible = !screen.layer_container.base.visible;
+    if (screen.layer_button.text_data == null) @panic("Layer toggle button must have text data");
+    if (screen.layer_container.base.visible) {
+        screen.layer_button.base.y = screen.layer_container.base.y + screen.layer_container.height() + 5;
+        screen.layer_button.text_data.?.setText("Hide Layer Toggle");
+    } else {
+        screen.layer_button.base.y = 5;
+        screen.layer_button.text_data.?.setText("Show Layer Toggle");
+    }
+}
+
 fn groundClicked(ud: ?*anyopaque) void {
     ui_systems.screen.editor.selected.ground = @as(*u16, @alignCast(@ptrCast(ud))).*;
 }
@@ -1320,13 +1341,8 @@ pub fn deinit(self: *MapEditorScreen) void {
     element.destroy(self.layer_dropdown);
     element.destroy(self.controls_container);
     element.destroy(self.map_size_dropdown);
-    element.destroy(self.layer_toggle_decor);
-    element.destroy(self.ground_layer_toggle);
-    element.destroy(self.entity_layer_toggle);
-    element.destroy(self.enemy_layer_toggle);
-    element.destroy(self.portal_layer_toggle);
-    element.destroy(self.container_layer_toggle);
-    element.destroy(self.region_layer_toggle);
+    element.destroy(self.layer_container);
+    element.destroy(self.layer_button);
 
     main.allocator.free(self.map_tile_data);
     main.allocator.free(self.selected_tiles);
