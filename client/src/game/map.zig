@@ -275,7 +275,7 @@ pub fn update(time: i64, dt: f32) void {
         interactive.type.store(.unset, .release);
     };
 
-    var should_unset_container = systems.screen.game.container_visible;
+    var should_unset_container = if (systems.screen == .game) systems.screen.game.container_visible else false;
     defer if (should_unset_container) {
         systems.ui_lock.lock();
         defer systems.ui_lock.unlock();
@@ -449,7 +449,7 @@ pub fn update(time: i64, dt: f32) void {
 
 // x/y < 0 has to be handled before this, since it's a u32
 pub fn validPos(x: u32, y: u32) bool {
-    return !(info.width == 0 or info.height == 0 or x >= info.width - 1 or y >= info.height - 1);
+    return !(info.width == 0 or info.height == 0 or x > info.width - 1 or y > info.height - 1);
 }
 
 // check_validity should always be on, unless you profiled that it causes clear slowdowns in your code.

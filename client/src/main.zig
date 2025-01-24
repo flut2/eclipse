@@ -179,7 +179,7 @@ fn renderTick() !void {
 
     var last_vsync = settings.enable_vsync;
     var fps_time_start: i64 = 0;
-    var frames: usize = 0;
+    var frames: u32 = 0;
     while (tick_render) : (std.atomic.spinLoopHint()) {
         if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
             camera.lock.lock();
@@ -198,7 +198,8 @@ fn renderTick() !void {
 
         if (current_time - fps_time_start > 1 * std.time.us_per_s) {
             if (settings.stats_enabled) switch (ui_systems.screen) {
-                inline .game, .editor => |screen| screen.updateFpsText(frames, try utils.currentMemoryUse(current_time)),
+                .game => |screen| screen.updateFpsText(frames, try utils.currentMemoryUse(current_time)),
+                .editor => |screen| screen.updateFps(frames, try utils.currentMemoryUse(current_time)),
                 else => {},
             };
             frames = 0;

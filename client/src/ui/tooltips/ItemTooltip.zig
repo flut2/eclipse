@@ -410,7 +410,11 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     }
 
     if (data.activations != null and data.cooldown > 0.0)
-        text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Cooldown: " ++ float_fmt ++ " seconds", .{ text, data.cooldown }) catch text;
+        text = std.fmt.bufPrint(
+            self.getMainBuffer(),
+            line_base ++ "Cooldown: " ++ float_fmt ++ " seconds",
+            .{ text, data.cooldown },
+        ) catch text;
 
     self.main_text.text_data.setText(text);
 
@@ -421,10 +425,18 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     if (data.untradeable)
         footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Can not be traded", .{footer_text}) catch footer_text;
     if (data.ephemeral)
-        footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "This item will disappear on map switch", .{footer_text}) catch footer_text;
+        footer_text = std.fmt.bufPrint(
+            self.getFooterBuffer(),
+            line_base ++ "This item will disappear on map switch",
+            .{footer_text},
+        ) catch footer_text;
 
     if (data.item_type == .boots or data.item_type == .artifact) {
-        footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Usable by: " ++ string_fmt, .{ footer_text, "All Classes" }) catch footer_text;
+        footer_text = std.fmt.bufPrint(
+            self.getFooterBuffer(),
+            line_base ++ "Usable by: " ++ string_fmt,
+            .{ footer_text, "All Classes" },
+        ) catch footer_text;
     } else if (data.item_type != .any and data.item_type != .consumable) {
         map.object_lock.lock();
         defer map.object_lock.unlock();
@@ -462,9 +474,17 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
                     for (class.item_types) |item_type| {
                         if (item_type != .any and item_type.typesMatch(data.item_type)) {
                             if (first) {
-                                footer_text = std.fmt.bufPrint(self.getFooterBuffer(), "{s}" ++ string_fmt, .{ footer_text, class.name }) catch footer_text;
+                                footer_text = std.fmt.bufPrint(
+                                    self.getFooterBuffer(),
+                                    "{s}" ++ string_fmt,
+                                    .{ footer_text, class.name },
+                                ) catch footer_text;
                             } else {
-                                footer_text = std.fmt.bufPrint(self.getFooterBuffer(), "{s}, " ++ string_fmt, .{ footer_text, class.name }) catch footer_text;
+                                footer_text = std.fmt.bufPrint(
+                                    self.getFooterBuffer(),
+                                    "{s}, " ++ string_fmt,
+                                    .{ footer_text, class.name },
+                                ) catch footer_text;
                             }
 
                             first = false;

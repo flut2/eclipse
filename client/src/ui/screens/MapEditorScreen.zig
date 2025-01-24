@@ -38,6 +38,7 @@ const ui_systems = @import("../systems.zig");
 const press_delay_ms = 25;
 const update_delay_ms = 10;
 const move_select_delay_ms = 15;
+const details_update_delay_ms = 15;
 
 const MapEditorTile = struct {
     // map ids
@@ -224,7 +225,7 @@ random_chance: f32 = 0.01,
 selection_image: *Image = undefined,
 selection_start_point: ?Position = null,
 selection_end_point: ?Position = null,
-fps_text: *Text = undefined,
+details_text: *Text = undefined,
 controls_container: *UiContainer = undefined,
 map_size_dropdown: *Dropdown = undefined,
 palette_decor: *Image = undefined,
@@ -269,6 +270,9 @@ show_region_layer: bool = true,
 last_press: i64 = -1,
 last_update: i64 = -1,
 last_move_select: i64 = -1,
+last_details_update: i64 = -1,
+last_fps: u32 = 0,
+last_mem: f32 = -1.0,
 
 pub fn nextMapIdForType(self: *MapEditorScreen, comptime T: type) *u32 {
     return switch (T) {
@@ -310,15 +314,14 @@ pub fn init(self: *MapEditorScreen) !void {
         .image_data = .{ .nine_slice = .fromAtlasData(selection, 0, 0, 1, 1, 1, 1, 1.0) },
     });
 
-    self.fps_text = try element.create(Text, .{
+    self.details_text = try element.create(Text, .{
         .base = .{ .x = 5 + control_decor_w + 5, .y = 5 },
         .text_data = .{
             .text = "",
             .size = 12,
             .text_type = .bold,
             .hori_align = .left,
-            .max_width = control_decor_w,
-            .max_chars = 64,
+            .max_chars = 128,
             .color = 0x6F573F,
         },
     });
@@ -1310,7 +1313,7 @@ pub fn deinit(self: *MapEditorScreen) void {
     self.command_queue.deinit();
 
     element.destroy(self.selection_image);
-    element.destroy(self.fps_text);
+    element.destroy(self.details_text);
     element.destroy(self.palette_decor);
     inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field|
         element.destroy(@field(self.palette_containers, field.name));
@@ -1844,6 +1847,11 @@ fn fill(self: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
 pub fn update(self: *MapEditorScreen, time: i64, _: f32) !void {
     if (self.map_tile_data.len <= 0) return;
 
+    if (main.current_time - self.last_details_update >= details_update_delay_ms * std.time.us_per_ms) {
+        self.updateDetailsText();
+        self.last_details_update = main.current_time;
+    }
+
     const time_sec = f32i(time) / std.time.us_per_s * 2;
     for (self.selected_tiles) |pos| {
         const square = map.getSquare(f32i(pos.x), f32i(pos.y), true, .ref) orelse continue;
@@ -1916,12 +1924,29 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
     }
 }
 
-pub fn updateFpsText(self: *MapEditorScreen, fps: usize, mem: f32) void {
-    self.fps_text.text_data.setText(std.fmt.bufPrint(
-        self.fps_text.text_data.backing_buffer,
+pub fn updateFps(self: *MapEditorScreen, fps: u32, mem: f32) void {
+    self.last_fps = fps;
+    self.last_mem = mem;
+    self.updateDetailsText();
+}
+
+pub fn updateDetailsText(self: *MapEditorScreen) void {
+    const player_x, const player_y = blk: {
+        map.object_lock.lock();
+        defer map.object_lock.unlock();
+        const player = map.localPlayer(.con) orelse break :blk .{ -1.0, -1.0 };
+        break :blk .{ player.x, player.y };
+    };
+
+    const world_point = main.camera.screenToWorld(input.mouse_x, input.mouse_y);
+
+    self.details_text.text_data.setText(std.fmt.bufPrint(
+        self.details_text.text_data.backing_buffer,
         \\FPS: {}
         \\Memory: {d:.1} MB
+        \\Current position: x={d:.1}, y={d:.1}
+        \\Current mouse position: x={d:.1}, y={d:.1}
     ,
-        .{ fps, mem },
+        .{ self.last_fps, self.last_mem, player_x, player_y, world_point.x, world_point.y },
     ) catch "Buffer out of memory");
 }
