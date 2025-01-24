@@ -249,7 +249,6 @@ undo_key: Settings.Button = .{ .key = .u },
 redo_key: Settings.Button = .{ .key = .r },
 fill_key: Settings.Button = .{ .key = .f },
 wand_key: Settings.Button = .{ .key = .m },
-curve_key: Settings.Button = .{ .key = .l },
 unselect_key: Settings.Button = .{ .key = .c },
 
 start_x_override: u16 = std.math.maxInt(u16),
@@ -581,18 +580,6 @@ pub fn init(self: *MapEditorScreen) !void {
 
     _ = try self.controls_container.createChild(KeyMapper, .{
         .base = .{ .x = button_inset, .y = button_inset + (button_pad_h + button_height) * 6 },
-        .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
-        .title_text_data = .{
-            .text = "Curve",
-            .size = 12,
-            .text_type = .bold,
-        },
-        .settings_button = &self.curve_key,
-        .setKeyCallback = noAction,
-    });
-
-    _ = try self.controls_container.createChild(KeyMapper, .{
-        .base = .{ .x = button_inset + button_pad_w + button_width, .y = button_inset + (button_pad_h + button_height) * 6 },
         .image_data = .fromNineSlices(button_data_base, button_data_hover, button_data_press, key_mapper_width, key_mapper_height, 26, 19, 1, 1, 1.0),
         .title_text_data = .{
             .text = "Unselect",
