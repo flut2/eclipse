@@ -307,7 +307,7 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
 }
 
 pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
-    if (ui_systems.screen == .editor or !cam_data.visibleInCamera(self.x, self.y)) return;
+    if (main.needs_map_bg or !cam_data.visibleInCamera(self.x, self.y)) return;
 
     const size = Camera.size_mult * cam_data.scale * self.size_mult;
 

@@ -18,7 +18,6 @@ const Image = @import("Image.zig");
 const Input = @import("Input.zig");
 const Item = @import("Item.zig");
 const KeyMapper = @import("KeyMapper.zig");
-const MenuBackground = @import("MenuBackground.zig");
 const Minimap = @import("Minimap.zig");
 const ScrollableContainer = @import("ScrollableContainer.zig");
 const Slider = @import("Slider.zig");
@@ -37,7 +36,6 @@ pub const UiElement = union(enum) {
     input_field: *Input,
     item: *Item,
     key_mapper: *KeyMapper,
-    menu_bg: *MenuBackground,
     scrollable_container: *ScrollableContainer,
     slider: *Slider,
     text: *Text,

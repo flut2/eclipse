@@ -1,9 +1,5 @@
 [
 {
-    .name = "menu_decor_frame",
-    .path = "menu_decor_frame.png",
-},
-{
     .name = "rare_slot",
     .path = "item/rare_slot.png",
 },

@@ -1,12 +1,13 @@
-const RecoverAst = @This();
-
 const std = @import("std");
 const assert = std.debug.assert;
+
 const ziggy = @import("../root.zig");
+const Rule = ziggy.schema.Schema.Rule;
 const Diagnostic = @import("Diagnostic.zig");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-const Rule = ziggy.schema.Schema.Rule;
+
+const RecoverAst = @This();
 
 const log = std.log.scoped(.ziggy_ast);
 
@@ -1427,6 +1428,7 @@ fn renderValue(
                 .horizontal => try w.writeAll("["),
             }
             try renderArray(indent + 1, mode, node.first_child_id, nodes, code, w);
+            if (mode == .vertical) try printIndent(indent, w);
             try w.writeAll("]");
         },
 

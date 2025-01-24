@@ -64,7 +64,7 @@ pub var win_freq: u64 = 0;
 pub var render_thread: std.Thread = undefined;
 pub var tick_frame = false;
 pub var tick_render = true;
-pub var editing_map = false;
+pub var needs_map_bg = false;
 pub var need_minimap_update = false;
 pub var need_force_update = false;
 pub var need_swap_chain_update = false;
@@ -281,7 +281,7 @@ fn gameTick(_: [*c]uv.uv_idle_t) callconv(.C) void {
     const dt = f32i(if (current_time > 0) time - current_time else 0);
     current_time = time;
 
-    if (tick_frame or editing_map) map.update(time, dt);
+    if (tick_frame or needs_map_bg) map.update(time, dt);
     ui_systems.update(time, dt) catch @panic("todo");
 }
 

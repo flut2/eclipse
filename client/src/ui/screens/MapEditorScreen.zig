@@ -1051,7 +1051,7 @@ fn initialize(self: *MapEditorScreen) void {
         .speed = 300,
     });
 
-    main.editing_map = true;
+    main.needs_map_bg = true;
     self.start_x_override = std.math.maxInt(u16);
     self.start_y_override = std.math.maxInt(u16);
 }
@@ -1060,14 +1060,14 @@ fn loadMap(screen: *MapEditorScreen, data_reader: anytype) !void {
     var arena: std.heap.ArenaAllocator = .init(main.allocator);
     defer arena.deinit();
     const parsed_map = try map_data.parseMap(data_reader, &arena);
-    screen.start_x_override = parsed_map.x + @divFloor(parsed_map.w, 2);
-    screen.start_y_override = parsed_map.y + @divFloor(parsed_map.h, 2);
-    screen.map_size = utils.nextPowerOfTwo(@max(parsed_map.x + parsed_map.w, parsed_map.y + parsed_map.h));
+    screen.start_x_override = parsed_map.w / 2;
+    screen.start_y_override = parsed_map.h / 2;
+    screen.map_size = @max(parsed_map.w, parsed_map.h);
     screen.initialize();
 
     for (parsed_map.tiles, 0..) |tile, i| {
-        const ux: u16 = @intCast(i % parsed_map.w + parsed_map.x);
-        const uy: u16 = @intCast(@divFloor(i, parsed_map.w) + parsed_map.y);
+        const ux: u16 = @intCast(i % parsed_map.w);
+        const uy: u16 = @intCast(i / parsed_map.w);
         if (tile.ground_name.len > 0) screen.setTile(ux, uy, game_data.ground.from_name.get(tile.ground_name).?.id);
         if (tile.region_name.len > 0) screen.setRegion(ux, uy, game_data.region.from_name.get(tile.region_name).?.id);
         if (tile.entity_name.len > 0) screen.setObject(Entity, ux, uy, game_data.entity.from_name.get(tile.entity_name).?.id);
@@ -1145,8 +1145,7 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
     defer data.deinit(main.allocator);
 
     const bounds = tileBounds(screen.map_tile_data);
-    if (bounds.min_x >= bounds.max_x or bounds.min_y >= bounds.max_y)
-        return error.InvalidMap;
+    if (bounds.min_x >= bounds.max_x or bounds.min_y >= bounds.max_y) return error.InvalidMap;
 
     var writer = data.writer(main.allocator);
     try writer.writeInt(u8, 0, .little); // version
@@ -1245,7 +1244,7 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
 }
 
 fn saveInner(screen: *MapEditorScreen) !void {
-    if (!main.editing_map) return;
+    if (!main.needs_map_bg) return;
 
     const file_path = nfd.saveFileDialog("map", null) catch return;
     if (file_path) |path| {
@@ -1275,13 +1274,16 @@ fn saveCallback(ud: ?*anyopaque) void {
 
 fn exitCallback(ud: ?*anyopaque) void {
     const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
-    const data = mapData(screen) catch |e| {
-        std.log.err("Error while saving map (for testing): {}", .{e});
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
-        return;
-    };
-    if (ui_systems.last_map_data) |last_map_data| main.allocator.free(last_map_data);
-    ui_systems.last_map_data = data;
+    saveMap: {
+        const data = mapData(screen) catch |e| {
+            if (e == error.EmptyMap) break :saveMap;
+            std.log.err("Error while saving map (for exit): {}", .{e});
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            break :saveMap;
+        };
+        if (ui_systems.last_map_data) |last_map_data| main.allocator.free(last_map_data);
+        ui_systems.last_map_data = data;
+    }
 
     if (main.character_list == null)
         ui_systems.switchScreen(.main_menu)
@@ -1334,7 +1336,7 @@ pub fn deinit(self: *MapEditorScreen) void {
     main.allocator.free(self.map_tile_data);
     main.allocator.free(self.selected_tiles);
 
-    main.editing_map = false;
+    main.needs_map_bg = false;
     map.dispose();
 
     main.allocator.destroy(self);

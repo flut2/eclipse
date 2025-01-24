@@ -302,7 +302,6 @@ pub var arena: std.heap.ArenaAllocator = undefined;
 
 pub var atlas: zstbi.Image = undefined;
 pub var ui_atlas: zstbi.Image = undefined;
-pub var menu_background: zstbi.Image = undefined;
 
 pub var bold_atlas: zstbi.Image = undefined;
 pub var bold_data: ParsedFontData = undefined;
@@ -1213,8 +1212,6 @@ pub fn init() !void {
         const dummy_button_ctx: std.hash_map.AutoContext(Settings.Button) = undefined;
         if (key_tex_map.capacity() > 0) key_tex_map.rehash(dummy_button_ctx);
     }
-
-    menu_background = try .loadFromFile("./assets/ui/menu_background.png", 4);
 
     bold_atlas = try .loadFromFile("./assets/fonts/amaranth_bold.png", 4);
     bold_italic_atlas = try .loadFromFile("./assets/fonts/amaranth_bold_italic.png", 4);

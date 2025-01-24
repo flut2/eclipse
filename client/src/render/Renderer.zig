@@ -62,9 +62,8 @@ pub const RenderType = enum(u32) {
     quad = 0,
     ui_quad = 1,
     minimap = 2,
-    menu_bg = 3,
-    text_normal = 4,
-    text_drop_shadow = 5,
+    text_normal = 3,
+    text_drop_shadow = 4,
 };
 
 pub const GenericData = extern struct {
@@ -185,7 +184,6 @@ bold_italic_text: Texture = .{},
 default: Texture = .{},
 ui: Texture = .{},
 minimap: Texture = .{},
-menu_bg: Texture = .{},
 
 generic_material: Material = .{},
 ground_material: Material = .{},
@@ -432,7 +430,6 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
         .{ &self.bold_italic_text, assets.bold_italic_atlas, true },
         .{ &self.default, assets.atlas, false },
         .{ &self.ui, assets.ui_atlas, false },
-        .{ &self.menu_bg, assets.menu_background, false },
         .{ &self.minimap, map.minimap, false },
     }) |mapping| mapping[0].* = try createTexture(
         self.context,
@@ -450,7 +447,6 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
     assets.bold_italic_atlas.deinit();
     assets.atlas.deinit();
     assets.ui_atlas.deinit();
-    assets.menu_background.deinit();
 
     try self.createGenericMaterial();
     try self.createGroundMaterial();
@@ -469,7 +465,6 @@ pub fn destroy(self: *Renderer) void {
     self.default.destroy(self.context, self.vk_allocator);
     self.ui.destroy(self.context, self.vk_allocator);
     self.minimap.destroy(self.context, self.vk_allocator);
-    self.menu_bg.destroy(self.context, self.vk_allocator);
 
     self.generic_material.destroy(self.context);
     self.ground_material.destroy(self.context);
@@ -926,7 +921,7 @@ fn createGenericMaterial(self: *Renderer) !void {
         .p_set_layouts = @ptrCast(&descriptor_layouts),
     }, @ptrCast(&descriptor_sets));
 
-    self.context.device.updateDescriptorSets(10, &.{
+    self.context.device.updateDescriptorSets(9, &.{
         .{
             .dst_set = descriptor_sets[0],
             .dst_binding = 0,
@@ -1020,20 +1015,6 @@ fn createGenericMaterial(self: *Renderer) !void {
             .p_image_info = &.{.{
                 .sampler = self.nearest_sampler,
                 .image_view = self.minimap.view,
-                .image_layout = .shader_read_only_optimal,
-            }},
-            .p_buffer_info = undefined,
-            .p_texel_buffer_view = undefined,
-        },
-        .{
-            .dst_set = descriptor_sets[0],
-            .dst_binding = 7,
-            .dst_array_element = 0,
-            .descriptor_count = 1,
-            .descriptor_type = .combined_image_sampler,
-            .p_image_info = &.{.{
-                .sampler = self.linear_sampler,
-                .image_view = self.menu_bg.view,
                 .image_layout = .shader_read_only_optimal,
             }},
             .p_buffer_info = undefined,
@@ -1647,7 +1628,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
     self.generics.clearRetainingCapacity();
     self.sort_extras.clearRetainingCapacity();
 
-    if ((main.tick_frame or main.editing_map) and
+    if ((main.tick_frame or main.needs_map_bg) and
         cam_data.x >= 0 and cam_data.y >= 0 and
         map.validPos(u32f(cam_data.x), u32f(cam_data.y)))
     {

@@ -8,9 +8,8 @@ const uint bold_italic_text_type = 3;
 const uint quad_render_type = 0;
 const uint ui_quad_render_type = 1;
 const uint minimap_render_type = 2;
-const uint menu_bg_render_type = 3;
-const uint text_normal_render_type = 4;
-const uint text_drop_shadow_render_type = 5;
+const uint text_normal_render_type = 3;
+const uint text_drop_shadow_render_type = 4;
 
 layout(location = 0) flat in int instance_id;
 layout(location = 1) in vec2 in_uv;
@@ -57,7 +56,6 @@ layout(set = 0, binding = 3) uniform sampler2D medium_italic_text_tex;
 layout(set = 0, binding = 4) uniform sampler2D bold_text_tex;
 layout(set = 0, binding = 5) uniform sampler2D bold_italic_text_tex;
 layout(set = 0, binding = 6) uniform sampler2D minimap_tex;
-layout(set = 0, binding = 7) uniform sampler2D menu_bg_tex;
 
 vec4 premultiply(vec4 tex) {
     return vec4(tex.rgb * tex.a, tex.a);
@@ -106,11 +104,6 @@ void main() {
 
         case minimap_render_type: {
             color = premultiply(textureGrad(minimap_tex, in_uv, dx, dy));
-            return;
-        }
-
-        case menu_bg_render_type: {
-            color = premultiply(textureGrad(menu_bg_tex, in_uv, dx, dy));
             return;
         }
 
