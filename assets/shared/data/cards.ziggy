@@ -80,14 +80,6 @@
     .max_stack = 5,
 },
 {
-    .id = 10,
-    .name = "Unstoppable Will",
-    .rarity = @CardRarity("common"),
-    .description = \\Gain $tentxt+10%$tenicon
-    ,
-    .max_stack = 5,
-},
-{
     .id = 11,
     .name = "Warrior's Spirit",
     .rarity = @CardRarity("rare"),
@@ -108,14 +100,6 @@
     .name = "Titan's Resolve",
     .rarity = @CardRarity("rare"),
     .description = \\Gain $statxt+15%$staicon&reset, $inttxt+15%$inticon
-    ,
-    .max_stack = 3,
-},
-{
-    .id = 14,
-    .name = "Corrosive Weaponry",
-    .rarity = @CardRarity("rare"),
-    .description = \\Gain $pentct+20%$penicon&reset, $prcicon+20%$prcicon
     ,
     .max_stack = 3,
 },

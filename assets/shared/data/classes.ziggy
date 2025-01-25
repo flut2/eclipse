@@ -33,7 +33,7 @@
             .name = "Ethereal Harvest",
             .description = 
             \\Gain the ability to see into the spirit world, allowing you to see the &type="med_it"Souls&reset of dead enemies.
-            \\When this ability is cast within 3 tiles of a &type="med_it"Soul&reset: Collect all &type="med_it"Souls&reset within $prctxt5 (+5%$prcicon) tiles&reset, powering this ability up, with stronger &type="med_it"Souls&reset granting more power.
+            \\When this ability is cast within 3 tiles of a &type="med_it"Soul&reset: Collect all &type="med_it"Souls&reset within $strtxt5 (+5%$stricon) tiles&reset, powering this ability up, with stronger &type="med_it"Souls&reset granting more power.
             \\When cast otherwise: You grant a $strtxtStrength&reset and $wittxtWit&reset buff to yourself and up to 5 allies within 4 tiles, scaling based on the amount and the value of &type="med_it"Souls&reset consumed.
             \\Current buffs: $strtxt{0}$stricon&reset, $wittxt{1}$witicon&reset
             ,
