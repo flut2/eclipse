@@ -372,6 +372,102 @@
     .path = "resources/resource_view_cell.png",
 },
 {
+    .name = "celestial_character_tooltip",
+    .path = "character_select/celestial_character_tooltip.png",
+},
+{
+    .name = "character_tooltip",
+    .path = "character_select/character_tooltip.png",
+},
+{
+    .name = "character_list_background",
+    .path = "character_select/character_list_background.png",
+},
+{
+    .name = "character_tooltip_aether_bar",
+    .path = "character_select/character_tooltip_aether_bar.png",
+},
+{
+    .name = "character_tooltip_talent_bar_1",
+    .path = "character_select/character_tooltip_talent_bar_1.png",
+},
+{
+    .name = "character_tooltip_talent_bar_2",
+    .path = "character_select/character_tooltip_talent_bar_2.png",
+},
+{
+    .name = "celestial_character_line",
+    .path = "character_select/celestial_character_line.png",
+    .w = 312,
+    .h = 76,
+},
+{
+    .name = "celestial_new_character_line",
+    .path = "character_select/celestial_new_character_line.png",
+    .w = 312,
+    .h = 76,
+},
+{
+    .name = "celestial_character_delete_button",
+    .path = "character_select/celestial_character_delete_button.png",
+    .w = 38,
+    .h = 44,
+},
+{
+    .name = "celestial_character_favorite_button",
+    .path = "character_select/celestial_character_favorite_button.png",
+    .w = 38,
+    .h = 44,
+},
+{
+    .name = "character_line",
+    .path = "character_select/character_line.png",
+    .w = 312,
+    .h = 76,
+},
+{
+    .name = "new_character_line",
+    .path = "character_select/new_character_line.png",
+    .w = 312,
+    .h = 76,
+},
+{
+    .name = "character_delete_button",
+    .path = "character_select/character_delete_button.png",
+    .w = 38,
+    .h = 44,
+},
+{
+    .name = "character_favorite_button",
+    .path = "character_select/character_favorite_button.png",
+    .w = 38,
+    .h = 44,
+},
+{
+    .name = "character_delete_icon",
+    .path = "character_select/character_delete_icon.png",
+    .w = 14,
+    .h = 14,
+},
+{
+    .name = "character_favorite_icon",
+    .path = "character_select/character_favorite_icon.png",
+    .w = 14,
+    .h = 14,
+},
+{
+    .name = "character_unfavorite_icon",
+    .path = "character_select/character_unfavorite_icon.png",
+    .w = 14,
+    .h = 14,
+},
+{
+    .name = "character_tooltip_card_icons",
+    .path = "character_select/character_tooltip_card_icons.png",
+    .w = 18,
+    .h = 18,
+},
+{
     .name = "text_input",
     .path = "elements/text_input.png",
     .w = 107,

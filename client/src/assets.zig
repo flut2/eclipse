@@ -142,8 +142,8 @@ pub const atlas_height = 1024;
 pub const base_texel_w = 1.0 / @as(comptime_float, atlas_width);
 pub const base_texel_h = 1.0 / @as(comptime_float, atlas_height);
 
-pub const ui_atlas_width = 2048;
-pub const ui_atlas_height = 2048;
+pub const ui_atlas_width = 4096;
+pub const ui_atlas_height = 4096;
 pub const ui_texel_w = 1.0 / @as(comptime_float, ui_atlas_width);
 pub const ui_texel_h = 1.0 / @as(comptime_float, ui_atlas_height);
 
@@ -1248,7 +1248,7 @@ pub fn init() !void {
     defer ctx.deinit();
 
     ui_atlas = try .createEmpty(ui_atlas_width, ui_atlas_height, 4, .{});
-    var ui_ctx: pack.Context = try .create(main.allocator, ui_atlas_width, ui_atlas_height, .{ .spaces_to_prealloc = 4096 });
+    var ui_ctx: pack.Context = try .create(main.allocator, ui_atlas_width, ui_atlas_height, .{ .spaces_to_prealloc = 8192 * 2 });
     defer ui_ctx.deinit();
 
     const game_sheets_data = try std.fs.cwd().openFile("./assets/sheets/game_sheets.ziggy", .{});
