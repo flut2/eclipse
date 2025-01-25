@@ -294,7 +294,7 @@ pub const CharacterData = struct {
         last_login_timestamp: u64,
         aether: u8,
         spirits_communed: u32,
-        stats: [13]i32,
+        stats: [10]i32,
         inventory: [22]u16,
         item_data: [22]network_data.ItemData,
         hp: i32,

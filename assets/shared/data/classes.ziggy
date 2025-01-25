@@ -26,10 +26,7 @@
         .speed = 55,
         .stamina = 75,
         .intelligence = 35,
-        .penetration = 25,
-        .piercing = 10,
         .haste = 35,
-        .tenacity = 60,
     },
     .abilities = [
         {
@@ -104,10 +101,7 @@
         .speed = 40,
         .stamina = 75,
         .intelligence = 20,
-        .penetration = 10,
-        .piercing = 10,
         .haste = 40,
-        .tenacity = 85,
     },
     .abilities = [
         {
@@ -189,10 +183,7 @@
         .speed = 60,
         .stamina = 55,
         .intelligence = 85,
-        .penetration = 35,
-        .piercing = 65,
         .haste = 70,
-        .tenacity = 35,
     },
     .abilities = [
         {
@@ -263,10 +254,7 @@
         .speed = 65,
         .stamina = 35,
         .intelligence = 15,
-        .penetration = 15,
-        .piercing = 10,
         .haste = 35,
-        .tenacity = 25,
     },
     .abilities = [
         {
@@ -343,10 +331,7 @@
         .speed = 65,
         .stamina = 25,
         .intelligence = 55,
-        .penetration = 10,
-        .piercing = 20,
         .haste = 65,
-        .tenacity = 25,
     },
     .abilities = [
         {

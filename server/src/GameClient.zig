@@ -567,7 +567,7 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
         try player.char_data.set(.{ .class_id = class_id });
         try player.char_data.set(.{ .create_timestamp = timestamp });
 
-        var stats: [13]i32 = undefined;
+        var stats: [10]i32 = undefined;
         stats[Player.health_stat] = class_data.stats.health;
         stats[Player.mana_stat] = class_data.stats.mana;
         stats[Player.strength_stat] = class_data.stats.strength;
@@ -577,10 +577,7 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
         stats[Player.speed_stat] = class_data.stats.speed;
         stats[Player.stamina_stat] = class_data.stats.stamina;
         stats[Player.intelligence_stat] = class_data.stats.intelligence;
-        stats[Player.penetration_stat] = class_data.stats.penetration;
-        stats[Player.piercing_stat] = class_data.stats.piercing;
         stats[Player.haste_stat] = class_data.stats.haste;
-        stats[Player.tenacity_stat] = class_data.stats.tenacity;
         try player.char_data.set(.{ .hp = class_data.stats.health });
         try player.char_data.set(.{ .mp = class_data.stats.mana });
         try player.char_data.set(.{ .stats = stats });

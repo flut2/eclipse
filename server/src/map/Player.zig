@@ -31,10 +31,7 @@ pub const resistance_stat = 5;
 pub const speed_stat = 6;
 pub const stamina_stat = 7;
 pub const intelligence_stat = 8;
-pub const penetration_stat = 9;
-pub const piercing_stat = 10;
-pub const haste_stat = 11;
-pub const tenacity_stat = 12;
+pub const haste_stat = 9;
 
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
@@ -55,8 +52,8 @@ hp: i32 = 100,
 mp: i32 = 0,
 hp_regen: f32 = 0.0,
 mp_regen: f32 = 0.0,
-stats: [13]i32 = @splat(0),
-stat_boosts: [13]i32 = @splat(0),
+stats: [10]i32 = @splat(0),
+stat_boosts: [10]i32 = @splat(0),
 inventory: [22]u16 = @splat(std.math.maxInt(u16)),
 inv_data: [22]network_data.ItemData = @splat(@bitCast(@as(u32, 0))),
 selecting_cards: ?[3]u16 = null,
@@ -482,10 +479,7 @@ fn statTypeToId(stat_type: @typeInfo(game_data.StatIncreaseData).@"union".tag_ty
         .speed => speed_stat,
         .stamina => stamina_stat,
         .intelligence => intelligence_stat,
-        .penetration => penetration_stat,
-        .piercing => piercing_stat,
         .haste => haste_stat,
-        .tenacity => tenacity_stat,
     };
 }
 
@@ -543,10 +537,7 @@ pub fn exportStats(
         stat_util.write(T, writer, cache, .{ .speed = @intCast(self.stats[speed_stat]) });
         stat_util.write(T, writer, cache, .{ .stamina = @intCast(self.stats[stamina_stat]) });
         stat_util.write(T, writer, cache, .{ .intelligence = @intCast(self.stats[intelligence_stat]) });
-        stat_util.write(T, writer, cache, .{ .penetration = @intCast(self.stats[penetration_stat]) });
-        stat_util.write(T, writer, cache, .{ .piercing = @intCast(self.stats[piercing_stat]) });
         stat_util.write(T, writer, cache, .{ .haste = @intCast(self.stats[haste_stat]) });
-        stat_util.write(T, writer, cache, .{ .tenacity = @intCast(self.stats[tenacity_stat]) });
 
         stat_util.write(T, writer, cache, .{ .strength_bonus = @intCast(self.stat_boosts[strength_stat]) });
         stat_util.write(T, writer, cache, .{ .wit_bonus = @intCast(self.stat_boosts[wit_stat]) });
@@ -555,10 +546,7 @@ pub fn exportStats(
         stat_util.write(T, writer, cache, .{ .speed_bonus = @intCast(self.stat_boosts[speed_stat]) });
         stat_util.write(T, writer, cache, .{ .stamina_bonus = @intCast(self.stat_boosts[stamina_stat]) });
         stat_util.write(T, writer, cache, .{ .intelligence_bonus = @intCast(self.stat_boosts[intelligence_stat]) });
-        stat_util.write(T, writer, cache, .{ .penetration_bonus = @intCast(self.stat_boosts[penetration_stat]) });
-        stat_util.write(T, writer, cache, .{ .piercing_bonus = @intCast(self.stat_boosts[piercing_stat]) });
         stat_util.write(T, writer, cache, .{ .haste_bonus = @intCast(self.stat_boosts[haste_stat]) });
-        stat_util.write(T, writer, cache, .{ .tenacity_bonus = @intCast(self.stat_boosts[tenacity_stat]) });
 
         inline for (0..self.inventory.len) |i| {
             const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =

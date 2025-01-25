@@ -155,15 +155,12 @@ fn processMacros(allocator: std.mem.Allocator, text: []const u8) ![]const u8 {
         .{ "$mpicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .max_mp = undefined }) },
         .{ "$stricon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .strength = undefined }) },
         .{ "$deficon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .defense = undefined }) },
-        .{ "$penicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .penetration = undefined }) },
         .{ "$witicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .wit = undefined }) },
         .{ "$resicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .resistance = undefined }) },
-        .{ "$prcicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .piercing = undefined }) },
         .{ "$staicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .stamina = undefined }) },
         .{ "$inticon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .intelligence = undefined }) },
         .{ "$spdicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .speed = undefined }) },
         .{ "$hsticon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .haste = undefined }) },
-        .{ "$tenicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .tenacity = undefined }) },
     }) |replace| {
         _ = std.mem.replace(
             u8,
@@ -273,10 +270,7 @@ const ClassStats = struct {
     speed: i16,
     stamina: i16,
     intelligence: i16,
-    penetration: i16,
-    piercing: i16,
     haste: i16,
-    tenacity: i16,
 };
 
 pub const AbilityData = struct {
@@ -485,10 +479,7 @@ pub const StatIncreaseData = union(enum) {
     speed: struct { amount: u16 },
     stamina: struct { amount: u16 },
     intelligence: struct { amount: u16 },
-    penetration: struct { amount: u16 },
-    piercing: struct { amount: u16 },
     haste: struct { amount: u16 },
-    tenacity: struct { amount: u16 },
 
     pub fn toString(self: StatIncreaseData) []const u8 {
         return switch (self) {
@@ -501,10 +492,7 @@ pub const StatIncreaseData = union(enum) {
             .speed => "Speed",
             .stamina => "Stamina",
             .intelligence => "Intelligence",
-            .penetration => "Penetration",
-            .piercing => "Piercing",
             .haste => "Haste",
-            .tenacity => "Tenacity",
         };
     }
 
@@ -519,10 +507,7 @@ pub const StatIncreaseData = union(enum) {
             .wit => "&img=\"misc_big,35\"",
             .resistance => "&img=\"misc_big,57\"",
             .intelligence => "&img=\"misc_big,59\"",
-            .penetration => "&img=\"misc_big,38\"",
-            .piercing => "&img=\"misc_big,60\"",
             .haste => "&img=\"misc_big,58\"",
-            .tenacity => "&img=\"misc_big,37\"",
         };
     }
 

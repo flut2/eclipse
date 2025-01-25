@@ -214,10 +214,7 @@ resistance_stat_text: *Text = undefined,
 speed_stat_text: *Text = undefined,
 stamina_stat_text: *Text = undefined,
 intelligence_stat_text: *Text = undefined,
-penetration_stat_text: *Text = undefined,
-piercing_stat_text: *Text = undefined,
 haste_stat_text: *Text = undefined,
-tenacity_stat_text: *Text = undefined,
 health_bar: *Bar = undefined,
 mana_bar: *Bar = undefined,
 spirit_bar: *Bar = undefined,
@@ -539,10 +536,7 @@ pub fn init(self: *GameScreen) !void {
     try addStatText(self.stats_container, &self.speed_stat_text, &idx);
     try addStatText(self.stats_container, &self.stamina_stat_text, &idx);
     try addStatText(self.stats_container, &self.intelligence_stat_text, &idx);
-    try addStatText(self.stats_container, &self.penetration_stat_text, &idx);
-    try addStatText(self.stats_container, &self.piercing_stat_text, &idx);
     try addStatText(self.stats_container, &self.haste_stat_text, &idx);
-    try addStatText(self.stats_container, &self.tenacity_stat_text, &idx);
 
     self.ability_container = try element.create(UiContainer, .{ .base = .{
         .x = self.bars_decor.base.x + 113,
@@ -1041,10 +1035,7 @@ pub fn updateStats(self: *GameScreen) void {
         updateStat(&self.speed_stat_text.text_data, player.speed, player.speed_bonus);
         updateStat(&self.stamina_stat_text.text_data, player.stamina, player.stamina);
         updateStat(&self.intelligence_stat_text.text_data, player.intelligence, player.intelligence_bonus);
-        updateStat(&self.penetration_stat_text.text_data, player.penetration, player.penetration_bonus);
-        updateStat(&self.piercing_stat_text.text_data, player.piercing, player.piercing_bonus);
         updateStat(&self.haste_stat_text.text_data, player.haste, player.haste_bonus);
-        updateStat(&self.tenacity_stat_text.text_data, player.tenacity, player.tenacity_bonus);
     }
 }
 
