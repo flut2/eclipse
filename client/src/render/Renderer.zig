@@ -1608,7 +1608,6 @@ pub fn draw(self: *Renderer, time: i64) !void {
     };
 
     const cmd_buffer = self.cmd_buffers[self.swapchain.image_index];
-    // try self.context.device.resetCommandBuffer(cmd_buffer, .{});
     try self.context.device.beginCommandBuffer(cmd_buffer, &.{ .flags = .{} });
     self.context.device.cmdSetViewport(cmd_buffer, 0, 1, @ptrCast(&viewport));
     self.context.device.cmdSetScissor(cmd_buffer, 0, 1, @ptrCast(&scissor));

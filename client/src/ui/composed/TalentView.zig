@@ -42,6 +42,7 @@ const TalentButton = struct {
                 .base = .{
                     .x = 6 + (inner_size - assets.error_data.width() * scale) / 2.0,
                     .y = 6 + (inner_size - assets.error_data.height() * scale) / 2.0,
+                    .event_policy = .pass_all,
                 },
                 .image_data = .{ .normal = .{ .atlas_data = assets.error_data, .scale_x = scale, .scale_y = scale } },
             }),

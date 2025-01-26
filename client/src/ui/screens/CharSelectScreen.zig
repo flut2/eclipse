@@ -84,6 +84,7 @@ const CharacterBox = struct {
                 .base = .{
                     .x = 38 + 6 + (64 - tex.width() * 5.0) / 2.0,
                     .y = 6 + (64 - tex.height() * 5.0) / 2.0,
+                    .event_policy = .pass_all,
                 },
                 .image_data = .{ .normal = .{ .atlas_data = tex, .scale_x = 5.0, .scale_y = 5.0 } },
             }),

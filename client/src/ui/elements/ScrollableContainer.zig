@@ -117,12 +117,7 @@ pub fn init(self: *ScrollableContainer) void {
                 .scissor = .{ .min_x = 0, .min_y = 0, .max_x = self.scissor_w, .max_y = self.scissor_h },
                 .visible = false,
                 .layer = self.base.layer,
-                .event_policy = .{
-                    .pass_press = true,
-                    .pass_release = true,
-                    .pass_move = true,
-                    .pass_scroll = true,
-                },
+                .event_policy = .pass_all,
             },
             .image_data = self.scroll_side_decor_image_data,
         };

@@ -138,12 +138,7 @@ pub fn mouseScroll(self: *Slider, x: f32, y: f32, _: f32, _: f32, _: f32, y_scro
 }
 
 pub fn init(self: *Slider) void {
-    self.base.event_policy = .{
-        .pass_move = true,
-        .pass_press = true,
-        .pass_scroll = true,
-        .pass_release = true,
-    };
+    self.base.event_policy = .pass_all;
 
     if (self.target) |value_ptr| {
         value_ptr.* = @min(self.max_value, @max(self.min_value, value_ptr.*));

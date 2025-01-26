@@ -667,22 +667,12 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
     } else @panic("Could not initiate ability for GameScreen, sheet was missing");
 
     self.ability_overlays[idx] = try self.ability_container.createChild(Image, .{
-        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false, .event_policy = .{
-            .pass_move = true,
-            .pass_press = true,
-            .pass_release = true,
-            .pass_scroll = true,
-        } },
+        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false, .event_policy = .pass_all },
         .image_data = undefined,
     });
 
     self.ability_overlay_texts[idx] = try self.ability_container.createChild(Text, .{
-        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false, .event_policy = .{
-            .pass_move = true,
-            .pass_press = true,
-            .pass_release = true,
-            .pass_scroll = true,
-        } },
+        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false, .event_policy = .pass_all },
         .text_data = .{
             .text = "",
             .size = 12.0,

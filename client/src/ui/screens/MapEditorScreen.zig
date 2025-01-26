@@ -298,12 +298,7 @@ pub fn init(self: *MapEditorScreen) !void {
             .x = 0,
             .y = 0,
             .visible = false,
-            .event_policy = .{
-                .pass_press = false,
-                .pass_release = false,
-                .pass_move = false,
-                .pass_scroll = false,
-            },
+            .event_policy = .pass_all,
         },
         .image_data = .{ .nine_slice = .fromAtlasData(selection, 0, 0, 1, 1, 1, 1, 1.0) },
     });

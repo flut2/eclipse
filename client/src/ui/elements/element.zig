@@ -63,6 +63,13 @@ pub const Layer = enum {
 };
 
 pub const EventPolicy = packed struct {
+    pub const pass_all: EventPolicy = .{
+        .pass_press = true,
+        .pass_release = true,
+        .pass_move = true,
+        .pass_scroll = true,
+    };
+
     pass_press: bool = false,
     pass_release: bool = false,
     pass_move: bool = false,
