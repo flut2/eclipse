@@ -20,6 +20,7 @@ const TalentButton = struct {
     button: *Button,
     icon: *Image,
     level_text: *Text,
+    locked_overlay: *Image,
     index: u8,
 
     pub fn create(root: *Container, index: u8) !TalentButton {
@@ -28,47 +29,65 @@ const TalentButton = struct {
         const sheet_name = if (data.large) "talent_cell_big" else "talent_cell_small";
         const scale: f32 = if (data.large) 5.0 else 4.0;
         const inner_size: f32 = if (data.large) 44.0 else 34.0;
+
+        const button = try base.createChild(Button, .{
+            .base = .{ .x = 0, .y = 0 },
+            .image_data = .fromImageData(
+                assets.getUiData(sheet_name, 0),
+                assets.getUiData(sheet_name, 1),
+                assets.getUiData(sheet_name, 2),
+            ),
+            .pressCallback = pressCallback,
+        });
+
+        const icon = try base.createChild(Image, .{
+            .base = .{
+                .x = 6 + (inner_size - assets.error_data.width() * scale) / 2.0,
+                .y = 6 + (inner_size - assets.error_data.height() * scale) / 2.0,
+                .event_policy = .pass_all,
+            },
+            .image_data = .{ .normal = .{ .atlas_data = assets.error_data, .scale_x = scale, .scale_y = scale } },
+        });
+
+        const level_text = try base.createChild(Text, .{
+            .base = .{
+                .x = 6,
+                .y = if (data.large) 62 else 52,
+            },
+            .text_data = .{
+                .text = "",
+                .size = 8,
+                .max_chars = 32,
+                .vert_align = .middle,
+                .hori_align = .middle,
+                .max_width = if (data.large) 44 else 34,
+                .max_height = 12,
+            },
+        });
+
+        const locked_overlay = try base.createChild(Image, .{
+            .base = .{ .x = 0, .y = 0, .event_policy = .pass_all, .visible = false },
+            .image_data = .{ .normal = .{
+                .atlas_data = if (data.large)
+                    assets.getUiData("talent_cell_big_locked", 0)
+                else
+                    assets.getUiData("talent_cell_small_locked", 0),
+            } },
+        });
+
         return .{
             .base = base,
-            .button = try base.createChild(Button, .{
-                .base = .{ .x = 0, .y = 0 },
-                .image_data = .fromImageData(
-                    assets.getUiData(sheet_name, 0),
-                    assets.getUiData(sheet_name, 1),
-                    assets.getUiData(sheet_name, 2),
-                ),
-                .pressCallback = pressCallback,
-            }),
-            .icon = try base.createChild(Image, .{
-                .base = .{
-                    .x = 6 + (inner_size - assets.error_data.width() * scale) / 2.0,
-                    .y = 6 + (inner_size - assets.error_data.height() * scale) / 2.0,
-                    .event_policy = .pass_all,
-                },
-                .image_data = .{ .normal = .{ .atlas_data = assets.error_data, .scale_x = scale, .scale_y = scale } },
-            }),
-            .level_text = try base.createChild(Text, .{
-                .base = .{
-                    .x = 6,
-                    .y = if (data.large) 62 else 52,
-                },
-                .text_data = .{
-                    .text = "",
-                    .size = 8,
-                    .max_chars = 32,
-                    .vert_align = .middle,
-                    .hori_align = .middle,
-                    .max_width = if (data.large) 44 else 34,
-                    .max_height = 12,
-                },
-            }),
+            .button = button,
+            .icon = icon,
+            .level_text = level_text,
+            .locked_overlay = locked_overlay,
             .index = index,
         };
     }
 
-    pub fn update(self: *TalentButton, talent_level: u16, aether: u8, talent_data: game_data.TalentData) void {
+    pub fn update(self: *TalentButton, talent_level: u16, aether: u8, locked: bool, talent_data: game_data.TalentData) void {
         if (aether < 1) return;
-        self.level_text.text_data.setText(std.fmt.bufPrint(self.level_text.text_data.backing_buffer, "{}/{}", .{
+        self.level_text.text_data.setText(std.fmt.bufPrint(self.level_text.text_data.backing_buffer, "Lv. {}/{}", .{
             talent_level,
             talent_data.max_level[aether - 1],
         }) catch "Buffer overflow");
@@ -86,6 +105,8 @@ const TalentButton = struct {
         } };
         self.icon.base.x = 6 + (inner_size - icon.width() * scale) / 2.0;
         self.icon.base.y = 6 + (inner_size - icon.height() * scale) / 2.0;
+        self.locked_overlay.base.visible = locked;
+        self.button.enabled = !locked;
     }
 
     fn pressCallback(ud: ?*anyopaque) void {
@@ -201,7 +222,18 @@ pub fn update(self: *TalentView, player: Player) void {
             for (player.talents) |talent| if (talent.data_id == i) break :blk talent.count;
             break :blk 0;
         };
-        button.update(talent_level, player.aether, data);
+        const meets_reqs = blk: {
+            reqLoop: for (data.requires) |req| {
+                for (player.talents) |talent|
+                    if (talent.data_id == req.index and talent.count >= req.level_per_aether * player.aether)
+                        continue :reqLoop;
+                break :blk false;
+            }
+
+            break :blk true;
+        };
+
+        button.update(talent_level, player.aether, !meets_reqs, data);
     }
 }
 

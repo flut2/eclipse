@@ -344,6 +344,14 @@
     .path = "talents/player_talent_tree_view.png",
 },
 {
+    .name = "talent_cell_small_locked",
+    .path = "talents/talent_cell_small_locked.png",
+},
+{
+    .name = "talent_cell_big_locked",
+    .path = "talents/talent_cell_big_locked.png",
+},
+{
     .name = "editor_selection",
     .path = "editor_selection.png",
 },
