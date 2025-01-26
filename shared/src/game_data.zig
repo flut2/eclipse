@@ -314,10 +314,12 @@ pub const TalentResourceCost = struct {
     };
 };
 pub const TalentRequirement = struct { index: u16, level_per_aether: u8 };
+pub const TalentType = enum { keystone, ability, minor };
 pub const TalentData = struct {
     name: []const u8,
     description: []const u8,
     icon: TextureData,
+    type: TalentType,
     max_level: []const u16, // This won't ever be >255, but ziggy breaks otherwise, thinking it's a string...
     level_costs: []const []const TalentResourceCost,
     requires: []const TalentRequirement = &.{},

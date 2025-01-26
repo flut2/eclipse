@@ -230,6 +230,7 @@
             .name = "Hyper Dilation",
             .description = "Boost the range of Time Dilation by 2.5% (additive) per level",
             .icon = { "ability_icons": 0 },
+            .type = @TalentType("ability"),
             .max_level = [5, 10],
             .level_costs = [
                 [{"Common Resource 1": 10}],
@@ -248,6 +249,7 @@
             .name = "Event Horizon",
             .description = "Increase the slowing effect of Time Dilation by 5% (additive) per level",
             .icon = { "ability_icons": 0 },
+            .type = @TalentType("keystone"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 500}, {"Rare Resource 1": 75}, {"Epic Resource 1": 35}],
@@ -259,6 +261,7 @@
             .name = "Intelligence Boost",
             .description = "Gain $inttxt+10 $inticon&reset per level",
             .icon = { "misc_big": 59 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -271,6 +274,7 @@
             .name = "Haste Boost",
             .description = "Gain $hsttxt+5 $hsticon&reset per level",
             .icon = { "misc_big": 58 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -283,6 +287,7 @@
             .name = "Mana Boost",
             .description = "Gain $mptxt+35 $mpicon&reset per level",
             .icon = { "misc_big": 39 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -295,6 +300,7 @@
             .name = "Heightened Perception",
             .description = "Gain Invulnerability after using Rewind for 0.2s per level",
             .icon = { "ability_icons": 1 },
+            .type = @TalentType("ability"),
             .max_level = [5, 10],
             .level_costs = [
                 [{"Common Resource 1": 10}],
@@ -313,6 +319,7 @@
             .name = "Damage Prevention",
             .description = "Restore $hptxt50 Health&reset per level after using Rewind",
             .icon = { "ability_icons": 1 },
+            .type = @TalentType("keystone"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 500}, {"Rare Resource 1": 75}, {"Epic Resource 1": 35}],
@@ -324,6 +331,7 @@
             .name = "Stamina Boost",
             .description = "Gain $statxt+10 $staicon&reset per level",
             .icon = { "misc_big": 36 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -336,6 +344,7 @@
             .name = "Speed Boost",
             .description = "Gain $spdtxt+5 $spdicon&reset per level",
             .icon = { "misc_big": 34 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -348,6 +357,7 @@
             .name = "Health Boost",
             .description = "Gain $hptxt+35 $hpicon&reset per level",
             .icon = { "misc_big": 40 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -360,6 +370,7 @@
             .name = "Double Tap",
             .description = "Cast another Null Pulse 0.5 seconds after the first one, with the second one having a range of 0.2 tiles per level",
             .icon = { "ability_icons": 2 },
+            .type = @TalentType("ability"),
             .max_level = [5, 10],
             .level_costs = [
                 [{"Common Resource 1": 10}],
@@ -378,6 +389,7 @@
             .name = "Essence Harvest",
             .description = "Restore $mptxt30 Mana&reset per level for every enemy killed by Null Pulse",
             .icon = { "ability_icons": 2 },
+            .type = @TalentType("keystone"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 500}, {"Rare Resource 1": 75}, {"Epic Resource 1": 35}],
@@ -389,6 +401,7 @@
             .name = "Wit Boost",
             .description = "Gain $wittxt+10 $witicon&reset per level",
             .icon = { "misc_big": 35 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -401,6 +414,7 @@
             .name = "Strength Boost",
             .description = "Gain $strtxt+5 $stricon&reset per level",
             .icon = { "misc_big": 32 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -413,6 +427,7 @@
             .name = "Defense Boost",
             .description = "Gain $deftxt+5 $deficon&reset per level",
             .icon = { "misc_big": 33 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -425,6 +440,7 @@
             .name = "Phase Shift",
             .description = "Return 2.5% (additive) per level of damage received in Time Lock immediately",
             .icon = { "ability_icons": 3 },
+            .type = @TalentType("ability"),
             .max_level = [5, 10],
             .level_costs = [
                 [{"Common Resource 1": 10}],
@@ -446,6 +462,7 @@
             \\The Magic Corp Turret scales in rarity per level, going from Common to Mythic 
             ,
             .icon = { "ability_icons": 3 },
+            .type = @TalentType("keystone"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 500}, {"Rare Resource 1": 75}, {"Epic Resource 1": 35}],
@@ -457,6 +474,7 @@
             .name = "Resistance Boost",
             .description = "Gain $restxt+10 $resicon&reset per level",
             .icon = { "misc_big": 57 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -469,6 +487,7 @@
             .name = "Health Boost",
             .description = "Gain $hptxt+35 $hpicon&reset per level",
             .icon = { "misc_big": 40 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],
@@ -481,6 +500,7 @@
             .name = "Mana Boost",
             .description = "Gain $mptxt+5 $mpicon&reset per level",
             .icon = { "misc_big": 39 },
+            .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
                 [{"Common Resource 1": 75}, {"Rare Resource 1": 15}, {"Epic Resource 1": 5}],

@@ -246,11 +246,11 @@ last_max_hp_bonus: i32 = -1,
 last_mp: i32 = -1,
 last_max_mp: i32 = -1,
 last_max_mp_bonus: i32 = -1,
-last_in_combat: bool = false,
 last_card_count: i32 = -1,
 last_gold: u32 = std.math.maxInt(u32),
 last_gems: u32 = std.math.maxInt(u32),
-last_resources: []const network_data.DataIdWithCount(u32) = &.{},
+last_resources: []const network_data.DataIdWithCount(u32) = &.{.{ .count = std.math.maxInt(u32), .data_id = std.math.maxInt(u16) }},
+last_talents: []const network_data.DataIdWithCount(u16) = &.{.{ .count = std.math.maxInt(u16), .data_id = std.math.maxInt(u16) }},
 
 pub fn init(self: *GameScreen) !void {
     const inventory_data = assets.getUiData("player_inventory", 0);
@@ -875,6 +875,11 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
         if (!std.mem.eql(network_data.DataIdWithCount(u32), self.last_resources, local_player.resources)) {
             try self.resource_view.update(local_player.resources);
             self.last_resources = local_player.resources;
+        }
+
+        if (!std.mem.eql(network_data.DataIdWithCount(u16), self.last_talents, local_player.talents)) {
+            self.talent_view.update(local_player);
+            self.last_talents = local_player.talents;
         }
 
         if (self.last_gold != local_player.gold) {
