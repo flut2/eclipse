@@ -72,7 +72,7 @@ const TalentButton = struct {
             player.talents[self.index],
             data.max_level * player.aether,
         });
-        const size = if (button_data[self.index][2]) 44.0 else 32.0; // TODO: hack, this is 34 instead of 32. fix in UI later
+        const size = if (button_data[self.index][2]) 44.0 else 30.0;
         const tex_list = assets.atlas_data.get(data.icon.sheet) orelse return;
         if (data.icon.index > tex_list.len - 1) return;
         const icon = tex_list[data.icon.index];

@@ -37,7 +37,7 @@ fn parseGeneric(allocator: std.mem.Allocator, path: []const u8, comptime DataTyp
     for (data_slice) |data| {
         const id_res = try data_maps.from_id.getOrPut(allocator, data.id);
         if (id_res.found_existing) {
-            std.log.err("Duplicate id for {s}: wanted to override {s}", .{data.name, id_res.value_ptr.name});
+            std.log.err("Duplicate id for {s}: wanted to override {s}", .{ data.name, id_res.value_ptr.name });
             std.posix.exit(0);
         }
         id_res.value_ptr.* = data;
@@ -298,18 +298,30 @@ pub const ResourceData = struct {
     icon: TextureData,
 };
 
-pub const ResourceCost = struct { name: []const u8, amount: u32 };
-pub const ItemCost = struct { name: []const u8, amount: u8 };
+pub const TalentResourceCost = struct {
+    name: []const u8,
+    amount: u32,
 
-pub const TalentLevelCost = struct { resources: []ResourceCost, items: []ItemCost = &.{} };
-pub const TalentRequirement = struct { index: u16, level: u8 };
+    pub const ziggy_options = struct {
+        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) ziggy.Parser.Error!TalentResourceCost {
+            const map = try parser.parseValue(ziggy.dynamic.Map(u16), first_tok);
+            switch (map.fields.count()) {
+                0 => @panic("You can't provide an empty map"),
+                1 => return .{ .name = map.fields.keys()[0], .amount = map.fields.values()[0] },
+                else => @panic("You can only map one value in a TalentResourceCost"),
+            }
+        }
+    };
+};
+pub const TalentRequirement = struct { index: u16, level_per_aether: u8 };
 pub const TalentData = struct {
     name: []const u8,
     description: []const u8,
     icon: TextureData,
-    max_level: u8,
-    level_costs: []TalentLevelCost,
-    requires: []TalentRequirement = &.{},
+    max_level: []const u16, // This won't ever be >255, but ziggy breaks otherwise, thinking it's a string...
+    level_costs: []const []const TalentResourceCost,
+    requires: []const TalentRequirement = &.{},
+    stat_increases_per_level: ?[]const StatIncreaseData = null,
 };
 
 pub const ClassData = struct {
@@ -325,7 +337,7 @@ pub const ClassData = struct {
     rpc_name: []const u8 = "Unknown",
     abilities: [4]AbilityData,
     light: LightData = .{},
-    talents: []TalentData,
+    talents: []const TalentData,
 };
 
 pub const ContainerData = struct {
@@ -337,7 +349,7 @@ pub const ContainerData = struct {
     light: LightData = .{},
     show_name: bool = false,
     draw_on_ground: bool = false,
-    animations: ?[]FrameData = null,
+    animations: ?[]const FrameData = null,
 };
 
 pub const ProjectileData = struct {
