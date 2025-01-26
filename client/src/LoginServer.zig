@@ -36,6 +36,7 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacketLogin).@"union".tag_t
         .login_response => handleLoginResponse,
         .register_response => handleRegisterResponse,
         .verify_response => handleVerifyResponse,
+        .delete_response => handleDeleteResponse,
         .@"error" => handleError,
     };
 }
@@ -312,6 +313,11 @@ fn handleVerifyResponse(_: *Server, data: PacketData(.verify_response)) void {
 
     main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.character_list.?.characters.len == 0) return;
+    if (main.skip_verify_loop) {
+        main.skip_verify_loop = false;
+        return;
+    }
+
     {
         ui_systems.ui_lock.lock();
         defer ui_systems.ui_lock.unlock();
@@ -323,13 +329,28 @@ fn handleVerifyResponse(_: *Server, data: PacketData(.verify_response)) void {
             main.enterGame(main.character_list.?.servers[0], char.char_id, std.math.maxInt(u16));
             return;
         };
-    
+
     main.enterGame(main.character_list.?.servers[0], main.character_list.?.characters[0].char_id, std.math.maxInt(u16));
+}
+
+fn handleDeleteResponse(_: *Server, data: PacketData(.delete_response)) void {
+    if (logRead(.non_tick)) std.log.debug("Login Recv - DeleteResponse: {}", .{data});
+
+    main.character_list = deepCopyList(data) catch main.oomPanic();
+    if (ui_systems.screen == .char_select) {
+        ui_systems.ui_lock.lock();
+        defer ui_systems.ui_lock.unlock();
+        ui_systems.screen.char_select.refresh() catch |e| {
+            std.log.err("Character select refresh failed post-deletion: {}", .{e});
+            return;
+        };
+    }
 }
 
 fn handleError(_: *Server, data: PacketData(.@"error")) void {
     if (logRead(.non_tick)) std.log.debug("Login Recv - Error: {}", .{data});
 
+    main.skip_verify_loop = false;
     {
         ui_systems.ui_lock.lock();
         defer ui_systems.ui_lock.unlock();

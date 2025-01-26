@@ -100,7 +100,7 @@ pub fn init(self: *CharacterTooltip) !void {
         .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_tooltip_talent_bar_1", 0) } },
         .text_data = .{
             .text = "0% Keystone Talents unlocked",
-            .size = 12,
+            .size = 11,
             .text_type = .bold_italic,
             .max_chars = 128,
         },
@@ -111,7 +111,7 @@ pub fn init(self: *CharacterTooltip) !void {
         .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_tooltip_talent_bar_1", 0) } },
         .text_data = .{
             .text = "0% Ability Talents unlocked",
-            .size = 12,
+            .size = 11,
             .text_type = .bold_italic,
             .max_chars = 128,
         },
@@ -164,11 +164,13 @@ pub fn deinit(self: *CharacterTooltip) void {
 }
 
 pub fn update(self: *CharacterTooltip, params: tooltip.ParamsFor(CharacterTooltip)) void {
-    const left_x = params.x - self.decor.width() - 15;
-    const up_y = params.y - self.decor.height() - 15;
-    self.root.base.x = if (left_x < 0) params.x + 15 else left_x;
-    self.root.base.y = if (up_y < 0) params.y + 15 else up_y;
-
+    defer {
+        const left_x = params.x - self.decor.width() - 5;
+        const up_y = params.y - self.decor.height() - 5;
+        self.root.base.x = if (left_x < 0) params.x + 5 else left_x;
+        self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
+    }
+    
     self.decor.image_data.normal.atlas_data = if (params.data.celestial)
         assets.getUiData("celestial_character_tooltip", 0)
     else
@@ -245,7 +247,4 @@ pub fn update(self: *CharacterTooltip, params: tooltip.ParamsFor(CharacterToolti
         );
         mapping[0].base.scissor.max_x = mapping[0].texHRaw() * mapping[1];
     }
-
-    self.root.base.x = params.x - self.decor.width() - 15;
-    self.root.base.y = params.y - self.decor.height() - 15;
 }

@@ -14,6 +14,7 @@ pub const Button = union(enum) { key: glfw.Key, mouse: glfw.MouseButton };
 
 var arena: std.heap.ArenaAllocator = undefined;
 pub var needs_char_id_dispose = false;
+pub var needs_fav_char_id_dispose = false;
 
 move_left: Button = .{ .key = .a },
 move_right: Button = .{ .key = .d },
@@ -64,6 +65,7 @@ pub fn deinit(self: Self) void {
     };
 
     if (needs_char_id_dispose) main.allocator.free(self.char_ids_login_sort);
+    if (needs_fav_char_id_dispose) main.allocator.free(self.favorite_char_ids);
     arena.deinit();
 }
 

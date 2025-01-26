@@ -238,6 +238,28 @@ pub fn save(self: *Player) !void {
 
 pub fn death(self: *Player, killer: []const u8) !void {
     if (self.rank == .admin) return;
+
+    const alive_char_ids = self.acc_data.get(.alive_char_ids) catch {
+        self.client.sendError(.message_with_disconnect, "Death failed: Database Error");
+        return;
+    };
+    const new_char_ids = main.allocator.alloc(u32, alive_char_ids.len - 1) catch main.oomPanic();
+    defer main.allocator.free(new_char_ids);
+    delete: {
+        for (alive_char_ids, 0..) |char_id, i| {
+            if (self.char_data.char_id != char_id) continue;
+            @memcpy(new_char_ids[0..i], alive_char_ids[0..i]);
+            @memcpy(new_char_ids[i..], alive_char_ids[i + 1 ..]);
+            break :delete;
+        }
+        self.client.sendError(.message_with_disconnect, "Death failed: Character does not exist");
+        return;
+    }
+
+    self.acc_data.set(.{ .alive_char_ids = new_char_ids }) catch {
+        self.client.sendError(.message_with_disconnect, "Death failed: Database Error");
+        return;
+    };
     self.client.queuePacket(.{ .death = .{ .killer_name = killer } });
     self.client.sameThreadShutdown();
 }

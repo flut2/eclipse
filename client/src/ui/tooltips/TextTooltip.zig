@@ -34,6 +34,13 @@ pub fn deinit(self: *TextTooltip) void {
 }
 
 pub fn update(self: *TextTooltip, params: tooltip.ParamsFor(TextTooltip)) void {
+    defer {
+        const left_x = params.x - self.decor.width() - 5;
+        const up_y = params.y - self.decor.height() - 5;
+        self.root.base.x = if (left_x < 0) params.x + 5 else left_x;
+        self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
+    }
+
     inline for (@typeInfo(element.TextData).@"struct".fields) |field| {
         comptime if (std.mem.eql(u8, field.name, "backing_buffer") or
             std.mem.eql(u8, field.name, "line_widths") or
@@ -59,9 +66,4 @@ pub fn update(self: *TextTooltip, params: tooltip.ParamsFor(TextTooltip)) void {
             image_data.scale_y = (self.text.height() + 16 * 2) / image_data.height();
         },
     }
-
-    const left_x = params.x - self.decor.width() - 15;
-    const up_y = params.y - self.decor.height() - 15;
-    self.root.base.x = if (left_x < 0) params.x + 15 else left_x;
-    self.root.base.y = if (up_y < 0) params.y + 15 else up_y;
 }

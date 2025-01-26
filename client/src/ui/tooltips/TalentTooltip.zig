@@ -78,15 +78,17 @@ pub fn deinit(self: *TalentTooltip) void {
 }
 
 pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) void {
+    defer {
+        const left_x = params.x - self.decor.width() - 5;
+        const up_y = params.y - self.decor.height() - 5;
+        self.root.base.x = if (left_x < 0) params.x + 5 else left_x;
+        self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
+    }
+    
     self.title.text_data.setText(params.data.name);
 
     switch (self.decor.image_data) {
         .nine_slice => |*nine_slice| nine_slice.h = self.root.height() + 15 * 2,
         .normal => |*image_data| image_data.scale_y = (self.root.height() + 15 * 2) / image_data.height(),
     }
-
-    const left_x = params.x - self.decor.width() - 15;
-    const up_y = params.y - self.decor.height() - 15;
-    self.root.base.x = if (left_x < 0) params.x + 15 else left_x;
-    self.root.base.y = if (up_y < 0) params.y + 15 else up_y;
 }

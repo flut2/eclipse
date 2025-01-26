@@ -8,6 +8,7 @@ const f32i = shared.utils.f32i;
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
+const Settings = @import("../../Settings.zig");
 const Bar = @import("../elements/Bar.zig");
 const Button = @import("../elements/Button.zig");
 const Container = @import("../elements/Container.zig");
@@ -27,6 +28,8 @@ const CharacterBox = struct {
     aether_bar: *Bar,
     delete_button: *Button,
     favorite_button: *Button,
+    unfavorite_button: *Button,
+    char_id: u32,
 
     pub fn create(root: *Container, char: *const network_data.CharacterData, idx: usize) !CharacterBox {
         const data = game_data.class.from_id.getPtr(char.class_id) orelse return error.InvalidClassId;
@@ -35,8 +38,8 @@ const CharacterBox = struct {
         const tex = anim_player_list[data.texture.index].walk_anims[0];
 
         const base = try root.createChild(Container, .{ .base = .{
-            .x = 12.0 + f32i(idx % 4) * 404.0,
-            .y = 48.0 + f32i(idx / 4) * 88.0,
+            .x = 12.0 + f32i(idx % 3) * 404.0,
+            .y = 48.0 + f32i(idx / 3) * 88.0,
         } });
 
         const decor = try base.createChild(Button, .{
@@ -73,6 +76,7 @@ const CharacterBox = struct {
             }),
         );
 
+        const is_char_fav = std.mem.indexOfScalar(u32, main.settings.favorite_char_ids, char.char_id) != null;
         return .{
             .base = base,
             .decor = decor,
@@ -94,7 +98,7 @@ const CharacterBox = struct {
             } }),
             .aether_bar = aether_bar,
             .favorite_button = try base.createChild(Button, .{
-                .base = .{ .x = 0, .y = 16 },
+                .base = .{ .x = 0, .y = 16, .visible = !is_char_fav },
                 .image_data = .fromImageData(
                     if (char.celestial)
                         assets.getUiData("celestial_character_favorite_button", 0)
@@ -110,7 +114,26 @@ const CharacterBox = struct {
                         assets.getUiData("character_favorite_button", 2),
                 ),
                 .userdata = @constCast(&char.char_id),
-                .pressCallback = deleteCallback,
+                .pressCallback = favCallback,
+            }),
+            .unfavorite_button = try base.createChild(Button, .{
+                .base = .{ .x = 0, .y = 16, .visible = is_char_fav },
+                .image_data = .fromImageData(
+                    if (char.celestial)
+                        assets.getUiData("celestial_character_unfavorite_button", 0)
+                    else
+                        assets.getUiData("character_unfavorite_button", 0),
+                    if (char.celestial)
+                        assets.getUiData("celestial_character_unfavorite_button", 1)
+                    else
+                        assets.getUiData("character_unfavorite_button", 1),
+                    if (char.celestial)
+                        assets.getUiData("celestial_character_unfavorite_button", 2)
+                    else
+                        assets.getUiData("character_unfavorite_button", 2),
+                ),
+                .userdata = @constCast(&char.char_id),
+                .pressCallback = unfavCallback,
             }),
             .delete_button = try base.createChild(Button, .{
                 .base = .{ .x = 350, .y = 16 },
@@ -131,11 +154,17 @@ const CharacterBox = struct {
                 .userdata = @constCast(&char.char_id),
                 .pressCallback = deleteCallback,
             }),
+            .char_id = char.char_id,
         };
     }
 
     pub fn destroy(self: *CharacterBox, root: *Container) void {
         root.container.destroyElement(self.base);
+    }
+
+    pub fn reposition(self: *CharacterBox, idx: usize) void {
+        self.base.base.x = 12.0 + f32i(idx % 3) * 404.0;
+        self.base.base.y = 48.0 + f32i(idx / 3) * 88.0;
     }
 
     fn charCallback(ud: ?*anyopaque) void {
@@ -150,12 +179,63 @@ const CharacterBox = struct {
 
     fn favCallback(ud: ?*anyopaque) void {
         const char_id: *u32 = @alignCast(@ptrCast(ud));
-        _ = char_id;
+        if (std.mem.indexOfScalar(u32, main.settings.favorite_char_ids, char_id.*) != null) return;
+        const prev_fav_len = main.settings.favorite_char_ids.len;
+        const fav_char_ids = main.allocator.alloc(u32, prev_fav_len + 1) catch main.oomPanic();
+        @memcpy(fav_char_ids[0..prev_fav_len], main.settings.favorite_char_ids);
+        fav_char_ids[prev_fav_len] = char_id.*;
+        if (Settings.needs_fav_char_id_dispose) main.allocator.free(main.settings.favorite_char_ids);
+        main.settings.favorite_char_ids = fav_char_ids;
+        Settings.needs_fav_char_id_dispose = true;
+
+        if (ui_systems.screen != .char_select) return;
+
+        for (ui_systems.screen.char_select.char_boxes) |*char_box|
+            if (char_box.char_id == char_id.*) {
+                char_box.favorite_button.base.visible = false;
+                char_box.unfavorite_button.base.visible = true;
+            };
+        ui_systems.screen.char_select.rearrange();
+    }
+
+    fn unfavCallback(ud: ?*anyopaque) void {
+        const char_id: *u32 = @alignCast(@ptrCast(ud));
+        if (std.mem.indexOfScalar(u32, main.settings.favorite_char_ids, char_id.*) == null) return;
+        const prev_fav_len = main.settings.favorite_char_ids.len;
+        const fav_char_ids = main.allocator.alloc(u32, prev_fav_len - 1) catch main.oomPanic();
+
+        delete: {
+            for (main.settings.favorite_char_ids, 0..) |fav_char_id, i| {
+                if (char_id.* != fav_char_id) continue;
+                @memcpy(fav_char_ids[0..i], main.settings.favorite_char_ids[0..i]);
+                @memcpy(fav_char_ids[i..], main.settings.favorite_char_ids[i + 1 ..]);
+                break :delete;
+            }
+            return;
+        }
+
+        if (Settings.needs_fav_char_id_dispose) main.allocator.free(main.settings.favorite_char_ids);
+        main.settings.favorite_char_ids = fav_char_ids;
+        Settings.needs_fav_char_id_dispose = true;
+
+        if (ui_systems.screen != .char_select) return;
+
+        for (ui_systems.screen.char_select.char_boxes) |*char_box|
+            if (char_box.char_id == char_id.*) {
+                char_box.favorite_button.base.visible = true;
+                char_box.unfavorite_button.base.visible = false;
+            };
+        ui_systems.screen.char_select.rearrange();
     }
 
     fn deleteCallback(ud: ?*anyopaque) void {
         const char_id: *u32 = @alignCast(@ptrCast(ud));
-        _ = char_id;
+        // TODO: dialog for failure
+        if (main.current_account) |acc| main.login_server.sendPacket(.{ .delete = .{
+            .email = acc.email,
+            .token = acc.token,
+            .char_id = char_id.*,
+        } });
     }
 };
 
@@ -169,6 +249,30 @@ gold_text: *Text = undefined,
 gems_text: *Text = undefined,
 
 pub fn init(self: *CharSelectScreen) !void {
+    try self.refresh();
+}
+
+pub fn resize(self: *CharSelectScreen, w: f32, h: f32) void {
+    self.box_container.base = .{ .x = (w - self.decor.width()) / 2.0, .y = (h - self.decor.height()) / 2.0 };
+    self.name_text.text_data.max_width = w;
+    self.name_text.text_data.max_height = self.box_container.base.y;
+}
+
+fn deinitExceptSelf(self: *CharSelectScreen) void {
+    if (self.char_boxes.len == 0) return;
+    element.destroy(self.box_container);
+    element.destroy(self.name_text);
+    main.allocator.free(self.char_boxes);
+}
+
+pub fn deinit(self: *CharSelectScreen) void {
+    self.deinitExceptSelf();
+    main.allocator.destroy(self);
+}
+
+pub fn refresh(self: *CharSelectScreen) !void {
+    self.deinitExceptSelf();
+
     // TODO: dialog for these
     const char_list = main.character_list orelse return;
     if (char_list.characters.len == 0 or char_list.servers.len == 0) return;
@@ -194,25 +298,25 @@ pub fn init(self: *CharSelectScreen) !void {
         .image_data = .{ .normal = .{ .atlas_data = decor } },
     });
 
-    var num_celestial: u8 = 0;
+    var num_normal: u8 = 0;
     var char_boxes: std.ArrayListUnmanaged(CharacterBox) = .empty;
     for (char_list.characters, 0..) |*char, i| {
         char_boxes.append(main.allocator, try .create(self.box_container, char, i)) catch main.oomPanic();
-        if (char.celestial) num_celestial += 1;
+        if (!char.celestial) num_normal += 1;
     }
     self.char_boxes = char_boxes.toOwnedSlice(main.allocator) catch main.oomPanic();
 
     const max_slots: u8 = if (@intFromEnum(char_list.rank) >= @intFromEnum(network_data.Rank.celestial)) 12 else 3;
     self.new_char_button = try self.box_container.createChild(Button, .{
         .base = .{
-            .x = 38.0 + 12.0 + f32i(self.char_boxes.len % 4) * 404.0,
-            .y = 48.0 + f32i(self.char_boxes.len / 4) * 88.0,
+            .x = 38.0 + 12.0 + f32i(self.char_boxes.len % 3) * 404.0,
+            .y = 48.0 + f32i(self.char_boxes.len / 3) * 88.0,
             .visible = self.char_boxes.len < max_slots,
         },
         .image_data = .fromImageData(
-            if (num_celestial > 3) assets.getUiData("celestial_new_character_line", 0) else assets.getUiData("new_character_line", 0),
-            if (num_celestial > 3) assets.getUiData("celestial_new_character_line", 1) else assets.getUiData("new_character_line", 1),
-            if (num_celestial > 3) assets.getUiData("celestial_new_character_line", 2) else assets.getUiData("new_character_line", 2),
+            if (num_normal >= 3) assets.getUiData("celestial_new_character_line", 0) else assets.getUiData("new_character_line", 0),
+            if (num_normal >= 3) assets.getUiData("celestial_new_character_line", 1) else assets.getUiData("new_character_line", 1),
+            if (num_normal >= 3) assets.getUiData("celestial_new_character_line", 2) else assets.getUiData("new_character_line", 2),
         ),
         .pressCallback = newCharCallback,
         .text_offset_x = 77,
@@ -294,30 +398,43 @@ pub fn init(self: *CharSelectScreen) !void {
             },
             .pressCallback = editorCallback,
         });
+
+    self.rearrange();
 }
 
-pub fn resize(self: *CharSelectScreen, w: f32, h: f32) void {
-    self.box_container.base = .{ .x = (w - self.decor.width()) / 2.0, .y = (h - self.decor.height()) / 2.0 };
-    self.name_text.text_data.max_width = w;
-    self.name_text.text_data.max_height = self.box_container.base.y;
+fn loginLessThan(_: void, a: CharacterBox, b: CharacterBox) bool {
+    const a_idx = std.mem.indexOfScalar(u32, main.settings.char_ids_login_sort, a.char_id);
+    const b_idx = std.mem.indexOfScalar(u32, main.settings.char_ids_login_sort, b.char_id);
+    if (a_idx == null and b_idx == null) return false;
+    if (a_idx == null and b_idx != null) return true;
+    if (a_idx != null and b_idx == null) return false;
+    return a_idx.? < b_idx.?;
 }
 
-pub fn deinit(self: *CharSelectScreen) void {
-    element.destroy(self.box_container);
-    element.destroy(self.name_text);
-    main.allocator.free(self.char_boxes);
-    main.allocator.destroy(self);
+fn favLessThan(_: void, a: CharacterBox, b: CharacterBox) bool {
+    const a_idx = std.mem.indexOfScalar(u32, main.settings.favorite_char_ids, a.char_id);
+    const b_idx = std.mem.indexOfScalar(u32, main.settings.favorite_char_ids, b.char_id);
+    if (a_idx == null and b_idx == null) return false;
+    if (a_idx == null and b_idx != null) return false;
+    if (a_idx != null and b_idx == null) return true;
+    return a_idx.? > b_idx.?;
+}
+
+pub fn rearrange(self: *CharSelectScreen) void {
+    std.sort.block(CharacterBox, self.char_boxes, {}, loginLessThan);
+    std.sort.block(CharacterBox, self.char_boxes, {}, favLessThan);
+    for (self.char_boxes, 0..) |*char_box, i| char_box.reposition(i);
 }
 
 fn newCharCallback(_: ?*anyopaque) void {
     ui_systems.switchScreen(.char_create);
 }
 
-pub fn editorCallback(_: ?*anyopaque) void {
+fn editorCallback(_: ?*anyopaque) void {
     ui_systems.switchScreen(.editor);
 }
 
-pub fn logOutCallback(_: ?*anyopaque) void {
+fn logOutCallback(_: ?*anyopaque) void {
     main.current_account = null;
     ui_systems.switchScreen(.main_menu);
 }

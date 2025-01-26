@@ -251,6 +251,13 @@ pub fn deinit(self: *Server) void {
 pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
     if (!self.initialized) return;
 
+    defer if (packet == .hello) {
+        if (main.current_account) |acc| {
+            main.login_server.sendPacket(.{ .verify = .{ .email = acc.email, .token = acc.token } });
+            main.skip_verify_loop = true;
+        }
+    };
+
     const is_tick = packet == .move or packet == .pong;
     if (build_options.log_packets == .all or
         build_options.log_packets == .c2s or

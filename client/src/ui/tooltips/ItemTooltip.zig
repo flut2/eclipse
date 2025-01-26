@@ -158,10 +158,12 @@ fn getFooterBuffer(self: *ItemTooltip) []u8 {
 }
 
 pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
-    const left_x = params.x - self.decor.width() - 15;
-    const up_y = params.y - self.decor.height() - 15;
-    self.root.base.x = if (left_x < 0) params.x + 15 else left_x;
-    self.root.base.y = if (up_y < 0) params.y + 15 else up_y;
+    defer {
+        const left_x = params.x - self.decor.width() - 5;
+        const up_y = params.y - self.decor.height() - 5;
+        self.root.base.x = if (left_x < 0) params.x + 5 else left_x;
+        self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
+    }
 
     if (self.item == params.item) return;
     self.item = params.item;
@@ -508,7 +510,4 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         self.line_break_two.base.visible = true;
         self.decor.image_data.nine_slice.h = self.footer.base.y + self.footer.text_data.height + 10;
     }
-
-    self.root.base.x = params.x - self.decor.width() - 15;
-    self.root.base.y = params.y - self.decor.height() - 15;
 }

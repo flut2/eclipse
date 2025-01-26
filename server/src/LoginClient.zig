@@ -30,6 +30,7 @@ fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacketLogin).@"union".tag_t
         .login => handleLogin,
         .register => handleRegister,
         .verify => handleVerify,
+        .delete => handleDelete,
     };
 }
 
@@ -154,11 +155,8 @@ fn databaseError(self: *Client) void {
     self.sendError("Database error");
 }
 
-fn getListData(self: *Client, acc_id: u32, token: u128) !network_data.CharacterListData {
-    var acc_data: db.AccountData = .{ .acc_id = acc_id };
-    defer acc_data.deinit();
-
-    if (try db.accountBanned(&acc_data)) {
+fn getListData(self: *Client, acc_data: *db.AccountData, token: u128) !network_data.CharacterListData {
+    if (try db.accountBanned(acc_data)) {
         self.sendError("Account banned");
         return error.AccountBanned;
     }
@@ -167,7 +165,7 @@ fn getListData(self: *Client, acc_id: u32, token: u128) !network_data.CharacterL
     defer char_list.deinit(main.allocator);
     buildList: {
         for (acc_data.get(.alive_char_ids) catch break :buildList) |char_id| {
-            var char_data: db.CharacterData = .{ .acc_id = acc_id, .char_id = char_id };
+            var char_data: db.CharacterData = .{ .acc_id = acc_data.acc_id, .char_id = char_id };
             defer char_data.deinit();
 
             var common_card_count: u8 = 0;
@@ -258,7 +256,9 @@ fn handleLogin(self: *Client, data: PacketData(.login)) void {
         self.databaseError();
         return;
     };
-    const list = self.getListData(acc_id, token) catch |e| {
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
+    defer acc_data.deinit();
+    const list = self.getListData(&acc_data, token) catch |e| {
         std.log.err("Error while creating list for {s}: {}", .{ data.email, e });
         if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
 
@@ -429,7 +429,9 @@ fn handleVerify(self: *Client, data: PacketData(.verify)) void {
         });
         return;
     };
-    const list = self.getListData(acc_id, data.token) catch |e| {
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
+    defer acc_data.deinit();
+    const list = self.getListData(&acc_data, data.token) catch |e| {
         std.log.err("Error while creating list for {s}: {}", .{ data.email, e });
         if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
 
@@ -438,4 +440,49 @@ fn handleVerify(self: *Client, data: PacketData(.verify)) void {
     };
     defer disposeList(list);
     self.queuePacket(.{ .verify_response = list });
+}
+
+fn handleDelete(self: *Client, data: PacketData(.delete)) void {
+    const acc_id = db.login(data.email, data.token) catch |e| {
+        self.sendError(switch (e) {
+            error.NoData => "Invalid email",
+            error.InvalidToken => "Invalid token",
+        });
+        return;
+    };
+
+    var acc_data: db.AccountData = .{ .acc_id = acc_id };
+    defer acc_data.deinit();
+
+    const alive_char_ids = acc_data.get(.alive_char_ids) catch {
+        self.sendError("Deletion failed: Database Error");
+        return;
+    };
+    const new_char_ids = main.allocator.alloc(u32, alive_char_ids.len - 1) catch main.oomPanic();
+    defer main.allocator.free(new_char_ids);
+    delete: {
+        for (alive_char_ids, 0..) |char_id, i| {
+            if (data.char_id != char_id) continue;
+            @memcpy(new_char_ids[0..i], alive_char_ids[0..i]);
+            @memcpy(new_char_ids[i..], alive_char_ids[i + 1 ..]);
+            break :delete;
+        }
+        self.sendError("Deletion failed: Character does not exist");
+        return;
+    }
+
+    acc_data.set(.{ .alive_char_ids = new_char_ids }) catch {
+        self.databaseError();
+        return;
+    };
+
+    const list = self.getListData(&acc_data, data.token) catch |e| {
+        std.log.err("Error while creating list for {s}: {}", .{ data.email, e });
+        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+
+        self.sendError("Could not retrieve list");
+        return;
+    };
+    defer disposeList(list);
+    self.queuePacket(.{ .delete_response = list });
 }

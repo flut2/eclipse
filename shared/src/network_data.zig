@@ -397,11 +397,13 @@ pub const C2SPacketLogin = union(enum) {
     login: struct { email: []const u8, password: []const u8 },
     register: struct { name: []const u8, email: []const u8, password: []const u8, hwid: []const u8 },
     verify: struct { email: []const u8, token: u128 },
+    delete: struct { email: []const u8, token: u128, char_id: u32 },
 };
 
 pub const S2CPacketLogin = union(enum) {
     login_response: CharacterListData,
     register_response: CharacterListData,
     verify_response: CharacterListData,
+    delete_response: CharacterListData,
     @"error": struct { description: []const u8 },
 };

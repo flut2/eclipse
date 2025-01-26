@@ -62,6 +62,7 @@ pub var character_list: ?network_data.CharacterListData = null;
 pub var current_time: i64 = 0;
 pub var win_freq: u64 = 0;
 pub var render_thread: std.Thread = undefined;
+pub var skip_verify_loop = false;
 pub var tick_frame = false;
 pub var tick_render = true;
 pub var needs_map_bg = false;

@@ -416,6 +416,12 @@
     .h = 44,
 },
 {
+    .name = "celestial_character_unfavorite_button",
+    .path = "character_select/celestial_character_unfavorite_button.png",
+    .w = 38,
+    .h = 44,
+},
+{
     .name = "character_line",
     .path = "character_select/character_line.png",
     .w = 312,
@@ -436,6 +442,12 @@
 {
     .name = "character_favorite_button",
     .path = "character_select/character_favorite_button.png",
+    .w = 38,
+    .h = 44,
+},
+{
+    .name = "character_unfavorite_button",
+    .path = "character_select/character_unfavorite_button.png",
     .w = 38,
     .h = 44,
 },
