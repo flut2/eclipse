@@ -24,7 +24,8 @@ pub const CharacterListData = struct {
     token: u128,
     rank: Rank,
     next_char_id: u32,
-    max_chars: u32,
+    gold: u32,
+    gems: u32,
     characters: []const CharacterData,
     servers: []const ServerData,
 };
@@ -32,15 +33,18 @@ pub const CharacterListData = struct {
 pub const CharacterData = struct {
     char_id: u32,
     class_id: u16,
-    health: i32,
-    mana: i32,
-    attack: i32,
-    defense: i32,
-    speed: i32,
-    dexterity: i32,
-    vitality: i32,
-    wisdom: i32,
-    inventory: []const u16,
+    celestial: bool,
+    aether: u8,
+    spirits_communed: u32,
+    equips: [4]u16,
+    keystone_talent_perc: f32,
+    ability_talent_perc: f32,
+    minor_talent_perc: f32,
+    common_card_count: u8,
+    rare_card_count: u8,
+    epic_card_count: u8,
+    legendary_card_count: u8,
+    mythic_card_count: u8,
 };
 
 pub const ServerData = struct {

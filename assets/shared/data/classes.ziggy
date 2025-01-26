@@ -310,14 +310,14 @@
     .description = "placeholder",
     .texture = {"players": 4},
     .item_types = [
-        @ItemType("staff"), 
-        @ItemType("robe"), 
+        @ItemType("bow"), 
+        @ItemType("leather"), 
         @ItemType("boots"), 
         @ItemType("artifact"),
     ],
     .default_items = [
-        "Enchanted Twig",
-        "Scruffy Shawl",
+        "Wooden Bow",
+        "Worn-out Hide",
         "Scrap Boots",
         "Dim Jade Nanobot",
     ],

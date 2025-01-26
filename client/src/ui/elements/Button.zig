@@ -1,3 +1,4 @@
+const CharacterData = @import("shared").network_data.CharacterData;
 const glfw = @import("glfw");
 
 const assets = @import("../../assets.zig");
@@ -16,8 +17,11 @@ pressCallback: *const fn (?*anyopaque) void,
 image_data: element.InteractableImageData,
 state: element.InteractableState = .none,
 disabled_image_data: ?element.ImageData = null,
+text_offset_x: f32 = 0.0,
+text_offset_y: f32 = 0.0,
 text_data: ?element.TextData = null,
 tooltip_text: ?element.TextData = null,
+char: ?*const CharacterData = null, // hack
 
 pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
     if (!self.base.visible or !self.enabled) return false;
@@ -45,6 +49,20 @@ pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) bo
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
+        systems.hover_lock.lock();
+        defer systems.hover_lock.unlock();
+        systems.hover_target = element.UiElement{ .button = self }; // TODO: re-add RLS when fixed
+        self.state = .hovered;
+
+        if (self.char) |char| {
+            tooltip.switchTooltip(.character, .{
+                .x = x + x_offset,
+                .y = y + y_offset,
+                .data = char,
+            });
+            return true;
+        }
+
         if (self.tooltip_text) |text| {
             tooltip.switchTooltip(.text, .{
                 .x = x + x_offset,
@@ -53,11 +71,6 @@ pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) bo
             });
             return true;
         }
-
-        systems.hover_lock.lock();
-        defer systems.hover_lock.unlock();
-        systems.hover_target = element.UiElement{ .button = self }; // TODO: re-add RLS when fixed
-        self.state = .hovered;
     } else self.state = .none;
 
     return !(self.base.event_policy.pass_move or !in_bounds);
@@ -65,10 +78,13 @@ pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) bo
 
 pub fn init(self: *Button) void {
     if (self.text_data) |*text_data| {
-        text_data.max_width = self.width();
-        text_data.max_height = self.height();
-        text_data.vert_align = .middle;
-        text_data.hori_align = .middle;
+        if (self.text_offset_x == 0.0 and self.text_offset_y == 0.0) {
+            text_data.max_width = self.width();
+            text_data.max_height = self.height();
+            text_data.vert_align = .middle;
+            text_data.hori_align = .middle;
+        }
+
         text_data.lock.lock();
         defer text_data.lock.unlock();
         text_data.recalculateAttributes();
@@ -88,11 +104,14 @@ pub fn deinit(self: *Button) void {
 
 pub fn draw(self: *Button, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
-    const image_data = if (self.enabled or self.disabled_image_data == null) self.image_data.current(self.state) else self.disabled_image_data.?;
+    const image_data = if (self.enabled or self.disabled_image_data == null)
+        self.image_data.current(self.state)
+    else
+        self.disabled_image_data.?;
     image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
     if (self.text_data) |*text_data| main.renderer.drawText(
-        self.base.x + x_offset,
-        self.base.y + y_offset,
+        self.base.x + self.text_offset_x + x_offset,
+        self.base.y + self.text_offset_y + y_offset,
         1.0,
         text_data,
         self.base.scissor,

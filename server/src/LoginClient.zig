@@ -170,19 +170,40 @@ fn getListData(self: *Client, acc_id: u32, token: u128) !network_data.CharacterL
             var char_data: db.CharacterData = .{ .acc_id = acc_id, .char_id = char_id };
             defer char_data.deinit();
 
-            const stats = try char_data.get(.stats);
+            var common_card_count: u8 = 0;
+            var rare_card_count: u8 = 0;
+            var epic_card_count: u8 = 0;
+            var legendary_card_count: u8 = 0;
+            var mythic_card_count: u8 = 0;
+
+            countCards: {
+                for (char_data.get(.cards) catch break :countCards) |card| {
+                    const card_data = game_data.card.from_id.get(card) orelse continue;
+                    switch (card_data.rarity) {
+                        .common => common_card_count += 1,
+                        .rare => rare_card_count += 1,
+                        .epic => epic_card_count += 1,
+                        .legendary => legendary_card_count += 1,
+                        .mythic => mythic_card_count += 1,
+                    }
+                }
+            }
+
             try char_list.append(main.allocator, .{
                 .char_id = char_id,
                 .class_id = try char_data.get(.class_id),
-                .health = stats[0],
-                .mana = stats[1],
-                .attack = stats[2],
-                .defense = stats[3],
-                .speed = stats[4],
-                .dexterity = stats[5],
-                .vitality = stats[6],
-                .wisdom = stats[7],
-                .inventory = &try char_data.get(.inventory),
+                .celestial = try char_data.get(.celestial),
+                .aether = try char_data.get(.aether),
+                .spirits_communed = try char_data.get(.spirits_communed),
+                .equips = (try char_data.get(.inventory))[0..4].*,
+                .keystone_talent_perc = 0.0,
+                .ability_talent_perc = 0.0,
+                .minor_talent_perc = 0.0,
+                .common_card_count = common_card_count,
+                .rare_card_count = rare_card_count,
+                .epic_card_count = epic_card_count,
+                .legendary_card_count = legendary_card_count,
+                .mythic_card_count = mythic_card_count,
             });
         }
     }
@@ -192,7 +213,8 @@ fn getListData(self: *Client, acc_id: u32, token: u128) !network_data.CharacterL
         .token = token,
         .rank = try acc_data.get(.rank),
         .next_char_id = try acc_data.get(.next_char_id),
-        .max_chars = try acc_data.get(.max_char_slots),
+        .gold = try acc_data.get(.gold),
+        .gems = try acc_data.get(.gems),
         .characters = try main.allocator.dupe(network_data.CharacterData, char_list.items),
         .servers = try main.allocator.dupe(network_data.ServerData, &.{.{
             .name = main.settings.server_name,
@@ -236,7 +258,10 @@ fn handleLogin(self: *Client, data: PacketData(.login)) void {
         self.databaseError();
         return;
     };
-    const list = self.getListData(acc_id, token) catch {
+    const list = self.getListData(acc_id, token) catch |e| {
+        std.log.err("Error while creating list for {s}: {}", .{ data.email, e });
+        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+
         self.sendError("Could not retrieve list");
         return;
     };
@@ -353,10 +378,6 @@ fn handleRegister(self: *Client, data: PacketData(.register)) void {
         self.databaseError();
         return;
     };
-    acc_data.set(.{ .max_char_slots = 2 }) catch {
-        self.databaseError();
-        return;
-    };
     acc_data.set(.{ .resources = &.{} }) catch {
         self.databaseError();
         return;
@@ -380,7 +401,11 @@ fn handleRegister(self: *Client, data: PacketData(.register)) void {
             self.databaseError();
             return;
         },
-        .max_chars = acc_data.get(.max_char_slots) catch {
+        .gold = acc_data.get(.gold) catch {
+            self.databaseError();
+            return;
+        },
+        .gems = acc_data.get(.gems) catch {
             self.databaseError();
             return;
         },
@@ -404,7 +429,10 @@ fn handleVerify(self: *Client, data: PacketData(.verify)) void {
         });
         return;
     };
-    const list = self.getListData(acc_id, data.token) catch {
+    const list = self.getListData(acc_id, data.token) catch |e| {
+        std.log.err("Error while creating list for {s}: {}", .{ data.email, e });
+        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+
         self.sendError("Could not retrieve list");
         return;
     };

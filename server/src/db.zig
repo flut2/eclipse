@@ -230,7 +230,6 @@ pub const AccountData = struct {
         rank: network_data.Rank,
         next_char_id: u32,
         alive_char_ids: []const u32,
-        max_char_slots: u32,
         resources: []const network_data.DataIdWithCount(u32),
         locked_until: u64,
     };
@@ -301,6 +300,7 @@ pub const CharacterData = struct {
         mp: i32,
         cards: []const u16,
         talents: []const network_data.DataIdWithCount(u16),
+        celestial: bool,
     };
 
     acc_id: u32,

@@ -253,7 +253,7 @@ pub fn mouseMove(x: f32, y: f32) bool {
         defer hover_lock.unlock();
         if (hover_target) |target| {
             switch (target) {
-                inline .input_field, .button, .char_box, .toggle, .key_mapper, .dropdown_container => |elem| elem.state = .none,
+                inline .input_field, .button, .toggle, .key_mapper, .dropdown_container => |elem| elem.state = .none,
                 .dropdown => |dropdown| dropdown.button_state = .none,
                 else => {},
             }

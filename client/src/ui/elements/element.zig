@@ -10,7 +10,6 @@ const Settings = @import("../../Settings.zig");
 const systems = @import("../systems.zig");
 const Bar = @import("Bar.zig");
 const Button = @import("Button.zig");
-const CharacterBox = @import("CharacterBox.zig");
 const Container = @import("Container.zig");
 const Dropdown = @import("Dropdown.zig");
 const DropdownContainer = @import("DropdownContainer.zig");
@@ -27,7 +26,6 @@ const Toggle = @import("Toggle.zig");
 pub const UiElement = union(enum) {
     bar: *Bar,
     button: *Button,
-    char_box: *CharacterBox,
     container: *Container,
     dropdown: *Dropdown,
     // don't actually use this here. internal use only

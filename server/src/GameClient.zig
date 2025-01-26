@@ -552,11 +552,13 @@ fn handleUseItem(self: *Client, data: PacketData(.use_item)) void {
 
 fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
     if (game_data.class.from_id.get(class_id)) |class_data| {
-        const max_slots = try player.acc_data.get(.max_char_slots);
+        const max_slots: u8 = if (@intFromEnum(try player.acc_data.get(.rank)) >= @intFromEnum(network_data.Rank.celestial)) 12 else 3;
         const alive_ids: []const u32 = player.acc_data.get(.alive_char_ids) catch &.{};
-        if (alive_ids.len >= max_slots)
-            return error.SlotsFull;
+        if (alive_ids.len >= max_slots) return error.SlotsFull;
 
+        // TODO
+        try player.char_data.set(.{ .celestial = false });
+        
         const next_char_id = try player.acc_data.get(.next_char_id);
         player.char_data.char_id = next_char_id;
         try player.acc_data.set(.{ .next_char_id = next_char_id + 1 });

@@ -267,10 +267,7 @@ fn logRead(comptime tick: enum { non_tick, tick }) bool {
 fn deepCopyList(temp_list: network_data.CharacterListData) !network_data.CharacterListData {
     var ret = temp_list;
     ret.name = try main.account_arena_allocator.dupe(u8, temp_list.name);
-
-    const characters = try main.account_arena_allocator.dupe(network_data.CharacterData, temp_list.characters);
-    for (characters, temp_list.characters) |*char, temp_char| char.inventory = try main.account_arena_allocator.dupe(u16, temp_char.inventory);
-    ret.characters = characters;
+    ret.characters = try main.account_arena_allocator.dupe(network_data.CharacterData, temp_list.characters);
 
     const servers = try main.account_arena_allocator.dupe(network_data.ServerData, temp_list.servers);
     for (servers, temp_list.servers) |*server, temp_server| {
