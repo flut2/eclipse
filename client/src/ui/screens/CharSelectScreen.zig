@@ -417,7 +417,7 @@ fn favLessThan(_: void, a: CharacterBox, b: CharacterBox) bool {
     if (a_idx == null and b_idx == null) return false;
     if (a_idx == null and b_idx != null) return false;
     if (a_idx != null and b_idx == null) return true;
-    return a_idx.? > b_idx.?;
+    return false;
 }
 
 pub fn rearrange(self: *CharSelectScreen) void {
