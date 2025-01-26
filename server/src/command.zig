@@ -30,7 +30,7 @@ pub fn handle(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         .{ "/give", network_data.Rank.admin, handleGive },
         .{ "/setgold", network_data.Rank.admin, handleSetGold },
         .{ "/setgems", network_data.Rank.admin, handleSetGems },
-        .{ "/setcrowns", network_data.Rank.admin, handleSetCrowns },
+        .{ "/setresource", network_data.Rank.admin, handleSetResource },
         .{ "/rank", network_data.Rank.admin, handleRank },
         .{ "/ban", network_data.Rank.mod, handleBan },
         .{ "/unban", network_data.Rank.mod, handleUnban },
@@ -406,35 +406,61 @@ fn handleSetGems(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) voi
     player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've given \"{s}\" {} Gems", .{ player_name, amount - old_gems }) catch return);
 }
 
-fn handleSetCrowns(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+fn handleSetResource(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     var response_buf: [256]u8 = undefined;
 
     const player_name = iter.next() orelse {
-        player.client.sendMessage("Invalid command usage. Arguments: /setcrowns [name] [decimal amount]");
+        player.client.sendMessage("Invalid command usage. Arguments: /setresource [player name] [decimal amount] [resource name]");
         return;
     };
-    const amount = std.fmt.parseInt(u32, iter.buffer[iter.index orelse 0 ..], 0) catch {
-        player.client.sendMessage("Invalid command usage. Arguments: /setcrowns [name] [decimal amount]");
+    const amount = std.fmt.parseInt(u32, iter.next() orelse {
+        player.client.sendMessage("Invalid command usage. Arguments: /setresource [player name] [decimal amount] [resource name]");
+        return;
+    }, 0) catch {
+        player.client.sendMessage("Invalid resource amount given");
+        return;
+    };
+    const resource_name = iter.buffer[iter.index orelse 0 ..];
+
+    const resource_data = game_data.resource.from_name.get(resource_name) orelse {
+        player.client.sendMessage("Resource not found in game data");
         return;
     };
 
     for (player.world.listForType(Player).items) |*other_player|
         if (std.mem.eql(u8, other_player.name, player_name)) {
-            const old_crowns = other_player.crowns;
-            other_player.crowns = amount;
+            const old_resources = blk: {
+                for (player.resources.items) |*res| if (res.data_id == resource_data.id) break :blk res.count;
+                break :blk 0;
+            };
+
+            incrementResource: {
+                for (player.resources.items) |*res| if (res.data_id == resource_data.id) {
+                    res.count += amount;
+                    break :incrementResource;
+                };
+                player.resources.append(main.allocator, .{
+                    .data_id = resource_data.id,
+                    .count = amount,
+                }) catch main.oomPanic();
+            }
 
             if (std.mem.eql(u8, player.name, player_name))
-                player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've given yourself {} Crowns", .{amount - old_crowns}) catch return)
+                player.client.sendMessage(std.fmt.bufPrint(
+                    &response_buf,
+                    "You've given yourself {}x {s}",
+                    .{ amount - old_resources, resource_data.name },
+                ) catch return)
             else {
                 other_player.client.sendMessage(std.fmt.bufPrint(
                     &response_buf,
-                    "You've received {} Crowns from \"{s}\"",
-                    .{ amount - old_crowns, player.name },
+                    "You've received {}x {s} from \"{s}\"",
+                    .{ amount - old_resources, resource_data.name, player.name },
                 ) catch return);
                 player.client.sendMessage(std.fmt.bufPrint(
                     &response_buf,
-                    "You've given \"{s}\" {} Crowns",
-                    .{ other_player.name, amount - old_crowns },
+                    "You've given \"{s}\" {}x {s}",
+                    .{ other_player.name, amount - old_resources, resource_data.name },
                 ) catch return);
             }
             return;
@@ -451,17 +477,57 @@ fn handleSetCrowns(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) v
     var acc_data: db.AccountData = .{ .acc_id = acc_id };
     defer acc_data.deinit();
 
-    const old_crowns = acc_data.get(.crowns) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch return);
+    const resources = acc_data.get(.resources) catch {
+        player.client.sendMessage(std.fmt.bufPrint(
+            &response_buf,
+            "Accessing database records for player \"{s}\" failed",
+            .{player_name},
+        ) catch return);
         return;
     };
 
-    acc_data.set(.{ .crowns = amount }) catch {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Accessing database records for player \"{s}\" failed", .{player_name}) catch return);
-        return;
+    const new_resources = main.allocator.alloc(network_data.DataIdWithCount(u32), resources.len + 1) catch main.oomPanic();
+    defer main.allocator.free(new_resources);
+    @memcpy(new_resources[0..resources.len], resources);
+
+    const old_resources = blk: {
+        for (resources) |res| if (res.data_id == resource_data.id) break :blk res.count;
+        break :blk 0;
     };
 
-    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've given \"{s}\" {} Crowns", .{ player_name, amount - old_crowns }) catch return);
+    incrementResource: {
+        for (new_resources) |*res| if (res.data_id == resource_data.id) {
+            res.count += amount;
+            acc_data.set(.{ .resources = new_resources[0..resources.len] }) catch {
+                player.client.sendMessage(std.fmt.bufPrint(
+                    &response_buf,
+                    "Accessing database records for player \"{s}\" failed",
+                    .{player_name},
+                ) catch return);
+                return;
+            };
+            break :incrementResource;
+        };
+
+        new_resources[resources.len] = .{
+            .data_id = resource_data.id,
+            .count = amount,
+        };
+        acc_data.set(.{ .resources = new_resources }) catch {
+            player.client.sendMessage(std.fmt.bufPrint(
+                &response_buf,
+                "Accessing database records for player \"{s}\" failed",
+                .{player_name},
+            ) catch return);
+            return;
+        };
+    }
+
+    player.client.sendMessage(std.fmt.bufPrint(
+        &response_buf,
+        "You've given \"{s}\" {}x {s}",
+        .{ player_name, amount - old_resources, resource_data.name },
+    ) catch return);
 }
 
 fn handleRank(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
