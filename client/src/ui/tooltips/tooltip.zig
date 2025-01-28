@@ -38,7 +38,7 @@ pub const TooltipParams = union(TooltipType) {
     text: struct { x: f32, y: f32, text_data: element.TextData },
     ability: struct { x: f32, y: f32, data: game_data.AbilityData },
     card: struct { x: f32, y: f32, data: game_data.CardData },
-    talent: struct { x: f32, y: f32, data: game_data.TalentData },
+    talent: struct { x: f32, y: f32, index: u8, data: *const game_data.TalentData },
     character: struct { x: f32, y: f32, data: *const network_data.CharacterData },
 };
 

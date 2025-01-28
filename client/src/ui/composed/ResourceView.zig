@@ -173,6 +173,7 @@ pub fn resize(self: *ResourceView, w: f32, h: f32) void {
 
 pub fn update(self: *ResourceView, resources: []const network_data.DataIdWithCount(u32)) !void {
     for (self.slots) |*slot| slot.destroy(self.slot_base);
+    main.allocator.free(self.slots);
 
     var slots: std.ArrayListUnmanaged(ResourceSlot) = .empty;
     var i: usize = 0;

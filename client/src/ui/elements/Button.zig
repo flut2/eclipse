@@ -1,5 +1,9 @@
-const CharacterData = @import("shared").network_data.CharacterData;
+const std = @import("std");
+
 const glfw = @import("glfw");
+const shared = @import("shared");
+const CharacterData = shared.network_data.CharacterData;
+const TalentData = shared.game_data.TalentData;
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
@@ -22,6 +26,8 @@ text_offset_y: f32 = 0.0,
 text_data: ?element.TextData = null,
 tooltip_text: ?element.TextData = null,
 char: ?*const CharacterData = null, // hack
+talent: ?*const TalentData = null, // hack 2
+talent_index: u8 = std.math.maxInt(u8),
 
 pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
     if (!self.base.visible or !self.enabled) return false;
@@ -45,20 +51,30 @@ pub fn mouseRelease(self: *Button, x: f32, y: f32, _: f32, _: f32) bool {
 }
 
 pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
-    if (!self.base.visible or !self.enabled) return false;
+    if (!self.base.visible) return false;
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
         systems.hover_lock.lock();
         defer systems.hover_lock.unlock();
         systems.hover_target = element.UiElement{ .button = self }; // TODO: re-add RLS when fixed
-        self.state = .hovered;
+        if (self.enabled) self.state = .hovered;
 
         if (self.char) |char| {
             tooltip.switchTooltip(.character, .{
                 .x = x + x_offset,
                 .y = y + y_offset,
                 .data = char,
+            });
+            return true;
+        }
+
+        if (self.talent) |talent| {
+            tooltip.switchTooltip(.talent, .{
+                .x = x + x_offset,
+                .y = y + y_offset,
+                .data = talent,
+                .index = self.talent_index,
             });
             return true;
         }
@@ -71,9 +87,9 @@ pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) bo
             });
             return true;
         }
-    } else self.state = .none;
+    } else if (self.enabled) self.state = .none;
 
-    return !(self.base.event_policy.pass_move or !in_bounds);
+    return !(self.base.event_policy.pass_move or !in_bounds or !self.enabled);
 }
 
 pub fn init(self: *Button) void {

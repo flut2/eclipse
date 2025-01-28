@@ -21,9 +21,9 @@ pub const LootTester = struct {
             .{ .name = "Absorption", .chance = 1.0 / 40.0, .threshold = 0.001 },
         });
         loot.dropResources(host, &.{
-            .{ .name = "Common Resource 1", .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.001 },
-            .{ .name = "Rare Resource 1", .chance = 1.0 / 20.0, .min = 2, .max = 7, .threshold = 0.001 },
-            .{ .name = "Epic Resource 1", .chance = 1.0 / 1.0, .min = 1, .max = 3, .threshold = 0.001 },
+            .{ .name = "Tiny Magisteel Alloy", .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.001 },
+            .{ .name = "Large Magisteel Alloy", .chance = 1.0 / 20.0, .min = 2, .max = 7, .threshold = 0.001 },
+            .{ .name = "Huge Magisteel Alloy", .chance = 1.0 / 1.0, .min = 1, .max = 3, .threshold = 0.001 },
         });
         loot.dropCurrency(host, &.{
             .{ .type = .gems, .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.001 },

@@ -85,7 +85,7 @@ const TalentButton = struct {
         };
     }
 
-    pub fn update(self: *TalentButton, talent_level: u16, aether: u8, locked: bool, talent_data: game_data.TalentData) void {
+    pub fn update(self: *TalentButton, talent_level: u16, aether: u8, locked: bool, talent_data: *const game_data.TalentData) void {
         if (aether < 1) return;
         self.level_text.text_data.setText(std.fmt.bufPrint(self.level_text.text_data.backing_buffer, "Lv. {}/{}", .{
             talent_level,
@@ -107,6 +107,8 @@ const TalentButton = struct {
         self.icon.base.y = 6 + (inner_size - icon.height() * scale) / 2.0;
         self.locked_overlay.base.visible = locked;
         self.button.enabled = !locked;
+        self.button.talent = talent_data;
+        self.button.talent_index = self.index;
     }
 
     fn pressCallback(ud: ?*anyopaque) void {
@@ -217,7 +219,7 @@ pub fn resize(self: *TalentView, w: f32, h: f32) void {
 pub fn update(self: *TalentView, player: Player) void {
     for (&self.buttons, 0..) |*button, i| {
         if (player.data.talents.len <= i) return;
-        const data = player.data.talents[i];
+        const data = &player.data.talents[i];
         const talent_level = blk: {
             for (player.talents) |talent| if (talent.data_id == i) break :blk talent.count;
             break :blk 0;

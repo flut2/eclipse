@@ -1,19 +1,19 @@
 [
 {
     .id = 0,
-    .name = "Common Resource 1",
+    .name = "Tiny Magisteel Alloy",
     .rarity = @ResourceRarity("common"),
     .icon = {"resources": 0},
 },
 {
     .id = 1,
-    .name = "Rare Resource 1",
+    .name = "Large Magisteel Alloy",
     .rarity = @ResourceRarity("rare"),
     .icon = {"resources": 1},
 },
 {
     .id = 2,
-    .name = "Epic Resource 1",
+    .name = "Huge Magisteel Alloy",
     .rarity = @ResourceRarity("epic"),
     .icon = {"resources": 2},
 },

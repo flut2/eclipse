@@ -324,6 +324,14 @@ pub const TalentData = struct {
     level_costs: []const []const TalentResourceCost,
     requires: []const TalentRequirement = &.{},
     stat_increases_per_level: ?[]const StatIncreaseData = null,
+
+    pub const ziggy_options = struct {
+        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !TalentData {
+            var talent = try parser.parseStruct(TalentData, first_tok);
+            talent.description = try processMacros(parser.gpa, talent.description);
+            return talent;
+        }
+    };
 };
 
 pub const ClassData = struct {

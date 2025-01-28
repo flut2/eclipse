@@ -204,6 +204,12 @@ pub const RGBA = extern struct {
             .a = u8f(std.math.maxInt(u8) * alpha),
         };
     }
+
+    pub fn toColor(self: RGBA) u24 {
+        return @as(u24, @intCast(self.r)) << 16 |
+                @as(u24, @intCast(self.g)) << 8 |
+                @as(u24, @intCast(self.b));
+    }
 };
 
 pub var rng: std.Random.DefaultPrng = .init(0);
@@ -275,6 +281,42 @@ pub inline fn distSqr(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
 
 pub inline fn dist(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
     return @sqrt(distSqr(x1, y1, x2, y2));
+}
+
+pub fn hueToRgb(p: f32, q: f32, t: f32) f32 {
+    var mod_t = t;
+    if (mod_t < 0.0) mod_t += 1.0;
+    if (mod_t > 1.0) mod_t -= 1.0;
+    if (mod_t < 1.0 / 6.0) return p + (q - p) * 6.0 * mod_t;
+    if (mod_t < 1.0 / 2.0) return q;
+    if (mod_t < 2.0 / 3.0) return p + (q - p) * (2.0 / 3.0 - mod_t) * 6.0;
+    return p;
+}
+
+fn rgbRound(val: f32) u8 {
+    return u8f(@min(@floor(val * 256), 255));
+}
+
+pub fn hslToRgb(h: f32, s: f32, l: f32) RGBA {
+    if (s == 0) return .{
+        .r = rgbRound(l),
+        .g = rgbRound(l),
+        .b = rgbRound(l),
+        .a = 255,
+    };
+
+    const q = if (l < 0.5) l * (1.0 + s) else l + s - l * s;
+    const p = 2.0 * l - q;
+    return .{
+        .r = rgbRound(hueToRgb(p, q, h + 1.0 / 3.0)),
+        .g = rgbRound(hueToRgb(p, q, h)),
+        .b = rgbRound(hueToRgb(p, q, h - 1.0 / 3.0)),
+        .a = 255,
+    };
+}
+
+pub fn redToGreen(perc: f32) RGBA {
+    return hslToRgb(perc / 3.0, 1.0, 0.5);
 }
 
 pub inline fn f16i(i: anytype) f16 {
