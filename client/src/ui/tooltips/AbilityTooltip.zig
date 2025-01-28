@@ -97,7 +97,7 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
     if (!has_mana_cost and !has_health_cost and !has_gold_cost) {
         self.subtext.text_data.setText(std.fmt.bufPrint(
             self.subtext.text_data.backing_buffer,
-            "No Cost | {d:.1}s " ++ cooldown_icon,
+            "No Cost &col=\"222222\"|&reset {d:.1}s " ++ cooldown_icon,
             .{params.data.cooldown},
         ) catch "Buffer overflow");
     } else {
@@ -108,25 +108,25 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
         if (has_health_cost and has_mana_cost) {
             self.subtext.text_data.setText(std.fmt.bufPrint(
                 self.subtext.text_data.backing_buffer,
-                "{d} " ++ mana_icon ++ " {d} " ++ health_icon ++ " | {d:.1}s " ++ cooldown_icon,
+                "{d} " ++ mana_icon ++ " {d} " ++ health_icon ++ " &col=\"222222\"|&reset {d:.1}s " ++ cooldown_icon,
                 .{ params.data.mana_cost, params.data.health_cost, params.data.cooldown },
             ) catch "Buffer overflow");
         } else if (has_health_cost) {
             self.subtext.text_data.setText(std.fmt.bufPrint(
                 self.subtext.text_data.backing_buffer,
-                "{d} " ++ health_icon ++ " | {d:.1}s " ++ cooldown_icon,
+                "{d} " ++ health_icon ++ " &col=\"222222\"|&reset {d:.1}s " ++ cooldown_icon,
                 .{ params.data.health_cost, params.data.cooldown },
             ) catch "Buffer overflow");
         } else if (has_mana_cost) {
             self.subtext.text_data.setText(std.fmt.bufPrint(
                 self.subtext.text_data.backing_buffer,
-                "{d} " ++ mana_icon ++ " | {d:.1}s " ++ cooldown_icon,
+                "{d} " ++ mana_icon ++ " &col=\"222222\"|&reset {d:.1}s " ++ cooldown_icon,
                 .{ params.data.mana_cost, params.data.cooldown },
             ) catch "Buffer overflow");
         } else {
             self.subtext.text_data.setText(std.fmt.bufPrint(
                 self.subtext.text_data.backing_buffer,
-                "{d} " ++ gold_icon ++ " | {d:.1}s " ++ cooldown_icon,
+                "{d} " ++ gold_icon ++ " &col=\"222222\"|&reset {d:.1}s " ++ cooldown_icon,
                 .{ params.data.gold_cost, params.data.cooldown },
             ) catch "Buffer overflow");
         }

@@ -460,13 +460,13 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
                 ) catch footer_text;
 
                 self.decor.image_data.nine_slice.color = 0x8B0000;
-                self.decor.image_data.nine_slice.color_intensity = 0.4;
+                self.decor.image_data.nine_slice.color_intensity = 0.1;
 
                 self.line_break_one.image_data.nine_slice.color = 0x8B0000;
-                self.line_break_one.image_data.nine_slice.color_intensity = 0.4;
+                self.line_break_one.image_data.nine_slice.color_intensity = 0.1;
 
                 self.line_break_two.image_data.nine_slice.color = 0x8B0000;
-                self.line_break_two.image_data.nine_slice.color_intensity = 0.4;
+                self.line_break_two.image_data.nine_slice.color_intensity = 0.1;
             } else {
                 footer_text = std.fmt.bufPrint(self.getFooterBuffer(), line_base ++ "Usable by: ", .{footer_text}) catch footer_text;
 

@@ -231,6 +231,21 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         break :blk true;
     };
 
+    self.decor.image_data.nine_slice = .fromAtlasData(if (meets_reqs)
+        assets.getUiData("tooltip_background", 0)
+    else
+        assets.getUiData("tooltip_background_locked", 0), 360, 0, 34, 34, 1, 1, 1.0);
+
+    self.line_break_one.image_data.nine_slice = .fromAtlasData(if (meets_reqs)
+        assets.getUiData("tooltip_line_spacer_top", 0)
+    else
+        assets.getUiData("tooltip_line_spacer_top_locked", 0), self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+
+    self.line_break_two.image_data.nine_slice = .fromAtlasData(if (meets_reqs)
+        assets.getUiData("tooltip_line_spacer_bottom", 0)
+    else
+        assets.getUiData("tooltip_line_spacer_bottom_locked", 0), self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+
     const talent_type_name = switch (params.data.type) {
         .keystone => "Keystone",
         .ability => "Ability",

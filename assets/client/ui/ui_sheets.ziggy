@@ -400,6 +400,18 @@
     .path = "character_select/character_tooltip_talent_bar_2.png",
 },
 {
+    .name = "tooltip_background_locked",
+    .path = "elements/tooltip_background_locked.png",
+},
+{
+    .name = "tooltip_line_spacer_top_locked",
+    .path = "elements/tooltip_line_spacer_top_locked.png",
+},
+{
+    .name = "tooltip_line_spacer_bottom_locked",
+    .path = "elements/tooltip_line_spacer_bottom_locked.png",
+},
+{
     .name = "celestial_character_line",
     .path = "character_select/celestial_character_line.png",
     .w = 312,
