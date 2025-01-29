@@ -58,7 +58,8 @@ pub fn mouseScroll(self: *ScrollableContainer, x: f32, y: f32, _: f32, _: f32, _
                 self.scroll_bar.max_value,
                 @max(
                     self.scroll_bar.min_value,
-                    self.scroll_bar.current_value + (self.scroll_bar.max_value - self.scroll_bar.min_value) * -y_scroll / (self.container.height() / 10.0),
+                    self.scroll_bar.current_value +
+                        (self.scroll_bar.max_value - self.scroll_bar.min_value) * -y_scroll / (self.container.height() / 10.0),
                 ),
             ),
         );
@@ -69,7 +70,8 @@ pub fn mouseScroll(self: *ScrollableContainer, x: f32, y: f32, _: f32, _: f32, _
 }
 
 pub fn init(self: *ScrollableContainer) void {
-    if (self.start_value < 0.0 or self.start_value > 1.0) std.debug.panic("Invalid start_value for ScrollableContainer: {d:.2}", .{self.start_value});
+    if (self.start_value < 0.0 or self.start_value > 1.0)
+        std.debug.panic("Invalid start_value for ScrollableContainer: {d:.2}", .{self.start_value});
 
     self.base_y = self.base.y;
 

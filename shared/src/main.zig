@@ -9,3 +9,5 @@ pub const uv = switch (@import("builtin").os.tag) {
     .macos => @import("uv_mac.zig"),
     else => @compileError("Unsupported OS"),
 };
+
+pub const rpmalloc = @import("rpmalloc.zig");

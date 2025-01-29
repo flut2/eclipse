@@ -23,6 +23,7 @@ pub fn buildWithoutDupes(
     enable_tracy: bool,
 ) !void {
     const enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse false;
+    const enable_gpa = b.option(bool, "enable_gpa", "Toggles using the GPA for memory debugging") orelse false;
     const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
     const version = b.option([]const u8, "version", "Build version, for the version text and client-server version checks") orelse "1.0";
     const login_server_ip = b.option([]const u8, "login_server_ip", "The IP of the login server") orelse "127.0.0.1";
@@ -49,6 +50,7 @@ pub fn buildWithoutDupes(
         options.addOption([]const u8, "login_server_ip", login_server_ip);
         options.addOption(u16, "login_server_port", login_server_port);
         options.addOption(bool, "enable_validation_layers", enable_validation_layers);
+        options.addOption(bool, "enable_gpa", enable_gpa);
         exe.root_module.addOptions("options", options);
 
         const shared_dep = b.dependency("shared", .{
@@ -57,9 +59,9 @@ pub fn buildWithoutDupes(
             .enable_tracy = enable_tracy,
         });
         exe.root_module.linkLibrary(shared_dep.artifact("libuv"));
+        exe.root_module.linkLibrary(shared_dep.artifact("rpmalloc"));
 
         exe.root_module.addImport("shared", shared_dep.module("shared"));
-        exe.root_module.addImport("rpmalloc", shared_dep.module("rpmalloc"));
         if (enable_tracy) exe.root_module.addImport("tracy", shared_dep.module("tracy"));
         exe.root_module.addImport("ziggy", shared_dep.module("ziggy"));
 

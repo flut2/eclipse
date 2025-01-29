@@ -11,6 +11,7 @@ const utils = shared.utils;
 const uv = shared.uv;
 const f32i = utils.f32i;
 const u32f = utils.u32f;
+const rpmalloc = shared.rpmalloc;
 const vk = @import("vulkan");
 const zaudio = @import("zaudio");
 const ziggy = @import("ziggy");
@@ -29,8 +30,6 @@ const element = @import("ui/elements/element.zig");
 const ui_systems = @import("ui/systems.zig");
 
 const tracy = if (build_options.enable_tracy) @import("tracy") else {};
-const rpmalloc = @import("rpmalloc").RPMalloc(.{});
-
 const AccountData = struct {
     email: []const u8,
     token: u128,
@@ -169,11 +168,10 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
 fn renderTick() !void {
     if (build_options.enable_tracy) tracy.SetThreadName("Render");
 
-    rpmalloc.initThread() catch |e| {
-        std.log.err("Render thread initialization failed: {}", .{e});
-        return;
-    };
-    defer rpmalloc.deinitThread(true);
+    if (!build_options.enable_gpa) {
+        rpmalloc.initThread();
+        defer rpmalloc.deinitThread();
+    }
 
     renderer = try .create(if (settings.enable_vsync) .fifo_khr else .immediate_khr);
     defer renderer.destroy();
@@ -320,6 +318,49 @@ pub fn audioFailure() void {
     });
 }
 
+fn uvMalloc(len: usize) callconv(.C) ?*anyopaque {
+    const result = std.c.malloc(len);
+    if (result) |addr| {
+        tracy.Alloc(addr, len);
+    } else {
+        var buffer: [128]u8 = undefined;
+        const msg = std.fmt.bufPrint(&buffer, "Alloc failed, requesting {d} bytes", .{len}) catch return result;
+        tracy.Message(msg);
+    }
+    return result;
+}
+
+fn uvCalloc(len: usize, elem_size: usize) callconv(.C) ?*anyopaque {
+    const result = std.c.malloc(len * elem_size);
+    if (result) |addr| {
+        @memset(@as([*]u8, @ptrCast(@alignCast(result)))[0 .. len * elem_size], 0);
+        tracy.Alloc(addr, len * elem_size);
+    } else {
+        var buffer: [128]u8 = undefined;
+        const msg = std.fmt.bufPrint(&buffer, "Calloc failed, requesting {d} bytes", .{len * elem_size}) catch return result;
+        tracy.Message(msg);
+    }
+    return result;
+}
+
+fn uvResize(ptr: ?*anyopaque, new_len: usize) callconv(.C) ?*anyopaque {
+    const result = std.c.realloc(ptr, new_len);
+    if (result != null) {
+        tracy.Free(ptr);
+        tracy.Alloc(ptr, new_len);
+    } else {
+        var buffer: [128]u8 = undefined;
+        const msg = std.fmt.bufPrint(&buffer, "Resize failed, requesting {d} bytes", .{new_len}) catch return result;
+        tracy.Message(msg);
+    }
+    return result;
+}
+
+fn uvFree(ptr: ?*anyopaque) callconv(.C) void {
+    std.c.free(ptr);
+    tracy.Free(ptr);
+}
+
 pub fn main() !void {
     if (build_options.enable_tracy) tracy.SetThreadName("Main");
 
@@ -334,14 +375,16 @@ pub fn main() !void {
     };
     utils.rng.seed(@intCast(start_time));
 
-    const is_debug = builtin.mode == .Debug;
-    var gpa = if (is_debug) std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 10 }).init else {};
-    defer _ = if (is_debug) gpa.deinit();
+    const use_gpa = build_options.enable_gpa;
+    var gpa = if (use_gpa) std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 10 }).init else {};
+    defer _ = if (use_gpa) gpa.deinit();
 
-    try rpmalloc.init(null, .{});
-    defer rpmalloc.deinit();
+    if (!use_gpa) {
+        rpmalloc.init(.{}, .{});
+        defer rpmalloc.deinit();
+    }
 
-    const child_allocator = if (is_debug)
+    const child_allocator = if (use_gpa)
         gpa.allocator()
     else
         rpmalloc.allocator();
@@ -349,6 +392,14 @@ pub fn main() !void {
         var tracy_alloc = tracy.TracyAllocator.init(child_allocator);
         break :blk tracy_alloc.allocator();
     } else child_allocator;
+
+    if (build_options.enable_tracy) {
+        const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
+        if (replace_alloc_status != 0) {
+            std.log.err("Libuv alloc replace error: {s}", .{uv.uv_strerror(replace_alloc_status)});
+            return error.ReplaceAllocFailed;
+        }
+    }
 
     var account_arena: std.heap.ArenaAllocator = .init(allocator);
     account_arena_allocator = account_arena.allocator();

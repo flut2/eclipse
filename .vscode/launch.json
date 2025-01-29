@@ -11,13 +11,13 @@
             "preLaunchTask": "Debug Client"
         },
         {
-            "name": "Debug Client (Validation)",
+            "name": "Debug Client (GPA, Validation)",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/client/zig-out/bin/Eclipse",
             "args": [],
             "cwd": "${workspaceFolder}/client/zig-out/bin",
-            "preLaunchTask": "Debug Client (Validation)"
+            "preLaunchTask": "Debug Client (GPA, Validation)"
         },
         {
             "name": "Debug Client (Windows)",
@@ -29,13 +29,13 @@
             "preLaunchTask": "Debug Client (Windows)"
         },
         {
-            "name": "Debug Client (Windows, Validation)",
+            "name": "Debug Client (Windows, GPA, Validation)",
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/client/zig-out/bin/Eclipse",
             "args": [],
             "cwd": "${workspaceFolder}/client/zig-out/bin",
-            "preLaunchTask": "Debug Client (Windows, Validation)"
+            "preLaunchTask": "Debug Client (Windows, GPA, Validation)"
         },
         {
             "name": "Debug Server",

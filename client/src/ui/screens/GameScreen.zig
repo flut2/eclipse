@@ -533,9 +533,9 @@ pub fn init(self: *GameScreen) !void {
     try addStatText(self.stats_container, &self.wit_stat_text, &idx);
     try addStatText(self.stats_container, &self.defense_stat_text, &idx);
     try addStatText(self.stats_container, &self.resistance_stat_text, &idx);
-    try addStatText(self.stats_container, &self.speed_stat_text, &idx);
     try addStatText(self.stats_container, &self.stamina_stat_text, &idx);
     try addStatText(self.stats_container, &self.intelligence_stat_text, &idx);
+    try addStatText(self.stats_container, &self.speed_stat_text, &idx);
     try addStatText(self.stats_container, &self.haste_stat_text, &idx);
 
     self.ability_container = try element.create(UiContainer, .{ .base = .{
@@ -689,13 +689,13 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
 fn addStatText(container: *UiContainer, text: **Text, idx: *f32) !void {
     defer idx.* += 1;
 
-    const x = 35.0 + 70.0 * @mod(idx.*, 3.0);
-    const y = 26.0 + 28.0 * @floor(idx.* / 3.0);
+    const x = 54.0 + 105.0 * @mod(idx.*, 2.0);
+    const y = 27.0 + 28.0 * @floor(idx.* / 2.0);
     text.* = try container.createChild(Text, .{ .base = .{ .x = x, .y = y }, .text_data = .{
         .text = "",
-        .size = 8,
+        .size = 12,
         .text_type = .bold,
-        .max_width = 67,
+        .max_width = 64,
         .max_height = 18,
         .hori_align = .middle,
         .vert_align = .middle,
@@ -1007,13 +1007,13 @@ fn updateStat(text_data: *element.TextData, base_val: i32, bonus_val: i32) void 
     text_data.setText((if (bonus_val > 0)
         std.fmt.bufPrint(
             text_data.backing_buffer,
-            "{}&size=\"6\"&col=\"65E698\"\n(+{})",
+            "{}&size=\"10\"&col=\"65E698\" (+{})",
             .{ base_val + bonus_val, bonus_val },
         )
     else if (bonus_val < 0)
         std.fmt.bufPrint(
             text_data.backing_buffer,
-            "{}&size=\"6\"&col=\"FF7070\"\n({})",
+            "{}&size=\"10\"&col=\"FF7070\" ({})",
             .{ base_val + bonus_val, bonus_val },
         )
     else
@@ -1027,9 +1027,9 @@ pub fn updateStats(self: *GameScreen) void {
         updateStat(&self.wit_stat_text.text_data, player.wit, player.wit_bonus);
         updateStat(&self.defense_stat_text.text_data, player.defense, player.defense_bonus);
         updateStat(&self.resistance_stat_text.text_data, player.resistance, player.resistance_bonus);
-        updateStat(&self.speed_stat_text.text_data, player.speed, player.speed_bonus);
         updateStat(&self.stamina_stat_text.text_data, player.stamina, player.stamina);
         updateStat(&self.intelligence_stat_text.text_data, player.intelligence, player.intelligence_bonus);
+        updateStat(&self.speed_stat_text.text_data, player.speed, player.speed_bonus);
         updateStat(&self.haste_stat_text.text_data, player.haste, player.haste_bonus);
     }
 }

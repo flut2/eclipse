@@ -9,9 +9,9 @@
             "command": "cd client && zig build -Doptimize=Debug -freference-trace",
         },
         {
-            "label": "Debug Client (Validation)",
+            "label": "Debug Client (GPA, Validation)",
             "type": "shell",
-            "command": "cd client && zig build -Doptimize=Debug -Denable_validation_layers=true -freference-trace",
+            "command": "cd client && zig build -Doptimize=Debug -Denable_validation_layers=true -Denable_gpa=true -freference-trace",
         },
         {
             "label": "Debug Client (Windows)",
@@ -19,9 +19,9 @@
             "command": "cd client ; zig build -Doptimize=Debug -freference-trace",
         },
         {
-            "label": "Debug Client (Windows, Validation)",
+            "label": "Debug Client (Windows, GPA, Validation)",
             "type": "shell",
-            "command": "cd client ; zig build -Doptimize=Debug -Denable_validation_layers=true -freference-trace",
+            "command": "cd client ; zig build -Doptimize=Debug -Denable_validation_layers=true -Denable_gpa=true -freference-trace",
         },
         {
             "label": "Debug Server",
