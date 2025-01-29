@@ -6,6 +6,7 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const uv = shared.uv;
+const rpmalloc = shared.rpmalloc;
 
 const db = @import("db.zig");
 const GameClient = @import("GameClient.zig");
@@ -16,7 +17,6 @@ const maps = @import("map/maps.zig");
 const Settings = @import("Settings.zig");
 
 const tracy = if (build_options.enable_tracy) @import("tracy") else {};
-const rpmalloc = @import("rpmalloc").RPMalloc(.{});
 pub const c = @cImport({
     @cDefine("REDIS_OPT_NONBLOCK", {});
     @cDefine("REDIS_OPT_REUSEADDR", {});
@@ -41,17 +41,16 @@ pub fn main() !void {
 
     utils.rng.seed(@intCast(std.time.microTimestamp()));
 
-    const is_debug = builtin.mode == .Debug;
-    var gpa = if (is_debug) std.heap.GeneralPurposeAllocator(.{}).init else {};
-    defer _ = if (is_debug) gpa.deinit();
+    const enable_gpa = build_options.enable_gpa;
+    var gpa = if (enable_gpa) std.heap.GeneralPurposeAllocator(.{}).init else {};
+    defer _ = if (enable_gpa) gpa.deinit();
 
-    try rpmalloc.init(null, .{});
-    defer rpmalloc.deinit();
+    if (!enable_gpa) {
+        rpmalloc.init(.{}, .{});
+        defer rpmalloc.deinit();
+    }
 
-    const child_allocator = switch (builtin.mode) {
-        .Debug => gpa.allocator(),
-        else => rpmalloc.allocator(),
-    };
+    const child_allocator = if (enable_gpa) gpa.allocator() else rpmalloc.allocator();
     allocator = if (build_options.enable_tracy) blk: {
         var tracy_alloc: tracy.TracyAllocator = .init(child_allocator);
         break :blk tracy_alloc.allocator();

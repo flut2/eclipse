@@ -967,9 +967,9 @@ fn parseContainerStat(container: *Container, stat: network_data.ContainerStat) v
             const inv_idx = @intFromEnum(stat) - @intFromEnum(network_data.ContainerStat.inv_data_0);
             container.inv_data[inv_idx] = val;
 
-            // const int_id = map.interactive.map_id.load(.acquire);
-            // if (container.map_id == int_id and ui_systems.screen == .game)
-            //     ui_systems.screen.game.setContainerItemData(val, inv_idx);
+            const int_id = map.interactive.map_id.load(.acquire);
+            if (container.map_id == int_id and ui_systems.screen == .game)
+                ui_systems.screen.game.setContainerItemData(val, inv_idx);
         },
         .name => |val| {
             const int_id = map.interactive.map_id.load(.acquire);

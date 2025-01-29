@@ -12,6 +12,7 @@ const stat_util = @import("stat_util.zig");
 const Container = @This();
 
 pub const inv_default: [9]u16 = @splat(std.math.maxInt(u16));
+pub const inv_data_default: [9]network_data.ItemData = @splat(.{});
 
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
@@ -22,6 +23,7 @@ size_mult: f32 = 1.0,
 stats_writer: utils.PacketWriter = .{},
 owner_map_id: u32 = std.math.maxInt(u32),
 inventory: [9]u16 = inv_default,
+inv_data: [9]network_data.ItemData = inv_data_default,
 disappear_time: i64 = 0,
 data: *const game_data.ContainerData = undefined,
 world: *World = undefined,
@@ -67,6 +69,15 @@ pub fn exportStats(self: *Container, cache: *[@typeInfo(network_data.ContainerSt
     stat_util.write(T, writer, cache, .{ .inv_6 = self.inventory[6] });
     stat_util.write(T, writer, cache, .{ .inv_7 = self.inventory[7] });
     stat_util.write(T, writer, cache, .{ .inv_8 = self.inventory[8] });
+    stat_util.write(T, writer, cache, .{ .inv_data_0 = self.inv_data[0] });
+    stat_util.write(T, writer, cache, .{ .inv_data_1 = self.inv_data[1] });
+    stat_util.write(T, writer, cache, .{ .inv_data_2 = self.inv_data[2] });
+    stat_util.write(T, writer, cache, .{ .inv_data_3 = self.inv_data[3] });
+    stat_util.write(T, writer, cache, .{ .inv_data_4 = self.inv_data[4] });
+    stat_util.write(T, writer, cache, .{ .inv_data_5 = self.inv_data[5] });
+    stat_util.write(T, writer, cache, .{ .inv_data_6 = self.inv_data[6] });
+    stat_util.write(T, writer, cache, .{ .inv_data_7 = self.inv_data[7] });
+    stat_util.write(T, writer, cache, .{ .inv_data_8 = self.inv_data[8] });
 
     return writer.list.items;
 }

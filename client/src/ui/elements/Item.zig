@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const glfw = @import("glfw");
+const ItemData = @import("shared").network_data.ItemData;
 
 const main = @import("../../main.zig");
 const CameraData = @import("../../render/CameraData.zig");
@@ -8,20 +9,20 @@ const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
-const ItemData = @import("shared").network_data.ItemData;
-
 const Item = @This();
 base: ElementBase,
+image_data: element.ImageData,
 background_x: f32,
 background_y: f32,
-image_data: element.ImageData,
+// don't set this to anything, it's used for item rarity backgrounds
+background_image_data: ?element.ImageData = null,
+amount_text: ?element.TextData = null,
 dragStartCallback: ?*const fn (*Item) void = null,
 dragEndCallback: ?*const fn (*Item) void = null,
 doubleClickCallback: ?*const fn (*Item) void = null,
 shiftClickCallback: ?*const fn (*Item) void = null,
+amount_visible: bool = false,
 draggable: bool = false,
-// don't set this to anything, it's used for item rarity backgrounds
-background_image_data: ?element.ImageData = null,
 is_dragging: bool = false,
 drag_start_x: f32 = 0,
 drag_start_y: f32 = 0,
@@ -89,10 +90,29 @@ pub fn mouseMove(self: *Item, x: f32, y: f32, x_offset: f32, y_offset: f32) bool
     return !(self.base.event_policy.pass_move or !in_bounds);
 }
 
-pub fn draw(self: Item, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn init(self: *Item) void {
+    if (self.amount_text) |*text_data| {
+        text_data.lock.lock();
+        defer text_data.lock.unlock();
+        text_data.recalculateAttributes();
+    }
+}
+
+pub fn draw(self: *Item, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
-    if (self.background_image_data) |background_image_data| background_image_data.draw(self.background_x + x_offset, self.background_y + y_offset, self.base.scissor);
+    if (self.background_image_data) |background_image_data| background_image_data.draw(
+        self.background_x + x_offset,
+        self.background_y + y_offset,
+        self.base.scissor,
+    );
     self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
+    if (self.amount_visible) if (self.amount_text) |*text| main.renderer.drawText(
+        self.background_x + 8 + x_offset,
+        self.background_y + 4 + y_offset,
+        1.0,
+        text,
+        self.base.scissor,
+    );
 }
 
 pub fn width(self: Item) f32 {

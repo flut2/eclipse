@@ -324,6 +324,7 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
             return;
         } else if (self.world.find(Player, data.from_map_id, .ref)) |player| {
             const start = player.inventory[data.from_slot_id];
+            const start_data = player.inv_data[data.from_slot_id];
             switch (data.to_obj_type) {
                 .player => if (data.to_map_id != self.player_map_id) {
                     self.sendError(.message_with_disconnect, "Invalid swap");
@@ -332,22 +333,57 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
                     if (!verifySwap(start, if (data.to_slot_id < 4) player.data.item_types[data.to_slot_id] else .any) or
                         !verifySwap(player.inventory[data.to_slot_id], if (data.from_slot_id < 4) player.data.item_types[data.from_slot_id] else .any))
                         return;
+                    defer player.recalculateItems();
+
+                    handleStack: {
+                        if (player.inventory[data.from_slot_id] == player.inventory[data.to_slot_id]) {
+                            const item_data = game_data.item.from_id.get(player.inventory[data.from_slot_id]) orelse break :handleStack;
+                            if (item_data.max_stack == 0) break :handleStack;
+                            if (player.inv_data[data.to_slot_id].amount + player.inv_data[data.from_slot_id].amount > item_data.max_stack)
+                                break :handleStack;
+
+                            player.inv_data[data.to_slot_id].amount += player.inv_data[data.from_slot_id].amount;
+                            player.inventory[data.from_slot_id] = std.math.maxInt(u16);
+                            player.inv_data[data.from_slot_id].amount = 0;
+                            return;
+                        }
+                    }
                     player.inventory[data.from_slot_id] = player.inventory[data.to_slot_id];
+                    player.inv_data[data.from_slot_id] = player.inv_data[data.to_slot_id];
                     player.inventory[data.to_slot_id] = start;
+                    player.inv_data[data.to_slot_id] = start_data;
                 },
                 .container => if (self.world.find(Container, data.to_map_id, .ref)) |cont| {
                     if (!verifySwap(cont.inventory[data.to_slot_id], if (data.from_slot_id < 4) player.data.item_types[data.from_slot_id] else .any))
                         return;
+
+                    defer player.recalculateItems();
+
+                    handleStack: {
+                        if (player.inventory[data.from_slot_id] == cont.inventory[data.to_slot_id]) {
+                            const item_data = game_data.item.from_id.get(player.inventory[data.from_slot_id]) orelse break :handleStack;
+                            if (item_data.max_stack == 0) break :handleStack;
+                            if (cont.inv_data[data.to_slot_id].amount + player.inv_data[data.from_slot_id].amount > item_data.max_stack)
+                                break :handleStack;
+
+                            cont.inv_data[data.to_slot_id].amount += player.inv_data[data.from_slot_id].amount;
+                            player.inventory[data.from_slot_id] = std.math.maxInt(u16);
+                            player.inv_data[data.from_slot_id].amount = 0;
+                            return;
+                        }
+                    }
+
                     player.inventory[data.from_slot_id] = cont.inventory[data.to_slot_id];
+                    player.inv_data[data.from_slot_id] = cont.inv_data[data.to_slot_id];
                     cont.inventory[data.to_slot_id] = start;
+                    cont.inv_data[data.to_slot_id] = start_data;
                 } else return,
                 else => return,
             }
-
-            player.recalculateItems();
         } else return,
         .container => if (self.world.find(Container, data.from_map_id, .ref)) |cont| {
             const start = cont.inventory[data.from_slot_id];
+            const start_data = cont.inv_data[data.from_slot_id];
             switch (data.to_obj_type) {
                 .player => if (data.to_map_id != self.player_map_id) {
                     self.sendError(.message_with_disconnect, "Invalid swap");
@@ -355,13 +391,47 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
                 } else if (self.world.find(Player, data.to_map_id, .ref)) |player| {
                     if (!verifySwap(start, if (data.to_slot_id < 4) player.data.item_types[data.to_slot_id] else .any))
                         return;
+
+                    defer player.recalculateItems();
+
+                    handleStack: {
+                        if (cont.inventory[data.from_slot_id] == player.inventory[data.to_slot_id]) {
+                            const item_data = game_data.item.from_id.get(cont.inventory[data.from_slot_id]) orelse break :handleStack;
+                            if (item_data.max_stack == 0) break :handleStack;
+                            if (player.inv_data[data.to_slot_id].amount + cont.inv_data[data.from_slot_id].amount > item_data.max_stack)
+                                break :handleStack;
+
+                            player.inv_data[data.to_slot_id].amount += cont.inv_data[data.from_slot_id].amount;
+                            cont.inventory[data.from_slot_id] = std.math.maxInt(u16);
+                            cont.inv_data[data.from_slot_id].amount = 0;
+                            return;
+                        }
+                    }
+
                     cont.inventory[data.from_slot_id] = player.inventory[data.to_slot_id];
+                    cont.inv_data[data.from_slot_id] = player.inv_data[data.to_slot_id];
                     player.inventory[data.to_slot_id] = start;
-                    player.recalculateItems();
+                    player.inv_data[data.to_slot_id] = start_data;
                 } else return,
                 .container => if (self.world.find(Container, data.to_map_id, .ref)) |other_cont| {
+                    handleStack: {
+                        if (cont.inventory[data.from_slot_id] == other_cont.inventory[data.to_slot_id]) {
+                            const item_data = game_data.item.from_id.get(cont.inventory[data.from_slot_id]) orelse break :handleStack;
+                            if (item_data.max_stack == 0) break :handleStack;
+                            if (other_cont.inv_data[data.to_slot_id].amount + cont.inv_data[data.from_slot_id].amount > item_data.max_stack)
+                                break :handleStack;
+
+                            other_cont.inv_data[data.to_slot_id].amount += cont.inv_data[data.from_slot_id].amount;
+                            cont.inventory[data.from_slot_id] = std.math.maxInt(u16);
+                            cont.inv_data[data.from_slot_id].amount = 0;
+                            return;
+                        }
+                    }
+
                     cont.inventory[data.from_slot_id] = other_cont.inventory[data.to_slot_id];
+                    cont.inv_data[data.from_slot_id] = other_cont.inv_data[data.to_slot_id];
                     other_cont.inventory[data.to_slot_id] = start;
+                    other_cont.inv_data[data.to_slot_id] = start_data;
                 } else return,
                 else => return,
             }
@@ -535,16 +605,30 @@ fn handleUseItem(self: *Client, data: PacketData(.use_item)) void {
                 self.sendError(.message_with_disconnect, "Invalid item use");
                 return;
             }
-            defer player.inventory[data.slot_id] = std.math.maxInt(u16);
             const item_data = game_data.item.from_id.get(player.inventory[data.slot_id]) orelse return;
             if (item_data.activations) |activations| processActivations(player, activations, item_data.name);
             processItemCosts(player, item_data);
+            if (item_data.max_stack > 0) {
+                player.inv_data[data.slot_id].amount -= 1;
+                if (player.inv_data[data.slot_id].amount == 0)
+                    player.inventory[data.slot_id] = std.math.maxInt(u16);
+            } else {
+                player.inventory[data.slot_id] = std.math.maxInt(u16);
+                player.inv_data[data.slot_id] = .{};
+            }
         },
         .container => if (self.world.find(Container, data.map_id, .ref)) |cont| {
-            defer cont.inventory[data.slot_id] = std.math.maxInt(u16);
             const item_data = game_data.item.from_id.get(cont.inventory[data.slot_id]) orelse return;
             if (item_data.activations) |activations| processActivations(player, activations, item_data.name);
             processItemCosts(player, item_data);
+            if (item_data.max_stack > 0) {
+                cont.inv_data[data.slot_id].amount -= 1;
+                if (cont.inv_data[data.slot_id].amount == 0)
+                    cont.inventory[data.slot_id] = std.math.maxInt(u16);
+            } else {
+                cont.inventory[data.slot_id] = std.math.maxInt(u16);
+                cont.inv_data[data.slot_id] = .{};
+            }
         } else return,
         else => return,
     }
@@ -690,6 +774,8 @@ fn handleInvDrop(self: *Client, data: PacketData(.inv_drop)) void {
     const player = self.world.find(Player, data.player_map_id, .ref) orelse return;
     var inventory = Container.inv_default;
     inventory[0] = player.inventory[data.slot_id];
+    var inv_data = Container.inv_data_default;
+    inv_data[0] = player.inv_data[data.slot_id];
     _ = self.world.add(Container, .{
         .x = player.x,
         .y = player.y,
@@ -697,12 +783,14 @@ fn handleInvDrop(self: *Client, data: PacketData(.inv_drop)) void {
         .name = main.allocator.dupe(u8, player.name) catch main.oomPanic(),
         .free_name = true,
         .inventory = inventory,
+        .inv_data = inv_data,
     }) catch {
         self.sendError(.message_with_disconnect, "Bag spawning failed");
         return;
     };
 
     player.inventory[data.slot_id] = std.math.maxInt(u16);
+    player.inv_data[data.slot_id] = .{};
     player.recalculateItems();
 }
 

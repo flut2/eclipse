@@ -230,5 +230,6 @@
     .mana_cost = { .chance = 1.0, .amount = 70 },
     .gold_cost = { .chance = 0.33, .amount = 300 },
     .activations = [ create_ally { .name = "Dwarven Coil" } ],
+    .max_stack = 16,
 },
 ]

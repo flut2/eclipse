@@ -47,7 +47,7 @@ pub fn init(self: *ItemTooltip) !void {
 
     self.item_name = try self.root.createChild(Text, .{
         .base = .{ .x = 8 * 4 + 25, .y = 10 },
-        .text_data = .{ .text = "", .size = 14, .text_type = .bold_italic },
+        .text_data = .{ .text = "", .size = 14, .max_chars = 64, .text_type = .bold_italic },
     });
 
     self.rarity = try self.root.createChild(Text, .{
@@ -244,7 +244,13 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         self.image.base.y = 10 + (10 * scale_y - self.image.height()) / 2;
     }
 
-    self.item_name.text_data.setText(data.name);
+    self.item_name.text_data.setText(if (data.max_stack == 0)
+        data.name
+    else
+        std.fmt.bufPrint(self.item_name.text_data.backing_buffer, "{}x {s}", .{
+            params.item_data.amount,
+            data.name,
+        }) catch "Buffer overflow");
     self.description.text_data.setText(data.description);
 
     const levelable = data.level_spirits > 0;

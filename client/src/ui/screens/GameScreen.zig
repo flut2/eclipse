@@ -312,6 +312,7 @@ pub fn init(self: *GameScreen) !void {
             },
             .background_x = self.inventory_decor.base.x + self.inventory_pos_data[i].x,
             .background_y = self.inventory_decor.base.y + self.inventory_pos_data[i].y,
+            .amount_text = .{ .text = "", .size = 10, .max_chars = 8, .color = 0x9B9B9B },
             .image_data = .{ .normal = .{ .scale_x = scale, .scale_y = scale, .atlas_data = assets.error_data, .glow = true } },
             .draggable = true,
             .dragStartCallback = itemDragStartCallback,
@@ -354,6 +355,7 @@ pub fn init(self: *GameScreen) !void {
             },
             .background_x = self.container_decor.base.x + self.container_pos_data[i].x,
             .background_y = self.container_decor.base.y + self.container_pos_data[i].y,
+            .amount_text = .{ .text = "", .size = 10, .max_chars = 8, .color = 0x9B9B9B },
             .image_data = .{ .normal = .{ .scale_x = 3.0, .scale_y = 3.0, .atlas_data = assets.error_data, .glow = true } },
             .draggable = true,
             .dragStartCallback = itemDragStartCallback,
@@ -1379,9 +1381,12 @@ pub fn setContainerItem(self: *GameScreen, item: u16, idx: u8) void {
 pub fn setContainerItemData(self: *GameScreen, item_data: ItemData, idx: u8) void {
     const data = game_data.item.from_id.get(self.container_items[idx].data_id) orelse return;
     self.container_items[idx].item_data = item_data;
-    if (data.level_spirits == 0) {
-        // TODO: amount text
-    }
+    if (data.max_stack > 0) {
+        self.container_items[idx].amount_text.?.setText(
+            std.fmt.bufPrint(self.container_items[idx].amount_text.?.backing_buffer, "{}x", .{item_data.amount}) catch "Buffer overflow",
+        );
+        self.container_items[idx].amount_visible = true;
+    } else self.container_items[idx].amount_visible = false;
 }
 
 fn itemFailure(self: *GameScreen, idx: u8) void {
@@ -1423,23 +1428,21 @@ pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
     const pos_w = self.inventory_pos_data[idx].w;
     const pos_h = self.inventory_pos_data[idx].h;
 
-    if (idx < 4) {
-        self.inventory_items[idx].background_image_data = switch (data.rarity) {
+    self.inventory_items[idx].background_image_data = if (idx < 4)
+        switch (data.rarity) {
             .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot_equip", 0) } },
             .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot_equip", 0) } },
             .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot_equip", 0) } },
             .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot_equip", 0) } },
             .common => null,
-        };
-    } else {
-        self.inventory_items[idx].background_image_data = switch (data.rarity) {
-            .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } },
-            .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } },
-            .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } },
-            .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } },
-            .common => null,
-        };
-    }
+        }
+    else switch (data.rarity) {
+        .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } },
+        .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } },
+        .epic => .{ .normal = .{ .atlas_data = assets.getUiData("epic_slot", 0) } },
+        .rare => .{ .normal = .{ .atlas_data = assets.getUiData("rare_slot", 0) } },
+        .common => null,
+    };
 
     self.inventory_items[idx].data_id = item;
     self.inventory_items[idx].image_data.normal.atlas_data = atlas_data;
@@ -1450,9 +1453,12 @@ pub fn setInvItem(self: *GameScreen, item: u16, idx: u8) void {
 pub fn setInvItemData(self: *GameScreen, item_data: ItemData, idx: u8) void {
     const data = game_data.item.from_id.get(self.inventory_items[idx].data_id) orelse return;
     self.inventory_items[idx].item_data = item_data;
-    if (data.level_spirits == 0) {
-        // TODO: amount text
-    }
+    if (data.max_stack > 0) {
+        self.inventory_items[idx].amount_text.?.setText(
+            std.fmt.bufPrint(self.inventory_items[idx].amount_text.?.backing_buffer, "{}x", .{item_data.amount}) catch "Buffer overflow",
+        );
+        self.inventory_items[idx].amount_visible = true;
+    } else self.inventory_items[idx].amount_visible = false;
 }
 
 pub fn setContainerVisible(self: *GameScreen, visible: bool) void {

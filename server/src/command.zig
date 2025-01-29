@@ -98,21 +98,43 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
 fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     var response_buf: [256]u8 = undefined;
 
+    const amount = std.fmt.parseInt(u16, iter.next() orelse {
+        player.client.sendMessage("Invalid command usage. Arguments: /give [decimal amount] [name]");
+        return;
+    }, 0) catch {
+        player.client.sendMessage("Improper amount supplied for /give");
+        return;
+    };
+
     const item_name = iter.buffer[iter.index orelse 0 ..];
     const item_data = game_data.item.from_name.get(item_name) orelse {
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "\"{s}\" not found in game data", .{item_name}) catch return);
+        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "\"{s}\" not found in game data", .{item_name}) catch "Buffer overflow");
         return;
     };
     const class_data = game_data.class.from_id.get(player.data_id) orelse return;
-    for (&player.inventory, 0..) |*equip, i| {
-        if (equip.* == std.math.maxInt(u16) and (i >= 4 or class_data.item_types[i].typesMatch(item_data.item_type))) {
-            equip.* = item_data.id;
-            player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've been given a \"{s}\"", .{item_data.name}) catch return);
-            return;
-        }
-    }
+    var amount_given: usize = 0;
+    for (0..amount) |_|
+        for (&player.inventory, &player.inv_data, 0..) |*equip, *inv_data, j| {
+            if (equip.* == std.math.maxInt(u16) and (j >= 4 or class_data.item_types[j].typesMatch(item_data.item_type))) {
+                equip.* = item_data.id;
+                if (item_data.max_stack > 0) {
+                    const clamped_amount = @min(item_data.max_stack, amount);
+                    inv_data.*.amount = clamped_amount;
+                    player.client.sendMessage(
+                        std.fmt.bufPrint(&response_buf, "You've been given {}x \"{s}\"", .{ clamped_amount, item_data.name }) catch "Buffer overflow",
+                    );
+                    return;
+                }
+                amount_given += 1;
+            }
+        };
 
-    player.client.sendMessage("You don't have enough space");
+    if (amount_given == 0)
+        player.client.sendMessage("You don't have enough space for any items")
+    else
+        player.client.sendMessage(
+            std.fmt.bufPrint(&response_buf, "You've been given {}x \"{s}\"", .{ amount_given, item_data.name }) catch "Buffer overflow",
+        );
 }
 
 fn handleClearSpawn(_: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {

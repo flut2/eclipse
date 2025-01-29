@@ -13,6 +13,7 @@ pub fn buildWithoutDupes(
         \\Whether to use Dragonfly for the database.
         \\Redis is assumed otherwise, and TTL banning/muting will be permanent across HWIDs, but not accounts.
     ) orelse false;
+    const enable_gpa = b.option(bool, "enable_gpa", "Toggles using the GPA for memory debugging") orelse false;
 
     behaviorGen: {
         var gen_file = b.build_root.handle.createFile(root_add ++ "src/_gen_behavior_file_dont_use.zig", .{}) catch break :behaviorGen;
@@ -45,9 +46,9 @@ pub fn buildWithoutDupes(
             .enable_tracy = enable_tracy,
         });
         exe.root_module.linkLibrary(shared_dep.artifact("libuv"));
+        exe.root_module.linkLibrary(shared_dep.artifact("rpmalloc"));
 
         exe.root_module.addImport("shared", shared_dep.module("shared"));
-        exe.root_module.addImport("rpmalloc", shared_dep.module("rpmalloc"));
         if (enable_tracy) exe.root_module.addImport("tracy", shared_dep.module("tracy"));
         exe.root_module.addImport("ziggy", shared_dep.module("ziggy"));
 
@@ -82,6 +83,7 @@ pub fn buildWithoutDupes(
 
         var options = b.addOptions();
         options.addOption(bool, "enable_tracy", enable_tracy);
+        options.addOption(bool, "enable_gpa", enable_gpa);
         options.addOption(bool, "use_dragonfly", use_dragonfly);
         exe.root_module.addOptions("options", options);
 
