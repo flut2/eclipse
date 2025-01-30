@@ -64,7 +64,9 @@
         {
             .name = "Ravenous Hunger",
             .description = 
-            \\Select and execute a monster below or at 10% HP, and gain its shot patterns at the time of its death as your own for $hsttxt20 (+10%$hsticon) seconds&reset.
+            \\Execute all monsters below or at 10% HP within $hsttxt1 (+10%$hsticon)&reset, and gain $multitxt10 Overheal&reset for every 100 HP the killed mobs had.
+            \\$footnotetxtOverheal: A form of healing that can heal you above your maximum Health
+            \\$footnotetxtThe Overheal is capped at $hptxt1000 (+10%$hpicon)$footnotetxt.
             ,
             .health_cost = 300,
             .mana_cost = 200,

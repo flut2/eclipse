@@ -826,10 +826,16 @@ fn addAnimEnemy(
         const cur_src_y = (set_idx - left_sub) * cut_height;
         const attack_scale = @as(u32, @intFromBool(frame_idx == 4)) + 1;
         const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width * attack_scale, cut_height);
-        current_positions[i].x = @intCast(cur_src_x + bounds.x_offset);
-        current_positions[i].y = @intCast(cur_src_y + bounds.y_offset);
-        current_rects[i].rect.w = @intCast(bounds.w + padding * 2);
-        current_rects[i].rect.h = @intCast(bounds.h + padding * 2);
+
+        current_positions[i].x = @intCast(cur_src_x);
+        current_positions[i].y = @intCast(cur_src_y);
+        if (bounds.w == 0 or bounds.h == 0) {
+            current_rects[i].rect.w = 0;
+            current_rects[i].rect.h = 0;
+        } else {
+            current_rects[i].rect.w = @intCast(cut_width * attack_scale + padding * 2);
+            current_rects[i].rect.h = @intCast(cut_height + padding * 2);
+        }
         current_rects[i].id = @intCast(i);
     }
 
@@ -963,10 +969,15 @@ fn addAnimPlayer(
         const cur_src_y = (set_idx - left_sub) * cut_height;
         const attack_scale = @as(u32, @intFromBool(frame_idx == 4)) + 1;
         const bounds = imageBounds(img, cur_src_x, cur_src_y, cut_width * attack_scale, cut_height);
-        current_positions[i].x = @intCast(cur_src_x + bounds.x_offset);
-        current_positions[i].y = @intCast(cur_src_y + bounds.y_offset);
-        current_rects[i].rect.w = @intCast(bounds.w + padding * 2);
-        current_rects[i].rect.h = @intCast(bounds.h + padding * 2);
+        current_positions[i].x = @intCast(cur_src_x);
+        current_positions[i].y = @intCast(cur_src_y);
+        if (bounds.w == 0 or bounds.h == 0) {
+            current_rects[i].rect.w = 0;
+            current_rects[i].rect.h = 0;
+        } else {
+            current_rects[i].rect.w = @intCast(cut_width * attack_scale + padding * 2);
+            current_rects[i].rect.h = @intCast(cut_height + padding * 2);
+        }
         current_rects[i].id = @intCast(i);
     }
 
