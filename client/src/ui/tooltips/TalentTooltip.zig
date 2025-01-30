@@ -201,7 +201,12 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
     self.last_talents = player.talents;
 
     const atlas_data = assets.ui_atlas_data.get(params.data.icon.sheet) orelse assets.atlas_data.get(params.data.icon.sheet);
-    if (atlas_data) |data| self.icon.image_data.normal.atlas_data = data[params.data.icon.index];
+    if (atlas_data) |data| {
+        const icon = data[params.data.icon.index];
+        self.icon.image_data.normal.atlas_data = icon;
+        self.icon.base.x = 10 + (44 - icon.width() * self.icon.image_data.normal.scale_x) / 2.0;
+        self.icon.base.y = 13 + (44 - icon.height() * self.icon.image_data.normal.scale_y) / 2.0;
+    }
 
     const talent_level = blk: {
         for (player.talents) |talent| if (talent.data_id == params.index) break :blk talent.count;

@@ -312,7 +312,7 @@ pub fn init(self: *GameScreen) !void {
             },
             .background_x = self.inventory_decor.base.x + self.inventory_pos_data[i].x,
             .background_y = self.inventory_decor.base.y + self.inventory_pos_data[i].y,
-            .amount_text = .{ .text = "", .size = 10, .max_chars = 8, .color = 0x9B9B9B },
+            .amount_text = .{ .text = "", .size = 10, .max_chars = 8, .color = 0xD2D2D2 },
             .image_data = .{ .normal = .{ .scale_x = scale, .scale_y = scale, .atlas_data = assets.error_data, .glow = true } },
             .draggable = true,
             .dragStartCallback = itemDragStartCallback,
@@ -355,7 +355,7 @@ pub fn init(self: *GameScreen) !void {
             },
             .background_x = self.container_decor.base.x + self.container_pos_data[i].x,
             .background_y = self.container_decor.base.y + self.container_pos_data[i].y,
-            .amount_text = .{ .text = "", .size = 10, .max_chars = 8, .color = 0x9B9B9B },
+            .amount_text = .{ .text = "", .size = 10, .max_chars = 8, .color = 0xD2D2D2 },
             .image_data = .{ .normal = .{ .scale_x = 3.0, .scale_y = 3.0, .atlas_data = assets.error_data, .glow = true } },
             .draggable = true,
             .dragStartCallback = itemDragStartCallback,
@@ -1383,7 +1383,7 @@ pub fn setContainerItemData(self: *GameScreen, item_data: ItemData, idx: u8) voi
     self.container_items[idx].item_data = item_data;
     if (data.max_stack > 0) {
         self.container_items[idx].amount_text.?.setText(
-            std.fmt.bufPrint(self.container_items[idx].amount_text.?.backing_buffer, "{}x", .{item_data.amount}) catch "Buffer overflow",
+            std.fmt.bufPrint(self.container_items[idx].amount_text.?.backing_buffer, "{}", .{item_data.amount}) catch "Buffer overflow",
         );
         self.container_items[idx].amount_visible = true;
     } else self.container_items[idx].amount_visible = false;
@@ -1455,7 +1455,7 @@ pub fn setInvItemData(self: *GameScreen, item_data: ItemData, idx: u8) void {
     self.inventory_items[idx].item_data = item_data;
     if (data.max_stack > 0) {
         self.inventory_items[idx].amount_text.?.setText(
-            std.fmt.bufPrint(self.inventory_items[idx].amount_text.?.backing_buffer, "{}x", .{item_data.amount}) catch "Buffer overflow",
+            std.fmt.bufPrint(self.inventory_items[idx].amount_text.?.backing_buffer, "{}", .{item_data.amount}) catch "Buffer overflow",
         );
         self.inventory_items[idx].amount_visible = true;
     } else self.inventory_items[idx].amount_visible = false;

@@ -198,7 +198,7 @@
         {
             .name = "Rewind",
             .description = 
-            \\Rewind time by $multitxt3 ($inttxt+1%$inticon, $mptxt+0.6%$mpicon, $wittxt+1%$witicon$multitxt)&reset seconds, causing you to return to your old position and Health. (if higher than current)
+            \\Rewind time by $multitxt3 ($inttxt+1%$inticon$multitxt, $mptxt+0.6%$mpicon$multitxt, $wittxt+1%$witicon$multitxt)&reset seconds, causing you to return to your old position and Health. (if higher than current)
             ,
             .mana_cost = 54,
             .cooldown = 9.0,
@@ -228,7 +228,7 @@
     .talents = [
         {
             .name = "Hyper Dilation",
-            .description = "Boost the range of Time Dilation by 2.5% (additive) per level.",
+            .description = "Boost the range of &type=\"med_it\"Time Dilation&reset by $multitxt2.5% (additive) per level&reset.",
             .icon = { "ability_icons": 0 },
             .type = @TalentType("ability"),
             .max_level = [5, 10],
@@ -247,7 +247,7 @@
         },
         {
             .name = "Event Horizon",
-            .description = "Increase the slowing effect of Time Dilation by 5% (additive) per level.",
+            .description = "Increase the slowing effect of &type=\"med_it\"Time Dilation&reset by $multitxt5% (additive) per level&reset.",
             .icon = { "ability_icons": 0 },
             .type = @TalentType("keystone"),
             .max_level = [1, 2],
@@ -259,7 +259,7 @@
         },
         {
             .name = "Intelligence Boost",
-            .description = "Gain $inttxt+10 $inticon&reset per level.",
+            .description = "Gain $inttxt+10$inticon per level&reset.",
             .icon = { "misc_big": 59 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -272,7 +272,7 @@
         },
         {
             .name = "Haste Boost",
-            .description = "Gain $hsttxt+5 $hsticon&reset per level.",
+            .description = "Gain $hsttxt+5$hsticon per level&reset.",
             .icon = { "misc_big": 58 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -285,7 +285,7 @@
         },
         {
             .name = "Mana Boost",
-            .description = "Gain $mptxt+35 $mpicon&reset per level.",
+            .description = "Gain $mptxt+35$mpicon per level&reset.",
             .icon = { "misc_big": 39 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -298,7 +298,7 @@
         },
         {
             .name = "Heightened Perception",
-            .description = "Gain Invulnerability after using Rewind for 0.2s per level.",
+            .description = "Gain Invulnerability after using &type=\"med_it\"Rewind&reset for $multitxt0.2s per level&reset.",
             .icon = { "ability_icons": 1 },
             .type = @TalentType("ability"),
             .max_level = [5, 10],
@@ -317,7 +317,7 @@
         },
         {
             .name = "Damage Prevention",
-            .description = "Restore $hptxt50 Health&reset per level after using Rewind.",
+            .description = "Restore $hptxt50 Health per level&reset after using &type=\"med_it\"Rewind&reset.",
             .icon = { "ability_icons": 1 },
             .type = @TalentType("keystone"),
             .max_level = [1, 2],
@@ -329,7 +329,7 @@
         },
         {
             .name = "Stamina Boost",
-            .description = "Gain $statxt+10 $staicon&reset per level.",
+            .description = "Gain $statxt+10$staicon per level&reset.",
             .icon = { "misc_big": 36 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -342,7 +342,7 @@
         },
         {
             .name = "Speed Boost",
-            .description = "Gain $spdtxt+5 $spdicon&reset per level.",
+            .description = "Gain $spdtxt+5$spdicon per level&reset.",
             .icon = { "misc_big": 34 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -355,7 +355,7 @@
         },
         {
             .name = "Health Boost",
-            .description = "Gain $hptxt+35 $hpicon&reset per level.",
+            .description = "Gain $hptxt+35$hpicon per level&reset.",
             .icon = { "misc_big": 40 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -387,7 +387,7 @@
         },
         {
             .name = "Essence Harvest",
-            .description = "Restore $mptxt30 Mana&reset per level for every enemy killed by Null Pulse.",
+            .description = "Restore $mptxt30 Mana per level&reset for every enemy killed by &type=\"med_it\"Null Pulse&reset.",
             .icon = { "ability_icons": 2 },
             .type = @TalentType("keystone"),
             .max_level = [1, 2],
@@ -399,7 +399,7 @@
         },
         {
             .name = "Wit Boost",
-            .description = "Gain $wittxt+10 $witicon&reset per level.",
+            .description = "Gain $wittxt+10$witicon per level&reset.",
             .icon = { "misc_big": 35 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -412,7 +412,7 @@
         },
         {
             .name = "Strength Boost",
-            .description = "Gain $strtxt+5 $stricon&reset per level.",
+            .description = "Gain $strtxt+5$stricon per level&reset.",
             .icon = { "misc_big": 32 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -425,7 +425,7 @@
         },
         {
             .name = "Defense Boost",
-            .description = "Gain $deftxt+5 $deficon&reset per level.",
+            .description = "Gain $deftxt+5$deficon per level&reset.",
             .icon = { "misc_big": 33 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -438,7 +438,7 @@
         },
         {
             .name = "Phase Shift",
-            .description = "Return 2.5% (additive) per level of damage received in Time Lock immediately.",
+            .description = "Return $multitxt2.5% (additive) per level&reset of damage received in &type=\"med_it\"Time Lock&reset immediately.",
             .icon = { "ability_icons": 3 },
             .type = @TalentType("ability"),
             .max_level = [5, 10],
@@ -458,8 +458,8 @@
         {
             .name = "Excellent Service",
             .description = 
-            \\Receive an Ephemeral Magic Corp Turret every time you hit the damage cap on Time Lock.
-            \\The Magic Corp Turret scales in rarity per level, going from Common to Mythic.
+            \\Receive an Ephemeral &type="med_it"Magic Corp Turret&reset every time you hit the damage cap on Time Lock.
+            \\The &type="med_it"Magic Corp Turret&reset scales in rarity per level, going from &type="bold_it"&col="B3B3B3"Common&reset to &type="bold_it"&col="B80000"Mythic&reset.
             ,
             .icon = { "ability_icons": 3 },
             .type = @TalentType("keystone"),
@@ -472,7 +472,7 @@
         },
         {
             .name = "Resistance Boost",
-            .description = "Gain $restxt+10 $resicon&reset per level.",
+            .description = "Gain $restxt+10$resicon per level&reset.",
             .icon = { "misc_big": 57 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -485,7 +485,7 @@
         },
         {
             .name = "Health Boost",
-            .description = "Gain $hptxt+35 $hpicon&reset per level.",
+            .description = "Gain $hptxt+35$hpicon per level&reset.",
             .icon = { "misc_big": 40 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
@@ -498,7 +498,7 @@
         },
         {
             .name = "Mana Boost",
-            .description = "Gain $mptxt+5 $mpicon&reset per level.",
+            .description = "Gain $mptxt+35$mpicon per level&reset.",
             .icon = { "misc_big": 39 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
