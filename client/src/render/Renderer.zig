@@ -173,7 +173,7 @@ const Material = struct {
     }
 };
 
-pub const ground_size = 5000;
+pub const ground_size = 200000;
 pub const generic_size = 20000;
 pub const ui_size = 2000;
 
