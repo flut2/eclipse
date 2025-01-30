@@ -282,7 +282,10 @@ pub fn update(time: i64, dt: f32) void {
         if (systems.screen == .game) {
             const screen = systems.screen.game;
             if (screen.container_id != -1) {
-                inline for (0..8) |idx| screen.setContainerItem(std.math.maxInt(u16), idx);
+                inline for (0..9) |idx| {
+                    screen.setContainerItem(std.math.maxInt(u16), idx);
+                    screen.setContainerItemData(.{}, idx);
+                }
                 screen.container_name.text_data.setText("");
             }
 
@@ -362,7 +365,10 @@ pub fn update(time: i64, dt: f32) void {
                         interactive.type.store(.container, .release);
 
                         if (screen.container_id != obj.map_id) {
-                            inline for (0..8) |idx| screen.setContainerItem(obj.inventory[idx], idx);
+                            inline for (0..9) |idx| {
+                                screen.setContainerItem(obj.inventory[idx], idx);
+                                screen.setContainerItemData(obj.inv_data[idx], idx);
+                            }
                             if (obj.name) |name| screen.container_name.text_data.setText(name);
                         }
 

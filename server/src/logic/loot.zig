@@ -4,6 +4,7 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const f32i = utils.f32i;
+const ItemData = shared.network_data.ItemData;
 
 const main = @import("../main.zig");
 const Container = @import("../map/Container.zig");
@@ -47,7 +48,7 @@ pub fn dropPortals(host: anytype, comptime loots: []const PortalLoot) void {
     };
 }
 
-pub const ItemLoot = struct { name: []const u8, chance: f32, threshold: f32 = 0.0 };
+pub const ItemLoot = struct { name: []const u8, min: u16 = 1, max: u16 = 1, chance: f32, threshold: f32 = 0.0 };
 pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
     comptime {
         verifyType(@TypeOf(host));
@@ -55,6 +56,7 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
         for (loots) |loot| {
             if (loot.threshold < 0.0 or loot.threshold > 1.0) @compileError("Invalid threshold, keep it [0.0; 1.0]");
             if (loot.chance <= 0.0 or loot.chance > 1.0) @compileError("Invalid chance, keep it ]0.0; 1.0]");
+            if (loot.min > loot.max) @compileError("The minimum amount can't be larger than the maximum amount");
 
             if (nameContains(name_list, loot.name))
                 @compileError("Do not have multiples of the same item in the loot table. Increase the chance of the existing one instead");
@@ -69,31 +71,45 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
 
         const fdamage = f32i(entry.value_ptr.*);
         var max_rarity: game_data.ItemRarity = .common;
-        var received_loot: [loots.len]u16 = @splat(std.math.maxInt(u16));
+        var received_loot: std.ArrayListUnmanaged(u16) = .empty;
+        defer received_loot.deinit(main.allocator);
+        var received_item_data: std.ArrayListUnmanaged(ItemData) = .empty;
+        defer received_item_data.deinit(main.allocator);
         var loot_idx: usize = 0;
         inline for (loots) |loot| @"continue": {
             if (fdamage / fmax_hp <= loot.threshold) break :@"continue";
 
-            if (loot.chance >= utils.rng.random().float(f32)) {
+            const rand = utils.rng.random();
+            if (loot.chance >= rand.float(f32)) {
                 const data = game_data.item.from_name.get(loot.name) orelse {
                     std.log.err("Item not found for name \"{s}\"", .{loot.name});
                     break :@"continue";
                 };
-                received_loot[loot_idx] = data.id;
-                loot_idx += 1;
-                max_rarity = @enumFromInt(@max(@intFromEnum(max_rarity), @intFromEnum(data.rarity)));
+                const amount = rand.intRangeAtMost(u16, loot.min, loot.max);
+                if (data.max_stack > 0) {
+                    received_loot.append(main.allocator, data.id) catch main.oomPanic();
+                    received_item_data.append(main.allocator, .{ .amount = amount }) catch main.oomPanic();
+                    loot_idx += 1;
+                    max_rarity = @enumFromInt(@max(@intFromEnum(max_rarity), @intFromEnum(data.rarity)));
+                } else for (0..amount) |_| {
+                    received_loot.append(main.allocator, data.id) catch main.oomPanic();
+                    received_item_data.append(main.allocator, .{}) catch main.oomPanic();
+                    loot_idx += 1;
+                    max_rarity = @enumFromInt(@max(@intFromEnum(max_rarity), @intFromEnum(data.rarity)));
+                }
             }
         }
 
         const container_data_id = max_rarity.containerDataId();
 
         var inventory = Container.inv_default;
+        var inv_data = Container.inv_data_default;
         var inv_index: usize = 0;
-        for (received_loot) |data_id| {
+        for (received_loot.items, received_item_data.items) |data_id, item_data| {
             if (data_id == std.math.maxInt(u16)) continue;
             inventory[inv_index] = data_id;
-            inv_index += 1;
-            if (inv_index == 9) {
+            inv_data[inv_index] = item_data;
+            if (inv_index == 8) {
                 const angle = utils.rng.random().float(f32) * std.math.tau;
                 const radius = utils.rng.random().float(f32) * 1.0;
                 _ = host.world.add(Container, .{
@@ -103,13 +119,15 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
                     .y = host.y + radius * @sin(angle),
                     .owner_map_id = player.map_id,
                     .inventory = inventory,
+                    .inv_data = inv_data,
                 }) catch |e| {
                     std.log.err("Adding loot for player \"{s}\" failed: {}", .{ player.name, e });
                     continue;
                 };
                 inventory = Container.inv_default;
+                inv_data = Container.inv_data_default;
                 inv_index = 0;
-            }
+            } else inv_index += 1;
         }
 
         if (inv_index > 0) {
@@ -122,6 +140,7 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
                 .y = host.y + radius * @sin(angle),
                 .owner_map_id = player.map_id,
                 .inventory = inventory,
+                .inv_data = inv_data,
             }) catch |e| {
                 std.log.err("Adding loot for player \"{s}\" failed: {}", .{ player.name, e });
                 continue;

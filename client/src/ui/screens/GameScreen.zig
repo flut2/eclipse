@@ -90,7 +90,7 @@ pub const Slot = struct {
     }
 
     pub fn nextEquippableSlot(item_types: []const game_data.ItemType, item_type: game_data.ItemType) Slot {
-        for (0..20) |idx| {
+        for (0..22) |idx| {
             if (idx >= 4 or item_types[idx].typesMatch(item_type)) return .{ .idx = @intCast(idx) };
         }
         return .{ .idx = 255 };

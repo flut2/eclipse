@@ -47,6 +47,15 @@
             "preLaunchTask": "Debug Server"
         },
         {
+            "name": "Debug Server (GPA)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/server/zig-out/bin/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/server/zig-out/bin",
+            "preLaunchTask": "Debug Server (GPA)"
+        },
+        {
             "name": "Debug Server (Windows)",
             "type": "cppvsdbg",
             "request": "launch",
@@ -54,6 +63,15 @@
             "args": [],
             "cwd": "${workspaceFolder}/server/zig-out/bin",
             "preLaunchTask": "Debug Server (Windows)"
+        },
+        {
+            "name": "Debug Server (GPA, Windows)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/server/zig-out/bin/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/server/zig-out/bin",
+            "preLaunchTask": "Debug Server (GPA, Windows)"
         },
     ]
 }

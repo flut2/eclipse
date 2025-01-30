@@ -14,6 +14,10 @@ pub const LootTester = struct {
     };
 
     pub fn death(_: *LootTester, host: *Enemy) !void {
+        loot.dropItems(host, &.{
+            .{ .name = "Bloodied Blade", .chance = 1.0 / 1.0, .min = 2, .max = 4, .threshold = 0.001 },
+            .{ .name = "Dwarven Coil", .chance = 1.0 / 1.0, .min = 2, .max = 7, .threshold = 0.001 },
+        });
         loot.dropCards(host, &.{
             .{ .name = "Heavy Strikes", .chance = 1.0 / 5.0, .threshold = 0.001 },
             .{ .name = "Titan's Resolve", .chance = 1.0 / 10.0, .threshold = 0.001 },

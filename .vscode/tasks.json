@@ -29,9 +29,19 @@
             "command": "cd server && zig build -Doptimize=Debug -freference-trace",
         },
         {
+            "label": "Debug Server (GPA)",
+            "type": "shell",
+            "command": "cd server && zig build -Doptimize=Debug -Denable_gpa=true -freference-trace",
+        },
+        {
             "label": "Debug Server (Windows)",
             "type": "shell",
             "command": "cd server ; zig build -Doptimize=Debug -freference-trace",
+        },
+        {
+            "label": "Debug Server (GPA, Windows)",
+            "type": "shell",
+            "command": "cd server ; zig build -Doptimize=Debug -Denable_gpa=true -freference-trace",
         }
     ]
 }
