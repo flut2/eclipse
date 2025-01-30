@@ -3,6 +3,7 @@ const std = @import("std");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const f32i = shared.utils.f32i;
+const ItemData = shared.network_data.ItemData;
 
 const assets = @import("../../assets.zig");
 const map = @import("../../game/map.zig");
@@ -29,9 +30,11 @@ line_break_one: *Image = undefined,
 main_text: *Text = undefined,
 line_break_two: *Image = undefined,
 footer: *Text = undefined,
-item: u16 = std.math.maxInt(u16),
 main_buffer_front: bool = false,
 footer_buffer_front: bool = false,
+
+last_item: u16 = std.math.maxInt(u16),
+last_item_data: ItemData = .{ .amount = std.math.maxInt(u16), .unused = std.math.maxInt(u16) },
 
 pub fn init(self: *ItemTooltip) !void {
     const tooltip_background_data = assets.getUiData("tooltip_background", 0);
@@ -165,8 +168,9 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
     }
 
-    if (self.item == params.item) return;
-    self.item = params.item;
+    if (self.last_item == params.item and self.last_item_data == params.item_data) return;
+    self.last_item = params.item;
+    self.last_item_data = params.item_data;
 
     const data = game_data.item.from_id.get(@intCast(params.item)) orelse return;
 
