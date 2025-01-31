@@ -175,20 +175,6 @@
     .h = 18,
 },
 {
-    .type = @SheetType("anim_enemy"),
-    .name = "mid_realm",
-    .path = "mid_realm.png",
-    .w = 8,
-    .h = 8,
-},
-{
-    .type = @SheetType("anim_enemy"),
-    .name = "mid_realm_big",
-    .path = "mid_realm_big.png",
-    .w = 16,
-    .h = 16,
-},
-{
     .type = @SheetType("anim_player"),
     .name = "players",
     .path = "players.png",

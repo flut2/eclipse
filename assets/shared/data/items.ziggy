@@ -228,7 +228,7 @@
     .description = "A sturdy dwarven invention that zaps enemies for $wittxt300 (+200%$witicon) Magic Damage&reset every second within $inttxt3 (+5%$inticon) tiles&reset for $hsttxt10 (+20%$hsticon) seconds&reset.",
     .rarity = @ItemRarity("epic"),
     .item_type = @ItemType("consumable"),
-    .texture = { "items": 223 },
+    .texture = { "items": 128 },
     .mana_cost = { .chance = 1.0, .amount = 70 },
     .gold_cost = { .chance = 0.33, .amount = 300 },
     .activations = [ create_ally { .name = "Dwarven Coil" } ],
