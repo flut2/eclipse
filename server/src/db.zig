@@ -226,7 +226,6 @@ pub const AccountData = struct {
         ban_expiry: i64,
         gold: u32,
         gems: u32,
-        crowns: u32,
         rank: network_data.Rank,
         next_char_id: u32,
         alive_char_ids: []const u32,

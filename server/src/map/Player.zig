@@ -44,7 +44,6 @@ name: []const u8 = &.{},
 rank: network_data.Rank = .default,
 gold: u32 = 0,
 gems: u32 = 0,
-crowns: u32 = 0,
 aether: u8 = 0,
 spirits_communed: u32 = 0,
 hp: i32 = 100,
@@ -129,7 +128,6 @@ pub fn init(self: *Player) !void {
     self.rank = try self.acc_data.getWithDefault(.rank, .default);
     self.gold = try self.acc_data.getWithDefault(.gold, 0);
     self.gems = try self.acc_data.getWithDefault(.gems, 0);
-    self.crowns = try self.acc_data.getWithDefault(.crowns, 0);
     self.resources.clearRetainingCapacity();
     self.resources.appendSlice(main.allocator, try self.acc_data.getWithDefault(.resources, &.{})) catch main.oomPanic();
 
@@ -218,7 +216,6 @@ pub fn save(self: *Player) !void {
     try self.acc_data.set(.{ .rank = self.rank });
     try self.acc_data.set(.{ .gold = self.gold });
     try self.acc_data.set(.{ .gems = self.gems });
-    try self.acc_data.set(.{ .crowns = self.crowns });
     try self.acc_data.set(.{ .resources = self.resources.items });
 
     try self.char_data.set(.{ .hp = self.hp });
@@ -532,7 +529,6 @@ pub fn exportStats(
     stat_util.write(T, writer, cache, .{ .mp = self.mp });
     stat_util.write(T, writer, cache, .{ .gold = self.gold });
     stat_util.write(T, writer, cache, .{ .gems = self.gems });
-    stat_util.write(T, writer, cache, .{ .crowns = self.crowns });
     stat_util.write(T, writer, cache, .{ .condition = self.condition });
     stat_util.write(T, writer, cache, .{ .ability_state = self.ability_state });
     stat_util.write(T, writer, cache, .{ .cards = self.cards });

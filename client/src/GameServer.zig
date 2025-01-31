@@ -820,7 +820,6 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         .condition => |val| player.condition = val,
         .gold => |val| player.gold = val,
         .gems => |val| player.gems = val,
-        .crowns => |val| player.crowns = val,
         .muted_until => |val| player.muted_until = val,
         .max_hp => |val| player.max_hp = val,
         .hp => |val| player.hp = val,

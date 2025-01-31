@@ -84,7 +84,6 @@ pub const PlayerStat = union(enum) {
     spirits_communed: u32,
     gold: u32,
     gems: u32,
-    crowns: u32,
     condition: utils.Condition,
     muted_until: i64,
     damage_mult: f32,

@@ -214,13 +214,11 @@ pub const ItemType = enum {
 pub const Currency = enum {
     gold,
     gems,
-    crowns,
 
     pub fn icon(self: Currency) TextureData {
         return switch (self) {
             .gold => .{ .sheet = "misc", .index = 20 },
             .gems => .{ .sheet = "misc", .index = 21 },
-            .crowns => .{ .sheet = "misc_big", .index = 50 },
         };
     }
 };

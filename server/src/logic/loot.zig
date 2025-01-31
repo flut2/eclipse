@@ -286,7 +286,6 @@ pub fn dropCurrency(host: anytype, comptime loots: []const CurrencyLoot) void {
                 switch (loot.type) {
                     .gems => player.gems += amount,
                     .gold => player.gold += amount,
-                    .crowns => player.crowns += amount,
                 }
                 player.client.queuePacket(.{ .text = .{
                     .name = "Server",
@@ -297,7 +296,6 @@ pub fn dropCurrency(host: anytype, comptime loots: []const CurrencyLoot) void {
                     .text = std.fmt.bufPrint(&buf, "You've received {} " ++ switch (loot.type) {
                         .gems => "Gems",
                         .gold => "Gold",
-                        .crowns => "Crowns",
                     }, .{amount}) catch break :@"continue",
                     .name_color = 0xCC00CC,
                     .text_color = 0xFF99FF,

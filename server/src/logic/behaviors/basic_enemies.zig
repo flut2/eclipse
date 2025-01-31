@@ -32,7 +32,6 @@ pub const LootTester = struct {
         loot.dropCurrency(host, &.{
             .{ .type = .gems, .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.001 },
             .{ .type = .gold, .chance = 1.0 / 1.0, .min = 2, .max = 7, .threshold = 0.001 },
-            .{ .type = .crowns, .chance = 1.0 / 80.0, .min = 1, .max = 3, .threshold = 0.001 },
         });
         loot.dropSpirits(host, .{ .chance = 1.0 / 1.0, .min = 50, .max = 100, .threshold = 0.001 });
     }

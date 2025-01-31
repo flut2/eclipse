@@ -362,10 +362,6 @@ fn handleRegister(self: *Client, data: PacketData(.register)) void {
         self.databaseError();
         return;
     };
-    acc_data.set(.{ .crowns = 0 }) catch {
-        self.databaseError();
-        return;
-    };
     acc_data.set(.{ .rank = if (acc_id == 0) .admin else .default }) catch {
         self.databaseError();
         return;
