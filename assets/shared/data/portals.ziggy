@@ -11,18 +11,8 @@
 },
 {
     .id = 2,
-    .name = "Slimy Ruins",
-    .textures = [{"portals": 5}],
-},
-{
-    .id = 3,
     .name = "Crimson Chasm",
-    .textures = [{"portals": 2}],
+    .textures = [{"portals": 1}],
     .draw_on_ground = true,
-},
-{
-    .id = 4,
-    .name = "Dusty Dune",
-    .textures = [{"portals": 3}],
 },
 ]
