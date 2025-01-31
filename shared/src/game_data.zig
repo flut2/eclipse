@@ -578,6 +578,9 @@ pub const ItemData = struct {
     max_stack: u16 = 0,
     level_spirits: u16 = 0,
     level_transform_item: ?[]const u8 = null,
+    health_gain_incr: f32 = 0.0,
+    mana_gain_incr: f32 = 0.0,
+    env_dmg_reduction: f32 = 0.0,
     sound: []const u8 = "Unknown.mp3",
 
     pub const ziggy_options = struct {

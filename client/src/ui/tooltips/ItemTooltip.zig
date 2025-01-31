@@ -421,6 +421,30 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         ) catch text;
     }
 
+    if (data.health_gain_incr > 0) {
+        text = std.fmt.bufPrint(
+            self.getMainBuffer(),
+            line_base ++ "Improve Health restoration efficiency by " ++ float_fmt ++ "%",
+            .{ text, data.health_gain_incr * 100.0 },
+        ) catch text;
+    }
+
+    if (data.mana_gain_incr > 0) {
+        text = std.fmt.bufPrint(
+            self.getMainBuffer(),
+            line_base ++ "Improve Mana restoration efficiency by " ++ float_fmt ++ "%",
+            .{ text, data.mana_gain_incr * 100.0 },
+        ) catch text;
+    }
+
+    if (data.env_dmg_reduction > 0) {
+        text = std.fmt.bufPrint(
+            self.getMainBuffer(),
+            line_base ++ "Reduce environmental damage received by " ++ float_fmt ++ "%",
+            .{ text, data.env_dmg_reduction * 100.0 },
+        ) catch text;
+    }
+
     if (data.activations != null and data.cooldown > 0.0)
         text = std.fmt.bufPrint(
             self.getMainBuffer(),
