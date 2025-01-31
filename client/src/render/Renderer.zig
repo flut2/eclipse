@@ -20,7 +20,6 @@ const Particle = @import("../game/particles.zig").Particle;
 const Player = @import("../game/Player.zig");
 const Portal = @import("../game/Portal.zig");
 const Projectile = @import("../game/Projectile.zig");
-const Purchasable = @import("../game/Purchasable.zig");
 const Square = @import("../game/Square.zig");
 const main = @import("../main.zig");
 const element = @import("../ui/elements/element.zig");
@@ -1645,7 +1644,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
         {
             map.object_lock.lock();
             defer map.object_lock.unlock();
-            inline for (.{ Entity, Enemy, Container, Player, Projectile, Purchasable, Ally }) |T|
+            inline for (.{ Entity, Enemy, Container, Player, Projectile, Ally }) |T|
                 for (map.listForType(T).items) |*obj| obj.draw(cam_data, float_time_ms);
 
             const int_id = map.interactive.map_id.load(.acquire);

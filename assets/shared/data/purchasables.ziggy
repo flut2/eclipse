@@ -1,7 +1,0 @@
-[
-{
-    .id = 0,
-    .name = "Generic Purchasable",
-    .textures = [{"misc": 0}],
-}
-]

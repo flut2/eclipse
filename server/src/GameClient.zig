@@ -58,7 +58,6 @@ fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?
         .pong => handlePong,
         .teleport => handleTeleport,
         .use_portal => handleUsePortal,
-        .buy => handleBuy,
         .ground_damage => handleGroundDamage,
         .player_hit => handlePlayerHit,
         .enemy_hit => handleEnemyHit,
@@ -851,8 +850,6 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
     } });
 }
 
-fn handleBuy(_: *Client, _: PacketData(.buy)) void {}
-
 fn handleGroundDamage(self: *Client, data: PacketData(.ground_damage)) void {
     const ux = u16f(data.x);
     const uy = u16f(data.y);
@@ -1117,4 +1114,6 @@ fn handleSelectCard(self: *Client, data: PacketData(.select_card)) void {
     }
 }
 
-fn handleTalentUpgrade(_: *Client, _: PacketData(.talent_upgrade)) void {}
+fn handleTalentUpgrade(_: *Client, _: PacketData(.talent_upgrade)) void {
+
+}

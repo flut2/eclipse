@@ -17,7 +17,6 @@ const Container = @import("Container.zig");
 const Enemy = @import("Enemy.zig");
 const Entity = @import("Entity.zig");
 const Portal = @import("Portal.zig");
-const Purchasable = @import("Purchasable.zig");
 const stat_util = @import("stat_util.zig");
 
 const Player = @This();
@@ -68,7 +67,6 @@ caches: struct {
     enemy: std.AutoHashMapUnmanaged(u32, [@typeInfo(network_data.EnemyStat).@"union".fields.len]?network_data.EnemyStat) = .empty,
     portal: std.AutoHashMapUnmanaged(u32, [@typeInfo(network_data.PortalStat).@"union".fields.len]?network_data.PortalStat) = .empty,
     container: std.AutoHashMapUnmanaged(u32, [@typeInfo(network_data.ContainerStat).@"union".fields.len]?network_data.ContainerStat) = .empty,
-    purchasable: std.AutoHashMapUnmanaged(u32, [@typeInfo(network_data.PurchasableStat).@"union".fields.len]?network_data.PurchasableStat) = .empty,
     ally: std.AutoHashMapUnmanaged(u32, [@typeInfo(network_data.AllyStat).@"union".fields.len]?network_data.AllyStat) = .empty,
 } = .{},
 conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .empty,
@@ -81,7 +79,6 @@ objs: struct {
     player: std.ArrayListUnmanaged(network_data.ObjectData) = .empty,
     portal: std.ArrayListUnmanaged(network_data.ObjectData) = .empty,
     container: std.ArrayListUnmanaged(network_data.ObjectData) = .empty,
-    purchasable: std.ArrayListUnmanaged(network_data.ObjectData) = .empty,
     ally: std.ArrayListUnmanaged(network_data.ObjectData) = .empty,
 } = .{},
 drops: struct {
@@ -90,7 +87,6 @@ drops: struct {
     player: std.ArrayListUnmanaged(u32) = .empty,
     portal: std.ArrayListUnmanaged(u32) = .empty,
     container: std.ArrayListUnmanaged(u32) = .empty,
-    purchasable: std.ArrayListUnmanaged(u32) = .empty,
     ally: std.ArrayListUnmanaged(u32) = .empty,
 } = .{},
 projectiles: [256]?u32 = @splat(null),
@@ -295,7 +291,6 @@ fn CacheType(comptime T: type) type {
         Enemy => [@typeInfo(network_data.EnemyStat).@"union".fields.len]?network_data.EnemyStat,
         Portal => [@typeInfo(network_data.PortalStat).@"union".fields.len]?network_data.PortalStat,
         Container => [@typeInfo(network_data.ContainerStat).@"union".fields.len]?network_data.ContainerStat,
-        Purchasable => [@typeInfo(network_data.PurchasableStat).@"union".fields.len]?network_data.PurchasableStat,
         Ally => [@typeInfo(network_data.AllyStat).@"union".fields.len]?network_data.AllyStat,
         else => @compileError("Unsupported type"),
     };
@@ -321,7 +316,6 @@ fn exportObject(self: *Player, comptime T: type) !void {
                 Enemy => self.caches.enemy,
                 Portal => self.caches.portal,
                 Container => self.caches.container,
-                Purchasable => self.caches.purchasable,
                 Ally => self.caches.ally,
                 else => @compileError("Unsupported type"),
             };
@@ -330,7 +324,6 @@ fn exportObject(self: *Player, comptime T: type) !void {
                 Enemy => .enemy,
                 Portal => .portal,
                 Container => .container,
-                Purchasable => .purchasable,
                 Ally => .ally,
                 else => @compileError("Unsupported type"),
             };
@@ -437,7 +430,7 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
     }
 
     inline for (@typeInfo(@TypeOf(self.objs)).@"struct".fields) |field| @field(self.objs, field.name).clearRetainingCapacity();
-    inline for (.{ Entity, Enemy, Portal, Container, Purchasable, Ally }) |ObjType| try self.exportObject(ObjType);
+    inline for (.{ Entity, Enemy, Portal, Container, Ally }) |ObjType| try self.exportObject(ObjType);
 
     for (self.world.listForType(Player).items) |*player| {
         const x_dt = player.x - self.x;
@@ -478,7 +471,6 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
     if (self.drops.enemy.items.len > 0) self.client.queuePacket(.{ .dropped_enemies = .{ .map_ids = self.drops.enemy.items } });
     if (self.drops.portal.items.len > 0) self.client.queuePacket(.{ .dropped_portals = .{ .map_ids = self.drops.portal.items } });
     if (self.drops.container.items.len > 0) self.client.queuePacket(.{ .dropped_containers = .{ .map_ids = self.drops.container.items } });
-    if (self.drops.purchasable.items.len > 0) self.client.queuePacket(.{ .dropped_purchasables = .{ .map_ids = self.drops.purchasable.items } });
     if (self.drops.ally.items.len > 0) self.client.queuePacket(.{ .dropped_allies = .{ .map_ids = self.drops.ally.items } });
 
     if (self.objs.player.items.len > 0) self.client.queuePacket(.{ .new_players = .{ .list = self.objs.player.items } });
@@ -486,7 +478,6 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
     if (self.objs.enemy.items.len > 0) self.client.queuePacket(.{ .new_enemies = .{ .list = self.objs.enemy.items } });
     if (self.objs.portal.items.len > 0) self.client.queuePacket(.{ .new_portals = .{ .list = self.objs.portal.items } });
     if (self.objs.container.items.len > 0) self.client.queuePacket(.{ .new_containers = .{ .list = self.objs.container.items } });
-    if (self.objs.purchasable.items.len > 0) self.client.queuePacket(.{ .new_purchasables = .{ .list = self.objs.purchasable.items } });
     if (self.objs.ally.items.len > 0) self.client.queuePacket(.{ .new_allies = .{ .list = self.objs.ally.items } });
 }
 

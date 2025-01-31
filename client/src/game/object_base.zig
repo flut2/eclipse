@@ -21,7 +21,6 @@ const Entity = @import("Entity.zig");
 const map = @import("map.zig");
 const Player = @import("Player.zig");
 const Portal = @import("Portal.zig");
-const Purchasable = @import("Purchasable.zig");
 
 pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
     const type_name = switch (ObjType) {
@@ -30,7 +29,6 @@ pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
         Enemy => "enemy",
         Portal => "portal",
         Container => "container",
-        Purchasable => "purchasable",
         Ally => "ally",
         else => @compileError("Invalid type"),
     };

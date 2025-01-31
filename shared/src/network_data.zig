@@ -208,15 +208,6 @@ pub const ContainerStat = union(enum) {
     inv_data_8: ItemData,
 };
 
-pub const PurchasableStat = union(enum) {
-    x: f32,
-    y: f32,
-    size_mult: f32,
-    name: []const u8,
-    cost: u32,
-    currency: game_data.Currency,
-};
-
 pub const AllyStat = union(enum) {
     x: f32,
     y: f32,
@@ -249,7 +240,6 @@ pub const ObjectType = enum(u8) {
     enemy,
     container,
     portal,
-    purchasable,
     ally,
 };
 
@@ -303,7 +293,6 @@ pub const C2SPacket = union(enum) {
     pong: extern struct { ping_time: i64, time: i64 },
     teleport: extern struct { player_map_id: u32 },
     use_portal: extern struct { portal_map_id: u32 },
-    buy: extern struct { purchasable_map_id: u32 },
     ground_damage: extern struct { time: i64, x: f32, y: f32 },
     player_hit: extern struct { enemy_map_id: u32, proj_index: u8 },
     enemy_hit: extern struct { time: i64, enemy_map_id: u32, proj_index: u8, killed: bool },
@@ -333,14 +322,12 @@ pub const S2CPacket = union(enum) {
     new_entities: struct { list: []const ObjectData },
     new_portals: struct { list: []const ObjectData },
     new_containers: struct { list: []const ObjectData },
-    new_purchasables: struct { list: []const ObjectData },
     new_allies: struct { list: []const ObjectData },
     dropped_players: struct { map_ids: []const u32 },
     dropped_enemies: struct { map_ids: []const u32 },
     dropped_entities: struct { map_ids: []const u32 },
     dropped_portals: struct { map_ids: []const u32 },
     dropped_containers: struct { map_ids: []const u32 },
-    dropped_purchasables: struct { map_ids: []const u32 },
     dropped_allies: struct { map_ids: []const u32 },
     notification: struct { obj_type: ObjectType, map_id: u32, message: []const u8, color: u32 },
     show_effect: extern struct {

@@ -17,7 +17,6 @@ const LightData = maps.LightData;
 const Player = @import("map/Player.zig");
 const Portal = @import("map/Portal.zig");
 const Projectile = @import("map/Projectile.zig");
-const Purchasable = @import("map/Purchasable.zig");
 const Tile = @import("map/Tile.zig");
 
 const World = @This();
@@ -36,7 +35,6 @@ next_map_ids: struct {
     portal: u32 = 0,
     container: u32 = 0,
     projectile: u32 = 0,
-    purchasable: u32 = 0,
     ally: u32 = 0,
 } = .{},
 w: u16 = 0,
@@ -53,7 +51,6 @@ drops: struct {
     player: std.ArrayListUnmanaged(u32) = .empty,
     portal: std.ArrayListUnmanaged(u32) = .empty,
     container: std.ArrayListUnmanaged(u32) = .empty,
-    purchasable: std.ArrayListUnmanaged(u32) = .empty,
     ally: std.ArrayListUnmanaged(u32) = .empty,
 } = .{},
 lists: struct {
@@ -63,7 +60,6 @@ lists: struct {
     portal: std.ArrayListUnmanaged(Portal) = .empty,
     container: std.ArrayListUnmanaged(Container) = .empty,
     projectile: std.ArrayListUnmanaged(Projectile) = .empty,
-    purchasable: std.ArrayListUnmanaged(Purchasable) = .empty,
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{},
 callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty,
@@ -76,7 +72,6 @@ pub fn listForType(self: *World, comptime T: type) *std.ArrayListUnmanaged(T) {
         Portal => &self.lists.portal,
         Container => &self.lists.container,
         Projectile => &self.lists.projectile,
-        Purchasable => &self.lists.purchasable,
         Ally => &self.lists.ally,
         else => @compileError("Given type has no list"),
     };
@@ -89,7 +84,6 @@ pub fn dropsForType(self: *World, comptime T: type) *std.ArrayListUnmanaged(u32)
         Player => &self.drops.player,
         Portal => &self.drops.portal,
         Container => &self.drops.container,
-        Purchasable => &self.drops.purchasable,
         Ally => &self.drops.ally,
         else => @compileError("Given type has no drops list"),
     };
@@ -103,7 +97,6 @@ pub fn nextMapIdForType(self: *World, comptime T: type) *u32 {
         Portal => &self.next_map_ids.portal,
         Container => &self.next_map_ids.container,
         Projectile => &self.next_map_ids.projectile,
-        Purchasable => &self.next_map_ids.purchasable,
         Ally => &self.next_map_ids.ally,
         else => @compileError("Given type has no next map id"),
     };
@@ -198,7 +191,7 @@ pub fn tick(self: *World, time: i64, dt: i64) !void {
     var iter = std.mem.reverseIterator(callback_indices_to_remove.items);
     while (iter.next()) |i| _ = self.callbacks.swapRemove(i);
 
-    inline for (.{ Entity, Enemy, Portal, Container, Projectile, Player, Purchasable, Ally }) |ObjType| {
+    inline for (.{ Entity, Enemy, Portal, Container, Projectile, Player, Ally }) |ObjType| {
         for (self.listForType(ObjType).items) |*obj| try obj.tick(time, dt);
     }
 }

@@ -20,7 +20,6 @@ const particles = @import("particles.zig");
 const Player = @import("Player.zig");
 const Portal = @import("Portal.zig");
 const Projectile = @import("Projectile.zig");
-const Purchasable = @import("Purchasable.zig");
 const Square = @import("Square.zig");
 
 const day_cycle: i32 = 10 * std.time.us_per_min;
@@ -37,7 +36,6 @@ pub var list: struct {
     projectile: std.ArrayListUnmanaged(Projectile) = .empty,
     particle: std.ArrayListUnmanaged(particles.Particle) = .empty,
     particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
-    purchasable: std.ArrayListUnmanaged(Purchasable) = .empty,
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
 pub var add_list: struct {
@@ -49,13 +47,12 @@ pub var add_list: struct {
     projectile: std.ArrayListUnmanaged(Projectile) = .empty,
     particle: std.ArrayListUnmanaged(particles.Particle) = .empty,
     particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
-    purchasable: std.ArrayListUnmanaged(Purchasable) = .empty,
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
 pub var remove_list: std.ArrayListUnmanaged(usize) = .empty;
 
 pub var interactive: struct {
-    const InteractiveType = enum(u8) { unset, portal, container, purchasable };
+    const InteractiveType = enum(u8) { unset, portal, container };
     map_id: std.atomic.Value(u32) = .init(std.math.maxInt(u32)),
     type: std.atomic.Value(InteractiveType) = .init(.unset),
 } = .{};
@@ -78,7 +75,6 @@ pub fn listForType(comptime T: type) *std.ArrayListUnmanaged(T) {
         Projectile => &list.projectile,
         particles.Particle => &list.particle,
         particles.ParticleEffect => &list.particle_effect,
-        Purchasable => &list.purchasable,
         Ally => &list.ally,
         else => @compileError("Invalid type"),
     };
@@ -94,7 +90,6 @@ pub fn addListForType(comptime T: type) *std.ArrayListUnmanaged(T) {
         Projectile => &add_list.projectile,
         particles.Particle => &add_list.particle,
         particles.ParticleEffect => &add_list.particle_effect,
-        Purchasable => &add_list.purchasable,
         Ally => &add_list.ally,
         else => @compileError("Invalid type"),
     };
@@ -315,7 +310,6 @@ pub fn update(time: i64, dt: f32) void {
         Container,
         particles.Particle,
         particles.ParticleEffect,
-        Purchasable,
         Ally,
     }) |ObjType| {
         var obj_list = listForType(ObjType);
@@ -411,24 +405,6 @@ pub fn update(time: i64, dt: f32) void {
                             should_unset_interactive = false;
                         }
                     }
-                    obj.update(time);
-                },
-                Purchasable => {
-                    const is_game = blk: {
-                        systems.ui_lock.lock();
-                        defer systems.ui_lock.unlock();
-                        break :blk systems.screen == .game;
-                    };
-                    if (is_game) {
-                        const dt_x = cam_x - obj.x;
-                        const dt_y = cam_y - obj.y;
-                        if (dt_x * dt_x + dt_y * dt_y < 1) {
-                            interactive.map_id.store(obj.map_id, .release);
-                            interactive.type.store(.purchasable, .release);
-                            should_unset_interactive = false;
-                        }
-                    }
-
                     obj.update(time);
                 },
                 Projectile => if (!obj.update(time, dt))

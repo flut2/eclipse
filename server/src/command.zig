@@ -14,7 +14,6 @@ const Enemy = @import("map/Enemy.zig");
 const Entity = @import("map/Entity.zig");
 const Player = @import("map/Player.zig");
 const Portal = @import("map/Portal.zig");
-const Purchasable = @import("map/Purchasable.zig");
 
 fn checkRank(player: *Player, comptime rank: network_data.Rank) bool {
     if (@intFromEnum(player.rank) >= @intFromEnum(rank)) return true;
@@ -67,13 +66,12 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
 
     const written_name = name_stream.getWritten();
     var name: ?[]const u8 = null;
-    inline for (.{ Entity, Enemy, Portal, Container, Purchasable, Ally }) |ObjType| {
+    inline for (.{ Entity, Enemy, Portal, Container, Ally }) |ObjType| {
         if (switch (ObjType) {
             Entity => game_data.entity,
             Enemy => game_data.enemy,
             Portal => game_data.portal,
             Container => game_data.container,
-            Purchasable => game_data.purchasable,
             Ally => game_data.ally,
             else => @compileError("Invalid type"),
         }.from_name.get(written_name)) |data| {

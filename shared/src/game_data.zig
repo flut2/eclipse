@@ -14,7 +14,6 @@ pub var entity: Maps(EntityData) = .{};
 pub var ground: Maps(GroundData) = .{};
 pub var portal: Maps(PortalData) = .{};
 pub var region: Maps(RegionData) = .{};
-pub var purchasable: Maps(PurchasableData) = .{};
 pub var ally: Maps(AllyData) = .{};
 
 var arena: std.heap.ArenaAllocator = undefined;
@@ -65,7 +64,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
             &ground,
             &portal,
             &region,
-            &purchasable,
             &ally,
             &resource,
         }) |data_maps| {
@@ -86,7 +84,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try parseGeneric(arena_allocator, "./assets/data/ground.ziggy", GroundData, &ground);
     try parseGeneric(arena_allocator, "./assets/data/portals.ziggy", PortalData, &portal);
     try parseGeneric(arena_allocator, "./assets/data/regions.ziggy", RegionData, &region);
-    try parseGeneric(arena_allocator, "./assets/data/purchasables.ziggy", PurchasableData, &purchasable);
     try parseGeneric(arena_allocator, "./assets/data/allies.ziggy", AllyData, &ally);
     try parseGeneric(arena_allocator, "./assets/data/resources.ziggy", ResourceData, &resource);
     try parseGeneric(arena_allocator, "./assets/data/classes.ziggy", ClassData, &class);
@@ -437,16 +434,6 @@ pub const EntityData = struct {
     hit_sound: []const u8 = "Unknown.mp3",
     death_sound: []const u8 = "Unknown.mp3",
     animations: ?[]FrameData = null,
-};
-
-pub const PurchasableData = struct {
-    id: u16,
-    name: []const u8,
-    size_mult: f32 = 1.0,
-    textures: []const TextureData,
-    light: LightData = .{},
-    show_name: bool = true,
-    draw_on_ground: bool = false,
 };
 
 pub const AllyData = struct {

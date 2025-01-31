@@ -19,7 +19,6 @@ const particles = @import("game/particles.zig");
 const Player = @import("game/Player.zig");
 const Portal = @import("game/Portal.zig");
 const Projectile = @import("game/Projectile.zig");
-const Purchasable = @import("game/Purchasable.zig");
 const Square = @import("game/Square.zig");
 const main = @import("main.zig");
 const dialog = @import("ui/dialogs/dialog.zig");
@@ -34,7 +33,6 @@ pub fn typeToObjEnum(comptime T: type) network_data.ObjectType {
         Entity => .entity,
         Container => .container,
         Portal => .portal,
-        Purchasable => .purchasable,
         Ally => .ally,
         else => @compileError("Invalid type"),
     };
@@ -47,7 +45,6 @@ pub fn ObjEnumToType(comptime obj_type: network_data.ObjectType) type {
         .enemy => Enemy,
         .portal => Portal,
         .container => Container,
-        .purchasable => Purchasable,
         .ally => Ally,
     };
 }
@@ -88,14 +85,12 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?
         .dropped_enemies => handleDroppedEnemies,
         .dropped_portals => handleDroppedPortals,
         .dropped_containers => handleDroppedContainers,
-        .dropped_purchasables => handleDroppedPurchasables,
         .dropped_allies => handleDroppedAllies,
         .new_players => handleNewPlayers,
         .new_entities => handleNewEntities,
         .new_enemies => handleNewEnemies,
         .new_portals => handleNewPortals,
         .new_containers => handleNewContainers,
-        .new_purchasables => handleNewPurchasables,
         .new_allies => handleNewAllies,
     };
 }
@@ -107,7 +102,6 @@ fn ObjEnumToStatType(comptime obj_type: network_data.ObjectType) type {
         .enemy => network_data.EnemyStat,
         .portal => network_data.PortalStat,
         .container => network_data.ContainerStat,
-        .purchasable => network_data.PurchasableStat,
         .ally => network_data.AllyStat,
     };
 }
@@ -119,7 +113,6 @@ fn ObjEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnum
         .enemy => parseEnemyStat,
         .portal => parsePortalStat,
         .container => parseContainerStat,
-        .purchasable => parsePurchasableStat,
         .ally => parseAllyStat,
     };
 }
@@ -492,10 +485,6 @@ fn handleDroppedContainers(_: *Server, data: PacketData(.dropped_containers)) vo
     droppedObject(Container, data.map_ids);
 }
 
-fn handleDroppedPurchasables(_: *Server, data: PacketData(.dropped_purchasables)) void {
-    droppedObject(Purchasable, data.map_ids);
-}
-
 fn handleDroppedAllies(_: *Server, data: PacketData(.dropped_allies)) void {
     droppedObject(Ally, data.map_ids);
 }
@@ -698,10 +687,6 @@ fn handleNewPortals(_: *Server, data: PacketData(.new_portals)) void {
 
 fn handleNewContainers(_: *Server, data: PacketData(.new_containers)) void {
     newObject(Container, data.list);
-}
-
-fn handleNewPurchasables(_: *Server, data: PacketData(.new_purchasables)) void {
-    newObject(Purchasable, data.list);
 }
 
 fn handleNewAllies(_: *Server, data: PacketData(.new_allies)) void {
@@ -986,17 +971,6 @@ fn parsePortalStat(portal: *Portal, stat: network_data.PortalStat) void {
         .y => |val| portal.y = val,
         .size_mult => |val| portal.size_mult = val,
         .name => |val| parseNameStat(portal, val),
-    }
-}
-
-fn parsePurchasableStat(purchasable: *Purchasable, stat: network_data.PurchasableStat) void {
-    switch (stat) {
-        .x => |val| purchasable.x = val,
-        .y => |val| purchasable.y = val,
-        .size_mult => |val| purchasable.size_mult = val,
-        .cost => |val| purchasable.cost = val,
-        .currency => |val| purchasable.currency = val,
-        .name => |val| parseNameStat(purchasable, val),
     }
 }
 
