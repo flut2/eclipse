@@ -33,7 +33,7 @@
 {
     .id = 5,
     .name = "Retrieve Metal Plating 1",
-    .textures = [{ "ground": 5 }, { "ground": 5 }, { "ground": 5 }, { "ground": 6 }],
+    .textures = [{ "ground": 5 }, { "ground": 6 }, { "ground": 6 }, { "ground": 6 }],
     .blend_prio = 1,
 },
 {

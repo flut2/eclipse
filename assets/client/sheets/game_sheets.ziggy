@@ -209,4 +209,11 @@
     .w = 24,
     .h = 24,
 },
+{
+    .type = @SheetType("image"),
+    .name = "props_large",
+    .path = "props_large.png",
+    .w = 24,
+    .h = 24,
+},
 ]
