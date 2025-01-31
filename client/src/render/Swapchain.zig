@@ -2,8 +2,8 @@ const std = @import("std");
 
 const vk = @import("vulkan");
 
-const Context = @import("Context.zig");
 const main = @import("../main.zig");
+const Context = @import("Context.zig");
 
 const Swapchain = @This();
 const SwapImage = struct {
@@ -71,12 +71,7 @@ pub fn init(ctx: Context, extent: vk.Extent2D, present_mode: vk.PresentModeKHR) 
     return try initRecycle(ctx, extent, .null_handle, present_mode);
 }
 
-pub fn initRecycle(
-    ctx: Context,
-    extent: vk.Extent2D,
-    old_handle: vk.SwapchainKHR,
-    present_mode: vk.PresentModeKHR,
-) !Swapchain {
+pub fn initRecycle(ctx: Context, extent: vk.Extent2D, old_handle: vk.SwapchainKHR, present_mode: vk.PresentModeKHR) !Swapchain {
     const caps = try ctx.instance.getPhysicalDeviceSurfaceCapabilitiesKHR(ctx.phys_device, ctx.surface);
     const actual_extent = findActualExtent(caps, extent);
     if (actual_extent.width == 0 or actual_extent.height == 0) return error.InvalidSurfaceDimensions;

@@ -61,10 +61,7 @@ pub const Queue = struct {
     family: u32,
 
     fn init(device: Device, family: u32) Queue {
-        return .{
-            .handle = device.getDeviceQueue(family, 0),
-            .family = family,
-        };
+        return .{ .handle = device.getDeviceQueue(family, 0), .family = family };
     }
 };
 
@@ -212,11 +209,7 @@ fn checkSuitable(instance: Instance, phys_device: vk.PhysicalDevice, surface: vk
 
     if (try allocateQueues(instance, phys_device, surface)) |allocation| {
         const props = instance.getPhysicalDeviceProperties(phys_device);
-        return .{
-            .phys_device = phys_device,
-            .props = props,
-            .queues = allocation,
-        };
+        return .{ .phys_device = phys_device, .props = props, .queues = allocation };
     }
 
     return null;
@@ -232,7 +225,7 @@ fn allocateQueues(instance: Instance, phys_device: vk.PhysicalDevice, surface: v
     for (families, 0..) |properties, i| {
         const family: u32 = @intCast(i);
         if (graphics_family == null and properties.queue_flags.graphics_bit) graphics_family = family;
-        if (present_family == null and (try instance.getPhysicalDeviceSurfaceSupportKHR(phys_device, family, surface)) == vk.TRUE) 
+        if (present_family == null and (try instance.getPhysicalDeviceSurfaceSupportKHR(phys_device, family, surface)) == vk.TRUE)
             present_family = family;
     }
 

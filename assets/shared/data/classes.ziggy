@@ -35,7 +35,7 @@
             \\Gain the ability to see into the spirit world, allowing you to see the &type="med_it"Souls&reset of dead enemies.
             \\When this ability is cast within 3 tiles of a &type="med_it"Soul&reset: Collect all &type="med_it"Souls&reset within $strtxt5 (+5%$stricon) tiles&reset, powering this ability up, with stronger &type="med_it"Souls&reset granting more power.
             \\When cast otherwise: You grant a $strtxtStrength&reset and $wittxtWit&reset buff to yourself and up to 5 allies within 4 tiles, scaling based on the amount and the value of &type="med_it"Souls&reset consumed.
-            \\Current buffs: $strtxt{0}$stricon&reset, $wittxt{1}$witicon&reset
+            \\Current buffs: $strtxt{}$stricon&reset, $wittxt{}$witicon&reset
             ,
             .health_cost = 100,
             .cooldown = 8.0,
@@ -65,7 +65,6 @@
             .name = "Ravenous Hunger",
             .description = 
             \\Execute all monsters below or at 10% HP within $hsttxt1 (+10%$hsticon)&reset, and gain $multitxt10 Overheal&reset for every 100 HP the killed mobs had.
-            \\$footnotetxtOverheal: A form of healing that can heal you above your maximum Health
             \\$footnotetxtThe Overheal is capped at $hptxt1000 (+10%$hpicon)$footnotetxt.
             ,
             .health_cost = 300,
@@ -512,159 +511,5 @@
             .stat_increases_per_level = [ max_mp { .amount = 35 } ],
         },
     ],
-},
-{
-    .id = 3,
-    .name = "Genie",
-    .description = "placeholder",
-    .texture = {"players": 3},
-    .item_types = [
-        @ItemType("sword"), 
-        @ItemType("leather"), 
-        @ItemType("boots"), 
-        @ItemType("artifact"),
-    ],
-    .default_items = [
-        "Silver Blade",
-        "Worn-out Hide",
-        "Scrap Boots",
-        "Dim Jade Nanobot",
-    ],
-    .stats = {
-        .health = 630,
-        .mana = 120,
-        .strength = 45,
-        .wit = 35,
-        .defense = 25,
-        .resistance = 20,
-        .speed = 65,
-        .stamina = 35,
-        .intelligence = 15,
-        .haste = 35,
-    },
-    .abilities = [
-        {
-            .name = "Equivalent Exchange",
-            .description = 
-            \\Make your other abilities cost $hsttxt8% (+8%$hsticon) less for 8 seconds. This includes the hit cost of Premium Protection.
-            ,
-            .health_cost = 350,
-            .cooldown = 17.0,
-            .icon = {"ability_icons": 0},
-        },
-        {
-            .name = "Asset Bubble",
-            .description = 
-            \\Deal 4.4% more damage per 10000 Gold you own for 8 seconds.
-            \\After this effect ends, deal 8.8% less damage per 10000 Gold you own for 17 seconds.
-            \\The damage buff is capped at 44%, while the debuff is capped at 88%.
-            ,
-            .gold_cost = 449,
-            .cooldown = 35.0,
-            .icon = {"ability_icons": 1},
-        },
-        {
-            .name = "Premium Protection",
-            .description = 
-            \\Become immune to damage for &type="bold_it"&col="C45860"8 (+8%&space&img="misc_big,58")&reset seconds, but pay &type="bold_it"&col="FFE770"0.5 Gold&reset for every damage point you would've taken.n&type="med_it"&size="10"&col="736562"This effect only applies to bullets that you can pay for.
-            ,
-            .cooldown = 28.0,
-            .icon = {"ability_icons": 2},
-        },
-        {
-            .name = "Compound Interest",
-            .description = 
-            \\Gain the following until this ability is recast:
-            \\ - $multitxt+280% (&col="D65BFF"-8% &img="misc_big,57", &col="FF9670"-8% &img="misc_big,33"&col="FFE770") Damage Taken&reset
-            \\ - &type="bold_it"&col="C45860"-17% &img="misc_big,34"&reset
-            \\ - &type="bold_it"All damage dealt now accumulates Drop Chance, at a rate of &col="C45860"0.8% (+0.8% &img="misc_big,58")&reset&type="bold_it" per 8000 damage dealt.&reset
-            \\Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for $multitxt35&reset seconds.
-            \\Currently accumulated Drop Chance: $multitxt{0}%
-            \\$footnotetxtSwitching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
-            \\The Drop Chance increase is capped at $multitxt125%.
-            ,
-            .gold_cost = 3599,
-            .cooldown = 125.0,
-            .icon = {"ability_icons": 3},
-        },
-    ],
-    .talents = [],
-},
-{
-    .id = 4,
-    .name = "Pixie",
-    .description = "placeholder",
-    .texture = {"players": 4},
-    .item_types = [
-        @ItemType("bow"), 
-        @ItemType("leather"), 
-        @ItemType("boots"), 
-        @ItemType("artifact"),
-    ],
-    .default_items = [
-        "Wooden Bow",
-        "Worn-out Hide",
-        "Scrap Boots",
-        "Dim Jade Nanobot",
-    ],
-    .stats = {
-        .health = 710,
-        .mana = 430,
-        .strength = 35,
-        .wit = 55,
-        .defense = 10,
-        .resistance = 25,
-        .speed = 65,
-        .stamina = 25,
-        .intelligence = 55,
-        .haste = 65,
-    },
-    .abilities = [
-        {
-            .name = "Equivalent Exchange",
-            .description = 
-            \\Make your other abilities cost 8% (+8% HST) less for 8 seconds. This includes the hit cost of Premium Protection.
-            ,
-            .health_cost = 350,
-            .cooldown = 17.0,
-            .icon = {"ability_icons": 0},
-        },
-        {
-            .name = "Asset Bubble",
-            .description = 
-            \\Deal 4.4% more damage per 10000 Gold you own for 8 seconds.
-            \\After this effect ends, deal 8.8% less damage per 10000 Gold you own for 17 seconds.
-            \\The damage buff is capped at 44%, while the debuff is capped at 88%.
-            ,
-            .gold_cost = 449,
-            .cooldown = 35.0,
-            .icon = {"ability_icons": 1},
-        },
-        {
-            .name = "Premium Protection",
-            .description = 
-            \\Become immune to damage for &type="bold_it"&col="C45860"8 (+8%&space&img="misc_big,58")&reset seconds, but pay &type="bold_it"&col="FFE770"0.5 Gold&reset for every damage point you would've taken.n&type="med_it"&size="10"&col="736562"This effect only applies to bullets that you can pay for.
-            ,
-            .cooldown = 28.0,
-            .icon = {"ability_icons": 2},
-        },
-        {
-            .name = "Compound Interest",
-            .description = 
-            \\Gain the following until this ability is recast:
-            \\ - &type="bold_it"&col="FFE770"+280% (&col="D65BFF"-8% &img="misc_big,57", &col="FF9670"-8% &img="misc_big,33"&col="FFE770") Damage Taken&reset
-            \\ - &type="bold_it"&col="C45860"-17% &img="misc_big,34"&reset
-            \\ - &type="bold_it"All damage dealt now accumulates Drop Chance, at a rate of &col="C45860"0.8% (+0.8% &img="misc_big,58")&reset&type="bold_it" per 8000 damage dealt.&reset
-            \\Recasting this ability removes the debuffs, sets it on cooldown, charges the Gold cost again and grants you the accumulated Drop Chance for &type="bold_it"&col="FFE770"35&reset seconds.
-            \\Currently accumulated Drop Chance: &type="bold_it"&col="FFE770"{0}%
-            \\&type="med_it"&size="10"&col="736562"Switching maps cancels this effect and sets it on cooldown, losing all accumulated Drop Chance.
-            \\The Drop Chance increase is capped at &type="bold_it"&col="FFE770"125%.
-            ,
-            .gold_cost = 3599,
-            .cooldown = 125.0,
-            .icon = {"ability_icons": 3},
-        },
-    ],
-    .talents = [],
 },
 ]

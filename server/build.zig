@@ -46,7 +46,13 @@ pub fn buildWithoutDupes(
             .enable_tracy = enable_tracy,
         });
         exe.root_module.linkLibrary(shared_dep.artifact("libuv"));
-        exe.root_module.linkLibrary(shared_dep.artifact("rpmalloc"));
+
+        const rpmalloc_dep = b.dependency("rpmalloc", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        exe.root_module.addImport("rpmalloc", rpmalloc_dep.module("rpmalloc"));
+        exe.root_module.linkLibrary(rpmalloc_dep.artifact("rpmalloc-lib"));
 
         exe.root_module.addImport("shared", shared_dep.module("shared"));
         if (enable_tracy) exe.root_module.addImport("tracy", shared_dep.module("tracy"));

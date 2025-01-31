@@ -180,35 +180,6 @@ pub fn build(b: *std.Build) !void {
     });
     b.installArtifact(libuv);
 
-    const rpmalloc = b.addStaticLibrary(.{
-        .name = "rpmalloc",
-        .root_source_file = b.path("src/rpmalloc.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    const rpmalloc_dep = b.dependency("rpmalloc", .{});
-
-    rpmalloc.addIncludePath(rpmalloc_dep.path("rpmalloc"));
-    lib.addIncludePath(rpmalloc_dep.path("rpmalloc"));
-
-    switch (builtin.os.tag) {
-        .linux => rpmalloc.linkSystemLibrary("pthread"),
-        .windows, .macos => {},
-        else => @compileError("Unsupported OS"),
-    }
-    rpmalloc.linkLibC();
-    rpmalloc.addCSourceFiles(.{
-        .root = rpmalloc_dep.path("rpmalloc"),
-        .files = &.{"rpmalloc.c"},
-        .flags = &switch (builtin.os.tag) {
-            .windows => .{},
-            .linux => .{"-D_GNU_SOURCE=1"},
-            .macos => .{ "-Wno-padded", "-Wno-documentation-unknown-command", "-Wno-static-in-inline" },
-            else => @compileError("Unsupported OS"),
-        },
-    });
-    b.installArtifact(rpmalloc);
-
     b.modules.put(b.dupe("ziggy"), b.dependency("ziggy", .{
         .target = target,
         .optimize = optimize,

@@ -6,7 +6,7 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const uv = shared.uv;
-const rpmalloc = shared.rpmalloc;
+const rpmalloc = @import("rpmalloc");
 
 const db = @import("db.zig");
 const GameClient = @import("GameClient.zig");

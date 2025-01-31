@@ -4,6 +4,10 @@
     .dependencies = .{
         .shared = .{ .path = "../shared" },
         .hiredis = .{ .path = "libs/hiredis" },
+        .rpmalloc = .{
+            .url = "git+https://github.com/flut2/rpmalloc-zig.git#cf50f608c9a97e030b8ffb5ed335812c7b2c8184",
+            .hash = "12209a171b7c176fe0344a74284232ef446c7cc9ae716725761ddc24b0998954c9f5",
+        },
     },
     .paths = .{
         "build.zig",
