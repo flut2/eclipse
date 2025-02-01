@@ -358,7 +358,6 @@ pub var error_data_wall: WallData = undefined;
 pub var light_w: f32 = 1.0;
 pub var light_h: f32 = 1.0;
 pub var light_data: AtlasData = undefined;
-pub var region_icon: AtlasData = undefined;
 
 fn packSort(_: void, lhs: pack.IdRect, rhs: pack.IdRect) bool {
     return lhs.rect.w < rhs.rect.w;
@@ -1323,10 +1322,6 @@ pub fn init() !void {
     if (atlas_data.get("light")) |light| {
         light_data = light[0];
     } else @panic("Could not find light in the atlas");
-
-    if (atlas_data.get("misc")) |misc| {
-        region_icon = misc[29];
-    } else @panic("Could not find misc in the atlas");
 
     if (atlas_data.get("ground_masks")) |ground_masks| {
         var left_mask_rect = ground_masks[0];

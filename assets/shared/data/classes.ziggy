@@ -109,7 +109,7 @@
         {
             .name = "Intelligence Boost",
             .description = "Gain $inttxt+10$inticon per level&reset.",
-            .icon = { "misc_big": 59 },
+            .icon = { "misc_big": 7 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -122,7 +122,7 @@
         {
             .name = "Haste Boost",
             .description = "Gain $hsttxt+5$hsticon per level&reset.",
-            .icon = { "misc_big": 58 },
+            .icon = { "misc_big": 9 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -135,7 +135,7 @@
         {
             .name = "Mana Boost",
             .description = "Gain $mptxt+35$mpicon per level&reset.",
-            .icon = { "misc_big": 39 },
+            .icon = { "misc_big": 1 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -179,7 +179,7 @@
         {
             .name = "Stamina Boost",
             .description = "Gain $statxt+10$staicon per level&reset.",
-            .icon = { "misc_big": 36 },
+            .icon = { "misc_big": 6 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -192,7 +192,7 @@
         {
             .name = "Speed Boost",
             .description = "Gain $spdtxt+5$spdicon per level&reset.",
-            .icon = { "misc_big": 34 },
+            .icon = { "misc_big": 8 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -205,7 +205,7 @@
         {
             .name = "Health Boost",
             .description = "Gain $hptxt+35$hpicon per level&reset.",
-            .icon = { "misc_big": 40 },
+            .icon = { "misc_big": 0 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -249,7 +249,7 @@
         {
             .name = "Wit Boost",
             .description = "Gain $wittxt+10$witicon per level&reset.",
-            .icon = { "misc_big": 35 },
+            .icon = { "misc_big": 3 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -262,7 +262,7 @@
         {
             .name = "Strength Boost",
             .description = "Gain $strtxt+5$stricon per level&reset.",
-            .icon = { "misc_big": 32 },
+            .icon = { "misc_big": 2 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -275,7 +275,7 @@
         {
             .name = "Defense Boost",
             .description = "Gain $deftxt+5$deficon per level&reset.",
-            .icon = { "misc_big": 33 },
+            .icon = { "misc_big": 4 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -322,7 +322,7 @@
         {
             .name = "Resistance Boost",
             .description = "Gain $restxt+10$resicon per level&reset.",
-            .icon = { "misc_big": 57 },
+            .icon = { "misc_big": 5 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -335,7 +335,7 @@
         {
             .name = "Health Boost",
             .description = "Gain $hptxt+35$hpicon per level&reset.",
-            .icon = { "misc_big": 40 },
+            .icon = { "misc_big": 0 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -348,7 +348,7 @@
         {
             .name = "Mana Boost",
             .description = "Gain $mptxt+35$mpicon per level&reset.",
-            .icon = { "misc_big": 39 },
+            .icon = { "misc_big": 1 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -484,7 +484,7 @@
         {
             .name = "Intelligence Boost",
             .description = "Gain $inttxt+10$inticon per level&reset.",
-            .icon = { "misc_big": 59 },
+            .icon = { "misc_big": 7 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -499,7 +499,7 @@
         {
             .name = "Haste Boost",
             .description = "Gain $hsttxt+5$hsticon per level&reset.",
-            .icon = { "misc_big": 58 },
+            .icon = { "misc_big": 9 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -514,7 +514,7 @@
         {
             .name = "Mana Boost",
             .description = "Gain $mptxt+35$mpicon per level&reset.",
-            .icon = { "misc_big": 39 },
+            .icon = { "misc_big": 1 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -569,7 +569,7 @@
         {
             .name = "Stamina Boost",
             .description = "Gain $statxt+10$staicon per level&reset.",
-            .icon = { "misc_big": 36 },
+            .icon = { "misc_big": 6 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -584,7 +584,7 @@
         {
             .name = "Speed Boost",
             .description = "Gain $spdtxt+5$spdicon per level&reset.",
-            .icon = { "misc_big": 34 },
+            .icon = { "misc_big": 8 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -599,7 +599,7 @@
         {
             .name = "Health Boost",
             .description = "Gain $hptxt+35$hpicon per level&reset.",
-            .icon = { "misc_big": 40 },
+            .icon = { "misc_big": 0 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -654,7 +654,7 @@
         {
             .name = "Wit Boost",
             .description = "Gain $wittxt+10$witicon per level&reset.",
-            .icon = { "misc_big": 35 },
+            .icon = { "misc_big": 3 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -669,7 +669,7 @@
         {
             .name = "Strength Boost",
             .description = "Gain $strtxt+5$stricon per level&reset.",
-            .icon = { "misc_big": 32 },
+            .icon = { "misc_big": 2 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -684,7 +684,7 @@
         {
             .name = "Defense Boost",
             .description = "Gain $deftxt+5$deficon per level&reset.",
-            .icon = { "misc_big": 33 },
+            .icon = { "misc_big": 4 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -742,7 +742,7 @@
         {
             .name = "Resistance Boost",
             .description = "Gain $restxt+10$resicon per level&reset.",
-            .icon = { "misc_big": 57 },
+            .icon = { "misc_big": 5 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -757,7 +757,7 @@
         {
             .name = "Health Boost",
             .description = "Gain $hptxt+35$hpicon per level&reset.",
-            .icon = { "misc_big": 40 },
+            .icon = { "misc_big": 0 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -772,7 +772,7 @@
         {
             .name = "Mana Boost",
             .description = "Gain $mptxt+35$mpicon per level&reset.",
-            .icon = { "misc_big": 39 },
+            .icon = { "misc_big": 1 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -890,7 +890,7 @@
         {
             .name = "Intelligence Boost",
             .description = "Gain $inttxt+10$inticon per level&reset.",
-            .icon = { "misc_big": 59 },
+            .icon = { "misc_big": 7 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -903,7 +903,7 @@
         {
             .name = "Haste Boost",
             .description = "Gain $hsttxt+5$hsticon per level&reset.",
-            .icon = { "misc_big": 58 },
+            .icon = { "misc_big": 9 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -916,7 +916,7 @@
         {
             .name = "Mana Boost",
             .description = "Gain $mptxt+35$mpicon per level&reset.",
-            .icon = { "misc_big": 39 },
+            .icon = { "misc_big": 1 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -960,7 +960,7 @@
         {
             .name = "Stamina Boost",
             .description = "Gain $statxt+10$staicon per level&reset.",
-            .icon = { "misc_big": 36 },
+            .icon = { "misc_big": 6 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -973,7 +973,7 @@
         {
             .name = "Speed Boost",
             .description = "Gain $spdtxt+5$spdicon per level&reset.",
-            .icon = { "misc_big": 34 },
+            .icon = { "misc_big": 8 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -986,7 +986,7 @@
         {
             .name = "Health Boost",
             .description = "Gain $hptxt+35$hpicon per level&reset.",
-            .icon = { "misc_big": 40 },
+            .icon = { "misc_big": 0 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -1030,7 +1030,7 @@
         {
             .name = "Wit Boost",
             .description = "Gain $wittxt+10$witicon per level&reset.",
-            .icon = { "misc_big": 35 },
+            .icon = { "misc_big": 3 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -1043,7 +1043,7 @@
         {
             .name = "Strength Boost",
             .description = "Gain $strtxt+5$stricon per level&reset.",
-            .icon = { "misc_big": 32 },
+            .icon = { "misc_big": 2 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -1056,7 +1056,7 @@
         {
             .name = "Defense Boost",
             .description = "Gain $deftxt+5$deficon per level&reset.",
-            .icon = { "misc_big": 33 },
+            .icon = { "misc_big": 4 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -1103,7 +1103,7 @@
         {
             .name = "Resistance Boost",
             .description = "Gain $restxt+10$resicon per level&reset.",
-            .icon = { "misc_big": 57 },
+            .icon = { "misc_big": 5 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -1116,7 +1116,7 @@
         {
             .name = "Health Boost",
             .description = "Gain $hptxt+35$hpicon per level&reset.",
-            .icon = { "misc_big": 40 },
+            .icon = { "misc_big": 0 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [
@@ -1129,7 +1129,7 @@
         {
             .name = "Mana Boost",
             .description = "Gain $mptxt+35$mpicon per level&reset.",
-            .icon = { "misc_big": 39 },
+            .icon = { "misc_big": 1 },
             .type = @TalentType("minor"),
             .max_level = [1, 2],
             .level_costs = [

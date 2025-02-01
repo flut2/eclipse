@@ -90,7 +90,7 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
     if (assets.ui_atlas_data.get(params.data.icon.sheet)) |data|
         self.image.image_data.normal.atlas_data = data[params.data.icon.index];
 
-    const cooldown_icon = "&img=\"misc_big,69\"";
+    const cooldown_icon = "&img=\"misc_big,10\"";
     const has_mana_cost = params.data.mana_cost > 0;
     const has_health_cost = params.data.health_cost > 0;
     const has_gold_cost = params.data.gold_cost > 0;
@@ -103,7 +103,7 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
     } else {
         const mana_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_mp = undefined });
         const health_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_hp = undefined });
-        const gold_icon = "&img=\"misc,20\"";
+        const gold_icon = "&img=\"misc,0\"";
 
         if (has_health_cost and has_mana_cost) {
             self.subtext.text_data.setText(std.fmt.bufPrint(

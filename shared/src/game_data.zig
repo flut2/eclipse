@@ -217,8 +217,8 @@ pub const Currency = enum {
 
     pub fn icon(self: Currency) TextureData {
         return switch (self) {
-            .gold => .{ .sheet = "misc", .index = 20 },
-            .gems => .{ .sheet = "misc", .index = 21 },
+            .gold => .{ .sheet = "misc", .index = 0 },
+            .gems => .{ .sheet = "misc", .index = 1 },
         };
     }
 };
@@ -502,16 +502,16 @@ pub const StatIncreaseData = union(enum) {
 
     pub fn toControlCode(self: StatIncreaseData) []const u8 {
         return switch (self) {
-            .max_hp => "&img=\"misc_big,40\"",
-            .max_mp => "&img=\"misc_big,39\"",
-            .strength => "&img=\"misc_big,32\"",
-            .defense => "&img=\"misc_big,33\"",
-            .speed => "&img=\"misc_big,34\"",
-            .stamina => "&img=\"misc_big,36\"",
-            .wit => "&img=\"misc_big,35\"",
-            .resistance => "&img=\"misc_big,57\"",
-            .intelligence => "&img=\"misc_big,59\"",
-            .haste => "&img=\"misc_big,58\"",
+            .max_hp => "&img=\"misc_big,0\"",
+            .max_mp => "&img=\"misc_big,1\"",
+            .strength => "&img=\"misc_big,2\"",
+            .wit => "&img=\"misc_big,3\"",
+            .defense => "&img=\"misc_big,4\"",
+            .resistance => "&img=\"misc_big,5\"",
+            .stamina => "&img=\"misc_big,6\"",
+            .intelligence => "&img=\"misc_big,7\"",
+            .speed => "&img=\"misc_big,8\"",
+            .haste => "&img=\"misc_big,9\"",
         };
     }
 

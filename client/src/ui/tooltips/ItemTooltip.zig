@@ -413,7 +413,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     }
 
     if (data.gold_cost) |cost| {
-        const gold_icon = "&img=\"misc,20\"";
+        const gold_icon = "&img=\"misc,0\"";
         text = std.fmt.bufPrint(
             self.getMainBuffer(),
             line_base ++ float_fmt ++ "% chance to consume " ++ decimal_fmt ++ "&space{s}",
