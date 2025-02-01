@@ -10,18 +10,29 @@ const main = @import("../../main.zig");
 const Container = @import("../elements/Container.zig");
 const element = @import("../elements/element.zig");
 const PlayerMenu = @import("PlayerMenu.zig");
+const TeleportMenu = @import("TeleportMenu.zig");
 
 pub const MenuType = enum {
     none,
     player,
+    teleport,
 };
 pub const Menu = union(MenuType) {
     none: void,
     player: PlayerMenu,
+    teleport: TeleportMenu,
 };
 pub const MenuParams = union(MenuType) {
     none: void,
     player: struct { x: f32, y: f32, player: Player },
+    teleport: struct {
+        x: f32,
+        y: f32,
+        map_id: u32,
+        data_id: u16,
+        name: []const u8,
+        rank: network_data.Rank,
+    },
 };
 
 pub var map: std.AutoHashMapUnmanaged(MenuType, *Menu) = .empty;
@@ -106,19 +117,22 @@ pub fn checkMenuValidity(x: f32, y: f32) void {
     switch (current.*) {
         .none => unreachable,
         inline else => |menu| {
-            if (!utils.isInBounds(x, y, menu.root.base.x, menu.root.base.y, menu.root.width(), menu.root.height()))
-                cancelMenu();
+            if (!utils.isInBounds(x, y, menu.root.base.x, menu.root.base.y, menu.root.width(), menu.root.height())) {
+                menu.root.base.visible = false;
+                current = map.get(.none) orelse unreachable;
+            }
         },
     }
 }
 
 pub fn cancelMenu() void {
-    if (current.* == .none) return;
+    if (current.* == .none or current.* == .teleport) return;
 
     switch (current.*) {
         .none => unreachable,
-        inline else => |menu| menu.root.base.visible = false,
+        inline else => |menu| {
+            menu.root.base.visible = false;
+            current = map.get(.none) orelse unreachable;
+        },
     }
-
-    current = map.get(.none) orelse unreachable;
 }

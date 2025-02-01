@@ -244,6 +244,14 @@
     .path = "block_icon.png",
 },
 {
+    .name = "celestial_player_tooltip_line",
+    .path = "celestial_player_tooltip_line.png",
+},
+{
+    .name = "player_tooltip_line",
+    .path = "player_tooltip_line.png",
+},
+{
     .name = "celestial_player_menu",
     .path = "menu/celestial_player_menu.png",
 },

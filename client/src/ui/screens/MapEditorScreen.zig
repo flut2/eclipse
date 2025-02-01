@@ -1289,29 +1289,27 @@ fn exitCallback(ud: ?*anyopaque) void {
 }
 
 fn testCallback(ud: ?*anyopaque) void {
-    if (main.character_list) |list| {
-        if (list.servers.len > 0 and list.characters.len > 0) {
-            const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
+    if (main.character_list) |list| if (list.servers.len > 0 and list.characters.len > 0) {
+        const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
 
-            const data = mapData(screen) catch |e| {
-                std.log.err("Error while saving map (for testing): {}", .{e});
-                if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        const data = mapData(screen) catch |e| {
+            std.log.err("Error while saving map (for testing): {}", .{e});
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            return;
+        };
+        if (ui_systems.last_map_data) |last_map_data| main.allocator.free(last_map_data);
+        ui_systems.last_map_data = data;
+        ui_systems.is_testing = true;
+
+        if (main.settings.char_ids_login_sort.len > 0)
+            for (list.characters) |char| if (char.char_id == main.settings.char_ids_login_sort[0]) {
+                main.enterTest(list.servers[0], char.char_id, data);
                 return;
             };
-            if (ui_systems.last_map_data) |last_map_data| main.allocator.free(last_map_data);
-            ui_systems.last_map_data = data;
-            ui_systems.is_testing = true;
 
-            if (main.settings.char_ids_login_sort.len > 0)
-                for (list.characters) |char| if (char.char_id == main.settings.char_ids_login_sort[0]) {
-                    main.enterTest(list.servers[0], char.char_id, data);
-                    return;
-                };
-
-            main.enterTest(list.servers[0], list.characters[0].char_id, data);
-            return;
-        }
-    }
+        main.enterTest(list.servers[0], list.characters[0].char_id, data);
+        return;
+    };
 }
 
 pub fn deinit(self: *MapEditorScreen) void {
@@ -1341,9 +1339,13 @@ pub fn resize(self: *MapEditorScreen, w: f32, _: f32) void {
     const palette_x = w - palette_decor_w - 5;
     const cont_x = palette_x + 8;
 
+    self.layer_button.base.x = palette_x - layer_decor_w - 5;
+    self.layer_container.base.x = palette_x - layer_decor_w - 5;
+
     self.palette_decor.base.x = palette_x;
     inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field| {
         @field(self.palette_containers, field.name).base.x = cont_x;
+        @field(self.palette_containers, field.name).container.base.x = cont_x;
     }
     self.layer_dropdown.base.x = palette_x;
     self.layer_dropdown.container.base.x = palette_x + self.layer_dropdown.container_inlay_x;

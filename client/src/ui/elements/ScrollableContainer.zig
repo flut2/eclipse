@@ -88,8 +88,7 @@ pub fn init(self: *ScrollableContainer) void {
         .layer = self.base.layer,
     } };
 
-    self.scroll_bar = main.allocator.create(Slider) catch @panic("ScrollableContainer scroll bar alloc failed");
-    self.scroll_bar.* = .{
+    self.scroll_bar = self.container.createChild(Slider, .{
         .base = .{
             .x = self.scroll_x,
             .y = self.scroll_y,
@@ -107,12 +106,10 @@ pub fn init(self: *ScrollableContainer) void {
         .vertical = true,
         .userdata = self,
         .current_value = self.start_value,
-    };
-    self.scroll_bar.init();
+    }) catch @panic("ScrollableContainer scroll bar alloc failed");
 
-    if (self.hasScrollDecor()) {
-        self.scroll_bar_decor = main.allocator.create(Image) catch @panic("ScrollableContainer scroll bar decor alloc failed");
-        self.scroll_bar_decor.* = .{
+    if (self.hasScrollDecor())
+        self.scroll_bar_decor = self.container.createChild(Image, .{
             .base = .{
                 .x = self.scroll_side_x,
                 .y = self.scroll_side_y,
@@ -122,29 +119,17 @@ pub fn init(self: *ScrollableContainer) void {
                 .event_policy = .pass_all,
             },
             .image_data = self.scroll_side_decor_image_data,
-        };
-        self.scroll_bar_decor.init();
-    }
+        }) catch @panic("ScrollableContainer scroll bar decor alloc failed");
 }
 
 pub fn deinit(self: *ScrollableContainer) void {
     self.container.deinit();
     main.allocator.destroy(self.container);
-
-    self.scroll_bar.deinit();
-    main.allocator.destroy(self.scroll_bar);
-
-    if (self.hasScrollDecor()) {
-        self.scroll_bar_decor.deinit();
-        main.allocator.destroy(self.scroll_bar_decor);
-    }
 }
 
 pub fn draw(self: ScrollableContainer, cam_data: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
     if (!self.base.visible) return;
     self.container.draw(cam_data, x_offset, y_offset, time);
-    self.scroll_bar.draw(cam_data, x_offset, y_offset, time);
-    self.scroll_bar_decor.draw(cam_data, x_offset, y_offset, time);
 }
 
 pub fn width(self: ScrollableContainer) f32 {

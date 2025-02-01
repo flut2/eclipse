@@ -290,7 +290,10 @@ pub fn update(time: i64, dt: f32) void {
         }
     };
 
-    if (time - last_tile_update > 16 * std.time.us_per_ms) {
+    systems.ui_lock.lock();
+    const is_editor = systems.screen == .editor;
+    systems.ui_lock.unlock();
+    if (!is_editor and time - last_tile_update > 16 * std.time.us_per_ms) {
         last_tile_update = time;
         square_lock.lock();
         defer square_lock.unlock();

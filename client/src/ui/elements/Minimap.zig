@@ -1,7 +1,9 @@
 const std = @import("std");
 
+const glfw = @import("glfw");
 const shared = @import("shared");
 const game_data = shared.game_data;
+const network_data = shared.network_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
 
@@ -13,6 +15,7 @@ const Player = @import("../../game/Player.zig");
 const Portal = @import("../../game/Portal.zig");
 const main = @import("../../main.zig");
 const CameraData = @import("../../render/CameraData.zig");
+const menu = @import("../menus/menu.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -27,6 +30,7 @@ const MinimapIcon = struct {
     x: f32,
     y: f32,
     id: u8,
+    map_id: u32 = std.math.maxInt(u32),
 };
 
 const Minimap = @This();
@@ -39,6 +43,75 @@ map_height: f32 = 0.0,
 icons: std.ArrayListUnmanaged(MinimapIcon) = .empty,
 icon_lock: std.Thread.Mutex = .{},
 last_update: i64 = -1,
+list_items: [9]tooltip.PlayerListItem = undefined,
+list_item_idx: usize = 0,
+first_list_map_id: u32 = std.math.maxInt(u32),
+first_list_rank: network_data.Rank = .default,
+
+pub fn mouseMove(self: *Minimap, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
+    if (!self.base.visible) return false;
+
+    if (menu.current.* == .teleport) {
+        const in_bounds = element.intersects(self, x, y);
+        return !(self.base.event_policy.pass_move or !in_bounds);
+    }
+
+    self.first_list_rank = .default;
+    self.first_list_map_id = std.math.maxInt(u32);
+    self.list_item_idx = 0;
+    for (self.icons.items) |icon|
+        if (icon.id == MinimapIcon.player_id and utils.distSqr(
+            self.base.x + self.offset_x + icon.x,
+            self.base.y + self.offset_y + icon.y,
+            x,
+            y,
+        ) < 20 * 20) {
+            map.object_lock.lock();
+            defer map.object_lock.unlock();
+            const player = map.findObject(Player, icon.map_id, .con) orelse continue;
+            self.list_items[self.list_item_idx] = .{
+                .data_id = player.data_id,
+                .name = player.name orelse "Unknown",
+                .celestial = @intFromEnum(player.rank) >= @intFromEnum(network_data.Rank.celestial),
+            };
+            if (self.list_item_idx == 0) {
+                self.first_list_map_id = player.map_id;
+                self.first_list_rank = player.rank;
+            }
+            self.list_item_idx += 1;
+            if (self.list_item_idx == self.list_items.len) break;
+        };
+
+    if (self.list_item_idx > 0)
+        tooltip.switchTooltip(.player_list, .{
+            .x = x + x_offset,
+            .y = y + y_offset,
+            .items = self.list_items[0..self.list_item_idx],
+        });
+
+    const in_bounds = element.intersects(self, x, y);
+    return !(self.base.event_policy.pass_move or !in_bounds);
+}
+
+pub fn mousePress(self: *Minimap, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
+    if (!self.base.visible) return false;
+
+    if (menu.current.* != .teleport and self.list_item_idx > 0) {
+        tooltip.switchTooltip(.none, {});
+        menu.switchMenu(.teleport, .{
+            .x = x,
+            .y = y,
+            .map_id = self.first_list_map_id,
+            .rank = self.first_list_rank,
+            .data_id = self.list_items[0].data_id,
+            .name = self.list_items[0].name,
+        });
+        return true;
+    }
+
+    const in_bounds = element.intersects(self, x, y);
+    return !(self.base.event_policy.pass_press or !in_bounds);
+}
 
 pub fn deinit(self: *Minimap) void {
     self.icons.deinit(main.allocator);
@@ -135,6 +208,7 @@ pub fn update(self: *Minimap, time: i64) void {
             .id = MinimapIcon.player_id,
             .x = (player.x - edge_x) * px_per_x,
             .y = (player.y - edge_y) * px_per_y,
+            .map_id = player.map_id,
         }) catch main.oomPanic();
     }
 

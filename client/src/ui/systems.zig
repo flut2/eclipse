@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const build_options = @import("options");
 const glfw = @import("glfw");
 const shared = @import("shared");
 const utils = shared.utils;
@@ -22,6 +23,8 @@ const main = @import("../main.zig");
 const CameraData = @import("../render/CameraData.zig");
 const dialog = @import("dialogs/dialog.zig");
 const element = @import("elements/element.zig");
+const Image = @import("elements/Image.zig");
+const Text = @import("elements/Text.zig");
 const menu = @import("menus/menu.zig");
 const AccountLoginScreen = @import("screens/AccountLoginScreen.zig");
 const AccountRegisterScreen = @import("screens/AccountRegisterScreen.zig");
@@ -63,6 +66,8 @@ pub var ui_lock: std.Thread.Mutex = .{};
 pub var elements: std.ArrayListUnmanaged(element.UiElement) = .empty;
 pub var elements_to_add: std.ArrayListUnmanaged(element.UiElement) = .empty;
 pub var screen: Screen = undefined;
+pub var darken_bg: *Image = undefined;
+pub var version_text: *Text = undefined;
 pub var hover_lock: std.Thread.Mutex = .{};
 pub var hover_target: ?element.UiElement = null;
 pub var last_map_data: ?[]u8 = null;
@@ -82,6 +87,29 @@ pub fn init() !void {
     try tooltip.init();
     try dialog.init();
     try menu.init();
+
+    main.camera.lock.lock();
+    const cam_w = main.camera.width;
+    const cam_h = main.camera.height;
+    main.camera.lock.unlock();
+    darken_bg = try element.create(Image, .{
+        .base = .{ .x = 0, .y = 0, .visible = false },
+        .image_data = .{ .nine_slice = .fromAtlasData(assets.getUiData("dark_background", 0), cam_w, cam_h, 0, 0, 8, 8, 1.0) },
+    });
+
+    version_text = try element.create(Text, .{
+        .base = .{ .x = 10, .y = main.camera.height - 25, .visible = false },
+        .text_data = .{
+            .text = "",
+            .size = 12,
+            .max_chars = 32,
+            .text_type = .medium_italic,
+            .color = 0xB0B0B0,
+        },
+    });
+    version_text.text_data.setText(
+        try std.fmt.bufPrint(version_text.text_data.backing_buffer, "Eclipse Alpha - v{s}", .{build_options.version}),
+    );
 }
 
 pub fn deinit() void {
@@ -91,6 +119,9 @@ pub fn deinit() void {
     tooltip.deinit();
     dialog.deinit();
     menu.deinit();
+
+    element.destroy(darken_bg);
+    element.destroy(version_text);
 
     switch (screen) {
         .game, .editor => {},
@@ -135,9 +166,16 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
     }
 
     switch (screen_type) {
-        .game, .editor => {},
-        else => loadMap() catch |e| {
-            std.log.err("Map loading failed: {}", .{e});
+        .game, .editor => {
+            darken_bg.base.visible = false;
+            version_text.base.visible = false;
+        },
+        else => {
+            darken_bg.base.visible = true;
+            version_text.base.visible = true;
+            loadMap() catch |e| {
+                std.log.err("Map loading failed: {}", .{e});
+            };
         },
     }
 
@@ -246,6 +284,9 @@ pub fn resize(w: f32, h: f32) void {
     }
 
     dialog.resize(w, h);
+    version_text.base.y = h - 25;
+    darken_bg.image_data.scaleWidth(w);
+    darken_bg.image_data.scaleHeight(h);
 }
 
 pub fn mouseMove(x: f32, y: f32) bool {
@@ -287,10 +328,9 @@ pub fn mousePress(x: f32, y: f32, button: glfw.MouseButton, mods: glfw.Mods) boo
     };
 
     checkMenu: {
-        if (button != .right) {
-            menu.checkMenuValidity(x, y);
-            break :checkMenu;
-        }
+        defer menu.checkMenuValidity(x, y);
+
+        if (button != .right) break :checkMenu;
 
         map.object_lock.lock();
         defer map.object_lock.unlock();
@@ -311,8 +351,6 @@ pub fn mousePress(x: f32, y: f32, button: glfw.MouseButton, mods: glfw.Mods) boo
             menu.switchMenu(.player, .{ .x = x, .y = y, .player = player });
             break :checkMenu;
         }
-
-        menu.checkMenuValidity(x, y);
     }
 
     return false;
