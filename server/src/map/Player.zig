@@ -253,6 +253,23 @@ pub fn death(self: *Player, killer: []const u8) !void {
         self.client.sendError(.message_with_disconnect, "Death failed: Database Error");
         return;
     };
+
+    const gravestone_id: u16 = switch (self.aether) {
+        1 => 2,
+        2 => 3,
+        3 => 4,
+        4 => 5,
+        5 => 6,
+        else => 2,
+    };
+
+    _ = self.world.add(Entity, .{
+        .x = self.x,
+        .y = self.y,
+        .data_id = gravestone_id,
+        .name = main.allocator.dupe(u8, self.name) catch main.oomPanic(),
+    }) catch |e| std.log.err("Populating gravestone for {s} failed: {}", .{ self.name, e });
+
     self.client.queuePacket(.{ .death = .{ .killer_name = killer } });
     self.client.sameThreadShutdown();
 }

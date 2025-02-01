@@ -20,6 +20,7 @@ x: f32 = 0.0,
 y: f32 = 0.0,
 hp: i32 = 0,
 max_hp: i32 = 0,
+name: []const u8 = &.{},
 condition: utils.Condition = .{},
 conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .empty,
 conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .empty,
@@ -74,6 +75,7 @@ pub fn deinit(self: *Entity) !void {
 
     self.damages_dealt.deinit(main.allocator);
     self.stats_writer.list.deinit(main.allocator);
+    main.allocator.free(self.name);
 }
 
 pub fn applyCondition(self: *Entity, condition: utils.ConditionEnum, duration: i64) void {
