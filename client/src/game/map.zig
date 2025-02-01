@@ -64,6 +64,7 @@ pub var minimap: zstbi.Image = undefined;
 pub var minimap_copy: []u8 = undefined;
 
 var last_update: i64 = 0;
+var last_tile_update: i64 = 0;
 
 pub fn listForType(comptime T: type) *std.ArrayListUnmanaged(T) {
     return switch (T) {
@@ -288,6 +289,13 @@ pub fn update(time: i64, dt: f32) void {
             screen.setContainerVisible(false);
         }
     };
+
+    if (time - last_tile_update > 16 * std.time.us_per_ms) {
+        last_tile_update = time;
+        square_lock.lock();
+        defer square_lock.unlock();
+        for (squares) |*square| square.updateAnims(time);
+    }
 
     const cam_x = main.camera.x;
     const cam_y = main.camera.y;

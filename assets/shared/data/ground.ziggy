@@ -11,12 +11,14 @@
     .blend_prio = 99,
     .sink = true,
     .speed_mult = 0.7,
+    .animation = { .type = @GroundAnim("wave"), .delta_x = 0.55, .delta_y = 0.55 },
 },
 {
     .id = 2,
     .name = "Water Dark",
     .textures = [{"ground": 4}],
     .no_walk = true,
+    .animation = { .type = @GroundAnim("wave"), .delta_x = 0.55, .delta_y = 0.55 },
 },
 {
     .id = 3,

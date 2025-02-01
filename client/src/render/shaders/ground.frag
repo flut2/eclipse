@@ -13,9 +13,13 @@ struct InstanceData {
     vec2 uv;
     vec2 offset_uv;
     vec2 left_blend_uv;
+    vec2 left_blend_offset_uv;
     vec2 top_blend_uv;
+    vec2 top_blend_offset_uv;
     vec2 right_blend_uv;
+    vec2 right_blend_offset_uv;
     vec2 bottom_blend_uv;
+    vec2 bottom_blend_offset_uv;
     float rotation;
     // r u8, g u8, b u8, a u8
     uint color;
@@ -48,6 +52,12 @@ vec4 unpackColor(uint color) {
     );
 }
 
+vec4 clampedSample(vec2 base_uv, vec2 uv, vec2 offset_uv, vec2 dx, vec2 dy) {
+    vec2 dims = base_size / constants.atlas_size;
+    vec2 clamp_uv = mod(uv + offset_uv + dims, dims);
+    return textureGrad(ground_tex, clamp_uv + base_uv, dx, dy);
+}
+
 void main() {
     InstanceData instance = instance_buffer.data[instance_id];
     vec2 dx = dFdx(in_uv);
@@ -56,7 +66,7 @@ void main() {
 
     if ((instance.left_blend_uv.x > 0.0 || instance.left_blend_uv.y > 0.0) &&
             textureGrad(ground_tex, constants.left_mask_uv + in_uv, dx, dy).a == 1.0) {
-        vec4 tex = textureGrad(ground_tex, instance.left_blend_uv + in_uv, dx, dy);
+        vec4 tex = clampedSample(instance.left_blend_uv, in_uv, instance.left_blend_offset_uv, dx, dy);
         if (rgba.a <= 0.0) {
             color = tex;
             return;
@@ -67,7 +77,7 @@ void main() {
 
     if ((instance.top_blend_uv.x > 0.0 || instance.top_blend_uv.y > 0.0) &&
             textureGrad(ground_tex, constants.top_mask_uv + in_uv, dx, dy).a == 1.0) {
-        vec4 tex = textureGrad(ground_tex, instance.top_blend_uv + in_uv, dx, dy);
+        vec4 tex = clampedSample(instance.top_blend_uv, in_uv, instance.top_blend_offset_uv, dx, dy);
         if (rgba.a <= 0.0) {
             color = tex;
             return;
@@ -78,7 +88,7 @@ void main() {
 
     if ((instance.right_blend_uv.x > 0.0 || instance.right_blend_uv.y > 0.0) &&
             textureGrad(ground_tex, constants.right_mask_uv + in_uv, dx, dy).a == 1.0) {
-        vec4 tex = textureGrad(ground_tex, instance.right_blend_uv + in_uv, dx, dy);
+        vec4 tex = clampedSample(instance.right_blend_uv, in_uv, instance.right_blend_offset_uv, dx, dy);
         if (rgba.a <= 0.0) {
             color = tex;
             return;
@@ -89,7 +99,7 @@ void main() {
 
     if ((instance.bottom_blend_uv.x > 0.0 || instance.bottom_blend_uv.y > 0.0) &&
             textureGrad(ground_tex, constants.bottom_mask_uv + in_uv, dx, dy).a == 1.0) {
-        vec4 tex = textureGrad(ground_tex, instance.bottom_blend_uv + in_uv, dx, dy);
+        vec4 tex = clampedSample(instance.bottom_blend_uv, in_uv, instance.bottom_blend_offset_uv, dx, dy);
         if (rgba.a <= 0.0) {
             color = tex;
             return;
@@ -98,9 +108,7 @@ void main() {
         return;
     }
 
-    vec2 dims = base_size / constants.atlas_size;
-    vec2 clamp_uv = mod(in_uv + instance.offset_uv + dims, dims);
-    vec4 tex = textureGrad(ground_tex, clamp_uv + instance.uv, dx, dy);
+    vec4 tex = clampedSample(instance.uv, in_uv, instance.offset_uv, dx, dy);
     if (rgba.a <= 0.0) {
         color = tex;
         return;

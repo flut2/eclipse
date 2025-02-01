@@ -89,9 +89,13 @@ pub const GroundData = extern struct {
     uv: [2]f32,
     offset_uv: [2]f32,
     left_blend_uv: [2]f32,
+    left_blend_offset_uv: [2]f32,
     top_blend_uv: [2]f32,
+    top_blend_offset_uv: [2]f32,
     right_blend_uv: [2]f32,
+    right_blend_offset_uv: [2]f32,
     bottom_blend_uv: [2]f32,
+    bottom_blend_offset_uv: [2]f32,
     rotation: f32,
     color: utils.RGBA,
 };

@@ -4,6 +4,7 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const u32f = utils.u32f;
+const f32i = utils.f32i;
 
 const assets = @import("../assets.zig");
 const main = @import("../main.zig");
@@ -23,13 +24,16 @@ pub const empty_tile = std.math.maxInt(u16);
 pub const editor_tile = std.math.maxInt(u16) - 1;
 
 pub const Blend = extern struct { u: f32, v: f32 };
+pub const Offset = extern struct { u: f32, v: f32 };
 
 data_id: u16 = empty_tile,
 x: f32 = 0.0,
 y: f32 = 0.0,
 color: utils.RGBA = .{},
-atlas_data: assets.AtlasData = assets.AtlasData.fromRaw(0, 0, 0, 0, .base),
+atlas_data: assets.AtlasData = .fromRaw(0, 0, 0, 0, .base),
 blends: [4]Blend = @splat(.{ .u = -1.0, .v = -1.0 }),
+blend_offsets: [4]Offset = @splat(.{ .u = 0.0, .v = 0.0 }),
+current_offset: Offset = .{ .u = 0.0, .v = 0.0 },
 rotation: f32 = 0.0,
 data: *const game_data.GroundData = undefined,
 entity_map_id: u32 = std.math.maxInt(u32),
@@ -94,29 +98,31 @@ fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, 
         if (other_sq.data_id != editor_tile and other_sq.data_id != empty_tile) {
             const other_blend_prio = other_sq.data.blend_prio;
             if (other_blend_prio > current_prio) {
-                square.blends[blend_dir] = .{
-                    .u = other_sq.atlas_data.tex_u,
-                    .v = other_sq.atlas_data.tex_v,
-                };
+                square.blends[blend_dir] = .{ .u = other_sq.atlas_data.tex_u, .v = other_sq.atlas_data.tex_v };
+                square.blend_offsets[blend_dir] = other_sq.current_offset;
                 other_sq.blends[opposite_dir] = .{ .u = -1.0, .v = -1.0 };
+                other_sq.blend_offsets[opposite_dir] = .{ .u = 0.0, .v = 0.0 };
             } else if (other_blend_prio < current_prio) {
-                other_sq.blends[opposite_dir] = .{
-                    .u = square.atlas_data.tex_u,
-                    .v = square.atlas_data.tex_v,
-                };
+                other_sq.blends[opposite_dir] = .{ .u = square.atlas_data.tex_u, .v = square.atlas_data.tex_v };
+                other_sq.blend_offsets[opposite_dir] = square.current_offset;
                 square.blends[blend_dir] = .{ .u = -1.0, .v = -1.0 };
+                square.blend_offsets[blend_dir] = .{ .u = 0.0, .v = 0.0 };
             } else {
                 square.blends[blend_dir] = .{ .u = -1.0, .v = -1.0 };
+                square.blend_offsets[blend_dir] = .{ .u = 0.0, .v = 0.0 };
                 other_sq.blends[opposite_dir] = .{ .u = -1.0, .v = -1.0 };
+                other_sq.blend_offsets[opposite_dir] = .{ .u = 0.0, .v = 0.0 };
             }
 
             return;
         }
 
         other_sq.blends[opposite_dir] = .{ .u = -1.0, .v = -1.0 };
+        other_sq.blend_offsets[opposite_dir] = .{ .u = 0.0, .v = 0.0 };
     }
 
     square.blends[blend_dir] = .{ .u = -1.0, .v = -1.0 };
+    square.blend_offsets[blend_dir] = .{ .u = 0.0, .v = 0.0 };
 }
 
 pub fn draw(self: Square, cam_data: CameraData, float_time_ms: f32) void {
@@ -127,27 +133,18 @@ pub fn draw(self: Square, cam_data: CameraData, float_time_ms: f32) void {
 
     if (main.settings.enable_lights) main.renderer.drawLight(self.data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
 
-    const time_sec = float_time_ms / std.time.ms_per_s;
-    const u_offset, const v_offset = switch (self.data.animation.type) {
-        .wave => .{
-            @sin(self.data.animation.delta_x * time_sec) * assets.base_texel_w,
-            @sin(self.data.animation.delta_y * time_sec) * assets.base_texel_h,
-        },
-        .flow => .{
-            (self.data.animation.delta_x * time_sec) * assets.base_texel_w,
-            (self.data.animation.delta_y * time_sec) * assets.base_texel_h,
-        },
-        .unset => .{ 0.0, 0.0 },
-    };
-
     main.renderer.grounds.append(main.allocator, .{
         .pos = .{ screen_pos.x, screen_pos.y },
         .uv = .{ self.atlas_data.tex_u, self.atlas_data.tex_v },
-        .offset_uv = .{ u_offset, v_offset },
+        .offset_uv = @bitCast(self.current_offset),
         .left_blend_uv = @bitCast(self.blends[0]),
+        .left_blend_offset_uv = @bitCast(self.blend_offsets[0]),
         .top_blend_uv = @bitCast(self.blends[1]),
+        .top_blend_offset_uv = @bitCast(self.blend_offsets[1]),
         .right_blend_uv = @bitCast(self.blends[2]),
+        .right_blend_offset_uv = @bitCast(self.blend_offsets[2]),
         .bottom_blend_uv = @bitCast(self.blends[3]),
+        .bottom_blend_offset_uv = @bitCast(self.blend_offsets[3]),
         .rotation = self.rotation,
         .color = self.color,
     }) catch main.oomPanic();
@@ -159,8 +156,48 @@ fn equals(square: ?*Square, data_id: u16) bool {
     } else return false;
 }
 
+pub fn updateAnims(square: *Square, time: i64) void {
+    if (square.data_id == editor_tile or square.data_id == empty_tile) return;
+
+    const time_sec = f32i(time) / std.time.us_per_s;
+    switch (square.data.animation.type) {
+        .wave => square.current_offset = .{
+            .u = @sin(square.data.animation.delta_x * time_sec) * assets.base_texel_w,
+            .v = @sin(square.data.animation.delta_y * time_sec) * assets.base_texel_h,
+        },
+        .flow => square.current_offset = .{
+            .u = (square.data.animation.delta_x * time_sec) * assets.base_texel_w,
+            .v = (square.data.animation.delta_y * time_sec) * assets.base_texel_h,
+        },
+        .unset => {},
+    }
+
+    const current_prio = square.data.blend_prio;
+    const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
+    const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
+    const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
+    const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
+    updateBlendAtDir(square, left_sq, current_prio, left_blend_dir);
+    updateBlendAtDir(square, top_sq, current_prio, top_blend_dir);
+    updateBlendAtDir(square, right_sq, current_prio, right_blend_dir);
+    updateBlendAtDir(square, bottom_sq, current_prio, bottom_blend_dir);
+}
+
 pub fn update(square: *Square) void {
     if (square.data_id == editor_tile or square.data_id == empty_tile) return;
+
+    const time_sec = f32i(main.current_time) / std.time.ms_per_s;
+    switch (square.data.animation.type) {
+        .wave => square.current_offset = .{
+            .u = @sin(square.data.animation.delta_x * time_sec) * assets.base_texel_w,
+            .v = @sin(square.data.animation.delta_y * time_sec) * assets.base_texel_h,
+        },
+        .flow => square.current_offset = .{
+            .u = (square.data.animation.delta_x * time_sec) * assets.base_texel_w,
+            .v = (square.data.animation.delta_y * time_sec) * assets.base_texel_h,
+        },
+        .unset => {},
+    }
 
     const current_prio = square.data.blend_prio;
     const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);

@@ -29,9 +29,13 @@ struct InstanceData {
     vec2 uv;
     vec2 offset_uv;
     vec2 left_blend_uv;
+    vec2 left_blend_offset_uv;
     vec2 top_blend_uv;
+    vec2 top_blend_offset_uv;
     vec2 right_blend_uv;
+    vec2 right_blend_offset_uv;
     vec2 bottom_blend_uv;
+    vec2 bottom_blend_offset_uv;
     float rotation;
     // r u8, g u8, b u8, a u8
     uint color;
