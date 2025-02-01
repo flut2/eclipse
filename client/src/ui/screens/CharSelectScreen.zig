@@ -25,7 +25,7 @@ const CharacterBox = struct {
     decor: *Button,
     class_tex: *Image,
     class_name: *Text,
-    aether_bar: *Bar,
+    spirit_bar: *Bar,
     delete_button: *Button,
     favorite_button: *Button,
     unfavorite_button: *Button,
@@ -54,9 +54,9 @@ const CharacterBox = struct {
             .char = char,
         });
 
-        const aether_bar = try base.createChild(Bar, .{
+        const spirit_bar = try base.createChild(Bar, .{
             .base = .{ .x = 117, .y = 45 },
-            .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_line_aether_bar", 0) } },
+            .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_line_spirit_bar", 0) } },
             .text_data = .{
                 .text = "",
                 .size = 12,
@@ -65,14 +65,14 @@ const CharacterBox = struct {
             },
         });
 
-        const aether_goal = game_data.spiritGoal(char.aether);
-        const aether_perc = f32i(char.spirits_communed) / f32i(aether_goal);
-        aether_bar.base.scissor.max_x = aether_bar.texWRaw() * aether_perc;
-        aether_bar.text_data.setText(
-            try std.fmt.bufPrint(aether_bar.text_data.backing_buffer, "Aether {} - {}/{}", .{
+        const spirit_goal = game_data.spiritGoal(char.aether);
+        const spirit_perc = f32i(char.spirits_communed) / f32i(spirit_goal);
+        spirit_bar.base.scissor.max_x = spirit_bar.texWRaw() * spirit_perc;
+        spirit_bar.text_data.setText(
+            try std.fmt.bufPrint(spirit_bar.text_data.backing_buffer, "Aether {} - {}/{}", .{
                 char.aether,
                 char.spirits_communed,
-                aether_goal,
+                spirit_goal,
             }),
         );
 
@@ -97,7 +97,7 @@ const CharacterBox = struct {
                 .max_width = 229,
                 .max_height = 26,
             } }),
-            .aether_bar = aether_bar,
+            .spirit_bar = spirit_bar,
             .favorite_button = try base.createChild(Button, .{
                 .base = .{ .x = 0, .y = 16, .visible = !is_char_fav },
                 .image_data = .fromImageData(

@@ -1,0 +1,124 @@
+const std = @import("std");
+
+const shared = @import("shared");
+const game_data = shared.game_data;
+const network_data = shared.network_data;
+const utils = shared.utils;
+
+const Player = @import("../../game/Player.zig");
+const main = @import("../../main.zig");
+const Container = @import("../elements/Container.zig");
+const element = @import("../elements/element.zig");
+const PlayerMenu = @import("PlayerMenu.zig");
+
+pub const MenuType = enum {
+    none,
+    player,
+};
+pub const Menu = union(MenuType) {
+    none: void,
+    player: PlayerMenu,
+};
+pub const MenuParams = union(MenuType) {
+    none: void,
+    player: struct { x: f32, y: f32, player: Player },
+};
+
+pub var map: std.AutoHashMapUnmanaged(MenuType, *Menu) = .empty;
+pub var current: *Menu = undefined;
+
+pub fn init() !void {
+    defer {
+        const dummy_menu_ctx: std.hash_map.AutoContext(MenuType) = undefined;
+        if (map.capacity() > 0) map.rehash(dummy_menu_ctx);
+    }
+
+    inline for (@typeInfo(Menu).@"union".fields) |field| @"continue": {
+        var menu = try main.allocator.create(Menu);
+        if (field.type == void) {
+            menu.* = @unionInit(Menu, field.name, {});
+            try map.put(main.allocator, std.meta.stringToEnum(MenuType, field.name) orelse
+                std.debug.panic("No enum type with name {s} found in MenuType", .{field.name}), menu);
+            break :@"continue";
+        }
+        menu.* = @unionInit(Menu, field.name, .{});
+        var menu_inner = &@field(menu, field.name);
+        menu_inner.* = .{ .root = try element.create(Container, .{ .base = .{ .visible = false, .layer = .menu, .x = 0, .y = 0 } }) };
+        try menu_inner.init();
+        try map.put(main.allocator, std.meta.stringToEnum(MenuType, field.name) orelse
+            std.debug.panic("No enum type with name {s} found in MenuType", .{field.name}), menu);
+    }
+
+    current = map.get(.none).?;
+}
+
+pub fn deinit() void {
+    var iter = map.valueIterator();
+    while (iter.next()) |value| {
+        switch (value.*.*) {
+            .none => {},
+            inline else => |*menu| menu.deinit(),
+        }
+
+        main.allocator.destroy(value.*);
+    }
+
+    map.deinit(main.allocator);
+}
+
+fn fieldName(comptime T: type) []const u8 {
+    if (!@inComptime()) @compileError("This function is comptime only");
+    var field_name: []const u8 = "";
+    for (@typeInfo(Menu).@"union".fields) |field| {
+        if (field.type == T) field_name = field.name;
+    }
+    if (field_name.len <= 0) @compileError("No params found");
+    return field_name;
+}
+
+pub fn ParamsFor(comptime T: type) type {
+    return std.meta.TagPayloadByName(MenuParams, fieldName(T));
+}
+
+pub fn switchMenu(comptime menu_type: MenuType, params: std.meta.TagPayload(MenuParams, menu_type)) void {
+    if (current.* == menu_type) return;
+
+    switch (current.*) {
+        .none => {},
+        inline else => |menu| menu.root.base.visible = false,
+    }
+
+    current = map.get(menu_type) orelse blk: {
+        std.log.err("Menu for {} was not found, using .none", .{menu_type});
+        break :blk map.get(.none) orelse @panic(".none was not a valid menu");
+    };
+
+    const T = std.meta.TagPayload(Menu, menu_type);
+    if (T == void) return;
+    var menu = &@field(current, fieldName(T));
+    menu.root.base.visible = true;
+    menu.update(params);
+}
+
+pub fn checkMenuValidity(x: f32, y: f32) void {
+    if (current.* == .none) return;
+
+    switch (current.*) {
+        .none => unreachable,
+        inline else => |menu| {
+            if (!utils.isInBounds(x, y, menu.root.base.x, menu.root.base.y, menu.root.width(), menu.root.height()))
+                cancelMenu();
+        },
+    }
+}
+
+pub fn cancelMenu() void {
+    if (current.* == .none) return;
+
+    switch (current.*) {
+        .none => unreachable,
+        inline else => |menu| menu.root.base.visible = false,
+    }
+
+    current = map.get(.none) orelse unreachable;
+}

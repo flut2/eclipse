@@ -398,10 +398,10 @@ pub fn init(self: *GameScreen) !void {
         },
     });
 
-    const xp_bar_data = assets.getUiData("player_xp_bar", 0);
+    const spirit_bar_data = assets.getUiData("player_spirit_bar", 0);
     self.spirit_bar = try element.create(Bar, .{
         .base = .{ .x = self.bars_decor.base.x + 114, .y = self.bars_decor.base.y + 22 },
-        .image_data = .{ .normal = .{ .atlas_data = xp_bar_data } },
+        .image_data = .{ .normal = .{ .atlas_data = spirit_bar_data } },
         .text_data = .{
             .text = "",
             .size = 10,

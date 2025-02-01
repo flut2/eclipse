@@ -9,6 +9,7 @@ const map_data = shared.map_data;
 const f32i = utils.f32i;
 
 const assets = @import("../assets.zig");
+const Camera = @import("../Camera.zig");
 const Container = @import("../game/Container.zig");
 const Enemy = @import("../game/Enemy.zig");
 const Entity = @import("../game/Entity.zig");
@@ -18,8 +19,10 @@ const Portal = @import("../game/Portal.zig");
 const Square = @import("../game/Square.zig");
 const input = @import("../input.zig");
 const main = @import("../main.zig");
+const CameraData = @import("../render/CameraData.zig");
 const dialog = @import("dialogs/dialog.zig");
 const element = @import("elements/element.zig");
+const menu = @import("menus/menu.zig");
 const AccountLoginScreen = @import("screens/AccountLoginScreen.zig");
 const AccountRegisterScreen = @import("screens/AccountRegisterScreen.zig");
 const CharCreateScreen = @import("screens/CharCreateScreen.zig");
@@ -78,6 +81,7 @@ pub fn init() !void {
 
     try tooltip.init();
     try dialog.init();
+    try menu.init();
 }
 
 pub fn deinit() void {
@@ -86,6 +90,7 @@ pub fn deinit() void {
 
     tooltip.deinit();
     dialog.deinit();
+    menu.deinit();
 
     switch (screen) {
         .game, .editor => {},
@@ -271,7 +276,7 @@ pub fn mouseMove(x: f32, y: f32) bool {
     return false;
 }
 
-pub fn mousePress(x: f32, y: f32, mods: glfw.Mods) bool {
+pub fn mousePress(x: f32, y: f32, button: glfw.MouseButton, mods: glfw.Mods) bool {
     ui_lock.lock();
     defer ui_lock.unlock();
 
@@ -280,6 +285,35 @@ pub fn mousePress(x: f32, y: f32, mods: glfw.Mods) bool {
         inline else => |inner_elem| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))
             return true,
     };
+
+    checkMenu: {
+        if (button != .right) {
+            menu.checkMenuValidity(x, y);
+            break :checkMenu;
+        }
+
+        map.object_lock.lock();
+        defer map.object_lock.unlock();
+        main.camera.lock.lock();
+        var cam_data: CameraData = undefined;
+        inline for (@typeInfo(CameraData).@"struct".fields) |field| @field(cam_data, field.name) = @field(main.camera, field.name);
+        main.camera.lock.unlock();
+        const cam_scale = Camera.size_mult * cam_data.scale;
+        for (map.listForType(Player).items) |player| {
+            if (player.map_id == map.info.player_map_id) continue;
+            const size = cam_scale * player.size_mult;
+            const pos = cam_data.worldToScreen(player.x, player.y);
+            const w = player.atlas_data.texWRaw() * size;
+            const h = player.atlas_data.texHRaw() * size;
+            const tl_x = pos.x - w / 2.0;
+            const tl_y = pos.y - h;
+            if (!utils.isInBounds(x, y, tl_x, tl_y, w, h)) continue;
+            menu.switchMenu(.player, .{ .x = x, .y = y, .player = player });
+            break :checkMenu;
+        }
+
+        menu.checkMenuValidity(x, y);
+    }
 
     return false;
 }

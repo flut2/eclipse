@@ -43,7 +43,7 @@ pub fn init() !void {
         if (field.type == void) {
             dialog.* = @unionInit(Dialog, field.name, {});
             try map.put(main.allocator, std.meta.stringToEnum(DialogType, field.name) orelse
-                std.debug.panic("No enum type with name {s} found on DialogType", .{field.name}), dialog);
+                std.debug.panic("No enum type with name {s} found in DialogType", .{field.name}), dialog);
             break :@"continue";
         }
         dialog.* = @unionInit(Dialog, field.name, .{});
@@ -51,7 +51,7 @@ pub fn init() !void {
         dialog_inner.* = .{ .root = try element.create(Container, .{ .base = .{ .visible = false, .layer = .dialog, .x = 0, .y = 0 } }) };
         try dialog_inner.init();
         try map.put(main.allocator, std.meta.stringToEnum(DialogType, field.name) orelse
-            std.debug.panic("No enum type with name {s} found on DialogType", .{field.name}), dialog);
+            std.debug.panic("No enum type with name {s} found in DialogType", .{field.name}), dialog);
     }
 
     current = map.get(.none).?;

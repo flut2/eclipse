@@ -13,6 +13,7 @@ const Input = @import("ui/elements/Input.zig");
 const KeyMapper = @import("ui/elements/KeyMapper.zig");
 const GameScreen = @import("ui/screens/GameScreen.zig");
 const ui_systems = @import("ui/systems.zig");
+const menu = @import("ui/menus/menu.zig");
 
 const press_mappings = .{
     .{ &main.settings.move_up, handleMoveUpPress, true },
@@ -320,6 +321,7 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
     }
 
     updateMove();
+    menu.cancelMenu();
 }
 
 pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
@@ -346,7 +348,7 @@ pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.A
             selected_key_mapper = null;
         }
 
-        if (!ui_systems.mousePress(mouse_x, mouse_y, mods)) {
+        if (!ui_systems.mousePress(mouse_x, mouse_y, button, mods)) {
             const is_editor = ui_systems.screen == .editor;
             if ((ui_systems.screen == .game or is_editor) and !disable_input)
                 inline for (press_mappings) |mapping| if (mapping[0].* == .mouse and mapping[0].mouse == button) mapping[1]();

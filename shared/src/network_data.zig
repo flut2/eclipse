@@ -79,7 +79,7 @@ pub const PlayerStat = union(enum) {
     cards: []const u16,
     resources: []const DataIdWithCount(u32),
     talents: []const DataIdWithCount(u16),
-    in_combat: bool,
+    rank: Rank,
     aether: u8,
     spirits_communed: u32,
     gold: u32,

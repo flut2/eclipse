@@ -811,7 +811,7 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         .cards => |val| player.cards = val,
         .resources => |val| player.resources = val,
         .talents => |val| player.talents = val,
-        .in_combat => |val| player.in_combat = val,
+        .rank => |val| player.rank = val,
         .aether => |val| player.aether = val,
         .spirits_communed => |val| player.spirits_communed = val,
         .damage_mult => |val| player.damage_mult = val,

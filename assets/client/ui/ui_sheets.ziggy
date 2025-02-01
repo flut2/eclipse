@@ -236,6 +236,34 @@
     .path = "minimap.png",
 },
 {
+    .name = "teleport_icon",
+    .path = "teleport_icon.png",
+},
+{
+    .name = "block_icon",
+    .path = "block_icon.png",
+},
+{
+    .name = "celestial_player_menu",
+    .path = "menu/celestial_player_menu.png",
+},
+{
+    .name = "player_menu",
+    .path = "menu/player_menu.png",
+},
+{
+    .name = "player_menu_spirit_bar",
+    .path = "menu/player_menu_spirit_bar.png",
+},
+{
+    .name = "player_menu_health_bar",
+    .path = "menu/player_menu_health_bar.png",
+},
+{
+    .name = "player_menu_mana_bar",
+    .path = "menu/player_menu_mana_bar.png",
+},
+{
     .name = "player_inventory",
     .path = "item/player_inventory.png",
 },
@@ -252,12 +280,8 @@
     .path = "player_abilities_bars.png",
 },
 {
-    .name = "player_xp_bar",
-    .path = "player_xp_bar.png",
-},
-{
-    .name = "player_xp_decor",
-    .path = "player_xp_decor.png",
+    .name = "player_spirit_bar",
+    .path = "player_spirit_bar.png",
 },
 {
     .name = "dark_background",
@@ -384,12 +408,12 @@
     .path = "character_select/character_list_background.png",
 },
 {
-    .name = "character_line_aether_bar",
-    .path = "character_select/character_line_aether_bar.png",
+    .name = "character_line_spirit_bar",
+    .path = "character_select/character_line_spirit_bar.png",
 },
 {
-    .name = "character_tooltip_aether_bar",
-    .path = "character_select/character_tooltip_aether_bar.png",
+    .name = "character_tooltip_spirit_bar",
+    .path = "character_select/character_tooltip_spirit_bar.png",
 },
 {
     .name = "character_tooltip_talent_bar_1",
@@ -410,6 +434,12 @@
 {
     .name = "tooltip_line_spacer_bottom_locked",
     .path = "elements/tooltip_line_spacer_bottom_locked.png",
+},
+{
+    .name = "player_menu_buttons",
+    .path = "menu/player_menu_buttons.png",
+    .w = 114,
+    .h = 34,
 },
 {
     .name = "celestial_character_line",

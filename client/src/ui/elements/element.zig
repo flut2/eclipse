@@ -59,6 +59,7 @@ pub const ElementBase = struct {
 pub const Layer = enum {
     default,
     dialog,
+    menu,
     tooltip,
 };
 

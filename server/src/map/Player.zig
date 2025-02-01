@@ -538,23 +538,33 @@ pub fn exportStats(
 
     stat_util.write(T, writer, cache, .{ .name = self.name });
     stat_util.write(T, writer, cache, .{ .aether = self.aether });
+    stat_util.write(T, writer, cache, .{ .spirits_communed = self.spirits_communed });
     stat_util.write(T, writer, cache, .{ .max_hp = self.stats[health_stat] });
     stat_util.write(T, writer, cache, .{ .max_hp_bonus = self.stat_boosts[health_stat] });
     stat_util.write(T, writer, cache, .{ .hp = self.hp });
     stat_util.write(T, writer, cache, .{ .max_mp = self.stats[mana_stat] });
     stat_util.write(T, writer, cache, .{ .max_mp_bonus = self.stat_boosts[mana_stat] });
     stat_util.write(T, writer, cache, .{ .mp = self.mp });
-    stat_util.write(T, writer, cache, .{ .gold = self.gold });
-    stat_util.write(T, writer, cache, .{ .gems = self.gems });
     stat_util.write(T, writer, cache, .{ .condition = self.condition });
     stat_util.write(T, writer, cache, .{ .ability_state = self.ability_state });
-    stat_util.write(T, writer, cache, .{ .cards = self.cards });
-    stat_util.write(T, writer, cache, .{ .resources = self.resources.items });
-    stat_util.write(T, writer, cache, .{ .talents = self.talents.items });
+    stat_util.write(T, writer, cache, .{ .muted_until = self.muted_until });
+    stat_util.write(T, writer, cache, .{ .rank = self.rank });
+
+    inline for (0..4) |i| {
+        const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
+            @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_0) + @as(u8, i));
+        stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_tag), self.inventory[i]));
+        const inv_data_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
+            @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_data_0) + @as(u8, i));
+        stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_data_tag), self.inv_data[i]));
+    }
 
     if (is_self) {
-        stat_util.write(T, writer, cache, .{ .spirits_communed = self.spirits_communed });
-        stat_util.write(T, writer, cache, .{ .muted_until = self.muted_until });
+        stat_util.write(T, writer, cache, .{ .gold = self.gold });
+        stat_util.write(T, writer, cache, .{ .gems = self.gems });
+        stat_util.write(T, writer, cache, .{ .cards = self.cards });
+        stat_util.write(T, writer, cache, .{ .resources = self.resources.items });
+        stat_util.write(T, writer, cache, .{ .talents = self.talents.items });
 
         stat_util.write(T, writer, cache, .{ .strength = @intCast(self.stats[strength_stat]) });
         stat_util.write(T, writer, cache, .{ .wit = @intCast(self.stats[wit_stat]) });
@@ -574,7 +584,7 @@ pub fn exportStats(
         stat_util.write(T, writer, cache, .{ .intelligence_bonus = @intCast(self.stat_boosts[intelligence_stat]) });
         stat_util.write(T, writer, cache, .{ .haste_bonus = @intCast(self.stat_boosts[haste_stat]) });
 
-        inline for (0..self.inventory.len) |i| {
+        inline for (4..self.inventory.len) |i| {
             const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
                 @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_0) + @as(u8, i));
             stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_tag), self.inventory[i]));

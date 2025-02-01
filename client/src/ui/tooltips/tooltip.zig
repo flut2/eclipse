@@ -56,7 +56,7 @@ pub fn init() !void {
         if (field.type == void) {
             tooltip.* = @unionInit(Tooltip, field.name, {});
             try map.put(main.allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
-                std.debug.panic("No enum type with name {s} found on TooltipType", .{field.name}), tooltip);
+                std.debug.panic("No enum type with name {s} found in TooltipType", .{field.name}), tooltip);
             break :@"continue";
         }
         tooltip.* = @unionInit(Tooltip, field.name, .{});
@@ -64,7 +64,7 @@ pub fn init() !void {
         tooltip_inner.* = .{ .root = try element.create(Container, .{ .base = .{ .visible = false, .layer = .tooltip, .x = 0, .y = 0 } }) };
         try tooltip_inner.init();
         try map.put(main.allocator, std.meta.stringToEnum(TooltipType, field.name) orelse
-            std.debug.panic("No enum type with name {s} found on TooltipType", .{field.name}), tooltip);
+            std.debug.panic("No enum type with name {s} found in TooltipType", .{field.name}), tooltip);
     }
 
     current = map.get(.none).?;

@@ -20,7 +20,7 @@ root: *Container = undefined,
 
 decor: *Image = undefined,
 char_icon: *Image = undefined,
-aether_bar: *Bar = undefined,
+spirit_bar: *Bar = undefined,
 items: [4]*Item = undefined,
 keystone_talents: *Bar = undefined,
 ability_talents: *Bar = undefined,
@@ -44,9 +44,9 @@ pub fn init(self: *CharacterTooltip) !void {
         .image_data = .{ .normal = .{ .atlas_data = assets.error_data, .scale_x = 4.0, .scale_y = 4.0, .glow = true } },
     });
 
-    self.aether_bar = try self.root.createChild(Bar, .{
+    self.spirit_bar = try self.root.createChild(Bar, .{
         .base = .{ .x = 15, .y = 15 },
-        .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_tooltip_aether_bar", 0) } },
+        .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_tooltip_spirit_bar", 0) } },
         .text_data = .{
             .text = "Aether 0 - 0/0",
             .size = 10,
@@ -207,9 +207,9 @@ pub fn update(self: *CharacterTooltip, params: tooltip.ParamsFor(CharacterToolti
 
     const aether_goal = game_data.spiritGoal(params.data.aether);
     const aether_perc = f32i(params.data.spirits_communed) / f32i(aether_goal);
-    self.aether_bar.base.scissor.max_x = self.aether_bar.texWRaw() * aether_perc;
-    self.aether_bar.text_data.setText(
-        std.fmt.bufPrint(self.aether_bar.text_data.backing_buffer, "Aether {} - {}/{}", .{
+    self.spirit_bar.base.scissor.max_x = self.spirit_bar.texWRaw() * aether_perc;
+    self.spirit_bar.text_data.setText(
+        std.fmt.bufPrint(self.spirit_bar.text_data.backing_buffer, "Aether {} - {}/{}", .{
             params.data.aether,
             params.data.spirits_communed,
             aether_goal,

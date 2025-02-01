@@ -107,6 +107,7 @@ status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
 direction: assets.Direction = .right,
 last_ability_use: [4]i64 = @splat(std.math.minInt(i31)),
 ability_state: network_data.AbilityState = .{},
+rank: network_data.Rank = .default,
 
 pub fn addToMap(player_data: Player) void {
     var self = player_data;
