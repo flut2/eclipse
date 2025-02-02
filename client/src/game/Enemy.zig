@@ -13,6 +13,7 @@ const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
 const CameraData = @import("../render/CameraData.zig");
 const element = @import("../ui/elements/element.zig");
+const SpeechBalloon = @import("../ui/game/SpeechBalloon.zig");
 const StatusText = @import("../ui/game/StatusText.zig");
 const ui_systems = @import("../ui/systems.zig");
 const base = @import("object_base.zig");
@@ -49,6 +50,7 @@ direction: assets.Direction = .right,
 anim_idx: u8 = 0,
 facing: f32 = std.math.nan(f32),
 status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
+speech_balloon: ?SpeechBalloon = null,
 next_anim: i64 = -1,
 
 pub fn addToMap(enemy_data: Enemy) void {
@@ -59,6 +61,7 @@ pub fn deinit(self: *Enemy) void {
     base.deinit(self);
     for (self.status_texts.items) |*text| text.deinit();
     self.status_texts.deinit(main.allocator);
+    if (self.speech_balloon) |*balloon| balloon.deinit();
 }
 
 pub fn draw(self: *Enemy, cam_data: CameraData, float_time_ms: f32) void {
@@ -163,6 +166,14 @@ pub fn draw(self: *Enemy, cam_data: CameraData, float_time_ms: f32) void {
     }
 
     base.drawStatusTexts(
+        self,
+        i64f(float_time_ms) * std.time.us_per_ms,
+        screen_pos.x - x_offset,
+        screen_pos.y,
+        cam_data.scale,
+    );
+
+    base.drawSpeechBalloon(
         self,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,

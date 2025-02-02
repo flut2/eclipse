@@ -18,6 +18,7 @@ const input = @import("../input.zig");
 const main = @import("../main.zig");
 const CameraData = @import("../render/CameraData.zig");
 const element = @import("../ui/elements/element.zig");
+const SpeechBalloon = @import("../ui/game/SpeechBalloon.zig");
 const StatusText = @import("../ui/game/StatusText.zig");
 const ui_systems = @import("../ui/systems.zig");
 const abilities = @import("abilities.zig");
@@ -104,6 +105,7 @@ x_dir: f32 = 0.0,
 y_dir: f32 = 0.0,
 facing: f32 = std.math.nan(f32),
 status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
+speech_balloon: ?SpeechBalloon = null,
 direction: assets.Direction = .right,
 last_ability_use: [4]i64 = @splat(std.math.minInt(i31)),
 ability_state: network_data.AbilityState = .{},
@@ -146,6 +148,7 @@ pub fn deinit(self: *Player) void {
     base.deinit(self);
     for (self.status_texts.items) |*text| text.deinit();
     self.status_texts.deinit(main.allocator);
+    if (self.speech_balloon) |*balloon| balloon.deinit();
     main.allocator.free(self.cards);
     main.allocator.free(self.resources);
     main.allocator.free(self.talents);
@@ -336,11 +339,13 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
+    var name_h: f32 = 0.0;
     if (self.name_text_data) |*data| {
+        name_h = data.height + 5;
         data.sort_extra = -data.height;
         main.renderer.drawText(
             screen_pos.x - x_offset - data.width / 2 - assets.padding * 2,
-            screen_pos.y - data.height - 5,
+            screen_pos.y - name_h,
             cam_data.scale,
             data,
             .{},
@@ -445,7 +450,15 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         self,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
-        screen_pos.y,
+        screen_pos.y - name_h,
+        cam_data.scale,
+    );
+
+    base.drawSpeechBalloon(
+        self,
+        i64f(float_time_ms) * std.time.us_per_ms,
+        screen_pos.x - x_offset,
+        screen_pos.y - name_h,
         cam_data.scale,
     );
 }

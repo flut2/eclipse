@@ -207,3 +207,10 @@ pub fn drawStatusTexts(self: anytype, time: i64, x: f32, y: f32, scale: f32) voi
         _ = self.status_texts.orderedRemove(i);
     }
 }
+
+pub fn drawSpeechBalloon(self: anytype, time: i64, x: f32, y: f32, scale: f32) void {
+    if (self.speech_balloon) |*balloon| if (!balloon.draw(time, x, y, scale)) {
+        balloon.deinit();
+        self.speech_balloon = null;
+    };
+}

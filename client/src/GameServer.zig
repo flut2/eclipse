@@ -613,11 +613,21 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
 
     if (data.map_id != std.math.maxInt(u32)) {
         switch (data.obj_type) {
-            inline else => |inner| {
+            inline .player, .enemy => |inner| {
                 map.object_lock.lock();
                 defer map.object_lock.unlock();
-                if (map.findObject(ObjEnumToType(inner), data.map_id, .con) == null) return;
+                if (map.findObject(ObjEnumToType(inner), data.map_id, .ref)) |obj| {
+                    if (obj.speech_balloon) |*balloon| balloon.deinit();
+                    obj.speech_balloon = .create(
+                        main.current_time,
+                        5.0 * std.time.us_per_s,
+                        main.allocator.dupe(u8, data.text) catch main.oomPanic(),
+                        data.obj_type == .enemy,
+                    );
+                }
+                    
             },
+            else => std.log.err("Unsupported object type for Text: {}", .{data.obj_type}),
         }
     }
 }
