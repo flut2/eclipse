@@ -2,7 +2,7 @@
 {
     .id = 65534,
     .name = "Map Editor Region Placeholder",
-    .textures = [{"misc_big": 70}],
+    .textures = [{"misc_big": 11}],
     .show_name = true,
 },
 {
@@ -283,6 +283,21 @@
         { .time = 0.4, .texture = {"props_large": 19} },
         { .time = 0.4, .texture = {"props_large": 20} },
         { .time = 0.4, .texture = {"props_large": 21} },
+    ],
+},
+{
+    .id = 37,
+    .name = "Retrieve Teleporter",
+    .textures = [{"props_large": 22}],
+    .size_mult = 1.6, 
+    .static = true,
+    .occupy_square = true,
+     .animations = [
+        { .time = 0.666, .texture = {"props_large": 22} },
+        { .time = 0.666, .texture = {"props_large": 23} },
+        { .time = 0.666, .texture = {"props_large": 24} },
+        { .time = 0.666, .texture = {"props_large": 25} },
+        { .time = 0.666, .texture = {"props_large": 26} },
     ],
 },
 ]
