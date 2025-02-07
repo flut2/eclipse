@@ -257,5 +257,35 @@
         .edges = [{ "ground": 88 }, { "ground": 89 }, { "ground": 90 }],
     },
     .blend_prio = 1,
-}
+},
+{
+    .id = 37,
+    .name = "Crown Cove Dirt",
+    .textures = [{ "ground": 107 }, { "ground": 108 ,}, { "ground": 109 }],
+    .blend_prio = 1,
+},
+{
+    .id = 38,
+    .name = "Crown Cove Grass Light",
+    .textures = [{ "ground": 110 }],
+    .blend_prio = 3,
+},
+{
+    .id = 39,
+    .name = "Crown Cove Grass Dark",
+    .textures = [{ "ground": 111 }],
+    .blend_prio = 2,
+},
+{
+    .id = 40,
+    .name = "Crown Cove Sand",
+    .textures = [{ "ground": 112 }],
+    .blend_prio = 4,
+},
+{
+    .id = 41,
+    .name = "Crown Cove Sand Wet",
+    .textures = [{ "ground": 113 }],
+    .blend_prio = 5,
+},
 ]
