@@ -7,13 +7,13 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
+const RGBA = utils.RGBA;
 const zaudio = @import("zaudio");
 const ziggy = @import("ziggy");
 const zstbi = @import("zstbi");
 
 const main = @import("main.zig");
 const Settings = @import("Settings.zig");
-const RGBA = utils.RGBA;
 
 // for packing
 const Position = struct { x: u16, y: u16 };
@@ -85,7 +85,7 @@ const InternalFontData = struct {
         underline_thickness: f32,
     },
     glyphs: []GlyphData,
-    kerning: []struct {},
+    kerning: []struct { dummy: f32 },
 };
 
 const ParsedFontData = struct {

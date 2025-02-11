@@ -1767,7 +1767,7 @@ fn fill(self: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
     stack.append(main.allocator, .{ .x1 = x, .x2 = x, .y = y - 1, .dy = -1 }) catch main.oomPanic();
 
     while (stack.items.len > 0) {
-        const pop = stack.pop();
+        const pop = stack.pop().?;
         var px = pop.x1;
 
         if (inside(self, places.items, px, pop.y, layer, current_id)) {
