@@ -61,7 +61,7 @@ pub fn mouseMove(self: *Input, x: f32, y: f32, _: f32, _: f32) bool {
 }
 
 pub fn init(self: *Input) void {
-    if (self.text_data.scissor == element.ScissorRect{})
+    if (self.text_data.scissor.isDefault())
         self.text_data.scissor = .{
             .min_x = 0,
             .min_y = 0,

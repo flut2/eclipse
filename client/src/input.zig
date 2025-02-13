@@ -156,13 +156,13 @@ fn handleInteract() void {
 
 fn handleChat() void {
     selected_input_field = ui_systems.screen.game.chat_input;
-    selected_input_field.?.last_input = 0;
+    ui_systems.screen.game.chat_input.last_input = 0;
 }
 
 fn handleChatCmd() void {
     charEvent(main.window, @intFromEnum(glfw.Key.slash));
     selected_input_field = ui_systems.screen.game.chat_input;
-    selected_input_field.?.last_input = 0;
+    ui_systems.screen.game.chat_input.last_input = 0;
 }
 
 fn handleTogglePerfStats() void {

@@ -1110,7 +1110,7 @@ fn parseFontData(comptime path: []const u8) !ParsedFontData {
 
 pub fn playSfx(name: []const u8) void {
     if (main.settings.sfx_volume <= 0.0) return;
-    const state = audio_state orelse blk: {
+    if (audio_state == null) {
         audio_state = AudioState.create() catch {
             main.audioFailure();
             return;
@@ -1126,9 +1126,7 @@ pub fn playSfx(name: []const u8) void {
             main_music.?.setVolume(main.settings.music_volume);
             if (main.settings.music_volume > 0.0) main_music.?.start() catch main.audioFailure();
         }
-
-        break :blk audio_state.?;
-    };
+    }
 
     if (sfx_map.get(name)) |audio| {
         if (!audio.isPlaying()) {
@@ -1149,7 +1147,7 @@ pub fn playSfx(name: []const u8) void {
             }
         }
 
-        var new_copy_audio = state.engine.createSoundCopy(audio, .{}, null) catch return;
+        var new_copy_audio = audio_state.?.engine.createSoundCopy(audio, .{}, null) catch return;
         new_copy_audio.setVolume(main.settings.sfx_volume);
         new_copy_audio.start() catch return;
         audio_copies.?.append(arena.allocator(), new_copy_audio) catch return;
@@ -1160,7 +1158,7 @@ pub fn playSfx(name: []const u8) void {
     const path = std.fmt.bufPrintZ(&sfx_path_buffer, "./assets/sfx/{s}", .{name}) catch return;
 
     if (std.fs.cwd().access(path, .{})) |_| {
-        var audio = state.engine.createSoundFromFile(path, .{}) catch return;
+        var audio = audio_state.?.engine.createSoundFromFile(path, .{}) catch return;
         audio.setVolume(main.settings.sfx_volume);
         audio.start() catch return;
 
@@ -1233,21 +1231,18 @@ pub fn init() !void {
     medium_data = try parseFontData("./assets/fonts/amaranth_regular.ziggy");
     medium_italic_data = try parseFontData("./assets/fonts/amaranth_italic.ziggy");
 
-    initAudio: {
-        audio_state = AudioState.create() catch {
-            main.audioFailure();
-            break :initAudio;
-        };
-        audio_state.?.engine.start() catch {
-            main.audioFailure();
-            break :initAudio;
-        };
+    audio_state = AudioState.create() catch blk: {
+        main.audioFailure();
+        break :blk null;
+    };
+    if (audio_state) |state| {
+        state.engine.start() catch main.audioFailure();
 
-        initMusic: {
-            main_music = audio_state.?.engine.createSoundFromFile("./assets/music/main_menu.mp3", .{}) catch break :initMusic;
-            main_music.?.setLooping(true);
-            main_music.?.setVolume(main.settings.music_volume);
-            if (main.settings.music_volume > 0.0) main_music.?.start() catch main.audioFailure();
+        main_music = state.engine.createSoundFromFile("./assets/music/main_menu.mp3", .{}) catch null;
+        if (main_music) |music| {
+            music.setLooping(true);
+            music.setVolume(main.settings.music_volume);
+            if (main.settings.music_volume > 0.0) music.start() catch main.audioFailure();
         }
     }
 

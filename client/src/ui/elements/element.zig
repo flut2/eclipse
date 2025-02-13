@@ -616,7 +616,7 @@ pub const ImageData = union(enum) {
     normal: NormalImageData,
 
     pub fn draw(self: ImageData, x: f32, y: f32, scissor_override: ScissorRect) void {
-        const scissor = if (scissor_override == ScissorRect{}) null else scissor_override;
+        const scissor = if (scissor_override.isDefault()) null else scissor_override;
         switch (self) {
             .nine_slice => |nine_slice| nine_slice.draw(x, y, scissor),
             .normal => |normal| normal.draw(x, y, scissor),
@@ -753,13 +753,20 @@ pub const InteractableImageData = struct {
 };
 
 // Scissor positions are relative to the element it's attached to
-pub const ScissorRect = packed struct {
+pub const ScissorRect = struct {
     pub const dont_scissor = -1.0;
 
     min_x: f32 = dont_scissor,
     max_x: f32 = dont_scissor,
     min_y: f32 = dont_scissor,
     max_y: f32 = dont_scissor,
+
+    pub fn isDefault(self: ScissorRect) bool {
+        return !(self.min_x != dont_scissor or
+            self.max_x != dont_scissor or
+            self.min_y != dont_scissor or
+            self.max_y != dont_scissor);
+    }
 };
 
 pub fn create(comptime T: type, data: T) !*@TypeOf(data) {

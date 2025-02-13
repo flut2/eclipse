@@ -56,7 +56,7 @@ pub fn init(self: *AbilityTooltip) !void {
 
     const tooltip_line_spacer_data = assets.getUiData("tooltip_line_spacer_top", 0);
     self.line_break = try self.root.createChild(Image, .{
-        .base = .{ .x = 20, .y = self.image.base.y + self.image.height() + 15 },
+        .base = .{ .x = 20, .y = self.image.base.y + 15 },
         .image_data = .{
             .nine_slice = .fromAtlasData(tooltip_line_spacer_data, self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0),
         },

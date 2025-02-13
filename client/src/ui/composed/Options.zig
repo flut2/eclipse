@@ -39,6 +39,7 @@ defaults_button: *Button = undefined,
 
 pub fn create() !*Options {
     var options = try main.allocator.create(Options);
+    options.* = .{};
 
     options.main_container = try element.create(Container, .{ .base = .{
         .x = 0,

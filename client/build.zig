@@ -37,8 +37,8 @@ pub fn buildWithoutDupes(
             .target = target,
             .optimize = optimize,
             .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
-            // .use_lld = !check and optimize != .Debug,
-            // .use_llvm = !check and optimize != .Debug,
+            .use_lld = !check and optimize != .Debug,
+            .use_llvm = !check and optimize != .Debug,
         });
 
         if (check) check_step.dependOn(&exe.step);
