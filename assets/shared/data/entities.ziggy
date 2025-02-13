@@ -300,4 +300,49 @@
         { .time = 0.666, .texture = {"props_large": 26} },
     ],
 },
+{
+    .id = 38,
+    .name = "Palm Trees",
+    .textures = [{"props_big":14}, {"props_big":15}, {"props_big":51}, {"props_big":52}],
+},
+{
+    .id = 39,
+    .name = "Crown Cove Campfire",
+    .textures = [{"props_big":53}],
+    .light = {
+        .color = "0xD12D00",
+        .intensity = 0.075,
+        .radius = 1.5,
+    },
+    .animations = [
+        { .time = 0.4, .texture = {"props_big": 53} },
+        { .time = 0.4, .texture = {"props_big": 54} },
+        { .time = 0.4, .texture = {"props_big": 55} },
+    ],
+},
+{
+    .id = 40,
+    .name = "Crown Cove Torch",
+    .textures = [{"props_big":19}],
+    .light = {
+        .color = "0xD12D00",
+        .intensity = 0.075,
+        .radius = 3.0,
+    },
+    .animations = [
+        { .time = 0.4, .texture = {"props_big": 19} },
+        { .time = 0.4, .texture = {"props_big": 20} },
+        { .time = 0.4, .texture = {"props_big": 21} },
+    ],
+},
+{
+    .id = 41,
+    .name = "Crown Cove Tall Grass",
+    .textures = [{"props_big":56}, {"props_big":57}, {"props_big":58}],
+},
+{
+    .id = 42,
+    .name = "Crown Cove Short Grass",
+    .textures = [{"props":224}, {"props":225}, {"props":226}, {"props":227}],
+},
 ]
