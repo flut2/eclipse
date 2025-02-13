@@ -565,7 +565,7 @@ pub fn check(
         .doc_node = doc_root_val,
     });
 
-    while (stack.popOrNull()) |elem| {
+    while (stack.pop()) |elem| {
         const rule = rules.nodes[elem.rule.node];
         const doc_node = doc.nodes[elem.doc_node];
         {

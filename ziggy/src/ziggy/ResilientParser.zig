@@ -1,3 +1,16 @@
+const std = @import("std");
+const mem = std.mem;
+const assert = std.debug.assert;
+
+const ziggy = @import("../root.zig");
+const Rule = ziggy.schema.Schema.Rule;
+const Diagnostic = @import("Diagnostic.zig");
+const RecoverAst = @import("RecoverAst.zig");
+const Suggestion = RecoverAst.Suggestion;
+const Hover = RecoverAst.Hover;
+const Tokenizer = @import("Tokenizer.zig");
+const Token = Tokenizer.Token;
+
 const Parser = @This();
 
 gpa: std.mem.Allocator,
@@ -7,19 +20,7 @@ diagnostic: ?*Diagnostic,
 fuel: u32,
 events: std.ArrayListUnmanaged(Event) = .{},
 
-const std = @import("std");
-const mem = std.mem;
-const assert = std.debug.assert;
-const ziggy = @import("../root.zig");
-const Diagnostic = @import("Diagnostic.zig");
-const Tokenizer = @import("Tokenizer.zig");
-const Token = Tokenizer.Token;
-const Rule = ziggy.schema.Schema.Rule;
 const log = std.log.scoped(.resilient_parser);
-const RecoverAst = @import("RecoverAst.zig");
-const Suggestion = RecoverAst.Suggestion;
-const Hover = RecoverAst.Hover;
-
 pub const Tree = struct {
     tag: Tree.Tag,
     children: std.ArrayListUnmanaged(Child) = .{},
@@ -127,7 +128,7 @@ pub const Tree = struct {
             });
         }
 
-        while (stack.popOrNull()) |elem| {
+        while (stack.pop()) |elem| {
             const rule = rules.nodes[elem.rule.node];
             assert(elem.child == .tree);
             const tree = elem.child.tree;
@@ -1452,7 +1453,7 @@ fn close(p: *Parser, m: MarkOpened, tag: Tree.Tag) MarkClosed {
 }
 
 fn buildTree(p: *Parser) !Tree {
-    assert(p.events.pop() == .close);
+    assert(p.events.pop().? == .close);
     p.tokenizer.idx = 0;
     var stack = std.ArrayList(Tree).init(p.gpa);
     defer stack.deinit();
@@ -1461,10 +1462,10 @@ fn buildTree(p: *Parser) !Tree {
         switch (event) {
             .open => |tag| try stack.append(.{ .tag = tag }),
             .close => {
-                const tree = stack.pop();
-                if (stack.items.len == 0) {
-                    log.debug("tree\n{}\n", .{tree.fmt(p.code)});
-                }
+                const tree = stack.pop().?;
+                // if (stack.items.len == 0) {
+                //     log.debug("tree\n{}\n", .{tree.fmt(p.code)});
+                // }
                 try stack.items[stack.items.len - 1].children.append(
                     p.gpa,
                     .{ .tree = tree },
@@ -1479,7 +1480,7 @@ fn buildTree(p: *Parser) !Tree {
         }
     }
 
-    const tree = stack.pop();
+    const tree = stack.pop().?;
     assert(p.tokenizer.next(p.code).tag == .eof);
     if (stack.items.len != 0) {
         log.debug("unhandled stack item tree {}", .{tree.fmt(p.code)});
