@@ -345,4 +345,10 @@
     .name = "Crown Cove Short Grass",
     .textures = [{"props":224}, {"props":225}, {"props":226}, {"props":227}],
 },
+{
+    .id = 43,
+    .name = "Crown Cove Spears",
+    .textures = [{"props_big":59}, {"props_big":60}, {"props_big":61}, {"props_big":62}, {"props_big":63}, {"props_big":64}, {"props_big":65}, {"props_big":66}, {"props_big":67},
+    {"props_big":68}, {"props_big":69}, {"props_big":70}],
+},
 ]
