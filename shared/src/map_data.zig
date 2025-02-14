@@ -35,7 +35,7 @@ pub fn parseMap(data_reader: anytype, arena: *std.heap.ArenaAllocator) !Map {
         .h = try reader.readInt(u16, .little),
         .tiles = undefined,
     };
-    ret.tiles = try allocator.alloc(Tile, ret.w * ret.h);
+    ret.tiles = try allocator.alloc(Tile, @as(u32, ret.w) * @as(u32, ret.h));
 
     const tiles = try allocator.alloc(Tile, try reader.readInt(u16, .little));
     for (tiles) |*tile| {

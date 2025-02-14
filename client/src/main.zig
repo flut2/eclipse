@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 const build_options = @import("options");
 const glfw = @import("glfw");
 const gpu = @import("zgpu");
+const rpmalloc = @import("rpmalloc");
 const shared = @import("shared");
 const network_data = shared.network_data;
 const game_data = shared.game_data;
@@ -11,7 +12,6 @@ const utils = shared.utils;
 const uv = shared.uv;
 const f32i = utils.f32i;
 const u32f = utils.u32f;
-const rpmalloc = @import("rpmalloc");
 const vk = @import("vulkan");
 const zaudio = @import("zaudio");
 const ziggy = @import("ziggy");
@@ -148,14 +148,38 @@ pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_d
 pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_map: []u8) void {
     if (current_account == null) return;
 
-    // TODO: readd RLS when fixed
-    game_server.hello_data = network_data.C2SPacket{ .map_hello = .{
-        .build_ver = build_options.version,
-        .email = current_account.?.email,
-        .token = current_account.?.token,
-        .char_id = char_id,
-        .map = test_map,
-    } };
+    const fragment_size = 50000;
+    const fragments = test_map.len / 50000 + 1;
+    if (fragments == 1) {
+        // TODO: readd RLS when fixed
+        game_server.hello_data = network_data.C2SPacket{ .map_hello = .{
+            .build_ver = build_options.version,
+            .email = current_account.?.email,
+            .token = current_account.?.token,
+            .char_id = char_id,
+            .map_fragment = test_map,
+        } };
+    } else {
+        var fragment_list: std.ArrayListUnmanaged(network_data.C2SPacket) = .empty;
+        for (0..fragments) |i| {
+            const map_slice = test_map[fragment_size * i .. @min(test_map.len, fragment_size * (i + 1))];
+            if (i == fragments - 1) {
+                // TODO: readd RLS when fixed
+                game_server.hello_data = network_data.C2SPacket{ .map_hello = .{
+                    .build_ver = build_options.version,
+                    .email = current_account.?.email,
+                    .token = current_account.?.token,
+                    .char_id = char_id,
+                    .map_fragment = map_slice,
+                } };
+            } else fragment_list.append(allocator, .{ .map_hello_fragment = .{
+                .map_fragment = map_slice,
+            } }) catch oomPanic();
+        }
+        if (fragment_list.items.len > 0) {
+            game_server.map_hello_fragments = fragment_list.toOwnedSlice(allocator) catch oomPanic();
+        } else fragment_list.deinit(allocator);
+    }
 
     updateCharIdSort(char_id);
 

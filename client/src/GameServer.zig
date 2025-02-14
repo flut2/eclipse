@@ -57,6 +57,7 @@ const WriteRequest = extern struct {
 socket: *uv.uv_tcp_t = undefined,
 read_arena: std.heap.ArenaAllocator = undefined,
 hello_data: network_data.C2SPacket = undefined,
+map_hello_fragments: ?[]network_data.C2SPacket = null,
 initialized: bool = false,
 
 fn PacketData(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?) type {
@@ -220,6 +221,11 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
         ui_systems.switchScreen(.game);
     }
 
+    if (server.map_hello_fragments) |fragments| {
+        defer main.allocator.free(fragments);
+        for (fragments) |fragment| server.sendPacket(fragment);
+        server.map_hello_fragments = null;
+    }
     server.sendPacket(server.hello_data);
 }
 
@@ -625,7 +631,6 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
                         data.obj_type == .enemy,
                     );
                 }
-                    
             },
             else => std.log.err("Unsupported object type for Text: {}", .{data.obj_type}),
         }

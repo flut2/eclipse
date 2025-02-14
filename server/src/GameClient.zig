@@ -41,6 +41,7 @@ ip: []const u8 = "",
 acc_id: u32 = std.math.maxInt(u32),
 char_id: u32 = std.math.maxInt(u32),
 player_map_id: u32 = std.math.maxInt(u32),
+map_data_fragments: std.ArrayListUnmanaged(u8) = .empty,
 
 fn PacketData(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?) type {
     return @typeInfo(network_data.C2SPacket).@"union".fields[@intFromEnum(tag)].type;
@@ -64,6 +65,7 @@ fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?
         .ally_hit => handleAllyHit,
         .escape => handleEscape,
         .map_hello => handleMapHello,
+        .map_hello_fragment => handleMapHelloFragment,
         .use_ability => handleUseAbility,
         .select_card => handleSelectCard,
         .talent_upgrade => handleTalentUpgrade,
@@ -943,6 +945,10 @@ fn handleEscape(self: *Client, _: PacketData(.escape)) void {
     } });
 }
 
+fn handleMapHelloFragment(self: *Client, data: PacketData(.map_hello_fragment)) void {
+    self.map_data_fragments.appendSlice(main.allocator, data.map_fragment) catch main.oomPanic();
+}
+
 fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
     if (self.player_map_id != std.math.maxInt(u32)) {
         self.sendError(.message_with_disconnect, "Already connected");
@@ -999,7 +1005,10 @@ fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
         return;
     };
 
-    self.world = maps.testWorld(data.map) catch {
+    self.map_data_fragments.appendSlice(main.allocator, data.map_fragment) catch main.oomPanic();
+    defer self.map_data_fragments.clearAndFree(main.allocator);
+
+    self.world = maps.testWorld(self.map_data_fragments.items) catch {
         self.sendError(.message_with_disconnect, "Creating test map failed");
         return;
     };
@@ -1114,6 +1123,4 @@ fn handleSelectCard(self: *Client, data: PacketData(.select_card)) void {
     }
 }
 
-fn handleTalentUpgrade(_: *Client, _: PacketData(.talent_upgrade)) void {
-
-}
+fn handleTalentUpgrade(_: *Client, _: PacketData(.talent_upgrade)) void {}
