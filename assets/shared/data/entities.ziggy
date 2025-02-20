@@ -353,25 +353,5 @@
     {"props_big":68}, {"props_big":69}, {"props_big":70}],
     .occupy_square = true,
 },
-{
-    .id = 44,
-    .name = "Restored Shrine Animation Test",
-    .textures = [{"props_big":94}],
-    .animations = [
-        { .time = 0.6, .texture = {"props_big": 94} },
-        { .time = 0.6, .texture = {"props_big": 95} },
-        { .time = 0.6, .texture = {"props_big": 96} },
-        { .time = 0.6, .texture = {"props_big": 97} },
-        { .time = 0.6, .texture = {"props_big": 98} },
-        { .time = 0.6, .texture = {"props_big": 99} },
-        { .time = 0.6, .texture = {"props_big": 100} },
-        { .time = 0.6, .texture = {"props_big": 101} },
-        { .time = 0.6, .texture = {"props_big": 102} },
-        { .time = 0.6, .texture = {"props_big": 103} },
-        { .time = 0.6, .texture = {"props_big": 104} },
-        { .time = 0.6, .texture = {"props_big": 105} },
-        { .time = 0.6, .texture = {"props_big": 106} },
 
-    ],
-},
 ]
