@@ -247,4 +247,24 @@
     .hit_sound = "enemies/goblin_hit.mp3",
     .death_sound = "enemies/goblin_death.mp3",
 },
+{
+    .id = 14,
+    .name = "Health Wisp",
+    .textures = [{"low_realm": 27}],
+    .size_mult = 1.2,
+    .light = {
+        .color = "0xE54242",
+        .intensity = 0.12,
+    },
+},
+{
+    .id = 15,
+    .name = "Magic Wisp",
+    .textures = [{"low_realm": 28}],
+    .size_mult = 1.2,
+    .light = {
+        .color = "0x4C8AED",
+        .intensity = 0.12,
+    },
+},
 ]

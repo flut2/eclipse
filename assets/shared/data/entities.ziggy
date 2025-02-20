@@ -353,5 +353,20 @@
     {"props_big":68}, {"props_big":69}, {"props_big":70}],
     .occupy_square = true,
 },
-
+{
+    .id = 44,
+    .name = "Dormant Health Shrine",
+    .textures = [{"props_big": 81}],
+    .size_mult = 1.6,
+    .static = true,
+    .occupy_square = true,
+},
+{
+    .id = 45,
+    .name = "Dormant Magic Shrine",
+    .textures = [{"props_big": 94}],
+    .size_mult = 1.6,
+    .static = true,
+    .occupy_square = true,
+},
 ]
