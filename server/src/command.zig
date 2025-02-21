@@ -12,6 +12,7 @@ const Ally = @import("map/Ally.zig");
 const Container = @import("map/Container.zig");
 const Enemy = @import("map/Enemy.zig");
 const Entity = @import("map/Entity.zig");
+const maps = @import("map/maps.zig");
 const Player = @import("map/Player.zig");
 const Portal = @import("map/Portal.zig");
 
@@ -45,6 +46,8 @@ pub fn handle(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
 }
 
 fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
     var buf: [256]u8 = undefined;
     var name_stream = std.io.fixedBufferStream(&buf);
     const first_str = iter.next() orelse return;
@@ -76,7 +79,7 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
             else => @compileError("Invalid type"),
         }.from_name.get(written_name)) |data| {
             name = data.name;
-            for (0..count) |_| _ = player.world.add(ObjType, .{
+            for (0..count) |_| _ = world.add(ObjType, .{
                 .x = player.x,
                 .y = player.y,
                 .data_id = data.id,
@@ -136,11 +139,13 @@ fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
 }
 
 fn handleClearSpawn(_: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
     var count: usize = 0;
     inline for (.{ Entity, Enemy, Portal, Container }) |ObjType| {
-        for (player.world.listForType(ObjType).items) |*obj| {
+        for (world.listForType(ObjType).items) |*obj| {
             if (obj.spawned) {
-                player.world.remove(ObjType, obj) catch continue;
+                world.remove(ObjType, obj) catch continue;
                 count += 1;
             }
         }
@@ -322,27 +327,28 @@ fn handleSetGold(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) voi
         return;
     };
 
-    for (player.world.listForType(Player).items) |*other_player|
-        if (std.mem.eql(u8, other_player.name, player_name)) {
-            const old_gold = other_player.gold;
-            other_player.gold = amount;
+    if (maps.worlds.getPtr(player.world_id)) |world|
+        for (world.listForType(Player).items) |*other_player|
+            if (std.mem.eql(u8, other_player.name, player_name)) {
+                const old_gold = other_player.gold;
+                other_player.gold = amount;
 
-            if (std.mem.eql(u8, player.name, player_name))
-                player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've given yourself {} Gold", .{amount - old_gold}) catch return)
-            else {
-                other_player.client.sendMessage(std.fmt.bufPrint(
-                    &response_buf,
-                    "You've received {} Gold from \"{s}\"",
-                    .{ amount - old_gold, player.name },
-                ) catch return);
-                player.client.sendMessage(std.fmt.bufPrint(
-                    &response_buf,
-                    "You've given \"{s}\" {} Gold",
-                    .{ other_player.name, amount - old_gold },
-                ) catch return);
-            }
-            return;
-        };
+                if (std.mem.eql(u8, player.name, player_name))
+                    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've given yourself {} Gold", .{amount - old_gold}) catch return)
+                else {
+                    other_player.client.sendMessage(std.fmt.bufPrint(
+                        &response_buf,
+                        "You've received {} Gold from \"{s}\"",
+                        .{ amount - old_gold, player.name },
+                    ) catch return);
+                    player.client.sendMessage(std.fmt.bufPrint(
+                        &response_buf,
+                        "You've given \"{s}\" {} Gold",
+                        .{ other_player.name, amount - old_gold },
+                    ) catch return);
+                }
+                return;
+            };
 
     var names: db.Names = .{};
     defer names.deinit();
@@ -380,27 +386,28 @@ fn handleSetGems(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) voi
         return;
     };
 
-    for (player.world.listForType(Player).items) |*other_player|
-        if (std.mem.eql(u8, other_player.name, player_name)) {
-            const old_gems = other_player.gems;
-            other_player.gems = amount;
+    if (maps.worlds.getPtr(player.world_id)) |world|
+        for (world.listForType(Player).items) |*other_player|
+            if (std.mem.eql(u8, other_player.name, player_name)) {
+                const old_gems = other_player.gems;
+                other_player.gems = amount;
 
-            if (std.mem.eql(u8, player.name, player_name))
-                player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've given yourself {} Gems", .{amount - old_gems}) catch return)
-            else {
-                other_player.client.sendMessage(std.fmt.bufPrint(
-                    &response_buf,
-                    "You've received {} Gems from \"{s}\"",
-                    .{ amount - old_gems, player.name },
-                ) catch return);
-                player.client.sendMessage(std.fmt.bufPrint(
-                    &response_buf,
-                    "You've given \"{s}\" {} Gems",
-                    .{ other_player.name, amount - old_gems },
-                ) catch return);
-            }
-            return;
-        };
+                if (std.mem.eql(u8, player.name, player_name))
+                    player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've given yourself {} Gems", .{amount - old_gems}) catch return)
+                else {
+                    other_player.client.sendMessage(std.fmt.bufPrint(
+                        &response_buf,
+                        "You've received {} Gems from \"{s}\"",
+                        .{ amount - old_gems, player.name },
+                    ) catch return);
+                    player.client.sendMessage(std.fmt.bufPrint(
+                        &response_buf,
+                        "You've given \"{s}\" {} Gems",
+                        .{ other_player.name, amount - old_gems },
+                    ) catch return);
+                }
+                return;
+            };
 
     var names: db.Names = .{};
     defer names.deinit();
@@ -447,44 +454,45 @@ fn handleSetResource(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player)
         return;
     };
 
-    for (player.world.listForType(Player).items) |*other_player|
-        if (std.mem.eql(u8, other_player.name, player_name)) {
-            const old_resources = blk: {
-                for (player.resources.items) |*res| if (res.data_id == resource_data.id) break :blk res.count;
-                break :blk 0;
-            };
-
-            incrementResource: {
-                for (player.resources.items) |*res| if (res.data_id == resource_data.id) {
-                    res.count += amount;
-                    break :incrementResource;
+    if (maps.worlds.getPtr(player.world_id)) |world|
+        for (world.listForType(Player).items) |*other_player|
+            if (std.mem.eql(u8, other_player.name, player_name)) {
+                const old_resources = blk: {
+                    for (player.resources.items) |*res| if (res.data_id == resource_data.id) break :blk res.count;
+                    break :blk 0;
                 };
-                player.resources.append(main.allocator, .{
-                    .data_id = resource_data.id,
-                    .count = amount,
-                }) catch main.oomPanic();
-            }
 
-            if (std.mem.eql(u8, player.name, player_name))
-                player.client.sendMessage(std.fmt.bufPrint(
-                    &response_buf,
-                    "You've given yourself {}x {s}",
-                    .{ amount - old_resources, resource_data.name },
-                ) catch return)
-            else {
-                other_player.client.sendMessage(std.fmt.bufPrint(
-                    &response_buf,
-                    "You've received {}x {s} from \"{s}\"",
-                    .{ amount - old_resources, resource_data.name, player.name },
-                ) catch return);
-                player.client.sendMessage(std.fmt.bufPrint(
-                    &response_buf,
-                    "You've given \"{s}\" {}x {s}",
-                    .{ other_player.name, amount - old_resources, resource_data.name },
-                ) catch return);
-            }
-            return;
-        };
+                incrementResource: {
+                    for (player.resources.items) |*res| if (res.data_id == resource_data.id) {
+                        res.count += amount;
+                        break :incrementResource;
+                    };
+                    player.resources.append(main.allocator, .{
+                        .data_id = resource_data.id,
+                        .count = amount,
+                    }) catch main.oomPanic();
+                }
+
+                if (std.mem.eql(u8, player.name, player_name))
+                    player.client.sendMessage(std.fmt.bufPrint(
+                        &response_buf,
+                        "You've given yourself {}x {s}",
+                        .{ amount - old_resources, resource_data.name },
+                    ) catch return)
+                else {
+                    other_player.client.sendMessage(std.fmt.bufPrint(
+                        &response_buf,
+                        "You've received {}x {s} from \"{s}\"",
+                        .{ amount - old_resources, resource_data.name, player.name },
+                    ) catch return);
+                    player.client.sendMessage(std.fmt.bufPrint(
+                        &response_buf,
+                        "You've given \"{s}\" {}x {s}",
+                        .{ other_player.name, amount - old_resources, resource_data.name },
+                    ) catch return);
+                }
+                return;
+            };
 
     var names: db.Names = .{};
     defer names.deinit();
@@ -567,20 +575,21 @@ fn handleRank(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         return;
     }
 
-    for (player.world.listForType(Player).items) |other_player|
-        if (std.mem.eql(u8, other_player.name, player_name)) {
-            other_player.client.sendMessage(std.fmt.bufPrint(
-                &response_buf,
-                "You've received the {s} Rank from \"{s}\"",
-                .{ rank.printName(), player.name },
-            ) catch return);
-            player.client.sendMessage(std.fmt.bufPrint(
-                &response_buf,
-                "You've set \"{s}\"'s Rank to {s}",
-                .{ other_player.name, rank.printName() },
-            ) catch return);
-            return;
-        };
+    if (maps.worlds.getPtr(player.world_id)) |world|
+        for (world.listForType(Player).items) |other_player|
+            if (std.mem.eql(u8, other_player.name, player_name)) {
+                other_player.client.sendMessage(std.fmt.bufPrint(
+                    &response_buf,
+                    "You've received the {s} Rank from \"{s}\"",
+                    .{ rank.printName(), player.name },
+                ) catch return);
+                player.client.sendMessage(std.fmt.bufPrint(
+                    &response_buf,
+                    "You've set \"{s}\"'s Rank to {s}",
+                    .{ other_player.name, rank.printName() },
+                ) catch return);
+                return;
+            };
 
     var names: db.Names = .{};
     defer names.deinit();

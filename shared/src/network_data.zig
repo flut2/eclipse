@@ -59,11 +59,8 @@ pub const AbilityState = packed struct(u8) {
     heart_of_stone: bool = false,
     time_dilation: bool = false,
     time_lock: bool = false,
-    equivalent_exchange: bool = false,
-    asset_bubble: bool = false,
-    post_asset_bubble: bool = false,
-    premium_protection: bool = false,
-    compound_interest: bool = false,
+    bloodfont: bool = false,
+    _padding: u4 = 0,
 };
 
 pub const ItemData = packed struct(u32) {

@@ -144,7 +144,7 @@ pub fn add(self: *World, comptime T: type, data: T) !u32 {
     obj.map_id = next_map_id.*;
     next_map_id.* += 1;
 
-    obj.world = self;
+    obj.world_id = self.id;
 
     if (std.meta.hasFn(T, "init")) try obj.init();
     try self.listForType(T).append(main.allocator, obj);
@@ -213,12 +213,13 @@ pub fn moveToward(host: anytype, x: f32, y: f32, speed: f32, dt: i64) void {
 
 pub fn validatedMove(self: anytype, x: f32, y: f32) void {
     if (x < 0.0 or y < 0.0) return;
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
 
     const ux = u32f(x);
     const uy = u32f(y);
-    if (ux >= self.world.w or uy >= self.world.h) return;
+    if (ux >= world.w or uy >= world.h) return;
 
-    const tile = self.world.tiles[uy * self.world.w + ux];
+    const tile = world.tiles[uy * world.w + ux];
     if (tile.data_id != std.math.maxInt(u16) and !tile.data.no_walk and !tile.occupied) {
         self.x = x;
         self.y = y;
@@ -266,5 +267,4 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
             .color = opts.aoe_color,
         } });
     };
-        
 }

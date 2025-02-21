@@ -214,15 +214,13 @@ pub fn useAbility(self: *Player, index: comptime_int) void {
     const data = switch (hash(abil_data.name)) {
         hash("Terrain Expulsion") => abilities.handleTerrainExpulsion(self, &self.data.abilities[index].projectiles.?[0]),
         hash("Heart of Stone") => abilities.handleHeartOfStone(self),
+        hash("Boulder Buddies"), hash("Earthen Prison") => &.{},
         hash("Time Dilation") => abilities.handleTimeDilation(self),
         hash("Rewind") => abilities.handleRewind(),
         hash("Null Pulse") => abilities.handleNullPulse(self),
         hash("Time Lock") => abilities.handleTimeLock(self),
-        hash("Equivalent Exchange") => abilities.handleEquivalentExchange(self),
-        hash("Asset Bubble") => abilities.handleAssetBubble(self),
-        hash("Premium Protection") => abilities.handlePremiumProtection(self),
-        hash("Compound Interest") => abilities.handleCompoundInterest(self),
-        hash("Boulder Buddies"), hash("Placeholder") => &.{},
+        hash("Ethereal Harvest"), hash("Space Shift"), hash("Ravenous Hunger") => &.{},
+        hash("Bloodfont") => abilities.handleBloodfont(self),
         else => {
             std.log.err("Unhandled ability: {s}", .{abil_data.name});
             return;

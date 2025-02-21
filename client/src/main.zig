@@ -29,6 +29,9 @@ const dialog = @import("ui/dialogs/dialog.zig");
 const element = @import("ui/elements/element.zig");
 const ui_systems = @import("ui/systems.zig");
 
+/// Data must have pointer stability and must be deallocated manually, usually in the callback (for type information)
+pub const TimedCallback = struct { trigger_on: i64, callback: *const fn (*anyopaque) void, data: *anyopaque };
+
 const tracy = if (build_options.enable_tracy) @import("tracy") else {};
 const AccountData = struct {
     email: []const u8,
@@ -84,6 +87,7 @@ pub var settings: Settings = .{};
 pub var main_loop: *uv.uv_loop_t = undefined;
 pub var window: *glfw.Window = undefined;
 pub var renderer: Renderer = undefined;
+pub var callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty;
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
     const float_w = f32i(w);
@@ -306,6 +310,17 @@ fn gameTick(_: [*c]uv.uv_idle_t) callconv(.C) void {
 
     if (tick_frame or needs_map_bg) map.update(time, dt);
     ui_systems.update(time, dt) catch @panic("todo");
+
+    var callback_indices_to_remove: std.ArrayListUnmanaged(usize) = .empty;
+    defer callback_indices_to_remove.deinit(allocator);
+    for (callbacks.items, 0..) |timed_cb, i| {
+        if (timed_cb.trigger_on <= time) {
+            timed_cb.callback(timed_cb.data);
+            callback_indices_to_remove.append(allocator, i) catch oomPanic();
+        }
+    }
+    var iter = std.mem.reverseIterator(callback_indices_to_remove.items);
+    while (iter.next()) |i| _ = callbacks.swapRemove(i);
 }
 
 pub fn disconnect(has_lock: bool) void {

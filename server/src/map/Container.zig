@@ -6,6 +6,7 @@ const network_data = shared.network_data;
 const utils = shared.utils;
 
 const main = @import("../main.zig");
+const maps = @import("../map/maps.zig");
 const World = @import("../World.zig");
 const stat_util = @import("stat_util.zig");
 
@@ -26,7 +27,7 @@ inventory: [9]u16 = inv_default,
 inv_data: [9]network_data.ItemData = inv_data_default,
 disappear_time: i64 = 0,
 data: *const game_data.ContainerData = undefined,
-world: *World = undefined,
+world_id: i32 = std.math.minInt(i32),
 spawned: bool = false,
 free_name: bool = false,
 
@@ -46,7 +47,8 @@ pub fn deinit(self: *Container) !void {
 
 pub fn tick(self: *Container, time: i64, _: i64) !void {
     if (time >= self.disappear_time or std.mem.eql(u16, &self.inventory, &inv_default)) {
-        try self.world.remove(Container, self);
+        const world = maps.worlds.getPtr(self.world_id) orelse return;
+        try world.remove(Container, self);
         return;
     }
 }

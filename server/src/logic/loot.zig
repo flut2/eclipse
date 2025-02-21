@@ -10,6 +10,7 @@ const main = @import("../main.zig");
 const Container = @import("../map/Container.zig");
 const Enemy = @import("../map/Enemy.zig");
 const Entity = @import("../map/Entity.zig");
+const maps = @import("../map/maps.zig");
 const Player = @import("../map/Player.zig");
 const Portal = @import("../map/Portal.zig");
 
@@ -38,12 +39,14 @@ pub fn dropPortals(host: anytype, comptime loots: []const PortalLoot) void {
         }
     }
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return;
+
     inline for (loots) |loot| if (loot.chance >= utils.rng.random().float(f32)) {
         const data = game_data.portal.from_name.get(loot.name) orelse {
             std.log.err("Portal not found for name \"{s}\"", .{loot.name});
             return;
         };
-        _ = host.world.add(Portal, .{ .x = host.x, .y = host.y, .data_id = data.id }) catch return;
+        _ = world.add(Portal, .{ .x = host.x, .y = host.y, .data_id = data.id }) catch return;
         return;
     };
 }
@@ -64,10 +67,12 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
         }
     }
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return;
+
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
-        const player = host.world.find(Player, entry.key_ptr.*, .con) orelse continue;
+        const player = world.find(Player, entry.key_ptr.*, .con) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
         var max_rarity: game_data.ItemRarity = .common;
@@ -112,7 +117,7 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
             if (inv_index == 8) {
                 const angle = utils.rng.random().float(f32) * std.math.tau;
                 const radius = utils.rng.random().float(f32) * 1.0;
-                _ = host.world.add(Container, .{
+                _ = world.add(Container, .{
                     .data_id = container_data_id,
                     .name = host.data.name,
                     .x = host.x + radius * @cos(angle),
@@ -133,7 +138,7 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
         if (inv_index > 0) {
             const angle = utils.rng.random().float(f32) * std.math.tau;
             const radius = utils.rng.random().float(f32) * 1.0;
-            _ = host.world.add(Container, .{
+            _ = world.add(Container, .{
                 .data_id = container_data_id,
                 .name = host.data.name,
                 .x = host.x + radius * @cos(angle),
@@ -166,10 +171,12 @@ pub fn dropCards(host: anytype, comptime loots: []const CardLoot) void {
         }
     }
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return;
+
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     playerLoop: while (iter.next()) |entry| {
-        const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue :playerLoop;
+        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue :playerLoop;
         if (player.selecting_cards != null or player.cards.len >= player.aether * 5) continue;
 
         const fdamage = f32i(entry.value_ptr.*);
@@ -214,12 +221,14 @@ pub fn dropResources(host: anytype, comptime loots: []const ResourceLoot) void {
 
     // TODO: some vfx
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return;
+
     var buf: [256]u8 = undefined;
     var rand = utils.rng.random();
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
-        const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
         inline for (loots) |loot| @"continue": {
@@ -270,12 +279,14 @@ pub fn dropCurrency(host: anytype, comptime loots: []const CurrencyLoot) void {
 
     // TODO: some vfx
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return;
+
     var buf: [256]u8 = undefined;
     var rand = utils.rng.random();
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
-        const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
         inline for (loots) |loot| @"continue": {
@@ -316,12 +327,14 @@ pub fn dropSpirits(host: anytype, comptime loot: SpiritLoot) void {
 
     // TODO: some vfx
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return;
+
     var buf: [256]u8 = undefined;
     var rand = utils.rng.random();
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
-        const player = host.world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
         if (fdamage / fmax_hp <= loot.threshold) continue;

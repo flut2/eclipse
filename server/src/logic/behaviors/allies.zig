@@ -6,6 +6,7 @@ const i64f = utils.i64f;
 
 const Ally = @import("../../map/Ally.zig");
 const Enemy = @import("../../map/Enemy.zig");
+const maps = @import("../../map/maps.zig");
 const Player = @import("../../map/Player.zig");
 const World = @import("../../World.zig");
 const Metadata = @import("../behavior.zig").BehaviorMetadata;
@@ -18,7 +19,8 @@ pub const BoulderBuddy = struct {
     };
 
     pub fn tick(_: *BoulderBuddy, host: *Ally, _: i64, dt: i64) !void {
-        const owner = host.world.find(Player, host.owner_map_id, .ref) orelse {
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        const owner = world.find(Player, host.owner_map_id, .ref) orelse {
             logic.wander(@src(), host, dt, 2.5);
             return;
         };
@@ -63,7 +65,8 @@ pub const DwarvenCoil = struct {
     last_attack: i64 = -1,
 
     pub fn entry(self: *DwarvenCoil, host: *Ally) !void {
-        const owner = host.world.find(Player, host.owner_map_id, .con) orelse return;
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        const owner = world.find(Player, host.owner_map_id, .con) orelse return;
         const fint = f32i(owner.stats[Player.intelligence_stat] + owner.stat_boosts[Player.intelligence_stat]);
         const fwit = f32i(owner.stats[Player.wit_stat] + owner.stat_boosts[Player.wit_stat]);
         self.damage = i64f(300.0 + fwit * 2.0);
@@ -74,7 +77,8 @@ pub const DwarvenCoil = struct {
         if (time - self.last_attack < 1 * std.time.us_per_s) return;
         defer self.last_attack = time;
 
-        host.world.aoe(Enemy, host.x, host.y, .ally, host.map_id, self.range, .{
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        world.aoe(Enemy, host.x, host.y, .ally, host.map_id, self.range, .{
             .magic_dmg = self.damage,
             .aoe_color = 0x01C6C6,
         });

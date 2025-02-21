@@ -8,6 +8,7 @@ const i64f = shared.utils.i64f;
 const main = @import("../main.zig");
 const World = @import("../World.zig");
 const Player = @import("Player.zig");
+const maps = @import("../map/maps.zig");
 
 const Projectile = @This();
 
@@ -25,7 +26,7 @@ start_time: i64 = 0,
 player_hit_list: std.AutoHashMapUnmanaged(u32, void) = .empty,
 ally_hit_list: std.AutoHashMapUnmanaged(u32, void) = .empty,
 data: *const game_data.ProjectileData,
-world: *World = undefined,
+world_id: i32 = std.math.minInt(i32),
 
 pub fn deinit(self: *Projectile) !void {
     self.player_hit_list.deinit(main.allocator);
@@ -33,8 +34,9 @@ pub fn deinit(self: *Projectile) !void {
 }
 
 pub fn delete(self: *Projectile) !void {
-    if (self.world.find(Player, self.owner_map_id, .ref)) |player| player.projectiles[self.index] = null;
-    try self.world.remove(Projectile, self);
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
+    if (world.find(Player, self.owner_map_id, .ref)) |player| player.projectiles[self.index] = null;
+    try world.remove(Projectile, self);
 }
 
 pub fn tick(self: *Projectile, time: i64, _: i64) !void {

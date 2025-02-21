@@ -33,7 +33,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
         .phys_dmg = i32f(1300.0 + fstr * 2.0),
     });
 
-    var buf: [5]u8 = undefined;
+    var buf: [@sizeOf(proj_index) + @sizeOf(attack_angle)]u8 = undefined;
     var fba = std.io.fixedBufferStream(&buf);
     _ = fba.write(&std.mem.toBytes(proj_index)) catch main.oomPanic();
     _ = fba.write(&std.mem.toBytes(attack_angle)) catch main.oomPanic();
@@ -70,7 +70,7 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
     var proj_list = map.listForType(Projectile);
     var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
     defer projs_to_remove.deinit(main.allocator);
-    for (proj_list.items, 0..) |*p, i| {
+    for (proj_list.items, 0..) |*p, i|
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
             if (map.findObject(Enemy, p.owner_map_id, .ref)) |e| {
                 const phys_dmg = i32f(f32i(game_data.physDamage(p.phys_dmg, e.defense, e.condition)) * damage_mult);
@@ -82,8 +82,8 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
             }
             p.deinit();
             projs_to_remove.append(main.allocator, i) catch main.oomPanic();
-        }
-    }
+        };
+        
     var iter = std.mem.reverseIterator(projs_to_remove.items);
     while (iter.next()) |i| _ = proj_list.orderedRemove(i);
     return &.{};
@@ -95,26 +95,8 @@ pub fn handleTimeLock(player: *Player) ![]u8 {
     return &.{};
 }
 
-pub fn handleEquivalentExchange(player: *Player) ![]u8 {
+pub fn handleBloodfont(player: *Player) ![]u8 {
     // TODO: needs VFX, impl
-    player.ability_state.equivalent_exchange = true;
-    return &.{};
-}
-
-pub fn handleAssetBubble(player: *Player) ![]u8 {
-    // TODO: needs VFX, impl
-    player.ability_state.asset_bubble = true;
-    return &.{};
-}
-
-pub fn handlePremiumProtection(player: *Player) ![]u8 {
-    // TODO: needs VFX, impl
-    player.ability_state.premium_protection = true;
-    return &.{};
-}
-
-pub fn handleCompoundInterest(player: *Player) ![]u8 {
-    // TODO: needs VFX, impl
-    player.ability_state.compound_interest = true;
+    player.ability_state.bloodfont = true;
     return &.{};
 }

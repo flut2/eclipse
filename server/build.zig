@@ -8,12 +8,12 @@ pub fn buildWithoutDupes(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     enable_tracy: bool,
+    enable_gpa: bool,
 ) !void {
     const use_dragonfly = b.option(bool, "use_dragonfly",
         \\Whether to use Dragonfly for the database.
         \\Redis is assumed otherwise, and TTL banning/muting will be permanent across HWIDs, but not accounts.
     ) orelse false;
-    const enable_gpa = b.option(bool, "enable_gpa", "Toggles using the GPA for memory debugging") orelse false;
 
     behaviorGen: {
         var gen_file = b.build_root.handle.createFile(root_add ++ "src/_gen_behavior_file_dont_use.zig", .{}) catch break :behaviorGen;
@@ -34,6 +34,8 @@ pub fn buildWithoutDupes(
             .target = target,
             .optimize = optimize,
             .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
+            .use_lld = !check,
+            .use_llvm = !check,
             // .use_lld = !check and optimize != .Debug or target.result.os.tag == .windows,
             // .use_llvm = !check and optimize != .Debug or target.result.os.tag == .windows,
         });
@@ -55,7 +57,7 @@ pub fn buildWithoutDupes(
             exe.root_module.addImport("rpmalloc", rpmalloc_dep.module("rpmalloc"));
             exe.root_module.linkLibrary(rpmalloc_dep.artifact("rpmalloc-lib"));
         }
-        
+
         exe.root_module.addImport("shared", shared_dep.module("shared"));
         if (enable_tracy) exe.root_module.addImport("tracy", shared_dep.module("tracy"));
         exe.root_module.addImport("ziggy", shared_dep.module("ziggy"));
@@ -125,7 +127,8 @@ pub fn buildWithoutDupes(
 pub fn build(b: *std.Build) !void {
     const check_step = b.step("check", "Check if app compiles");
     const enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false;
+    const enable_gpa = b.option(bool, "enable_gpa", "Toggles using the GPA for memory debugging") orelse false;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    try buildWithoutDupes(b, "", false, check_step, target, optimize, enable_tracy);
+    try buildWithoutDupes(b, "", false, check_step, target, optimize, enable_tracy, enable_gpa);
 }

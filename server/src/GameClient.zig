@@ -494,7 +494,9 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             } });
         },
         .heal_nova => |val| {
-            for (player.world.listForType(Player).items) |world_player|
+            const world = maps.worlds.getPtr(player.world_id) orelse continue;
+
+            for (world.listForType(Player).items) |world_player|
                 if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
                     const old_hp = player.hp;
                     const new_hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + val.amount);
@@ -522,7 +524,9 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                 };
         },
         .magic_nova => |val| {
-            for (player.world.listForType(Player).items) |world_player|
+            const world = maps.worlds.getPtr(player.world_id) orelse continue;
+
+            for (world.listForType(Player).items) |world_player|
                 if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
                     const old_mp = player.mp;
                     const new_mp = @min(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat], player.mp + val.amount);
@@ -550,6 +554,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                 };
         },
         .create_portal => |val| {
+            const world = maps.worlds.getPtr(player.world_id) orelse continue;
             const data = game_data.portal.from_name.get(val.name) orelse continue;
 
             const angle = utils.rng.random().float(f32) * std.math.tau;
@@ -557,7 +562,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             const x = player.x + radius * @cos(angle);
             const y = player.y + radius * @sin(angle);
 
-            _ = player.world.add(Portal, .{
+            _ = world.add(Portal, .{
                 .x = x,
                 .y = y,
                 .data_id = data.id,
@@ -569,6 +574,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             };
         },
         .create_ally => |val| {
+            const world = maps.worlds.getPtr(player.world_id) orelse continue;
             const data = game_data.ally.from_name.get(val.name) orelse continue;
 
             const duration = blk: {
@@ -582,7 +588,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             const x = player.x + radius * @cos(angle);
             const y = player.y + radius * @sin(angle);
 
-            _ = player.world.add(Ally, .{
+            _ = world.add(Ally, .{
                 .x = x,
                 .y = y,
                 .data_id = data.id,
@@ -800,16 +806,8 @@ fn handlePong(_: *Client, _: PacketData(.pong)) void {}
 fn handleTeleport(_: *Client, _: PacketData(.teleport)) void {}
 
 fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
-    const portal_map_id = if (self.world.find(Portal, data.portal_map_id, .con)) |e| e.data_id else {
+    const portal_data_id = if (self.world.find(Portal, data.portal_map_id, .con)) |e| e.data_id else {
         self.sendMessage("Portal not found");
-        return;
-    };
-
-    const new_world = maps.portalWorld(portal_map_id, data.portal_map_id) catch {
-        self.sendMessage("Map load failed");
-        return;
-    } orelse {
-        self.sendMessage("Map does not exist");
         return;
     };
 
@@ -828,7 +826,13 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
         return;
     };
 
-    self.world = new_world;
+    self.world = maps.portalWorld(portal_data_id, data.portal_map_id) catch {
+        self.sendMessage("Map load failed");
+        return;
+    } orelse {
+        self.sendMessage("Map does not exist");
+        return;
+    };
 
     self.player_map_id = self.world.add(Player, .{
         .acc_data = .{ .acc_id = self.acc_id },
@@ -1080,15 +1084,15 @@ fn handleUseAbility(self: *Client, data: PacketData(.use_ability)) void {
         ),
         hash("Heart of Stone") => abilities.handleHeartOfStone(player),
         hash("Boulder Buddies") => abilities.handleBoulderBuddies(player),
-        hash("Placeholder") => abilities.handlePlaceholder(),
+        hash("Earthen Prison") => abilities.handleEarthenPrison(player),
         hash("Time Dilation") => abilities.handleTimeDilation(player),
         hash("Rewind") => abilities.handleRewind(player),
         hash("Null Pulse") => abilities.handleNullPulse(player),
         hash("Time Lock") => abilities.handleTimeLock(player),
-        hash("Equivalent Exchange") => abilities.handleEquivalentExchange(player),
-        hash("Asset Bubble") => abilities.handleAssetBubble(player),
-        hash("Premium Protection") => abilities.handlePremiumProtection(player),
-        hash("Compound Interest") => abilities.handleCompoundInterest(player),
+        hash("Ethereal Harvest") => abilities.handleEtherealHarvest(player),
+        hash("Space Shift") => abilities.handleSpaceShift(player),
+        hash("Bloodfont") => abilities.handleBloodfont(player),
+        hash("Ravenous Hunger") => abilities.handleRavenousHunger(player),
         else => {
             std.log.err("Unhandled ability: {s}", .{abil_data.name});
             return;

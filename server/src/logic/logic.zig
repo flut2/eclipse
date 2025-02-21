@@ -11,6 +11,7 @@ const main = @import("../main.zig");
 const Ally = @import("../map/Ally.zig");
 const Enemy = @import("../map/Enemy.zig");
 const Entity = @import("../map/Entity.zig");
+const maps = @import("../map/maps.zig");
 const Player = @import("../map/Player.zig");
 const Projectile = @import("../map/Projectile.zig");
 const World = @import("../World.zig");
@@ -58,6 +59,8 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
 }) bool {
     verifyType(@TypeOf(host));
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return false;
+
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.heal.getPtr(storage_id) orelse blk: {
         host.storages.heal.put(main.allocator, storage_id, .{}) catch return false;
@@ -67,7 +70,7 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
     if (storage.time > 0) return false;
     defer storage.time = opts.cooldown;
 
-    for (host.world.listForType(Enemy).items) |*e| {
+    for (world.listForType(Enemy).items) |*e| {
         const dx = e.x - host.x;
         const dy = e.y - host.y;
         if (std.mem.eql(u8, e.data.name, opts.target_name) and dx * dx + dy * dy <= opts.range * opts.range) {
@@ -80,7 +83,7 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
             const msg = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return false;
 
             const obj_type: network_data.ObjectType = if (@TypeOf(host.*) == Enemy) .enemy else .entity;
-            for (host.world.listForType(Player).items) |p| {
+            for (world.listForType(Player).items) |p| {
                 p.client.queuePacket(.{ .notification = .{
                     .obj_type = obj_type,
                     .map_id = e.map_id,
@@ -115,6 +118,8 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
 }) bool {
     verifyType(@TypeOf(host));
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return false;
+
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.charge.getPtr(storage_id) orelse blk: {
         host.storages.charge.put(main.allocator, storage_id, .{}) catch return false;
@@ -136,7 +141,7 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
         storage.time -= dt;
         if (storage.time > 0) return false;
 
-        if (host.world.getNearestWithin(Player, host.x, host.y, opts.range * opts.range)) |p| {
+        if (world.getNearestWithin(Player, host.x, host.y, opts.range * opts.range)) |p| {
             const dx = host.x - p.x;
             const dy = host.y - p.y;
             storage.target_x = p.x;
@@ -157,8 +162,10 @@ pub fn orbit(host: anytype, dt: i64, opts: struct {
 }) bool {
     verifyType(@TypeOf(host));
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return false;
+
     const acq_sqr = opts.acquire_range * opts.acquire_range;
-    for (host.world.listForType(Enemy).items) |*e| {
+    for (world.listForType(Enemy).items) |*e| {
         const dx = host.x - e.x;
         const dy = host.y - e.y;
         if (std.mem.eql(u8, opts.target_name, e.data.name) and
@@ -182,8 +189,10 @@ pub fn orbitPlayer(host: anytype, dt: i64, opts: struct {
 }) bool {
     verifyType(@TypeOf(host));
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return false;
+
     const acq_sqr = opts.acquire_range * opts.acquire_range;
-    if (host.world.find(Player, opts.target_map_id, .con)) |p| {
+    if (world.find(Player, opts.target_map_id, .con)) |p| {
         const dx = host.x - p.x;
         const dy = host.y - p.y;
         if (dx * dx + dy * dy <= acq_sqr) {
@@ -209,6 +218,8 @@ pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64,
 }) void {
     verifyType(@TypeOf(host));
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return;
+
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.aoe.getPtr(storage_id) orelse blk: {
         host.storages.aoe.put(main.allocator, storage_id, .{}) catch return;
@@ -226,7 +237,7 @@ pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64,
         else => @compileError("Unsupported type"),
     };
 
-    host.world.aoe(Player, host.x, host.y, obj_type, host.map_id, opts.radius, .{
+    world.aoe(Player, host.x, host.y, obj_type, host.map_id, opts.radius, .{
         .phys_dmg = opts.phys_dmg,
         .magic_dmg = opts.magic_dmg,
         .true_dmg = opts.true_dmg,
@@ -244,6 +255,8 @@ pub fn follow(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
 }) bool {
     verifyType(@TypeOf(host));
 
+    const world = maps.worlds.getPtr(host.world_id) orelse return false;
+
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.follow.getPtr(storage_id) orelse blk: {
         host.storages.follow.put(main.allocator, storage_id, .{}) catch return false;
@@ -256,7 +269,7 @@ pub fn follow(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
 
     const acq_sqr = opts.acquire_range * opts.acquire_range;
 
-    const target = host.world.getNearestWithin(Player, host.x, host.y, acq_sqr) orelse return false;
+    const target = world.getNearestWithin(Player, host.x, host.y, acq_sqr) orelse return false;
     World.moveToward(host, target.x, target.y, opts.speed, dt);
     return true;
 }
@@ -297,6 +310,8 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
     fixed_angle: f32 = std.math.nan(f32),
     rotate_angle: f32 = std.math.nan(f32),
 }) void {
+    const world = maps.worlds.getPtr(host.world_id) orelse return;
+
     const storage_id = getStorageId(src_loc);
     var storage = host.storages.shoot.getPtr(storage_id) orelse blk: {
         host.storages.shoot.put(main.allocator, storage_id, .{}) catch return;
@@ -311,7 +326,7 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
 
     var angle: f32 = 0.0;
     if (std.math.isNan(opts.fixed_angle)) {
-        if (host.world.getNearestWithin(Player, host.x, host.y, radius_sqr)) |p| {
+        if (world.getNearestWithin(Player, host.x, host.y, radius_sqr)) |p| {
             angle = if (opts.predictivity > 0 and opts.predictivity > utils.rng.random().float(f32))
                 0.0 // predict(host, p)
             else
@@ -337,7 +352,7 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
     for (0..opts.count) |i| {
         const fi = f32i(i);
 
-        const map_id = host.world.add(Projectile, .{
+        const map_id = world.add(Projectile, .{
             .owner_obj_type = .enemy,
             .owner_map_id = host.map_id,
             .x = host.x,
@@ -355,7 +370,7 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
         host.next_proj_index +%= 1;
     }
 
-    for (host.world.listForType(Player).items) |p| {
+    for (world.listForType(Player).items) |p| {
         const dx = p.x - host.x;
         const dy = p.y - host.y;
         if (dx * dx + dy * dy <= 20 * 20) {
