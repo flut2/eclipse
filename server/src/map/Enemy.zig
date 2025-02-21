@@ -8,6 +8,7 @@ const utils = shared.utils;
 const behavior_data = @import("../logic/behavior.zig");
 const behavior_logic = @import("../logic/logic.zig");
 const main = @import("../main.zig");
+const maps = @import("../map/maps.zig");
 const World = @import("../World.zig");
 const Ally = @import("Ally.zig");
 const Player = @import("Player.zig");
@@ -31,7 +32,7 @@ damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
 conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .empty,
 conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .empty,
 data: *const game_data.EnemyData = undefined,
-world: *World = undefined,
+world_id: i32 = std.math.minInt(i32),
 spawned: bool = false,
 behavior: ?*behavior_data.EnemyBehavior = null,
 storages: behavior_logic.Storages = .{},
@@ -82,7 +83,8 @@ pub fn clearCondition(self: *Enemy, condition: utils.ConditionEnum) void {
 }
 
 pub fn delete(self: *Enemy) !void {
-    try self.world.remove(Enemy, self);
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
+    try world.remove(Enemy, self);
 }
 
 pub fn tick(self: *Enemy, time: i64, dt: i64) !void {
@@ -110,7 +112,8 @@ pub fn tick(self: *Enemy, time: i64, dt: i64) !void {
 
 pub fn damage(self: *Enemy, owner_type: network_data.ObjectType, owner_id: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
     if (self.data.health == 0) return;
-
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
+    
     const dmg = game_data.physDamage(phys_dmg, self.data.defense, self.condition) +
         game_data.magicDamage(magic_dmg, self.data.resistance, self.condition) +
         true_dmg;
@@ -118,7 +121,7 @@ pub fn damage(self: *Enemy, owner_type: network_data.ObjectType, owner_id: u32, 
 
     const map_id = switch (owner_type) {
         .player => owner_id,
-        .ally => (self.world.find(Ally, owner_id, .con) orelse return).owner_map_id,
+        .ally => (world.find(Ally, owner_id, .con) orelse return).owner_map_id,
         else => return,
     };
 

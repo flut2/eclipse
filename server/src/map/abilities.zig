@@ -9,6 +9,7 @@ const i64f = utils.i64f;
 const u32f = utils.u32f;
 
 const main = @import("../main.zig");
+const maps = @import("../map/maps.zig");
 const World = @import("../World.zig");
 const Ally = @import("Ally.zig");
 const Enemy = @import("Enemy.zig");
@@ -16,9 +17,11 @@ const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
 
 pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.ProjectileData, proj_index: u8, angle: f32) !void {
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
     const x = player.x + @cos(angle) * 0.25;
     const y = player.y + @sin(angle) * 0.25;
-    const map_id = player.world.add(Projectile, .{
+    const map_id = world.add(Projectile, .{
         .x = x,
         .y = y,
         .owner_obj_type = .player,
@@ -42,6 +45,8 @@ fn heartOfStoneCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 }
 
 pub fn handleHeartOfStone(player: *Player) !void {
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
     const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
     const duration = i64f((10.0 + fint * 0.1) * std.time.us_per_s);
 
@@ -52,7 +57,7 @@ pub fn handleHeartOfStone(player: *Player) !void {
 
     const map_id_copy = try main.allocator.create(u32);
     map_id_copy.* = player.map_id;
-    player.world.callbacks.append(main.allocator, .{
+    world.callbacks.append(main.allocator, .{
         .trigger_on = main.current_time + duration,
         .callback = heartOfStoneCallback,
         .data = map_id_copy,
@@ -60,6 +65,8 @@ pub fn handleHeartOfStone(player: *Player) !void {
 }
 
 pub fn handleBoulderBuddies(player: *Player) !void {
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
     for (0..3) |_| {
         const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
         const duration = i64f((15.0 + fint * 0.1) * std.time.us_per_s);
@@ -68,7 +75,7 @@ pub fn handleBoulderBuddies(player: *Player) !void {
         const x = player.x + radius * @cos(angle);
         const y = player.y + radius * @sin(angle);
 
-        const map_id = try player.world.add(Ally, .{
+        const map_id = try world.add(Ally, .{
             .x = x,
             .y = y,
             .data_id = 0,
@@ -79,7 +86,7 @@ pub fn handleBoulderBuddies(player: *Player) !void {
         const fhp = f32i(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat]);
         const fdef = f32i(player.stats[Player.defense_stat] + player.stat_boosts[Player.defense_stat]);
         const fres = f32i(player.stats[Player.resistance_stat] + player.stat_boosts[Player.resistance_stat]);
-        if (player.world.find(Ally, map_id, .ref)) |ally| {
+        if (world.find(Ally, map_id, .ref)) |ally| {
             ally.max_hp = i32f(3600.0 + fhp * 3.6);
             ally.hp = ally.max_hp;
             ally.defense = i32f(25.0 + fdef * 0.15);
@@ -99,8 +106,9 @@ pub fn handleBoulderBuddies(player: *Player) !void {
     }
 }
 
-pub fn handlePlaceholder() !void {
-    std.log.err("Placeholder not implemented yet", .{});
+pub fn handleEarthenPrison(player: *Player) !void {
+    _ = player;
+    std.log.err("Earthen Prison not implemented yet", .{});
 }
 
 fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
@@ -110,6 +118,8 @@ fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 }
 
 pub fn handleTimeDilation(player: *Player) !void {
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
     const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
     const duration = i64f((10.0 + fint * 0.12) * std.time.us_per_s);
 
@@ -117,7 +127,7 @@ pub fn handleTimeDilation(player: *Player) !void {
 
     const map_id_copy = try main.allocator.create(u32);
     map_id_copy.* = player.map_id;
-    player.world.callbacks.append(main.allocator, .{
+    world.callbacks.append(main.allocator, .{
         .trigger_on = main.current_time + duration,
         .callback = timeDilationCallback,
         .data = map_id_copy,
@@ -142,6 +152,8 @@ pub fn handleRewind(player: *Player) !void {
 }
 
 pub fn handleNullPulse(player: *Player) !void {
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
     const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
     const fwit = f32i(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
     const radius = 3.0 + fint * 0.12;
@@ -149,9 +161,9 @@ pub fn handleNullPulse(player: *Player) !void {
     const damage_mult = 5.0 + fwit * 0.06;
 
     var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
-    for (player.world.listForType(Projectile).items, 0..) |*p, i| {
+    for (world.listForType(Projectile).items, 0..) |*p, i| {
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
-            if (player.world.find(Enemy, p.owner_map_id, .ref)) |e| {
+            if (world.find(Enemy, p.owner_map_id, .ref)) |e| {
                 const phys_dmg = i32f(f32i(p.phys_dmg) * damage_mult);
                 const magic_dmg = i32f(f32i(p.magic_dmg) * damage_mult);
                 const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
@@ -162,7 +174,7 @@ pub fn handleNullPulse(player: *Player) !void {
         }
     }
     var iter = std.mem.reverseIterator(projs_to_remove.items);
-    while (iter.next()) |i| _ = player.world.lists.projectile.orderedRemove(i);
+    while (iter.next()) |i| _ = world.lists.projectile.orderedRemove(i);
 }
 
 fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
@@ -171,7 +183,7 @@ fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     if (world.find(Player, player_map_id.*, .ref)) |player| {
         const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
         const radius = 9.0 + fint * 0.06;
-        player.world.aoe(Enemy, player.x, player.x, .player, player.map_id, radius, .{
+        world.aoe(Enemy, player.x, player.x, .player, player.map_id, radius, .{
             .magic_dmg = @intCast(@min(u32f(30000.0 + fint * 100.0), player.stored_damage)),
             .aoe_color = 0x0FE9EB,
         });
@@ -181,6 +193,8 @@ fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 }
 
 pub fn handleTimeLock(player: *Player) !void {
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
     const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
     const duration = i64f((15.0 + fint * 0.12) * std.time.us_per_s);
 
@@ -189,84 +203,29 @@ pub fn handleTimeLock(player: *Player) !void {
 
     const map_id_copy = try main.allocator.create(u32);
     map_id_copy.* = player.map_id;
-    player.world.callbacks.append(main.allocator, .{
+    world.callbacks.append(main.allocator, .{
         .trigger_on = main.current_time + duration,
         .callback = timeLockCallback,
         .data = map_id_copy,
     }) catch main.oomPanic();
 }
 
-fn equivalentExchangeCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
-    const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
-    defer main.allocator.destroy(player_map_id);
-    if (world.find(Player, player_map_id.*, .ref)) |player| player.ability_state.equivalent_exchange = false;
+pub fn handleEtherealHarvest(player: *Player) !void {
+    _ = player; // autofix
+    std.log.err("Earthen Prison not implemented yet", .{});
 }
 
-pub fn handleEquivalentExchange(player: *Player) !void {
-    player.ability_state.equivalent_exchange = true;
-
-    const map_id_copy = try main.allocator.create(u32);
-    map_id_copy.* = player.map_id;
-    player.world.callbacks.append(main.allocator, .{
-        .trigger_on = main.current_time + 8 * std.time.us_per_s,
-        .callback = equivalentExchangeCallback,
-        .data = map_id_copy,
-    }) catch main.oomPanic();
+pub fn handleSpaceShift(player: *Player) !void {
+    _ = player; // autofix
+    std.log.err("Earthen Prison not implemented yet", .{});
 }
 
-fn postAssetBubbleCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
-    const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
-    defer main.allocator.destroy(player_map_id);
-    if (world.find(Player, player_map_id.*, .ref)) |player| player.ability_state.post_asset_bubble = false;
+pub fn handleBloodfont(player: *Player) !void {
+    _ = player; // autofix
+    std.log.err("Earthen Prison not implemented yet", .{});
 }
 
-fn assetBubbleCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
-    const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
-    if (world.find(Player, player_map_id.*, .ref)) |player| {
-        player.ability_state.asset_bubble = false;
-        player.ability_state.post_asset_bubble = true;
-        player.world.callbacks.append(main.allocator, .{
-            .trigger_on = main.current_time + 17 * std.time.us_per_s,
-            .callback = postAssetBubbleCallback,
-            .data = player_map_id,
-        }) catch main.oomPanic();
-    }
-}
-
-pub fn handleAssetBubble(player: *Player) !void {
-    player.ability_state.asset_bubble = true;
-
-    const map_id_copy = try main.allocator.create(u32);
-    map_id_copy.* = player.map_id;
-    player.world.callbacks.append(main.allocator, .{
-        .trigger_on = main.current_time + 8 * std.time.us_per_s,
-        .callback = assetBubbleCallback,
-        .data = map_id_copy,
-    }) catch main.oomPanic();
-}
-
-fn premiumProtectionCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
-    const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
-    defer main.allocator.destroy(player_map_id);
-    if (world.find(Player, player_map_id.*, .ref)) |player| player.ability_state.premium_protection = false;
-}
-
-pub fn handlePremiumProtection(player: *Player) !void {
-    const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
-    const duration = i64f((8.0 + fhst * 0.08) * std.time.us_per_s);
-
-    player.ability_state.premium_protection = true;
-
-    const map_id_copy = try main.allocator.create(u32);
-    map_id_copy.* = player.map_id;
-    player.world.callbacks.append(main.allocator, .{
-        .trigger_on = main.current_time + duration,
-        .callback = assetBubbleCallback,
-        .data = map_id_copy,
-    }) catch main.oomPanic();
-}
-
-pub fn handleCompoundInterest(player: *Player) !void {
-    _ = player;
-    std.log.err("Compound Interest not implemented yet", .{});
+pub fn handleRavenousHunger(player: *Player) !void {
+    _ = player; // autofix
+    std.log.err("Earthen Prison not implemented yet", .{});
 }

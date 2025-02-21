@@ -11,6 +11,7 @@ const u16f = utils.u16f;
 const db = @import("../db.zig");
 const Client = @import("../GameClient.zig");
 const main = @import("../main.zig");
+const maps = @import("../map/maps.zig");
 const World = @import("../World.zig");
 const Ally = @import("Ally.zig");
 const Container = @import("Container.zig");
@@ -102,7 +103,7 @@ ability_state: network_data.AbilityState = .{},
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.ClassData = undefined,
 client: *Client = undefined,
-world: *World = undefined,
+world_id: i32 = std.math.minInt(i32),
 
 pub fn init(self: *Player) !void {
     self.stats_writer.list = try .initCapacity(main.allocator, 256);
@@ -184,14 +185,16 @@ pub fn clearEphemerals(self: *Player) void {
 }
 
 pub fn moveToSpawn(self: *Player) void {
-    const spawn_points = self.world.regions.get(game_data.region.from_name.get("Spawn").?.id);
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
+
+    const spawn_points = world.regions.get(game_data.region.from_name.get("Spawn").?.id);
     if (spawn_points == null or spawn_points.?.len == 0) {
         std.log.err("Could not find spawn point for player with data id {}", .{self.data_id});
         return;
     }
 
     const rand_point = spawn_points.?[utils.rng.random().intRangeAtMost(usize, 0, spawn_points.?.len - 1)];
-    const tile = self.world.tiles[rand_point.y * self.world.w + rand_point.x];
+    const tile = world.tiles[rand_point.y * world.w + rand_point.x];
     if (tile.data_id == std.math.maxInt(u16) or tile.data.no_walk or tile.occupied) {
         std.log.err("Spawn point {} was not walkable for player with data id {}", .{ rand_point, self.data_id });
         return;
@@ -263,12 +266,13 @@ pub fn death(self: *Player, killer: []const u8) !void {
         else => 2,
     };
 
-    _ = self.world.add(Entity, .{
-        .x = self.x,
-        .y = self.y,
-        .data_id = gravestone_id,
-        .name = main.allocator.dupe(u8, self.name) catch main.oomPanic(),
-    }) catch |e| std.log.err("Populating gravestone for {s} failed: {}", .{ self.name, e });
+    if (maps.worlds.getPtr(self.world_id)) |world|
+        _ = world.add(Entity, .{
+            .x = self.x,
+            .y = self.y,
+            .data_id = gravestone_id,
+            .name = main.allocator.dupe(u8, self.name) catch main.oomPanic(),
+        }) catch |e| std.log.err("Populating gravestone for {s} failed: {}", .{ self.name, e });
 
     self.client.queuePacket(.{ .death = .{ .killer_name = killer } });
     self.client.sameThreadShutdown();
@@ -292,7 +296,8 @@ pub fn damage(self: *Player, owner_type: network_data.ObjectType, owner_id: u32,
 
     if (self.hp <= 0) {
         const owner_name = blk: {
-            break :blk (self.world.find(Enemy, owner_id, .con) orelse break :blk "Unknown").data.name;
+            const world = maps.worlds.getPtr(self.world_id) orelse break :blk "Unknown";
+            break :blk (world.find(Enemy, owner_id, .con) orelse break :blk "Unknown").data.name;
         };
         self.death(owner_name) catch return;
     }
@@ -316,8 +321,8 @@ fn defaultCache(comptime T: type) CacheType(T) {
     return cache;
 }
 
-fn exportObject(self: *Player, comptime T: type) !void {
-    for (self.world.listForType(T).items) |*object| {
+fn exportObject(self: *Player, world: *World, comptime T: type) !void {
+    for (world.listForType(T).items) |*object| {
         if (T == Container and
             object.owner_map_id != std.math.maxInt(u32) and
             object.owner_map_id != self.map_id) continue;
@@ -364,6 +369,7 @@ fn exportObject(self: *Player, comptime T: type) !void {
 
 pub fn tick(self: *Player, time: i64, dt: i64) !void {
     if (self.x < 0.0 or self.y < 0.0) return;
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
 
     if (time - self.last_lock_update >= 60 * std.time.us_per_s) {
         const ms_time = @divFloor(time, 1000);
@@ -414,7 +420,8 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
     const iuy: i64 = uy;
 
     self.tiles.clearRetainingCapacity();
-    for (self.world.tiles) |tile| {
+
+    for (world.tiles) |tile| {
         if (tile.data_id == std.math.maxInt(u16))
             continue;
 
@@ -435,7 +442,7 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
 
     inline for (@typeInfo(@TypeOf(self.drops)).@"struct".fields) |field| {
         @field(self.drops, field.name).clearRetainingCapacity();
-        for (@field(self.world.drops, field.name).items) |id| {
+        for (@field(world.drops, field.name).items) |id| {
             if (@field(self.caches, field.name).contains(id)) {
                 _ = @field(self.caches, field.name).remove(id);
                 try @field(self.drops, field.name).append(main.allocator, id);
@@ -444,9 +451,9 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
     }
 
     inline for (@typeInfo(@TypeOf(self.objs)).@"struct".fields) |field| @field(self.objs, field.name).clearRetainingCapacity();
-    inline for (.{ Entity, Enemy, Portal, Container, Ally }) |ObjType| try self.exportObject(ObjType);
+    inline for (.{ Entity, Enemy, Portal, Container, Ally }) |ObjType| try self.exportObject(world, ObjType);
 
-    for (self.world.listForType(Player).items) |*player| {
+    for (world.listForType(Player).items) |*player| {
         const x_dt = player.x - self.x;
         const y_dt = player.y - self.y;
         if (x_dt * x_dt + y_dt * y_dt <= 16 * 16) {

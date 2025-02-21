@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const Entity = @import("../../map/Entity.zig");
+const maps = @import("../../map/maps.zig");
 const Player = @import("../../map/Player.zig");
 const Metadata = @import("../behavior.zig").BehaviorMetadata;
 
@@ -16,7 +17,8 @@ pub const HealthShrine = struct {
         if (time - self.last_healed < 1.5 * std.time.us_per_s) return;
         defer self.last_healed = time;
 
-        const player = host.world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
         const pre_hp = player.hp;
         player.hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + 75);
         const hp_delta = player.hp - pre_hp;
@@ -55,7 +57,8 @@ pub const MagicShrine = struct {
         if (time - self.last_healed < 1.5 * std.time.us_per_s) return;
         defer self.last_healed = time;
 
-        const player = host.world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
         const pre_mp = player.mp;
         player.mp = @min(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat], player.mp + 40);
         const mp_delta = player.mp - pre_mp;
@@ -94,7 +97,8 @@ pub const RetrieveHealthBeacon = struct {
         if (time - self.last_healed < 1.5 * std.time.us_per_s) return;
         defer self.last_healed = time;
 
-        const player = host.world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
         const pre_hp = player.hp;
         player.hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + 75);
         const hp_delta = player.hp - pre_hp;
@@ -133,7 +137,8 @@ pub const RetrieveManaBeacon = struct {
         if (time - self.last_healed < 1.5 * std.time.us_per_s) return;
         defer self.last_healed = time;
 
-        const player = host.world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
         const pre_mp = player.mp;
         player.mp = @min(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat], player.mp + 40);
         const mp_delta = player.mp - pre_mp;

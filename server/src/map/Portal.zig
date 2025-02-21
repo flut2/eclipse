@@ -8,6 +8,7 @@ const utils = shared.utils;
 const main = @import("../main.zig");
 const World = @import("../World.zig");
 const stat_util = @import("stat_util.zig");
+const maps = @import("../map/maps.zig");
 
 const Portal = @This();
 
@@ -18,7 +19,7 @@ y: f32 = 0.0,
 disappear_time: i64 = std.math.maxInt(i64),
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.PortalData = undefined,
-world: *World = undefined,
+world_id: i32 = std.math.minInt(i32),
 spawned: bool = false,
 
 pub fn init(self: *Portal) !void {
@@ -38,7 +39,7 @@ pub fn deinit(self: *Portal) !void {
 
 pub fn tick(self: *Portal, time: i64, _: i64) !void {
     if (time >= self.disappear_time) {
-        try self.world.remove(Portal, self);
+        if (maps.worlds.getPtr(self.world_id)) |world| try world.remove(Portal, self);
         return;
     }
 }

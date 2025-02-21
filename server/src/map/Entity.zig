@@ -9,6 +9,7 @@ const u32f = utils.u32f;
 const behavior_data = @import("../logic/behavior.zig");
 const behavior_logic = @import("../logic/logic.zig");
 const main = @import("../main.zig");
+const maps = @import("../map/maps.zig");
 const World = @import("../World.zig");
 const Ally = @import("Ally.zig");
 const stat_util = @import("stat_util.zig");
@@ -27,7 +28,7 @@ conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .empty,
 damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.EntityData = undefined,
-world: *World = undefined,
+world_id: i32 = std.math.minInt(i32),
 spawned: bool = false,
 behavior: ?*behavior_data.EntityBehavior = null,
 storages: behavior_logic.Storages = .{},
@@ -51,7 +52,7 @@ pub fn init(self: *Entity) !void {
     if (self.data.occupy_square or self.data.full_occupy) {
         const ux = u32f(self.x);
         const uy = u32f(self.y);
-        self.world.tiles[uy * self.world.w + ux].occupied = true;
+        if (maps.worlds.getPtr(self.world_id)) |world| world.tiles[uy * world.w + ux].occupied = true;
     }
 
     self.hp = self.data.health;
@@ -70,7 +71,7 @@ pub fn deinit(self: *Entity) !void {
     if (self.data.occupy_square or self.data.full_occupy) {
         const ux = u32f(self.x);
         const uy = u32f(self.y);
-        self.world.tiles[uy * self.world.w + ux].occupied = false;
+        if (maps.worlds.getPtr(self.world_id)) |world| world.tiles[uy * world.w + ux].occupied = false;
     }
 
     self.damages_dealt.deinit(main.allocator);
@@ -91,7 +92,8 @@ pub fn clearCondition(self: *Entity, condition: utils.ConditionEnum) void {
 }
 
 pub fn tick(self: *Entity, time: i64, dt: i64) !void {
-    if (self.data.health > 0 and self.hp <= 0) try self.world.remove(Entity, self);
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
+    if (self.data.health > 0 and self.hp <= 0) try world.remove(Entity, self);
 
     self.conditions_to_remove.clearRetainingCapacity();
     for (self.conditions_active.values(), self.conditions_active.keys()) |*d, k| {
@@ -115,6 +117,7 @@ pub fn tick(self: *Entity, time: i64, dt: i64) !void {
 
 pub fn damage(self: *Entity, owner_type: network_data.ObjectType, owner_id: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
     if (self.data.health == 0) return;
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
 
     const dmg = game_data.physDamage(phys_dmg, self.data.defense, self.condition) +
         game_data.magicDamage(magic_dmg, self.data.resistance, self.condition) +
@@ -123,7 +126,7 @@ pub fn damage(self: *Entity, owner_type: network_data.ObjectType, owner_id: u32,
 
     const map_id = switch (owner_type) {
         .player => owner_id,
-        .ally => (self.world.find(Ally, owner_id) orelse return).owner_map_id,
+        .ally => (world.find(Ally, owner_id) orelse return).owner_map_id,
         else => return,
     };
 

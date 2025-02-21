@@ -21,9 +21,9 @@ pub fn buildWithoutDupes(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     enable_tracy: bool,
+    enable_gpa: bool,
 ) !void {
     const enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse false;
-    const enable_gpa = b.option(bool, "enable_gpa", "Toggles using the GPA for memory debugging") orelse false;
     const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
     const version = b.option([]const u8, "version", "Build version, for the version text and client-server version checks") orelse "1.0";
     const login_server_ip = b.option([]const u8, "login_server_ip", "The IP of the login server") orelse "127.0.0.1";
@@ -37,6 +37,8 @@ pub fn buildWithoutDupes(
             .target = target,
             .optimize = optimize,
             .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
+            .use_lld = !check,
+            .use_llvm = !check,
             // .use_lld = !check and optimize != .Debug or target.result.os.tag == .windows,
             // .use_llvm = !check and optimize != .Debug or target.result.os.tag == .windows,
         });
@@ -161,7 +163,8 @@ pub fn buildWithoutDupes(
 pub fn build(b: *std.Build) !void {
     const check_step = b.step("check", "Check if app compiles");
     const enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false;
+    const enable_gpa = b.option(bool, "enable_gpa", "Toggles using the GPA for memory debugging") orelse false;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    try buildWithoutDupes(b, "", false, check_step, target, optimize, enable_tracy);
+    try buildWithoutDupes(b, "", false, check_step, target, optimize, enable_tracy, enable_gpa);
 }

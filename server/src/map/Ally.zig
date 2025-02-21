@@ -8,6 +8,7 @@ const utils = shared.utils;
 const behavior_data = @import("../logic/behavior.zig");
 const behavior_logic = @import("../logic/logic.zig");
 const main = @import("../main.zig");
+const maps = @import("../map/maps.zig");
 const World = @import("../World.zig");
 const stat_util = @import("stat_util.zig");
 
@@ -27,7 +28,7 @@ owner_map_id: u32 = std.math.maxInt(u32),
 disappear_time: i64 = std.math.maxInt(i64),
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.AllyData = undefined,
-world: *World = undefined,
+world_id: i32 = std.math.minInt(i32),
 spawned: bool = false,
 behavior: ?*behavior_data.AllyBehavior = null,
 storages: behavior_logic.Storages = .{},
@@ -66,7 +67,8 @@ pub fn deinit(self: *Ally) !void {
 }
 
 pub fn delete(self: *Ally) !void {
-    try self.world.remove(Ally, self);
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
+    try world.remove(Ally, self);
 }
 
 pub fn damage(self: *Ally, owner_type: network_data.ObjectType, _: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
