@@ -33,7 +33,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
         .phys_dmg = i32f(1300.0 + fstr * 2.0),
     });
 
-    var buf: [@sizeOf(proj_index) + @sizeOf(attack_angle)]u8 = undefined;
+    var buf: [@sizeOf(@TypeOf(proj_index)) + @sizeOf(@TypeOf(attack_angle))]u8 = undefined;
     var fba = std.io.fixedBufferStream(&buf);
     _ = fba.write(&std.mem.toBytes(proj_index)) catch main.oomPanic();
     _ = fba.write(&std.mem.toBytes(attack_angle)) catch main.oomPanic();
