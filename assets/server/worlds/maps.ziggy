@@ -10,10 +10,10 @@
     },
 },
 {
-    .name = "Realm",
-    .file = "realm.map",
-    .portal_name = "Realm",
-    .map_type = @MapType("realm"),
+    .name = "Luntaer",
+    .file = "t1_realm.map",
+    .portal_name = "Luntaer",
+    .map_type = @MapType("luntaer"),
     .light = {
         .day_intensity = 0.05,
         .night_intensity = 0.2,

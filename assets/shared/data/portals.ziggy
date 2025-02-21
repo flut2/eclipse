@@ -1,8 +1,18 @@
 [
 {
     .id = 0,
-    .name = "Realm",
-    .textures = [{"portals_big": 0}],
+    .name = "Luntaer",
+    .textures = [{"props_large": 22}],
+    .animations = [
+        { .time = 0.4, .texture = {"props_large": 22} },
+        { .time = 0.4, .texture = {"props_large": 23} },
+        { .time = 0.4, .texture = {"props_large": 24} },
+        { .time = 0.4, .texture = {"props_large": 25} },
+        { .time = 0.4, .texture = {"props_large": 26} },
+        { .time = 0.4, .texture = {"props_large": 25} },
+        { .time = 0.4, .texture = {"props_large": 24} },
+        { .time = 0.4, .texture = {"props_large": 23} },
+    ],
 },
 {
     .id = 1,

@@ -194,7 +194,7 @@ pub fn moveToSpawn(self: *Player) void {
     }
 
     const rand_point = spawn_points.?[utils.rng.random().intRangeAtMost(usize, 0, spawn_points.?.len - 1)];
-    const tile = world.tiles[rand_point.y * world.w + rand_point.x];
+    const tile = world.tiles[@as(u32, rand_point.y) * @as(u32, world.w) + @as(u32, rand_point.x)];
     if (tile.data_id == std.math.maxInt(u16) or tile.data.no_walk or tile.occupied) {
         std.log.err("Spawn point {} was not walkable for player with data id {}", .{ rand_point, self.data_id });
         return;

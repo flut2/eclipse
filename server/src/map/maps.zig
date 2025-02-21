@@ -23,7 +23,7 @@ pub const LightData = struct {
     night_intensity: f32 = 0.0,
 };
 
-pub const MapType = enum { default, realm, @"test" };
+pub const MapType = enum { default, luntaer, @"test" };
 
 pub const MapDetails = struct {
     name: []const u8,
@@ -105,8 +105,8 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
     for (parsed_map.tiles, 0..) |tile, i| {
         const ux: u16 = @intCast(i % parsed_map.w);
         const uy: u16 = @intCast(@divFloor(i, parsed_map.w));
-        const fx = f32i(ux);
-        const fy = f32i(uy);
+        const fx = f32i(ux) + 0.5;
+        const fy = f32i(uy) + 0.5;
 
         if (tile.ground_name.len > 0) {
             const data = game_data.ground.from_name.getPtr(tile.ground_name) orelse @panic("Tile had no data attached");

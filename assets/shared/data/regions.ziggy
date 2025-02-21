@@ -19,4 +19,14 @@
     .name = "Store 3",
     .color = "0xC6B1FF",
 },
+{
+    .id = 4,
+    .name = "Forest Monster Spawn",
+    .color = "0xC6B1FF",
+},
+{
+    .id = 5,
+    .name = "Forest Encounter Spawn",
+    .color = "0xC6B1FF",
+},
 ]

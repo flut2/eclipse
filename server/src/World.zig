@@ -173,7 +173,7 @@ pub fn find(self: *World, comptime T: type, map_id: u32, comptime constness: enu
 }
 
 pub fn tick(self: *World, time: i64, dt: i64) !void {
-    if (self.id >= 0 and self.map_type != .realm and
+    if (self.id >= 0 and self.map_type != .luntaer and
         time > self.time_added + 30 * std.time.us_per_s and self.listForType(Player).items.len == 0)
     {
         self.deinit();
