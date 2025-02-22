@@ -98,6 +98,10 @@ pub fn init(self: *Item) void {
     }
 }
 
+pub fn deinit(self: *Item) void {
+    if (self.amount_text) |*text_data| text_data.deinit();
+}
+
 pub fn draw(self: *Item, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
     if (!self.base.visible) return;
     if (self.background_image_data) |background_image_data| background_image_data.draw(
