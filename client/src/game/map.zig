@@ -127,17 +127,18 @@ pub fn deinit() void {
         square_lock.lock();
         defer square_lock.unlock();
         main.allocator.free(squares);
+        squares = &.{};
     }
 
     minimap.deinit();
     main.allocator.free(minimap_copy);
+    info = .{};
+    main.camera.resetToDefaults();
 }
 
 pub fn dispose() void {
     interactive.map_id.store(std.math.maxInt(u32), .release);
     interactive.type.store(.unset, .release);
-
-    info = .{};
 
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
         object_lock.lock();
@@ -158,7 +159,7 @@ pub fn dispose() void {
 
     move_records.clearRetainingCapacity();
     main.allocator.free(info.name);
-    info.name = "";
+    info = .{};
     {
         square_lock.lock();
         defer square_lock.unlock();
@@ -167,6 +168,7 @@ pub fn dispose() void {
 
     @memset(minimap.data, 0);
     main.need_force_update = true;
+    main.camera.resetToDefaults();
 
     // main.minimap_update = .{};
     // minimap.deinit();
@@ -391,7 +393,7 @@ pub fn update(time: i64, dt: f32) void {
                     }
 
                     obj.update(time, dt);
-                    
+
                     if (is_self) {
                         main.camera.update(obj.x, obj.y, dt);
                         addMoveRecord(time, obj.x, obj.y);

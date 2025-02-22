@@ -49,7 +49,7 @@ pub fn init(self: *Entity) !void {
         return;
     };
 
-    if (self.data.occupy_square or self.data.full_occupy) {
+    if (self.data.occupy_square or self.data.full_occupy or self.data.is_wall) {
         const ux = u32f(self.x);
         const uy = u32f(self.y);
         if (maps.worlds.getPtr(self.world_id)) |world| world.tiles[uy * world.w + ux].occupied = true;
@@ -68,7 +68,7 @@ pub fn deinit(self: *Entity) !void {
         main.allocator.destroy(behav);
     }
 
-    if (self.data.occupy_square or self.data.full_occupy) {
+    if (self.data.occupy_square or self.data.full_occupy or self.data.is_wall) {
         const ux = u32f(self.x);
         const uy = u32f(self.y);
         if (maps.worlds.getPtr(self.world_id)) |world| world.tiles[uy * world.w + ux].occupied = false;

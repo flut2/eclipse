@@ -64,7 +64,8 @@ pub fn addToMap(entity_data: Entity) void {
         }
 
         const tex = self.data.textures[utils.rng.next() % self.data.textures.len];
-        if (ui_systems.screen != .editor and self.data.static and self.data.occupy_square) {
+        if (ui_systems.screen != .editor and self.data.static and 
+            (self.data.occupy_square or self.data.full_occupy or self.data.is_wall)) {
             if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
                 const floor_y = u32f(self.y);
                 const floor_x = u32f(self.x);
@@ -94,41 +95,33 @@ pub fn addToMap(entity_data: Entity) void {
         self.x = @floor(self.x);
         self.y = @floor(self.y);
 
-        if (map.getSquare(self.x, self.y - 1, true, .con)) |square| {
-            if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+        if (map.getSquare(self.x, self.y - 1, true, .con)) |square|
+            if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall|
                 if (wall.data.is_wall) {
                     wall.wall_outline_cull.bottom = true;
                     self.wall_outline_cull.top = true;
-                }
-            }
-        }
+                };
 
-        if (map.getSquare(self.x, self.y + 1, true, .con)) |square| {
-            if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+        if (map.getSquare(self.x, self.y + 1, true, .con)) |square|
+            if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall|
                 if (wall.data.is_wall) {
                     wall.wall_outline_cull.top = true;
                     self.wall_outline_cull.bottom = true;
-                }
-            }
-        }
+                };
 
-        if (map.getSquare(self.x - 1, self.y, true, .con)) |square| {
-            if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+        if (map.getSquare(self.x - 1, self.y, true, .con)) |square|
+            if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall|
                 if (wall.data.is_wall) {
                     wall.wall_outline_cull.right = true;
                     self.wall_outline_cull.left = true;
-                }
-            }
-        }
+                };
 
-        if (map.getSquare(self.x + 1, self.y, true, .con)) |square| {
-            if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall| {
+        if (map.getSquare(self.x + 1, self.y, true, .con)) |square|
+            if (map.findObjectWithAddList(Entity, square.entity_map_id, .ref)) |wall|
                 if (wall.data.is_wall) {
                     wall.wall_outline_cull.left = true;
                     self.wall_outline_cull.right = true;
-                }
-            }
-        }
+                };
     }
 
     base.addToMap(self, Entity);
@@ -137,7 +130,7 @@ pub fn addToMap(entity_data: Entity) void {
 pub fn deinit(self: *Entity) void {
     base.deinit(self);
 
-    if (self.data.occupy_square or self.data.full_occupy) {
+    if (self.data.occupy_square or self.data.full_occupy or self.data.is_wall) {
         if (map.getSquare(self.x, self.y, true, .ref)) |square| {
             if (square.entity_map_id == self.map_id) square.entity_map_id = std.math.maxInt(u32);
         }

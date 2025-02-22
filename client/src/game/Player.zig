@@ -623,7 +623,7 @@ fn isWalkable(x: f32, y: f32) bool {
         const walkable = !square.data.no_walk;
         const not_occupied = blk: {
             const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk true;
-            break :blk !e.data.occupy_square;
+            break :blk !e.data.occupy_square and !e.data.is_wall;
         };
         return square.data_id != Square.editor_tile and square.data_id != Square.empty_tile and walkable and not_occupied;
     } else return false;

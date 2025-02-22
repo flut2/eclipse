@@ -7,7 +7,7 @@ const ziggy = @import("ziggy");
 const assets = @import("assets.zig");
 const main = @import("main.zig");
 
-const Self = @This();
+const Settings = @This();
 
 pub const CursorType = enum { basic, royal, ranger, aztec, fiery, target_enemy, target_ally };
 pub const Button = union(enum) { key: glfw.Key, mouse: glfw.MouseButton };
@@ -45,7 +45,7 @@ cursor_type: CursorType = .aztec,
 favorite_char_ids: []const u32 = &.{},
 char_ids_login_sort: []const u32 = &.{},
 
-pub fn init(allocator: std.mem.Allocator) !Self {
+pub fn init(allocator: std.mem.Allocator) !Settings {
     arena = std.heap.ArenaAllocator.init(allocator);
     const arena_allocator = arena.allocator();
 
@@ -55,10 +55,10 @@ pub fn init(allocator: std.mem.Allocator) !Self {
     const file_data = try file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
     defer arena_allocator.free(file_data);
 
-    return try std.json.parseFromSliceLeaky(Self, arena_allocator, file_data, .{ .ignore_unknown_fields = true, .allocate = .alloc_always });
+    return try std.json.parseFromSliceLeaky(Settings, arena_allocator, file_data, .{ .ignore_unknown_fields = true, .allocate = .alloc_always });
 }
 
-pub fn deinit(self: Self) void {
+pub fn deinit(self: Settings) void {
     self.save() catch |e| {
         std.log.err("Settings save failed: {}", .{e});
         return;
@@ -69,7 +69,7 @@ pub fn deinit(self: Self) void {
     arena.deinit();
 }
 
-pub fn save(self: Self) !void {
+pub fn save(self: Settings) !void {
     const file = try std.fs.cwd().createFile("settings.json", .{});
     defer file.close();
 
@@ -77,8 +77,8 @@ pub fn save(self: Self) !void {
     try file.writeAll(settings_json);
 }
 
-pub fn resetToDefaults(self: *Self) void {
-    inline for (@typeInfo(Self).@"struct".fields) |field|
+pub fn resetToDefaults(self: *Settings) void {
+    inline for (@typeInfo(Settings).@"struct".fields) |field|
         @field(self, field.name) = @as(*const field.type, @ptrCast(@alignCast(field.default_value_ptr orelse
             @panic("All settings need a default value, but it wasn't found")))).*;
 }

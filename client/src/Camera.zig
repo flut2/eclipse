@@ -8,6 +8,8 @@ const map = @import("game/map.zig");
 const main = @import("main.zig");
 const pad = @import("assets.zig").padding;
 
+const Camera = @This();
+
 pub const px_per_tile = 63;
 pub const size_mult = 6.0;
 
@@ -71,4 +73,14 @@ pub fn screenToWorld(self: @This(), x_in: f32, y_in: f32) struct { x: f32, y: f3
     const x_div = (x_in - self.width / 2.0) / (px_per_tile * self.scale);
     const y_div = (y_in - self.height / 2.0) / (px_per_tile * self.scale);
     return .{ .x = self.x + x_div, .y = self.y + y_div };
+}
+
+pub fn resetToDefaults(self: *Camera) void {
+    self.lock.lock();
+    defer self.lock.unlock();
+    inline for (@typeInfo(Camera).@"struct".fields) |field| {
+        if (!std.mem.eql(u8, field.name, "lock"))
+            @field(self, field.name) = @as(*const field.type, @ptrCast(@alignCast(field.default_value_ptr orelse
+                @panic("All settings need a default value, but it wasn't found")))).*;
+    }
 }

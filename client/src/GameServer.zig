@@ -466,7 +466,7 @@ fn handleMapInfo(_: *Server, data: PacketData(.map_info)) void {
     }
 
     map.setMapInfo(data);
-    map.info.name = data.name;
+    map.info.name = main.allocator.dupe(u8, data.name) catch main.oomPanic();
 
     main.tick_frame = true;
 }
