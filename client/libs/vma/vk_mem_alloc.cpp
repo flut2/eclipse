@@ -14,7 +14,6 @@
 #endif
 
 #include <windows.h>
-#include <vulkan/vulkan_win32.h>
 #if !defined(VK_USE_PLATFORM_WIN32_KHR)
     #define VK_USE_PLATFORM_WIN32_KHR
 #endif // #if !defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -60,8 +59,6 @@
     #pragma clang diagnostic ignored "-Wmissing-field-initializers"
     #pragma clang diagnostic ignored "-Wnullability-completeness"
 #endif
-
-#include <vulkan/vulkan.h>
 
 #include "vk_mem_alloc.h"
 
