@@ -90,7 +90,7 @@ pub fn buildWithoutDupes(
             exe.addLibraryPath(.{ .cwd_relative = b.pathJoin(&.{ path, "lib" }) });
             exe.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ path, "include" }) });
         } else @panic("Could not find Vulkan SDK");
-        exe.addCSourceFile(.{ .file = b.path(root_add ++ "libs/vma/vk_mem_alloc.cpp"), .flags = &.{"-std=c++11"} });
+        exe.addCSourceFile(.{ .file = b.path(root_add ++ "libs/vma/vk_mem_alloc.cpp"), .flags = &.{"-std=c++17"} });
 
         inline for (.{
             .{ "generic.vert", "generic_vert.spv", "generic_vert" },
