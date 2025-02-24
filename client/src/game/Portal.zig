@@ -64,31 +64,38 @@ pub fn draw(self: *Portal, cam_data: CameraData, float_time_ms: f32, int_id: u32
             .{ .alpha_mult = self.alpha, .sort_extra = -4096 },
         );
 
-        if (self.name_text_data) |*data| main.renderer.drawText(
-            screen_pos.x - data.width * cam_data.scale / 2,
-            screen_pos.y - h_half - data.height * cam_data.scale - 5,
-            cam_data.scale,
-            data,
-            .{},
-        );
-
-        if (int_id == self.map_id) {
-            const button_w = 100.0 / 5.0;
-            const button_h = 100.0 / 5.0;
-            const total_w = main.renderer.enter_text_data.width * cam_data.scale + button_w;
-
-            main.renderer.drawQuad(
-                screen_pos.x - total_w / 2,
-                screen_pos.y + h_half + 5,
-                button_w * cam_data.scale,
-                button_h * cam_data.scale,
-                assets.interact_key_tex,
+        if (self.name_text_data) |*data| {
+            const name_h = h_half + (data.height + 5) * cam_data.scale;
+            const name_y = screen_pos.y - name_h;
+            data.sort_extra = (screen_pos.y - name_y) + (h_half - name_h);
+            main.renderer.drawText(
+                screen_pos.x - data.width * cam_data.scale / 2,
+                name_y,
+                cam_data.scale,
+                data,
                 .{},
             );
+        }
 
+        if (int_id == self.map_id) {
+            const button_w = 100.0 / 5.0 * cam_data.scale;
+            const button_h = 100.0 / 5.0 * cam_data.scale;
+            const total_w = main.renderer.enter_text_data.width * cam_data.scale + button_w;
+
+            const enter_y = screen_pos.y + h_half + 5;
+            main.renderer.drawQuad(
+                screen_pos.x - total_w / 2,
+                enter_y,
+                button_w,
+                button_h,
+                assets.interact_key_tex,
+                .{ .sort_extra = (screen_pos.y - enter_y) + (h_half - button_h) },
+            );
+
+            main.renderer.enter_text_data.sort_extra = (screen_pos.y - enter_y) + (h_half - main.renderer.enter_text_data.height);
             main.renderer.drawText(
-                screen_pos.x - total_w / 2 + button_w,
-                screen_pos.y + h_half + 5,
+                screen_pos.x - total_w / 2 + button_w + 5,
+                enter_y,
                 cam_data.scale,
                 &main.renderer.enter_text_data,
                 .{},
@@ -116,31 +123,38 @@ pub fn draw(self: *Portal, cam_data: CameraData, float_time_ms: f32, int_id: u32
     _ = &color_intensity;
     // flash
 
-    if (self.name_text_data) |*data| main.renderer.drawText(
-        screen_pos.x - data.width * cam_data.scale / 2,
-        screen_pos.y - data.height * cam_data.scale - 5,
-        cam_data.scale,
-        data,
-        .{},
-    );
-
-    if (int_id == self.map_id) {
-        const button_w = 100.0 / 5.0;
-        const button_h = 100.0 / 5.0;
-        const total_w = main.renderer.enter_text_data.width * cam_data.scale + button_w;
-
-        main.renderer.drawQuad(
-            screen_pos.x - total_w / 2,
-            screen_pos.y + h + 5,
-            button_w * cam_data.scale,
-            button_h * cam_data.scale,
-            assets.interact_key_tex,
+    if (self.name_text_data) |*data| {
+        const name_h = (data.height + 5) * cam_data.scale;
+        const name_y = screen_pos.y - name_h;
+        data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
+        main.renderer.drawText(
+            screen_pos.x - data.width * cam_data.scale / 2,
+            name_y,
+            cam_data.scale,
+            data,
             .{},
         );
+    }
 
+    if (int_id == self.map_id) {
+        const button_w = 100.0 / 5.0 * cam_data.scale;
+        const button_h = 100.0 / 5.0 * cam_data.scale;
+        const total_w = main.renderer.enter_text_data.width * cam_data.scale + button_w;
+
+        const enter_y = screen_pos.y + h + 5;
+        main.renderer.drawQuad(
+            screen_pos.x - total_w / 2,
+            enter_y,
+            button_w,
+            button_h,
+            assets.interact_key_tex,
+            .{ .sort_extra = (screen_pos.y - enter_y) + (h - button_h) },
+        );
+
+        main.renderer.enter_text_data.sort_extra = (screen_pos.y - enter_y) + (h - main.renderer.enter_text_data.height);
         main.renderer.drawText(
-            screen_pos.x - total_w / 2 + button_w,
-            screen_pos.y + h + 5,
+            screen_pos.x - total_w / 2 + button_w + 5,
+            enter_y,
             cam_data.scale,
             &main.renderer.enter_text_data,
             .{},

@@ -159,57 +159,79 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
     var screen_pos = cam_data.worldToScreen(self.x, self.y);
     const size = Camera.size_mult * cam_data.scale * self.size_mult;
 
+    var atlas_data = self.atlas_data;
+    var sink: f32 = 1.0;
+    if (!self.data.block_sink) {
+        if (map.getSquare(self.x, self.y, true, .con)) |square| sink += if (square.data.sink) 0.75 else 0;
+        atlas_data.tex_h /= sink;
+    }
+
+    const w = atlas_data.texWRaw() * size;
+    const h = atlas_data.texHRaw() * size;
+
     if (self.data.is_wall) {
         const wall_size_mult = Camera.px_per_tile / 9.0 * cam_data.scale * self.size_mult;
         const base_w = self.wall_data.base.texWRaw() * wall_size_mult;
         const base_h = self.wall_data.base.texHRaw() * wall_size_mult;
         const base_x = screen_pos.x;
         const base_y = screen_pos.y - @max(base_h / 2.0, (self.wall_data.base.texHRaw() - 9.0) * wall_size_mult / 2.0);
-        main.renderer.drawQuad(base_x, base_y, base_w, base_h, self.wall_data.base, .{});
+        main.renderer.drawQuad(
+            base_x,
+            base_y,
+            base_w,
+            base_h,
+            self.wall_data.base,
+            .{ .sort_extra = (screen_pos.y - base_y) + (h - base_h) },
+        );
 
         if (!self.wall_outline_cull.left) {
-            const left_outline_w = self.wall_data.left_outline.texWRaw() * wall_size_mult;
+            const left_w = self.wall_data.left_outline.texWRaw() * wall_size_mult;
+            const left_h = self.wall_data.left_outline.texHRaw() * wall_size_mult;
             main.renderer.drawQuad(
-                base_x - left_outline_w,
+                base_x - left_w,
                 base_y,
-                left_outline_w,
+                left_w,
                 self.wall_data.left_outline.texHRaw() * wall_size_mult,
                 self.wall_data.left_outline,
-                .{},
+                .{ .sort_extra = (screen_pos.y - base_y) + (h - left_h) },
             );
         }
 
         if (!self.wall_outline_cull.right) {
+            const right_h = self.wall_data.right_outline.texHRaw() * wall_size_mult;
             main.renderer.drawQuad(
                 base_x + base_w,
                 base_y,
                 self.wall_data.right_outline.texWRaw() * wall_size_mult,
-                self.wall_data.right_outline.texHRaw() * wall_size_mult,
+                right_h,
                 self.wall_data.right_outline,
-                .{},
+                .{ .sort_extra = (screen_pos.y - base_y) + (h - right_h) },
             );
         }
 
         if (!self.wall_outline_cull.top) {
-            const top_outline_h = self.wall_data.top_outline.texHRaw() * wall_size_mult;
+            const top_h = self.wall_data.top_outline.texHRaw() * wall_size_mult;
+            const top_y = base_y - top_h;
             main.renderer.drawQuad(
                 base_x,
-                base_y - top_outline_h,
+                top_y,
                 self.wall_data.top_outline.texWRaw() * wall_size_mult,
-                top_outline_h,
+                top_h,
                 self.wall_data.top_outline,
-                .{},
+                .{ .sort_extra = (screen_pos.y - top_y) + (h - top_h) },
             );
         }
 
         if (!self.wall_outline_cull.bottom) {
+            const bottom_h = self.wall_data.bottom_outline.texHRaw() * wall_size_mult;
+            const bottom_y = base_y + base_h;
             main.renderer.drawQuad(
                 base_x,
-                base_y + base_h,
+                bottom_y,
                 self.wall_data.bottom_outline.texWRaw() * wall_size_mult,
-                self.wall_data.bottom_outline.texHRaw() * wall_size_mult,
+                bottom_h,
                 self.wall_data.bottom_outline,
-                .{},
+                .{ .sort_extra = (screen_pos.y - bottom_y) + (h - bottom_h) },
             );
         }
 
@@ -229,26 +251,21 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
             .{ .alpha_mult = self.alpha, .sort_extra = -4096 },
         );
 
-        if (self.name_text_data) |*data| main.renderer.drawText(
-            screen_pos.x - data.width * cam_data.scale / 2,
-            screen_pos.y - h_half - data.height * cam_data.scale - 5,
-            cam_data.scale,
-            data,
-            .{},
-        );
+        if (self.name_text_data) |*data| {
+            const name_h = h_half - (data.height - 5) * cam_data.scale;
+            const name_y = screen_pos.y - name_h;
+            data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
+            main.renderer.drawText(
+                screen_pos.x - data.width * cam_data.scale / 2,
+                name_y,
+                cam_data.scale,
+                data,
+                .{},
+            );
+        }
 
         return;
     }
-
-    var atlas_data = self.atlas_data;
-    var sink: f32 = 1.0;
-    if (!self.data.block_sink) {
-        if (map.getSquare(self.x, self.y, true, .con)) |square| sink += if (square.data.sink) 0.75 else 0;
-        atlas_data.tex_h /= sink;
-    }
-
-    const w = atlas_data.texWRaw() * size;
-    const h = atlas_data.texHRaw() * size;
 
     screen_pos.y += self.z * -px_per_tile - h + assets.padding * size;
 
@@ -267,15 +284,18 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
         main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
-    if (self.data.show_name) {
-        if (self.name_text_data) |*data| main.renderer.drawText(
+    if (self.data.show_name) if (self.name_text_data) |*data| {
+        const name_h = (data.height + 5) * cam_data.scale;
+        const name_y = screen_pos.y - name_h;
+        data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
+        main.renderer.drawText(
             screen_pos.x - data.width * cam_data.scale / 2,
-            screen_pos.y - data.height * cam_data.scale - 5,
+            name_y,
             cam_data.scale,
             data,
             .{},
         );
-    }
+    };
 
     main.renderer.drawQuad(
         screen_pos.x - w / 2.0,
@@ -297,6 +317,7 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
         const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * cam_data.scale;
         const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * cam_data.scale;
         const hp_bar_y = screen_pos.y + h + y_pos;
+        const hp_bar_sort_extra = (screen_pos.y - hp_bar_y) + (h - hp_bar_h);
 
         main.renderer.drawQuad(
             screen_pos.x - hp_bar_w / 2.0,
@@ -304,7 +325,7 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
             hp_bar_w,
             hp_bar_h,
             assets.empty_bar_data,
-            .{ .shadow_texel_mult = 0.5, .sort_extra = -0.0001 },
+            .{ .shadow_texel_mult = 0.5, .sort_extra = hp_bar_sort_extra - 0.0001 },
         );
 
         const float_hp = f32i(self.hp);
@@ -319,7 +340,7 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
             hp_bar_w / hp_perc,
             hp_bar_h,
             hp_bar_data,
-            .{},
+            .{ .sort_extra = hp_bar_sort_extra },
         );
 
         y_pos += hp_bar_h + 5.0;

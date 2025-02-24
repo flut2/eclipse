@@ -163,7 +163,15 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
     }
 }
 
-pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.?, float_time_ms: f32, x: f32, y: f32, scale: f32) void {
+pub fn drawConditions(
+    cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.?,
+    float_time_ms: f32,
+    x: f32,
+    y: f32,
+    scale: f32,
+    base_y: f32,
+    base_h: f32,
+) void {
     var cond_len: f32 = 0.0;
     for (0..@bitSizeOf(utils.Condition)) |i| {
         if (cond_int & (@as(usize, 1) << @intCast(i)) != 0)
@@ -186,7 +194,7 @@ pub fn drawConditions(cond_int: @typeInfo(utils.Condition).@"struct".backing_int
                     cond_w,
                     cond_h,
                     current_frame,
-                    .{ .shadow_texel_mult = 1.0 },
+                    .{ .shadow_texel_mult = 1.0, .sort_extra = (base_y - y) + (base_h - cond_h) },
                 );
                 cond_new_idx += 1.0;
             }

@@ -72,15 +72,18 @@ pub fn draw(self: *Container, cam_data: CameraData, float_time_ms: f32) void {
         main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
-    if (self.data.show_name) {
-        if (self.name_text_data) |*data| main.renderer.drawText(
+    if (self.data.show_name) if (self.name_text_data) |*data| {
+        const name_h = (data.height + 5) * cam_data.scale;
+        const name_y = screen_pos.y - name_h;
+        data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
+        main.renderer.drawText(
             screen_pos.x - data.width * cam_data.scale / 2,
-            screen_pos.y - data.height * cam_data.scale - 5,
+            name_y,
             cam_data.scale,
             data,
             .{},
         );
-    }
+    };
 
     main.renderer.drawQuad(
         screen_pos.x - w / 2.0,

@@ -339,11 +339,12 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
 
     var name_h: f32 = 0.0;
     if (self.name_text_data) |*data| {
-        name_h = data.height + 5;
-        data.sort_extra = -data.height;
+        name_h = (data.height + 5) * cam_data.scale;
+        const name_y = screen_pos.y - name_h;
+        data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
         main.renderer.drawText(
-            screen_pos.x - x_offset - data.width / 2 - assets.padding * 2,
-            screen_pos.y - name_h,
+            screen_pos.x - x_offset - data.width * cam_data.scale / 2 - assets.padding * 2,
+            name_y,
             cam_data.scale,
             data,
             .{},
@@ -370,6 +371,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * cam_data.scale;
         const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * cam_data.scale;
         const hp_bar_y = screen_pos.y + h + y_pos;
+        const hp_bar_sort_extra = (screen_pos.y - hp_bar_y) + (h - hp_bar_h);
 
         main.renderer.drawQuad(
             screen_pos.x - x_offset - hp_bar_w / 2.0,
@@ -377,7 +379,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
             hp_bar_w,
             hp_bar_h,
             assets.empty_bar_data,
-            .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos - 0.0001 },
+            .{ .shadow_texel_mult = 0.5, .sort_extra = hp_bar_sort_extra - 0.0001 },
         );
 
         const float_hp = f32i(self.hp);
@@ -396,7 +398,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
             hp_bar_w * hp_perc,
             hp_bar_h,
             hp_bar_data,
-            .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
+            .{ .shadow_texel_mult = 0.5, .sort_extra = hp_bar_sort_extra },
         );
 
         y_pos += hp_bar_h + 5.0;
@@ -406,6 +408,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         const mp_bar_w = assets.mp_bar_data.width() * 2 * cam_data.scale;
         const mp_bar_h = assets.mp_bar_data.height() * 2 * cam_data.scale;
         const mp_bar_y = screen_pos.y + h + y_pos;
+        const mp_bar_sort_extra = (screen_pos.y - mp_bar_y) + (h - mp_bar_h);
 
         main.renderer.drawQuad(
             screen_pos.x - x_offset - mp_bar_w / 2.0,
@@ -413,7 +416,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
             mp_bar_w,
             mp_bar_h,
             assets.empty_bar_data,
-            .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos - 0.0001 },
+            .{ .shadow_texel_mult = 0.5, .sort_extra = mp_bar_sort_extra - 0.0001 },
         );
 
         const float_mp = f32i(self.mp);
@@ -432,7 +435,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
             mp_bar_w * mp_perc,
             mp_bar_h,
             mp_bar_data,
-            .{ .shadow_texel_mult = 0.5, .sort_extra = -h - y_pos },
+            .{ .shadow_texel_mult = 0.5, .sort_extra = mp_bar_sort_extra },
         );
 
         y_pos += mp_bar_h + 5.0;
@@ -440,7 +443,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
 
     const cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.? = @bitCast(self.condition);
     if (cond_int > 0) {
-        base.drawConditions(cond_int, float_time_ms, screen_pos.x - x_offset, screen_pos.y + h + y_pos, cam_data.scale);
+        base.drawConditions(cond_int, float_time_ms, screen_pos.x - x_offset, screen_pos.y + h + y_pos, cam_data.scale, screen_pos.y, h);
         y_pos += 20;
     }
 
