@@ -114,6 +114,38 @@ pub fn appendMap(self: *World, map: maps.MapData) !void {
     for (map.enemies) |e| _ = try self.add(Enemy, .{ .x = e.x, .y = e.y, .data_id = e.data_id });
     for (map.portals) |p| _ = try self.add(Portal, .{ .x = p.x, .y = p.y, .data_id = p.data_id });
     for (map.containers) |c| _ = try self.add(Container, .{ .x = c.x, .y = c.y, .data_id = c.data_id });
+
+    switch (self.map_type) {
+        .dungeon => {
+            var iter = map.regions.iterator();
+            while (iter.next()) |entry| {
+                const data = game_data.region.from_id.get(entry.key_ptr.*) orelse continue;
+                if (std.mem.eql(u8, data.name, "Dungeon Monster Spawn")) {
+                    const mobs = map.details.normal_mobs orelse continue;
+                    for (entry.value_ptr.*) |point| {
+                        const rand_mob = mobs[utils.rng.next() % mobs.len];
+                        const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                            std.log.err("Spawning dungeon mob \"{s}\" failed, no data found", .{rand_mob});
+                            continue;
+                        };
+                        _ = try self.add(Enemy, .{ .x = f32i(point.x) + 0.5, .y = f32i(point.y) + 0.5, .data_id = mob_data.id });
+                    }
+                } else if (std.mem.eql(u8, data.name, "Dungeon Treasure Spawn")) {
+                    const mobs = map.details.treasure_mobs orelse continue;
+                    if (utils.rng.random().float(f32) <= map.details.treasure_chance) {
+                        const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                        const rand_mob = mobs[utils.rng.next() % mobs.len];
+                        const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                            std.log.err("Spawning dungeon treasure \"{s}\" failed, no data found", .{rand_mob});
+                            continue;
+                        };
+                        _ = try self.add(Enemy, .{ .x = f32i(rand_point.x) + 0.5, .y = f32i(rand_point.y) + 0.5, .data_id = mob_data.id });
+                    }
+                }
+            }
+        },
+        else => {},
+    }
 }
 
 pub fn create(w: u16, h: u16, id: i32) !World {
@@ -173,7 +205,7 @@ pub fn find(self: *World, comptime T: type, map_id: u32, comptime constness: enu
 }
 
 pub fn tick(self: *World, time: i64, dt: i64) !void {
-    if (self.id >= 0 and self.map_type != .luntaer and
+    if (self.id >= 0 and self.map_type != .realm and
         time > self.time_added + 30 * std.time.us_per_s and self.listForType(Player).items.len == 0)
     {
         self.deinit();

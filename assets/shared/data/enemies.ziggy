@@ -267,4 +267,99 @@
         .intensity = 0.12,
     },
 },
+{
+    .id = 16,
+    .name = "Tribe Shaman",
+    .textures = [{"low_realm": 22}],
+},
+{
+    .id = 17,
+    .name = "Tribe Rogue",
+    .textures = [{"low_realm": 23}],
+},
+{
+    .id = 18,
+    .name = "Tribe Mage",
+    .textures = [{"low_realm": 24}],
+},
+{
+    .id = 19,
+    .name = "Tribe Pyromancer",
+    .textures = [{"low_realm": 25}],
+},
+{
+    .id = 20,
+    .name = "Tribe Monk",
+    .textures = [{"low_realm": 26}],
+},
+{
+    .id = 21,
+    .name = "Possessed Totem",
+    .textures = [{"low_realm_big": 1}],
+},
+{
+    .id = 22,
+    .name = "Possessed Gilded Totem",
+    .textures = [{"low_realm_big": 2}],
+},
+{
+    .id = 23,
+    .name = "Tribe Chief",
+    .textures = [{"low_realm_big": 3}],
+},
+{
+    .id = 24,
+    .name = "Possessed Sword of Sorrow",
+    .textures = [{"low_realm_big": 4}],
+},
+{
+    .id = 25,
+    .name = "Possessed Axe of Sorrow",
+    .textures = [{"low_realm_big": 5}],
+},
+{
+    .id = 26,
+    .name = "Possessed Sword of Anger",
+    .textures = [{"low_realm_big": 6}],
+},
+{
+    .id = 27,
+    .name = "Possessed Axe of Anger",
+    .textures = [{"low_realm_big": 7}],
+},
+{
+    .id = 28,
+    .name = "Possessed Short Sword of Sorrow",
+    .textures = [{"low_realm_big": 8}],
+},
+{
+    .id = 29,
+    .name = "Possessed Short Axe of Sorrow",
+    .textures = [{"low_realm_big": 9}],
+},
+{
+    .id = 30,
+    .name = "Possessed Short Daggers of Sorrow",
+    .textures = [{"low_realm_big": 10}],
+},
+{
+    .id = 31,
+    .name = "Possessed Short Sword of Anger",
+    .textures = [{"low_realm_big": 11}],
+},
+{
+    .id = 32,
+    .name = "Possessed Short Axe of Anger",
+    .textures = [{"low_realm_big": 12}],
+},
+{
+    .id = 33,
+    .name = "Possessed Short Daggers of Anger",
+    .textures = [{"low_realm_big": 13}],
+},
+{
+    .id = 35,
+    .name = "Possessed Short Totem",
+    .textures = [{"low_realm_big": 25}],
+},
 ]

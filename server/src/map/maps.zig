@@ -23,7 +23,7 @@ pub const LightData = struct {
     night_intensity: f32 = 0.0,
 };
 
-pub const MapType = enum { default, luntaer, @"test" };
+pub const MapType = enum { default, realm, dungeon, @"test" };
 
 pub const MapDetails = struct {
     name: []const u8,
@@ -33,6 +33,15 @@ pub const MapDetails = struct {
     light: LightData = .{},
     portal_name: ?[]const u8 = null,
     map_type: MapType = .default,
+    normal_mobs: ?[][]const u8 = null,
+    treasure_chance: f32 = 0.0,
+    treasure_mobs: ?[][]const u8 = null,
+    biome_1_mobs: ?[][]const u8 = null,
+    biome_1_encounters: ?[][]const u8 = null,
+    biome_2_mobs: ?[][]const u8 = null,
+    biome_2_encounters: ?[][]const u8 = null,
+    biome_3_mobs: ?[][]const u8 = null,
+    biome_3_encounters: ?[][]const u8 = null,
 
     pub const test_details: MapDetails = .{
         .name = "Test Map",

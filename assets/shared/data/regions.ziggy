@@ -21,12 +21,22 @@
 },
 {
     .id = 4,
-    .name = "Forest Monster Spawn",
-    .color = "0xC6B1FF",
+    .name = "Biome 1 Monster Spawn",
+    .color = "0x640D5F",
 },
 {
     .id = 5,
-    .name = "Forest Encounter Spawn",
-    .color = "0xC6B1FF",
+    .name = "Biome 1 Encounter Spawn",
+    .color = "0xFEB5B00",
+},
+{
+    .id = 6,
+    .name = "Dungeon Monster Spawn",
+    .color = "0xD91656",
+},
+{
+    .id = 7,
+    .name = "Dungeon Treasure Spawn",
+    .color = "0xFFB200",
 },
 ]
