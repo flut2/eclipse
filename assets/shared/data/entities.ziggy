@@ -369,4 +369,36 @@
     .static = true,
     .occupy_square = true,
 },
+{
+    .id = 46,
+    .name = "T1 Realm Large Trees",
+    .textures = [{"props_big": 0}, {"props_big": 107}, {"props_big": 108}],
+    .health = 500,
+    .defense = 10,
+    .occupy_square = true,
+},
+{
+    .id = 47,
+    .name = "T1 Realm Large Trees Dry",
+    .textures = [{"props_big": 40}, {"props_big": 109}, {"props_big": 110}],
+    .health = 500,
+    .defense = 10,
+    .occupy_square = true,
+},
+{
+    .id = 48,
+    .name = "T1 Realm Lamp Post",
+    .textures = [{"props_big":22}],
+    .light = {
+        .color = "0xE2DD4E",
+        .intensity = 0.075,
+        .radius = 2.75,
+    },
+    .animations = [
+        { .time = 0.4, .texture = {"props_big": 22} },
+        { .time = 0.4, .texture = {"props_big": 23} },
+        { .time = 0.4, .texture = {"props_big": 24} },
+        { .time = 0.4, .texture = {"props_big": 23} },
+    ],
+},
 ]

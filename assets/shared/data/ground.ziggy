@@ -131,7 +131,7 @@
     .id = 16,
     .name = "T1 Realm Grass Blades Dark",
     .textures = [{ "ground": 54 }, { "ground": 55 }],
-    .blend_prio = 2,
+    .blend_prio = 6,
 },
 {
     .id = 17,
@@ -149,13 +149,13 @@
     .id = 19,
     .name = "T1 Realm Grass Blades Dry Dark",
     .textures = [{ "ground": 60 }, { "ground": 61 }],
-    .blend_prio = 2,
+    .blend_prio = 8,
 },
 {
     .id = 20,
     .name = "T1 Realm Grass Blades Dry Short",
     .textures = [{ "ground": 62 }, { "ground": 63 }, { "ground": 64 }],
-    .blend_prio = 3,
+    .blend_prio = 9,
 },
 {
     .id = 21,
@@ -234,18 +234,21 @@
     .name = "T1 Realm Brown Stone Road",
     .textures = [{ "ground": 77 }, { "ground": 78 }],
     .blend_prio = 1,
+    .speed_mult = 1.10,
 },
 {
     .id = 34,
     .name = "T1 Realm Grey Stone Road",
     .textures = [{ "ground": 79 }, { "ground": 80 }],
     .blend_prio = 1,
+    .speed_mult = 1.10,
 },
 {
     .id = 35,
     .name = "T1 Realm Green Stone Road",
     .textures = [{ "ground": 81 }, { "ground": 82 }],
     .blend_prio = 1,
+    .speed_mult = 1.10,
 },
 {
     .id = 36,
