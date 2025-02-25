@@ -39,4 +39,24 @@
     .name = "Dungeon Treasure Spawn",
     .color = "0xFFB200",
 },
+{
+    .id = 8,
+    .name = "Biome 2 Monster Spawn",
+    .color = "0x640D5F",
+},
+{
+    .id = 9,
+    .name = "Biome 2 Encounter Spawn",
+    .color = "0xFEB5B00",
+},
+{
+    .id = 10,
+    .name = "Biome 3 Monster Spawn",
+    .color = "0x640D5F",
+},
+{
+    .id = 11,
+    .name = "Biome 3 Encounter Spawn",
+    .color = "0xFEB5B00",
+},
 ]

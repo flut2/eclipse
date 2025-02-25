@@ -177,7 +177,7 @@ const Material = struct {
 };
 
 pub const ground_size = 200000;
-pub const generic_size = 20000;
+pub const generic_size = 50000;
 pub const ui_size = 2000;
 
 medium_text: Texture = .{},
@@ -1360,6 +1360,7 @@ pub fn drawText(
     text_data: *element.TextData,
     scissor_override: element.ScissorRect,
 ) void {
+    if (scale <= 0.3) return;
     text_data.lock.lock();
     defer text_data.lock.unlock();
 
