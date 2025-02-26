@@ -1518,6 +1518,7 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
         defer map.object_lock.unlock();
         _ = map.removeEntity(Entity, tile.region_map_id);
         tile.region_map_id = std.math.maxInt(u32);
+        tile.region = std.math.maxInt(u16);
     } else {
         const data = game_data.region.from_id.get(data_id) orelse {
             std.log.err("Data not found for region with data id {}, setting at x={}, y={} cancelled", .{ data_id, x, y });
