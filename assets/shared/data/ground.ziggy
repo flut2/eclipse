@@ -291,4 +291,34 @@
     .textures = [{ "ground": 113 }],
     .blend_prio = 5,
 },
+{
+    .id = 42,
+    .name = "T1 Realm Rug Green",
+    .textures = [{ "ground": 88 }, { "ground": 89 }, { "ground": 90 }],
+    .rug_textures = {
+        .corners = [{ "ground": 83 }],
+        .inner_corners = [{ "ground": 84 }],
+        .edges = [{ "ground": 85 }, { "ground": 86 }, { "ground": 87 }],
+    },
+},
+{
+    .id = 43,
+    .name = "T1 Realm Rug Red",
+    .textures = [{ "ground": 96 }, { "ground": 97 }, { "ground": 98 }],
+    .rug_textures = {
+        .corners = [{ "ground": 91 }],
+        .inner_corners = [{ "ground": 92 }],
+        .edges = [{ "ground": 93 }, { "ground": 94 }, { "ground": 95 }],
+    },
+},
+{
+    .id = 44,
+    .name = "T1 Realm Rug Grey",
+    .textures = [{ "ground": 104 }, { "ground": 105 }, { "ground": 106 }],
+    .rug_textures = {
+        .corners = [{ "ground": 99 }],
+        .inner_corners = [{ "ground": 100 }],
+        .edges = [{ "ground": 101 }, { "ground": 102 }, { "ground": 103 }],
+    },
+},
 ]
