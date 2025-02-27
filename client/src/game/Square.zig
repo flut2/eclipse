@@ -94,9 +94,16 @@ pub fn addToMap(square_data: Square) void {
     map.squares[current_idx].update();
 }
 
-fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, comptime blend_dir: comptime_int) void {
+fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, disable_blend: bool, comptime blend_dir: comptime_int) void {
     if (other_square) |other_sq| {
         const opposite_dir = (blend_dir + 2) % 4;
+        if (disable_blend) {
+            square.blends[blend_dir] = .{ .u = -1.0, .v = -1.0 };
+            square.blend_offsets[blend_dir] = .{ .u = 0.0, .v = 0.0 };
+            other_sq.blends[opposite_dir] = .{ .u = -1.0, .v = -1.0 };
+            other_sq.blend_offsets[opposite_dir] = .{ .u = 0.0, .v = 0.0 };
+            return;
+        }
 
         if (other_sq.data_id != editor_tile and other_sq.data_id != empty_tile) {
             const other_blend_prio = other_sq.data.blend_prio;
@@ -176,14 +183,15 @@ pub fn updateAnims(square: *Square, time: i64) void {
     }
 
     const current_prio = square.data.blend_prio;
+    const disable_blend = square.data.disable_blend;
     const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
     const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
     const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
     const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
-    updateBlendAtDir(square, left_sq, current_prio, left_blend_dir);
-    updateBlendAtDir(square, top_sq, current_prio, top_blend_dir);
-    updateBlendAtDir(square, right_sq, current_prio, right_blend_dir);
-    updateBlendAtDir(square, bottom_sq, current_prio, bottom_blend_dir);
+    updateBlendAtDir(square, left_sq, current_prio, disable_blend, left_blend_dir);
+    updateBlendAtDir(square, top_sq, current_prio, disable_blend, top_blend_dir);
+    updateBlendAtDir(square, right_sq, current_prio, disable_blend, right_blend_dir);
+    updateBlendAtDir(square, bottom_sq, current_prio, disable_blend, bottom_blend_dir);
 }
 
 pub fn update(square: *Square) void {
@@ -203,14 +211,15 @@ pub fn update(square: *Square) void {
     }
 
     const current_prio = square.data.blend_prio;
+    const disable_blend = square.data.disable_blend;
     const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
     const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
     const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
     const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
-    updateBlendAtDir(square, left_sq, current_prio, left_blend_dir);
-    updateBlendAtDir(square, top_sq, current_prio, top_blend_dir);
-    updateBlendAtDir(square, right_sq, current_prio, right_blend_dir);
-    updateBlendAtDir(square, bottom_sq, current_prio, bottom_blend_dir);
+    updateBlendAtDir(square, left_sq, current_prio, disable_blend, left_blend_dir);
+    updateBlendAtDir(square, top_sq, current_prio, disable_blend, top_blend_dir);
+    updateBlendAtDir(square, right_sq, current_prio, disable_blend, right_blend_dir);
+    updateBlendAtDir(square, bottom_sq, current_prio, disable_blend, bottom_blend_dir);
     const current_data_id = square.data_id;
     square.updateRugs(current_data_id);
     if (left_sq) |sq| sq.updateRugs(current_data_id);
@@ -237,6 +246,13 @@ fn updateRugs(square: *Square, current_data_id: u16) void {
     const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
     const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
     const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
+    defer {
+        const current_prio = square.data.blend_prio;
+        updateBlendAtDir(square, left_sq, current_prio, true, left_blend_dir);
+        updateBlendAtDir(square, top_sq, current_prio, true, top_blend_dir);
+        updateBlendAtDir(square, right_sq, current_prio, true, right_blend_dir);
+        updateBlendAtDir(square, bottom_sq, current_prio, true, bottom_blend_dir);
+    }
 
     const top_left_sq = map.getSquare(square.x - 1, square.y - 1, true, .ref);
     const top_right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y - 1, true, .ref) else null;

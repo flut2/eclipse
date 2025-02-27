@@ -471,6 +471,7 @@ pub const GroundData = struct {
     speed_mult: f32 = 1.0,
     damage: i16 = 0,
     blend_prio: i16 = 0,
+    disable_blend: bool = false,
 };
 
 pub const StatIncreaseData = union(enum) {
