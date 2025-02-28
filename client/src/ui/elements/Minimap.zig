@@ -193,6 +193,7 @@ pub fn update(self: *Minimap, time: i64) void {
     const px_per_y = self.map_height / vis_h;
 
     for (map.listForType(Portal).items) |portal| {
+        if (utils.distSqr(portal.x, portal.y, x, y) > 16 * 16) continue;
         if (!utils.isInBounds(portal.x, portal.y, edge_x, edge_y, vis_w, vis_h)) continue;
         self.icons.append(main.allocator, .{
             .id = MinimapIcon.portal_id,
@@ -213,6 +214,7 @@ pub fn update(self: *Minimap, time: i64) void {
     }
 
     for (map.listForType(Enemy).items) |enemy| {
+        if (!enemy.data.elite and utils.distSqr(enemy.x, enemy.y, x, y) > 16 * 16) continue;
         if (!utils.isInBounds(enemy.x, enemy.y, edge_x, edge_y, vis_w, vis_h)) continue;
         self.icons.append(main.allocator, .{
             .id = MinimapIcon.enemy_id,
