@@ -1595,6 +1595,12 @@ pub fn draw(self: *Renderer, time: i64) !void {
     inline for (@typeInfo(CameraData).@"struct".fields) |field| @field(cam_data, field.name) = @field(main.camera, field.name);
     main.camera.lock.unlock();
 
+    const move_dt = if (cam_data.last_update == 0) 0 else f32i(time - cam_data.last_update);
+    const dx = cam_data.x_dir * move_dt;
+    const dy = cam_data.y_dir * move_dt;
+    cam_data.x += dx;
+    cam_data.y += dy;
+
     const clear: vk.ClearValue = .{ .color = .{ .float_32 = .{ 0.0, 0.0, 0.0, 0.0 } } };
 
     const viewport: vk.Viewport = .{

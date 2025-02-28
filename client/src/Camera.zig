@@ -10,7 +10,7 @@ const pad = @import("assets.zig").padding;
 
 const Camera = @This();
 
-pub const px_per_tile = 63;
+pub const px_per_tile = 63.0;
 pub const size_mult = 6.0;
 
 /// This lock is for reading from the render thread (it does not, and should not write),
@@ -21,6 +21,9 @@ quake: bool = false,
 quake_amount: f32 = 0.0,
 x: f32 = 0.0,
 y: f32 = 0.0,
+x_dir: f32 = 0.0,
+y_dir: f32 = 0.0,
+last_update: i64 = 0,
 scale: f32 = 1.0,
 min_x: u32 = 0,
 min_y: u32 = 0,
@@ -32,7 +35,15 @@ clip_scale: [2]f32 = [2]f32{ 2.0 / 1280.0, 2.0 / 720.0 },
 clip_offset: [2]f32 = [2]f32{ -1280.0 / 2.0, -720.0 / 2.0 },
 cam_offset_px: [2]f32 = [2]f32{ 0.0, 0.0 },
 
-pub fn update(self: *@This(), target_x: f32, target_y: f32, dt: f32) void {
+pub fn update(
+    self: *@This(),
+    target_x: f32,
+    target_y: f32,
+    dt: f32,
+    x_dir: f32,
+    y_dir: f32,
+    time: i64,
+) void {
     const map_w = map.info.width;
     const map_h = map.info.height;
     if (map_w == 0 or map_h == 0) return;
@@ -53,11 +64,14 @@ pub fn update(self: *@This(), target_x: f32, target_y: f32, dt: f32) void {
 
     self.x = tx;
     self.y = ty;
+    self.x_dir = x_dir;
+    self.y_dir = y_dir;
+    self.last_update = time;
     self.cam_offset_px[0] = tx * px_per_tile * self.scale;
     self.cam_offset_px[1] = ty * px_per_tile * self.scale;
 
-    const w_half = self.width / (2 * px_per_tile * self.scale);
-    const h_half = self.height / (2 * px_per_tile * self.scale);
+    const w_half = self.width / (2.0 * px_per_tile * self.scale);
+    const h_half = self.height / (2.0 * px_per_tile * self.scale);
     const max_dist = @ceil(@sqrt(w_half * w_half + h_half * h_half) + 1);
 
     const min_x_dt = tx - max_dist;

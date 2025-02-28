@@ -103,6 +103,7 @@ sink_level: f32 = 0,
 colors: []u32 = &.{},
 x_dir: f32 = 0.0,
 y_dir: f32 = 0.0,
+last_self_move: i64 = 0,
 facing: f32 = std.math.nan(f32),
 status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
 speech_balloon: ?SpeechBalloon = null,
@@ -304,11 +305,21 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
 pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
     if (main.needs_map_bg or !cam_data.visibleInCamera(self.x, self.y)) return;
 
+    var x = self.x;
+    var y = self.y;
+    if (self.map_id == map.info.player_map_id) {
+        const move_dt = if (self.last_self_move == 0) 0 else f32i(i64f(float_time_ms) * std.time.us_per_ms - self.last_self_move);
+        const dx = self.x_dir * move_dt;
+        const dy = self.y_dir * move_dt;
+        x += dx;
+        y += dy;
+    }
+
     const size = Camera.size_mult * cam_data.scale * self.size_mult;
 
     var atlas_data = self.atlas_data;
     var sink: f32 = 1.0;
-    if (map.getSquare(self.x, self.y, true, .con)) |square| sink += if (square.data.sink) 0.75 else 0;
+    if (map.getSquare(x, y, true, .con)) |square| sink += if (square.data.sink) 0.75 else 0;
     atlas_data.tex_h /= sink;
 
     const w = atlas_data.texWRaw() * size;
@@ -318,7 +329,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
     const stand_w = stand_data.width() * size;
     const x_offset = (if (self.direction == .left) stand_w - w else w - stand_w) / 2.0;
 
-    var screen_pos = cam_data.worldToScreen(self.x, self.y);
+    var screen_pos = cam_data.worldToScreen(x, y);
     screen_pos.x += x_offset;
     screen_pos.y += self.z * -px_per_tile - h + assets.padding * size;
 
@@ -333,7 +344,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
     // flash
 
     if (main.settings.enable_lights) {
-        const tile_pos = cam_data.worldToScreen(self.x, self.y);
+        const tile_pos = cam_data.worldToScreen(x, y);
         main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
     }
 
@@ -571,8 +582,10 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
                     }
                 }
 
-                const dx = self.x_dir * dt;
-                const dy = self.y_dir * dt;
+                const move_dt: f32 = if (self.last_self_move == 0) dt else @floatFromInt(time - self.last_self_move);
+                const dx = self.x_dir * move_dt;
+                const dy = self.y_dir * move_dt;
+                self.last_self_move = time;
 
                 if (dx < move_threshold and dx > -move_threshold and dy < move_threshold and dy > -move_threshold) {
                     modifyStep(self, self.x + dx, self.y + dy);

@@ -62,6 +62,8 @@ pub var account_arena_allocator: std.mem.Allocator = undefined;
 pub var current_account: ?AccountData = null;
 pub var character_list: ?network_data.CharacterListData = null;
 pub var current_time: i64 = 0;
+pub var last_map_update: i64 = 0;
+pub var last_ui_update: i64 = 0;
 pub var win_freq: u64 = 0;
 pub var render_thread: std.Thread = undefined;
 pub var skip_verify_loop = false;
@@ -305,11 +307,16 @@ fn gameTick(_: [*c]uv.uv_idle_t) callconv(.C) void {
         .windows => @as(i64, @intCast(@divFloor(instant.timestamp * std.time.us_per_s, win_freq))),
         else => @divFloor(instant.timestamp.nsec, std.time.ns_per_us) + instant.timestamp.sec * std.time.us_per_s,
     } - start_time;
-    const dt = f32i(if (current_time > 0) time - current_time else 0);
     current_time = time;
 
-    if (tick_frame or needs_map_bg) map.update(time, dt);
-    ui_systems.update(time, dt) catch @panic("todo");
+    if ((tick_frame or needs_map_bg) and time - last_map_update >= @floor(60.0 / 1000.0) * std.time.us_per_s) {
+        map.update(time, f32i(time - last_map_update));
+        last_map_update = time;
+    }
+    if (time - last_ui_update >= @floor(60.0 / 1000.0) * std.time.us_per_s) {
+        ui_systems.update(time, f32i(time - last_ui_update)) catch @panic("todo");
+        last_ui_update = time;
+    }
 
     var callback_indices_to_remove: std.ArrayListUnmanaged(usize) = .empty;
     defer callback_indices_to_remove.deinit(allocator);
@@ -352,8 +359,8 @@ pub fn audioFailure() void {
     settings.sfx_volume = 0.0;
     settings.music_volume = 0.0;
     dialog.showDialog(.text, .{ .title = "Audio Error", .body = 
-    \\There was a problem interacting with your audio device. 
-    \\Audio has been turned off, but you can turn it back on in the Options if you believe this to be incorrect or temporary.
+        \\There was a problem interacting with your audio device. 
+        \\Audio has been turned off, but you can turn it back on in the Options if you believe this to be incorrect or temporary.
     });
 }
 

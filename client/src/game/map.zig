@@ -63,7 +63,6 @@ pub var last_records_clear_time: i64 = 0;
 pub var minimap: zstbi.Image = undefined;
 pub var minimap_copy: []u8 = undefined;
 
-var last_update: i64 = 0;
 var last_tile_update: i64 = 0;
 
 pub fn listForType(comptime T: type) *std.ArrayListUnmanaged(T) {
@@ -395,7 +394,7 @@ pub fn update(time: i64, dt: f32) void {
                     obj.update(time, dt);
 
                     if (is_self) {
-                        main.camera.update(obj.x, obj.y, dt);
+                        main.camera.update(obj.x, obj.y, dt, obj.x_dir, obj.y_dir, time);
                         addMoveRecord(time, obj.x, obj.y);
                         if (input.attacking) {
                             const shoot_angle = std.math.atan2(input.mouse_y - main.camera.height / 2.0, input.mouse_x - main.camera.width / 2.0);
