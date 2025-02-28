@@ -329,7 +329,7 @@ fn exportObject(self: *Player, world: *World, comptime T: type) !void {
 
         const x_dt = object.x - self.x;
         const y_dt = object.y - self.y;
-        if (x_dt * x_dt + y_dt * y_dt <= 16 * 16) {
+        if (T == Enemy and object.data.elite or x_dt * x_dt + y_dt * y_dt <= 16 * 16) {
             var caches = &switch (T) {
                 Entity => self.caches.entity,
                 Enemy => self.caches.enemy,

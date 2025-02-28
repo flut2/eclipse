@@ -410,6 +410,7 @@ pub const EnemyData = struct {
     death_sound: []const u8 = "Unknown.mp3",
     show_name: bool = false,
     draw_on_ground: bool = false,
+    elite: bool = false,
 };
 
 pub const EntityData = struct {

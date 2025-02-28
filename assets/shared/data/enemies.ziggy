@@ -306,6 +306,7 @@
     .id = 23,
     .name = "Tribe Chief",
     .textures = [{"low_realm_big": 3}],
+    .elite = true,
 },
 {
     .id = 24,

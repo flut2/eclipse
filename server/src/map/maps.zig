@@ -38,10 +38,16 @@ pub const MapDetails = struct {
     treasure_mobs: ?[][]const u8 = null,
     biome_1_mobs: ?[][]const u8 = null,
     biome_1_encounters: ?[][]const u8 = null,
+    biome_1_spawn_target: u32 = 0,
+    biome_1_encounter_chance: f32 = 0.0,
     biome_2_mobs: ?[][]const u8 = null,
     biome_2_encounters: ?[][]const u8 = null,
+    biome_2_spawn_target: u32 = 0,
+    biome_2_encounter_chance: f32 = 0.0,
     biome_3_mobs: ?[][]const u8 = null,
     biome_3_encounters: ?[][]const u8 = null,
+    biome_3_spawn_target: u32 = 0,
+    biome_3_encounter_chance: f32 = 0.0,
 
     pub const test_details: MapDetails = .{
         .name = "Test Map",
