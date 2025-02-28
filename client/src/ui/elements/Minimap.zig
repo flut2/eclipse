@@ -9,6 +9,8 @@ const f32i = utils.f32i;
 
 const assets = @import("../../assets.zig");
 const Camera = @import("../../Camera.zig");
+const Ally = @import("../../game/Ally.zig");
+const Container = @import("../../game/Container.zig");
 const Enemy = @import("../../game/Enemy.zig");
 const map = @import("../../game/map.zig");
 const Player = @import("../../game/Player.zig");
@@ -26,6 +28,13 @@ const MinimapIcon = struct {
     const player_id = 3;
     const party_id = 4;
     const enemy_id = 5;
+    const elite_id = 8;
+    const ally_id = 9;
+    const common_container_id = 10;
+    const rare_container_id = 11;
+    const epic_container_id = 12;
+    const legendary_container_id = 13;
+    const mythic_container_id = 14;
 
     x: f32,
     y: f32,
@@ -202,6 +211,26 @@ pub fn update(self: *Minimap, time: i64) void {
         }) catch main.oomPanic();
     }
 
+    for (map.listForType(Ally).items) |ally| {
+        if (utils.distSqr(ally.x, ally.y, x, y) > 16 * 16) continue;
+        if (!utils.isInBounds(ally.x, ally.y, edge_x, edge_y, vis_w, vis_h)) continue;
+        self.icons.append(main.allocator, .{
+            .id = MinimapIcon.ally_id,
+            .x = (ally.x - edge_x) * px_per_x,
+            .y = (ally.y - edge_y) * px_per_y,
+        }) catch main.oomPanic();
+    }
+
+    for (map.listForType(Container).items) |container| {
+        if (utils.distSqr(container.x, container.y, x, y) > 16 * 16) continue;
+        if (!utils.isInBounds(container.x, container.y, edge_x, edge_y, vis_w, vis_h)) continue;
+        self.icons.append(main.allocator, .{
+            .id = @intCast(MinimapIcon.common_container_id + container.data_id),
+            .x = (container.x - edge_x) * px_per_x,
+            .y = (container.y - edge_y) * px_per_y,
+        }) catch main.oomPanic();
+    }
+
     for (map.listForType(Player).items) |player| {
         if (player.map_id == map.info.player_map_id or
             !utils.isInBounds(player.x, player.y, edge_x, edge_y, vis_w, vis_h)) continue;
@@ -217,7 +246,7 @@ pub fn update(self: *Minimap, time: i64) void {
         if (!enemy.data.elite and utils.distSqr(enemy.x, enemy.y, x, y) > 16 * 16) continue;
         if (!utils.isInBounds(enemy.x, enemy.y, edge_x, edge_y, vis_w, vis_h)) continue;
         self.icons.append(main.allocator, .{
-            .id = MinimapIcon.enemy_id,
+            .id = if (enemy.data.elite) MinimapIcon.elite_id else MinimapIcon.enemy_id,
             .x = (enemy.x - edge_x) * px_per_x,
             .y = (enemy.y - edge_y) * px_per_y,
         }) catch main.oomPanic();

@@ -5,7 +5,7 @@
     .health = 3600,
     .defense = 25,
     .resistance = 5,
-    .textures = [{ "misc_chars": 7 }, { "misc_chars": 8 }, { "misc_chars": 9 }],
+    .textures = [{ "misc_chars": 0 }, { "misc_chars": 1 }, { "misc_chars": 2 }],
 },
 {
     .id = 1,
