@@ -65,8 +65,6 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
     const radius_sqr = radius * radius;
     const damage_mult = 5.0 + fwit * 0.06 * player.damage_mult;
 
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     var proj_list = map.listForType(Projectile);
     var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
     defer projs_to_remove.deinit(main.allocator);
