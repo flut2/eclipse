@@ -285,9 +285,9 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
             .angle = angle,
             .index = proj_index,
             .owner_map_id = self.map_id,
-            .phys_dmg = i32f(f32i(proj_data.phys_dmg) * self.strengthMult()),
-            .magic_dmg = i32f(f32i(proj_data.magic_dmg) * self.witMult()),
-            .true_dmg = i32f(f32i(proj_data.true_dmg)),
+            .phys_dmg = i32f(f32i(proj_data.phys_dmg) * self.strengthMult() * self.damage_mult),
+            .magic_dmg = i32f(f32i(proj_data.magic_dmg) * self.witMult() * self.damage_mult),
+            .true_dmg = i32f(f32i(proj_data.true_dmg) * self.damage_mult),
         });
 
         main.game_server.sendPacket(.{ .player_projectile = .{
@@ -604,7 +604,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
                 };
                 if (square.data.damage > 0 and !protect) {
                     main.game_server.sendPacket(.{ .ground_damage = .{ .time = time, .x = self.x, .y = self.y } });
-                    map.takeDamage(self, square.data.damage, .true, .{}, self.colors);
+                    map.takeDamage(self, i32f(f32i(square.data.damage) * self.hit_mult), .true, .{}, self.colors);
                     self.last_ground_damage_time = time;
                 }
             }

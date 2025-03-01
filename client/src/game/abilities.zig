@@ -30,7 +30,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
         .angle = attack_angle,
         .index = proj_index,
         .owner_map_id = player.map_id,
-        .phys_dmg = i32f(1300.0 + fstr * 2.0),
+        .phys_dmg = i32f(3000.0 + fstr * 3.0 * player.damage_mult),
     });
 
     var buf: [@sizeOf(@TypeOf(proj_index)) + @sizeOf(@TypeOf(attack_angle))]u8 = undefined;
@@ -63,7 +63,7 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
     const fwit = f32i(player.wit + player.wit_bonus);
     const radius = 3.0 + fint * 0.12;
     const radius_sqr = radius * radius;
-    const damage_mult = 5.0 + fwit * 0.06;
+    const damage_mult = 5.0 + fwit * 0.06 * player.damage_mult;
 
     map.object_lock.lock();
     defer map.object_lock.unlock();

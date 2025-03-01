@@ -4,6 +4,8 @@ const shared = @import("shared");
 const network_data = shared.network_data;
 const game_data = shared.game_data;
 const utils = shared.utils;
+const f32i = utils.f32i;
+const i32f = utils.i32f;
 
 const behavior_data = @import("../logic/behavior.zig");
 const behavior_logic = @import("../logic/logic.zig");
@@ -114,9 +116,19 @@ pub fn damage(self: *Enemy, owner_type: network_data.ObjectType, owner_id: u32, 
     if (self.data.health == 0) return;
     const world = maps.worlds.getPtr(self.world_id) orelse return;
     
-    const dmg = game_data.physDamage(phys_dmg, self.data.defense, self.condition) +
-        game_data.magicDamage(magic_dmg, self.data.resistance, self.condition) +
-        true_dmg;
+    var fdmg = f32i(game_data.physDamage(
+        phys_dmg,
+        self.data.defense,
+        self.condition,
+    ) + game_data.magicDamage(
+        magic_dmg,
+        self.data.resistance,
+        self.condition,
+    ) + true_dmg);
+    if (owner_type == .player) {
+        if (world.find(Player, owner_id, .con)) |player| fdmg *= player.damage_multiplier;
+    }
+    const dmg = i32f(fdmg);
     self.hp -= dmg;
 
     const map_id = switch (owner_type) {

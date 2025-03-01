@@ -93,7 +93,7 @@ projectiles: [256]?u32 = @splat(null),
 position_records: [256]struct { x: f32, y: f32 } = @splat(.{ .x = std.math.maxInt(u16), .y = std.math.maxInt(u16) }),
 hp_records: [256]i32 = @splat(-1),
 chunked_tick_id: u8 = 0,
-/// Reused for multiple abilities, this means different things depending on class. Chrono being Time Lock, Genie being Compound Interest
+/// Time Lock only currently
 stored_damage: u32 = 0,
 last_ability_use: [4]i64 = @splat(-1),
 last_lock_update: i64 = -1,
@@ -104,6 +104,7 @@ stats_writer: utils.PacketWriter = .{},
 data: *const game_data.ClassData = undefined,
 client: *Client = undefined,
 world_id: i32 = std.math.minInt(i32),
+export_pos: bool = false,
 
 pub fn init(self: *Player) !void {
     self.stats_writer.list = try .initCapacity(main.allocator, 256);
@@ -290,9 +291,16 @@ pub fn addExp(self: *Player, amount: u32) void {
 pub fn damage(self: *Player, owner_type: network_data.ObjectType, owner_id: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
     if (owner_type != .enemy) return; // something saner later
 
-    self.hp -= game_data.physDamage(phys_dmg, self.stats[defense_stat] + self.stat_boosts[defense_stat], self.condition);
-    self.hp -= game_data.magicDamage(magic_dmg, self.stats[resistance_stat] + self.stat_boosts[resistance_stat], self.condition);
-    self.hp -= true_dmg;
+    const dmg = i32f(f32i(game_data.physDamage(
+        phys_dmg,
+        self.stats[defense_stat] + self.stat_boosts[defense_stat],
+        self.condition,
+    ) + game_data.magicDamage(
+        magic_dmg,
+        self.stats[resistance_stat] + self.stat_boosts[resistance_stat],
+        self.condition,
+    ) + true_dmg) * self.hit_multiplier);
+    self.hp -= dmg;
 
     if (self.hp <= 0) {
         const owner_name = blk: {
@@ -300,7 +308,10 @@ pub fn damage(self: *Player, owner_type: network_data.ObjectType, owner_id: u32,
             break :blk (world.find(Enemy, owner_id, .con) orelse break :blk "Unknown").data.name;
         };
         self.death(owner_name) catch return;
+        return;
     }
+
+    if (self.ability_state.time_lock and dmg > 0) self.stored_damage += @intCast(dmg * 5);
 }
 
 fn CacheType(comptime T: type) type {
@@ -458,13 +469,14 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
         const y_dt = player.y - self.y;
         if (x_dt * x_dt + y_dt * y_dt <= 16 * 16) {
             if (self.caches.player.getPtr(player.map_id)) |cache| {
-                const stats = try player.exportStats(cache, player.map_id == self.map_id, false);
+                const stats = try player.exportStats(cache, player.map_id == self.map_id, self.export_pos);
                 if (stats.len > 0)
                     try self.objs.player.append(main.allocator, .{
                         .data_id = player.data_id,
                         .map_id = player.map_id,
                         .stats = stats,
                     });
+                self.export_pos = false;
             } else {
                 var cache = defaultCache(Player);
                 try self.objs.player.append(main.allocator, .{
@@ -532,7 +544,7 @@ pub fn exportStats(
     self: *Player,
     cache: *[@typeInfo(network_data.PlayerStat).@"union".fields.len]?network_data.PlayerStat,
     is_self: bool,
-    comptime force_export_pos: bool,
+    force_export_pos: bool,
 ) ![]const u8 {
     const writer = &self.stats_writer;
     writer.list.clearRetainingCapacity();
@@ -556,6 +568,8 @@ pub fn exportStats(
     stat_util.write(T, writer, cache, .{ .ability_state = self.ability_state });
     stat_util.write(T, writer, cache, .{ .muted_until = self.muted_until });
     stat_util.write(T, writer, cache, .{ .rank = self.rank });
+    stat_util.write(T, writer, cache, .{ .damage_mult = self.damage_multiplier });
+    stat_util.write(T, writer, cache, .{ .hit_mult = self.hit_multiplier });
 
     inline for (0..4) |i| {
         const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =

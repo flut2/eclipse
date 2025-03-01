@@ -387,8 +387,6 @@ pub const ProjectileData = struct {
     heat_seek_delay: f32 = 0,
     light: LightData = .{},
     conditions: ?[]const TimedCondition = null,
-    knockback: bool = false,
-    knockback_strength: f32 = 1.0,
 
     pub fn range(self: ProjectileData) f32 {
         const base_range = self.speed * self.duration * 10.0;

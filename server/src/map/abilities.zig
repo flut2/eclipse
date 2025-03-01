@@ -50,7 +50,7 @@ pub fn handleHeartOfStone(player: *Player) !void {
     const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
     const duration = i64f((10.0 + fint * 0.1) * std.time.us_per_s);
 
-    player.hit_multiplier = 0.15;
+    player.hit_multiplier = 0.5;
     player.ability_state.heart_of_stone = true;
     player.applyCondition(.slowed, duration);
     player.applyCondition(.stunned, duration);
@@ -140,15 +140,39 @@ pub fn handleRewind(player: *Player) !void {
     const fwit = f32i(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
     const duration = i64f((3.0 + fint * 0.01 + fmana * 0.006 + fwit * 0.01) * std.time.us_per_s);
     if (duration <= 0 or duration > 25 * std.time.us_per_s) {
-        player.client.sendError(.message_with_disconnect, "Too many/little seconds elapsed");
+        player.client.sendError(.message_with_disconnect, "Too many/little seconds elapsed for Rewind");
         return;
     }
 
     const tick = player.chunked_tick_id -%
         @as(u8, @intCast(@divFloor(@as(u64, @intCast(duration)), @as(u64, std.time.us_per_s) / main.settings.tps * 3)));
-    player.hp = player.hp_records[tick];
+    if (player.hp_records[tick] == -1) return;
+
+    const hp_delta = player.hp_records[tick] - player.hp;
+    if (hp_delta > 0) {
+        player.hp = player.hp_records[tick];
+        var buf: [64]u8 = undefined;
+        player.client.queuePacket(.{ .notification = .{
+            .obj_type = .player,
+            .map_id = player.map_id,
+            .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
+            .color = 0x00FF00,
+        } });
+
+        player.client.queuePacket(.{ .show_effect = .{
+            .eff_type = .potion,
+            .obj_type = .player,
+            .map_id = player.map_id,
+            .x1 = 0,
+            .y1 = 0,
+            .x2 = 0,
+            .y2 = 0,
+            .color = 0x00FF00,
+        } });
+    }
     player.x = player.position_records[tick].x;
     player.y = player.position_records[tick].y;
+    player.export_pos = true;    
 }
 
 pub fn handleNullPulse(player: *Player) !void {
@@ -188,6 +212,7 @@ fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
             .aoe_color = 0x0FE9EB,
         });
         player.ability_state.time_lock = false;
+        player.hit_multiplier = 1.0;
         player.stored_damage = 0;
     }
 }
@@ -199,6 +224,7 @@ pub fn handleTimeLock(player: *Player) !void {
     const duration = i64f((15.0 + fint * 0.12) * std.time.us_per_s);
 
     player.ability_state.time_lock = true;
+    player.hit_multiplier = 0.5;
     player.applyCondition(.slowed, duration);
 
     const map_id_copy = try main.allocator.create(u32);
@@ -212,20 +238,20 @@ pub fn handleTimeLock(player: *Player) !void {
 
 pub fn handleEtherealHarvest(player: *Player) !void {
     _ = player; // autofix
-    std.log.err("Earthen Prison not implemented yet", .{});
+    std.log.err("Ethereal Harvest not implemented yet", .{});
 }
 
 pub fn handleSpaceShift(player: *Player) !void {
     _ = player; // autofix
-    std.log.err("Earthen Prison not implemented yet", .{});
+    std.log.err("Space Shift not implemented yet", .{});
 }
 
 pub fn handleBloodfont(player: *Player) !void {
     _ = player; // autofix
-    std.log.err("Earthen Prison not implemented yet", .{});
+    std.log.err("Bloodfont not implemented yet", .{});
 }
 
 pub fn handleRavenousHunger(player: *Player) !void {
     _ = player; // autofix
-    std.log.err("Earthen Prison not implemented yet", .{});
+    std.log.err("Ravenous Hunger not implemented yet", .{});
 }

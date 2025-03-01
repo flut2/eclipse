@@ -3,6 +3,7 @@ const std = @import("std");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
+const i32f = utils.i32f;
 const f32i = utils.f32i;
 
 const assets = @import("../assets.zig");
@@ -297,12 +298,13 @@ fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
 
     var phys_dmg: i32 = 0;
     var magic_dmg: i32 = 0;
-    const true_dmg = self.true_dmg;
+    var true_dmg = self.true_dmg;
     switch (@TypeOf(obj.*)) {
         Player => {
             if (map.info.player_map_id != obj.map_id) return self.data.piercing;
-            phys_dmg = game_data.physDamage(self.phys_dmg, obj.defense + obj.defense_bonus, obj.condition);
-            magic_dmg = game_data.magicDamage(self.magic_dmg, obj.resistance + obj.resistance_bonus, obj.condition);
+            phys_dmg = i32f(f32i(game_data.physDamage(self.phys_dmg, obj.defense + obj.defense_bonus, obj.condition)) * obj.hit_mult);
+            magic_dmg = i32f(f32i(game_data.magicDamage(self.magic_dmg, obj.resistance + obj.resistance_bonus, obj.condition)) * obj.hit_mult);
+            true_dmg = i32f(f32i(true_dmg) * obj.hit_mult);
             main.game_server.sendPacket(.{ .player_hit = .{ .proj_index = self.index, .enemy_map_id = self.owner_map_id } });
         },
         Ally => {

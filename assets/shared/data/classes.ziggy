@@ -391,25 +391,24 @@
         {
             .name = "Terrain Expulsion",
             .description = 
-            \\Shoot a large shard of earth dealing $strtxt1300 (+200%$stricon) Physical Damage&reset that knocks enemies back and slows them for $multitxt5&reset ($deftxt+10%$deficon, $restxt+10%$resicon$multitxt)&reset seconds.
+            \\Shoot a large shard of earth dealing $strtxt3000 (+300%$stricon) Physical Damage&reset that slows them for 5 seconds.
             ,
             .mana_cost = 28,
             .cooldown = 9.0,
             .icon = {"ability_icons": 4},
             .projectiles = [{
                 .textures = [{ "projectiles_big": 0 }, { "projectiles_big": 1 }, { "projectiles_big": 2 },],
-                .phys_dmg = 1300,
+                .phys_dmg = 3000,
                 .speed = 1.5,
                 .duration = 0.4,
-                .knockback = true,
-                .knockback_strength = 3.0,
                 .rotation = 0.33,
+                .conditions = [{ .type = @Condition("slowed"), .duration = 5.0 }],
             }],
         },
         {
             .name = "Heart of Stone",
             .description = 
-            \\Grow in size for $inttxt10 (+10%$inticon)&reset seconds, receiving 15% damage, a much larger hitbox, moving slower and becoming unable to shoot.
+            \\Grow in size for $inttxt10 (+10%$inticon)&reset seconds, receiving halved damage, moving slower and becoming unable to shoot.
             ,
             .mana_cost = 120,
             .cooldown = 49.0,
@@ -844,7 +843,7 @@
         {
             .name = "Time Lock",
             .description = 
-            \\Become immune to damage and slowed for $inttxt15 (+12%$inticon)&reset seconds, storing all damage taken. 
+            \\Receive halved damage and become slowed for $inttxt15 (+12%$inticon)&reset seconds, storing all damage taken 5 times over. 
             \\Return double the damage stored as a Magic Damage blast within $inttxt9 (+6%$inticon)&reset tiles after this effect ends.
             \\$footnotetxtDamage is capped at $wittxt30000 (+10000%$witicon)&reset.
             ,
