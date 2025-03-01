@@ -1,5 +1,6 @@
 .{
-    .name = "Eclipse Client",
+    .fingerprint = 0x684a4fd89382116e,
+    .name = .eclipse_client,
     .version = "1.0.0",
     .dependencies = .{
         .shared = .{ .path = "../shared" },
@@ -8,17 +9,17 @@
         .zaudio = .{ .path = "libs/zaudio" },
         .zstbi = .{ .path = "libs/zstbi" },
         .zglfw = .{ .path = "libs/zglfw" },
-        .rpmalloc = .{
-            .url = "git+https://github.com/flut2/rpmalloc-zig.git#f440339324dac35ea262abdce8a47b36c3a7a612",
-            .hash = "12203f2b4ced453e6117490ba108a0b7cac6d5b3ec972a26093e4725f1b395bff3b2",
-        },
         .turbopack = .{
-            .url = "git+https://github.com/flut2/turbopack.git#afeb5e792e19043aea738ff0315e07047dc64dd6",
-            .hash = "1220436f7fbbe4886f98313128e2fc0291bba801229429e8ad0a3de47360851761fe",
+            .url = "git+https://github.com/flut2/turbopack.git#10fc67d55533e2d495f302755f1ec4e7a4d90317",
+            .hash = "turbopack-1.0.0-rSxRju8bAAB6-FV36FgBYVI36EIeFwQee7KJXZp9BiAe",
+        },
+        .rpmalloc = .{
+            .url = "git+https://github.com/flut2/rpmalloc-zig.git#8cf613e29251ac9070cb10dd31dff2411cd96531",
+            .hash = "rpmalloc_zig-1.0.0-AAAAAGdGAAA8rbHQViIKm-CbxG3e1l4cBTJgRnqnDvXe",
         },
         .vulkan_zig = .{
-            .url = "git+https://github.com/Snektron/vulkan-zig.git#1fd5a6e217dfcc7e4406d449924a1feb1ecffbb9",
-            .hash = "122096b4021c4bb35d373d589a31237e2ac834969ea50401d73cc50780aaec8ea367",
+            .url = "git+https://github.com/Snektron/vulkan-zig.git#604416bf44baf95568c428e1aa55499aa8e07607",
+            .hash = "vulkan-0.0.0-AAAAAC5bAwASnqFlLMD4V42z3LolS8n7xv3RlbXhAhv0",
         },
     },
     .paths = .{

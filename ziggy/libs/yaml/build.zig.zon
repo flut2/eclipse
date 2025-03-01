@@ -1,0 +1,12 @@
+.{
+    .name = .zig_yaml,
+    .version = "0.1.0",
+    .paths = .{
+        "src",
+        "test",
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
+        "README.md",
+    },
+}

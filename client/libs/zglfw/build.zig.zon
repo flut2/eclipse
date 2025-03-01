@@ -1,5 +1,5 @@
 .{
-    .name = "zglfw",
+    .name = .zglfw,
     .version = "0.9.0",
     .paths = .{
         "build.zig",
