@@ -401,4 +401,36 @@
         { .time = 0.4, .texture = {"props_big": 23} },
     ],
 },
+{
+    .id = 49,
+    .name = "Enemy Soul",
+    .textures = [{"misc": 3}],
+    .light = {
+        .color = "0xB49DFF",
+        .intensity = 0.1,
+        .radius = 3.0,
+    },
+    .static = true,
+    .animations = [
+        { .time = 0.4, .texture = {"misc": 3} },
+        { .time = 0.4, .texture = {"misc": 4} },
+        { .time = 0.4, .texture = {"misc": 5} },
+        { .time = 0.4, .texture = {"misc": 6} },
+        { .time = 0.4, .texture = {"misc": 7} },
+        { .time = 0.4, .texture = {"misc": 6} },
+        { .time = 0.4, .texture = {"misc": 5} },
+        { .time = 0.4, .texture = {"misc": 4} },
+    ],
+},
+{
+    .id = 50,
+    .name = "Demon Rift",
+    .textures = [{"misc": 3}],
+    .light = {
+        .color = "0xB49DFF",
+        .intensity = 0.1,
+        .radius = 3.0,
+    },
+    .static = true,
+},
 ]

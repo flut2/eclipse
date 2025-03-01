@@ -426,10 +426,9 @@
         {
             .name = "Earthen Prison",
             .description = 
-            \\Plant an Obelisk of Binding into the ground for $hsttxt15 (+20%$hsticon) seconds, causing enemies within $inttxt9 (+10%$inticon) tiles&reset to be encased in stone, and linked to you and your Boulder Buddies.
-            \\The enemies become unable to shoot or move while encased in stone, but they redirect $multitxt5% ($deftxt-1%$deficon, $restxt-1$resicon)&reset of damage received back to you and your Boulder Buddies.
-            \\$footnotetxtThe damage is received by your Boulder Buddies first (if they exist) and to you second.
-            \\The Obelisk of Binding will be destroyed early if you fall below 10% Health, or if you would fall below 10% Health due to this effect.
+            \\Plant an Obelisk of Binding into the ground for $hsttxt15 (+20%$hsticon) seconds, causing enemies within $inttxt9 (+10%$inticon) tiles&reset to be encased in stone, and linked to your Obelisk.
+            \\The enemies become unable to shoot or move while encased in stone, but they redirect $multitxt5% ($deftxt-1%$deficon, $restxt-1$resicon)&reset of damage received back to your Obelisk.
+            \\$footnotetxtThis effect will be cancelled early if the Obelisk is destroyed.
             ,
             .mana_cost = 100,
             .health_cost = 300,
