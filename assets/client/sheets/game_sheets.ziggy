@@ -182,6 +182,13 @@
     .h = 10,
 },
 {
+    .type = @SheetType("anim_player"),
+    .name = "bloodfont_demon",
+    .path = "bloodfont_demon.png",
+    .w = 18,
+    .h = 18,
+},
+{
     .type = @SheetType("image"),
     .name = "containers",
     .path = "containers.png",

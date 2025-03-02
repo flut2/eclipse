@@ -93,7 +93,7 @@ projectiles: [256]?u32 = @splat(null),
 position_records: [256]struct { x: f32, y: f32 } = @splat(.{ .x = std.math.maxInt(u16), .y = std.math.maxInt(u16) }),
 hp_records: [256]i32 = @splat(-1),
 chunked_tick_id: u8 = 0,
-/// Time Lock only currently
+/// Used by Time Lock and Bloodfont
 stored_damage: u32 = 0,
 last_ability_use: [4]i64 = @splat(-1),
 last_lock_update: i64 = -1,
@@ -288,10 +288,18 @@ pub fn addExp(self: *Player, amount: u32) void {
     }
 }
 
-pub fn damage(self: *Player, owner_type: network_data.ObjectType, owner_id: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
+pub fn damage(
+    self: *Player,
+    owner_type: network_data.ObjectType,
+    owner_id: u32,
+    phys_dmg: i32,
+    magic_dmg: i32,
+    true_dmg: i32,
+    conditions: ?[]const game_data.TimedCondition,
+) void {
     if (owner_type != .enemy) return; // something saner later
 
-    const dmg = i32f(f32i(game_data.physDamage(
+    const unscaled_dmg = f32i(game_data.physDamage(
         phys_dmg,
         self.stats[defense_stat] + self.stat_boosts[defense_stat],
         self.condition,
@@ -299,7 +307,8 @@ pub fn damage(self: *Player, owner_type: network_data.ObjectType, owner_id: u32,
         magic_dmg,
         self.stats[resistance_stat] + self.stat_boosts[resistance_stat],
         self.condition,
-    ) + true_dmg) * self.hit_multiplier);
+    ) + true_dmg);
+    const dmg = i32f(unscaled_dmg * self.hit_multiplier);
     self.hp -= dmg;
 
     if (self.hp <= 0) {
@@ -311,7 +320,10 @@ pub fn damage(self: *Player, owner_type: network_data.ObjectType, owner_id: u32,
         return;
     }
 
-    if (self.ability_state.time_lock and dmg > 0) self.stored_damage += @intCast(dmg * 5);
+    if (conditions) |conds| for (conds) |cond| self.applyCondition(cond.type, i32f(cond.duration * std.time.us_per_s));
+
+    if (dmg > 0 and self.ability_state.time_lock) self.stored_damage += @intCast(dmg * 5);
+    if (unscaled_dmg > 0 and self.ability_state.bloodfont) self.stored_damage += @intCast(i32f(unscaled_dmg));
 }
 
 fn CacheType(comptime T: type) type {

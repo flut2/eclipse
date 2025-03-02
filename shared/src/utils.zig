@@ -105,6 +105,7 @@ pub const ConditionEnum = enum {
     paralyzed,
     stunned,
     silenced,
+    encased_in_stone,
 
     pub fn toString(self: ConditionEnum) []const u8 {
         return switch (self) {
@@ -124,18 +125,19 @@ pub const ConditionEnum = enum {
             .paralyzed => "Paralyzed",
             .stunned => "Stunned",
             .silenced => "Silenced",
+            .encased_in_stone => "Encased in Stone",
         };
     }
 };
 
-pub const Condition = packed struct {
+pub const Condition = packed struct(u32) {
     comptime {
         const struct_fields = @typeInfo(Condition).@"struct".fields;
         const enum_fields = @typeInfo(ConditionEnum).@"enum".fields;
-        if (struct_fields.len != enum_fields.len)
+        if (struct_fields.len - 1 != enum_fields.len)
             @compileError("utils.Condition and utils.ConditionEnum's field lengths don't match");
 
-        for (struct_fields, enum_fields) |struct_field, enum_field| {
+        for (struct_fields[0..enum_fields.len], enum_fields) |struct_field, enum_field| {
             if (!std.mem.eql(u8, struct_field.name, enum_field.name))
                 @compileError("utils.Condition and utils.ConditionEnum have differing field names: utils.Condition=" ++
                     struct_field.name ++ ", utils.ConditionEnum=" ++ enum_field.name);
@@ -158,6 +160,8 @@ pub const Condition = packed struct {
     paralyzed: bool = false,
     stunned: bool = false,
     silenced: bool = false,
+    encased_in_stone: bool = false,
+    padding: u15 = 0,
 
     pub fn isDefault(self: Condition) bool {
         return self == .{};
@@ -207,8 +211,8 @@ pub const RGBA = extern struct {
 
     pub fn toColor(self: RGBA) u24 {
         return @as(u24, @intCast(self.r)) << 16 |
-                @as(u24, @intCast(self.g)) << 8 |
-                @as(u24, @intCast(self.b));
+            @as(u24, @intCast(self.g)) << 8 |
+            @as(u24, @intCast(self.b));
     }
 };
 

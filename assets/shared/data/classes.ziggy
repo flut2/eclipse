@@ -43,7 +43,7 @@
         {
             .name = "Space Shift",
             .description = 
-            \\Tear a Rift within space-time for $statxt10 (+10%$staicon) seconds&reset, allowing ally &type="med_it"Demons&reset to join you in the fight, and granting yourself and other players up to $mptxt10 (+1%$mpicon) Mana&reset every second, with this regeneration becoming weaker the further they are from the Rift.
+            \\Tear a Rift within space-time for $statxt10 (+10%$staicon) seconds&reset, granting yourself and other players up to $mptxt10 (+1%$mpicon) Mana&reset every second, with this regeneration becoming weaker the further they are from the Rift.
             ,
             .mana_cost = 150,
             .health_cost = 200,
@@ -408,7 +408,7 @@
         {
             .name = "Heart of Stone",
             .description = 
-            \\Grow in size for $inttxt10 (+10%$inticon)&reset seconds, receiving halved damage, moving slower and becoming unable to shoot.
+            \\Grow in size for $inttxt10 (+10%$inticon)&reset seconds, receiving halved damage and moving slower.
             ,
             .mana_cost = 120,
             .cooldown = 49.0,
@@ -426,8 +426,8 @@
         {
             .name = "Earthen Prison",
             .description = 
-            \\Plant an Obelisk of Binding into the ground for $hsttxt15 (+20%$hsticon) seconds, causing enemies within $inttxt9 (+10%$inticon) tiles&reset to be encased in stone, and linked to your Obelisk.
-            \\The enemies become unable to shoot or move while encased in stone, but they redirect $multitxt5% ($deftxt-1%$deficon, $restxt-1$resicon)&reset of damage received back to your Obelisk.
+            \\Plant an Obelisk of Binding into the ground for $hsttxt15 (+20%$hsticon) seconds&reset, causing enemies within $inttxt9 (+10%$inticon) tiles&reset to be encased in stone, and linked to your Obelisk.
+            \\The enemies become unable to shoot or move while encased in stone, but they redirect $multitxt50% ($deftxt-1%$deficon, $restxt-1%$resicon)&reset of damage received back to your Obelisk.
             \\$footnotetxtThis effect will be cancelled early if the Obelisk is destroyed.
             ,
             .mana_cost = 100,

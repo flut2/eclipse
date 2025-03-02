@@ -358,6 +358,7 @@ pub var error_data_wall: WallData = undefined;
 pub var light_w: f32 = 1.0;
 pub var light_h: f32 = 1.0;
 pub var light_data: AtlasData = undefined;
+pub var bloodfont_data: AnimPlayerData = undefined;
 
 fn packSort(_: void, lhs: pack.IdRect, rhs: pack.IdRect) bool {
     return lhs.rect.w < rhs.rect.w;
@@ -1364,6 +1365,10 @@ pub fn init() !void {
             .bottom_outline = error_data,
         };
     } else @panic("Could not find error_texture in the atlas");
+
+    if (anim_players.get("bloodfont_demon")) |bloodfont| {
+        bloodfont_data = bloodfont[0];
+    } else @panic("Could not find bloodfont_demon in the atlas");
 
     populateKeyMap();
     interact_key_tex = getKeyTexture(main.settings.interact);

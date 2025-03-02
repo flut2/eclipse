@@ -61,8 +61,7 @@ pub const Crocodile = struct {
         logic.aoe(@src(), host, dt, .{
             .radius = 3.0,
             .magic_dmg = 80,
-            .effect = .slowed,
-            .effect_duration = 0.5 * std.time.us_per_s,
+            .conditions = &.{.{ .type = .slowed, .duration = 0.5 * std.time.us_per_s }},
             .cooldown = 0.6 * std.time.us_per_s,
             .color = 0x01361F,
         });
@@ -404,8 +403,7 @@ pub const RegalMummy = struct {
             .radius = 3.0,
             .magic_dmg = 150,
             .cooldown = 0.3 * std.time.us_per_s,
-            .effect = .slowed,
-            .effect_duration = 0.1 * std.time.us_per_s,
+            .conditions = &.{.{ .type = .slowed, .duration = 0.1 * std.time.us_per_s }},
             .color = 0x01361F,
         });
     }

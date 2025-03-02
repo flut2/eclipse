@@ -229,13 +229,15 @@ pub fn tick(self: *World, time: i64, dt: i64) !void {
 }
 
 pub fn moveToward(host: anytype, x: f32, y: f32, speed: f32, dt: i64) void {
+    if (host.condition.paralyzed or host.condition.encased_in_stone) return;
+
     const dx = x - host.x;
     const dy = y - host.y;
     const dist = @sqrt(dx * dx + dy * dy);
     if (dist <= 0.01) return;
 
     const fdt = f32i(dt);
-    const travel_dist = speed * (fdt / std.time.us_per_s);
+    const travel_dist = speed * (fdt / std.time.us_per_s) * @as(f32, if (host.condition.slowed) 0.5 else 1.0);
 
     if (dist > travel_dist) {
         const c = travel_dist / dist;
@@ -243,9 +245,11 @@ pub fn moveToward(host: anytype, x: f32, y: f32, speed: f32, dt: i64) void {
     } else validatedMove(host, x, y);
 }
 
-pub fn validatedMove(self: anytype, x: f32, y: f32) void {
+pub fn validatedMove(host: anytype, x: f32, y: f32) void {
+    if (host.condition.paralyzed or host.condition.encased_in_stone) return;
+
     if (x < 0.0 or y < 0.0) return;
-    const world = maps.worlds.getPtr(self.world_id) orelse return;
+    const world = maps.worlds.getPtr(host.world_id) orelse return;
 
     const ux = u32f(x);
     const uy = u32f(y);
@@ -253,8 +257,8 @@ pub fn validatedMove(self: anytype, x: f32, y: f32) void {
 
     const tile = world.tiles[uy * world.w + ux];
     if (tile.data_id != std.math.maxInt(u16) and !tile.data.no_walk and !tile.occupied) {
-        self.x = x;
-        self.y = y;
+        host.x = x;
+        host.y = y;
     }
 }
 
@@ -276,15 +280,13 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
     phys_dmg: i32 = 0,
     magic_dmg: i32 = 0,
     true_dmg: i32 = 0,
-    effect: ?utils.ConditionEnum = null,
-    effect_duration: i64 = 1 * std.time.us_per_s,
+    conditions: ?[]const game_data.TimedCondition = null,
     aoe_color: u32 = 0xFFFFFFFF,
 }) void {
     const radius_sqr = radius * radius;
     for (self.listForType(T).items) |*obj| {
         if (utils.distSqr(obj.x, obj.y, x, y) > radius_sqr) continue;
-        obj.damage(owner_type, owner_id, opts.phys_dmg, opts.magic_dmg, opts.true_dmg);
-        if (opts.effect) |eff| obj.applyCondition(eff, opts.effect_duration);
+        obj.damage(owner_type, owner_id, opts.phys_dmg, opts.magic_dmg, opts.true_dmg, opts.conditions);
     }
 
     if (T == Enemy and opts.aoe_color != 0xFFFFFFFF) for (self.listForType(Player).items) |*player| {

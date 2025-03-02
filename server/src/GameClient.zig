@@ -884,7 +884,7 @@ fn handlePlayerHit(self: *Client, data: PacketData(.player_hit)) void {
     const proj = self.world.find(Projectile, enemy.projectiles[data.proj_index] orelse return, .ref) orelse return;
     if (proj.player_hit_list.contains(self.player_map_id)) return;
     const player = self.world.find(Player, self.player_map_id, .ref) orelse return;
-    player.damage(.enemy, enemy.map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
+    player.damage(.enemy, enemy.map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg, proj.data.conditions);
     proj.player_hit_list.put(main.allocator, self.player_map_id, {}) catch return;
 }
 
@@ -893,7 +893,7 @@ fn handleEnemyHit(self: *Client, data: PacketData(.enemy_hit)) void {
     const enemy = self.world.find(Enemy, data.enemy_map_id, .ref) orelse return;
     const proj = self.world.find(Projectile, player.projectiles[data.proj_index] orelse return, .ref) orelse return;
 
-    enemy.damage(.player, self.player_map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
+    enemy.damage(.player, self.player_map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg, proj.data.conditions);
     if (!proj.data.piercing) proj.delete() catch return;
 }
 
@@ -902,7 +902,7 @@ fn handleAllyHit(self: *Client, data: PacketData(.ally_hit)) void {
     const proj = self.world.find(Projectile, enemy.projectiles[data.proj_index] orelse return, .ref) orelse return;
     if (proj.ally_hit_list.contains(data.ally_map_id)) return;
     const ally = self.world.find(Ally, data.ally_map_id, .ref) orelse return;
-    ally.damage(.enemy, enemy.map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg);
+    ally.damage(.enemy, enemy.map_id, proj.phys_dmg, proj.magic_dmg, proj.true_dmg, proj.data.conditions);
     proj.ally_hit_list.put(main.allocator, data.ally_map_id, {}) catch return;
 }
 

@@ -315,7 +315,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         y += dy;
     }
 
-    const size = Camera.size_mult * cam_data.scale * self.size_mult;
+    const size = Camera.size_mult * cam_data.scale * self.size_mult * @as(f32, if (self.ability_state.heart_of_stone) 1.5 else 1.0);
 
     var atlas_data = self.atlas_data;
     var sink: f32 = 1.0;
@@ -325,7 +325,10 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
     const w = atlas_data.texWRaw() * size;
     const h = atlas_data.texHRaw() * size;
     const dir_idx: u8 = @intFromEnum(self.direction);
-    const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions];
+    const stand_data = if (self.ability_state.bloodfont)
+        assets.bloodfont_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions]
+    else
+        self.anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions];
     const stand_w = stand_data.width() * size;
     const x_offset = (if (self.direction == .left) stand_w - w else w - stand_w) / 2.0;
 
@@ -339,8 +342,13 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
 
     var color: u32 = 0;
     var color_intensity: f32 = 0.0;
-    _ = &color;
-    _ = &color_intensity;
+    if (self.ability_state.time_lock) {
+        color = 0x3AFFC0;
+        color_intensity = 0.33;
+    } else if (self.ability_state.heart_of_stone) {
+        color = 0xE0A628;
+        color_intensity = 0.33;
+    }
     // flash
 
     if (main.settings.enable_lights) {
@@ -521,11 +529,12 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
     const anim_idx = u8f(@max(0, @min(0.99999, float_period)) * 2.0);
     const dir_idx: u8 = @intFromEnum(dir);
 
-    const stand_data = self.anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions];
+    const anim_data = if (self.ability_state.bloodfont) assets.bloodfont_data else self.anim_data;
+    const stand_data = anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions];
 
     self.atlas_data = switch (action) {
-        .walk => self.anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions + 1 + anim_idx],
-        .attack => self.anim_data.attack_anims[dir_idx * assets.AnimPlayerData.attack_actions + anim_idx],
+        .walk => anim_data.walk_anims[dir_idx * assets.AnimPlayerData.walk_actions + 1 + anim_idx],
+        .attack => anim_data.attack_anims[dir_idx * assets.AnimPlayerData.attack_actions + anim_idx],
         .stand => stand_data,
     };
 

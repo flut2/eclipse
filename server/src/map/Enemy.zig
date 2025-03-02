@@ -27,6 +27,7 @@ spawn_y: f32 = 0.0,
 max_hp: i32 = 100,
 hp: i32 = 100,
 size_mult: f32 = 1.0,
+obelisk_map_id: u32 = std.math.maxInt(u32),
 name: ?[]const u8 = null,
 next_proj_index: u8 = 0,
 projectiles: [256]?u32 = @splat(null),
@@ -116,10 +117,18 @@ pub fn tick(self: *Enemy, time: i64, dt: i64) !void {
     };
 }
 
-pub fn damage(self: *Enemy, owner_type: network_data.ObjectType, owner_id: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
+pub fn damage(
+    self: *Enemy,
+    owner_type: network_data.ObjectType,
+    owner_id: u32,
+    phys_dmg: i32,
+    magic_dmg: i32,
+    true_dmg: i32,
+    conditions: ?[]const game_data.TimedCondition,
+) void {
     if (self.data.health == 0) return;
     const world = maps.worlds.getPtr(self.world_id) orelse return;
-    
+
     var fdmg = f32i(game_data.physDamage(
         phys_dmg,
         self.data.defense,
@@ -133,6 +142,11 @@ pub fn damage(self: *Enemy, owner_type: network_data.ObjectType, owner_id: u32, 
         if (world.find(Player, owner_id, .con)) |player| fdmg *= player.damage_multiplier;
     }
     const dmg = i32f(fdmg);
+    if (self.condition.encased_in_stone) {
+        if (world.find(Ally, self.obelisk_map_id, .ref)) |obelisk| {
+            obelisk.damage(.enemy, self.map_id, 0, 0, dmg, null);
+        } else self.clearCondition(.encased_in_stone);
+    }
     self.hp -= dmg;
 
     const map_id = switch (owner_type) {
@@ -140,6 +154,8 @@ pub fn damage(self: *Enemy, owner_type: network_data.ObjectType, owner_id: u32, 
         .ally => (world.find(Ally, owner_id, .con) orelse return).owner_map_id,
         else => return,
     };
+
+    if (conditions) |conds| for (conds) |cond| self.applyCondition(cond.type, i32f(cond.duration * std.time.us_per_s));
 
     const res = self.damages_dealt.getOrPut(main.allocator, map_id) catch return;
     if (res.found_existing) res.value_ptr.* += dmg else res.value_ptr.* = dmg;

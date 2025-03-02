@@ -5,6 +5,7 @@ const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
 const u32f = utils.u32f;
+const i32f = utils.i32f;
 
 const behavior_data = @import("../logic/behavior.zig");
 const behavior_logic = @import("../logic/logic.zig");
@@ -124,7 +125,15 @@ pub fn tick(self: *Entity, time: i64, dt: i64) !void {
     };
 }
 
-pub fn damage(self: *Entity, owner_type: network_data.ObjectType, owner_id: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
+pub fn damage(
+    self: *Entity,
+    owner_type: network_data.ObjectType,
+    owner_id: u32,
+    phys_dmg: i32,
+    magic_dmg: i32,
+    true_dmg: i32,
+    conditions: ?[]const game_data.TimedCondition,
+) void {
     if (self.data.health == 0) return;
     const world = maps.worlds.getPtr(self.world_id) orelse return;
 
@@ -138,6 +147,8 @@ pub fn damage(self: *Entity, owner_type: network_data.ObjectType, owner_id: u32,
         .ally => (world.find(Ally, owner_id) orelse return).owner_map_id,
         else => return,
     };
+
+    if (conditions) |conds| for (conds) |cond| self.applyCondition(cond.type, i32f(cond.duration * std.time.us_per_s));
 
     const res = self.damages_dealt.getOrPut(main.allocator, map_id) catch return;
     if (res.found_existing) res.value_ptr.* += dmg else res.value_ptr.* = dmg;

@@ -92,8 +92,10 @@ pub fn draw(self: *Enemy, cam_data: CameraData, float_time_ms: f32) void {
 
     var color: u32 = 0;
     var color_intensity: f32 = 0.0;
-    _ = &color;
-    _ = &color_intensity;
+    if (self.condition.encased_in_stone) {
+        color = 0xE0A628;
+        color_intensity = 0.33;
+    }
     // flash
 
     if (main.settings.enable_lights) {

@@ -4,6 +4,8 @@ const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
+const i32f = utils.i32f;
+const f32i = utils.f32i;
 
 const behavior_data = @import("../logic/behavior.zig");
 const behavior_logic = @import("../logic/logic.zig");
@@ -21,6 +23,7 @@ y: f32 = 0.0,
 spawn_x: f32 = 0.0,
 spawn_y: f32 = 0.0,
 size_mult: f32 = 1.0,
+hit_multiplier: f32 = 1.0,
 condition: utils.Condition = .{},
 hp: i32 = 0,
 max_hp: i32 = 0,
@@ -75,12 +78,27 @@ pub fn delete(self: *Ally) !void {
     try world.remove(Ally, self);
 }
 
-pub fn damage(self: *Ally, owner_type: network_data.ObjectType, _: u32, phys_dmg: i32, magic_dmg: i32, true_dmg: i32) void {
+pub fn damage(
+    self: *Ally,
+    owner_type: network_data.ObjectType,
+    _: u32,
+    phys_dmg: i32,
+    magic_dmg: i32,
+    true_dmg: i32,
+    _: ?[]const game_data.TimedCondition,
+) void {
     if (owner_type != .enemy) return; // something saner later
 
-    self.hp -= game_data.physDamage(phys_dmg, self.defense, self.condition);
-    self.hp -= game_data.magicDamage(magic_dmg, self.resistance, self.condition);
-    self.hp -= true_dmg;
+    const dmg = i32f(f32i(game_data.physDamage(
+        phys_dmg,
+        self.data.defense,
+        self.condition,
+    ) + game_data.magicDamage(
+        magic_dmg,
+        self.data.resistance,
+        self.condition,
+    ) + true_dmg) * self.hit_multiplier);
+    self.hp -= dmg;
 
     if (self.hp <= 0) self.delete() catch return;
 }

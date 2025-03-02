@@ -6,6 +6,7 @@ const utils = shared.utils;
 const network_data = shared.network_data;
 const f32i = utils.f32i;
 const u32f = utils.u32f;
+const i64f = utils.i64f;
 const zstbi = @import("zstbi");
 
 const assets = @import("../assets.zig");
@@ -538,7 +539,7 @@ pub fn takeDamage(
         const cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.? = @bitCast(conditions);
         for (0..@bitSizeOf(utils.Condition)) |i| {
             if (cond_int & (@as(usize, 1) << @intCast(i)) != 0) {
-                const eff: utils.ConditionEnum = @enumFromInt(i + 1);
+                const eff: utils.ConditionEnum = @enumFromInt(i);
                 const cond_str = eff.toString();
                 if (cond_str.len == 0) continue;
 
@@ -547,7 +548,7 @@ pub fn takeDamage(
                 self.status_texts.append(main.allocator, .{
                     .initial_size = 16.0,
                     .dispose_text = true,
-                    .show_at = main.current_time,
+                    .show_at = main.current_time + i64f(0.2 * std.time.us_per_s),
                     .text_data = .{
                         .text = std.fmt.allocPrint(main.allocator, "{s}", .{cond_str}) catch main.oomPanic(),
                         .text_type = .bold,

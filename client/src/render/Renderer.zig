@@ -235,7 +235,7 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
             .armored => &.{3},
             .armor_broken => &.{9},
             .targeted => &.{8},
-            .hidden, .invisible, .paralyzed, .stunned, .silenced => &.{},
+            .hidden, .invisible, .paralyzed, .stunned, .silenced, .encased_in_stone => &.{},
         };
 
         const indices_len = sheet_indices.len;

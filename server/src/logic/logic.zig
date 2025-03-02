@@ -45,8 +45,8 @@ fn verifyType(comptime T: type) void {
     const type_info = @typeInfo(T);
     if (type_info != .pointer or
         type_info.pointer.child != Enemy and
-        type_info.pointer.child != Entity and
-        type_info.pointer.child != Ally)
+            type_info.pointer.child != Entity and
+            type_info.pointer.child != Ally)
         @compileError("Invalid type given. Please use \"Enemy\", \"Entity\" or \"Ally\"");
 }
 
@@ -217,8 +217,7 @@ pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64,
     phys_dmg: i32 = 0,
     magic_dmg: i32 = 0,
     true_dmg: i32 = 0,
-    effect: ?utils.ConditionEnum = null,
-    effect_duration: i64 = 1 * std.time.us_per_s,
+    conditions: ?[]const game_data.TimedCondition = null,
     cooldown: i64 = 1 * std.time.us_per_s,
     color: u32 = 0xFFFFFF,
 }) void {
@@ -247,8 +246,7 @@ pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64,
         .phys_dmg = opts.phys_dmg,
         .magic_dmg = opts.magic_dmg,
         .true_dmg = opts.true_dmg,
-        .effect = opts.effect,
-        .effect_duration = opts.effect_duration,
+        .conditions = opts.conditions,
         .aoe_color = opts.color,
     });
 }
@@ -316,6 +314,8 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
     fixed_angle: f32 = std.math.nan(f32),
     rotate_angle: f32 = std.math.nan(f32),
 }) void {
+    if (host.condition.stunned or host.condition.encased_in_stone) return;
+
     const world = maps.worlds.getPtr(host.world_id) orelse return;
 
     const storage_id = getStorageId(src_loc);

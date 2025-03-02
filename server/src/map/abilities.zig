@@ -19,6 +19,7 @@ const Projectile = @import("Projectile.zig");
 pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.ProjectileData, proj_index: u8, angle: f32) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
+    const fstr = f32i(player.stats[Player.strength_stat] + player.stat_boosts[Player.strength_stat]);
     const x = player.x + @cos(angle) * 0.25;
     const y = player.y + @sin(angle) * 0.25;
     const map_id = world.add(Projectile, .{
@@ -28,7 +29,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
         .owner_map_id = player.map_id,
         .angle = angle,
         .start_time = main.current_time,
-        .phys_dmg = proj_data.phys_dmg,
+        .phys_dmg = i32f(3000.0 + fstr * 3.0 * player.damage_multiplier),
         .index = proj_index,
         .data = proj_data,
     }) catch return;
@@ -53,7 +54,6 @@ pub fn handleHeartOfStone(player: *Player) !void {
     player.hit_multiplier = 0.5;
     player.ability_state.heart_of_stone = true;
     player.applyCondition(.slowed, duration);
-    player.applyCondition(.stunned, duration);
 
     const map_id_copy = try main.allocator.create(u32);
     map_id_copy.* = player.map_id;
@@ -107,8 +107,31 @@ pub fn handleBoulderBuddies(player: *Player) !void {
 }
 
 pub fn handleEarthenPrison(player: *Player) !void {
-    _ = player;
-    std.log.err("Earthen Prison not implemented yet", .{});
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
+    const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
+    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
+    const fdef = f32i(player.stats[Player.defense_stat] + player.stat_boosts[Player.defense_stat]);
+    const fres = f32i(player.stats[Player.resistance_stat] + player.stat_boosts[Player.resistance_stat]);
+    const duration = i64f((15.0 + fhst * 0.2) * std.time.us_per_s);
+    const radius = 9.0 + fint * 0.1;
+    const redirect_perc = @max(0.0, 0.5 - fdef * 0.01 * 0.01 - fres * 0.01 * 0.01);
+    const radius_sqr = radius * radius;
+
+    const obelisk_map_id = try world.add(Ally, .{
+        .x = player.x,
+        .y = player.y,
+        .data_id = 2,
+        .owner_map_id = player.map_id,
+        .disappear_time = main.current_time + duration,
+        .hit_multiplier = redirect_perc,
+    });
+
+    for (world.listForType(Enemy).items) |*e|
+        if (utils.distSqr(e.x, e.y, player.x, player.y) <= radius_sqr) {
+            e.obelisk_map_id = obelisk_map_id;
+            e.applyCondition(.encased_in_stone, duration);
+        };
 }
 
 fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
@@ -172,7 +195,7 @@ pub fn handleRewind(player: *Player) !void {
     }
     player.x = player.position_records[tick].x;
     player.y = player.position_records[tick].y;
-    player.export_pos = true;    
+    player.export_pos = true;
 }
 
 pub fn handleNullPulse(player: *Player) !void {
@@ -191,7 +214,7 @@ pub fn handleNullPulse(player: *Player) !void {
                 const phys_dmg = i32f(f32i(p.phys_dmg) * damage_mult);
                 const magic_dmg = i32f(f32i(p.magic_dmg) * damage_mult);
                 const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
-                e.damage(.player, player.map_id, phys_dmg, magic_dmg, true_dmg);
+                e.damage(.player, player.map_id, phys_dmg, magic_dmg, true_dmg, null);
             }
             try p.deinit();
             projs_to_remove.append(main.allocator, i) catch main.oomPanic();
@@ -246,9 +269,55 @@ pub fn handleSpaceShift(player: *Player) !void {
     std.log.err("Space Shift not implemented yet", .{});
 }
 
+fn bloodfontCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
+    const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
+    defer main.allocator.destroy(player_map_id);
+    if (world.find(Player, player_map_id.*, .ref)) |player| {
+        const old_hp = player.hp;
+        player.hp = @max(1, player.hp - @as(i32, @intCast(player.stored_damage)));
+        const hp_delta = player.hp - old_hp;
+        if (hp_delta < 0) {
+            var buf: [64]u8 = undefined;
+            player.client.queuePacket(.{ .notification = .{
+                .obj_type = .player,
+                .map_id = player.map_id,
+                .message = std.fmt.bufPrint(&buf, "{}", .{hp_delta}) catch return,
+                .color = 0xFF0000,
+            } });
+
+            player.client.queuePacket(.{ .show_effect = .{
+                .eff_type = .potion,
+                .obj_type = .player,
+                .map_id = player.map_id,
+                .x1 = 0,
+                .y1 = 0,
+                .x2 = 0,
+                .y2 = 0,
+                .color = 0xFF0000,
+            } });
+        }
+        player.ability_state.bloodfont = false;
+        player.hit_multiplier = 1.0;
+        player.stored_damage = 0;
+    }
+}
+
 pub fn handleBloodfont(player: *Player) !void {
-    _ = player; // autofix
-    std.log.err("Bloodfont not implemented yet", .{});
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+
+    const fhp = f32i(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat]);
+    const duration = i64f((13.0 + fhp * 0.01) * std.time.us_per_s);
+
+    player.ability_state.bloodfont = true;
+    player.hit_multiplier = 0.0;
+
+    const map_id_copy = try main.allocator.create(u32);
+    map_id_copy.* = player.map_id;
+    world.callbacks.append(main.allocator, .{
+        .trigger_on = main.current_time + duration,
+        .callback = bloodfontCallback,
+        .data = map_id_copy,
+    }) catch main.oomPanic();
 }
 
 pub fn handleRavenousHunger(player: *Player) !void {
