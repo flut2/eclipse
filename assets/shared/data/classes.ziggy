@@ -115,7 +115,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 1, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ intelligence { .amount = 10 } ],
+            .flat_stats = [ intelligence { .amount = 10 } ],
         },
         {
             .name = "Haste Boost",
@@ -128,7 +128,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 2, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ haste { .amount = 5 } ],
+            .flat_stats = [ haste { .amount = 5 } ],
         },
         {
             .name = "Mana Boost",
@@ -141,7 +141,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 3, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_mp { .amount = 35 } ],
+            .flat_stats = [ max_mp { .amount = 35 } ],
         },
         {
             .name = "Heightened Perception",
@@ -185,7 +185,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 6, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ stamina { .amount = 10 } ],
+            .flat_stats = [ stamina { .amount = 10 } ],
         },
         {
             .name = "Speed Boost",
@@ -198,7 +198,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 7, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ haste { .amount = 5 } ],
+            .flat_stats = [ haste { .amount = 5 } ],
         },
         {
             .name = "Health Boost",
@@ -211,7 +211,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 8, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_mp { .amount = 35 } ],
+            .flat_stats = [ max_mp { .amount = 35 } ],
         },
         {
             .name = "Double Tap",
@@ -255,7 +255,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 11, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ wit { .amount = 10 } ],
+            .flat_stats = [ wit { .amount = 10 } ],
         },
         {
             .name = "Strength Boost",
@@ -268,7 +268,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 12, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ strength { .amount = 5 } ],
+            .flat_stats = [ strength { .amount = 5 } ],
         },
         {
             .name = "Defense Boost",
@@ -281,7 +281,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 13, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ defense { .amount = 5 } ],
+            .flat_stats = [ defense { .amount = 5 } ],
         },
         {
             .name = "Phase Shift",
@@ -328,7 +328,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 16, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ wit { .amount = 10 } ],
+            .flat_stats = [ wit { .amount = 10 } ],
         },
         {
             .name = "Health Boost",
@@ -341,7 +341,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 17, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_hp { .amount = 35 } ],
+            .flat_stats = [ max_hp { .amount = 35 } ],
         },
         {
             .name = "Mana Boost",
@@ -354,7 +354,7 @@
                 [{"Solid Magma": 1100}, {"Phoenix Feather": 175}, {"Bottled Flame": 75}],
             ],
             .requires = [{ .index = 18, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_mp { .amount = 35 } ],
+            .flat_stats = [ max_mp { .amount = 35 } ],
         },
     ],
 },
@@ -490,7 +490,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 1, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ intelligence { .amount = 10 } ],
+            .flat_stats = [ intelligence { .amount = 10 } ],
         },
         {
             .name = "Haste Boost",
@@ -505,7 +505,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 2, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ haste { .amount = 5 } ],
+            .flat_stats = [ haste { .amount = 5 } ],
         },
         {
             .name = "Mana Boost",
@@ -520,7 +520,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 3, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_mp { .amount = 35 } ],
+            .flat_stats = [ max_mp { .amount = 35 } ],
         },
         {
             .name = "Heightened Perception",
@@ -575,7 +575,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 6, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ stamina { .amount = 10 } ],
+            .flat_stats = [ stamina { .amount = 10 } ],
         },
         {
             .name = "Speed Boost",
@@ -590,7 +590,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 7, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ haste { .amount = 5 } ],
+            .flat_stats = [ haste { .amount = 5 } ],
         },
         {
             .name = "Health Boost",
@@ -605,7 +605,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 8, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_mp { .amount = 35 } ],
+            .flat_stats = [ max_mp { .amount = 35 } ],
         },
         {
             .name = "Double Tap",
@@ -660,7 +660,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 11, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ wit { .amount = 10 } ],
+            .flat_stats = [ wit { .amount = 10 } ],
         },
         {
             .name = "Strength Boost",
@@ -675,7 +675,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 12, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ strength { .amount = 5 } ],
+            .flat_stats = [ strength { .amount = 5 } ],
         },
         {
             .name = "Defense Boost",
@@ -690,7 +690,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 13, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ defense { .amount = 5 } ],
+            .flat_stats = [ defense { .amount = 5 } ],
         },
         {
             .name = "Phase Shift",
@@ -748,7 +748,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 16, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ wit { .amount = 10 } ],
+            .flat_stats = [ wit { .amount = 10 } ],
         },
         {
             .name = "Health Boost",
@@ -763,7 +763,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 17, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_hp { .amount = 35 } ],
+            .flat_stats = [ max_hp { .amount = 35 } ],
         },
         {
             .name = "Mana Boost",
@@ -778,7 +778,7 @@
                  {"Phoenix Feather": 90}, {"Flawless Mahogany": 40}, {"Bottled Flame": 45}],
             ],
             .requires = [{ .index = 18, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_mp { .amount = 35 } ],
+            .flat_stats = [ max_mp { .amount = 35 } ],
         },
     ],
 },
@@ -894,7 +894,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 1, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ intelligence { .amount = 10 } ],
+            .flat_stats = [ intelligence { .amount = 10 } ],
         },
         {
             .name = "Haste Boost",
@@ -907,7 +907,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 2, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ haste { .amount = 5 } ],
+            .flat_stats = [ haste { .amount = 5 } ],
         },
         {
             .name = "Mana Boost",
@@ -920,7 +920,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 3, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_mp { .amount = 35 } ],
+            .flat_stats = [ max_mp { .amount = 35 } ],
         },
         {
             .name = "Heightened Perception",
@@ -964,7 +964,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 6, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ stamina { .amount = 10 } ],
+            .flat_stats = [ stamina { .amount = 10 } ],
         },
         {
             .name = "Speed Boost",
@@ -977,7 +977,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 7, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ haste { .amount = 5 } ],
+            .flat_stats = [ haste { .amount = 5 } ],
         },
         {
             .name = "Health Boost",
@@ -990,7 +990,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 8, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_mp { .amount = 35 } ],
+            .flat_stats = [ max_mp { .amount = 35 } ],
         },
         {
             .name = "Double Tap",
@@ -1034,7 +1034,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 11, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ wit { .amount = 10 } ],
+            .flat_stats = [ wit { .amount = 10 } ],
         },
         {
             .name = "Strength Boost",
@@ -1047,7 +1047,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 12, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ strength { .amount = 5 } ],
+            .flat_stats = [ strength { .amount = 5 } ],
         },
         {
             .name = "Defense Boost",
@@ -1060,7 +1060,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 13, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ defense { .amount = 5 } ],
+            .flat_stats = [ defense { .amount = 5 } ],
         },
         {
             .name = "Phase Shift",
@@ -1107,7 +1107,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 16, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ wit { .amount = 10 } ],
+            .flat_stats = [ wit { .amount = 10 } ],
         },
         {
             .name = "Health Boost",
@@ -1120,7 +1120,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 17, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_hp { .amount = 35 } ],
+            .flat_stats = [ max_hp { .amount = 35 } ],
         },
         {
             .name = "Mana Boost",
@@ -1133,7 +1133,7 @@
                 [{"Tiny Magisteel Alloy": 1100}, {"Large Magisteel Alloy": 175}, {"Huge Magisteel Alloy": 75}],
             ],
             .requires = [{ .index = 18, .level_per_aether = 1 }],
-            .stat_increases_per_level = [ max_mp { .amount = 35 } ],
+            .flat_stats = [ max_mp { .amount = 35 } ],
         },
     ],
 },

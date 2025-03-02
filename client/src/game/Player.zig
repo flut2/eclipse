@@ -184,6 +184,12 @@ fn hash(str: []const u8) u64 {
     return std.hash.Wyhash.hash(0, str);
 }
 
+pub fn hasCard(self: *Player, card_name: []const u8) bool {
+    const data = game_data.card.from_name.get(card_name) orelse return false;
+    for (self.cards) |card_id| if (card_id == data.id) return true;
+    return false;
+}
+
 pub fn useAbility(self: *Player, index: comptime_int) void {
     if (index < 0 or index >= 4) @compileError("Invalid index");
     const abil_data = self.data.abilities[index];
@@ -257,7 +263,7 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
         return;
     };
 
-    const attack_delay = i64f(1.0 / (item_data.fire_rate * attack_frequency));
+    const attack_delay = i64f(1.0 / ((item_data.fire_rate + @as(f32, if (self.hasCard("Deft Hands")) 0.1 else 0.0)) * attack_frequency));
     if (time < self.attack_start + attack_delay) return;
 
     assets.playSfx(item_data.sound);

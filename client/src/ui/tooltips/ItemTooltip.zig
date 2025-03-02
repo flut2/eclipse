@@ -375,7 +375,9 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         if (proj.boomerang) text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "Projectiles boomerang", .{text}) catch text;
     }
 
-    if (data.stat_increases) |stat_increases| for (stat_increases, 0..) |incr, i| {
+    var i: usize = 0;
+    if (data.stat_increases) |stat_increases| for (stat_increases) |incr| {
+        defer i += 1;
         if (i == 0) text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "On Equip: ", .{text}) catch text;
 
         const amount = incr.amount();
@@ -390,6 +392,26 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
                 self.getMainBuffer(),
                 "{s}" ++ decimal_fmt ++ " {s}{s}",
                 .{ text, amount, incr.toControlCode(), if (i == stat_increases.len - 1) "" else ", " },
+            ) catch text;
+        }
+    };
+
+    if (data.perc_stat_increases) |stat_increases| for (stat_increases) |incr| {
+        defer i += 1;
+        if (i == 0) text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "On Equip: ", .{text}) catch text;
+
+        const amount = incr.amount();
+        if (amount > 0) {
+            text = std.fmt.bufPrint(
+                self.getMainBuffer(),
+                "{s}+" ++ float_fmt ++ "% {s}{s}",
+                .{ text, amount * 100.0, incr.toControlCode(), if (i == stat_increases.len - 1) "" else ", " },
+            ) catch text;
+        } else {
+            text = std.fmt.bufPrint(
+                self.getMainBuffer(),
+                "{s}" ++ float_fmt ++ "% {s}{s}",
+                .{ text, amount * 100.0, incr.toControlCode(), if (i == stat_increases.len - 1) "" else ", " },
             ) catch text;
         }
     };

@@ -318,7 +318,8 @@ pub const TalentData = struct {
     max_level: []const u16, // This won't ever be >255, but ziggy breaks otherwise, thinking it's a string...
     level_costs: []const []const TalentResourceCost,
     requires: []const TalentRequirement = &.{},
-    stat_increases_per_level: ?[]const StatIncreaseData = null,
+    flat_stats: ?[]const StatIncreaseData = null,
+    perc_stats: ?[]const StatIncreaseDataPerc = null,
 
     pub const ziggy_options = struct {
         pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !TalentData {
@@ -522,6 +523,55 @@ pub const StatIncreaseData = union(enum) {
     }
 };
 
+pub const StatIncreaseDataPerc = union(enum) {
+    max_hp: struct { amount: f32 },
+    max_mp: struct { amount: f32 },
+    strength: struct { amount: f32 },
+    wit: struct { amount: f32 },
+    defense: struct { amount: f32 },
+    resistance: struct { amount: f32 },
+    speed: struct { amount: f32 },
+    stamina: struct { amount: f32 },
+    intelligence: struct { amount: f32 },
+    haste: struct { amount: f32 },
+
+    pub fn toString(self: StatIncreaseDataPerc) []const u8 {
+        return switch (self) {
+            .max_hp => "Max HP",
+            .max_mp => "Max MP",
+            .strength => "Strength",
+            .wit => "Wit",
+            .defense => "Defense",
+            .resistance => "Resistance",
+            .speed => "Speed",
+            .stamina => "Stamina",
+            .intelligence => "Intelligence",
+            .haste => "Haste",
+        };
+    }
+
+    pub fn toControlCode(self: StatIncreaseDataPerc) []const u8 {
+        return switch (self) {
+            .max_hp => "&img=\"misc_big,0\"",
+            .max_mp => "&img=\"misc_big,1\"",
+            .strength => "&img=\"misc_big,2\"",
+            .wit => "&img=\"misc_big,3\"",
+            .defense => "&img=\"misc_big,4\"",
+            .resistance => "&img=\"misc_big,5\"",
+            .stamina => "&img=\"misc_big,6\"",
+            .intelligence => "&img=\"misc_big,7\"",
+            .speed => "&img=\"misc_big,8\"",
+            .haste => "&img=\"misc_big,9\"",
+        };
+    }
+
+    pub fn amount(self: StatIncreaseDataPerc) f32 {
+        return switch (self) {
+            inline else => |inner| inner.amount,
+        };
+    }
+};
+
 pub const TimedCondition = struct {
     type: utils.ConditionEnum,
     duration: f32,
@@ -565,6 +615,7 @@ pub const ItemData = struct {
     projectile_count: u8 = 1,
     projectile: ?ProjectileData = null,
     stat_increases: ?[]const StatIncreaseData = null,
+    perc_stat_increases: ?[]const StatIncreaseDataPerc = null,
     activations: ?[]const ActivationData = null,
     arc_gap: f32 = 5.0,
     mana_cost: ?ItemResourceCost = null,
@@ -597,6 +648,8 @@ pub const CardData = struct {
     rarity: CardRarity,
     description: []const u8,
     max_stack: u16 = 0,
+    flat_stats: ?[]const StatIncreaseData = null,
+    perc_stats: ?[]const StatIncreaseDataPerc = null,
 
     pub const ziggy_options = struct {
         pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !CardData {

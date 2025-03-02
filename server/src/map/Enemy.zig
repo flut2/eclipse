@@ -72,6 +72,60 @@ pub fn deinit(self: *Enemy) !void {
         main.allocator.destroy(behav);
     }
 
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
+    var iter = self.damages_dealt.iterator();
+    while (iter.next()) |entry| {
+        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+        const dmg = entry.value_ptr.*;
+        if (player.hasCard("Vampiric Enchantment")) {
+            const old_hp = player.hp;
+            player.hp = @min(player.data.stats.health, player.hp + @min(200, @divFloor(dmg, 1000)));
+            const hp_delta = player.hp - old_hp;
+            var buf: [64]u8 = undefined;
+            player.client.queuePacket(.{ .notification = .{
+                .obj_type = .player,
+                .map_id = player.map_id,
+                .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
+                .color = 0x00FF00,
+            } });
+
+            player.client.queuePacket(.{ .show_effect = .{
+                .eff_type = .potion,
+                .obj_type = .player,
+                .map_id = player.map_id,
+                .x1 = 0,
+                .y1 = 0,
+                .x2 = 0,
+                .y2 = 0,
+                .color = 0x00FF00,
+            } });
+        }
+
+        if (player.hasCard("Ritual Sacrifice")) {
+            const old_mp = player.mp;
+            player.mp = @min(player.data.stats.mana, player.mp + @min(100, @divFloor(dmg, 4000)));
+            const mp_delta = player.hp - old_mp;
+            var buf: [64]u8 = undefined;
+            player.client.queuePacket(.{ .notification = .{
+                .obj_type = .player,
+                .map_id = player.map_id,
+                .message = std.fmt.bufPrint(&buf, "+{}", .{mp_delta}) catch return,
+                .color = 0x0000FF,
+            } });
+
+            player.client.queuePacket(.{ .show_effect = .{
+                .eff_type = .potion,
+                .obj_type = .player,
+                .map_id = player.map_id,
+                .x1 = 0,
+                .y1 = 0,
+                .x2 = 0,
+                .y2 = 0,
+                .color = 0x0000FF,
+            } });
+        }
+    }
+
     self.storages.deinit();
     self.damages_dealt.deinit(main.allocator);
     self.stats_writer.list.deinit(main.allocator);

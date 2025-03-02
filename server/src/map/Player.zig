@@ -144,7 +144,7 @@ pub fn init(self: *Player) !void {
     self.inventory = try self.char_data.get(.inventory);
     self.inv_data = try self.char_data.get(.item_data);
 
-    self.recalculateItems();
+    self.recalculateBoosts();
 
     self.moveToSpawn();
 }
@@ -279,7 +279,13 @@ pub fn death(self: *Player, killer: []const u8) !void {
     self.client.sameThreadShutdown();
 }
 
-pub fn addExp(self: *Player, amount: u32) void {
+pub fn hasCard(self: *Player, card_name: []const u8) bool {
+    const data = game_data.card.from_name.get(card_name) orelse return false;
+    for (self.cards) |card_id| if (card_id == data.id) return true;
+    return false;
+}
+
+pub fn addSpirits(self: *Player, amount: u32) void {
     self.spirits_communed += amount;
     const spirit_goal = game_data.spiritGoal(self.aether);
     if (self.spirits_communed >= spirit_goal) {
@@ -324,6 +330,7 @@ pub fn damage(
 
     if (dmg > 0 and self.ability_state.time_lock) self.stored_damage += @intCast(dmg * 5);
     if (unscaled_dmg > 0 and self.ability_state.bloodfont) self.stored_damage += @intCast(i32f(unscaled_dmg));
+    if (dmg > 100 and self.hasCard("Absorption")) self.hp = @min(self.data.stats.health, i32f(f32i(dmg) * 0.15));
 }
 
 fn CacheType(comptime T: type) type {
@@ -526,7 +533,7 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
     if (self.objs.ally.items.len > 0) self.client.queuePacket(.{ .new_allies = .{ .list = self.objs.ally.items } });
 }
 
-fn statTypeToId(stat_type: @typeInfo(game_data.StatIncreaseData).@"union".tag_type.?) u16 {
+fn statTypeToId(stat_type: anytype) u16 {
     return switch (stat_type) {
         .max_hp => health_stat,
         .max_mp => mana_stat,
@@ -541,14 +548,51 @@ fn statTypeToId(stat_type: @typeInfo(game_data.StatIncreaseData).@"union".tag_ty
     };
 }
 
-pub fn recalculateItems(self: *Player) void {
+pub fn recalculateBoosts(self: *Player) void {
     @memset(&self.stat_boosts, 0);
+
+    var perc_boosts: [self.stat_boosts.len]f32 = @splat(0.0);
+
     for (self.inventory[0..4]) |item_id| {
-        const props = game_data.item.from_id.get(item_id) orelse continue;
-        if (props.stat_increases) |stat_increases| for (stat_increases) |si|
+        const data = game_data.item.from_id.get(item_id) orelse continue;
+        if (data.stat_increases) |stat_increases| for (stat_increases) |si|
             switch (si) {
                 inline else => |inner, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(inner.amount),
             };
+        if (data.perc_stat_increases) |stat_increases| for (stat_increases) |si|
+            switch (si) {
+                inline else => |inner, tag| perc_boosts[statTypeToId(tag)] += inner.amount,
+            };
+    }
+
+    for (self.cards) |card_id| {
+        const data = game_data.card.from_id.get(card_id) orelse continue;
+        if (data.flat_stats) |stat_increases| for (stat_increases) |si|
+            switch (si) {
+                inline else => |inner, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(inner.amount),
+            };
+        if (data.perc_stats) |stat_increases| for (stat_increases) |si|
+            switch (si) {
+                inline else => |inner, tag| perc_boosts[statTypeToId(tag)] += inner.amount,
+            };
+    }
+
+    for (self.talents.items) |talent| {
+        const class_data = game_data.class.from_id.get(self.data_id) orelse continue;
+        if (class_data.talents.len >= talent.data_id) continue;
+        const talent_data = class_data.talents[talent.data_id];
+        if (talent_data.flat_stats) |stat_increases| for (stat_increases) |si|
+            switch (si) {
+                inline else => |inner, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(inner.amount * talent.count),
+            };
+        if (talent_data.perc_stats) |stat_increases| for (stat_increases) |si|
+            switch (si) {
+                inline else => |inner, tag| perc_boosts[statTypeToId(tag)] += inner.amount * f32i(talent.count),
+            };
+    }
+
+    for (perc_boosts, 0..) |perc_boost, i| {
+        if (perc_boost != 0.0) self.stat_boosts[i] += i32f(f32i(self.stat_boosts[i]) * perc_boost);
     }
 }
 

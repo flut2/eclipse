@@ -6,6 +6,7 @@
     .description = \\Gain $deftxt+3%$deficon
     ,
     .max_stack = 5,
+    .perc_stats = [ defense { .amount = 0.03 } ],
 },
 {
     .id = 1,
@@ -14,6 +15,7 @@
     .description = \\Gain $restxt+3%$resicon
     ,
     .max_stack = 5,
+    .perc_stats = [ resistance { .amount = 0.03 } ],
 },
 {
     .id = 2,
@@ -22,6 +24,7 @@
     .description = \\Gain $strtxt+5%$stricon
     ,
     .max_stack = 5,
+    .perc_stats = [ strength { .amount = 0.05 } ],
 },
 {
     .id = 3,
@@ -30,6 +33,7 @@
     .description = \\Gain $wittxt+5%$witicon
     ,
     .max_stack = 5,
+    .perc_stats = [ wit { .amount = 0.05 } ],
 },
 {
     .id = 4,
@@ -38,6 +42,7 @@
     .description = \\Gain $hptxt+5%$hpicon
     ,
     .max_stack = 5,
+    .perc_stats = [ max_hp { .amount = 0.05 } ],
 },
 {
     .id = 5,
@@ -46,6 +51,7 @@
     .description = \\Gain $mptxt+5%$mpicon
     ,
     .max_stack = 5,
+    .perc_stats = [ max_mp { .amount = 0.05 } ]
 },
 {
     .id = 6,
@@ -54,6 +60,7 @@
     .description = \\Gain $spdtxt+7%$spdicon
     ,
     .max_stack = 5,
+    .perc_stats = [ speed { .amount = 0.07 } ]
 },
 {
     .id = 7,
@@ -62,6 +69,7 @@
     .description = \\Gain $hsttxt+10%$hsticon
     ,
     .max_stack = 5,
+    .perc_stats = [ haste { .amount = 0.1 } ]
 },
 {
     .id = 8,
@@ -70,6 +78,7 @@
     .description = \\Gain $statxt+10%$staicon
     ,
     .max_stack = 5,
+    .perc_stats = [ stamina { .amount = 0.1 } ]
 },
 {
     .id = 9,
@@ -78,6 +87,7 @@
     .description = \\Gain $inttxt+10%$inticon
     ,
     .max_stack = 5,
+    .perc_stats = [ intelligence { .amount = 0.1 } ]
 },
 {
     .id = 11,
@@ -86,6 +96,7 @@
     .description = \\Gain $deftxt+7%$deficon&reset, $restxt+7%$resicon
     ,
     .max_stack = 3,
+    .perc_stats = [ defense { .amount = 0.07 }, resistance { .amount = 0.07 } ]
 },
 {
     .id = 12,
@@ -94,6 +105,7 @@
     .description = \\Gain $strtxt+10%$stricon&reset, $wittxt+10%$witicon
     ,
     .max_stack = 3,
+    .perc_stats = [ strength { .amount = 0.1 }, wit { .amount = 0.1 } ]
 },
 {
     .id = 13,
@@ -102,6 +114,7 @@
     .description = \\Gain $statxt+15%$staicon&reset, $inttxt+15%$inticon
     ,
     .max_stack = 3,
+    .perc_stats = [ stamina { .amount = 0.15 }, intelligence { .amount = 0.15 } ]
 },
 {
     .id = 15,
@@ -129,7 +142,7 @@
     .id = 18,
     .name = "Absorption",
     .rarity = @CardRarity("legendary"),
-    .description = \\Release a $hptxt10 (+1%$hpicon) Health&reset Healing Blast when receiving Physical or Magic Damage above 70 in a single hit
+    .description = \\Receive 15% less damage when you get hit for more than 100 damage
     ,
 },
 ]

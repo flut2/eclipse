@@ -334,7 +334,7 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
                     if (!verifySwap(start, if (data.to_slot_id < 4) player.data.item_types[data.to_slot_id] else .any) or
                         !verifySwap(player.inventory[data.to_slot_id], if (data.from_slot_id < 4) player.data.item_types[data.from_slot_id] else .any))
                         return;
-                    defer player.recalculateItems();
+                    defer player.recalculateBoosts();
 
                     handleStack: {
                         if (player.inventory[data.from_slot_id] == player.inventory[data.to_slot_id]) {
@@ -358,7 +358,7 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
                     if (!verifySwap(cont.inventory[data.to_slot_id], if (data.from_slot_id < 4) player.data.item_types[data.from_slot_id] else .any))
                         return;
 
-                    defer player.recalculateItems();
+                    defer player.recalculateBoosts();
 
                     handleStack: {
                         if (player.inventory[data.from_slot_id] == cont.inventory[data.to_slot_id]) {
@@ -393,7 +393,7 @@ fn handleInvSwap(self: *Client, data: PacketData(.inv_swap)) void {
                     if (!verifySwap(start, if (data.to_slot_id < 4) player.data.item_types[data.to_slot_id] else .any))
                         return;
 
-                    defer player.recalculateItems();
+                    defer player.recalculateBoosts();
 
                     handleStack: {
                         if (cont.inventory[data.from_slot_id] == player.inventory[data.to_slot_id]) {
@@ -798,7 +798,7 @@ fn handleInvDrop(self: *Client, data: PacketData(.inv_drop)) void {
 
     player.inventory[data.slot_id] = std.math.maxInt(u16);
     player.inv_data[data.slot_id] = .{};
-    player.recalculateItems();
+    player.recalculateBoosts();
 }
 
 fn handlePong(_: *Client, _: PacketData(.pong)) void {}
@@ -1125,6 +1125,15 @@ fn handleSelectCard(self: *Client, data: PacketData(.select_card)) void {
             player.cards[player.cards.len - 1] = player.selecting_cards.?[@intFromEnum(idx) - 1];
         },
     }
+
+    player.recalculateBoosts();
 }
 
-fn handleTalentUpgrade(_: *Client, _: PacketData(.talent_upgrade)) void {}
+fn handleTalentUpgrade(self: *Client, _: PacketData(.talent_upgrade)) void {
+    const player = self.world.find(Player, self.player_map_id, .ref) orelse {
+        self.sendError(.message_with_disconnect, "Player does not exist");
+        return;
+    };
+
+    player.recalculateBoosts();
+}
