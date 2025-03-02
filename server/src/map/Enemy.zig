@@ -22,6 +22,8 @@ map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
 x: f32 = 0.0,
 y: f32 = 0.0,
+spawn_x: f32 = 0.0,
+spawn_y: f32 = 0.0,
 max_hp: i32 = 100,
 hp: i32 = 100,
 size_mult: f32 = 1.0,
@@ -56,6 +58,8 @@ pub fn init(self: *Enemy) !void {
     };
     self.hp = @intCast(self.data.health);
     self.max_hp = @intCast(self.data.health);
+    self.spawn_x = self.x;
+    self.spawn_y = self.y;
 }
 
 pub fn deinit(self: *Enemy) !void {

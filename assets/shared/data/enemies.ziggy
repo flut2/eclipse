@@ -251,6 +251,9 @@
     .id = 14,
     .name = "Health Wisp",
     .textures = [{"low_realm": 27}],
+    .health = 30000,
+    .defense = 100,
+    .resistance = 65,
     .size_mult = 1.2,
     .light = {
         .color = "0xE54242",
@@ -261,6 +264,9 @@
     .id = 15,
     .name = "Magic Wisp",
     .textures = [{"low_realm": 28}],
+    .health = 30000,
+    .defense = 65,
+    .resistance = 100,
     .size_mult = 1.2,
     .light = {
         .color = "0x4C8AED",

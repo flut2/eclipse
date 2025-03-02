@@ -19,6 +19,8 @@ map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
 x: f32 = 0.0,
 y: f32 = 0.0,
+spawn_x: f32 = 0.0,
+spawn_y: f32 = 0.0,
 hp: i32 = 0,
 max_hp: i32 = 0,
 name: []const u8 = &.{},
@@ -57,6 +59,8 @@ pub fn init(self: *Entity) !void {
 
     self.hp = self.data.health;
     self.max_hp = self.data.health;
+    self.spawn_x = self.x;
+    self.spawn_y = self.y;
 }
 
 pub fn deinit(self: *Entity) !void {
@@ -89,6 +93,11 @@ pub fn applyCondition(self: *Entity, condition: utils.ConditionEnum, duration: i
 pub fn clearCondition(self: *Entity, condition: utils.ConditionEnum) void {
     _ = self.conditions_active.swapRemove(condition);
     self.condition.set(condition, false);
+}
+
+pub fn delete(self: *Entity) !void {
+    const world = maps.worlds.getPtr(self.world_id) orelse return;
+    try world.remove(Entity, self);
 }
 
 pub fn tick(self: *Entity, time: i64, dt: i64) !void {

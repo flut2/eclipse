@@ -1,9 +1,15 @@
 const std = @import("std");
 
+const shared = @import("shared");
+const game_data = shared.game_data;
+
+const Enemy = @import("../../map/Enemy.zig");
 const Entity = @import("../../map/Entity.zig");
 const maps = @import("../../map/maps.zig");
 const Player = @import("../../map/Player.zig");
+const World = @import("../../World.zig");
 const Metadata = @import("../behavior.zig").BehaviorMetadata;
+const logic = @import("../logic.zig");
 
 pub const HealthShrine = struct {
     pub const data: Metadata = .{
@@ -162,5 +168,61 @@ pub const RetrieveManaBeacon = struct {
             .y2 = 0,
             .color = 0x0000FF,
         } });
+    }
+};
+
+pub const HealthWisp = struct {
+    pub const data: Metadata = .{
+        .type = .enemy,
+        .name = "Health Wisp",
+    };
+
+    pub fn tick(_: *HealthWisp, host: *Enemy, _: i64, dt: i64) !void {
+        logic.wander(@src(), host, dt, 2.5);
+        logic.clampToSpawn(host, dt, 4.0, 5.0);
+    }
+};
+
+pub const MagicWisp = struct {
+    pub const data: Metadata = .{
+        .type = .enemy,
+        .name = "Magic Wisp",
+    };
+
+    pub fn tick(_: *MagicWisp, host: *Enemy, _: i64, dt: i64) !void {
+        logic.wander(@src(), host, dt, 2.5);
+        logic.clampToSpawn(host, dt, 4.0, 5.0);
+    }
+};
+
+pub const DormantHealthShrine = struct {
+    pub const data: Metadata = .{
+        .type = .entity,
+        .name = "Dormant Health Shrine",
+    };
+
+    pub fn tick(_: *DormantHealthShrine, host: *Entity, _: i64, _: i64) !void {
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        if (world.getAmountWithin(Enemy, "Health Wisp", host.x, host.y, 20 * 20) == 0) {
+            const shrine_data = game_data.entity.from_name.get("Health Shrine") orelse return;
+            _ = try world.add(Entity, .{ .data_id = shrine_data.id, .x = host.x, .y = host.y });
+            try host.delete();
+        }
+    }
+};
+
+pub const DormantMagicShrine = struct {
+    pub const data: Metadata = .{
+        .type = .entity,
+        .name = "Dormant Magic Shrine",
+    };
+
+    pub fn tick(_: *DormantMagicShrine, host: *Entity, _: i64, _: i64) !void {
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        if (world.getAmountWithin(Enemy, "Magic Wisp", host.x, host.y, 20 * 20) == 0) {
+            const shrine_data = game_data.entity.from_name.get("Magic Shrine") orelse return;
+            _ = try world.add(Entity, .{ .data_id = shrine_data.id, .x = host.x, .y = host.y });
+            try host.delete();
+        }
     }
 };

@@ -153,6 +153,12 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
     }
 }
 
+pub fn clampToSpawn(host: anytype, dt: i64, radius: f32, speed: f32) void {
+    verifyType(@TypeOf(host));
+    if (utils.distSqr(host.spawn_x, host.spawn_y, host.x, host.y) > radius * radius)
+        World.moveToward(host, host.spawn_x, host.spawn_y, speed, dt);
+}
+
 pub fn orbit(host: anytype, dt: i64, opts: struct {
     speed: f32,
     radius: f32,

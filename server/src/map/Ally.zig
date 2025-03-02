@@ -18,6 +18,8 @@ map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
 x: f32 = 0.0,
 y: f32 = 0.0,
+spawn_x: f32 = 0.0,
+spawn_y: f32 = 0.0,
 size_mult: f32 = 1.0,
 condition: utils.Condition = .{},
 hp: i32 = 0,
@@ -52,6 +54,8 @@ pub fn init(self: *Ally) !void {
     self.hp = self.max_hp;
     self.defense = self.data.defense;
     self.resistance = self.data.resistance;
+    self.spawn_x = self.x;
+    self.spawn_y = self.y;
 }
 
 pub fn deinit(self: *Ally) !void {
