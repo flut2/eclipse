@@ -18,9 +18,9 @@
 {
     .id = 2,
     .name = "Obelisk of Binding",
-    .health = 55000,
+    .health = 35000,
     .defense = 65,
     .resistance = 45,
-    .textures = [{ "misc_chars_big": 0 }],
+    .textures = [{ "misc_chars_big": 1 }],
 },
 ]

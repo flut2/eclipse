@@ -425,9 +425,9 @@
 {
     .id = 50,
     .name = "Demon Rift",
-    .textures = [{"misc": 3}],
+    .textures = [{"misc_big": 13}],
     .light = {
-        .color = "0xB49DFF",
+        .color = "0x5F3CD6",
         .intensity = 0.1,
         .radius = 3.0,
     },
