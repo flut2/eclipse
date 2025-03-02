@@ -4,5 +4,5 @@
 .redis_port = 6379,
 .public_ip = "127.0.0.1",
 .server_name = "Eclipse",
-.build_version = "1.0",
+.build_version = "0.1",
 .tps = 20,
