@@ -313,6 +313,27 @@
     .name = "Tribe Chief",
     .textures = [{"low_realm_big": 3}],
     .elite = true,
+    .health = 120000,
+    .defense = 85,
+    .resistance = 115,
+    .projectiles = [
+        {
+            .textures = [{"projectiles": 11}],
+            .angle_correction = 1,
+            .phys_dmg = 150,
+            .speed = 0.7,
+            .duration = 0.9,
+        },
+        {
+            .textures = [{"projectiles": 11}],
+            .angle_correction = 1,
+            .magic_dmg = 85,
+            .speed = 1.6,
+            .duration = 0.33,
+            .amplitude = 0.55,
+            .frequency = 0.3,
+        }
+    ],
 },
 {
     .id = 24,

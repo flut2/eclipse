@@ -305,10 +305,18 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
 
 pub fn getAmountWithin(self: *World, comptime T: type, name: []const u8, x: f32, y: f32, radius_sqr: f32) u32 {
     var amount: u32 = 0;
-    for (self.listForType(T).items) |*obj| {
+    for (self.listForType(T).items) |obj| {
         if (!std.mem.eql(u8, obj.data.name, name)) continue;
         const dist_sqr = utils.distSqr(obj.x, obj.y, x, y);
         if (dist_sqr <= radius_sqr and !obj.condition.invisible) amount += 1;
     }
     return amount;
+}
+
+pub fn anyPlayersNear(self: *World, x: f32, y: f32, radius_sqr: f32) bool {
+    for (self.listForType(Player).items) |obj| {
+        const dist_sqr = utils.distSqr(obj.x, obj.y, x, y);
+        if (dist_sqr <= radius_sqr and !obj.condition.invisible) return true;
+    }
+    return false;
 }
