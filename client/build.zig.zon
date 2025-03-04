@@ -18,8 +18,8 @@
             .hash = "rpmalloc_zig-1.0.0-AAAAAGdGAAA8rbHQViIKm-CbxG3e1l4cBTJgRnqnDvXe",
         },
         .vulkan_zig = .{
-            .url = "git+https://github.com/Snektron/vulkan-zig.git#604416bf44baf95568c428e1aa55499aa8e07607",
-            .hash = "vulkan-0.0.0-AAAAAC5bAwASnqFlLMD4V42z3LolS8n7xv3RlbXhAhv0",
+            .url = "git+https://github.com/Snektron/vulkan-zig.git#dcd538828c513919c3abf0bd55afacdce0576c61",
+            .hash = "vulkan-0.0.0-r7Ytxy5bAwASnqFlLMD4V42z3LolS8n7xv3RlbXhAhv0",
         },
     },
     .paths = .{
