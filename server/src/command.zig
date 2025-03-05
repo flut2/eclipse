@@ -99,10 +99,11 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
 fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     var response_buf: [256]u8 = undefined;
 
-    const amount = std.fmt.parseInt(u16, iter.next() orelse {
+    const amount_str = iter.next() orelse {
         player.client.sendMessage("Invalid command usage. Arguments: /give [decimal amount] [name]");
         return;
-    }, 0) catch {
+    };
+    const amount = std.fmt.parseInt(u16, amount_str, 0) catch {
         player.client.sendMessage("Improper amount supplied for /give");
         return;
     };
@@ -114,7 +115,7 @@ fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     };
     const class_data = game_data.class.from_id.get(player.data_id) orelse return;
     var amount_given: usize = 0;
-    for (0..amount) |_|
+    mainLoop: for (0..amount) |_|
         for (&player.inventory, &player.inv_data, 0..) |*equip, *inv_data, j| {
             if (equip.* == std.math.maxInt(u16) and (j >= 4 or class_data.item_types[j].typesMatch(item_data.item_type))) {
                 equip.* = item_data.id;
@@ -127,6 +128,7 @@ fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
                     return;
                 }
                 amount_given += 1;
+                if (amount_given >= amount) break :mainLoop;
             }
         };
 
