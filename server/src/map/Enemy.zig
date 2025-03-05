@@ -38,7 +38,15 @@ conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .em
 conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .empty,
 data: *const game_data.EnemyData = undefined,
 world_id: i32 = std.math.minInt(i32),
-spawned: bool = false,
+spawn: packed struct {
+    command: bool = false,
+    biome_1: bool = false,
+    biome_2: bool = false,
+    biome_3: bool = false,
+    biome_1_encounter: bool = false,
+    biome_2_encounter: bool = false,
+    biome_3_encounter: bool = false,
+} = .{},
 behavior: ?*behavior_data.EnemyBehavior = null,
 storages: behavior_logic.Storages = .{},
 
@@ -73,6 +81,148 @@ pub fn deinit(self: *Enemy) !void {
     }
 
     const world = maps.worlds.getPtr(self.world_id) orelse return;
+    if (self.spawn.biome_1_encounter) world.biome_1_encounter_alive = false;
+    if (self.spawn.biome_2_encounter) world.biome_2_encounter_alive = false;
+    if (self.spawn.biome_3_encounter) world.biome_3_encounter_alive = false;
+    if (self.spawn.biome_1 and world.biome_1_spawn > 0) {
+        world.biome_1_spawn -= 1;
+        if (!world.biome_1_encounter_alive and
+            utils.rng.random().float(f32) <= world.details.biome_1_encounter_chance)
+        {
+            var iter = world.regions.iterator();
+            while (iter.next()) |entry| {
+                const data = game_data.region.from_id.get(entry.key_ptr.*) orelse continue;
+                if (std.mem.eql(u8, data.name, "Biome 1 Encounter Spawn")) {
+                    const mobs = world.details.biome_1_encounters orelse continue;
+                    const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                    const rand_mob = mobs[utils.rng.next() % mobs.len];
+                    const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                        std.log.err("Spawning biome 1 encounter \"{s}\" failed, no data found", .{rand_mob});
+                        continue;
+                    };
+                    _ = try world.add(Enemy, .{
+                        .x = f32i(rand_point.x) + 0.5,
+                        .y = f32i(rand_point.y) + 0.5,
+                        .data_id = mob_data.id,
+                        .spawn = .{ .biome_1_encounter = true },
+                    });
+                    world.biome_1_encounter_alive = true;
+                    var buf: [256]u8 = undefined;
+                    const msg = try std.fmt.bufPrint(
+                        &buf,
+                        "A mighty \"{s}\" has spawned in {s}",
+                        .{ mob_data.name, world.details.biome_1_name },
+                    );
+                    for (world.listForType(Player).items) |*player| {
+                        player.client.queuePacket(.{ .text = .{
+                            .name = "",
+                            .obj_type = .entity,
+                            .map_id = std.math.maxInt(u32),
+                            .bubble_time = 0,
+                            .recipient = "",
+                            .text = msg,
+                            .name_color = 0xCC00CC,
+                            .text_color = 0xFF99FF,
+                        } });
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    if (self.spawn.biome_2 and world.biome_2_spawn > 0) {
+        world.biome_2_spawn -= 1;
+        if (!world.biome_2_encounter_alive and
+            utils.rng.random().float(f32) <= world.details.biome_2_encounter_chance)
+        {
+            var iter = world.regions.iterator();
+            while (iter.next()) |entry| {
+                const data = game_data.region.from_id.get(entry.key_ptr.*) orelse continue;
+                if (std.mem.eql(u8, data.name, "Biome 2 Encounter Spawn")) {
+                    const mobs = world.details.biome_2_encounters orelse continue;
+                    const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                    const rand_mob = mobs[utils.rng.next() % mobs.len];
+                    const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                        std.log.err("Spawning biome 2 encounter \"{s}\" failed, no data found", .{rand_mob});
+                        continue;
+                    };
+                    _ = try world.add(Enemy, .{
+                        .x = f32i(rand_point.x) + 0.5,
+                        .y = f32i(rand_point.y) + 0.5,
+                        .data_id = mob_data.id,
+                        .spawn = .{ .biome_2_encounter = true },
+                    });
+                    world.biome_2_encounter_alive = true;
+                    var buf: [256]u8 = undefined;
+                    const msg = try std.fmt.bufPrint(
+                        &buf,
+                        "A mighty \"{s}\" has spawned in {s}",
+                        .{ mob_data.name, world.details.biome_2_name },
+                    );
+                    for (world.listForType(Player).items) |*player| {
+                        player.client.queuePacket(.{ .text = .{
+                            .name = "",
+                            .obj_type = .entity,
+                            .map_id = std.math.maxInt(u32),
+                            .bubble_time = 0,
+                            .recipient = "",
+                            .text = msg,
+                            .name_color = 0xCC00CC,
+                            .text_color = 0xFF99FF,
+                        } });
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    if (self.spawn.biome_3 and world.biome_3_spawn > 0) {
+        world.biome_3_spawn -= 1;
+        if (!world.biome_3_encounter_alive and
+            utils.rng.random().float(f32) <= world.details.biome_3_encounter_chance)
+        {
+            var iter = world.regions.iterator();
+            while (iter.next()) |entry| {
+                const data = game_data.region.from_id.get(entry.key_ptr.*) orelse continue;
+                if (std.mem.eql(u8, data.name, "Biome 3 Encounter Spawn")) {
+                    const mobs = world.details.biome_3_encounters orelse continue;
+                    const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                    const rand_mob = mobs[utils.rng.next() % mobs.len];
+                    const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                        std.log.err("Spawning biome 3 encounter \"{s}\" failed, no data found", .{rand_mob});
+                        continue;
+                    };
+                    _ = try world.add(Enemy, .{
+                        .x = f32i(rand_point.x) + 0.5,
+                        .y = f32i(rand_point.y) + 0.5,
+                        .data_id = mob_data.id,
+                        .spawn = .{ .biome_3_encounter = true },
+                    });
+                    world.biome_3_encounter_alive = true;
+                    var buf: [256]u8 = undefined;
+                    const msg = try std.fmt.bufPrint(
+                        &buf,
+                        "A mighty \"{s}\" has spawned in {s}",
+                        .{ mob_data.name, world.details.biome_3_name },
+                    );
+                    for (world.listForType(Player).items) |*player| {
+                        player.client.queuePacket(.{ .text = .{
+                            .name = "",
+                            .obj_type = .entity,
+                            .map_id = std.math.maxInt(u32),
+                            .bubble_time = 0,
+                            .recipient = "",
+                            .text = msg,
+                            .name_color = 0xCC00CC,
+                            .text_color = 0xFF99FF,
+                        } });
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
     var iter = self.damages_dealt.iterator();
     while (iter.next()) |entry| {
         const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;

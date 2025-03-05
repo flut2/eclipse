@@ -34,9 +34,11 @@ disappear_time: i64 = std.math.maxInt(i64),
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.AllyData = undefined,
 world_id: i32 = std.math.minInt(i32),
-spawned: bool = false,
 behavior: ?*behavior_data.AllyBehavior = null,
 storages: behavior_logic.Storages = .{},
+spawn: packed struct {
+    command: bool = false,
+} = .{},
 
 pub fn init(self: *Ally) !void {
     if (behavior_data.ally_behavior_map.get(self.data_id)) |behav| {

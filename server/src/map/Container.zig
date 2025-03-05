@@ -28,7 +28,9 @@ inv_data: [9]network_data.ItemData = inv_data_default,
 disappear_time: i64 = 0,
 data: *const game_data.ContainerData = undefined,
 world_id: i32 = std.math.minInt(i32),
-spawned: bool = false,
+spawn: packed struct {
+    command: bool = false,
+} = .{},
 free_name: bool = false,
 
 pub fn init(self: *Container) !void {

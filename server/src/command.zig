@@ -83,7 +83,7 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
                 .x = player.x,
                 .y = player.y,
                 .data_id = data.id,
-                .spawned = true,
+                .spawn = .{ .command = true },
             }) catch return;
         }
     }
@@ -144,7 +144,7 @@ fn handleClearSpawn(_: *std.mem.SplitIterator(u8, .scalar), player: *Player) voi
     var count: usize = 0;
     inline for (.{ Entity, Enemy, Portal, Container }) |ObjType| {
         for (world.listForType(ObjType).items) |*obj| {
-            if (obj.spawned) {
+            if (obj.spawn.command) {
                 world.remove(ObjType, obj) catch continue;
                 count += 1;
             }

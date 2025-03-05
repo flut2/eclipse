@@ -40,7 +40,7 @@ pub fn delete(self: *Projectile) !void {
 }
 
 pub fn tick(self: *Projectile, time: i64, _: i64) !void {
-    if (time - self.start_time >= i64f(self.data.duration + 0.25 * std.time.us_per_s)) {
+    if (time - self.start_time >= i64f(self.data.duration + 3 * std.time.us_per_s)) {
         try self.delete();
         return;
     }

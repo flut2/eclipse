@@ -32,7 +32,9 @@ damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.EntityData = undefined,
 world_id: i32 = std.math.minInt(i32),
-spawned: bool = false,
+spawn: packed struct {
+    command: bool = false,
+} = .{},
 behavior: ?*behavior_data.EntityBehavior = null,
 storages: behavior_logic.Storages = .{},
 

@@ -40,9 +40,7 @@ next_map_ids: struct {
 w: u16 = 0,
 h: u16 = 0,
 time_added: i64 = 0,
-name: []const u8 = undefined,
-light_data: LightData = .{},
-map_type: maps.MapType = .default,
+details: maps.MapDetails = .{},
 tiles: []Tile = &.{},
 regions: std.AutoHashMapUnmanaged(u16, []WorldPoint) = .empty,
 drops: struct {
@@ -63,6 +61,13 @@ lists: struct {
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{},
 callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty,
+biome_1_spawn: u32 = 0,
+biome_2_spawn: u32 = 0,
+biome_3_spawn: u32 = 0,
+biome_1_encounter_alive: bool = false,
+biome_2_encounter_alive: bool = false,
+biome_3_encounter_alive: bool = false,
+last_realm_spawn: i64 = 0,
 
 pub fn listForType(self: *World, comptime T: type) *std.ArrayListUnmanaged(T) {
     return switch (T) {
@@ -105,17 +110,72 @@ pub fn nextMapIdForType(self: *World, comptime T: type) *u32 {
 pub fn appendMap(self: *World, map: maps.MapData) !void {
     @memcpy(self.tiles, map.tiles);
     self.regions = map.regions;
-
-    self.name = map.details.name;
-    self.light_data = map.details.light;
-    self.map_type = map.details.map_type;
+    self.details = map.details;
 
     for (map.entities) |e| _ = try self.add(Entity, .{ .x = e.x, .y = e.y, .data_id = e.data_id });
     for (map.enemies) |e| _ = try self.add(Enemy, .{ .x = e.x, .y = e.y, .data_id = e.data_id });
     for (map.portals) |p| _ = try self.add(Portal, .{ .x = p.x, .y = p.y, .data_id = p.data_id });
     for (map.containers) |c| _ = try self.add(Container, .{ .x = c.x, .y = c.y, .data_id = c.data_id });
 
-    switch (self.map_type) {
+    switch (self.details.map_type) {
+        .realm => {
+            var iter = map.regions.iterator();
+            while (iter.next()) |entry| {
+                const data = game_data.region.from_id.get(entry.key_ptr.*) orelse continue;
+                if (std.mem.eql(u8, data.name, "Biome 1 Monster Spawn")) {
+                    const mobs = map.details.biome_1_mobs orelse continue;
+                    for (0..map.details.biome_1_spawn_target) |_| {
+                        const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                        const rand_mob = mobs[utils.rng.next() % mobs.len];
+                        const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                            std.log.err("Spawning biome 1 mob \"{s}\" failed, no data found", .{rand_mob});
+                            continue;
+                        };
+                        _ = try self.add(Enemy, .{
+                            .x = f32i(rand_point.x) + 0.5,
+                            .y = f32i(rand_point.y) + 0.5,
+                            .data_id = mob_data.id,
+                            .spawn = .{ .biome_1 = true },
+                        });
+                        self.biome_1_spawn += 1;
+                    }
+                } else if (std.mem.eql(u8, data.name, "Biome 2 Monster Spawn")) {
+                    const mobs = map.details.biome_2_mobs orelse continue;
+                    for (0..map.details.biome_2_spawn_target) |_| {
+                        const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                        const rand_mob = mobs[utils.rng.next() % mobs.len];
+                        const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                            std.log.err("Spawning biome 2 mob \"{s}\" failed, no data found", .{rand_mob});
+                            continue;
+                        };
+                        _ = try self.add(Enemy, .{
+                            .x = f32i(rand_point.x) + 0.5,
+                            .y = f32i(rand_point.y) + 0.5,
+                            .data_id = mob_data.id,
+                            .spawn = .{ .biome_2 = true },
+                        });
+                        self.biome_2_spawn += 1;
+                    }
+                } else if (std.mem.eql(u8, data.name, "Biome 3 Monster Spawn")) {
+                    const mobs = map.details.biome_3_mobs orelse continue;
+                    for (0..map.details.biome_3_spawn_target) |_| {
+                        const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                        const rand_mob = mobs[utils.rng.next() % mobs.len];
+                        const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                            std.log.err("Spawning biome 3 mob \"{s}\" failed, no data found", .{rand_mob});
+                            continue;
+                        };
+                        _ = try self.add(Enemy, .{
+                            .x = f32i(rand_point.x) + 0.5,
+                            .y = f32i(rand_point.y) + 0.5,
+                            .data_id = mob_data.id,
+                            .spawn = .{ .biome_3 = true },
+                        });
+                        self.biome_3_spawn += 1;
+                    }
+                }
+            }
+        },
         .dungeon => {
             var iter = map.regions.iterator();
             while (iter.next()) |entry| {
@@ -159,7 +219,7 @@ pub fn create(w: u16, h: u16, id: i32) !World {
 }
 
 pub fn deinit(self: *World) void {
-    std.log.info("World \"{s}\" (id {}) removed", .{ self.name, self.id });
+    std.log.info("World \"{s}\" (id {}) removed", .{ self.details.name, self.id });
 
     inline for (.{ &self.lists, &self.drops }) |list| {
         inline for (@typeInfo(@TypeOf(list.*)).@"struct".fields) |field| @field(list, field.name).deinit(main.allocator);
@@ -205,7 +265,7 @@ pub fn find(self: *World, comptime T: type, map_id: u32, comptime constness: enu
 }
 
 pub fn tick(self: *World, time: i64, dt: i64) !void {
-    if (self.id >= 0 and self.map_type != .realm and
+    if (self.id >= 0 and self.details.map_type != .realm and
         time > self.time_added + 30 * std.time.us_per_s and self.listForType(Player).items.len == 0)
     {
         self.deinit();
@@ -224,7 +284,68 @@ pub fn tick(self: *World, time: i64, dt: i64) !void {
     while (iter.next()) |i| _ = self.callbacks.swapRemove(i);
 
     inline for (.{ Entity, Enemy, Portal, Container, Projectile, Player, Ally }) |ObjType| {
-        for (self.listForType(ObjType).items) |*obj| try obj.tick(time, dt);
+        for (self.listForType(ObjType).items) |*obj|
+            if (ObjType == Player or self.anyPlayersNear(obj.x, obj.y, 20 * 20)) try obj.tick(time, dt);
+    }
+
+    if (time - self.last_realm_spawn >= std.time.us_per_min) {
+        var region_iter = self.regions.iterator();
+        while (region_iter.next()) |entry| {
+            const data = game_data.region.from_id.get(entry.key_ptr.*) orelse continue;
+            if (std.mem.eql(u8, data.name, "Biome 1 Monster Spawn")) {
+                const mobs = self.details.biome_1_mobs orelse continue;
+                for (0..self.details.biome_1_spawn_target) |_| {
+                    const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                    const rand_mob = mobs[utils.rng.next() % mobs.len];
+                    const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                        std.log.err("Spawning biome 1 mob \"{s}\" failed, no data found", .{rand_mob});
+                        continue;
+                    };
+                    _ = try self.add(Enemy, .{
+                        .x = f32i(rand_point.x) + 0.5,
+                        .y = f32i(rand_point.y) + 0.5,
+                        .data_id = mob_data.id,
+                        .spawn = .{ .biome_1 = true },
+                    });
+                    self.biome_1_spawn += 1;
+                }
+            } else if (std.mem.eql(u8, data.name, "Biome 2 Monster Spawn")) {
+                const mobs = self.details.biome_2_mobs orelse continue;
+                for (0..self.details.biome_2_spawn_target) |_| {
+                    const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                    const rand_mob = mobs[utils.rng.next() % mobs.len];
+                    const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                        std.log.err("Spawning biome 2 mob \"{s}\" failed, no data found", .{rand_mob});
+                        continue;
+                    };
+                    _ = try self.add(Enemy, .{
+                        .x = f32i(rand_point.x) + 0.5,
+                        .y = f32i(rand_point.y) + 0.5,
+                        .data_id = mob_data.id,
+                        .spawn = .{ .biome_2 = true },
+                    });
+                    self.biome_2_spawn += 1;
+                }
+            } else if (std.mem.eql(u8, data.name, "Biome 3 Monster Spawn")) {
+                const mobs = self.details.biome_3_mobs orelse continue;
+                for (0..self.details.biome_3_spawn_target) |_| {
+                    const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
+                    const rand_mob = mobs[utils.rng.next() % mobs.len];
+                    const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
+                        std.log.err("Spawning biome 2 mob \"{s}\" failed, no data found", .{rand_mob});
+                        continue;
+                    };
+                    _ = try self.add(Enemy, .{
+                        .x = f32i(rand_point.x) + 0.5,
+                        .y = f32i(rand_point.y) + 0.5,
+                        .data_id = mob_data.id,
+                        .spawn = .{ .biome_3 = true },
+                    });
+                    self.biome_3_spawn += 1;
+                }
+            }
+        }
+        self.last_realm_spawn = time;
     }
 }
 

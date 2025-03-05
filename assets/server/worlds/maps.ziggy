@@ -33,10 +33,19 @@
     .biome_1_encounters = [
         "Loot Tester"
     ],
+    .biome_1_spawn_target = 600,
+    .biome_1_encounter_chance = 0.01,
+    .biome_1_name = "Forest",
     .biome_2_mobs = [],
     .biome_2_encounters = [],
+    .biome_2_spawn_target = 0,
+    .biome_2_name = "Volcano",
+    .biome_2_encounter_chance = 0.005,
     .biome_3_mobs = [],
     .biome_3_encounters = [],
+    .biome_3_spawn_target = 0,
+    .biome_3_name = "Desert",
+    .biome_3_encounter_chance = 0.001,
 },
 {
     .name = "Crimson Chasm",

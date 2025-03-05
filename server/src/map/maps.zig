@@ -26,8 +26,8 @@ pub const LightData = struct {
 pub const MapType = enum { default, realm, dungeon, @"test" };
 
 pub const MapDetails = struct {
-    name: []const u8,
-    file: []const u8,
+    name: []const u8 = &.{},
+    file: []const u8 = &.{},
     setpiece: bool = false,
     id: i32 = 0,
     light: LightData = .{},
@@ -40,14 +40,17 @@ pub const MapDetails = struct {
     biome_1_encounters: ?[][]const u8 = null,
     biome_1_spawn_target: u32 = 0,
     biome_1_encounter_chance: f32 = 0.0,
+    biome_1_name: []const u8 = "Unknown Biome",
     biome_2_mobs: ?[][]const u8 = null,
     biome_2_encounters: ?[][]const u8 = null,
     biome_2_spawn_target: u32 = 0,
     biome_2_encounter_chance: f32 = 0.0,
+    biome_2_name: []const u8 = "Unknown Biome",
     biome_3_mobs: ?[][]const u8 = null,
     biome_3_encounters: ?[][]const u8 = null,
     biome_3_spawn_target: u32 = 0,
     biome_3_encounter_chance: f32 = 0.0,
+    biome_3_name: []const u8 = "Unknown Biome",
 
     pub const test_details: MapDetails = .{
         .name = "Test Map",

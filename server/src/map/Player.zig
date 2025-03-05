@@ -326,7 +326,7 @@ pub fn damage(
         return;
     }
 
-    if (conditions) |conds| for (conds) |cond| self.applyCondition(cond.type, i32f(cond.duration * std.time.us_per_s));
+    if (conditions) |conds| for (conds) |cond| self.applyCondition(cond.type, i32f(cond.duration));
 
     if (dmg > 0 and self.ability_state.time_lock) self.stored_damage += @intCast(dmg * 5);
     if (unscaled_dmg > 0 and self.ability_state.bloodfont) self.stored_damage += @intCast(i32f(unscaled_dmg));

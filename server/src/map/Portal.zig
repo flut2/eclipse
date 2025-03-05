@@ -6,9 +6,9 @@ const network_data = shared.network_data;
 const utils = shared.utils;
 
 const main = @import("../main.zig");
+const maps = @import("../map/maps.zig");
 const World = @import("../World.zig");
 const stat_util = @import("stat_util.zig");
-const maps = @import("../map/maps.zig");
 
 const Portal = @This();
 
@@ -20,7 +20,9 @@ disappear_time: i64 = std.math.maxInt(i64),
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.PortalData = undefined,
 world_id: i32 = std.math.minInt(i32),
-spawned: bool = false,
+spawn: packed struct {
+    command: bool = false,
+} = .{},
 
 pub fn init(self: *Portal) !void {
     self.stats_writer.list = try .initCapacity(main.allocator, 32);
