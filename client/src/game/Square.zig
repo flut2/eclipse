@@ -5,6 +5,7 @@ const game_data = shared.game_data;
 const utils = shared.utils;
 const u32f = utils.u32f;
 const f32i = utils.f32i;
+const i64f = utils.i64f;
 
 const assets = @import("../assets.zig");
 const main = @import("../main.zig");
@@ -26,6 +27,12 @@ pub const editor_tile = std.math.maxInt(u16) - 1;
 pub const Blend = extern struct { u: f32, v: f32 };
 pub const Offset = extern struct { u: f32, v: f32 };
 
+const AnimData = struct {
+    anim_idx: u8 = 0,
+    next_anim: i64 = -1,
+};
+var anim_data: std.AutoHashMapUnmanaged(u16, AnimData) = .empty;
+
 data_id: u16 = empty_tile,
 x: f32 = 0.0,
 y: f32 = 0.0,
@@ -35,7 +42,6 @@ blends: [4]Blend = @splat(.{ .u = -1.0, .v = -1.0 }),
 blend_offsets: [4]Offset = @splat(.{ .u = 0.0, .v = 0.0 }),
 current_offset: Offset = .{ .u = 0.0, .v = 0.0 },
 rotation: f32 = 0.0,
-data: *const game_data.GroundData = undefined,
 entity_map_id: u32 = std.math.maxInt(u32),
 
 fn selectTexture(self: *Square, tex_list: []const game_data.TextureData) void {
@@ -60,11 +66,6 @@ pub fn addToMap(square_data: Square) void {
     var self = square_data;
     const floor_y = u32f(self.y);
     const floor_x = u32f(self.x);
-
-    self.data = game_data.ground.from_id.getPtr(self.data_id) orelse {
-        std.log.err("Could not find data for square with data id {}, returning", .{self.data_id});
-        return;
-    };
 
     if (game_data.ground.from_id.get(self.data_id)) |ground_data| {
         const tex_list = ground_data.textures;
@@ -106,7 +107,14 @@ fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, 
         }
 
         if (other_sq.data_id != editor_tile and other_sq.data_id != empty_tile) {
-            const other_blend_prio = other_sq.data.blend_prio;
+            const other_sq_data = game_data.ground.from_id.get(other_sq.data_id) orelse {
+                other_sq.blends[opposite_dir] = .{ .u = square.atlas_data.tex_u, .v = square.atlas_data.tex_v };
+                other_sq.blend_offsets[opposite_dir] = square.current_offset;
+                square.blends[blend_dir] = .{ .u = -1.0, .v = -1.0 };
+                square.blend_offsets[blend_dir] = .{ .u = 0.0, .v = 0.0 };
+                return;
+            };
+            const other_blend_prio = other_sq_data.blend_prio;
             if (other_blend_prio > current_prio) {
                 square.blends[blend_dir] = .{ .u = other_sq.atlas_data.tex_u, .v = other_sq.atlas_data.tex_v };
                 square.blend_offsets[blend_dir] = other_sq.current_offset;
@@ -139,9 +147,11 @@ pub fn draw(self: Square, cam_data: CameraData, float_time_ms: f32) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_ground_layer or
         self.data_id == Square.empty_tile) return;
 
+    const data = game_data.ground.from_id.get(self.data_id) orelse return;
+
     const screen_pos = cam_data.worldToScreen(self.x, self.y);
 
-    if (main.settings.enable_lights) main.renderer.drawLight(self.data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
+    if (main.settings.enable_lights) main.renderer.drawLight(data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
 
     main.renderer.grounds.append(main.allocator, .{
         .pos = .{ screen_pos.x, screen_pos.y },
@@ -161,57 +171,109 @@ pub fn draw(self: Square, cam_data: CameraData, float_time_ms: f32) void {
 }
 
 fn equals(square: ?*Square, data_id: u16) bool {
-    if (square) |sq| {
-        return sq.data_id == data_id;
-    } else return false;
+    return if (square) |sq| sq.data_id == data_id else false;
 }
 
-pub fn updateAnims(square: *Square, time: i64) void {
-    if (square.data_id == editor_tile or square.data_id == empty_tile) return;
+pub fn updateAnims(self: *Square, time: i64) void {
+    if (self.data_id == editor_tile or self.data_id == empty_tile) return;
+    const data = game_data.ground.from_id.get(self.data_id) orelse return;
+    if (data.animation.type == .unset and data.animations == null) return;
+
+    updateTexAnim: {
+        if (data.animations) |animations| {
+            std.debug.assert(data.anim_sync_id != std.math.maxInt(u16));
+            var sqr_anim_data: AnimData = anim_data.get(data.anim_sync_id) orelse .{};
+            if (time >= sqr_anim_data.next_anim) {
+                const frame_len = animations.len;
+                if (frame_len < 2) {
+                    std.log.err("The amount of frames ({}) was not enough for Square with data id {}", .{ frame_len, self.data_id });
+                    break :updateTexAnim;
+                }
+
+                const frame_data = animations[sqr_anim_data.anim_idx];
+                const tex_data = frame_data.texture;
+                if (assets.atlas_data.get(tex_data.sheet)) |tex| {
+                    if (tex_data.index >= tex.len) {
+                        std.log.err("Incorrect index ({}) given to anim with sheet {s}, Square with data id: {}", .{ tex_data.index, tex_data.sheet, self.data_id });
+                        break :updateTexAnim;
+                    }
+                    self.atlas_data = tex[tex_data.index];
+                    self.atlas_data.removePadding();
+                    sqr_anim_data.anim_idx = @intCast((sqr_anim_data.anim_idx + 1) % frame_len);
+                    sqr_anim_data.next_anim = time + i64f(frame_data.time * std.time.us_per_s);
+                    anim_data.put(main.allocator, data.anim_sync_id, sqr_anim_data) catch break :updateTexAnim;
+                } else {
+                    std.log.err("Could not find sheet {s} for anim on Square with data id {}", .{ tex_data.sheet, self.data_id });
+                    break :updateTexAnim;
+                }
+            } else {
+                const frame_len = animations.len;
+                if (frame_len < 2) {
+                    std.log.err("The amount of frames ({}) was not enough for Square with data id {}", .{ frame_len, self.data_id });
+                    break :updateTexAnim;
+                }
+
+                const frame_data = animations[sqr_anim_data.anim_idx];
+                const tex_data = frame_data.texture;
+                if (assets.atlas_data.get(tex_data.sheet)) |tex| {
+                    if (tex_data.index >= tex.len) {
+                        std.log.err("Incorrect index ({}) given to anim with sheet {s}, Square with data id: {}", .{ tex_data.index, tex_data.sheet, self.data_id });
+                        break :updateTexAnim;
+                    }
+                    self.atlas_data = tex[tex_data.index];
+                } else {
+                    std.log.err("Could not find sheet {s} for anim on Square with data id {}", .{ tex_data.sheet, self.data_id });
+                    break :updateTexAnim;
+                }
+            }
+        }
+    }
 
     const time_sec = f32i(time) / std.time.us_per_s;
-    switch (square.data.animation.type) {
-        .wave => square.current_offset = .{
-            .u = @sin(square.data.animation.delta_x * time_sec) * assets.base_texel_w,
-            .v = @sin(square.data.animation.delta_y * time_sec) * assets.base_texel_h,
+    switch (data.animation.type) {
+        .wave => self.current_offset = .{
+            .u = @sin(data.animation.delta_x * time_sec) * assets.base_texel_w,
+            .v = @sin(data.animation.delta_y * time_sec) * assets.base_texel_h,
         },
-        .flow => square.current_offset = .{
-            .u = (square.data.animation.delta_x * time_sec) * assets.base_texel_w,
-            .v = (square.data.animation.delta_y * time_sec) * assets.base_texel_h,
+        .flow => self.current_offset = .{
+            .u = (data.animation.delta_x * time_sec) * assets.base_texel_w,
+            .v = (data.animation.delta_y * time_sec) * assets.base_texel_h,
         },
         .unset => {},
     }
 
-    const current_prio = square.data.blend_prio;
-    const disable_blend = square.data.disable_blend;
-    const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
-    const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
-    const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
-    const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
-    updateBlendAtDir(square, left_sq, current_prio, disable_blend, left_blend_dir);
-    updateBlendAtDir(square, top_sq, current_prio, disable_blend, top_blend_dir);
-    updateBlendAtDir(square, right_sq, current_prio, disable_blend, right_blend_dir);
-    updateBlendAtDir(square, bottom_sq, current_prio, disable_blend, bottom_blend_dir);
+    const current_prio = data.blend_prio;
+    const disable_blend = data.disable_blend;
+    const left_sq = map.getSquare(self.x - 1, self.y, true, .ref);
+    const top_sq = map.getSquare(self.x, self.y - 1, true, .ref);
+    const right_sq = if (self.x < std.math.maxInt(u32)) map.getSquare(self.x + 1, self.y, true, .ref) else null;
+    const bottom_sq = if (self.y < std.math.maxInt(u32)) map.getSquare(self.x, self.y + 1, true, .ref) else null;
+    updateBlendAtDir(self, left_sq, current_prio, disable_blend, left_blend_dir);
+    updateBlendAtDir(self, top_sq, current_prio, disable_blend, top_blend_dir);
+    updateBlendAtDir(self, right_sq, current_prio, disable_blend, right_blend_dir);
+    updateBlendAtDir(self, bottom_sq, current_prio, disable_blend, bottom_blend_dir);
 }
 
 pub fn update(square: *Square) void {
     if (square.data_id == editor_tile or square.data_id == empty_tile) return;
 
+    const data = game_data.ground.from_id.get(square.data_id) orelse return;
+
     const time_sec = f32i(main.current_time) / std.time.ms_per_s;
-    switch (square.data.animation.type) {
+    switch (data.animation.type) {
         .wave => square.current_offset = .{
-            .u = @sin(square.data.animation.delta_x * time_sec) * assets.base_texel_w,
-            .v = @sin(square.data.animation.delta_y * time_sec) * assets.base_texel_h,
+            .u = @sin(data.animation.delta_x * time_sec) * assets.base_texel_w,
+            .v = @sin(data.animation.delta_y * time_sec) * assets.base_texel_h,
         },
         .flow => square.current_offset = .{
-            .u = (square.data.animation.delta_x * time_sec) * assets.base_texel_w,
-            .v = (square.data.animation.delta_y * time_sec) * assets.base_texel_h,
+            .u = (data.animation.delta_x * time_sec) * assets.base_texel_w,
+            .v = (data.animation.delta_y * time_sec) * assets.base_texel_h,
         },
         .unset => {},
     }
 
-    const current_prio = square.data.blend_prio;
-    const disable_blend = square.data.disable_blend;
+    const current_prio = data.blend_prio;
+    const disable_blend = data.disable_blend;
     const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
     const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
     const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
@@ -240,14 +302,15 @@ pub fn update(square: *Square) void {
 }
 
 fn updateRugs(square: *Square, current_data_id: u16) void {
-    const rug_tex = square.data.rug_textures orelse return;
+    const data = game_data.ground.from_id.get(square.data_id) orelse return;
+    const rug_tex = data.rug_textures orelse return;
 
     const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
     const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
     const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
     const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
     defer {
-        const current_prio = square.data.blend_prio;
+        const current_prio = data.blend_prio;
         updateBlendAtDir(square, left_sq, current_prio, true, left_blend_dir);
         updateBlendAtDir(square, top_sq, current_prio, true, top_blend_dir);
         updateBlendAtDir(square, right_sq, current_prio, true, right_blend_dir);
@@ -270,7 +333,7 @@ fn updateRugs(square: *Square, current_data_id: u16) void {
     const bottom_left_eq = equals(bottom_left_sq, current_data_id);
     const bottom_right_eq = equals(bottom_right_sq, current_data_id);
 
-    square.selectTexture(square.data.textures);
+    square.selectTexture(data.textures);
     square.rotation = std.math.degreesToRadians(0);
 
     if (!top_eq) {

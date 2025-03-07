@@ -153,7 +153,7 @@ pub fn deinit(self: *Entity) void {
 pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
     if (ui_systems.screen == .editor and
         (!ui_systems.screen.editor.show_entity_layer or
-        self.data_id == 0xFFFE and !ui_systems.screen.editor.show_region_layer) or
+            self.data_id == 0xFFFE and !ui_systems.screen.editor.show_region_layer) or
         !cam_data.visibleInCamera(self.x, self.y)) return;
 
     var screen_pos = cam_data.worldToScreen(self.x, self.y);
@@ -162,7 +162,9 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
     var atlas_data = self.atlas_data;
     var sink: f32 = 1.0;
     if (!self.data.block_sink) {
-        if (map.getSquare(self.x, self.y, true, .con)) |square| sink += if (square.data.sink) 0.75 else 0;
+        if (map.getSquare(self.x, self.y, true, .con)) |square| {
+            if (game_data.ground.from_id.get(square.data_id)) |data| sink += if (data.sink) 0.75 else 0;
+        }
         atlas_data.tex_h /= sink;
     }
 

@@ -472,6 +472,8 @@ pub const GroundData = struct {
     damage: i16 = 0,
     blend_prio: i16 = 0,
     disable_blend: bool = false,
+    anim_sync_id: u16 = std.math.maxInt(u16),
+    animations: ?[]FrameData = null,
 };
 
 pub const StatIncreaseData = union(enum) {

@@ -108,7 +108,9 @@ pub fn draw(self: *Portal, cam_data: CameraData, float_time_ms: f32, int_id: u32
     var atlas_data = self.atlas_data;
 
     var sink: f32 = 1.0;
-    if (map.getSquare(self.x, self.y, true, .con)) |square| sink += if (square.data.sink) 0.75 else 0;
+    if (map.getSquare(self.x, self.y, true, .con)) |square| {
+        if (game_data.ground.from_id.get(square.data_id)) |data| sink += if (data.sink) 0.75 else 0;
+    }
     atlas_data.tex_h /= sink;
 
     const w = atlas_data.texWRaw() * size;
