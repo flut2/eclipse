@@ -234,7 +234,10 @@ pub fn save(self: *Player) !void {
 }
 
 pub fn death(self: *Player, killer: []const u8) !void {
-    if (self.rank == .admin) return;
+    if (self.rank == .admin) {
+        self.hp = 1;
+        return;
+    }
 
     const alive_char_ids = self.acc_data.get(.alive_char_ids) catch {
         self.client.sendError(.message_with_disconnect, "Death failed: Database Error");
