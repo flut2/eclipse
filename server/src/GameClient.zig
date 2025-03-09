@@ -230,7 +230,8 @@ fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) v
     processItemCosts(player, item_data.*);
 
     const proj_data = item_data.projectile orelse return;
-
+    const str_mult = utils.strengthMult(player.stats[Player.strength_stat], player.stat_boosts[Player.strength_stat], player.condition);
+    const wit_mult = utils.witMult(player.stats[Player.wit_stat], player.stat_boosts[Player.wit_stat]);
     const map_id = self.world.add(Projectile, .{
         .x = data.x,
         .y = data.y,
@@ -238,9 +239,9 @@ fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) v
         .owner_map_id = self.player_map_id,
         .angle = data.angle,
         .start_time = main.current_time,
-        .phys_dmg = proj_data.phys_dmg,
-        .magic_dmg = proj_data.magic_dmg,
-        .true_dmg = proj_data.true_dmg,
+        .phys_dmg = i32f(f32i(proj_data.phys_dmg) * str_mult * player.damage_multiplier),
+        .magic_dmg = i32f(f32i(proj_data.magic_dmg) * wit_mult * player.damage_multiplier),
+        .true_dmg = i32f(f32i(proj_data.true_dmg) * (str_mult + wit_mult) / 2.0 * player.damage_multiplier),
         .index = data.proj_index,
         .data = &item_data.projectile.?,
     }) catch return;

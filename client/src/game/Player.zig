@@ -161,18 +161,6 @@ pub fn onMove(self: *Player) void {
     };
 }
 
-pub fn strengthMult(self: Player) f32 {
-    if (self.condition.weak) return 0.5;
-
-    var mult = 0.5 + f32i(self.strength + self.strength_bonus) / 75.0;
-    if (self.condition.damaging) mult *= 1.5;
-    return mult;
-}
-
-pub fn witMult(self: Player) f32 {
-    return 0.5 + f32i(self.wit + self.wit_bonus) / 75.0;
-}
-
 pub fn moveSpeedMultiplier(self: Player) f32 {
     if (self.condition.slowed) return min_move_speed * self.move_multiplier * self.walk_speed_multiplier;
 
@@ -286,6 +274,8 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
         const x = self.x + @cos(angle_base) * 0.25;
         const y = self.y + @sin(angle_base) * 0.25;
 
+        const str_mult = utils.strengthMult(self.strength, self.strength_bonus, self.condition);
+        const wit_mult = utils.witMult(self.wit, self.wit_bonus);
         Projectile.addToMap(.{
             .x = x,
             .y = y,
@@ -293,9 +283,9 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
             .angle = angle,
             .index = proj_index,
             .owner_map_id = self.map_id,
-            .phys_dmg = i32f(f32i(proj_data.phys_dmg) * self.strengthMult() * self.damage_mult),
-            .magic_dmg = i32f(f32i(proj_data.magic_dmg) * self.witMult() * self.damage_mult),
-            .true_dmg = i32f(f32i(proj_data.true_dmg) * self.damage_mult),
+            .phys_dmg = i32f(f32i(proj_data.phys_dmg) * str_mult * self.damage_mult),
+            .magic_dmg = i32f(f32i(proj_data.magic_dmg) * wit_mult * self.damage_mult),
+            .true_dmg = i32f(f32i(proj_data.true_dmg) * (str_mult + wit_mult) / 2.0 * self.damage_mult),
         });
 
         main.game_server.sendPacket(.{ .player_projectile = .{
