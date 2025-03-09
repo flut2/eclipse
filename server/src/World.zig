@@ -294,7 +294,7 @@ pub fn tick(self: *World, time: i64, dt: i64) !void {
             const data = game_data.region.from_id.get(entry.key_ptr.*) orelse continue;
             if (std.mem.eql(u8, data.name, "Biome 1 Monster Spawn")) {
                 const mobs = self.details.biome_1_mobs orelse continue;
-                for (0..self.details.biome_1_spawn_target) |_| {
+                for (self.biome_1_spawn..self.details.biome_1_spawn_target) |_| {
                     const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
                     const rand_mob = mobs[utils.rng.next() % mobs.len];
                     const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
@@ -311,7 +311,7 @@ pub fn tick(self: *World, time: i64, dt: i64) !void {
                 }
             } else if (std.mem.eql(u8, data.name, "Biome 2 Monster Spawn")) {
                 const mobs = self.details.biome_2_mobs orelse continue;
-                for (0..self.details.biome_2_spawn_target) |_| {
+                for (self.biome_2_spawn..self.details.biome_2_spawn_target) |_| {
                     const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
                     const rand_mob = mobs[utils.rng.next() % mobs.len];
                     const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
@@ -328,7 +328,7 @@ pub fn tick(self: *World, time: i64, dt: i64) !void {
                 }
             } else if (std.mem.eql(u8, data.name, "Biome 3 Monster Spawn")) {
                 const mobs = self.details.biome_3_mobs orelse continue;
-                for (0..self.details.biome_3_spawn_target) |_| {
+                for (self.biome_3_spawn..self.details.biome_3_spawn_target) |_| {
                     const rand_point = entry.value_ptr.*[utils.rng.next() % entry.value_ptr.len];
                     const rand_mob = mobs[utils.rng.next() % mobs.len];
                     const mob_data = game_data.enemy.from_name.get(rand_mob) orelse {
