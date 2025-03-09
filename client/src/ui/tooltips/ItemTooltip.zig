@@ -446,7 +446,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     if (data.health_gain_incr > 0) {
         text = std.fmt.bufPrint(
             self.getMainBuffer(),
-            line_base ++ "Improve Health restoration efficiency by " ++ float_fmt ++ "%",
+            line_base ++ "Improves Health restoration efficiency by " ++ float_fmt ++ "%",
             .{ text, data.health_gain_incr * 100.0 },
         ) catch text;
     }
@@ -454,7 +454,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     if (data.mana_gain_incr > 0) {
         text = std.fmt.bufPrint(
             self.getMainBuffer(),
-            line_base ++ "Improve Mana restoration efficiency by " ++ float_fmt ++ "%",
+            line_base ++ "Improves Mana restoration efficiency by " ++ float_fmt ++ "%",
             .{ text, data.mana_gain_incr * 100.0 },
         ) catch text;
     }
@@ -496,8 +496,6 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
             .{ footer_text, "All Classes" },
         ) catch footer_text;
     } else if (data.item_type != .any and data.item_type != .consumable) {
-        map.object_lock.lock();
-        defer map.object_lock.unlock();
         if (map.localPlayer(.con)) |player| {
             const has_type = blk: {
                 for (player.data.item_types) |item_type| {

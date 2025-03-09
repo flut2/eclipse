@@ -2,7 +2,7 @@ const std = @import("std");
 
 const glfw = @import("glfw");
 
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const systems = @import("../systems.zig");
 const Container = @import("Container.zig");
 const Dropdown = @import("Dropdown.zig");
@@ -28,8 +28,6 @@ pub fn mousePress(self: *DropdownContainer, x: f32, y: f32, _: f32, _: f32, _: g
             self.parent.children.items[self.parent.selected_index].state = .none;
         self.parent.selected_index = self.index;
         if (self.parent.auto_close) self.parent.toggled = false;
-        systems.hover_lock.lock();
-        defer systems.hover_lock.unlock();
         if (systems.hover_target != null and
             systems.hover_target.? == .dropdown_container and
             systems.hover_target.?.dropdown_container == self)
@@ -53,8 +51,6 @@ pub fn mouseMove(self: *DropdownContainer, x: f32, y: f32, _: f32, _: f32) bool 
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
-        systems.hover_lock.lock();
-        defer systems.hover_lock.unlock();
         systems.hover_target = element.UiElement{ .dropdown_container = self }; // TODO: re-add RLS when fixed
         self.state = .hovered;
     } else self.state = .none;
@@ -66,10 +62,17 @@ pub fn deinit(self: *DropdownContainer) void {
     self.container.deinit();
 }
 
-pub fn draw(self: DropdownContainer, cam_data: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
+pub fn draw(
+    self: DropdownContainer,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    time: i64,
+) void {
     if (!self.base.visible) return;
-    self.background_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
-    self.container.draw(cam_data, self.base.x + x_offset, self.base.y + y_offset, time);
+    self.background_data.current(self.state).draw(generics, sort_extras, self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
+    self.container.draw(generics, sort_extras, self.base.x + x_offset, self.base.y + y_offset, time);
 }
 
 pub fn width(self: *DropdownContainer) f32 {

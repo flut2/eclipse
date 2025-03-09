@@ -170,26 +170,18 @@ fn handleTogglePerfStats() void {
 }
 
 fn handleAbility1() void {
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     if (map.localPlayer(.ref)) |player| player.useAbility(0);
 }
 
 fn handleAbility2() void {
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     if (map.localPlayer(.ref)) |player| player.useAbility(1);
 }
 
 fn handleAbility3() void {
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     if (map.localPlayer(.ref)) |player| player.useAbility(2);
 }
 
 fn handleAbility4() void {
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     if (map.localPlayer(.ref)) |player| player.useAbility(3);
 }
 
@@ -397,8 +389,6 @@ pub fn scrollEvent(_: *glfw.Window, x_offset: f64, y_offset: f64) callconv(.C) v
                 const max_zoom = f32i(@divFloor(size, 32));
                 const scroll_speed = f32i(size) / 1280;
 
-                main.camera.lock.lock();
-                defer main.camera.lock.unlock();
                 main.camera.minimap_zoom += @floatCast(y_offset * scroll_speed);
                 main.camera.minimap_zoom = @max(1, @min(max_zoom, main.camera.minimap_zoom));
             },
@@ -406,8 +396,6 @@ pub fn scrollEvent(_: *glfw.Window, x_offset: f64, y_offset: f64) callconv(.C) v
                 const min_zoom = 0.05;
                 const scroll_speed = 0.01;
 
-                main.camera.lock.lock();
-                defer main.camera.lock.unlock();
                 main.camera.scale += @floatCast(y_offset * scroll_speed);
                 main.camera.scale = @min(1, @max(min_zoom, main.camera.scale));
             },

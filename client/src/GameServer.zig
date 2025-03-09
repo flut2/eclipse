@@ -175,7 +175,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
         }
     } else if (bytes_read < 0) {
         std.log.err("Game read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
-        main.disconnect(false);
+        main.disconnect();
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -192,7 +192,7 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
 
     if (status != 0) {
         std.log.err("Game connection callback error: {s}", .{uv.uv_strerror(status)});
-        main.disconnect(false);
+        main.disconnect();
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -204,7 +204,7 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
     const read_status = uv.uv_read_start(@ptrCast(server.socket), allocBuffer, readCallback);
     if (read_status != 0) {
         std.log.err("Game read init error: {s}", .{uv.uv_strerror(read_status)});
-        main.disconnect(false);
+        main.disconnect();
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -215,11 +215,7 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
 
     server.initialized = true;
 
-    {
-        ui_systems.ui_lock.lock();
-        defer ui_systems.ui_lock.unlock();
-        ui_systems.switchScreen(.game);
-    }
+    ui_systems.switchScreen(.game);
 
     if (server.map_hello_fragments) |fragments| {
         defer main.allocator.free(fragments);
@@ -241,7 +237,7 @@ pub fn init(self: *Server) !void {
 }
 
 pub fn deinit(self: *Server) void {
-    main.disconnect(false);
+    main.disconnect();
     main.allocator.destroy(self.socket);
     self.read_arena.deinit();
     self.initialized = false;
@@ -264,15 +260,12 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
         (build_options.log_packets == .c2s_non_tick or build_options.log_packets == .all_non_tick) and !is_tick)
         std.log.info("Send: {}", .{packet}); // TODO: custom formatting
 
-    if (packet == .use_portal or packet == .escape) {
-        map.object_lock.lock();
-        defer map.object_lock.unlock();
+    if (packet == .use_portal or packet == .escape)
         if (map.localPlayer(.ref)) |player| {
             player.x = -1.0;
             player.y = -1.0;
             map.clearMoveRecords(main.current_time);
-        }
-    }
+        };
 
     switch (packet) {
         inline else => |data| {
@@ -289,7 +282,7 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
             while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
             if (write_status < 0) {
                 std.log.err("Game write send error: {s}", .{uv.uv_strerror(write_status)});
-                main.disconnect(false);
+                main.disconnect();
                 self.shutdown();
                 dialog.showDialog(.text, .{
                     .title = "Connection Error",
@@ -344,9 +337,6 @@ fn logRead(comptime tick: enum { non_tick, tick }) bool {
 fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
     if (logRead(.non_tick)) std.log.debug("Recv - AllyProjectile: {}", .{data});
 
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
-
     if (map.findObject(Player, data.player_map_id, .ref)) |player| {
         const item_data = game_data.item.from_id.getPtr(data.item_data_id) orelse return;
         Projectile.addToMap(.{
@@ -377,10 +367,7 @@ fn handleAoe(_: *Server, data: PacketData(.aoe)) void {
 }
 
 fn handleDamage(_: *Server, data: PacketData(.damage)) void {
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
-
-    if (map.findObject(Player, data.player_map_id, .ref)) |player| {
+    if (map.findObject(Player, data.player_map_id, .ref)) |player|
         map.takeDamage(
             player,
             data.amount,
@@ -388,7 +375,6 @@ fn handleDamage(_: *Server, data: PacketData(.damage)) void {
             data.effects,
             player.colors,
         );
-    }
 
     if (logRead(.non_tick)) std.log.debug("Recv - Damage: {}", .{data});
 }
@@ -402,9 +388,6 @@ fn handleDeath(self: *Server, data: PacketData(.death)) void {
 
 fn handleEnemyProjectile(_: *Server, data: PacketData(.enemy_projectile)) void {
     if (logRead(.non_tick)) std.log.debug("Recv - EnemyProjectile: {}", .{data});
-
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
 
     var owner = if (map.findObject(Enemy, data.enemy_map_id, .ref)) |enemy| enemy else return;
 
@@ -440,7 +423,7 @@ fn handleError(self: *Server, data: PacketData(.@"error")) void {
     if (logRead(.non_tick)) std.log.debug("Recv - Error: {}", .{data});
 
     if (data.type == .message_with_disconnect or data.type == .force_close_game) {
-        main.disconnect(false);
+        main.disconnect();
         self.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -459,11 +442,7 @@ fn handleMapInfo(_: *Server, data: PacketData(.map_info)) void {
 
     map.dispose();
 
-    {
-        main.camera.lock.lock();
-        defer main.camera.lock.unlock();
-        main.camera.quake = false;
-    }
+    main.camera.quake = false;
 
     map.setMapInfo(data);
     map.info.name = main.allocator.dupe(u8, data.name) catch main.oomPanic();
@@ -499,8 +478,6 @@ fn handleNotification(_: *Server, data: PacketData(.notification)) void {
     switch (data.obj_type) {
         inline .player, .ally, .enemy, .entity => |inner| {
             const T = ObjEnumToType(inner);
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
             if (map.findObject(T, data.map_id, .ref)) |obj| obj.status_texts.append(main.allocator, .{
                 .initial_size = 16.0,
                 .dispose_text = true,
@@ -544,8 +521,6 @@ fn handleShowEffect(_: *Server, data: PacketData(.show_effect)) void {
             switch (data.obj_type) {
                 inline else => |inner| {
                     const T = ObjEnumToType(inner);
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
                     if (map.findObject(T, data.map_id, .con)) |obj| {
                         start_x = obj.x;
                         start_y = obj.y;
@@ -574,8 +549,6 @@ fn handleShowEffect(_: *Server, data: PacketData(.show_effect)) void {
             switch (data.obj_type) {
                 inline else => |inner| {
                     const T = ObjEnumToType(inner);
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
                     if (map.findObject(T, data.map_id, .con)) |obj| {
                         start_x = obj.x;
                         start_y = obj.y;
@@ -600,8 +573,6 @@ fn handleShowEffect(_: *Server, data: PacketData(.show_effect)) void {
             });
         },
         .earthquake => {
-            main.camera.lock.lock();
-            defer main.camera.lock.unlock();
             main.camera.quake = true;
             main.camera.quake_amount = 0.0;
         },
@@ -620,8 +591,6 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
     if (data.map_id != std.math.maxInt(u32)) {
         switch (data.obj_type) {
             inline .player, .enemy => |inner| {
-                map.object_lock.lock();
-                defer map.object_lock.unlock();
                 if (map.findObject(ObjEnumToType(inner), data.map_id, .ref)) |obj| {
                     if (obj.speech_balloon) |*balloon| balloon.deinit();
                     obj.speech_balloon = .create(
@@ -647,8 +616,6 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     defer {
         if (main.tick_frame) {
             const time = main.current_time;
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
             if (map.localPlayer(.ref)) |local_player| {
                 self.sendPacket(.{ .move = .{
                     .tick_id = data.tick_id,
@@ -673,8 +640,6 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
         }
     }
 
-    map.square_lock.lock();
-    defer map.square_lock.unlock();
     for (data.tiles) |tile| Square.addToMap(.{
         .data_id = tile.data_id,
         .x = f32i(tile.x) + 0.5,
@@ -710,17 +675,12 @@ fn handleNewAllies(_: *Server, data: PacketData(.new_allies)) void {
 
 fn droppedObject(comptime T: type, list: []const u32) void {
     if (list.len == 0) return;
-
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     for (list) |map_id| _ = map.removeEntity(T, map_id);
 }
 
 fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
     const tick_time = @as(f32, std.time.us_per_s) / 30.0;
 
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     for (list) |obj| {
         var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };
         const current_obj = map.findObject(T, obj.map_id, .ref) orelse findAddObj: {

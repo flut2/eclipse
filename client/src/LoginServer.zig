@@ -113,7 +113,7 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
 
     if (status != 0) {
         std.log.err("Login connection callback error: {s}", .{uv.uv_strerror(status)});
-        main.disconnect(false);
+        main.disconnect();
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -137,11 +137,8 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
     if (server.needs_verify) {
         if (main.current_account) |acc| {
             server.sendPacket(.{ .verify = .{ .email = acc.email, .token = acc.token } });
-        } else {
-            ui_systems.ui_lock.lock();
-            defer ui_systems.ui_lock.unlock();
-            ui_systems.switchScreen(.main_menu);
-        }
+        } else ui_systems.switchScreen(.main_menu);
+
         server.needs_verify = false;
     }
 
@@ -165,7 +162,7 @@ pub fn init(self: *Server) !void {
 }
 
 pub fn deinit(self: *Server) void {
-    main.disconnect(false);
+    main.disconnect();
     main.allocator.destroy(self.socket);
     self.read_arena.deinit();
     self.unsent_packets.deinit();
@@ -241,11 +238,7 @@ pub fn shutdown(self: *Server) void {
     self.needs_verify = false;
     self.unsent_packets.discard(self.unsent_packets.count);
 
-    {
-        ui_systems.ui_lock.lock();
-        defer ui_systems.ui_lock.unlock();
-        ui_systems.switchScreen(.main_menu);
-    }
+    ui_systems.switchScreen(.main_menu);
 
     if (self.initialized and uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
 }
@@ -286,8 +279,6 @@ fn handleLoginResponse(_: *Server, data: PacketData(.login_response)) void {
     main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.current_account) |*acc| acc.token = main.character_list.?.token;
 
-    ui_systems.ui_lock.lock();
-    defer ui_systems.ui_lock.unlock();
     if (main.character_list.?.characters.len > 0)
         ui_systems.switchScreen(.char_select)
     else
@@ -300,8 +291,6 @@ fn handleRegisterResponse(_: *Server, data: PacketData(.register_response)) void
     main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.current_account) |*acc| acc.token = main.character_list.?.token;
 
-    ui_systems.ui_lock.lock();
-    defer ui_systems.ui_lock.unlock();
     if (main.character_list.?.characters.len > 0)
         ui_systems.switchScreen(.char_select)
     else
@@ -318,11 +307,7 @@ fn handleVerifyResponse(_: *Server, data: PacketData(.verify_response)) void {
         return;
     }
 
-    {
-        ui_systems.ui_lock.lock();
-        defer ui_systems.ui_lock.unlock();
-        ui_systems.switchScreen(.game);
-    }
+    ui_systems.switchScreen(.game);
 
     if (main.settings.char_ids_login_sort.len > 0)
         for (main.character_list.?.characters) |char| if (char.char_id == main.settings.char_ids_login_sort[0]) {
@@ -337,25 +322,19 @@ fn handleDeleteResponse(_: *Server, data: PacketData(.delete_response)) void {
     if (logRead(.non_tick)) std.log.debug("Login Recv - DeleteResponse: {}", .{data});
 
     main.character_list = deepCopyList(data) catch main.oomPanic();
-    if (ui_systems.screen == .char_select) {
-        ui_systems.ui_lock.lock();
-        defer ui_systems.ui_lock.unlock();
+    if (ui_systems.screen == .char_select)
         ui_systems.screen.char_select.refresh() catch |e| {
             std.log.err("Character select refresh failed post-deletion: {}", .{e});
             return;
         };
-    }
 }
 
 fn handleError(_: *Server, data: PacketData(.@"error")) void {
     if (logRead(.non_tick)) std.log.debug("Login Recv - Error: {}", .{data});
 
     main.skip_verify_loop = false;
-    {
-        ui_systems.ui_lock.lock();
-        defer ui_systems.ui_lock.unlock();
-        ui_systems.switchScreen(.main_menu);
-    }
+    ui_systems.switchScreen(.main_menu);
+
     dialog.showDialog(.text, .{
         .title = "Connection Error",
         .body = main.allocator.dupe(u8, data.description) catch "",

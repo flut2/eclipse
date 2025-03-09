@@ -1,9 +1,11 @@
+const std = @import("std");
+
 const glfw = @import("glfw");
 
 const assets = @import("../../assets.zig");
 const input = @import("../../input.zig");
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const Settings = @import("../../Settings.zig");
 const systems = @import("../systems.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
@@ -60,8 +62,6 @@ pub fn mouseMove(self: *KeyMapper, x: f32, y: f32, x_offset: f32, y_offset: f32)
             return true;
         }
 
-        systems.hover_lock.lock();
-        defer systems.hover_lock.unlock();
         systems.hover_target = element.UiElement{ .key_mapper = self }; // TODO: re-add RLS when fixed
         self.state = .hovered;
     } else self.state = .none;
@@ -70,17 +70,8 @@ pub fn mouseMove(self: *KeyMapper, x: f32, y: f32, x_offset: f32, y_offset: f32)
 }
 
 pub fn init(self: *KeyMapper) void {
-    if (self.title_text_data) |*text_data| {
-        text_data.lock.lock();
-        defer text_data.lock.unlock();
-        text_data.recalculateAttributes();
-    }
-
-    if (self.tooltip_text) |*text_data| {
-        text_data.lock.lock();
-        defer text_data.lock.unlock();
-        text_data.recalculateAttributes();
-    }
+    if (self.title_text_data) |*text_data| text_data.recalculateAttributes();
+    if (self.tooltip_text) |*text_data| text_data.recalculateAttributes();
 }
 
 pub fn deinit(self: *KeyMapper) void {
@@ -88,7 +79,14 @@ pub fn deinit(self: *KeyMapper) void {
     if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: *KeyMapper, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(
+    self: *KeyMapper,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    _: i64,
+) void {
     if (!self.base.visible) return;
     const image_data = self.image_data.current(self.state);
     const w, const h = switch (image_data) {
@@ -96,7 +94,9 @@ pub fn draw(self: *KeyMapper, _: CameraData, x_offset: f32, y_offset: f32, _: i6
         .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
     };
 
-    main.renderer.drawQuad(
+    Renderer.drawQuad(
+        generics,
+        sort_extras,
         self.base.x + x_offset,
         self.base.y + y_offset,
         w,
@@ -104,7 +104,9 @@ pub fn draw(self: *KeyMapper, _: CameraData, x_offset: f32, y_offset: f32, _: i6
         assets.getKeyTexture(self.settings_button.*),
         .{ .scissor = self.base.scissor },
     );
-    if (self.title_text_data) |*text_data| main.renderer.drawText(
+    if (self.title_text_data) |*text_data| Renderer.drawText(
+        generics,
+        sort_extras,
         self.base.x + w + 5 + x_offset,
         self.base.y + (h - text_data.height) / 2 + y_offset,
         1.0,

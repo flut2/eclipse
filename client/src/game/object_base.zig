@@ -12,7 +12,7 @@ const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const size_mult = Camera.size_mult;
 const main = @import("../main.zig");
-const CameraData = @import("../render/CameraData.zig");
+const Renderer = @import("../render/Renderer.zig");
 const ui_systems = @import("../ui/systems.zig");
 const Ally = @import("Ally.zig");
 const Container = @import("Container.zig");
@@ -164,6 +164,9 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
 }
 
 pub fn drawConditions(
+    renderer: *Renderer,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
     cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.?,
     float_time_ms: f32,
     x: f32,
@@ -175,20 +178,22 @@ pub fn drawConditions(
     var cond_len: f32 = 0.0;
     for (0..@bitSizeOf(utils.Condition)) |i| {
         if (cond_int & (@as(usize, 1) << @intCast(i)) != 0)
-            cond_len += if (main.renderer.condition_rects[i].len > 0) 1.0 else 0.0;
+            cond_len += if (renderer.condition_rects[i].len > 0) 1.0 else 0.0;
     }
 
     var cond_new_idx: f32 = 0.0;
     for (0..@bitSizeOf(utils.Condition)) |i| {
         if (cond_int & (@as(usize, 1) << @intCast(i)) != 0) {
-            const data = main.renderer.condition_rects[i];
+            const data = renderer.condition_rects[i];
             if (data.len > 0) {
                 const frame_new_idx = usizef(float_time_ms / (0.5 * std.time.us_per_s));
                 const current_frame = data[@mod(frame_new_idx, data.len)];
                 const cond_w = current_frame.texWRaw() * scale;
                 const cond_h = current_frame.texHRaw() * scale;
 
-                main.renderer.drawQuad(
+                Renderer.drawQuad(
+                    generics,
+                    sort_extras,
                     x - cond_len * (cond_w + 2) / 2 + cond_new_idx * (cond_w + 2),
                     y,
                     cond_w,
@@ -202,11 +207,19 @@ pub fn drawConditions(
     }
 }
 
-pub fn drawStatusTexts(self: anytype, time: i64, x: f32, y: f32, scale: f32) void {
+pub fn drawStatusTexts(
+    self: anytype,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    time: i64,
+    x: f32,
+    y: f32,
+    scale: f32,
+) void {
     var status_texts_to_dispose: std.ArrayListUnmanaged(usize) = .empty;
     defer status_texts_to_dispose.deinit(main.allocator);
     for (self.status_texts.items, 0..) |*text, i|
-        if (!text.draw(time, x, y, scale))
+        if (!text.draw(generics, sort_extras, time, x, y, scale))
             status_texts_to_dispose.append(main.allocator, i) catch main.oomPanic();
 
     var iter = std.mem.reverseIterator(status_texts_to_dispose.items);
@@ -216,8 +229,16 @@ pub fn drawStatusTexts(self: anytype, time: i64, x: f32, y: f32, scale: f32) voi
     }
 }
 
-pub fn drawSpeechBalloon(self: anytype, time: i64, x: f32, y: f32, scale: f32) void {
-    if (self.speech_balloon) |*balloon| if (!balloon.draw(time, x, y, scale)) {
+pub fn drawSpeechBalloon(
+    self: anytype,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    time: i64,
+    x: f32,
+    y: f32,
+    scale: f32,
+) void {
+    if (self.speech_balloon) |*balloon| if (!balloon.draw(generics, sort_extras, time, x, y, scale)) {
         balloon.deinit();
         self.speech_balloon = null;
     };

@@ -10,7 +10,7 @@ const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
-const CameraData = @import("../render/CameraData.zig");
+const Renderer = @import("../render/Renderer.zig");
 const Ally = @import("Ally.zig");
 const Enemy = @import("Enemy.zig");
 const Entity = @import("Entity.zig");
@@ -196,15 +196,21 @@ fn updatePosition(self: *Projectile, elapsed: f32, dt: f32) void {
     }
 }
 
-pub fn draw(self: *Projectile, cam_data: CameraData, float_time_ms: f32) void {
+pub fn draw(
+    self: *Projectile,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    float_time_ms: f32,
+) void {
     defer self.time_dilation_active = false;
 
-    if (!cam_data.visibleInCamera(self.x, self.y)) return;
+    if (!main.camera.visibleInCamera(self.x, self.y)) return;
 
-    const size = Camera.size_mult * cam_data.scale * self.data.size_mult;
+    const size = Camera.size_mult * main.camera.scale * self.data.size_mult;
     const w = self.atlas_data.texWRaw() * size;
     const h = self.atlas_data.texHRaw() * size;
-    const screen_pos = cam_data.worldToScreen(self.x, self.y);
+    const screen_pos = main.camera.worldToScreen(self.x, self.y);
     const z_offset = self.z * -px_per_tile - h + assets.padding * size;
     const rotation = self.data.rotation;
     const angle_correction = f32i(self.data.angle_correction) * std.math.degreesToRadians(45);
@@ -212,14 +218,16 @@ pub fn draw(self: *Projectile, cam_data: CameraData, float_time_ms: f32) void {
         (if (rotation == 0.0) 0.0 else std.math.degreesToRadians(float_time_ms / (1 / rotation))));
 
     if (main.settings.enable_lights) {
-        const tile_pos = cam_data.worldToScreen(self.x, self.y);
-        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        const tile_pos = main.camera.worldToScreen(self.x, self.y);
+        Renderer.drawLight(lights, self.data.light, tile_pos.x, tile_pos.y, main.camera.scale, float_time_ms);
     }
 
     const color: u32 = if (self.time_dilation_active) 0x0000FF else 0x000000;
     const color_intensity: f32 = if (self.time_dilation_active) 0.33 else 0.0;
 
-    main.renderer.drawQuad(
+    Renderer.drawQuad(
+        generics,
+        sort_extras,
         screen_pos.x - w / 2.0,
         screen_pos.y + z_offset,
         w,

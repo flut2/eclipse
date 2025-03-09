@@ -9,7 +9,7 @@ const i64f = utils.i64f;
 
 const assets = @import("../assets.zig");
 const main = @import("../main.zig");
-const CameraData = @import("../render/CameraData.zig");
+const Renderer = @import("../render/Renderer.zig");
 const ui_systems = @import("../ui/systems.zig");
 const Entity = @import("Entity.zig");
 const map = @import("map.zig");
@@ -61,8 +61,6 @@ fn selectTexture(self: *Square, tex_list: []const game_data.TextureData) void {
 }
 
 pub fn addToMap(square_data: Square) void {
-    std.debug.assert(!map.square_lock.tryLock());
-
     var self = square_data;
     const floor_y = u32f(self.y);
     const floor_x = u32f(self.x);
@@ -143,17 +141,22 @@ fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, 
     square.blend_offsets[blend_dir] = .{ .u = 0.0, .v = 0.0 };
 }
 
-pub fn draw(self: Square, cam_data: CameraData, float_time_ms: f32) void {
+pub fn draw(
+    self: Square,
+    grounds: *std.ArrayListUnmanaged(Renderer.GroundData),
+    lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    float_time_ms: f32,
+) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_ground_layer or
         self.data_id == Square.empty_tile) return;
 
     const data = game_data.ground.from_id.get(self.data_id) orelse return;
 
-    const screen_pos = cam_data.worldToScreen(self.x, self.y);
+    const screen_pos = main.camera.worldToScreen(self.x, self.y);
 
-    if (main.settings.enable_lights) main.renderer.drawLight(data.light, screen_pos.x, screen_pos.y, cam_data.scale, float_time_ms);
+    if (main.settings.enable_lights) Renderer.drawLight(lights, data.light, screen_pos.x, screen_pos.y, main.camera.scale, float_time_ms);
 
-    main.renderer.grounds.append(main.allocator, .{
+    grounds.append(main.allocator, .{
         .pos = .{ screen_pos.x, screen_pos.y },
         .uv = .{ self.atlas_data.tex_u, self.atlas_data.tex_v },
         .offset_uv = @bitCast(self.current_offset),

@@ -10,7 +10,7 @@ const assets = @import("../assets.zig");
 const px_per_tile = @import("../Camera.zig").px_per_tile;
 const GameServer = @import("../GameServer.zig");
 const main = @import("../main.zig");
-const CameraData = @import("../render/CameraData.zig");
+const Renderer = @import("../render/Renderer.zig");
 const map = @import("map.zig");
 
 pub const ThrowParticle = struct {
@@ -251,8 +251,6 @@ pub const HealParticle = struct {
         switch (self.target_obj_type) {
             inline else => |obj_enum| {
                 const T = GameServer.ObjEnumToType(obj_enum);
-                map.object_lock.lock();
-                defer map.object_lock.unlock();
                 if (map.findObject(T, self.target_map_id, .con)) |obj| {
                     self.x = obj.x + self.dist * @cos(self.angle);
                     self.y = obj.y + self.dist * @sin(self.angle);
@@ -282,17 +280,23 @@ pub const Particle = union(enum) {
         };
     }
 
-    pub fn draw(self: Particle, cam_data: CameraData) void {
+    pub fn draw(
+        self: Particle,
+        generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+        sort_extras: *std.ArrayListUnmanaged(f32),
+    ) void {
         switch (self) {
             inline else => |particle| {
-                if (!cam_data.visibleInCamera(particle.x, particle.y)) return;
+                if (!main.camera.visibleInCamera(particle.x, particle.y)) return;
 
-                const w = assets.particle.texWRaw() * particle.size * cam_data.scale;
-                const h = assets.particle.texHRaw() * particle.size * cam_data.scale;
-                const screen_pos = cam_data.worldToScreen(particle.x, particle.y);
-                const z_off = particle.z * (-px_per_tile * cam_data.scale) - h - assets.padding * particle.size * cam_data.scale;
+                const w = assets.particle.texWRaw() * particle.size * main.camera.scale;
+                const h = assets.particle.texHRaw() * particle.size * main.camera.scale;
+                const screen_pos = main.camera.worldToScreen(particle.x, particle.y);
+                const z_off = particle.z * (-px_per_tile * main.camera.scale) - h - assets.padding * particle.size * main.camera.scale;
 
-                main.renderer.drawQuad(
+                Renderer.drawQuad(
+                    generics,
+                    sort_extras,
                     screen_pos.x - w / 2.0,
                     screen_pos.y + z_off,
                     w,
@@ -522,8 +526,6 @@ pub const HealEffect = struct {
         switch (self.target_obj_type) {
             inline else => |obj_enum| {
                 const T = GameServer.ObjEnumToType(obj_enum);
-                map.object_lock.lock();
-                defer map.object_lock.unlock();
                 if (map.findObject(T, self.target_map_id, .con)) |obj| {
                     for (0..10) |i| {
                         const float_i: f32 = f32i(i);

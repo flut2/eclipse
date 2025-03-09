@@ -7,7 +7,7 @@ const i64f = utils.i64f;
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const element = @import("../elements/element.zig");
 
 const SpeechBalloon = @This();
@@ -46,11 +46,7 @@ pub fn create(
         .outline_width = 0.0,
         .sort_extra = 500, // TODO: hack
     };
-    {
-        text_data.lock.lock();
-        defer text_data.lock.unlock();
-        text_data.recalculateAttributes();
-    }
+    text_data.recalculateAttributes();
 
     if (text_data.height >= 12 * text_scale) {
         image_data.normal.atlas_data = if (is_enemy)
@@ -58,8 +54,6 @@ pub fn create(
         else
             assets.getUiData("speech_balloons_medium", 0);
         text_data.max_height = 19 * text_scale;
-        text_data.lock.lock();
-        defer text_data.lock.unlock();
         text_data.recalculateAttributes();
     }
 
@@ -70,8 +64,6 @@ pub fn create(
             assets.getUiData("speech_balloons_large", 0);
         text_data.max_width = 59 * text_scale;
         text_data.max_height = 26 * text_scale;
-        text_data.lock.lock();
-        defer text_data.lock.unlock();
         text_data.recalculateAttributes();
     }
 
@@ -83,17 +75,25 @@ pub fn create(
     };
 }
 
-pub fn draw(self: *SpeechBalloon, time: i64, obj_x: f32, obj_y: f32, scale: f32) bool {
+pub fn draw(
+    self: *SpeechBalloon,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    time: i64,
+    obj_x: f32,
+    obj_y: f32,
+    scale: f32,
+) bool {
     const elapsed = time - self.show_at;
     if (elapsed <= 0) return true;
     if (elapsed > self.duration) return false;
 
-    self.text_data.lock.lock();
     const x = obj_x - self.image_data.width() / 2;
     const y = obj_y - self.image_data.height();
-    self.text_data.lock.unlock();
 
-    main.renderer.drawQuad(
+    Renderer.drawQuad(
+        generics,
+        sort_extras,
         x,
         y,
         self.image_data.width() * scale,
@@ -101,15 +101,11 @@ pub fn draw(self: *SpeechBalloon, time: i64, obj_x: f32, obj_y: f32, scale: f32)
         self.image_data.normal.atlas_data,
         .{ .sort_extra = 400 }, // TODO: hack
     );
-    main.renderer.drawText(x + text_offset_x * scale, y + text_offset_y * scale, scale, &self.text_data, .{});
+    Renderer.drawText(generics, sort_extras, x + text_offset_x * scale, y + text_offset_y * scale, scale, &self.text_data, .{});
     return true;
 }
 
 pub fn deinit(self: *SpeechBalloon) void {
-    {
-        self.text_data.lock.lock();
-        defer self.text_data.lock.unlock();
-        main.allocator.free(self.text_data.text);
-    }
+    main.allocator.free(self.text_data.text);
     self.text_data.deinit();
 }

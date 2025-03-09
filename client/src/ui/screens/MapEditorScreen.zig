@@ -1026,16 +1026,12 @@ fn initialize(self: *MapEditorScreen) void {
 
     const center = f32i(self.map_size) / 2.0;
 
-    {
-        map.square_lock.lock();
-        defer map.square_lock.unlock();
-        for (0..self.map_size) |y| for (0..self.map_size) |x|
-            Square.addToMap(.{
-                .x = f32i(x) + 0.5,
-                .y = f32i(y) + 0.5,
-                .data_id = Square.editor_tile,
-            });
-    }
+    for (0..self.map_size) |y| for (0..self.map_size) |x|
+        Square.addToMap(.{
+            .x = f32i(x) + 0.5,
+            .y = f32i(y) + 0.5,
+            .data_id = Square.editor_tile,
+        });
 
     map.info.player_map_id = std.math.maxInt(u32) - 1;
     Player.addToMap(.{
@@ -1158,30 +1154,13 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
             const tile: map_data.Tile = .{
                 .ground_name = if (map_tile.ground == defaultType(.ground)) "" else game_data.ground.from_id.get(map_tile.ground).?.name,
                 .region_name = if (map_tile.region == defaultType(.region)) "" else game_data.region.from_id.get(map_tile.region).?.name,
-                .enemy_name = blk: {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
-                    break :blk if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "";
-                },
-                .entity_name = blk: {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
-                    break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "";
-                },
-                .portal_name = blk: {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
-                    break :blk if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "";
-                },
-                .container_name = blk: {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
-                    break :blk if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "";
-                },
+                .enemy_name = if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "",
+                .entity_name = if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "",
+                .portal_name = if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "",
+                .container_name = if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "",
             };
 
-            if (indexOfTile(tiles.items, tile) == null)
-                try tiles.append(main.allocator, tile);
+            if (indexOfTile(tiles.items, tile) == null) try tiles.append(main.allocator, tile);
         }
     }
 
@@ -1201,26 +1180,10 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
             const tile: map_data.Tile = .{
                 .ground_name = if (map_tile.ground == defaultType(.ground)) "" else game_data.ground.from_id.get(map_tile.ground).?.name,
                 .region_name = if (map_tile.region == defaultType(.region)) "" else game_data.region.from_id.get(map_tile.region).?.name,
-                .enemy_name = blk: {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
-                    break :blk if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "";
-                },
-                .entity_name = blk: {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
-                    break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "";
-                },
-                .portal_name = blk: {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
-                    break :blk if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "";
-                },
-                .container_name = blk: {
-                    map.object_lock.lock();
-                    defer map.object_lock.unlock();
-                    break :blk if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "";
-                },
+                .enemy_name = if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "",
+                .entity_name = if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "",
+                .portal_name = if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "",
+                .container_name = if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "",
             };
 
             if (indexOfTile(tiles.items, tile)) |idx| {
@@ -1501,8 +1464,6 @@ fn setTile(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
 
     tile.ground = data_id;
 
-    map.square_lock.lock();
-    defer map.square_lock.unlock();
     Square.addToMap(.{
         .x = f32i(x) + 0.5,
         .y = f32i(y) + 0.5,
@@ -1514,8 +1475,6 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
     const tile = self.getTilePtr(x, y);
 
     if (data_id == std.math.maxInt(u16)) {
-        map.object_lock.lock();
-        defer map.object_lock.unlock();
         _ = map.removeEntity(Entity, tile.region_map_id);
         tile.region_map_id = std.math.maxInt(u32);
         tile.region = std.math.maxInt(u16);
@@ -1526,8 +1485,6 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
         };
 
         if (tile.region_map_id != std.math.maxInt(u32)) {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
             if (map.findObject(Entity, tile.region_map_id, .con)) |obj| if (std.mem.eql(u8, obj.name orelse "", data.name)) return;
             _ = map.removeEntity(Entity, tile.region_map_id);
         }
@@ -1568,8 +1525,6 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
     };
 
     if (data_id == std.math.maxInt(u16)) {
-        map.object_lock.lock();
-        defer map.object_lock.unlock();
         _ = map.removeEntity(ObjType, field.*);
         field.* = std.math.maxInt(u32);
     } else {
@@ -1586,8 +1541,6 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
         }
 
         if (field.* != std.math.maxInt(u32)) {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
             if (map.findObject(ObjType, field.*, .con)) |obj| if (obj.data_id == data_id) return;
             _ = map.removeEntity(ObjType, field.*);
         }
@@ -1597,9 +1550,6 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
 
         field.* = next_map_id.*;
 
-        const needs_lock = ObjType == Entity and data.?.is_wall;
-        if (needs_lock) map.object_lock.lock();
-        defer if (needs_lock) map.object_lock.unlock();
         ObjType.addToMap(.{
             .x = f32i(x) + 0.5,
             .y = f32i(y) + 0.5,
@@ -1637,26 +1587,10 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
                 switch (self.active_layer) {
                     .ground => break :blk tile.ground,
                     .region => break :blk tile.region,
-                    .entity => break :blk lockBlk: {
-                        map.object_lock.lock();
-                        defer map.object_lock.unlock();
-                        break :lockBlk if (map.findObject(Entity, tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
-                    },
-                    .enemy => break :blk lockBlk: {
-                        map.object_lock.lock();
-                        defer map.object_lock.unlock();
-                        break :lockBlk if (map.findObject(Enemy, tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
-                    },
-                    .portal => break :blk lockBlk: {
-                        map.object_lock.lock();
-                        defer map.object_lock.unlock();
-                        break :lockBlk if (map.findObject(Portal, tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
-                    },
-                    .container => break :blk lockBlk: {
-                        map.object_lock.lock();
-                        defer map.object_lock.unlock();
-                        break :lockBlk if (map.findObject(Container, tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
-                    },
+                    .entity => break :blk if (map.findObject(Entity, tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16),
+                    .enemy => break :blk if (map.findObject(Enemy, tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16),
+                    .portal => break :blk if (map.findObject(Portal, tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16),
+                    .container => break :blk if (map.findObject(Container, tile.container, .con)) |c| c.data_id else std.math.maxInt(u16),
                 }
 
                 break :blk defaultType(self.active_layer);
@@ -1720,26 +1654,10 @@ fn typeAt(layer: Layer, screen: *MapEditorScreen, x: u16, y: u16) u16 {
     return switch (layer) {
         .ground => map_tile.ground,
         .region => map_tile.region,
-        .enemy => blk: {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
-            break :blk if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16);
-        },
-        .entity => blk: {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
-            break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
-        },
-        .portal => blk: {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
-            break :blk if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16);
-        },
-        .container => blk: {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
-            break :blk if (map.findObject(Container, map_tile.container, .con)) |c| c.data_id else std.math.maxInt(u16);
-        },
+        .enemy => if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16),
+        .entity => if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16),
+        .portal => if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16),
+        .container => if (map.findObject(Container, map_tile.container, .con)) |c| c.data_id else std.math.maxInt(u16),
     };
 }
 
@@ -1899,26 +1817,14 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
         .sample => switch (self.active_layer) {
             .ground => self.selected.ground = map_tile.ground,
             .region => self.selected.region = map_tile.region,
-            .enemy => self.selected.enemy = blk: {
-                map.object_lock.lock();
-                defer map.object_lock.unlock();
-                break :blk if (map.findObject(Enemy, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
-            },
-            .entity => self.selected.entity = blk: {
-                map.object_lock.lock();
-                defer map.object_lock.unlock();
-                break :blk if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16);
-            },
-            .portal => self.selected.portal = blk: {
-                map.object_lock.lock();
-                defer map.object_lock.unlock();
-                break :blk if (map.findObject(Portal, map_tile.entity, .con)) |p| p.data_id else std.math.maxInt(u16);
-            },
-            .container => self.selected.container = blk: {
-                map.object_lock.lock();
-                defer map.object_lock.unlock();
-                break :blk if (map.findObject(Container, map_tile.entity, .con)) |c| c.data_id else std.math.maxInt(u16);
-            },
+            .enemy => self.selected.enemy =
+                if (map.findObject(Enemy, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16),
+            .entity => self.selected.entity =
+                if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16),
+            .portal => self.selected.portal =
+                if (map.findObject(Portal, map_tile.entity, .con)) |p| p.data_id else std.math.maxInt(u16),
+            .container => self.selected.container =
+                if (map.findObject(Container, map_tile.entity, .con)) |c| c.data_id else std.math.maxInt(u16),
         },
         .fill => fill(self, ux, uy, false),
         .wand => fill(self, ux, uy, true),
@@ -1935,8 +1841,6 @@ pub fn updateFps(self: *MapEditorScreen, fps: u32, mem: f32) void {
 
 pub fn updateDetailsText(self: *MapEditorScreen) void {
     const player_x, const player_y = blk: {
-        map.object_lock.lock();
-        defer map.object_lock.unlock();
         const player = map.localPlayer(.con) orelse break :blk .{ -1.0, -1.0 };
         break :blk .{ player.x, player.y };
     };

@@ -20,7 +20,7 @@ const Portal = @import("../game/Portal.zig");
 const Square = @import("../game/Square.zig");
 const input = @import("../input.zig");
 const main = @import("../main.zig");
-const CameraData = @import("../render/CameraData.zig");
+const Renderer = @import("../render/Renderer.zig");
 const dialog = @import("dialogs/dialog.zig");
 const element = @import("elements/element.zig");
 const Image = @import("elements/Image.zig");
@@ -62,13 +62,11 @@ const points = [_]TimedPoint{
     .{ .x = 22.0, .y = 28.0, .time = 3 * std.time.us_per_s },
 };
 
-pub var ui_lock: std.Thread.Mutex = .{};
 pub var elements: std.ArrayListUnmanaged(element.UiElement) = .empty;
 pub var elements_to_add: std.ArrayListUnmanaged(element.UiElement) = .empty;
 pub var screen: Screen = undefined;
 pub var darken_bg: *Image = undefined;
 pub var version_text: *Text = undefined;
-pub var hover_lock: std.Thread.Mutex = .{};
 pub var hover_target: ?element.UiElement = null;
 pub var last_map_data: ?[]u8 = null;
 pub var is_testing: bool = false;
@@ -88,10 +86,8 @@ pub fn init() !void {
     try dialog.init();
     try menu.init();
 
-    main.camera.lock.lock();
     const cam_w = main.camera.width;
     const cam_h = main.camera.height;
-    main.camera.lock.unlock();
     darken_bg = try element.create(Image, .{
         .base = .{ .x = 0, .y = 0, .visible = false },
         .image_data = .{ .nine_slice = .fromAtlasData(assets.getUiData("dark_background", 0), cam_w, cam_h, 0, 0, 8, 8, 1.0) },
@@ -113,9 +109,6 @@ pub fn init() !void {
 }
 
 pub fn deinit() void {
-    ui_lock.lock();
-    defer ui_lock.unlock();
-
     tooltip.deinit();
     dialog.deinit();
     menu.deinit();
@@ -143,13 +136,7 @@ pub fn switchScreen(comptime screen_type: ScreenType) void {
     const T = std.meta.TagPayloadByName(Screen, @tagName(screen_type));
     if (T == void or screen == screen_type) return;
 
-    std.debug.assert(!ui_lock.tryLock());
-
-    {
-        main.camera.lock.lock();
-        defer main.camera.lock.unlock();
-        main.camera.scale = 1.0;
-    }
+    main.camera.scale = 1.0;
     input.selected_key_mapper = null;
 
     switch (screen) {
@@ -228,8 +215,6 @@ fn setTile(x: u16, y: u16, data_id: u16) void {
         return;
     }
 
-    map.square_lock.lock();
-    defer map.square_lock.unlock();
     Square.addToMap(.{
         .x = f32i(x) + 0.5,
         .y = f32i(y) + 0.5,
@@ -253,9 +238,6 @@ fn setObject(comptime ObjType: type, x: u16, y: u16, data_id: u16) void {
     const next_map_id = nextMapIdForType(ObjType);
     defer next_map_id.* += 1;
 
-    const needs_lock = ObjType == Entity and data.?.is_wall;
-    if (needs_lock) map.object_lock.lock();
-    defer if (needs_lock) map.object_lock.unlock();
     ObjType.addToMap(.{
         .x = f32i(x) + 0.5,
         .y = f32i(y) + 0.5,
@@ -275,9 +257,6 @@ fn nextMapIdForType(comptime T: type) *u32 {
 }
 
 pub fn resize(w: f32, h: f32) void {
-    ui_lock.lock();
-    defer ui_lock.unlock();
-
     switch (screen) {
         .empty => {},
         inline else => |inner_screen| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_screen)).pointer.child, "resize")) inner_screen.resize(w, h),
@@ -290,22 +269,15 @@ pub fn resize(w: f32, h: f32) void {
 }
 
 pub fn mouseMove(x: f32, y: f32) bool {
-    ui_lock.lock();
-    defer ui_lock.unlock();
-
     tooltip.switchTooltip(.none, {});
-    {
-        hover_lock.lock();
-        defer hover_lock.unlock();
-        if (hover_target) |target| {
-            switch (target) {
-                inline .input_field, .button, .toggle, .key_mapper, .dropdown_container => |elem| elem.state = .none,
-                .dropdown => |dropdown| dropdown.button_state = .none,
-                else => {},
-            }
-
-            hover_target = null;
+    if (hover_target) |target| {
+        switch (target) {
+            inline .input_field, .button, .toggle, .key_mapper, .dropdown_container => |elem| elem.state = .none,
+            .dropdown => |dropdown| dropdown.button_state = .none,
+            else => {},
         }
+
+        hover_target = null;
     }
 
     var elem_iter = std.mem.reverseIterator(elements.items);
@@ -318,9 +290,6 @@ pub fn mouseMove(x: f32, y: f32) bool {
 }
 
 pub fn mousePress(x: f32, y: f32, button: glfw.MouseButton, mods: glfw.Mods) bool {
-    ui_lock.lock();
-    defer ui_lock.unlock();
-
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| switch (elem) {
         inline else => |inner_elem| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))
@@ -332,17 +301,11 @@ pub fn mousePress(x: f32, y: f32, button: glfw.MouseButton, mods: glfw.Mods) boo
 
         if (button != .right) break :checkMenu;
 
-        map.object_lock.lock();
-        defer map.object_lock.unlock();
-        main.camera.lock.lock();
-        var cam_data: CameraData = undefined;
-        inline for (@typeInfo(CameraData).@"struct".fields) |field| @field(cam_data, field.name) = @field(main.camera, field.name);
-        main.camera.lock.unlock();
-        const cam_scale = Camera.size_mult * cam_data.scale;
+        const cam_scale = Camera.size_mult * main.camera.scale;
         for (map.listForType(Player).items) |player| {
             if (player.map_id == map.info.player_map_id) continue;
             const size = cam_scale * player.size_mult;
-            const pos = cam_data.worldToScreen(player.x, player.y);
+            const pos = main.camera.worldToScreen(player.x, player.y);
             const w = player.atlas_data.texWRaw() * size;
             const h = player.atlas_data.texHRaw() * size;
             const tl_x = pos.x - w / 2.0;
@@ -357,9 +320,6 @@ pub fn mousePress(x: f32, y: f32, button: glfw.MouseButton, mods: glfw.Mods) boo
 }
 
 pub fn mouseRelease(x: f32, y: f32) bool {
-    ui_lock.lock();
-    defer ui_lock.unlock();
-
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| switch (elem) {
         inline else => |inner_elem| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseRelease") and inner_elem.mouseRelease(x, y, 0, 0))
@@ -370,9 +330,6 @@ pub fn mouseRelease(x: f32, y: f32) bool {
 }
 
 pub fn mouseScroll(x: f32, y: f32, x_scroll: f32, y_scroll: f32) bool {
-    ui_lock.lock();
-    defer ui_lock.unlock();
-
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| switch (elem) {
         inline else => |inner_elem| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mouseScroll") and inner_elem.mouseScroll(x, y, 0, 0, x_scroll, y_scroll))
@@ -408,16 +365,11 @@ pub fn update(time: i64, dt: f32) !void {
             const current_point = points[current_point_idx];
             const next_point = points[next_point_idx];
             const frac = f32i(time - last_point_switch) / f32i(current_point.time);
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
             var player = map.localPlayer(.ref) orelse break :backgroundUpdate;
             player.x = lerp(current_point.x, next_point.x, frac);
             player.y = lerp(current_point.y, next_point.y, frac);
         },
     }
-
-    ui_lock.lock();
-    defer ui_lock.unlock();
 
     elements.appendSlice(main.allocator, elements_to_add.items) catch |e| {
         @branchHint(.cold);

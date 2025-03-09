@@ -24,10 +24,10 @@ const Square = @import("../game/Square.zig");
 const main = @import("../main.zig");
 const element = @import("../ui/elements/element.zig");
 const ui_systems = @import("../ui/systems.zig");
-const CameraData = @import("CameraData.zig");
 const Context = @import("Context.zig");
 const Swapchain = @import("Swapchain.zig");
 const vma = @import("vma.zig");
+const Camera = @import("../Camera.zig");
 
 const Renderer = @This();
 
@@ -35,6 +35,13 @@ const generic_vert_spv align(@alignOf(u32)) = @embedFile("generic_vert").*;
 const generic_frag_spv align(@alignOf(u32)) = @embedFile("generic_frag").*;
 const ground_vert_spv align(@alignOf(u32)) = @embedFile("ground_vert").*;
 const ground_frag_spv align(@alignOf(u32)) = @embedFile("ground_frag").*;
+
+const DrawData = struct {
+    grounds: []const GroundData = &.{},
+    generics: []const GenericData = &.{},
+    ui_generics: []const GenericData = &.{},
+    camera: Camera = .{},
+};
 
 pub const LightData = struct {
     x: f32,
@@ -218,6 +225,8 @@ context: Context = undefined,
 swapchain: Swapchain = undefined,
 vk_allocator: vma.Allocator = undefined,
 
+draw_queue: utils.SpscQueue(DrawData, main.frames_in_flight) = .{},
+
 pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
     var self: Renderer = .{};
 
@@ -257,9 +266,7 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
 
     self.context = try .init(main.window);
 
-    main.camera.lock.lock();
     const extent: vk.Extent2D = .{ .width = u32f(main.camera.width), .height = u32f(main.camera.height) };
-    main.camera.lock.unlock();
     self.swapchain = try .init(self.context, extent, present_mode);
 
     self.vk_allocator = try .create(&.{
@@ -1316,7 +1323,16 @@ fn createGroundMaterial(self: *Renderer) !void {
     };
 }
 
-pub fn drawQuad(self: *Renderer, x: f32, y: f32, w: f32, h: f32, atlas_data: assets.AtlasData, opts: QuadOptions) void {
+pub fn drawQuad(
+    generics: *std.ArrayListUnmanaged(GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    atlas_data: assets.AtlasData,
+    opts: QuadOptions,
+) void {
     const render_type: RenderType = if (opts.render_type_override) |rt| rt else switch (atlas_data.atlas_type) {
         .ui => .ui_quad,
         .base => .quad,
@@ -1330,8 +1346,8 @@ pub fn drawQuad(self: *Renderer, x: f32, y: f32, w: f32, h: f32, atlas_data: ass
 
     const dont_scissor = element.ScissorRect.dont_scissor;
 
-    self.sort_extras.append(main.allocator, opts.sort_extra) catch main.oomPanic();
-    self.generics.append(main.allocator, .{
+    sort_extras.append(main.allocator, opts.sort_extra) catch main.oomPanic();
+    generics.append(main.allocator, .{
         .render_type = render_type,
         .rotation = opts.rotation,
         .shadow_color = opts.shadow_color,
@@ -1353,7 +1369,8 @@ pub fn drawQuad(self: *Renderer, x: f32, y: f32, w: f32, h: f32, atlas_data: ass
 }
 
 pub fn drawText(
-    self: *Renderer,
+    generics: *std.ArrayListUnmanaged(GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
     x: f32,
     y: f32,
     scale: f32,
@@ -1361,8 +1378,6 @@ pub fn drawText(
     scissor_override: element.ScissorRect,
 ) void {
     if (scale <= 0.3) return;
-    text_data.lock.lock();
-    defer text_data.lock.unlock();
 
     if (text_data.line_widths == null or text_data.break_indices == null) return;
 
@@ -1488,7 +1503,9 @@ pub fn drawText(
 
                             const w_larger = data[index].tex_w > data[index].tex_h;
                             const scaled_size = current_size * current_font_data.size;
-                            self.drawQuad(
+                            drawQuad(
+                                generics,
+                                sort_extras,
                                 x_pointer,
                                 y_pointer - scaled_size,
                                 if (w_larger) scaled_size else data[index].width() * (scaled_size / data[index].height()),
@@ -1549,8 +1566,8 @@ pub fn drawText(
 
         const scissor = if (scissor_override.isDefault()) text_data.scissor else scissor_override;
 
-        self.sort_extras.append(main.allocator, text_data.sort_extra) catch main.oomPanic();
-        self.generics.append(main.allocator, .{
+        sort_extras.append(main.allocator, text_data.sort_extra) catch main.oomPanic();
+        generics.append(main.allocator, .{
             .render_type = render_type,
             .text_type = current_type,
             .text_dist_factor = current_font_data.px_range * current_size,
@@ -1575,11 +1592,18 @@ pub fn drawText(
     }
 }
 
-pub fn drawLight(self: *Renderer, data: game_data.LightData, tile_cx: f32, tile_cy: f32, scale: f32, float_time_ms: f32) void {
+pub fn drawLight(
+    lights: *std.ArrayListUnmanaged(LightData),
+    data: game_data.LightData,
+    tile_cx: f32,
+    tile_cy: f32,
+    scale: f32,
+    float_time_ms: f32,
+) void {
     if (data.color == std.math.maxInt(u32)) return;
 
     const size = px_per_tile * (data.radius + data.pulse * @sin(float_time_ms / 1000.0 * data.pulse_speed)) * scale * 4;
-    self.lights.append(main.allocator, .{
+    lights.append(main.allocator, .{
         .x = tile_cx - size / 2.0,
         .y = tile_cy - size / 2.0,
         .w = size,
@@ -1589,20 +1613,10 @@ pub fn drawLight(self: *Renderer, data: game_data.LightData, tile_cx: f32, tile_
     }) catch main.oomPanic();
 }
 
-pub fn draw(self: *Renderer, time: i64) !void {
-    main.camera.lock.lock();
-    var cam_data: CameraData = undefined;
-    inline for (@typeInfo(CameraData).@"struct".fields) |field| @field(cam_data, field.name) = @field(main.camera, field.name);
-    main.camera.lock.unlock();
-
-    const move_dt = if (cam_data.last_update == 0) 0 else f32i(time - cam_data.last_update);
-    const dx = cam_data.x_dir * move_dt;
-    const dy = cam_data.y_dir * move_dt;
-    cam_data.x += dx;
-    cam_data.y += dy;
+pub fn draw(self: *Renderer) !bool {
+    const draw_data = self.draw_queue.pop() orelse return false;
 
     const clear: vk.ClearValue = .{ .color = .{ .float_32 = .{ 0.0, 0.0, 0.0, 0.0 } } };
-
     const viewport: vk.Viewport = .{
         .x = 0,
         .y = 0,
@@ -1611,7 +1625,6 @@ pub fn draw(self: *Renderer, time: i64) !void {
         .min_depth = 0,
         .max_depth = 1,
     };
-
     const scissor: vk.Rect2D = .{
         .offset = .{ .x = 0, .y = 0 },
         .extent = self.swapchain.extent,
@@ -1634,67 +1647,17 @@ pub fn draw(self: *Renderer, time: i64) !void {
         .p_clear_values = @ptrCast(&clear),
     }, .@"inline");
 
-    self.generics.clearRetainingCapacity();
-    self.sort_extras.clearRetainingCapacity();
-
-    if ((main.tick_frame or main.needs_map_bg) and
-        cam_data.x >= 0 and cam_data.y >= 0 and
-        map.validPos(u32f(cam_data.x), u32f(cam_data.y)))
-    {
-        const float_time_ms = f32i(time) / std.time.us_per_ms;
-        self.grounds.clearRetainingCapacity();
-        self.lights.clearRetainingCapacity();
-
-        {
-            map.square_lock.lock();
-            defer map.square_lock.unlock();
-            for (cam_data.min_y..cam_data.max_y) |y| for (cam_data.min_x..cam_data.max_x) |x|
-                map.getSquare(f32i(x), f32i(y), false, .con).?.draw(cam_data, float_time_ms);
-        }
-
-        {
-            map.object_lock.lock();
-            defer map.object_lock.unlock();
-            inline for (.{ Entity, Enemy, Container, Player, Projectile, Ally }) |T|
-                for (map.listForType(T).items) |*obj| obj.draw(cam_data, float_time_ms);
-
-            const int_id = map.interactive.map_id.load(.acquire);
-            for (map.listForType(Portal).items) |*portal| portal.draw(cam_data, float_time_ms, int_id);
-            for (map.listForType(Particle).items) |particle| particle.draw(cam_data);
-        }
-    }
-
-    if (main.settings.enable_lights) {
-        self.sortGenerics();
-
-        const opts: QuadOptions = .{
-            .color = map.info.bg_color,
-            .color_intensity = 1.0,
-            .alpha_mult = map.getLightIntensity(time),
-        };
-        self.drawQuad(0, 0, cam_data.width, cam_data.height, assets.generic_8x8, opts);
-
-        for (self.lights.items) |data| self.drawQuad(
-            data.x,
-            data.y,
-            data.w,
-            data.h,
-            assets.light_data,
-            .{ .color = data.color, .color_intensity = 1.0, .alpha_mult = data.intensity },
-        );
-    } else self.sortGenerics();
-
     const ground_push_constants: GroundPushConstants = .{
-        .scale = cam_data.scale,
+        .scale = draw_data.camera.scale,
         .left_mask_uv = assets.left_mask_uv,
         .top_mask_uv = assets.top_mask_uv,
         .right_mask_uv = assets.right_mask_uv,
         .bottom_mask_uv = assets.bottom_mask_uv,
-        .clip_scale = cam_data.clip_scale,
-        .clip_offset = cam_data.clip_offset,
+        .clip_scale = draw_data.camera.clip_scale,
+        .clip_offset = draw_data.camera.clip_offset,
         .atlas_size = .{ assets.atlas_width, assets.atlas_height },
     };
-    const ground_len: u32 = @min(self.grounds.items.len, ground_size);
+    const ground_len: u32 = @min(draw_data.grounds.len, ground_size);
     if (ground_len > 0) {
         try writeToBuffer(
             self.context,
@@ -1702,7 +1665,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
             self.ground_staging_buffer,
             self.ground_buffer.buffer.handle,
             GroundData,
-            self.grounds.items[0..ground_len],
+            draw_data.grounds[0..ground_len],
         );
 
         self.context.device.cmdPushConstants(
@@ -1728,17 +1691,17 @@ pub fn draw(self: *Renderer, time: i64) !void {
     }
 
     const ui_off: GenericPushConstants = .{
-        .clip_scale = cam_data.clip_scale,
-        .clip_offset = cam_data.clip_offset,
+        .clip_scale = draw_data.camera.clip_scale,
+        .clip_offset = draw_data.camera.clip_offset,
         .is_ui = 0,
     };
     const ui_on: GenericPushConstants = .{
-        .clip_scale = cam_data.clip_scale,
-        .clip_offset = cam_data.clip_offset,
+        .clip_scale = draw_data.camera.clip_scale,
+        .clip_offset = draw_data.camera.clip_offset,
         .is_ui = 1,
     };
 
-    const game_len: u32 = @min(self.generics.items.len, generic_size);
+    const game_len: u32 = @min(draw_data.generics.len, generic_size);
     if (game_len > 0) {
         try writeToBuffer(
             self.context,
@@ -1746,7 +1709,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
             self.generic_staging_buffer,
             self.generic_buffer.buffer.handle,
             GenericData,
-            self.generics.items[0..game_len],
+            draw_data.generics[0..game_len],
         );
 
         self.context.device.cmdPushConstants(
@@ -1771,15 +1734,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
         self.context.device.cmdDraw(cmd_buffer, game_len * 6, 1, 0, 0);
     }
 
-    self.generics.clearRetainingCapacity();
-
-    {
-        ui_systems.ui_lock.lock();
-        defer ui_systems.ui_lock.unlock();
-        for (ui_systems.elements.items) |elem| elem.draw(cam_data, 0, 0, time);
-    }
-
-    const ui_len: u32 = @min(self.generics.items.len, generic_size);
+    const ui_len: u32 = @min(draw_data.ui_generics.len, generic_size);
     if (ui_len > 0) {
         try writeToBuffer(
             self.context,
@@ -1787,7 +1742,7 @@ pub fn draw(self: *Renderer, time: i64) !void {
             self.ui_staging_buffer,
             self.ui_buffer.buffer.handle,
             GenericData,
-            self.generics.items[0..ui_len],
+            draw_data.ui_generics[0..ui_len],
         );
 
         self.context.device.cmdPushConstants(
@@ -1828,12 +1783,13 @@ pub fn draw(self: *Renderer, time: i64) !void {
         try self.context.device.queueWaitIdle(self.context.graphics_queue.handle);
         try self.swapchain.recreate(
             self.context,
-            .{ .width = u32f(cam_data.width), .height = u32f(cam_data.height) },
+            .{ .width = u32f(draw_data.camera.width), .height = u32f(draw_data.camera.height) },
             if (main.settings.enable_vsync) .fifo_khr else .immediate_khr,
         );
         self.destroyFrameAndCmdBuffers();
         try self.createFrameAndCmdBuffers();
     }
+    return true;
 }
 
 fn sortGenerics(self: *Renderer) void {

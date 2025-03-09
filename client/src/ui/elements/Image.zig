@@ -1,9 +1,11 @@
+const std = @import("std");
+
 const game_data = @import("shared").game_data;
 
 const assets = @import("../../assets.zig");
 const map = @import("../../game/map.zig");
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -52,20 +54,23 @@ pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) boo
 }
 
 pub fn init(self: *Image) void {
-    if (self.tooltip_text) |*text_data| {
-        text_data.lock.lock();
-        defer text_data.lock.unlock();
-        text_data.recalculateAttributes();
-    }
+    if (self.tooltip_text) |*text_data| text_data.recalculateAttributes();
 }
 
 pub fn deinit(self: *Image) void {
     if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: Image, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(
+    self: Image,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    _: i64,
+) void {
     if (!self.base.visible) return;
-    self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
+    self.image_data.draw(generics, sort_extras, self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
 }
 
 pub fn width(self: Image) f32 {

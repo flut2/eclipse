@@ -186,8 +186,6 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
     }
 
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     const player = map.localPlayer(.con) orelse return;
     if (player.aether < 1) return;
 

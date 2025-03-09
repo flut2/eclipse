@@ -50,11 +50,7 @@ pub fn update(self: *TextTooltip, params: tooltip.ParamsFor(TextTooltip)) void {
         @field(self.text.text_data, field.name) = @field(params.text_data, field.name);
     }
 
-    {
-        self.text.text_data.lock.lock();
-        defer self.text.text_data.lock.unlock();
-        self.text.text_data.recalculateAttributes();
-    }
+    self.text.text_data.recalculateAttributes();
 
     switch (self.decor.image_data) {
         .nine_slice => |*nine_slice| {

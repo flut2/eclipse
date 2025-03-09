@@ -337,11 +337,7 @@ fn registerCallback(ud: ?*anyopaque) void {
     const current_screen: *AccountRegisterScreen = @alignCast(@ptrCast(ud.?));
     const email = main.account_arena_allocator.dupe(u8, current_screen.email_input.text_data.text) catch main.oomPanic();
     const hwid = getHwid(main.account_arena_allocator) catch {
-        {
-            ui_systems.ui_lock.lock();
-            defer ui_systems.ui_lock.unlock();
-            ui_systems.switchScreen(.main_menu);
-        }
+        ui_systems.switchScreen(.main_menu);
         dialog.showDialog(.text, .{
             .title = "Register Failed",
             .body = "Unable to retrieve HWID",

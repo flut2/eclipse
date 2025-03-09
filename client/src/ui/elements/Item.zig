@@ -4,7 +4,7 @@ const glfw = @import("glfw");
 const ItemData = @import("shared").network_data.ItemData;
 
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -91,26 +91,33 @@ pub fn mouseMove(self: *Item, x: f32, y: f32, x_offset: f32, y_offset: f32) bool
 }
 
 pub fn init(self: *Item) void {
-    if (self.amount_text) |*text_data| {
-        text_data.lock.lock();
-        defer text_data.lock.unlock();
-        text_data.recalculateAttributes();
-    }
+    if (self.amount_text) |*text_data| text_data.recalculateAttributes();
 }
 
 pub fn deinit(self: *Item) void {
     if (self.amount_text) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: *Item, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(
+    self: *Item,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    _: i64,
+) void {
     if (!self.base.visible) return;
     if (self.background_image_data) |background_image_data| background_image_data.draw(
+        generics,
+        sort_extras,
         self.background_x + x_offset,
         self.background_y + y_offset,
         self.base.scissor,
     );
-    self.image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
-    if (self.amount_visible) if (self.amount_text) |*text| main.renderer.drawText(
+    self.image_data.draw(generics, sort_extras, self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
+    if (self.amount_visible) if (self.amount_text) |*text| Renderer.drawText(
+        generics,
+        sort_extras,
         self.background_x + 8 + x_offset,
         self.background_y + 4 + y_offset,
         1.0,

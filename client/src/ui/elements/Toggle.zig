@@ -1,8 +1,10 @@
+const std = @import("std");
+
 const glfw = @import("glfw");
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const systems = @import("../systems.zig");
 const tooltip = @import("../tooltips/tooltip.zig");
 const element = @import("element.zig");
@@ -54,8 +56,6 @@ pub fn mouseMove(self: *Toggle, x: f32, y: f32, x_offset: f32, y_offset: f32) bo
             return true;
         }
 
-        systems.hover_lock.lock();
-        defer systems.hover_lock.unlock();
         systems.hover_target = element.UiElement{ .toggle = self }; // TODO: re-add RLS when fixed
         self.state = .hovered;
     } else self.state = .none;
@@ -64,17 +64,8 @@ pub fn mouseMove(self: *Toggle, x: f32, y: f32, x_offset: f32, y_offset: f32) bo
 }
 
 pub fn init(self: *Toggle) void {
-    if (self.text_data) |*text_data| {
-        text_data.lock.lock();
-        defer text_data.lock.unlock();
-        text_data.recalculateAttributes();
-    }
-
-    if (self.tooltip_text) |*text_data| {
-        text_data.lock.lock();
-        defer text_data.lock.unlock();
-        text_data.recalculateAttributes();
-    }
+    if (self.text_data) |*text_data| text_data.recalculateAttributes();
+    if (self.tooltip_text) |*text_data| text_data.recalculateAttributes();
 }
 
 pub fn deinit(self: *Toggle) void {
@@ -82,7 +73,14 @@ pub fn deinit(self: *Toggle) void {
     if (self.tooltip_text) |*text_data| text_data.deinit();
 }
 
-pub fn draw(self: *Toggle, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(
+    self: *Toggle,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    _: i64,
+) void {
     if (!self.base.visible) return;
     const image_data = if (self.toggled.*)
         self.on_image_data.current(self.state)
@@ -93,8 +91,10 @@ pub fn draw(self: *Toggle, _: CameraData, x_offset: f32, y_offset: f32, _: i64) 
         .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
     };
 
-    image_data.draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
-    if (self.text_data) |*text_data| main.renderer.drawText(
+    image_data.draw(generics, sort_extras, self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
+    if (self.text_data) |*text_data| Renderer.drawText(
+        generics,
+        sort_extras,
         self.base.x + w + 5 + x_offset,
         self.base.y + (h - text_data.height) / 2 + y_offset,
         1.0,

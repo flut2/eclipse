@@ -9,7 +9,7 @@ const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
-const CameraData = @import("../render/CameraData.zig");
+const Renderer = @import("../render/Renderer.zig");
 const element = @import("../ui/elements/element.zig");
 const ui_systems = @import("../ui/systems.zig");
 const base = @import("object_base.zig");
@@ -42,12 +42,18 @@ pub fn deinit(self: *Container) void {
     base.deinit(self);
 }
 
-pub fn draw(self: *Container, cam_data: CameraData, float_time_ms: f32) void {
+pub fn draw(
+    self: *Container,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    float_time_ms: f32,
+) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_container_layer or
-        !cam_data.visibleInCamera(self.x, self.y)) return;
+        !main.camera.visibleInCamera(self.x, self.y)) return;
 
-    var screen_pos = cam_data.worldToScreen(self.x, self.y);
-    const size = Camera.size_mult * cam_data.scale * self.size_mult;
+    var screen_pos = main.camera.worldToScreen(self.x, self.y);
+    const size = Camera.size_mult * main.camera.scale * self.size_mult;
 
     var atlas_data = self.atlas_data;
 
@@ -70,24 +76,28 @@ pub fn draw(self: *Container, cam_data: CameraData, float_time_ms: f32) void {
     // flash
 
     if (main.settings.enable_lights) {
-        const tile_pos = cam_data.worldToScreen(self.x, self.y);
-        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        const tile_pos = main.camera.worldToScreen(self.x, self.y);
+        Renderer.drawLight(lights, self.data.light, tile_pos.x, tile_pos.y, main.camera.scale, float_time_ms);
     }
 
     if (self.data.show_name) if (self.name_text_data) |*data| {
-        const name_h = (data.height + 5) * cam_data.scale;
+        const name_h = (data.height + 5) * main.camera.scale;
         const name_y = screen_pos.y - name_h;
         data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
-        main.renderer.drawText(
-            screen_pos.x - data.width * cam_data.scale / 2,
+        Renderer.drawText(
+            generics,
+            sort_extras,
+            screen_pos.x - data.width * main.camera.scale / 2,
             name_y,
-            cam_data.scale,
+            main.camera.scale,
             data,
             .{},
         );
     };
 
-    main.renderer.drawQuad(
+    Renderer.drawQuad(
+        generics,
+        sort_extras,
         screen_pos.x - w / 2.0,
         screen_pos.y,
         w,

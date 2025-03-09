@@ -284,10 +284,8 @@ pub fn refresh(self: *CharSelectScreen) !void {
     const button_w = 100;
     const button_h = 40;
 
-    main.camera.lock.lock();
     const cam_w = main.camera.width;
     const cam_h = main.camera.height;
-    main.camera.lock.unlock();
 
     const decor = assets.getUiData("character_list_background", 0);
     self.box_container = try element.create(Container, .{

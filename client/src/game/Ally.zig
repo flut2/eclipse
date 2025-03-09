@@ -11,7 +11,7 @@ const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
-const CameraData = @import("../render/CameraData.zig");
+const Renderer = @import("../render/Renderer.zig");
 const element = @import("../ui/elements/element.zig");
 const StatusText = @import("../ui/game/StatusText.zig");
 const base = @import("object_base.zig");
@@ -55,11 +55,18 @@ pub fn deinit(self: *Ally) void {
     self.status_texts.deinit(main.allocator);
 }
 
-pub fn draw(self: *Ally, cam_data: CameraData, float_time_ms: f32) void {
-    if (!cam_data.visibleInCamera(self.x, self.y)) return;
+pub fn draw(
+    self: *Ally,
+    renderer: *Renderer,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    float_time_ms: f32,
+) void {
+    if (!main.camera.visibleInCamera(self.x, self.y)) return;
 
-    var screen_pos = cam_data.worldToScreen(self.x, self.y);
-    const size = Camera.size_mult * cam_data.scale * self.size_mult;
+    var screen_pos = main.camera.worldToScreen(self.x, self.y);
+    const size = Camera.size_mult * main.camera.scale * self.size_mult;
 
     var atlas_data = self.atlas_data;
     var sink: f32 = 1.0;
@@ -89,24 +96,28 @@ pub fn draw(self: *Ally, cam_data: CameraData, float_time_ms: f32) void {
     // flash
 
     if (main.settings.enable_lights) {
-        const tile_pos = cam_data.worldToScreen(self.x, self.y);
-        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        const tile_pos = main.camera.worldToScreen(self.x, self.y);
+        Renderer.drawLight(lights, self.data.light, tile_pos.x, tile_pos.y, main.camera.scale, float_time_ms);
     }
 
     if (self.data.show_name) if (self.name_text_data) |*data| {
-        const name_h = (data.height + 5) * cam_data.scale;
+        const name_h = (data.height + 5) * main.camera.scale;
         const name_y = screen_pos.y - name_h;
         data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
-        main.renderer.drawText(
-            screen_pos.x - x_offset - data.width * cam_data.scale / 2,
+        Renderer.drawText(
+            generics,
+            sort_extras,
+            screen_pos.x - x_offset - data.width * main.camera.scale / 2,
             name_y,
-            cam_data.scale,
+            main.camera.scale,
             data,
             .{},
         );
     };
 
-    main.renderer.drawQuad(
+    Renderer.drawQuad(
+        generics,
+        sort_extras,
         screen_pos.x - w / 2.0,
         screen_pos.y,
         w,
@@ -123,12 +134,14 @@ pub fn draw(self: *Ally, cam_data: CameraData, float_time_ms: f32) void {
     var y_pos: f32 = if (sink != 1.0) 15.0 else 5.0;
 
     if (self.hp >= 0 and self.hp < self.max_hp) {
-        const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * cam_data.scale;
-        const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * cam_data.scale;
+        const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * main.camera.scale;
+        const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * main.camera.scale;
         const hp_bar_y = screen_pos.y + h + y_pos;
         const hp_bar_sort_extra = (screen_pos.y - hp_bar_y) + (h - hp_bar_h);
 
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             screen_pos.x - x_offset - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w,
@@ -143,7 +156,9 @@ pub fn draw(self: *Ally, cam_data: CameraData, float_time_ms: f32) void {
         var hp_bar_data = assets.hp_bar_data;
         hp_bar_data.tex_w /= hp_perc;
 
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             screen_pos.x - x_offset - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w / hp_perc,
@@ -157,16 +172,29 @@ pub fn draw(self: *Ally, cam_data: CameraData, float_time_ms: f32) void {
 
     const cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.? = @bitCast(self.condition);
     if (cond_int > 0) {
-        base.drawConditions(cond_int, float_time_ms, screen_pos.x - x_offset, screen_pos.y + h + y_pos, cam_data.scale, screen_pos.y, h);
+        base.drawConditions(
+            renderer,
+            generics,
+            sort_extras,
+            cond_int,
+            float_time_ms,
+            screen_pos.x - x_offset,
+            screen_pos.y + h + y_pos,
+            main.camera.scale,
+            screen_pos.y,
+            h,
+        );
         y_pos += 20;
     }
 
     base.drawStatusTexts(
         self,
+        generics,
+        sort_extras,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y,
-        cam_data.scale,
+        main.camera.scale,
     );
 }
 

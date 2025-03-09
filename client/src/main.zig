@@ -29,6 +29,8 @@ const dialog = @import("ui/dialogs/dialog.zig");
 const element = @import("ui/elements/element.zig");
 const ui_systems = @import("ui/systems.zig");
 
+pub const frames_in_flight = 3;
+
 /// Data must have pointer stability and must be deallocated manually, usually in the callback (for type information)
 pub const TimedCallback = struct { trigger_on: i64, callback: *const fn (*anyopaque) void, data: *anyopaque };
 
@@ -88,23 +90,18 @@ pub var camera: Camera = .{};
 pub var settings: Settings = .{};
 pub var main_loop: *uv.uv_loop_t = undefined;
 pub var window: *glfw.Window = undefined;
-pub var renderer: Renderer = undefined;
 pub var callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty;
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
     const float_w = f32i(w);
     const float_h = f32i(h);
 
-    {
-        camera.lock.lock();
-        defer camera.lock.unlock();
-        camera.width = float_w;
-        camera.height = float_h;
-        camera.clip_scale[0] = 2.0 / float_w;
-        camera.clip_scale[1] = 2.0 / float_h;
-        camera.clip_offset[0] = -float_w / 2.0;
-        camera.clip_offset[1] = -float_h / 2.0;
-    }
+    camera.width = float_w;
+    camera.height = float_h;
+    camera.clip_scale[0] = 2.0 / float_w;
+    camera.clip_scale[1] = 2.0 / float_h;
+    camera.clip_offset[0] = -float_w / 2.0;
+    camera.clip_offset[1] = -float_h / 2.0;
 
     ui_systems.resize(float_w, float_h);
 
@@ -195,7 +192,7 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
     };
 }
 
-fn renderTick() !void {
+fn renderTick(renderer: *Renderer) !void {
     if (build_options.enable_tracy) tracy.SetThreadName("Render");
 
     if (!build_options.enable_gpa) {
@@ -203,17 +200,12 @@ fn renderTick() !void {
         defer rpmalloc.deinitThread();
     }
 
-    renderer = try .create(if (settings.enable_vsync) .fifo_khr else .immediate_khr);
-    defer renderer.destroy();
-
     var last_vsync = settings.enable_vsync;
     var fps_time_start: i64 = 0;
     var frames: u32 = 0;
     while (tick_render) : (std.atomic.spinLoopHint()) {
         if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
-            camera.lock.lock();
             const extent: vk.Extent2D = .{ .width = u32f(camera.width), .height = u32f(camera.height) };
-            camera.lock.unlock();
             try renderer.context.device.queueWaitIdle(renderer.context.graphics_queue.handle);
             try renderer.swapchain.recreate(renderer.context, extent, if (settings.enable_vsync) .fifo_khr else .immediate_khr);
             renderer.destroyFrameAndCmdBuffers();
@@ -222,8 +214,7 @@ fn renderTick() !void {
             need_swap_chain_update = false;
         }
 
-        defer frames += 1;
-        try renderer.draw(current_time);
+        if (try renderer.draw()) frames += 1;
 
         if (current_time - fps_time_start > 1 * std.time.us_per_s) {
             if (settings.stats_enabled) switch (ui_systems.screen) {
@@ -290,7 +281,8 @@ fn renderTick() !void {
     }
 }
 
-fn gameTick(_: [*c]uv.uv_idle_t) callconv(.C) void {
+fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.C) void {
+    const renderer: *Renderer = @ptrCast(@alignCast(idler.*.data));
     if (window.shouldClose()) {
         @branchHint(.unlikely);
         uv.uv_stop(@ptrCast(main_loop));
@@ -309,13 +301,13 @@ fn gameTick(_: [*c]uv.uv_idle_t) callconv(.C) void {
     } - start_time;
     current_time = time;
 
-    if ((tick_frame or needs_map_bg) and time - last_map_update >= @floor(60.0 / 1000.0) * std.time.us_per_s) {
-        map.update(time, f32i(time - last_map_update));
-        last_map_update = time;
-    }
     if (time - last_ui_update >= @floor(60.0 / 1000.0) * std.time.us_per_s) {
         ui_systems.update(time, f32i(time - last_ui_update)) catch @panic("todo");
         last_ui_update = time;
+    }
+    if ((tick_frame or needs_map_bg) and time - last_map_update >= @floor(60.0 / 1000.0) * std.time.us_per_s) {
+        map.update(renderer, time, f32i(time - last_map_update));
+        last_map_update = time;
     }
 
     var callback_indices_to_remove: std.ArrayListUnmanaged(usize) = .empty;
@@ -330,24 +322,19 @@ fn gameTick(_: [*c]uv.uv_idle_t) callconv(.C) void {
     while (iter.next()) |i| _ = callbacks.swapRemove(i);
 }
 
-pub fn disconnect(has_lock: bool) void {
+pub fn disconnect() void {
     map.dispose();
     input.reset();
-    {
-        if (!has_lock) ui_systems.ui_lock.lock();
-        defer if (!has_lock) ui_systems.ui_lock.unlock();
-
-        if (ui_systems.is_testing) {
-            ui_systems.switchScreen(.editor);
-            ui_systems.is_testing = false;
-        } else {
-            if (character_list == null)
-                ui_systems.switchScreen(.main_menu)
-            else if (character_list.?.characters.len > 0)
-                ui_systems.switchScreen(.char_select)
-            else
-                ui_systems.switchScreen(.char_create);
-        }
+    if (ui_systems.is_testing) {
+        ui_systems.switchScreen(.editor);
+        ui_systems.is_testing = false;
+    } else {
+        if (character_list == null)
+            ui_systems.switchScreen(.main_menu)
+        else if (character_list.?.characters.len > 0)
+            ui_systems.switchScreen(.char_select)
+        else
+            ui_systems.switchScreen(.char_create);
     }
 }
 
@@ -507,7 +494,10 @@ pub fn main() !void {
     _ = window.setScrollCallback(input.scrollEvent);
     _ = window.setFramebufferSizeCallback(onResize);
 
-    render_thread = try .spawn(.{ .allocator = allocator }, renderTick, .{});
+    var renderer: Renderer = try .create(if (settings.enable_vsync) .fifo_khr else .immediate_khr);
+    defer renderer.destroy();
+
+    render_thread = try .spawn(.{ .allocator = allocator }, renderTick, .{&renderer});
     defer {
         tick_render = false;
         render_thread.join();
@@ -530,6 +520,7 @@ pub fn main() !void {
     defer login_server.deinit();
 
     var idler: uv.uv_idle_t = undefined;
+    idler.data = &renderer;
     const idle_init_status = uv.uv_idle_init(@ptrCast(main_loop), &idler);
     if (idle_init_status != 0) {
         std.log.err("Idle creation error: {s}", .{uv.uv_strerror(loop_status)});

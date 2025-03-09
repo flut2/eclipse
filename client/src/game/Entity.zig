@@ -11,7 +11,7 @@ const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const main = @import("../main.zig");
-const CameraData = @import("../render/CameraData.zig");
+const Renderer = @import("../render/Renderer.zig");
 const element = @import("../ui/elements/element.zig");
 const StatusText = @import("../ui/game/StatusText.zig");
 const ui_systems = @import("../ui/systems.zig");
@@ -150,14 +150,20 @@ pub fn deinit(self: *Entity) void {
     self.status_texts.deinit(main.allocator);
 }
 
-pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
+pub fn draw(
+    self: *Entity,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    float_time_ms: f32,
+) void {
     if (ui_systems.screen == .editor and
         (!ui_systems.screen.editor.show_entity_layer or
             self.data_id == 0xFFFE and !ui_systems.screen.editor.show_region_layer) or
-        !cam_data.visibleInCamera(self.x, self.y)) return;
+        !main.camera.visibleInCamera(self.x, self.y)) return;
 
-    var screen_pos = cam_data.worldToScreen(self.x, self.y);
-    const size = Camera.size_mult * cam_data.scale * self.size_mult;
+    var screen_pos = main.camera.worldToScreen(self.x, self.y);
+    const size = Camera.size_mult * main.camera.scale * self.size_mult;
 
     var atlas_data = self.atlas_data;
     var sink: f32 = 1.0;
@@ -172,12 +178,14 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
     const h = atlas_data.texHRaw() * size;
 
     if (self.data.is_wall) {
-        const wall_size_mult = Camera.px_per_tile / 9.0 * cam_data.scale * self.size_mult;
+        const wall_size_mult = Camera.px_per_tile / 9.0 * main.camera.scale * self.size_mult;
         const base_w = self.wall_data.base.texWRaw() * wall_size_mult;
         const base_h = self.wall_data.base.texHRaw() * wall_size_mult;
         const base_x = screen_pos.x;
         const base_y = screen_pos.y - @max(base_h / 2.0, (self.wall_data.base.texHRaw() - 9.0) * wall_size_mult / 2.0);
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             base_x,
             base_y,
             base_w,
@@ -189,7 +197,9 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
         if (!self.wall_outline_cull.left) {
             const left_w = self.wall_data.left_outline.texWRaw() * wall_size_mult;
             const left_h = self.wall_data.left_outline.texHRaw() * wall_size_mult;
-            main.renderer.drawQuad(
+            Renderer.drawQuad(
+                generics,
+                sort_extras,
                 base_x - left_w,
                 base_y,
                 left_w,
@@ -201,7 +211,9 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
 
         if (!self.wall_outline_cull.right) {
             const right_h = self.wall_data.right_outline.texHRaw() * wall_size_mult;
-            main.renderer.drawQuad(
+            Renderer.drawQuad(
+                generics,
+                sort_extras,
                 base_x + base_w,
                 base_y,
                 self.wall_data.right_outline.texWRaw() * wall_size_mult,
@@ -214,7 +226,9 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
         if (!self.wall_outline_cull.top) {
             const top_h = self.wall_data.top_outline.texHRaw() * wall_size_mult;
             const top_y = base_y - top_h;
-            main.renderer.drawQuad(
+            Renderer.drawQuad(
+                generics,
+                sort_extras,
                 base_x,
                 top_y,
                 self.wall_data.top_outline.texWRaw() * wall_size_mult,
@@ -227,7 +241,9 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
         if (!self.wall_outline_cull.bottom) {
             const bottom_h = self.wall_data.bottom_outline.texHRaw() * wall_size_mult;
             const bottom_y = base_y + base_h;
-            main.renderer.drawQuad(
+            Renderer.drawQuad(
+                generics,
+                sort_extras,
                 base_x,
                 bottom_y,
                 self.wall_data.bottom_outline.texWRaw() * wall_size_mult,
@@ -241,10 +257,12 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
     }
 
     if (self.data.draw_on_ground) {
-        const tile_size = @as(f32, px_per_tile) * cam_data.scale;
+        const tile_size = @as(f32, px_per_tile) * main.camera.scale;
         const h_half = tile_size / 2.0;
 
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             screen_pos.x - tile_size / 2.0,
             screen_pos.y - h_half,
             tile_size,
@@ -254,13 +272,15 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
         );
 
         if (self.name_text_data) |*data| {
-            const name_h = h_half - (data.height - 5) * cam_data.scale;
+            const name_h = h_half - (data.height - 5) * main.camera.scale;
             const name_y = screen_pos.y - name_h;
             data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
-            main.renderer.drawText(
-                screen_pos.x - data.width * cam_data.scale / 2,
+            Renderer.drawText(
+                generics,
+                sort_extras,
+                screen_pos.x - data.width * main.camera.scale / 2,
                 name_y,
-                cam_data.scale,
+                main.camera.scale,
                 data,
                 .{},
             );
@@ -282,24 +302,28 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
     // flash
 
     if (main.settings.enable_lights) {
-        const tile_pos = cam_data.worldToScreen(@floor(self.x), @floor(self.y));
-        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        const tile_pos = main.camera.worldToScreen(@floor(self.x), @floor(self.y));
+        Renderer.drawLight(lights, self.data.light, tile_pos.x, tile_pos.y, main.camera.scale, float_time_ms);
     }
 
     if (self.data.show_name) if (self.name_text_data) |*data| {
-        const name_h = (data.height + 5) * cam_data.scale;
+        const name_h = (data.height + 5) * main.camera.scale;
         const name_y = screen_pos.y - name_h;
         data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
-        main.renderer.drawText(
-            screen_pos.x - data.width * cam_data.scale / 2,
+        Renderer.drawText(
+            generics,
+            sort_extras,
+            screen_pos.x - data.width * main.camera.scale / 2,
             name_y,
-            cam_data.scale,
+            main.camera.scale,
             data,
             .{},
         );
     };
 
-    main.renderer.drawQuad(
+    Renderer.drawQuad(
+        generics,
+        sort_extras,
         screen_pos.x - w / 2.0,
         screen_pos.y,
         w,
@@ -316,12 +340,14 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
     var y_pos: f32 = if (sink != 1.0) 15.0 else 5.0;
 
     if (self.hp >= 0 and self.hp < self.max_hp) {
-        const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * cam_data.scale;
-        const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * cam_data.scale;
+        const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * main.camera.scale;
+        const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * main.camera.scale;
         const hp_bar_y = screen_pos.y + h + y_pos;
         const hp_bar_sort_extra = (screen_pos.y - hp_bar_y) + (h - hp_bar_h);
 
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             screen_pos.x - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w,
@@ -336,7 +362,9 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
         var hp_bar_data = assets.hp_bar_data;
         hp_bar_data.tex_w /= hp_perc;
 
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             screen_pos.x - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w / hp_perc,
@@ -350,10 +378,12 @@ pub fn draw(self: *Entity, cam_data: CameraData, float_time_ms: f32) void {
 
     base.drawStatusTexts(
         self,
+        generics,
+        sort_extras,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x,
         screen_pos.y,
-        cam_data.scale,
+        main.camera.scale,
     );
 }
 

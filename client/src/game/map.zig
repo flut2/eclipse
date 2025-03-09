@@ -12,7 +12,8 @@ const zstbi = @import("zstbi");
 const assets = @import("../assets.zig");
 const input = @import("../input.zig");
 const main = @import("../main.zig");
-const systems = @import("../ui/systems.zig");
+const Renderer = @import("../render/Renderer.zig");
+const ui_systems = @import("../ui/systems.zig");
 const Ally = @import("Ally.zig");
 const Container = @import("Container.zig");
 const Enemy = @import("Enemy.zig");
@@ -26,8 +27,24 @@ const Square = @import("Square.zig");
 const day_cycle: i32 = 10 * std.time.us_per_min;
 const day_cycle_half: f32 = @as(f32, day_cycle) / 2;
 
-pub var square_lock: std.Thread.Mutex = .{};
-pub var object_lock: std.Thread.Mutex = .{};
+const MapData = struct {
+    grounds: std.ArrayListUnmanaged(Renderer.GroundData) = .empty,
+    sort_extras: std.ArrayListUnmanaged(f32) = .empty,
+    generics: std.ArrayListUnmanaged(Renderer.GenericData) = .empty,
+    ui_sort_extras: std.ArrayListUnmanaged(f32) = .empty,
+    ui_generics: std.ArrayListUnmanaged(Renderer.GenericData) = .empty,
+    lights: std.ArrayListUnmanaged(Renderer.LightData) = .empty,
+
+    pub fn clear(self: *MapData) void {
+        self.grounds.clearRetainingCapacity();
+        self.sort_extras.clearRetainingCapacity();
+        self.generics.clearRetainingCapacity();
+        self.ui_sort_extras.clearRetainingCapacity();
+        self.ui_generics.clearRetainingCapacity();
+        self.lights.clearRetainingCapacity();
+    }
+};
+
 pub var list: struct {
     player: std.ArrayListUnmanaged(Player) = .empty,
     entity: std.ArrayListUnmanaged(Entity) = .empty,
@@ -51,6 +68,10 @@ pub var add_list: struct {
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
 pub var remove_list: std.ArrayListUnmanaged(usize) = .empty;
+
+pub var lights: std.ArrayListUnmanaged(Renderer.LightData) = .empty;
+pub var draw_data: [main.frames_in_flight]MapData = @splat(.{});
+pub var draw_data_index: u8 = 0;
 
 pub var interactive: struct {
     const InteractiveType = enum(u8) { unset, portal, container };
@@ -103,9 +124,6 @@ pub fn init() !void {
 
 pub fn deinit() void {
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
-        object_lock.lock();
-        defer object_lock.unlock();
-
         var child_list = &@field(list, field.name);
         defer child_list.deinit(main.allocator);
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
@@ -123,12 +141,8 @@ pub fn deinit() void {
 
     move_records.deinit(main.allocator);
     main.allocator.free(info.name);
-    {
-        square_lock.lock();
-        defer square_lock.unlock();
-        main.allocator.free(squares);
-        squares = &.{};
-    }
+    main.allocator.free(squares);
+    squares = &.{};
 
     minimap.deinit();
     main.allocator.free(minimap_copy);
@@ -141,9 +155,6 @@ pub fn dispose() void {
     interactive.type.store(.unset, .release);
 
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
-        object_lock.lock();
-        defer object_lock.unlock();
-
         var child_list = &@field(list, field.name);
         defer child_list.clearRetainingCapacity();
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
@@ -160,11 +171,7 @@ pub fn dispose() void {
     move_records.clearRetainingCapacity();
     main.allocator.free(info.name);
     info = .{};
-    {
-        square_lock.lock();
-        defer square_lock.unlock();
-        @memset(squares, Square{});
-    }
+    @memset(squares, Square{});
 
     @memset(minimap.data, 0);
     main.need_force_update = true;
@@ -190,21 +197,15 @@ pub fn getLightIntensity(time: i64) f32 {
 pub fn setMapInfo(data: network_data.MapInfo) void {
     info = data;
 
-    {
-        square_lock.lock();
-        defer square_lock.unlock();
-        squares = if (squares.len == 0)
-            main.allocator.alloc(Square, @as(u32, data.width) * @as(u32, data.height)) catch return
-        else
-            main.allocator.realloc(squares, @as(u32, data.width) * @as(u32, data.height)) catch return;
+    squares = if (squares.len == 0)
+        main.allocator.alloc(Square, @as(u32, data.width) * @as(u32, data.height)) catch return
+    else
+        main.allocator.realloc(squares, @as(u32, data.width) * @as(u32, data.height)) catch return;
 
-        @memset(squares, Square{});
-    }
+    @memset(squares, Square{});
 
     const size = @max(data.width, data.height);
     const max_zoom = f32i(@divFloor(size, 32));
-    main.camera.lock.lock();
-    defer main.camera.lock.unlock();
     main.camera.minimap_zoom = @max(1, @min(max_zoom, main.camera.minimap_zoom));
 
     @memset(minimap.data, 0);
@@ -221,7 +222,6 @@ pub fn setMapInfo(data: network_data.MapInfo) void {
 
 const Constness = enum { con, ref };
 pub fn findObject(comptime T: type, map_id: u32, comptime constness: Constness) if (constness == .con) ?T else ?*T {
-    std.debug.assert(!object_lock.tryLock());
     switch (constness) {
         .con => for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj,
         .ref => for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj,
@@ -231,7 +231,6 @@ pub fn findObject(comptime T: type, map_id: u32, comptime constness: Constness) 
 
 // Using this is a bad idea if you don't know what you're doing
 pub fn findObjectWithAddList(comptime T: type, map_id: u32, comptime constness: Constness) if (constness == .con) ?T else ?*T {
-    std.debug.assert(!object_lock.tryLock());
     switch (constness) {
         .con => {
             for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
@@ -246,14 +245,12 @@ pub fn findObjectWithAddList(comptime T: type, map_id: u32, comptime constness: 
 }
 
 pub fn localPlayer(comptime constness: Constness) if (constness == .con) ?Player else ?*Player {
-    std.debug.assert(!object_lock.tryLock());
     if (info.player_map_id == std.math.maxInt(u32)) return null;
     if (findObject(Player, info.player_map_id, constness)) |player| return player;
     return null;
 }
 
 pub fn removeEntity(comptime T: type, map_id: u32) bool {
-    std.debug.assert(!object_lock.tryLock());
     var obj_list = listForType(T);
     for (obj_list.items, 0..) |*obj, i| if (obj.map_id == map_id) {
         obj.deinit();
@@ -264,7 +261,7 @@ pub fn removeEntity(comptime T: type, map_id: u32) bool {
     return false;
 }
 
-pub fn update(time: i64, dt: f32) void {
+pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
     if (info.player_map_id == std.math.maxInt(u32)) return;
 
     var should_unset_interactive = true;
@@ -273,12 +270,10 @@ pub fn update(time: i64, dt: f32) void {
         interactive.type.store(.unset, .release);
     };
 
-    var should_unset_container = if (systems.screen == .game) systems.screen.game.container_visible else false;
+    var should_unset_container = if (ui_systems.screen == .game) ui_systems.screen.game.container_visible else false;
     defer if (should_unset_container) {
-        systems.ui_lock.lock();
-        defer systems.ui_lock.unlock();
-        if (systems.screen == .game) {
-            const screen = systems.screen.game;
+        if (ui_systems.screen == .game) {
+            const screen = ui_systems.screen.game;
             if (screen.container_id != -1) {
                 inline for (0..9) |idx| {
                     screen.setContainerItem(std.math.maxInt(u16), idx);
@@ -294,8 +289,6 @@ pub fn update(time: i64, dt: f32) void {
 
     if (time - last_tile_update > 16 * std.time.us_per_ms) {
         last_tile_update = time;
-        square_lock.lock();
-        defer square_lock.unlock();
         for (squares) |*square| square.updateAnims(time);
     }
 
@@ -306,10 +299,7 @@ pub fn update(time: i64, dt: f32) void {
     const cam_min_y = f32i(main.camera.min_y);
     const cam_max_y = f32i(main.camera.max_y);
 
-    object_lock.lock();
-    defer object_lock.unlock();
-
-    defer if (systems.screen == .game) systems.screen.game.minimap.update(time);
+    defer if (ui_systems.screen == .game) ui_systems.screen.game.minimap.update(time);
 
     inline for (.{
         Entity,
@@ -351,11 +341,8 @@ pub fn update(time: i64, dt: f32) void {
             switch (ObjType) {
                 Container => {
                     containerUpdate: {
-                        systems.ui_lock.lock();
-                        defer systems.ui_lock.unlock();
-
-                        if (systems.screen != .game) break :containerUpdate;
-                        const screen = systems.screen.game;
+                        if (ui_systems.screen != .game) break :containerUpdate;
+                        const screen = ui_systems.screen.game;
 
                         const dt_x = cam_x - obj.x;
                         const dt_y = cam_y - obj.y;
@@ -392,7 +379,7 @@ pub fn update(time: i64, dt: f32) void {
                     obj.update(time, dt);
 
                     if (is_self) {
-                        main.camera.update(obj.x, obj.y, dt, obj.x_dir, obj.y_dir, time);
+                        main.camera.update(obj.x, obj.y, dt);
                         addMoveRecord(time, obj.x, obj.y);
                         if (input.attacking) {
                             const shoot_angle = std.math.atan2(input.mouse_y - main.camera.height / 2.0, input.mouse_x - main.camera.width / 2.0);
@@ -401,11 +388,7 @@ pub fn update(time: i64, dt: f32) void {
                     }
                 },
                 Portal => {
-                    const is_game = blk: {
-                        systems.ui_lock.lock();
-                        defer systems.ui_lock.unlock();
-                        break :blk systems.screen == .game;
-                    };
+                    const is_game = ui_systems.screen == .game;
                     if (is_game) {
                         const dt_x = cam_x - obj.x;
                         const dt_y = cam_y - obj.y;
@@ -437,6 +420,121 @@ pub fn update(time: i64, dt: f32) void {
             _ = obj_list.orderedRemove(i);
         }
     }
+
+    defer draw_data_index = (draw_data_index + 1) % main.frames_in_flight;
+    var cur_draw_data = &draw_data[draw_data_index];
+    cur_draw_data.clear();
+
+    if ((main.tick_frame or main.needs_map_bg) and
+        main.camera.x >= 0 and main.camera.y >= 0 and
+        validPos(u32f(main.camera.x), u32f(main.camera.y)))
+    {
+        const float_time_ms = f32i(time) / std.time.us_per_ms;
+
+        for (main.camera.min_y..main.camera.max_y) |y| for (main.camera.min_x..main.camera.max_x) |x|
+            getSquare(f32i(x), f32i(y), false, .con).?.draw(&cur_draw_data.grounds, &cur_draw_data.lights, float_time_ms);
+
+        inline for (.{ Enemy, Player, Ally }) |T|
+            for (listForType(T).items) |*obj| obj.draw(
+                renderer,
+                &cur_draw_data.generics,
+                &cur_draw_data.sort_extras,
+                &cur_draw_data.lights,
+                float_time_ms,
+            );
+
+        inline for (.{ Entity, Container, Projectile }) |T|
+            for (listForType(T).items) |*obj| obj.draw(
+                &cur_draw_data.generics,
+                &cur_draw_data.sort_extras,
+                &cur_draw_data.lights,
+                float_time_ms,
+            );
+
+        const int_id = interactive.map_id.load(.acquire);
+        for (listForType(Portal).items) |*portal| portal.draw(
+            renderer,
+            &cur_draw_data.generics,
+            &cur_draw_data.sort_extras,
+            &cur_draw_data.lights,
+            float_time_ms,
+            int_id,
+        );
+        for (listForType(particles.Particle).items) |particle| particle.draw(&cur_draw_data.generics, &cur_draw_data.sort_extras);
+    }
+
+    if (main.settings.enable_lights) {
+        sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items);
+
+        const opts: Renderer.QuadOptions = .{
+            .color = info.bg_color,
+            .color_intensity = 1.0,
+            .alpha_mult = getLightIntensity(time),
+        };
+        Renderer.drawQuad(
+            &cur_draw_data.generics,
+            &cur_draw_data.sort_extras,
+            0,
+            0,
+            main.camera.width,
+            main.camera.height,
+            assets.generic_8x8,
+            opts,
+        );
+
+        for (cur_draw_data.lights.items) |data| Renderer.drawQuad(
+            &cur_draw_data.generics,
+            &cur_draw_data.sort_extras,
+            data.x,
+            data.y,
+            data.w,
+            data.h,
+            assets.light_data,
+            .{ .color = data.color, .color_intensity = 1.0, .alpha_mult = data.intensity },
+        );
+    } else sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items);
+
+    for (ui_systems.elements.items) |elem| elem.draw(
+        &cur_draw_data.ui_generics,
+        &cur_draw_data.ui_sort_extras,
+        0,
+        0,
+        time,
+    );
+
+    if (cur_draw_data.grounds.items.len > 0 or
+        cur_draw_data.generics.items.len > 0 or
+        cur_draw_data.ui_generics.items.len > 0)
+        // This is blocking, meaning updating is locked behind frame rates.
+        // This saves power, but has the side effect of lower frame rates being much worse to play,
+        // like on Flash where projs skip over entities in low frame rates.
+        // TODO: Revisit whether this would be an issue for anyone (really bad PCs)
+        renderer.draw_queue.push(.{
+            .grounds = cur_draw_data.grounds.items,
+            .generics = cur_draw_data.generics.items,
+            .ui_generics = cur_draw_data.ui_generics.items,
+            .camera = main.camera, // to copy and save
+        });
+}
+
+fn sortGenerics(generics: []Renderer.GenericData, sort_extras: []f32) void {
+    const SortContext = struct {
+        items: []Renderer.GenericData,
+        sort_extras: []f32,
+
+        pub fn lessThan(ctx: @This(), a: usize, b: usize) bool {
+            const item_a = ctx.items[a];
+            const item_b = ctx.items[b];
+            return item_a.pos[1] + item_a.size[1] + ctx.sort_extras[a] < item_b.pos[1] + item_b.size[1] + ctx.sort_extras[b];
+        }
+
+        pub fn swap(ctx: @This(), a: usize, b: usize) void {
+            std.mem.swap(f32, &ctx.sort_extras[a], &ctx.sort_extras[b]);
+            std.mem.swap(Renderer.GenericData, &ctx.items[a], &ctx.items[b]);
+        }
+    };
+
+    std.sort.pdqContext(0, generics.len, SortContext{ .items = generics, .sort_extras = sort_extras });
 }
 
 // x/y < 0 has to be handled before this, since it's a u32

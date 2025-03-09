@@ -1,5 +1,7 @@
+const std = @import("std");
+
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
 
@@ -8,8 +10,6 @@ base: ElementBase,
 text_data: element.TextData,
 
 pub fn init(self: *Text) void {
-    self.text_data.lock.lock();
-    defer self.text_data.lock.unlock();
     self.text_data.recalculateAttributes();
 }
 
@@ -17,9 +17,16 @@ pub fn deinit(self: *Text) void {
     self.text_data.deinit();
 }
 
-pub fn draw(self: *Text, _: CameraData, x_offset: f32, y_offset: f32, _: i64) void {
+pub fn draw(
+    self: *Text,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    _: i64,
+) void {
     if (!self.base.visible) return;
-    main.renderer.drawText(self.base.x + x_offset, self.base.y + y_offset, 1.0, &self.text_data, self.base.scissor);
+    Renderer.drawText(generics, sort_extras, self.base.x + x_offset, self.base.y + y_offset, 1.0, &self.text_data, self.base.scissor);
 }
 
 pub fn width(self: Text) f32 {

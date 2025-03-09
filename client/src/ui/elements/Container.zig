@@ -3,7 +3,7 @@ const std = @import("std");
 const glfw = @import("glfw");
 
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const systems = @import("../systems.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -121,8 +121,6 @@ pub fn destroyElement(self: *Container, elem: anytype) void {
         elem == @field(systems.hover_target.?, field_name))
         systems.hover_target = null;
 
-    std.debug.assert(!systems.ui_lock.tryLock());
-
     removeFromList: for (self.elements.items, 0..) |rem_elem, i| if (rem_elem == tag.? and @field(rem_elem, field_name) == elem) {
         _ = self.elements.orderedRemove(i);
         break :removeFromList;
@@ -158,9 +156,16 @@ pub fn deinit(self: *Container) void {
     self.elements.deinit(main.allocator);
 }
 
-pub fn draw(self: Container, cam_data: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
+pub fn draw(
+    self: Container,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    time: i64,
+) void {
     if (!self.base.visible) return;
-    for (self.elements.items) |elem| elem.draw(cam_data, x_offset + self.base.x, y_offset + self.base.y, time);
+    for (self.elements.items) |elem| elem.draw(generics, sort_extras, x_offset + self.base.x, y_offset + self.base.y, time);
 }
 
 pub fn width(self: *Container) f32 {

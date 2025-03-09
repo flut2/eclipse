@@ -5,7 +5,7 @@ const glfw = @import("glfw");
 const assets = @import("../../assets.zig");
 const input = @import("../../input.zig");
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const systems = @import("../systems.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -51,8 +51,6 @@ pub fn mouseMove(self: *Input, x: f32, y: f32, _: f32, _: f32) bool {
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
-        systems.hover_lock.lock();
-        defer systems.hover_lock.unlock();
         systems.hover_target = element.UiElement{ .input_field = self }; // TODO: re-add RLS when fixed
         self.state = .hovered;
     } else self.state = .none;
@@ -69,11 +67,7 @@ pub fn init(self: *Input) void {
             .max_y = self.height() - self.text_inlay_y * 2,
         };
 
-    {
-        self.text_data.lock.lock();
-        defer self.text_data.lock.unlock();
-        self.text_data.recalculateAttributes();
-    }
+    self.text_data.recalculateAttributes();
 
     switch (self.cursor_image_data) {
         .nine_slice => |*nine_slice| nine_slice.h = self.text_data.height,
@@ -86,19 +80,26 @@ pub fn deinit(self: *Input) void {
     self.text_data.deinit();
 }
 
-pub fn draw(self: *Input, _: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
+pub fn draw(
+    self: *Input,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    time: i64,
+) void {
     if (!self.base.visible) return;
 
-    self.image_data.current(self.state).draw(self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
+    self.image_data.current(self.state).draw(generics, sort_extras, self.base.x + x_offset, self.base.y + y_offset, self.base.scissor);
 
     const text_x = self.base.x + self.text_inlay_x + assets.padding + x_offset + self.x_offset;
     const text_y = self.base.y + self.text_inlay_y + assets.padding + y_offset;
-    main.renderer.drawText(text_x, text_y, 1.0, &self.text_data, self.base.scissor);
+    Renderer.drawText(generics, sort_extras, text_x, text_y, 1.0, &self.text_data, self.base.scissor);
 
     const flash_delay = 500 * std.time.us_per_ms;
     if (self.last_input != -1 and (time - self.last_input < flash_delay or @mod(@divFloor(time, flash_delay), 2) == 0)) {
         const cursor_x = text_x + self.text_data.width + 1.0;
-        self.cursor_image_data.draw(cursor_x, text_y, self.base.scissor);
+        self.cursor_image_data.draw(generics, sort_extras, cursor_x, text_y, self.base.scissor);
     }
 }
 
@@ -139,11 +140,7 @@ pub fn clear(self: *Input) void {
 pub fn inputUpdate(self: *Input) void {
     self.last_input = main.current_time;
 
-    {
-        self.text_data.lock.lock();
-        defer self.text_data.lock.unlock();
-        self.text_data.recalculateAttributes();
-    }
+    self.text_data.recalculateAttributes();
 
     const cursor_width = switch (self.cursor_image_data) {
         .nine_slice => |nine_slice| if (nine_slice.alpha > 0) nine_slice.w else 0.0,

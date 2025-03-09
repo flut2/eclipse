@@ -16,7 +16,7 @@ const Camera = @import("../Camera.zig");
 const px_per_tile = Camera.px_per_tile;
 const input = @import("../input.zig");
 const main = @import("../main.zig");
-const CameraData = @import("../render/CameraData.zig");
+const Renderer = @import("../render/Renderer.zig");
 const element = @import("../ui/elements/element.zig");
 const SpeechBalloon = @import("../ui/game/SpeechBalloon.zig");
 const StatusText = @import("../ui/game/StatusText.zig");
@@ -310,8 +310,15 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
     }
 }
 
-pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
-    if (main.needs_map_bg or !cam_data.visibleInCamera(self.x, self.y)) return;
+pub fn draw(
+    self: *Player,
+    renderer: *Renderer,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    float_time_ms: f32,
+) void {
+    if (main.needs_map_bg or !main.camera.visibleInCamera(self.x, self.y)) return;
 
     var x = self.x;
     var y = self.y;
@@ -323,7 +330,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         y += dy;
     }
 
-    const size = Camera.size_mult * cam_data.scale * self.size_mult * @as(f32, if (self.ability_state.heart_of_stone) 1.5 else 1.0);
+    const size = Camera.size_mult * main.camera.scale * self.size_mult * @as(f32, if (self.ability_state.heart_of_stone) 1.5 else 1.0);
 
     var atlas_data = self.atlas_data;
     var sink: f32 = 1.0;
@@ -342,7 +349,7 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
     const stand_w = stand_data.width() * size;
     const x_offset = (if (self.direction == .left) stand_w - w else w - stand_w) / 2.0;
 
-    var screen_pos = cam_data.worldToScreen(x, y);
+    var screen_pos = main.camera.worldToScreen(x, y);
     screen_pos.x += x_offset;
     screen_pos.y += self.z * -px_per_tile - h + assets.padding * size;
 
@@ -362,25 +369,29 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
     // flash
 
     if (main.settings.enable_lights) {
-        const tile_pos = cam_data.worldToScreen(x, y);
-        main.renderer.drawLight(self.data.light, tile_pos.x, tile_pos.y, cam_data.scale, float_time_ms);
+        const tile_pos = main.camera.worldToScreen(x, y);
+        Renderer.drawLight(lights, self.data.light, tile_pos.x, tile_pos.y, main.camera.scale, float_time_ms);
     }
 
     var name_h: f32 = 0.0;
     if (self.name_text_data) |*data| {
-        name_h = (data.height + 5) * cam_data.scale;
+        name_h = (data.height + 5) * main.camera.scale;
         const name_y = screen_pos.y - name_h;
         data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
-        main.renderer.drawText(
-            screen_pos.x - x_offset - data.width * cam_data.scale / 2 - assets.padding * 2,
+        Renderer.drawText(
+            generics,
+            sort_extras,
+            screen_pos.x - x_offset - data.width * main.camera.scale / 2 - assets.padding * 2,
             name_y,
-            cam_data.scale,
+            main.camera.scale,
             data,
             .{},
         );
     }
 
-    main.renderer.drawQuad(
+    Renderer.drawQuad(
+        generics,
+        sort_extras,
         screen_pos.x - w / 2.0,
         screen_pos.y,
         w,
@@ -397,12 +408,14 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
     var y_pos: f32 = if (sink != 1.0) 15.0 else 5.0;
 
     if (self.hp >= 0 and self.hp < self.max_hp + self.max_hp_bonus) {
-        const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * cam_data.scale;
-        const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * cam_data.scale;
+        const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * main.camera.scale;
+        const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * main.camera.scale;
         const hp_bar_y = screen_pos.y + h + y_pos;
         const hp_bar_sort_extra = (screen_pos.y - hp_bar_y) + (h - hp_bar_h);
 
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             screen_pos.x - x_offset - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w,
@@ -421,7 +434,9 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         var hp_bar_data = assets.hp_bar_data;
         hp_bar_data.tex_w *= hp_perc;
 
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             screen_pos.x - x_offset - hp_bar_w / 2.0,
             hp_bar_y,
             hp_bar_w * hp_perc,
@@ -434,12 +449,14 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
     }
 
     if (self.mp >= 0 and self.mp < self.max_mp + self.max_mp_bonus) {
-        const mp_bar_w = assets.mp_bar_data.width() * 2 * cam_data.scale;
-        const mp_bar_h = assets.mp_bar_data.height() * 2 * cam_data.scale;
+        const mp_bar_w = assets.mp_bar_data.width() * 2 * main.camera.scale;
+        const mp_bar_h = assets.mp_bar_data.height() * 2 * main.camera.scale;
         const mp_bar_y = screen_pos.y + h + y_pos;
         const mp_bar_sort_extra = (screen_pos.y - mp_bar_y) + (h - mp_bar_h);
 
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             screen_pos.x - x_offset - mp_bar_w / 2.0,
             mp_bar_y,
             mp_bar_w,
@@ -458,7 +475,9 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
         var mp_bar_data = assets.mp_bar_data;
         mp_bar_data.tex_w *= mp_perc;
 
-        main.renderer.drawQuad(
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
             screen_pos.x - x_offset - mp_bar_w / 2.0,
             mp_bar_y,
             mp_bar_w * mp_perc,
@@ -472,24 +491,39 @@ pub fn draw(self: *Player, cam_data: CameraData, float_time_ms: f32) void {
 
     const cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.? = @bitCast(self.condition);
     if (cond_int > 0) {
-        base.drawConditions(cond_int, float_time_ms, screen_pos.x - x_offset, screen_pos.y + h + y_pos, cam_data.scale, screen_pos.y, h);
+        base.drawConditions(
+            renderer,
+            generics,
+            sort_extras,
+            cond_int,
+            float_time_ms,
+            screen_pos.x - x_offset,
+            screen_pos.y + h + y_pos,
+            main.camera.scale,
+            screen_pos.y,
+            h,
+        );
         y_pos += 20;
     }
 
     base.drawStatusTexts(
         self,
+        generics,
+        sort_extras,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y - name_h,
-        cam_data.scale,
+        main.camera.scale,
     );
 
     base.drawSpeechBalloon(
         self,
+        generics,
+        sort_extras,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y - name_h,
-        cam_data.scale,
+        main.camera.scale,
     );
 }
 

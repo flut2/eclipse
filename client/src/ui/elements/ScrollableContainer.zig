@@ -3,7 +3,7 @@ const std = @import("std");
 const glfw = @import("glfw");
 
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const Container = @import("Container.zig");
 const element = @import("element.zig");
 const ElementBase = element.ElementBase;
@@ -128,9 +128,16 @@ pub fn deinit(self: *ScrollableContainer) void {
     main.allocator.destroy(self.container);
 }
 
-pub fn draw(self: ScrollableContainer, cam_data: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
+pub fn draw(
+    self: ScrollableContainer,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    time: i64,
+) void {
     if (!self.base.visible) return;
-    self.container.draw(cam_data, x_offset, y_offset, time);
+    self.container.draw(generics, sort_extras, x_offset, y_offset, time);
 }
 
 pub fn width(self: ScrollableContainer) f32 {

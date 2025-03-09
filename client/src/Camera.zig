@@ -13,17 +13,11 @@ const Camera = @This();
 pub const px_per_tile = 63.0;
 pub const size_mult = 6.0;
 
-/// This lock is for reading from the render thread (it does not, and should not write),
-/// and for writing from the main thread. Reading from the main thread can be lock free
-lock: std.Thread.Mutex = .{},
 minimap_zoom: f32 = 4.0,
 quake: bool = false,
 quake_amount: f32 = 0.0,
 x: f32 = 0.0,
 y: f32 = 0.0,
-x_dir: f32 = 0.0,
-y_dir: f32 = 0.0,
-last_update: i64 = 0,
 scale: f32 = 1.0,
 min_x: u32 = 0,
 min_y: u32 = 0,
@@ -35,21 +29,10 @@ clip_scale: [2]f32 = [2]f32{ 2.0 / 1280.0, 2.0 / 720.0 },
 clip_offset: [2]f32 = [2]f32{ -1280.0 / 2.0, -720.0 / 2.0 },
 cam_offset_px: [2]f32 = [2]f32{ 0.0, 0.0 },
 
-pub fn update(
-    self: *@This(),
-    target_x: f32,
-    target_y: f32,
-    dt: f32,
-    x_dir: f32,
-    y_dir: f32,
-    time: i64,
-) void {
+pub fn update(self: *@This(), target_x: f32, target_y: f32, dt: f32) void {
     const map_w = map.info.width;
     const map_h = map.info.height;
     if (map_w == 0 or map_h == 0) return;
-
-    self.lock.lock();
-    defer self.lock.unlock();
 
     var tx: f32 = target_x;
     var ty: f32 = target_y;
@@ -64,9 +47,6 @@ pub fn update(
 
     self.x = tx;
     self.y = ty;
-    self.x_dir = x_dir;
-    self.y_dir = y_dir;
-    self.last_update = time;
     self.cam_offset_px[0] = tx * px_per_tile * self.scale;
     self.cam_offset_px[1] = ty * px_per_tile * self.scale;
 
@@ -83,15 +63,34 @@ pub fn update(
     self.max_y = @min(map_h - 1, u32f(ty + max_dist));
 }
 
-pub fn screenToWorld(self: @This(), x_in: f32, y_in: f32) struct { x: f32, y: f32 } {
+pub fn screenToWorld(self: Camera, x_in: f32, y_in: f32) struct { x: f32, y: f32 } {
     const x_div = (x_in - self.width / 2.0) / (px_per_tile * self.scale);
     const y_div = (y_in - self.height / 2.0) / (px_per_tile * self.scale);
     return .{ .x = self.x + x_div, .y = self.y + y_div };
 }
 
+pub fn worldToScreen(self: Camera, x_in: f32, y_in: f32) struct { x: f32, y: f32 } {
+    return .{
+        .x = x_in * px_per_tile * self.scale - self.cam_offset_px[0] - self.clip_offset[0],
+        .y = y_in * px_per_tile * self.scale - self.cam_offset_px[1] - self.clip_offset[1],
+    };
+}
+
+pub fn visibleInCamera(self: Camera, x_in: f32, y_in: f32) bool {
+    if (std.math.isNan(x_in) or
+        std.math.isNan(y_in) or
+        x_in < 0 or
+        y_in < 0 or
+        x_in > std.math.maxInt(u32) or
+        y_in > std.math.maxInt(u32))
+        return false;
+
+    const floor_x = u32f(x_in);
+    const floor_y = u32f(y_in);
+    return !(floor_x < self.min_x or floor_x > self.max_x or floor_y < self.min_y or floor_y > self.max_y);
+}
+
 pub fn resetToDefaults(self: *Camera) void {
-    self.lock.lock();
-    defer self.lock.unlock();
     inline for (@typeInfo(Camera).@"struct".fields) |field| {
         if (!std.mem.eql(u8, field.name, "lock"))
             @field(self, field.name) = @as(*const field.type, @ptrCast(@alignCast(field.default_value_ptr orelse

@@ -817,8 +817,6 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
 pub fn update(self: *GameScreen, time: i64, _: f32) !void {
     self.fps_text.base.visible = main.settings.stats_enabled;
 
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     if (map.localPlayer(.con)) |local_player| {
         if (!self.abilities_inited) {
             for (0..4) |i| try addAbility(self, local_player.data.abilities[i], i);
@@ -1023,7 +1021,6 @@ fn updateStat(text_data: *element.TextData, base_val: i32, bonus_val: i32) void 
 }
 
 pub fn updateStats(self: *GameScreen) void {
-    std.debug.assert(!map.object_lock.tryLock());
     if (map.localPlayer(.con)) |player| {
         updateStat(&self.strength_stat_text.text_data, player.strength, player.strength_bonus);
         updateStat(&self.wit_stat_text.text_data, player.wit, player.wit_bonus);
@@ -1078,8 +1075,6 @@ fn swapError(self: *GameScreen, start_slot: Slot, start_item: u16, start_item_da
 }
 
 pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
-    std.debug.assert(!map.object_lock.tryLock());
-
     const int_id = map.interactive.map_id.load(.acquire);
 
     const start_item = if (start_slot.is_container)
@@ -1174,8 +1169,6 @@ fn itemDoubleClickCallback(item: *Item) void {
 
     const start_slot = Slot.findSlotId(systems.screen.game.*, item.base.x + 4, item.base.y + 4);
     const data = game_data.item.from_id.get(item.data_id) orelse return;
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     const local_player = map.localPlayer(.con) orelse return;
 
     if (data.item_type == .consumable and !start_slot.is_container) {
@@ -1220,11 +1213,7 @@ fn statsCallback(ud: ?*anyopaque) void {
     screen.cards_container.base.visible = false;
     screen.talent_view.setVisible(false);
     screen.resource_view.setVisible(false);
-    if (screen.stats_container.base.visible) {
-        map.object_lock.lock();
-        defer map.object_lock.unlock();
-        screen.updateStats();
-    }
+    if (screen.stats_container.base.visible) screen.updateStats();
 }
 
 fn cardsCallback(ud: ?*anyopaque) void {
@@ -1295,8 +1284,6 @@ fn itemDragEndCallback(item: *Item) void {
         return;
     }
 
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     current_screen.swapSlots(start_slot, end_slot);
 }
 
@@ -1308,8 +1295,6 @@ fn itemShiftClickCallback(item: *Item) void {
     const data = game_data.item.from_id.get(@intCast(item.data_id)) orelse return;
     if (data.item_type != .consumable) return;
 
-    map.object_lock.lock();
-    defer map.object_lock.unlock();
     const local_player = map.localPlayer(.con) orelse return;
 
     main.game_server.sendPacket(.{ .use_item = .{

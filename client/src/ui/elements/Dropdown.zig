@@ -7,7 +7,7 @@ const f32i = utils.f32i;
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
-const CameraData = @import("../../render/CameraData.zig");
+const Renderer = @import("../../render/Renderer.zig");
 const systems = @import("../systems.zig");
 const DropdownContainer = @import("DropdownContainer.zig");
 const element = @import("element.zig");
@@ -42,7 +42,6 @@ auto_close: bool = true,
 toggled: bool = false,
 next_index: u32 = 0,
 selected_index: u32 = std.math.maxInt(u32),
-lock: std.Thread.Mutex = .{},
 children: std.ArrayListUnmanaged(*DropdownContainer) = .empty,
 
 pub fn mousePress(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
@@ -83,8 +82,6 @@ pub fn mouseMove(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32) 
     const current_button = button_data.current(self.button_state);
     const in_bounds = utils.isInBounds(x, y, self.base.x + self.title_data.width(), self.base.y, current_button.width(), current_button.height());
     if (in_bounds) {
-        systems.hover_lock.lock();
-        defer systems.hover_lock.unlock();
         systems.hover_target = element.UiElement{ .dropdown = self }; // TODO: re-add RLS when fixed
         self.button_state = .hovered;
     } else self.button_state = .none;
@@ -120,11 +117,7 @@ pub fn init(self: *Dropdown) void {
     self.title_text.max_height = self.title_data.height();
     self.title_text.vert_align = .middle;
     self.title_text.hori_align = .middle;
-    {
-        self.title_text.lock.lock();
-        defer self.title_text.lock.unlock();
-        self.title_text.recalculateAttributes();
-    }
+    self.title_text.recalculateAttributes();
 
     const w_base = self.w - self.container_inlay_x * 2;
     const scroll_max_w = @max(self.scroll_w, self.scroll_knob_image_data.width(.none));
@@ -165,7 +158,14 @@ pub fn deinit(self: *Dropdown) void {
     main.allocator.destroy(self.container);
 }
 
-pub fn draw(self: *Dropdown, cam_data: CameraData, x_offset: f32, y_offset: f32, time: i64) void {
+pub fn draw(
+    self: *Dropdown,
+    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
+    sort_extras: *std.ArrayListUnmanaged(f32),
+    x_offset: f32,
+    y_offset: f32,
+    time: i64,
+) void {
     if (!self.base.visible) return;
 
     const base_x = self.base.x + x_offset;
@@ -174,20 +174,17 @@ pub fn draw(self: *Dropdown, cam_data: CameraData, x_offset: f32, y_offset: f32,
         .nine_slice => |nine_slice| .{ nine_slice.w, nine_slice.h },
         .normal => |normal| .{ normal.texWRaw(), normal.texHRaw() },
     };
-    self.title_data.draw(base_x, base_y, self.base.scissor);
+    self.title_data.draw(generics, sort_extras, base_x, base_y, self.base.scissor);
 
-    main.renderer.drawText(base_x, base_y, 1.0, &self.title_text, self.base.scissor);
+    Renderer.drawText(generics, sort_extras, base_x, base_y, 1.0, &self.title_text, self.base.scissor);
 
     const toggled = self.toggled;
     const button_image_data = (if (toggled) self.button_data_extended else self.button_data_collapsed).current(self.button_state);
-    button_image_data.draw(base_x + title_w, base_y, self.base.scissor);
+    button_image_data.draw(generics, sort_extras, base_x + title_w, base_y, self.base.scissor);
 
     if (self.toggled and self.container.base.visible) {
-        self.background_data.draw(base_x, base_y + title_h, self.base.scissor);
-
-        self.lock.lock();
-        defer self.lock.unlock();
-        self.container.draw(cam_data, x_offset, y_offset, time);
+        self.background_data.draw(generics, sort_extras, base_x, base_y + title_h, self.base.scissor);
+        self.container.draw(generics, sort_extras, x_offset, y_offset, time);
     }
 }
 
@@ -209,9 +206,6 @@ pub fn texHRaw(self: Dropdown) f32 {
 
 // the container field's x/y are relative to parents
 pub fn createChild(self: *Dropdown, pressCallback: *const fn (*DropdownContainer) void) !*DropdownContainer {
-    self.lock.lock();
-    defer self.lock.unlock();
-
     const scroll_vis_pre = self.container.scroll_bar.base.visible;
 
     const next_idx = f32i(self.next_index);
