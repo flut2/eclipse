@@ -215,11 +215,7 @@ fn renderTick(renderer: *Renderer) !void {
         if (try renderer.draw()) frames += 1;
 
         if (current_time - fps_time_start > 1 * std.time.us_per_s) {
-            if (settings.stats_enabled) switch (ui_systems.screen) {
-                .game => |screen| screen.updateFpsText(frames, try utils.currentMemoryUse(current_time)),
-                .editor => |screen| screen.updateFps(frames, try utils.currentMemoryUse(current_time)),
-                else => {},
-            };
+            map.frames.store(frames, .release);
             frames = 0;
             fps_time_start = current_time;
         }

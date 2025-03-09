@@ -1379,7 +1379,7 @@ pub fn drawText(
 ) void {
     if (scale <= 0.3) return;
 
-    if (text_data.line_widths == null or text_data.break_indices == null or text_data.line_widths.?.items.len == 0) return;
+    if (text_data.line_widths == null or text_data.break_indices == null) return;
 
     var current_type = text_data.text_type;
     var current_font_data = switch (current_type) {

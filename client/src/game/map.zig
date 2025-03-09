@@ -84,6 +84,8 @@ pub var info: network_data.MapInfo = .{};
 pub var last_records_clear_time: i64 = 0;
 pub var minimap: zstbi.Image = undefined;
 pub var minimap_copy: []u8 = undefined;
+pub var frames: std.atomic.Value(u32) = .init(0);
+pub var fps_time_start: i64 = 0;
 
 var last_tile_update: i64 = 0;
 
@@ -515,6 +517,15 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
             .ui_generics = cur_draw_data.ui_generics.items,
             .camera = main.camera, // to copy and save
         });
+
+    if (main.settings.stats_enabled and time - fps_time_start >= 1 * std.time.us_per_s) {
+        switch (ui_systems.screen) {
+            .game => |screen| screen.updateFpsText(frames.load(.acquire), utils.currentMemoryUse(time) catch -1.0),
+            .editor => |screen| screen.updateFps(frames.load(.acquire), utils.currentMemoryUse(time) catch -1.0),
+            else => {},
+        }
+        fps_time_start = time;
+    }
 }
 
 fn sortGenerics(generics: []Renderer.GenericData, sort_extras: []f32) void {
