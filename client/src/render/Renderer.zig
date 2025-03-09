@@ -11,6 +11,7 @@ const zstbi = @import("zstbi");
 
 const assets = @import("../assets.zig");
 const px_per_tile = @import("../Camera.zig").px_per_tile;
+const Camera = @import("../Camera.zig");
 const Ally = @import("../game/Ally.zig");
 const Container = @import("../game/Container.zig");
 const Enemy = @import("../game/Enemy.zig");
@@ -27,7 +28,6 @@ const ui_systems = @import("../ui/systems.zig");
 const Context = @import("Context.zig");
 const Swapchain = @import("Swapchain.zig");
 const vma = @import("vma.zig");
-const Camera = @import("../Camera.zig");
 
 const Renderer = @This();
 
@@ -1379,7 +1379,7 @@ pub fn drawText(
 ) void {
     if (scale <= 0.3) return;
 
-    if (text_data.line_widths == null or text_data.break_indices == null) return;
+    if (text_data.line_widths == null or text_data.break_indices == null or text_data.line_widths.?.items.len == 0) return;
 
     var current_type = text_data.text_type;
     var current_font_data = switch (current_type) {
