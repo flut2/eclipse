@@ -64,7 +64,7 @@ pub const DwarvenCoil = struct {
     range: f32 = 3.0,
     last_attack: i64 = -1,
 
-    pub fn entry(self: *DwarvenCoil, host: *Ally) !void {
+    pub fn spawn(self: *DwarvenCoil, host: *Ally) !void {
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const owner = world.find(Player, host.owner_map_id, .con) orelse return;
         const fint = f32i(owner.stats[Player.intelligence_stat] + owner.stat_boosts[Player.intelligence_stat]);

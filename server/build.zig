@@ -30,14 +30,16 @@ pub fn buildWithoutDupes(
         if (!check and skip_non_check) continue;
         const exe = b.addExecutable(.{
             .name = "Eclipse",
-            .root_source_file = b.path(root_add ++ "src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
             .use_lld = !check,
             .use_llvm = !check,
             // .use_lld = !check and optimize != .Debug or target.result.os.tag == .windows,
             // .use_llvm = !check and optimize != .Debug or target.result.os.tag == .windows,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path(root_add ++ "src/main.zig"),
+                .target = target,
+                .optimize = optimize,
+                .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
+            }),
         });
 
         if (check) check_step.dependOn(&exe.step);

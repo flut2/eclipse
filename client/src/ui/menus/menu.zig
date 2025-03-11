@@ -78,7 +78,6 @@ pub fn deinit() void {
 }
 
 fn fieldName(comptime T: type) []const u8 {
-    if (!@inComptime()) @compileError("This function is comptime only");
     var field_name: []const u8 = "";
     for (@typeInfo(Menu).@"union".fields) |field| {
         if (field.type == T) field_name = field.name;

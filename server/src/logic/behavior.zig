@@ -16,8 +16,6 @@ pub const BehaviorMetadata = struct {
 };
 
 fn getMetadata(comptime T: type) BehaviorMetadata {
-    if (!@inComptime()) @compileError("This function is comptime-only");
-
     var ret: ?BehaviorMetadata = null;
     for (@typeInfo(T).@"struct".decls) |decl| @"continue": {
         if (!std.mem.eql(u8, decl.name, "data")) break :@"continue";
@@ -32,8 +30,6 @@ fn getMetadata(comptime T: type) BehaviorMetadata {
 }
 
 fn Behavior(comptime behav_type: BehaviorType) type {
-    if (!@inComptime()) @compileError("This function is comptime-only");
-
     const EnumField = std.builtin.Type.EnumField;
     const UnionField = std.builtin.Type.UnionField;
 
