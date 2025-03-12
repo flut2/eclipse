@@ -8,6 +8,7 @@ const f32i = utils.f32i;
 const i64f = utils.i64f;
 
 const assets = @import("../assets.zig");
+const px_per_tile = @import("../Camera.zig").px_per_tile;
 const main = @import("../main.zig");
 const Renderer = @import("../render/Renderer.zig");
 const ui_systems = @import("../ui/systems.zig");
@@ -154,7 +155,8 @@ pub fn draw(
 
     const screen_pos = main.camera.worldToScreen(self.x, self.y);
 
-    if (main.settings.enable_lights) Renderer.drawLight(lights, data.light, screen_pos.x, screen_pos.y, main.camera.scale, float_time_ms);
+    if (main.settings.enable_lights)
+        Renderer.drawLight(lights, data.light, screen_pos.x, screen_pos.y, px_per_tile, px_per_tile, main.camera.scale, float_time_ms);
 
     grounds.append(main.allocator, .{
         .pos = .{ screen_pos.x, screen_pos.y },

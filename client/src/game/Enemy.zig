@@ -142,10 +142,17 @@ pub fn draw(
     }
     // flash
 
-    if (main.settings.enable_lights) {
-        const tile_pos = main.camera.worldToScreen(self.x, self.y);
-        Renderer.drawLight(lights, self.data.light, tile_pos.x, tile_pos.y, main.camera.scale, float_time_ms);
-    }
+    if (main.settings.enable_lights)
+        Renderer.drawLight(
+            lights,
+            self.data.light,
+            screen_pos.x - w / 2.0,
+            screen_pos.y,
+            w,
+            h,
+            main.camera.scale,
+            float_time_ms,
+        );
 
     if (self.data.show_name) if (self.name_text_data) |*data| {
         const name_h = (data.height + 5) * main.camera.scale;

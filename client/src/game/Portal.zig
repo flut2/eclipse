@@ -54,11 +54,6 @@ pub fn draw(
     var screen_pos = main.camera.worldToScreen(self.x, self.y);
     const size = Camera.size_mult * main.camera.scale * self.size_mult;
 
-    if (main.settings.enable_lights) {
-        const tile_pos = main.camera.worldToScreen(self.x, self.y);
-        Renderer.drawLight(lights, self.data.light, tile_pos.x, tile_pos.y, main.camera.scale, float_time_ms);
-    }
-
     if (self.data.draw_on_ground) {
         const tile_size = @as(f32, px_per_tile) * main.camera.scale;
         const h_half = tile_size / 2.0;
@@ -68,8 +63,8 @@ pub fn draw(
             sort_extras,
             screen_pos.x - tile_size / 2.0,
             screen_pos.y - h_half,
-            tile_size * main.camera.scale,
-            tile_size * main.camera.scale,
+            tile_size,
+            tile_size,
             self.atlas_data,
             .{ .alpha_mult = self.alpha, .sort_extra = -4096 },
         );
@@ -88,6 +83,18 @@ pub fn draw(
                 .{},
             );
         }
+
+        if (main.settings.enable_lights)
+            Renderer.drawLight(
+                lights,
+                self.data.light,
+                screen_pos.x - tile_size / 2.0,
+                screen_pos.y - h_half,
+                tile_size,
+                tile_size,
+                main.camera.scale,
+                float_time_ms,
+            );
 
         if (int_id == self.map_id) {
             const button_w = 100.0 / 5.0 * main.camera.scale;
@@ -200,6 +207,9 @@ pub fn draw(
             .color_intensity = color_intensity,
         },
     );
+
+    if (main.settings.enable_lights)
+        Renderer.drawLight(lights, self.data.light, screen_pos.x - w / 2.0, screen_pos.y, w, h, main.camera.scale, float_time_ms);
 }
 
 pub fn update(self: *Portal, time: i64) void {

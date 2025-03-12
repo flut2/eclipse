@@ -1595,17 +1595,19 @@ pub fn drawText(
 pub fn drawLight(
     lights: *std.ArrayListUnmanaged(LightData),
     data: game_data.LightData,
-    tile_cx: f32,
-    tile_cy: f32,
+    owner_x: f32,
+    owner_y: f32,
+    owner_w: f32,
+    owner_h: f32,
     scale: f32,
     float_time_ms: f32,
 ) void {
     if (data.color == std.math.maxInt(u32)) return;
 
-    const size = px_per_tile * (data.radius + data.pulse * @sin(float_time_ms / 1000.0 * data.pulse_speed)) * scale * 4;
+    const size = 64.0 * (data.radius + data.pulse * @sin(float_time_ms / 1000.0 * data.pulse_speed)) * scale * 4;
     lights.append(main.allocator, .{
-        .x = tile_cx - size / 2.0,
-        .y = tile_cy - size / 2.0,
+        .x = owner_x - (size - owner_w) / 2.0,
+        .y = owner_y - (size - owner_h) / 2.0,
         .w = size,
         .h = size,
         .color = data.color,

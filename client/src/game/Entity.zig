@@ -194,6 +194,18 @@ pub fn draw(
             .{ .sort_extra = (screen_pos.y - base_y) + (h - base_h) },
         );
 
+        if (main.settings.enable_lights)
+            Renderer.drawLight(
+                lights,
+                self.data.light,
+                base_x,
+                base_y,
+                base_w,
+                base_h,
+                main.camera.scale,
+                float_time_ms,
+            );
+
         if (!self.wall_outline_cull.left) {
             const left_w = self.wall_data.left_outline.texWRaw() * wall_size_mult;
             const left_h = self.wall_data.left_outline.texHRaw() * wall_size_mult;
@@ -286,6 +298,18 @@ pub fn draw(
             );
         }
 
+        if (main.settings.enable_lights)
+            Renderer.drawLight(
+                lights,
+                self.data.light,
+                screen_pos.x - tile_size / 2.0,
+                screen_pos.y - h_half,
+                tile_size,
+                tile_size,
+                main.camera.scale,
+                float_time_ms,
+            );
+
         return;
     }
 
@@ -301,10 +325,17 @@ pub fn draw(
     _ = &color_intensity;
     // flash
 
-    if (main.settings.enable_lights) {
-        const tile_pos = main.camera.worldToScreen(@floor(self.x), @floor(self.y));
-        Renderer.drawLight(lights, self.data.light, tile_pos.x, tile_pos.y, main.camera.scale, float_time_ms);
-    }
+    if (main.settings.enable_lights)
+        Renderer.drawLight(
+            lights,
+            self.data.light,
+            screen_pos.x - w / 2.0,
+            screen_pos.y,
+            w,
+            h,
+            main.camera.scale,
+            float_time_ms,
+        );
 
     if (self.data.show_name) if (self.name_text_data) |*data| {
         const name_h = (data.height + 5) * main.camera.scale;

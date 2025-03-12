@@ -4,8 +4,7 @@
     .name = "The Retrieve",
     .file = "retrieve.map",
     .light = {
-        .day_intensity = 0.05,
-        .night_intensity = 0.2,
+        .intensity = 0.8,
         .color = "0x000000",
     },
 },
@@ -15,8 +14,8 @@
     .portal_name = "Luntaer",
     .map_type = @MapType("realm"),
     .light = {
-        .day_intensity = 0.05,
-        .night_intensity = 0.2,
+        .day_intensity = 0.2,
+        .night_intensity = 0.65,
         .color = "0x000000",
     },
     .biome_1_mobs = [
@@ -62,8 +61,7 @@
     .portal_name = "Crown Cove",
     .map_type = @MapType("dungeon"),
     .light = {
-        .day_intensity = 0.03,
-        .night_intensity = 0.1,
+        .intensity = 0.2,
         .color = "0x000000",
     },
     .normal_mobs = [

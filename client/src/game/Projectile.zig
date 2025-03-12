@@ -217,10 +217,17 @@ pub fn draw(
     const angle = -(self.visual_angle + angle_correction +
         (if (rotation == 0.0) 0.0 else std.math.degreesToRadians(float_time_ms / (1 / rotation))));
 
-    if (main.settings.enable_lights) {
-        const tile_pos = main.camera.worldToScreen(self.x, self.y);
-        Renderer.drawLight(lights, self.data.light, tile_pos.x, tile_pos.y, main.camera.scale, float_time_ms);
-    }
+    if (main.settings.enable_lights)
+        Renderer.drawLight(
+            lights,
+            self.data.light,
+            screen_pos.x - w / 2.0,
+            screen_pos.y + z_offset,
+            w,
+            h,
+            main.camera.scale,
+            float_time_ms,
+        );
 
     const color: u32 = if (self.time_dilation_active) 0x0000FF else 0x000000;
     const color_intensity: f32 = if (self.time_dilation_active) 0.33 else 0.0;
