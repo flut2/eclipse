@@ -1,4 +1,5 @@
 .{
+    .fingerprint = 0xbc82bf36214b36ea,
     .name = .eclipse_shared,
     .version = "1.0.0",
     .dependencies = .{

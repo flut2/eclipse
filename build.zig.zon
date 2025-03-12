@@ -1,4 +1,5 @@
 .{
+    .fingerprint = 0xbd5534bf7da310cf,
     .name = .eclipse,
     .version = "1.0.0",
     .dependencies = .{
@@ -10,11 +11,11 @@
         .zglfw = .{ .path = "client/libs/zglfw" },
         .hiredis = .{
             .url = "git+https://github.com/redis/hiredis.git#77bcc73ebbc562d8e8173832b710bfbfa4327b13",
-            .hash = "1220bb7f7de97ee93c3a5183e2aa862363b019e3fef4a6a6c8171bd5a464a4f0301b",
+            .hash = "N-V-__8AAMeyCAC7f33pfuk8OlGD4qqGI2OwGeP-9KamyBcb",
         },
         .rpmalloc = .{
-            .url = "git+https://github.com/flut2/rpmalloc-zig.git#f440339324dac35ea262abdce8a47b36c3a7a612",
-            .hash = "12203f2b4ced453e6117490ba108a0b7cac6d5b3ec972a26093e4725f1b395bff3b2",
+            .url = "git+https://github.com/flut2/rpmalloc-zig.git#8cf613e29251ac9070cb10dd31dff2411cd96531",
+            .hash = "rpmalloc_zig-1.0.0-AAAAAGdGAAA8rbHQViIKm-CbxG3e1l4cBTJgRnqnDvXe",
         },
         .turbopack = .{
             .url = "git+https://github.com/flut2/turbopack.git#10fc67d55533e2d495f302755f1ec4e7a4d90317",
