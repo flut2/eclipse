@@ -144,7 +144,7 @@ pub fn handleTimeDilation(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
     const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const duration = i64f((10.0 + fint * 0.12) * std.time.us_per_s);
+    const duration = i64f((5.0 + fint * 0.05) * std.time.us_per_s);
 
     player.ability_state.time_dilation = true;
 
@@ -203,9 +203,9 @@ pub fn handleNullPulse(player: *Player) !void {
 
     const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
     const fwit = f32i(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
-    const radius = 3.0 + fint * 0.12;
+    const radius = 5.0 + fint * 0.12;
     const radius_sqr = radius * radius;
-    const damage_mult = 5.0 + fwit * 0.06;
+    const damage_mult = 0.25 + fwit * 0.01 * player.damage_multiplier;
 
     var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
     for (world.listForType(Projectile).items, 0..) |*p, i| {
@@ -229,13 +229,14 @@ fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     defer main.allocator.destroy(player_map_id);
     if (world.find(Player, player_map_id.*, .ref)) |player| {
         const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-        const radius = 9.0 + fint * 0.06;
+        const radius = 12.0 + fint * 0.06;
         world.aoe(Enemy, player.x, player.x, .player, player.map_id, radius, .{
-            .magic_dmg = @intCast(@min(u32f(30000.0 + fint * 100.0), player.stored_damage)),
+            .magic_dmg = @intCast(@min(u32f(30000.0 + fint * 100.0 * player.damage_multiplier), player.stored_damage)),
             .aoe_color = 0x0FE9EB,
         });
         player.ability_state.time_lock = false;
         player.hit_multiplier = 1.0;
+        player.damage_multiplier = 1.0;
         player.stored_damage = 0;
     }
 }
@@ -244,10 +245,11 @@ pub fn handleTimeLock(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
     const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const duration = i64f((15.0 + fint * 0.12) * std.time.us_per_s);
+    const duration = i64f((10.0 + fint * 0.12) * std.time.us_per_s);
 
     player.ability_state.time_lock = true;
     player.hit_multiplier = 0.5;
+    player.damage_multiplier = 0.75;
     player.applyCondition(.slowed, duration);
 
     const map_id_copy = try main.allocator.create(u32);

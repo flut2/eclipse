@@ -386,7 +386,10 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
                         main.camera.update(obj.x, obj.y, dt);
                         addMoveRecord(time, obj.x, obj.y);
                         if (input.attacking) {
-                            const shoot_angle = std.math.atan2(input.mouse_y - main.camera.height / 2.0, input.mouse_x - main.camera.width / 2.0);
+                            const shoot_angle = std.math.atan2(
+                                input.mouse_y - main.camera.height / 2.0,
+                                input.mouse_x - main.camera.width / 2.0,
+                            );
                             obj.weaponShoot(shoot_angle, time);
                         }
                     }

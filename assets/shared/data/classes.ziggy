@@ -815,9 +815,9 @@
         {
             .name = "Time Dilation",
             .description = 
-            \\All enemy projectiles within $wittxt3 (+6%$witicon)&reset tiles of you move 30% slower for $inttxt10 (+12%$inticon)&reset seconds.
+            \\All enemy projectiles within $wittxt3 (+6%$witicon)&reset tiles of you move 30% slower for $inttxt5 (+5%$inticon)&reset seconds.
             ,
-            .mana_cost = 72,
+            .mana_cost = 90,
             .cooldown = 24.0,
             .icon = {"ability_icons": 0},
         },
@@ -826,14 +826,14 @@
             .description = 
             \\Rewind time by $multitxt3 ($inttxt+1%$inticon$multitxt, $mptxt+0.6%$mpicon$multitxt, $wittxt+1%$witicon$multitxt)&reset seconds, causing you to return to your old position and Health. (if higher than current)
             ,
-            .mana_cost = 54,
+            .mana_cost = 72,
             .cooldown = 9.0,
             .icon = {"ability_icons": 1},
         },
         {
             .name = "Null Pulse",
             .description = 
-            \\Destroy all enemy projectiles within $inttxt3 (+12%$inticon)&reset tiles, causing the enemies that created them to take $wittxt5 (+6%$witicon)&reset times the damage.
+            \\Destroy all enemy projectiles within $inttxt5 (+12%$inticon)&reset tiles, causing the enemies that created them to take $wittxt25% (+1%$witicon)&reset damage.
             ,
             .mana_cost = 150,
             .cooldown = 30.0,
@@ -842,8 +842,8 @@
         {
             .name = "Time Lock",
             .description = 
-            \\Receive halved damage and become slowed for $inttxt15 (+12%$inticon)&reset seconds, storing all damage taken 5 times over. 
-            \\Return double the damage stored as a Magic Damage blast within $inttxt9 (+6%$inticon)&reset tiles after this effect ends.
+            \\Receive 50% damage, deal 75% damage and become slowed for $inttxt10 (+12%$inticon)&reset seconds, storing 500% of all damage received.
+            \\Return the damage stored as a Magic Damage blast within $inttxt12 (+6%$inticon)&reset tiles after this effect ends.
             \\$footnotetxtDamage is capped at $wittxt30000 (+10000%$witicon)&reset.
             ,
             .mana_cost = 210,
