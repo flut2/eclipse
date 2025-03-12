@@ -1827,7 +1827,10 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
                 if (map.findObject(Container, map_tile.entity, .con)) |c| c.data_id else std.math.maxInt(u16),
         },
         .fill => fill(self, ux, uy, false),
-        .wand => fill(self, ux, uy, true),
+        .wand => {
+            self.clearSelection();
+            fill(self, ux, uy, true);
+        },
         .unselect => self.clearSelection(),
         .none => {},
     }
