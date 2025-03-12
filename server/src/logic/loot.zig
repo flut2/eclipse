@@ -198,7 +198,7 @@ pub fn dropCards(host: anytype, comptime loots: []const CardLoot) void {
 
         if (card_idx == 3) {
             player.selecting_cards = cards;
-            player.client.queuePacket(.{ .card_options = .{ .cards = cards } });
+            player.client.sendPacket(.{ .card_options = .{ .cards = cards } });
         }
     }
 }
@@ -251,7 +251,7 @@ pub fn dropResources(host: anytype, comptime loots: []const ResourceLoot) void {
                     }) catch main.oomPanic();
                 }
 
-                player.client.queuePacket(.{ .text = .{
+                player.client.sendPacket(.{ .text = .{
                     .name = "Server",
                     .obj_type = .entity,
                     .map_id = std.math.maxInt(u32),
@@ -298,7 +298,7 @@ pub fn dropCurrency(host: anytype, comptime loots: []const CurrencyLoot) void {
                     .gems => player.gems += amount,
                     .gold => player.gold += amount,
                 }
-                player.client.queuePacket(.{ .text = .{
+                player.client.sendPacket(.{ .text = .{
                     .name = "Server",
                     .obj_type = .entity,
                     .map_id = std.math.maxInt(u32),

@@ -243,6 +243,13 @@ pub const ObjectData = struct {
     data_id: u16,
     map_id: u32,
     stats: []const u8,
+
+    pub fn byteSize(self: ObjectData) usize {
+        return @sizeOf(@TypeOf(self.data_id)) + 
+            @sizeOf(@TypeOf(self.map_id)) + 
+            @sizeOf(u16) + // array len
+            @sizeOf(@typeInfo(@TypeOf(self.stats)).pointer.child) * self.stats.len;
+    }
 };
 
 pub const MapInfo = struct {

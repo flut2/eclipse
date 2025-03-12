@@ -2,11 +2,11 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const build_options = @import("options");
+const rpmalloc = @import("rpmalloc");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const uv = shared.uv;
-const rpmalloc = @import("rpmalloc");
 
 const db = @import("db.zig");
 const GameClient = @import("GameClient.zig");
@@ -98,6 +98,9 @@ fn listenToServer(comptime acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.C)
     const accept_socket_status = uv.uv_tcp_init(uv.uv_default_loop(), server_handle);
     if (accept_socket_status != 0) std.debug.panic("Setting up accept socket failed: {s}", .{uv.uv_strerror(accept_socket_status)});
 
+    const disable_nagle_status = uv.uv_tcp_nodelay(server_handle, 1);
+    if (disable_nagle_status != 0) std.debug.panic("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
+
     const addr = std.net.Address.parseIp4("0.0.0.0", port) catch @panic("Parsing 0.0.0.0 failed");
     const socket_bind_status = uv.uv_tcp_bind(server_handle, @ptrCast(&addr.in.sa), 0);
     if (socket_bind_status != 0) std.debug.panic("Setting up socket bind failed: {s}", .{uv.uv_strerror(socket_bind_status)});
@@ -133,6 +136,13 @@ fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
         return;
     }
 
+    const disable_nagle_status = uv.uv_tcp_nodelay(@ptrCast(socket), 1);
+    if (disable_nagle_status != 0) {
+        std.debug.panic("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
+        uv.uv_close(@ptrCast(socket), onSocketClose);
+        return;
+    }
+
     const accept_status = uv.uv_accept(server, @ptrCast(socket));
     if (accept_status != 0) {
         std.log.err("Failed to accept game socket: {s}", .{uv.uv_strerror(accept_status)});
@@ -142,12 +152,12 @@ fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
 
     const cli = game_client_pool.create() catch oomPanic();
     socket.*.data = cli;
-    cli.* = .{ .arena = .init(allocator), .socket = socket };
+    cli.* = .{ .read_arena = .init(allocator), .socket = socket };
 
     const read_init_status = uv.uv_read_start(@ptrCast(socket), GameClient.allocBuffer, GameClient.readCallback);
     if (read_init_status != 0) {
         std.log.err("Failed to initialize reading on game socket: {s}", .{uv.uv_strerror(read_init_status)});
-        cli.sameThreadShutdown();
+        cli.shutdown();
         return;
     }
 }
@@ -175,12 +185,12 @@ fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
 
     const cli = login_client_pool.create() catch oomPanic();
     socket.*.data = cli;
-    cli.* = .{ .arena = .init(allocator), .socket = socket };
+    cli.* = .{ .read_arena = .init(allocator), .socket = socket };
 
     const read_init_status = uv.uv_read_start(@ptrCast(socket), LoginClient.allocBuffer, LoginClient.readCallback);
     if (read_init_status != 0) {
         std.log.err("Failed to initialize reading on login socket: {s}", .{uv.uv_strerror(read_init_status)});
-        cli.sameThreadShutdown();
+        cli.shutdown();
         return;
     }
 }

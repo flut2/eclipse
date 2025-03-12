@@ -146,7 +146,7 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
 pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const server: *Server = @ptrCast(@alignCast(socket.data));
-    defer _ = server.read_arena.reset(.{ .retain_with_limit = 1024 });
+    defer _ = server.read_arena.reset(.{ .retain_with_limit = std.math.maxInt(u16) });
     const allocator = server.read_arena.allocator();
 
     if (bytes_read > 0) {
@@ -304,6 +304,10 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
         return error.NoSocket;
     }
 
+    const disable_nagle_status = uv.uv_tcp_nodelay(@ptrCast(self.socket), 1);
+    if (disable_nagle_status != 0)
+        std.log.err("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
+
     var connect_data = try main.allocator.create(uv.uv_connect_t);
     connect_data.data = self;
     const conn_status = uv.uv_tcp_connect(@ptrCast(connect_data), @ptrCast(self.socket), @ptrCast(&addr.in.sa), connectCallback);
@@ -452,26 +456,32 @@ fn handleMapInfo(_: *Server, data: PacketData(.map_info)) void {
 
 fn handleDroppedPlayers(_: *Server, data: PacketData(.dropped_players)) void {
     droppedObject(Player, data.map_ids);
+    if (logRead(.tick)) std.log.debug("Recv - DroppedPlayers: {}", .{data});
 }
 
 fn handleDroppedEnemies(_: *Server, data: PacketData(.dropped_enemies)) void {
     droppedObject(Enemy, data.map_ids);
+    if (logRead(.tick)) std.log.debug("Recv - DroppedEnemies: {}", .{data});
 }
 
 fn handleDroppedEntities(_: *Server, data: PacketData(.dropped_entities)) void {
     droppedObject(Entity, data.map_ids);
+    if (logRead(.tick)) std.log.debug("Recv - DroppedEntities: {}", .{data});
 }
 
 fn handleDroppedPortals(_: *Server, data: PacketData(.dropped_portals)) void {
     droppedObject(Portal, data.map_ids);
+    if (logRead(.tick)) std.log.debug("Recv - DroppedPortals: {}", .{data});
 }
 
 fn handleDroppedContainers(_: *Server, data: PacketData(.dropped_containers)) void {
     droppedObject(Container, data.map_ids);
+    if (logRead(.tick)) std.log.debug("Recv - DroppedContainers: {}", .{data});
 }
 
 fn handleDroppedAllies(_: *Server, data: PacketData(.dropped_allies)) void {
     droppedObject(Ally, data.map_ids);
+    if (logRead(.tick)) std.log.debug("Recv - DroppedAllies: {}", .{data});
 }
 
 fn handleNotification(_: *Server, data: PacketData(.notification)) void {
@@ -604,10 +614,13 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
             else => std.log.err("Unsupported object type for Text: {}", .{data.obj_type}),
         }
     }
+
+    if (logRead(.non_tick)) std.log.debug("Recv - Text: {}", .{data});
 }
 
 fn handleCardOptions(_: *Server, data: PacketData(.card_options)) void {
     if (ui_systems.screen == .game) ui_systems.screen.game.card_selection.updateSelectables(data.cards);
+    if (logRead(.non_tick)) std.log.debug("Recv - CardOptions: {}", .{data});
 }
 
 fn handleTalentUpgradeResponse(_: *Server, _: PacketData(.talent_upgrade_response)) void {}
@@ -647,30 +660,38 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     });
 
     main.need_minimap_update = data.tiles.len > 0;
+
+    if (logRead(.tick)) std.log.debug("Recv - NewTick: {}", .{data});
 }
 
 fn handleNewPlayers(_: *Server, data: PacketData(.new_players)) void {
     newObject(Player, data.list);
+    if (logRead(.tick)) std.log.debug("Recv - NewPlayers: {}", .{data});
 }
 
 fn handleNewEntities(_: *Server, data: PacketData(.new_entities)) void {
     newObject(Entity, data.list);
+    if (logRead(.tick)) std.log.debug("Recv - NewEntities: {}", .{data});
 }
 
 fn handleNewEnemies(_: *Server, data: PacketData(.new_enemies)) void {
     newObject(Enemy, data.list);
+    if (logRead(.tick)) std.log.debug("Recv - NewEnemies: {}", .{data});
 }
 
 fn handleNewPortals(_: *Server, data: PacketData(.new_portals)) void {
     newObject(Portal, data.list);
+    if (logRead(.tick)) std.log.debug("Recv - NewPortals: {}", .{data});
 }
 
 fn handleNewContainers(_: *Server, data: PacketData(.new_containers)) void {
     newObject(Container, data.list);
+    if (logRead(.tick)) std.log.debug("Recv - NewContainers: {}", .{data});
 }
 
 fn handleNewAllies(_: *Server, data: PacketData(.new_allies)) void {
     newObject(Ally, data.list);
+    if (logRead(.tick)) std.log.debug("Recv - NewAllies: {}", .{data});
 }
 
 fn droppedObject(comptime T: type, list: []const u32) void {

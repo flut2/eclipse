@@ -18,7 +18,7 @@ const WriteRequest = extern struct {
 };
 
 socket: *uv.uv_tcp_t = undefined,
-arena: std.heap.ArenaAllocator = undefined,
+read_arena: std.heap.ArenaAllocator = undefined,
 needs_shutdown: bool = false,
 
 fn PacketData(comptime tag: @typeInfo(network_data.C2SPacketLogin).@"union".tag_type.?) type {
@@ -34,13 +34,9 @@ fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacketLogin).@"union".tag_t
     };
 }
 
-pub fn allocBuffer(socket: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
-    const client: *Client = @ptrCast(@alignCast(socket.*.data));
+pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
     buf.* = .{
-        .base = @ptrCast(client.arena.allocator().alloc(u8, suggested_size) catch {
-            client.sameThreadShutdown(); // no failure, if we can't alloc it wouldn't go through anyway
-            return;
-        }),
+        .base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic()),
         .len = @intCast(suggested_size),
     };
 }
@@ -48,7 +44,7 @@ pub fn allocBuffer(socket: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]u
 fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.C) void {
     const client: *Client = @ptrCast(@alignCast(socket.*.data));
     main.socket_pool.destroy(client.socket);
-    client.arena.deinit();
+    client.read_arena.deinit();
     main.login_client_pool.destroy(client);
 }
 
@@ -57,44 +53,40 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
     const client: *Client = @ptrCast(@alignCast(wr.request.data));
 
     if (status != 0) {
-        client.queuePacket(.{ .@"error" = .{ .description = "Socket write error" } });
+        client.sendPacket(.{ .@"error" = .{ .description = "Socket write error" } });
         return;
     }
 
-    const arena_allocator = client.arena.allocator();
-    arena_allocator.free(wr.buffer.base[0..wr.buffer.len]);
-    arena_allocator.destroy(wr);
+    main.allocator.free(wr.buffer.base[0..wr.buffer.len]);
+    main.allocator.destroy(wr);
 }
 
 pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const client: *Client = @ptrCast(@alignCast(socket.data));
-    const arena_allocator = client.arena.allocator();
-    var child_arena = std.heap.ArenaAllocator.init(arena_allocator);
-    defer child_arena.deinit();
-    const child_arena_allocator = child_arena.allocator();
+
+    defer _ = client.read_arena.reset(.{ .retain_with_limit = std.math.maxInt(u12) });
+    const allocator = client.read_arena.allocator();
 
     if (bytes_read > 0) {
         var reader: utils.PacketReader = .{ .buffer = buf.*.base[0..@intCast(bytes_read)] };
 
         while (reader.index <= bytes_read - 3) {
-            defer _ = child_arena.reset(.retain_capacity);
-
-            const len = reader.read(u16, child_arena_allocator);
+            const len = reader.read(u16, allocator);
             if (len > bytes_read - reader.index)
                 return;
 
             const next_packet_idx = reader.index + len;
             const EnumType = @typeInfo(network_data.C2SPacketLogin).@"union".tag_type.?;
-            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), child_arena_allocator);
+            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), allocator);
             const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
                 std.log.err("Error parsing C2SPacketLogin ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
-                client.queuePacket(.{ .@"error" = .{ .description = "Socket read error" } });
+                client.sendPacket(.{ .@"error" = .{ .description = "Socket read error" } });
                 return;
             };
 
             switch (packet_id) {
-                inline else => |id| handlerFn(id)(client, reader.read(PacketData(id), child_arena_allocator)),
+                inline else => |id| handlerFn(id)(client, reader.read(PacketData(id), allocator)),
             }
 
             if (reader.index < next_packet_idx) {
@@ -104,43 +96,41 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
         }
     } else if (bytes_read < 0) {
         if (bytes_read != uv.UV_EOF) {
-            client.queuePacket(.{ .@"error" = .{ .description = "Socket read error" } });
-        } else client.sameThreadShutdown();
+            client.sendPacket(.{ .@"error" = .{ .description = "Socket read error" } });
+        } else client.shutdown();
         return;
     }
 
-    arena_allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
+    main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
 }
 
 fn asyncCloseCallback(_: [*c]uv.uv_handle_t) callconv(.C) void {}
 
 pub fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.C) void {
     const client: *Client = @ptrCast(@alignCast(handle.*.data));
-    client.sameThreadShutdown();
+    client.shutdown();
 }
 
-pub fn sameThreadShutdown(self: *Client) void {
+pub fn shutdown(self: *Client) void {
     if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
 }
 
-pub fn queuePacket(self: *Client, packet: network_data.S2CPacketLogin) void {
+pub fn sendPacket(self: *Client, packet: network_data.S2CPacketLogin) void {
     switch (packet) {
         inline else => |data| {
-            const arena_allocator = self.arena.allocator();
-
             var writer: utils.PacketWriter = .{};
-            writer.writeLength(arena_allocator);
-            writer.write(@intFromEnum(std.meta.activeTag(packet)), arena_allocator);
-            writer.write(data, arena_allocator);
+            defer writer.list.deinit(main.allocator);
+            writer.writeLength(main.allocator);
+            writer.write(@intFromEnum(std.meta.activeTag(packet)), main.allocator);
+            writer.write(data, main.allocator);
             writer.updateLength();
 
-            const wr: *WriteRequest = arena_allocator.create(WriteRequest) catch main.oomPanic();
-            wr.buffer.base = @ptrCast(writer.list.items);
-            wr.buffer.len = @intCast(writer.list.items.len);
-            wr.request.data = @ptrCast(self);
-            const write_status = uv.uv_write(@ptrCast(wr), @ptrCast(self.socket), @ptrCast(&wr.buffer), 1, writeCallback);
-            if (write_status != 0) {
-                self.sameThreadShutdown();
+            const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
+
+            var write_status = uv.UV_EAGAIN;
+            while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
+            if (write_status < 0) {
+                self.shutdown();
                 return;
             }
         },
@@ -148,7 +138,7 @@ pub fn queuePacket(self: *Client, packet: network_data.S2CPacketLogin) void {
 }
 
 pub fn sendError(self: *Client, message: []const u8) void {
-    self.queuePacket(.{ .@"error" = .{ .description = message } });
+    self.sendPacket(.{ .@"error" = .{ .description = message } });
 }
 
 fn databaseError(self: *Client) void {
@@ -266,7 +256,7 @@ fn handleLogin(self: *Client, data: PacketData(.login)) void {
         return;
     };
     defer disposeList(list);
-    self.queuePacket(.{ .login_response = list });
+    self.sendPacket(.{ .login_response = list });
 }
 
 fn handleRegister(self: *Client, data: PacketData(.register)) void {
@@ -414,7 +404,7 @@ fn handleRegister(self: *Client, data: PacketData(.register)) void {
             .admin_only = false,
         }}, // TODO: multi-server support
     };
-    self.queuePacket(.{ .register_response = list });
+    self.sendPacket(.{ .register_response = list });
 }
 
 fn handleVerify(self: *Client, data: PacketData(.verify)) void {
@@ -435,7 +425,7 @@ fn handleVerify(self: *Client, data: PacketData(.verify)) void {
         return;
     };
     defer disposeList(list);
-    self.queuePacket(.{ .verify_response = list });
+    self.sendPacket(.{ .verify_response = list });
 }
 
 fn handleDelete(self: *Client, data: PacketData(.delete)) void {
@@ -480,5 +470,5 @@ fn handleDelete(self: *Client, data: PacketData(.delete)) void {
         return;
     };
     defer disposeList(list);
-    self.queuePacket(.{ .delete_response = list });
+    self.sendPacket(.{ .delete_response = list });
 }

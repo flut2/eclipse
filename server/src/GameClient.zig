@@ -34,7 +34,7 @@ const WriteRequest = extern struct {
 };
 
 socket: *uv.uv_tcp_t = undefined,
-arena: std.heap.ArenaAllocator = undefined,
+read_arena: std.heap.ArenaAllocator = undefined,
 needs_shutdown: bool = false,
 world: *World = undefined,
 ip: []const u8 = "",
@@ -72,13 +72,9 @@ fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?
     };
 }
 
-pub fn allocBuffer(socket: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
-    const client: *Client = @ptrCast(@alignCast(socket.*.data));
+pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
     buf.* = .{
-        .base = @ptrCast(client.arena.allocator().alloc(u8, suggested_size) catch {
-            client.sameThreadShutdown(); // no failure, if we can't alloc it wouldn't go through anyway
-            return;
-        }),
+        .base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic()),
         .len = @intCast(suggested_size),
     };
 }
@@ -92,7 +88,7 @@ fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.C) void {
     }
 
     main.socket_pool.destroy(client.socket);
-    client.arena.deinit();
+    client.read_arena.deinit();
     main.game_client_pool.destroy(client);
 }
 
@@ -105,32 +101,27 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
         return;
     }
 
-    const arena_allocator = client.arena.allocator();
-    arena_allocator.free(wr.buffer.base[0..wr.buffer.len]);
-    arena_allocator.destroy(wr);
+    main.allocator.free(wr.buffer.base[0..wr.buffer.len]);
+    main.allocator.destroy(wr);
 }
 
 pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const client: *Client = @ptrCast(@alignCast(socket.data));
 
-    const arena_allocator = client.arena.allocator();
-    var child_arena: std.heap.ArenaAllocator = .init(arena_allocator);
-    defer child_arena.deinit();
-    const child_arena_allocator = child_arena.allocator();
+    defer _ = client.read_arena.reset(.{ .retain_with_limit = std.math.maxInt(u12) });
+    const allocator = client.read_arena.allocator();
 
     if (bytes_read > 0) {
         var reader: utils.PacketReader = .{ .buffer = buf.*.base[0..@intCast(bytes_read)] };
 
         while (reader.index <= bytes_read - 3) {
-            defer _ = child_arena.reset(.retain_capacity);
-
-            const len = reader.read(u16, child_arena_allocator);
+            const len = reader.read(u16, allocator);
             if (len > bytes_read - reader.index) return;
 
             const next_packet_idx = reader.index + len;
             const EnumType = @typeInfo(network_data.C2SPacket).@"union".tag_type.?;
-            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), child_arena_allocator);
+            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), allocator);
             const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
                 std.log.err("Error parsing C2SPacket ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
                 client.sendError(.message_with_disconnect, "Socket read error");
@@ -138,7 +129,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
             };
 
             switch (packet_id) {
-                inline else => |id| handlerFn(id)(client, reader.read(PacketData(id), child_arena_allocator)),
+                inline else => |id| handlerFn(id)(client, reader.read(PacketData(id), allocator)),
             }
 
             if (reader.index < next_packet_idx) {
@@ -149,52 +140,50 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
     } else if (bytes_read < 0) {
         if (bytes_read != uv.UV_EOF) {
             client.sendError(.message_with_disconnect, "Socket read error");
-        } else client.sameThreadShutdown();
+        } else client.shutdown();
         return;
     }
 
-    arena_allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
+    main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
 }
 
 fn asyncCloseCallback(_: [*c]uv.uv_handle_t) callconv(.C) void {}
 
 pub fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.C) void {
     const client: *Client = @ptrCast(@alignCast(handle.*.data));
-    client.sameThreadShutdown();
+    client.shutdown();
 }
 
-pub fn sameThreadShutdown(self: *Client) void {
+pub fn shutdown(self: *Client) void {
     if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
 }
 
-pub fn queuePacket(self: *Client, packet: network_data.S2CPacket) void {
+pub fn sendPacket(self: *Client, packet: network_data.S2CPacket) void {
     switch (packet) {
         inline else => |data| {
-            const arena_allocator = self.arena.allocator();
-
             var writer: utils.PacketWriter = .{};
-            writer.writeLength(arena_allocator);
-            writer.write(@intFromEnum(std.meta.activeTag(packet)), arena_allocator);
-            writer.write(data, arena_allocator);
+            defer writer.list.deinit(main.allocator);
+            writer.writeLength(main.allocator);
+            writer.write(@intFromEnum(std.meta.activeTag(packet)), main.allocator);
+            writer.write(data, main.allocator);
             writer.updateLength();
 
-            const wr: *WriteRequest = arena_allocator.create(WriteRequest) catch main.oomPanic();
-            wr.buffer.base = @ptrCast(writer.list.items);
-            wr.buffer.len = @intCast(writer.list.items.len);
-            wr.request.data = @ptrCast(self);
-            const write_status = uv.uv_write(@ptrCast(wr), @ptrCast(self.socket), @ptrCast(&wr.buffer), 1, writeCallback);
-            if (write_status != 0) {
-                self.sameThreadShutdown();
+            const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
+
+            var write_status = uv.UV_EAGAIN;
+            while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
+            if (write_status < 0) {
+                self.shutdown();
                 return;
             }
         },
     }
 
-    if (packet == .@"error") self.sameThreadShutdown();
+    if (packet == .@"error") self.shutdown();
 }
 
 pub fn sendMessage(self: *Client, msg: []const u8) void {
-    self.queuePacket(.{ .text = .{
+    self.sendPacket(.{ .text = .{
         .name = "Server",
         .obj_type = .entity,
         .map_id = std.math.maxInt(u32),
@@ -207,7 +196,7 @@ pub fn sendMessage(self: *Client, msg: []const u8) void {
 }
 
 pub fn sendError(self: *Client, error_type: network_data.ErrorType, message: []const u8) void {
-    self.queuePacket(.{ .@"error" = .{ .type = error_type, .description = message } });
+    self.sendPacket(.{ .@"error" = .{ .type = error_type, .description = message } });
 }
 
 fn processItemCosts(player: *Player, data: game_data.ItemData) void {
@@ -252,7 +241,7 @@ fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) v
         if (world_player.map_id == self.player_map_id) continue;
 
         if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16)
-            world_player.client.queuePacket(.{ .ally_projectile = .{
+            world_player.client.sendPacket(.{ .ally_projectile = .{
                 .player_map_id = self.player_map_id,
                 .angle = data.angle,
                 .item_data_id = item_data_id,
@@ -299,7 +288,7 @@ fn handlePlayerText(self: *Client, data: PacketData(.player_text)) void {
     if (player.muted_until >= main.current_time) return;
 
     for (self.world.listForType(Player).items) |*other_player|
-        other_player.client.queuePacket(.{ .text = .{
+        other_player.client.sendPacket(.{ .text = .{
             .name = player.name,
             .obj_type = .player,
             .map_id = self.player_map_id,
@@ -451,7 +440,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             player.hp = new_hp;
 
             var buf: [32]u8 = undefined;
-            player.client.queuePacket(.{ .show_effect = .{
+            player.client.sendPacket(.{ .show_effect = .{
                 .eff_type = .potion,
                 .color = 0xFFFFFF,
                 .map_id = player.map_id,
@@ -462,7 +451,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                 .y2 = 0,
             } });
 
-            player.client.queuePacket(.{ .notification = .{
+            player.client.sendPacket(.{ .notification = .{
                 .message = std.fmt.bufPrint(&buf, "+{}", .{new_hp - old_hp}) catch continue,
                 .color = 0x00FF00,
                 .map_id = player.map_id,
@@ -476,7 +465,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             player.mp = new_mp;
 
             var buf: [32]u8 = undefined;
-            player.client.queuePacket(.{ .show_effect = .{
+            player.client.sendPacket(.{ .show_effect = .{
                 .eff_type = .potion,
                 .color = 0xFFFFFF,
                 .map_id = player.map_id,
@@ -487,7 +476,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                 .y2 = 0,
             } });
 
-            player.client.queuePacket(.{ .notification = .{
+            player.client.sendPacket(.{ .notification = .{
                 .message = std.fmt.bufPrint(&buf, "+{}", .{new_mp - old_mp}) catch continue,
                 .color = 0x9000FF,
                 .map_id = player.map_id,
@@ -505,7 +494,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                     player.hp = new_hp;
 
                     var buf: [32]u8 = undefined;
-                    player.client.queuePacket(.{ .show_effect = .{
+                    player.client.sendPacket(.{ .show_effect = .{
                         .eff_type = .potion,
                         .color = 0xFFFFFF,
                         .map_id = player.map_id,
@@ -516,7 +505,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                         .y2 = 0,
                     } });
 
-                    player.client.queuePacket(.{ .notification = .{
+                    player.client.sendPacket(.{ .notification = .{
                         .message = std.fmt.bufPrint(&buf, "+{}", .{new_hp - old_hp}) catch continue,
                         .color = 0x00FF00,
                         .map_id = player.map_id,
@@ -535,7 +524,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                     player.mp = new_mp;
 
                     var buf: [32]u8 = undefined;
-                    player.client.queuePacket(.{ .show_effect = .{
+                    player.client.sendPacket(.{ .show_effect = .{
                         .eff_type = .potion,
                         .color = 0xFFFFFF,
                         .map_id = player.map_id,
@@ -546,7 +535,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                         .y2 = 0,
                     } });
 
-                    player.client.queuePacket(.{ .notification = .{
+                    player.client.sendPacket(.{ .notification = .{
                         .message = std.fmt.bufPrint(&buf, "+{}", .{new_mp - old_mp}) catch continue,
                         .color = 0x9000FF,
                         .map_id = player.map_id,
@@ -664,8 +653,11 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
         player.char_data.char_id = next_char_id;
         try player.acc_data.set(.{ .next_char_id = next_char_id + 1 });
 
-        const new_alive_ids = try std.mem.concat(player.client.arena.allocator(), u32, &.{ alive_ids, &.{next_char_id} });
-        try player.acc_data.set(.{ .alive_char_ids = new_alive_ids });
+        {
+            const new_alive_ids = try std.mem.concat(main.allocator, u32, &.{ alive_ids, &.{next_char_id} });
+            defer main.allocator.free(new_alive_ids);
+            try player.acc_data.set(.{ .alive_char_ids = new_alive_ids });
+        }
 
         try player.char_data.set(.{ .class_id = class_id });
         try player.char_data.set(.{ .create_timestamp = timestamp });
@@ -765,7 +757,7 @@ fn handleHello(self: *Client, data: PacketData(.hello)) void {
         return;
     };
 
-    self.queuePacket(.{ .map_info = .{
+    self.sendPacket(.{ .map_info = .{
         .width = self.world.w,
         .height = self.world.h,
         .name = self.world.details.name,
@@ -844,7 +836,7 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
         return;
     };
 
-    self.queuePacket(.{ .map_info = .{
+    self.sendPacket(.{ .map_info = .{
         .width = @intCast(self.world.w),
         .height = @intCast(self.world.h),
         .name = self.world.details.name,
@@ -868,7 +860,7 @@ fn handleGroundDamage(self: *Client, data: PacketData(.ground_damage)) void {
         if (world_player.map_id == self.player_map_id) continue;
 
         if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16)
-            self.queuePacket(.{ .damage = .{
+            self.sendPacket(.{ .damage = .{
                 .player_map_id = self.player_map_id,
                 .effects = .{},
                 .damage_type = .true,
@@ -937,7 +929,7 @@ fn handleEscape(self: *Client, _: PacketData(.escape)) void {
         return;
     };
 
-    self.queuePacket(.{ .map_info = .{
+    self.sendPacket(.{ .map_info = .{
         .width = self.world.w,
         .height = self.world.h,
         .name = self.world.details.name,
@@ -1023,7 +1015,7 @@ fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
         return;
     };
 
-    self.queuePacket(.{ .map_info = .{
+    self.sendPacket(.{ .map_info = .{
         .width = self.world.w,
         .height = self.world.h,
         .name = self.world.details.name,

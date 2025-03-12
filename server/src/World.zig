@@ -411,7 +411,7 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
     }
 
     if (T == Enemy and opts.aoe_color != 0xFFFFFFFF) for (self.listForType(Player).items) |*player| {
-        player.client.queuePacket(.{ .show_effect = .{
+        player.client.sendPacket(.{ .show_effect = .{
             .obj_type = owner_type,
             .map_id = owner_id,
             .eff_type = .area_blast,

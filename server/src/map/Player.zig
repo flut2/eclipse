@@ -278,8 +278,8 @@ pub fn death(self: *Player, killer: []const u8) !void {
             .name = main.allocator.dupe(u8, self.name) catch main.oomPanic(),
         }) catch |e| std.log.err("Populating gravestone for {s} failed: {}", .{ self.name, e });
 
-    self.client.queuePacket(.{ .death = .{ .killer_name = killer } });
-    self.client.sameThreadShutdown();
+    self.client.sendPacket(.{ .death = .{ .killer_name = killer } });
+    self.client.shutdown();
 }
 
 pub fn hasCard(self: *Player, card_name: []const u8) bool {
@@ -519,21 +519,65 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
         }
     }
 
-    self.client.queuePacket(.{ .new_tick = .{ .tick_id = main.tick_id, .tiles = self.tiles.items } });
+    self.client.sendPacket(.{ .new_tick = .{ .tick_id = main.tick_id, .tiles = self.tiles.items } });
 
-    if (self.drops.player.items.len > 0) self.client.queuePacket(.{ .dropped_players = .{ .map_ids = self.drops.player.items } });
-    if (self.drops.entity.items.len > 0) self.client.queuePacket(.{ .dropped_entities = .{ .map_ids = self.drops.entity.items } });
-    if (self.drops.enemy.items.len > 0) self.client.queuePacket(.{ .dropped_enemies = .{ .map_ids = self.drops.enemy.items } });
-    if (self.drops.portal.items.len > 0) self.client.queuePacket(.{ .dropped_portals = .{ .map_ids = self.drops.portal.items } });
-    if (self.drops.container.items.len > 0) self.client.queuePacket(.{ .dropped_containers = .{ .map_ids = self.drops.container.items } });
-    if (self.drops.ally.items.len > 0) self.client.queuePacket(.{ .dropped_allies = .{ .map_ids = self.drops.ally.items } });
+    const max_bytes = std.math.maxInt(u15);
+    inline for (.{
+        .{ "dropped_players", self.drops.player.items },
+        .{ "dropped_entities", self.drops.entity.items },
+        .{ "dropped_enemies", self.drops.enemy.items },
+        .{ "dropped_portals", self.drops.portal.items },
+        .{ "dropped_containers", self.drops.container.items },
+        .{ "dropped_allies", self.drops.ally.items },
+    }) |mapping| @"continue": {
+        if (mapping[1].len == 0) break :@"continue";
+        const child_size = @sizeOf(u32);
+        const total_size = mapping[1].len * child_size;
+        for (0..total_size / max_bytes + 1) |i|
+            self.client.sendPacket(@unionInit(network_data.S2CPacket, mapping[0], .{
+                .map_ids = mapping[1][i * max_bytes / child_size .. @min((total_size - i * max_bytes) / child_size, (i + 1) * max_bytes / child_size)],
+            }));
+    }
 
-    if (self.objs.player.items.len > 0) self.client.queuePacket(.{ .new_players = .{ .list = self.objs.player.items } });
-    if (self.objs.entity.items.len > 0) self.client.queuePacket(.{ .new_entities = .{ .list = self.objs.entity.items } });
-    if (self.objs.enemy.items.len > 0) self.client.queuePacket(.{ .new_enemies = .{ .list = self.objs.enemy.items } });
-    if (self.objs.portal.items.len > 0) self.client.queuePacket(.{ .new_portals = .{ .list = self.objs.portal.items } });
-    if (self.objs.container.items.len > 0) self.client.queuePacket(.{ .new_containers = .{ .list = self.objs.container.items } });
-    if (self.objs.ally.items.len > 0) self.client.queuePacket(.{ .new_allies = .{ .list = self.objs.ally.items } });
+    inline for (.{
+        .{ "new_players", self.objs.player.items },
+        .{ "new_entities", self.objs.entity.items },
+        .{ "new_enemies", self.objs.enemy.items },
+        .{ "new_portals", self.objs.portal.items },
+        .{ "new_containers", self.objs.container.items },
+        .{ "new_allies", self.objs.ally.items },
+    }) |mapping| @"continue": {
+        if (mapping[1].len == 0) break :@"continue";
+        var size_tally: usize = 0;
+        var last_idx: usize = 0;
+        var idx: usize = 0;
+        for (mapping[1]) |data| {
+            defer idx += 1;
+            const byte_size = data.byteSize();
+            const next_size = size_tally + byte_size;
+            if (next_size > max_bytes and idx > last_idx) {
+                // std.log.err("sending " ++ mapping[0] ++ ": {} bytes", .{size_tally});
+                self.client.sendPacket(@unionInit(network_data.S2CPacket, mapping[0], .{
+                    .list = mapping[1][last_idx .. idx - 1],
+                }));
+                size_tally = byte_size;
+                last_idx = idx;
+            } else size_tally = next_size;
+        }
+
+        // std.log.err("sending " ++ mapping[0] ++ ": {} bytes", .{size_tally});
+        if (last_idx < mapping[1].len - 1)
+            self.client.sendPacket(@unionInit(network_data.S2CPacket, mapping[0], .{
+                .list = mapping[1][last_idx..],
+            }));
+    }
+
+    if (self.objs.player.items.len > 0) self.client.sendPacket(.{ .new_players = .{ .list = self.objs.player.items } });
+    if (self.objs.entity.items.len > 0) self.client.sendPacket(.{ .new_entities = .{ .list = self.objs.entity.items } });
+    if (self.objs.enemy.items.len > 0) self.client.sendPacket(.{ .new_enemies = .{ .list = self.objs.enemy.items } });
+    if (self.objs.portal.items.len > 0) self.client.sendPacket(.{ .new_portals = .{ .list = self.objs.portal.items } });
+    if (self.objs.container.items.len > 0) self.client.sendPacket(.{ .new_containers = .{ .list = self.objs.container.items } });
+    if (self.objs.ally.items.len > 0) self.client.sendPacket(.{ .new_allies = .{ .list = self.objs.ally.items } });
 }
 
 fn statTypeToId(stat_type: anytype) u16 {

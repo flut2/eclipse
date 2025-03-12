@@ -81,7 +81,7 @@ pub const PacketReader = struct {
 
         const byte_size = @sizeOf(T);
         const next_idx = self.index + byte_size;
-        if (next_idx > self.buffer.len) std.debug.panic("Buffer attempted to read out of bounds", .{});
+        if (next_idx > self.buffer.len) @panic("Buffer attempted to read out of bounds");
         var buf = self.buffer[self.index..next_idx];
         self.index += byte_size;
         return std.mem.bytesToValue(T, buf[0..byte_size]);

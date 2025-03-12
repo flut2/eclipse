@@ -92,7 +92,11 @@ pub fn visibleInCamera(self: Camera, x_in: f32, y_in: f32) bool {
 
 pub fn resetToDefaults(self: *Camera) void {
     inline for (@typeInfo(Camera).@"struct".fields) |field| {
-        if (!std.mem.eql(u8, field.name, "lock"))
+        if (!std.mem.eql(u8, field.name, "width") and
+            !std.mem.eql(u8, field.name, "height") and
+            !std.mem.eql(u8, field.name, "clip_scale") and
+            !std.mem.eql(u8, field.name, "clip_offset") and
+            !std.mem.eql(u8, field.name, "cam_offset_px"))
             @field(self, field.name) = @as(*const field.type, @ptrCast(@alignCast(field.default_value_ptr orelse
                 @panic("All settings need a default value, but it wasn't found")))).*;
     }

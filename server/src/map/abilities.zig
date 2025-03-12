@@ -93,7 +93,7 @@ pub fn handleBoulderBuddies(player: *Player) !void {
             ally.resistance = i32f(5.0 + fres * 0.1);
         } else return;
 
-        player.client.queuePacket(.{ .show_effect = .{
+        player.client.sendPacket(.{ .show_effect = .{
             .obj_type = .ally,
             .map_id = map_id,
             .eff_type = .area_blast,
@@ -175,14 +175,14 @@ pub fn handleRewind(player: *Player) !void {
     if (hp_delta > 0) {
         player.hp = player.hp_records[tick];
         var buf: [64]u8 = undefined;
-        player.client.queuePacket(.{ .notification = .{
+        player.client.sendPacket(.{ .notification = .{
             .obj_type = .player,
             .map_id = player.map_id,
             .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
             .color = 0x00FF00,
         } });
 
-        player.client.queuePacket(.{ .show_effect = .{
+        player.client.sendPacket(.{ .show_effect = .{
             .eff_type = .potion,
             .obj_type = .player,
             .map_id = player.map_id,
@@ -278,14 +278,14 @@ fn bloodfontCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
         const hp_delta = player.hp - old_hp;
         if (hp_delta < 0) {
             var buf: [64]u8 = undefined;
-            player.client.queuePacket(.{ .notification = .{
+            player.client.sendPacket(.{ .notification = .{
                 .obj_type = .player,
                 .map_id = player.map_id,
                 .message = std.fmt.bufPrint(&buf, "{}", .{hp_delta}) catch return,
                 .color = 0xFF0000,
             } });
 
-            player.client.queuePacket(.{ .show_effect = .{
+            player.client.sendPacket(.{ .show_effect = .{
                 .eff_type = .potion,
                 .obj_type = .player,
                 .map_id = player.map_id,

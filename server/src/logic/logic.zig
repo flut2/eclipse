@@ -84,14 +84,14 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
 
             const obj_type: network_data.ObjectType = if (@TypeOf(host.*) == Enemy) .enemy else .entity;
             for (world.listForType(Player).items) |p| {
-                p.client.queuePacket(.{ .notification = .{
+                p.client.sendPacket(.{ .notification = .{
                     .obj_type = obj_type,
                     .map_id = e.map_id,
                     .message = msg,
                     .color = 0x00FF00,
                 } });
 
-                p.client.queuePacket(.{ .show_effect = .{
+                p.client.sendPacket(.{ .show_effect = .{
                     .eff_type = .trail,
                     .obj_type = obj_type,
                     .map_id = host.map_id,
@@ -380,7 +380,7 @@ pub fn shoot(comptime src_loc: std.builtin.SourceLocation, host: *Enemy, time: i
         const dx = p.x - host.x;
         const dy = p.y - host.y;
         if (dx * dx + dy * dy <= 20 * 20) {
-            p.client.queuePacket(.{ .enemy_projectile = .{
+            p.client.sendPacket(.{ .enemy_projectile = .{
                 .proj_index = proj_index_start,
                 .enemy_map_id = host.map_id,
                 .proj_data_id = opts.proj_index,

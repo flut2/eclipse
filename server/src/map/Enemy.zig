@@ -114,7 +114,7 @@ pub fn deinit(self: *Enemy) !void {
                         .{ mob_data.name, world.details.biome_1_name },
                     );
                     for (world.listForType(Player).items) |*player| {
-                        player.client.queuePacket(.{ .text = .{
+                        player.client.sendPacket(.{ .text = .{
                             .name = "",
                             .obj_type = .entity,
                             .map_id = std.math.maxInt(u32),
@@ -160,7 +160,7 @@ pub fn deinit(self: *Enemy) !void {
                         .{ mob_data.name, world.details.biome_2_name },
                     );
                     for (world.listForType(Player).items) |*player| {
-                        player.client.queuePacket(.{ .text = .{
+                        player.client.sendPacket(.{ .text = .{
                             .name = "",
                             .obj_type = .entity,
                             .map_id = std.math.maxInt(u32),
@@ -206,7 +206,7 @@ pub fn deinit(self: *Enemy) !void {
                         .{ mob_data.name, world.details.biome_3_name },
                     );
                     for (world.listForType(Player).items) |*player| {
-                        player.client.queuePacket(.{ .text = .{
+                        player.client.sendPacket(.{ .text = .{
                             .name = "",
                             .obj_type = .entity,
                             .map_id = std.math.maxInt(u32),
@@ -232,14 +232,14 @@ pub fn deinit(self: *Enemy) !void {
             player.hp = @min(player.data.stats.health, player.hp + @min(200, @divFloor(dmg, 1000)));
             const hp_delta = player.hp - old_hp;
             var buf: [64]u8 = undefined;
-            player.client.queuePacket(.{ .notification = .{
+            player.client.sendPacket(.{ .notification = .{
                 .obj_type = .player,
                 .map_id = player.map_id,
                 .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
                 .color = 0x00FF00,
             } });
 
-            player.client.queuePacket(.{ .show_effect = .{
+            player.client.sendPacket(.{ .show_effect = .{
                 .eff_type = .potion,
                 .obj_type = .player,
                 .map_id = player.map_id,
@@ -256,14 +256,14 @@ pub fn deinit(self: *Enemy) !void {
             player.mp = @min(player.data.stats.mana, player.mp + @min(100, @divFloor(dmg, 4000)));
             const mp_delta = player.hp - old_mp;
             var buf: [64]u8 = undefined;
-            player.client.queuePacket(.{ .notification = .{
+            player.client.sendPacket(.{ .notification = .{
                 .obj_type = .player,
                 .map_id = player.map_id,
                 .message = std.fmt.bufPrint(&buf, "+{}", .{mp_delta}) catch return,
                 .color = 0x0000FF,
             } });
 
-            player.client.queuePacket(.{ .show_effect = .{
+            player.client.sendPacket(.{ .show_effect = .{
                 .eff_type = .potion,
                 .obj_type = .player,
                 .map_id = player.map_id,

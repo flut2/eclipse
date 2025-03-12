@@ -222,6 +222,10 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
         return error.NoSocket;
     }
 
+    const disable_nagle_status = uv.uv_tcp_nodelay(@ptrCast(self.socket), 1);
+    if (disable_nagle_status != 0) 
+        std.log.err("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
+
     var connect_data = try main.allocator.create(uv.uv_connect_t);
     connect_data.data = self;
     const conn_status = uv.uv_tcp_connect(@ptrCast(connect_data), @ptrCast(self.socket), @ptrCast(&addr.in.sa), connectCallback);

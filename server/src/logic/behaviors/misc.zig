@@ -31,14 +31,14 @@ pub const HealthShrine = struct {
         if (hp_delta <= 0) return;
 
         var buf: [64]u8 = undefined;
-        player.client.queuePacket(.{ .notification = .{
+        player.client.sendPacket(.{ .notification = .{
             .obj_type = .player,
             .map_id = player.map_id,
             .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
             .color = 0x00FF00,
         } });
 
-        player.client.queuePacket(.{ .show_effect = .{
+        player.client.sendPacket(.{ .show_effect = .{
             .eff_type = .trail,
             .obj_type = .entity,
             .map_id = host.map_id,
@@ -71,14 +71,14 @@ pub const MagicShrine = struct {
         if (mp_delta <= 0) return;
 
         var buf: [64]u8 = undefined;
-        player.client.queuePacket(.{ .notification = .{
+        player.client.sendPacket(.{ .notification = .{
             .obj_type = .player,
             .map_id = player.map_id,
             .message = std.fmt.bufPrint(&buf, "+{}", .{mp_delta}) catch return,
             .color = 0x0000FF,
         } });
 
-        player.client.queuePacket(.{ .show_effect = .{
+        player.client.sendPacket(.{ .show_effect = .{
             .eff_type = .trail,
             .obj_type = .entity,
             .map_id = host.map_id,
@@ -111,14 +111,14 @@ pub const RetrieveHealthBeacon = struct {
         if (hp_delta <= 0) return;
 
         var buf: [64]u8 = undefined;
-        player.client.queuePacket(.{ .notification = .{
+        player.client.sendPacket(.{ .notification = .{
             .obj_type = .player,
             .map_id = player.map_id,
             .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
             .color = 0x00FF00,
         } });
 
-        player.client.queuePacket(.{ .show_effect = .{
+        player.client.sendPacket(.{ .show_effect = .{
             .eff_type = .trail,
             .obj_type = .entity,
             .map_id = host.map_id,
@@ -151,14 +151,14 @@ pub const RetrieveManaBeacon = struct {
         if (mp_delta <= 0) return;
 
         var buf: [64]u8 = undefined;
-        player.client.queuePacket(.{ .notification = .{
+        player.client.sendPacket(.{ .notification = .{
             .obj_type = .player,
             .map_id = player.map_id,
             .message = std.fmt.bufPrint(&buf, "+{}", .{mp_delta}) catch return,
             .color = 0x0000FF,
         } });
 
-        player.client.queuePacket(.{ .show_effect = .{
+        player.client.sendPacket(.{ .show_effect = .{
             .eff_type = .trail,
             .obj_type = .entity,
             .map_id = host.map_id,
