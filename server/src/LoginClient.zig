@@ -128,7 +128,8 @@ pub fn sendPacket(self: *Client, packet: network_data.S2CPacketLogin) void {
             const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
 
             var write_status = uv.UV_EAGAIN;
-            while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
+            while (write_status == uv.UV_EAGAIN or (write_status >= 0 and write_status != writer.list.items.len))
+                write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
             if (write_status < 0) {
                 self.shutdown();
                 return;

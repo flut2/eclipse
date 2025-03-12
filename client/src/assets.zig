@@ -201,6 +201,11 @@ pub const AnimEnemyData = struct {
 
     walk_anims: [directions * walk_actions]AtlasData,
     attack_anims: [directions * attack_actions]AtlasData,
+
+    pub fn removePadding(self: *AnimEnemyData) void {
+        for (&self.walk_anims) |*data| data.removePadding();
+        for (&self.attack_anims) |*data| data.removePadding();
+    }
 };
 
 pub const AnimPlayerData = struct {
@@ -210,6 +215,11 @@ pub const AnimPlayerData = struct {
 
     walk_anims: [directions * walk_actions]AtlasData,
     attack_anims: [directions * attack_actions]AtlasData,
+
+    pub fn removePadding(self: *AnimPlayerData) void {
+        for (&self.walk_anims) |*data| data.removePadding();
+        for (&self.attack_anims) |*data| data.removePadding();
+    }
 };
 
 pub const AtlasType = enum(u8) {
@@ -470,12 +480,12 @@ fn addWall(
 
     const len = std.math.divExact(u32, img.width * img.height, full_cut_width * full_cut_height) catch
         std.debug.panic("Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})", .{
-        sheet_name,
-        img.width,
-        img.height,
-        full_cut_width,
-        full_cut_height,
-    });
+            sheet_name,
+            img.width,
+            img.height,
+            full_cut_width,
+            full_cut_height,
+        });
 
     var current_rects = try arena.allocator().alloc(pack.IdRect, len);
     defer arena.allocator().free(current_rects);
@@ -804,9 +814,9 @@ fn addAnimEnemy(
 
     const len = @divExact(std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
         std.debug.panic(
-        "Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
-        .{ sheet_name, img.width, img.height, cut_width, cut_height },
-    ), 6) * 5 * AnimEnemyData.directions;
+            "Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
+            .{ sheet_name, img.width, img.height, cut_width, cut_height },
+        ), 6) * 5 * AnimEnemyData.directions;
 
     var current_rects = try arena.allocator().alloc(pack.IdRect, len);
     defer arena.allocator().free(current_rects);
@@ -946,9 +956,9 @@ fn addAnimPlayer(
 
     var len = @divExact(std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
         std.debug.panic(
-        "Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
-        .{ sheet_name, img.width, img.height, cut_width, cut_height },
-    ), 6) * 5;
+            "Sheet {s} has an incorrect resolution: {}x{} (cut_w={}, cut_h={})",
+            .{ sheet_name, img.width, img.height, cut_width, cut_height },
+        ), 6) * 5;
     len += @divFloor(len, 3); // for the "missing" left side
 
     var current_rects = try arena.allocator().alloc(pack.IdRect, len);

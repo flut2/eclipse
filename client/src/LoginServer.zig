@@ -104,7 +104,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
         });
     }
 
-    if (buf.*.base != null) main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
+    main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
 }
 
 fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
@@ -196,7 +196,8 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
             const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
 
             var write_status = uv.UV_EAGAIN;
-            while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
+            while (write_status == uv.UV_EAGAIN or (write_status >= 0 and write_status != writer.list.items.len))
+                write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
             if (write_status < 0) {
                 std.log.err("Login write send error: {s}", .{uv.uv_strerror(write_status)});
                 self.shutdown();
@@ -223,7 +224,7 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
     }
 
     const disable_nagle_status = uv.uv_tcp_nodelay(@ptrCast(self.socket), 1);
-    if (disable_nagle_status != 0) 
+    if (disable_nagle_status != 0)
         std.log.err("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
 
     var connect_data = try main.allocator.create(uv.uv_connect_t);

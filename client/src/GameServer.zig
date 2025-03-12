@@ -183,7 +183,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
         });
     }
 
-    if (buf.*.base != null) main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
+    main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
 }
 
 fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
@@ -279,7 +279,8 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
             const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
 
             var write_status = uv.UV_EAGAIN;
-            while (write_status == uv.UV_EAGAIN) write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
+            while (write_status == uv.UV_EAGAIN or (write_status >= 0 and write_status != writer.list.items.len))
+                write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
             if (write_status < 0) {
                 std.log.err("Game write send error: {s}", .{uv.uv_strerror(write_status)});
                 main.disconnect();
@@ -700,7 +701,7 @@ fn droppedObject(comptime T: type, list: []const u32) void {
 }
 
 fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
-    const tick_time = @as(f32, std.time.us_per_s) / 30.0;
+    const tick_time = @as(f32, std.time.us_per_s) / 20.0;
 
     for (list) |obj| {
         var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };

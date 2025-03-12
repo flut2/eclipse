@@ -56,7 +56,6 @@ pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
                 std.log.err("Could not find anim sheet {s} for {s} with data id {}. Using error texture", .{ tex.sheet, type_name, self.data_id });
                 self.anim_data = assets.error_data_enemy;
             }
-            self.atlas_data = self.anim_data.walk_anims[0];
         } else {
             if (self.data.textures.len == 0) {
                 std.log.err("{s} with data id {} has an empty texture list, parsing failed", .{ type_name, self.data_id });
@@ -82,16 +81,21 @@ pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
             }
         }
 
-        if (@hasField(T, "colors")) self.colors = assets.atlas_to_color_data.get(if (@hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall)
-            @bitCast(self.wall_data.base)
-        else
-            @bitCast(self.atlas_data)) orelse blk: {
-            std.log.err("Could not parse color data for {s} with data id {}. Setting it to empty", .{ type_name, self.data_id });
-            break :blk &.{};
-        };
+        if (@hasField(T, "colors")) {
+            const image: u160 = if (@hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall)
+                @bitCast(self.wall_data.base)
+            else if (@hasField(T, "anim_data"))
+                @bitCast(self.anim_data.walk_anims[0])
+            else
+                @bitCast(self.atlas_data);
+            self.colors = assets.atlas_to_color_data.get(image) orelse blk: {
+                std.log.err("Could not parse color data for {s} with data id {}. Setting it to empty", .{ type_name, self.data_id });
+                break :blk &.{};
+            };
+        }
 
         if (self.data.draw_on_ground or @hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall)
-            self.atlas_data.removePadding();
+            if (@hasField(T, "anim_data")) self.anim_data.removePadding() else self.atlas_data.removePadding();
     }
 
     if (self.name_text_data == null and self.data.show_name) {
