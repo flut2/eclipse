@@ -573,6 +573,7 @@ const tracy_full = struct {
                 .vtable = &.{
                     .alloc = alloc,
                     .resize = resize,
+                    .remap = remap,
                     .free = free,
                 },
             };
@@ -581,16 +582,16 @@ const tracy_full = struct {
         fn alloc(
             ctx: *anyopaque,
             len: usize,
-            log2_ptr_align: u8,
+            alignment: std.mem.Alignment,
             ra: usize,
         ) ?[*]u8 {
             const self: *TracyAllocator = @ptrCast(@alignCast(ctx));
-            const result = self.child_allocator.rawAlloc(len, log2_ptr_align, ra);
+            const result = self.child_allocator.rawAlloc(len, alignment, ra);
             if (result) |addr| {
                 Alloc(addr, len);
             } else {
                 var buffer: [128]u8 = undefined;
-                const msg = std.fmt.bufPrint(&buffer, "alloc failed requesting {d}", .{len}) catch return result;
+                const msg = std.fmt.bufPrint(&buffer, "Alloc failed: {}", .{len}) catch return result;
                 Message(msg);
             }
             return result;
@@ -599,18 +600,38 @@ const tracy_full = struct {
         fn resize(
             ctx: *anyopaque,
             buf: []u8,
-            log2_ptr_align: u8,
+            alignment: std.mem.Alignment,
             new_len: usize,
             ra: usize,
         ) bool {
             const self: *TracyAllocator = @ptrCast(@alignCast(ctx));
-            const result = self.child_allocator.rawResize(buf, log2_ptr_align, new_len, ra);
+            const result = self.child_allocator.rawResize(buf, alignment, new_len, ra);
             if (result) {
                 Free(buf.ptr);
                 Alloc(buf.ptr, new_len);
             } else {
                 var buffer: [128]u8 = undefined;
-                const msg = std.fmt.bufPrint(&buffer, "resize failed requesting {d} -> {d}", .{ buf.len, new_len }) catch return result;
+                const msg = std.fmt.bufPrint(&buffer, "Resize failed: {} -> {}", .{ buf.len, new_len }) catch return result;
+                Message(msg);
+            }
+            return result;
+        }
+
+        fn remap(
+            ctx: *anyopaque,
+            buf: []u8,
+            alignment: std.mem.Alignment,
+            new_len: usize,
+            ra: usize,
+        ) ?[*]u8 {
+            const self: *TracyAllocator = @ptrCast(@alignCast(ctx));
+            const result = self.child_allocator.rawRemap(buf, alignment, new_len, ra);
+            if (result != null) {
+                Free(buf.ptr);
+                Alloc(buf.ptr, new_len);
+            } else {
+                var buffer: [128]u8 = undefined;
+                const msg = std.fmt.bufPrint(&buffer, "Remap failed: {} -> {}", .{ buf.len, new_len }) catch return result;
                 Message(msg);
             }
             return result;
@@ -619,11 +640,11 @@ const tracy_full = struct {
         fn free(
             ctx: *anyopaque,
             buf: []u8,
-            log2_ptr_align: u8,
+            alignment: std.mem.Alignment,
             ra: usize,
         ) void {
             const self: *TracyAllocator = @ptrCast(@alignCast(ctx));
-            self.child_allocator.rawFree(buf, log2_ptr_align, ra);
+            self.child_allocator.rawFree(buf, alignment, ra);
             Free(buf.ptr);
         }
     };
