@@ -39,6 +39,7 @@ pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
         return;
     };
     self.size_mult = self.data.size_mult;
+    self.sort_random = utils.rng.random().int(u16);
 
     texParse: {
         const T = @TypeOf(self);
@@ -171,6 +172,7 @@ pub fn drawConditions(
     renderer: *Renderer,
     generics: *std.ArrayListUnmanaged(Renderer.GenericData),
     sort_extras: *std.ArrayListUnmanaged(f32),
+    sort_randoms: *std.ArrayListUnmanaged(u16),
     cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.?,
     float_time_ms: f32,
     x: f32,
@@ -178,6 +180,7 @@ pub fn drawConditions(
     scale: f32,
     base_y: f32,
     base_h: f32,
+    sort_random: u16,
 ) void {
     var cond_len: f32 = 0.0;
     for (0..@bitSizeOf(utils.Condition)) |i| {
@@ -205,6 +208,8 @@ pub fn drawConditions(
                     current_frame,
                     .{ .shadow_texel_mult = 1.0, .sort_extra = (base_y - y) + (base_h - cond_h) },
                 );
+                sort_randoms.append(main.allocator, sort_random) catch main.oomPanic();
+
                 cond_new_idx += 1.0;
             }
         }
@@ -215,16 +220,20 @@ pub fn drawStatusTexts(
     self: anytype,
     generics: *std.ArrayListUnmanaged(Renderer.GenericData),
     sort_extras: *std.ArrayListUnmanaged(f32),
+    sort_randoms: *std.ArrayListUnmanaged(u16),
     time: i64,
     x: f32,
     y: f32,
     scale: f32,
+    sort_random: u16,
 ) void {
     var status_texts_to_dispose: std.ArrayListUnmanaged(usize) = .empty;
     defer status_texts_to_dispose.deinit(main.allocator);
-    for (self.status_texts.items, 0..) |*text, i|
-        if (!text.draw(generics, sort_extras, time, x, y, scale))
+    for (self.status_texts.items, 0..) |*text, i| {
+        if (!text.draw(generics, sort_extras, time, x, y, scale)) {
             status_texts_to_dispose.append(main.allocator, i) catch main.oomPanic();
+        } else for (0..text.text_data.text.len) |_| sort_randoms.append(main.allocator, sort_random) catch main.oomPanic();
+    }
 
     var iter = std.mem.reverseIterator(status_texts_to_dispose.items);
     while (iter.next()) |i| {
@@ -237,13 +246,15 @@ pub fn drawSpeechBalloon(
     self: anytype,
     generics: *std.ArrayListUnmanaged(Renderer.GenericData),
     sort_extras: *std.ArrayListUnmanaged(f32),
+    sort_randoms: *std.ArrayListUnmanaged(u16),
     time: i64,
     x: f32,
     y: f32,
     scale: f32,
+    sort_random: u16,
 ) void {
     if (self.speech_balloon) |*balloon| if (!balloon.draw(generics, sort_extras, time, x, y, scale)) {
         balloon.deinit();
         self.speech_balloon = null;
-    };
+    } else for (0..balloon.text_data.text.len + 1) |_| sort_randoms.append(main.allocator, sort_random) catch main.oomPanic();
 }

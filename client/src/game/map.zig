@@ -29,6 +29,7 @@ const day_cycle_half: f32 = @as(f32, day_cycle) / 2;
 
 const MapData = struct {
     grounds: std.ArrayListUnmanaged(Renderer.GroundData) = .empty,
+    sort_randoms: std.ArrayListUnmanaged(u16) = .empty,
     sort_extras: std.ArrayListUnmanaged(f32) = .empty,
     generics: std.ArrayListUnmanaged(Renderer.GenericData) = .empty,
     ui_sort_extras: std.ArrayListUnmanaged(f32) = .empty,
@@ -37,6 +38,7 @@ const MapData = struct {
 
     pub fn clear(self: *MapData) void {
         self.grounds.clearRetainingCapacity();
+        self.sort_randoms.clearRetainingCapacity();
         self.sort_extras.clearRetainingCapacity();
         self.generics.clearRetainingCapacity();
         self.ui_sort_extras.clearRetainingCapacity();
@@ -442,6 +444,7 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
                 &cur_draw_data.generics,
                 &cur_draw_data.sort_extras,
                 &cur_draw_data.lights,
+                &cur_draw_data.sort_randoms,
                 float_time_ms,
             );
 
@@ -450,6 +453,7 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
                 &cur_draw_data.generics,
                 &cur_draw_data.sort_extras,
                 &cur_draw_data.lights,
+                &cur_draw_data.sort_randoms,
                 float_time_ms,
             );
 
@@ -459,14 +463,19 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
             &cur_draw_data.generics,
             &cur_draw_data.sort_extras,
             &cur_draw_data.lights,
+            &cur_draw_data.sort_randoms,
             float_time_ms,
             int_id,
         );
-        for (listForType(particles.Particle).items) |particle| particle.draw(&cur_draw_data.generics, &cur_draw_data.sort_extras);
+        for (listForType(particles.Particle).items) |particle| particle.draw(
+            &cur_draw_data.generics,
+            &cur_draw_data.sort_extras,
+            &cur_draw_data.sort_randoms,
+        );
     }
 
     if (main.settings.enable_lights) {
-        sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items);
+        sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items, cur_draw_data.sort_randoms.items);
 
         const opts: Renderer.QuadOptions = .{
             .color = info.bg_color,
@@ -494,7 +503,7 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
             assets.light_data,
             .{ .color = data.color, .color_intensity = 1.0, .alpha_mult = data.intensity },
         );
-    } else sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items);
+    } else sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items, cur_draw_data.sort_randoms.items);
 
     for (ui_systems.elements.items) |elem| elem.draw(
         &cur_draw_data.ui_generics,
@@ -528,24 +537,30 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
     }
 }
 
-fn sortGenerics(generics: []Renderer.GenericData, sort_extras: []f32) void {
+fn sortGenerics(generics: []Renderer.GenericData, sort_extras: []f32, sort_randoms: []u16) void {
     const SortContext = struct {
         items: []Renderer.GenericData,
         sort_extras: []f32,
+        sort_randoms: []u16,
 
         pub fn lessThan(ctx: @This(), a: usize, b: usize) bool {
             const item_a = ctx.items[a];
             const item_b = ctx.items[b];
-            return item_a.pos[1] + item_a.size[1] + ctx.sort_extras[a] < item_b.pos[1] + item_b.size[1] + ctx.sort_extras[b];
+            const norm_sort_random_a = f32i(ctx.sort_randoms[a]) / @as(f32, std.math.maxInt(u16));
+            const norm_sort_random_b = f32i(ctx.sort_randoms[b]) / @as(f32, std.math.maxInt(u16));
+            const a_value = item_a.pos[1] + item_a.size[1] + ctx.sort_extras[a] + norm_sort_random_a;
+            const b_value = item_b.pos[1] + item_b.size[1] + ctx.sort_extras[b] + norm_sort_random_b;
+            return a_value < b_value;
         }
 
         pub fn swap(ctx: @This(), a: usize, b: usize) void {
+            std.mem.swap(u16, &ctx.sort_randoms[a], &ctx.sort_randoms[b]);
             std.mem.swap(f32, &ctx.sort_extras[a], &ctx.sort_extras[b]);
             std.mem.swap(Renderer.GenericData, &ctx.items[a], &ctx.items[b]);
         }
     };
 
-    std.sort.pdqContext(0, generics.len, SortContext{ .items = generics, .sort_extras = sort_extras });
+    std.sort.pdqContext(0, generics.len, SortContext{ .items = generics, .sort_extras = sort_extras, .sort_randoms = sort_randoms });
 }
 
 // x/y < 0 has to be handled before this, since it's a u32

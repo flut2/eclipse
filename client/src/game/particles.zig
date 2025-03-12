@@ -20,6 +20,7 @@ pub const ThrowParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
+    sort_random: u16 = 0xAAAA,
 
     initial_size: f32,
     lifetime: f32,
@@ -30,7 +31,9 @@ pub const ThrowParticle = struct {
     last_update: i64 = 0,
 
     pub fn addToMap(part: ThrowParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .throw = part }) catch main.oomPanic();
+        var mod_part = part;
+        mod_part.sort_random = utils.rng.random().int(u16);
+        map.addListForType(Particle).append(main.allocator, .{ .throw = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *ThrowParticle, time: i64, dt: f32) bool {
@@ -69,6 +72,7 @@ pub const SparkerParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
+    sort_random: u16 = 0xAAAA,
 
     initial_size: f32,
     lifetime: f32,
@@ -79,7 +83,9 @@ pub const SparkerParticle = struct {
     last_update: i64 = 0,
 
     pub fn addToMap(part: SparkerParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .sparker = part }) catch main.oomPanic();
+        var mod_part = part;
+        mod_part.sort_random = utils.rng.random().int(u16);
+        map.addListForType(Particle).append(main.allocator, .{ .sparker = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *SparkerParticle, time: i64, dt: f32) bool {
@@ -118,6 +124,7 @@ pub const SparkParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
+    sort_random: u16 = 0xAAAA,
 
     initial_size: f32,
     lifetime: f32,
@@ -126,7 +133,9 @@ pub const SparkParticle = struct {
     dy: f32,
 
     pub fn addToMap(part: SparkParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .spark = part }) catch main.oomPanic();
+        var mod_part = part;
+        mod_part.sort_random = utils.rng.random().int(u16);
+        map.addListForType(Particle).append(main.allocator, .{ .spark = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *SparkParticle, _: i64, dt: f32) bool {
@@ -147,12 +156,15 @@ pub const TeleportParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
+    sort_random: u16 = 0xAAAA,
 
     time_left: f32,
     z_dir: f32,
 
     pub fn addToMap(part: TeleportParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .teleport = part }) catch main.oomPanic();
+        var mod_part = part;
+        mod_part.sort_random = utils.rng.random().int(u16);
+        map.addListForType(Particle).append(main.allocator, .{ .teleport = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *TeleportParticle, _: i64, dt: f32) bool {
@@ -172,6 +184,7 @@ pub const ExplosionParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
+    sort_random: u16 = 0xAAAA,
 
     lifetime: f32,
     time_left: f32,
@@ -180,7 +193,9 @@ pub const ExplosionParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: ExplosionParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .explosion = part }) catch main.oomPanic();
+        var mod_part = part;
+        mod_part.sort_random = utils.rng.random().int(u16);
+        map.addListForType(Particle).append(main.allocator, .{ .explosion = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *ExplosionParticle, _: i64, dt: f32) bool {
@@ -202,6 +217,7 @@ pub const HitParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
+    sort_random: u16 = 0xAAAA,
 
     lifetime: f32,
     time_left: f32,
@@ -210,7 +226,9 @@ pub const HitParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: HitParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .hit = part }) catch main.oomPanic();
+        var mod_part = part;
+        mod_part.sort_random = utils.rng.random().int(u16);
+        map.addListForType(Particle).append(main.allocator, .{ .hit = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *HitParticle, _: i64, dt: f32) bool {
@@ -232,6 +250,7 @@ pub const HealParticle = struct {
     color: u32 = 0,
     size: f32 = 1.0,
     alpha_mult: f32 = 1.0,
+    sort_random: u16 = 0xAAAA,
 
     target_obj_type: network_data.ObjectType,
     target_map_id: u32,
@@ -241,7 +260,9 @@ pub const HealParticle = struct {
     z_dir: f32,
 
     pub fn addToMap(part: HealParticle) void {
-        map.addListForType(Particle).append(main.allocator, .{ .heal = part }) catch main.oomPanic();
+        var mod_part = part;
+        mod_part.sort_random = utils.rng.random().int(u16);
+        map.addListForType(Particle).append(main.allocator, .{ .heal = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *HealParticle, _: i64, dt: f32) bool {
@@ -284,6 +305,7 @@ pub const Particle = union(enum) {
         self: Particle,
         generics: *std.ArrayListUnmanaged(Renderer.GenericData),
         sort_extras: *std.ArrayListUnmanaged(f32),
+        sort_randoms: *std.ArrayListUnmanaged(u16),
     ) void {
         switch (self) {
             inline else => |particle| {
@@ -309,6 +331,8 @@ pub const Particle = union(enum) {
                         .color_intensity = 1.0,
                     },
                 );
+
+                sort_randoms.append(main.allocator, particle.sort_random) catch main.oomPanic();
             },
         }
     }

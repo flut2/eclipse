@@ -111,6 +111,7 @@ direction: assets.Direction = .right,
 last_ability_use: [4]i64 = @splat(std.math.minInt(i31)),
 ability_state: network_data.AbilityState = .{},
 rank: network_data.Rank = .default,
+sort_random: u16 = 0xAAAA,
 
 pub fn addToMap(player_data: Player) void {
     var self = player_data;
@@ -130,6 +131,7 @@ pub fn addToMap(player_data: Player) void {
         std.log.err("Could not parse color data for player with data id {}. Setting it to empty", .{self.data_id});
         break :blk &.{};
     };
+    self.sort_random = utils.rng.random().int(u16);
 
     if (self.name_text_data == null) {
         self.name_text_data = .{
@@ -306,19 +308,10 @@ pub fn draw(
     generics: *std.ArrayListUnmanaged(Renderer.GenericData),
     sort_extras: *std.ArrayListUnmanaged(f32),
     lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    sort_randoms: *std.ArrayListUnmanaged(u16),
     float_time_ms: f32,
 ) void {
     if (main.needs_map_bg or !main.camera.visibleInCamera(self.x, self.y)) return;
-
-    var x = self.x;
-    var y = self.y;
-    if (self.map_id == map.info.player_map_id) {
-        const move_dt = if (self.last_self_move == 0) 0 else f32i(i64f(float_time_ms) * std.time.us_per_ms - self.last_self_move);
-        const dx = self.x_dir * move_dt;
-        const dy = self.y_dir * move_dt;
-        x += dx;
-        y += dy;
-    }
 
     const size = Camera.size_mult * main.camera.scale * self.size_mult * @as(f32, if (self.ability_state.heart_of_stone) 1.5 else 1.0);
 
@@ -339,7 +332,7 @@ pub fn draw(
     const stand_w = stand_data.width() * size;
     const x_offset = (if (self.direction == .left) stand_w - w else w - stand_w) / 2.0;
 
-    var screen_pos = main.camera.worldToScreen(x, y);
+    var screen_pos = main.camera.worldToScreen(self.x, self.y);
     screen_pos.x += x_offset;
     screen_pos.y += self.z * -px_per_tile - h + assets.padding * size;
 
@@ -375,6 +368,7 @@ pub fn draw(
             data,
             .{},
         );
+        for (0..data.text.len) |_| sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
     }
 
     Renderer.drawQuad(
@@ -392,6 +386,7 @@ pub fn draw(
             .color_intensity = color_intensity,
         },
     );
+    sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
     var y_pos: f32 = if (sink != 1.0) 15.0 else 5.0;
 
@@ -411,6 +406,7 @@ pub fn draw(
             assets.empty_bar_data,
             .{ .shadow_texel_mult = 0.5, .sort_extra = hp_bar_sort_extra - 0.0001 },
         );
+        sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         const float_hp = f32i(self.hp);
         const float_max_hp = f32i(self.max_hp + self.max_hp_bonus);
@@ -432,6 +428,7 @@ pub fn draw(
             hp_bar_data,
             .{ .shadow_texel_mult = 0.5, .sort_extra = hp_bar_sort_extra },
         );
+        sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         y_pos += hp_bar_h + 5.0;
     }
@@ -452,6 +449,7 @@ pub fn draw(
             assets.empty_bar_data,
             .{ .shadow_texel_mult = 0.5, .sort_extra = mp_bar_sort_extra - 0.0001 },
         );
+        sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         const float_mp = f32i(self.mp);
         const float_max_mp = f32i(self.max_mp + self.max_mp_bonus);
@@ -473,6 +471,7 @@ pub fn draw(
             mp_bar_data,
             .{ .shadow_texel_mult = 0.5, .sort_extra = mp_bar_sort_extra },
         );
+        sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         y_pos += mp_bar_h + 5.0;
     }
@@ -483,6 +482,7 @@ pub fn draw(
             renderer,
             generics,
             sort_extras,
+            sort_randoms,
             cond_int,
             float_time_ms,
             screen_pos.x - x_offset,
@@ -490,6 +490,7 @@ pub fn draw(
             main.camera.scale,
             screen_pos.y,
             h,
+            self.sort_random,
         );
         y_pos += 20;
     }
@@ -498,20 +499,24 @@ pub fn draw(
         self,
         generics,
         sort_extras,
+        sort_randoms,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y - name_h,
         main.camera.scale,
+        self.sort_random,
     );
 
     base.drawSpeechBalloon(
         self,
         generics,
         sort_extras,
+        sort_randoms,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y - name_h,
         main.camera.scale,
+        self.sort_random,
     );
 }
 

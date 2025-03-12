@@ -46,6 +46,7 @@ hit_list: std.AutoHashMapUnmanaged(u32, void) = .empty,
 heat_seek_fired: bool = false,
 time_dilation_active: bool = false,
 last_hit_check: i64 = 0,
+sort_random: u16 = 0xAAAA,
 
 pub fn addToMap(proj_data: Projectile) void {
     var self = proj_data;
@@ -66,6 +67,8 @@ pub fn addToMap(proj_data: Projectile) void {
         std.log.err("Could not parse color data for projectile. Setting it to empty", .{});
         break :blk &.{};
     };
+
+    self.sort_random = utils.rng.random().int(u16);
 
     map.addListForType(Projectile).append(main.allocator, self) catch @panic("Adding projectile failed");
 }
@@ -201,6 +204,7 @@ pub fn draw(
     generics: *std.ArrayListUnmanaged(Renderer.GenericData),
     sort_extras: *std.ArrayListUnmanaged(f32),
     lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    sort_randoms: *std.ArrayListUnmanaged(u16),
     float_time_ms: f32,
 ) void {
     defer self.time_dilation_active = false;
@@ -242,6 +246,7 @@ pub fn draw(
         self.atlas_data,
         .{ .shadow_texel_mult = 2.0 / size, .rotation = angle, .color = color, .color_intensity = color_intensity },
     );
+    sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 }
 
 pub fn update(self: *Projectile, time: i64, dt: f32) bool {

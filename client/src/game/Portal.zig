@@ -30,6 +30,7 @@ atlas_data: assets.AtlasData = .default,
 data: *const game_data.PortalData = undefined,
 anim_idx: u8 = 0,
 next_anim: i64 = -1,
+sort_random: u16 = 0xAAAA,
 
 pub fn addToMap(portal_data: Portal) void {
     base.addToMap(portal_data, Portal);
@@ -45,6 +46,7 @@ pub fn draw(
     generics: *std.ArrayListUnmanaged(Renderer.GenericData),
     sort_extras: *std.ArrayListUnmanaged(f32),
     lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    sort_randoms: *std.ArrayListUnmanaged(u16),
     float_time_ms: f32,
     int_id: u32,
 ) void {
@@ -68,6 +70,7 @@ pub fn draw(
             self.atlas_data,
             .{ .alpha_mult = self.alpha, .sort_extra = -4096 },
         );
+        sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         if (self.name_text_data) |*data| {
             const name_h = h_half + (data.height + 5) * main.camera.scale;
@@ -82,6 +85,7 @@ pub fn draw(
                 data,
                 .{},
             );
+            for (0..data.text.len) |_| sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
         }
 
         if (main.settings.enable_lights)
@@ -112,6 +116,7 @@ pub fn draw(
                 assets.interact_key_tex,
                 .{ .sort_extra = (screen_pos.y - enter_y) + (h_half - button_h) },
             );
+            sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
             renderer.enter_text_data.sort_extra = (screen_pos.y - enter_y) + (h_half - renderer.enter_text_data.height);
             Renderer.drawText(
@@ -123,6 +128,7 @@ pub fn draw(
                 &renderer.enter_text_data,
                 .{},
             );
+            for (0..renderer.enter_text_data.text.len) |_| sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
         }
 
         return;
@@ -161,6 +167,7 @@ pub fn draw(
             data,
             .{},
         );
+        for (0..data.text.len) |_| sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
     }
 
     if (int_id == self.map_id) {
@@ -179,6 +186,7 @@ pub fn draw(
             assets.interact_key_tex,
             .{ .sort_extra = (screen_pos.y - enter_y) + (h - button_h) },
         );
+        sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         renderer.enter_text_data.sort_extra = (screen_pos.y - enter_y) + (h - renderer.enter_text_data.height);
         Renderer.drawText(
@@ -190,6 +198,7 @@ pub fn draw(
             &renderer.enter_text_data,
             .{},
         );
+        for (0..renderer.enter_text_data.text.len) |_| sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
     }
 
     Renderer.drawQuad(
@@ -207,6 +216,7 @@ pub fn draw(
             .color_intensity = color_intensity,
         },
     );
+    sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
     if (main.settings.enable_lights)
         Renderer.drawLight(lights, self.data.light, screen_pos.x - w / 2.0, screen_pos.y, w, h, main.camera.scale, float_time_ms);

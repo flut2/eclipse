@@ -50,6 +50,7 @@ facing: f32 = std.math.nan(f32),
 status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
 speech_balloon: ?SpeechBalloon = null,
 next_anim: i64 = -1,
+sort_random: u16 = 0xAAAA,
 
 pub fn addToMap(enemy_data: Enemy) void {
     base.addToMap(enemy_data, Enemy);
@@ -68,6 +69,7 @@ pub fn draw(
     generics: *std.ArrayListUnmanaged(Renderer.GenericData),
     sort_extras: *std.ArrayListUnmanaged(f32),
     lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    sort_randoms: *std.ArrayListUnmanaged(u16),
     float_time_ms: f32,
 ) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_enemy_layer or
@@ -167,6 +169,7 @@ pub fn draw(
             data,
             .{},
         );
+        for (0..data.text.len) |_| sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
     };
 
     Renderer.drawQuad(
@@ -184,6 +187,7 @@ pub fn draw(
             .color_intensity = color_intensity,
         },
     );
+    sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
     var y_pos: f32 = if (sink != 1.0) 15.0 else 5.0;
 
@@ -203,6 +207,7 @@ pub fn draw(
             assets.empty_bar_data,
             .{ .shadow_texel_mult = 0.5, .sort_extra = hp_bar_sort_extra - 0.0001 },
         );
+        sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         const float_hp = f32i(self.hp);
         const float_max_hp = f32i(self.max_hp);
@@ -220,6 +225,7 @@ pub fn draw(
             hp_bar_data,
             .{ .shadow_texel_mult = 0.5, .sort_extra = hp_bar_sort_extra },
         );
+        sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         y_pos += hp_bar_h + 5.0;
     }
@@ -230,6 +236,7 @@ pub fn draw(
             renderer,
             generics,
             sort_extras,
+            sort_randoms,
             cond_int,
             float_time_ms,
             screen_pos.x - x_offset,
@@ -237,6 +244,7 @@ pub fn draw(
             main.camera.scale,
             screen_pos.y,
             h,
+            self.sort_random,
         );
         y_pos += 20;
     }
@@ -245,20 +253,24 @@ pub fn draw(
         self,
         generics,
         sort_extras,
+        sort_randoms,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y,
         main.camera.scale,
+        self.sort_random,
     );
 
     base.drawSpeechBalloon(
         self,
         generics,
         sort_extras,
+        sort_randoms,
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x - x_offset,
         screen_pos.y,
         main.camera.scale,
+        self.sort_random,
     );
 }
 

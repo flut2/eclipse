@@ -33,6 +33,7 @@ inventory: [9]u16 = @splat(std.math.maxInt(u16)),
 inv_data: [9]network_data.ItemData = @splat(@bitCast(@as(u32, 0))),
 anim_idx: u8 = 0,
 next_anim: i64 = -1,
+sort_random: u16 = 0xAAAA,
 
 pub fn addToMap(container_data: Container) void {
     base.addToMap(container_data, Container);
@@ -47,6 +48,7 @@ pub fn draw(
     generics: *std.ArrayListUnmanaged(Renderer.GenericData),
     sort_extras: *std.ArrayListUnmanaged(f32),
     lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    sort_randoms: *std.ArrayListUnmanaged(u16),
     float_time_ms: f32,
 ) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_container_layer or
@@ -100,6 +102,7 @@ pub fn draw(
             data,
             .{},
         );
+        for (0..data.text.len) |_| sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
     };
 
     Renderer.drawQuad(
@@ -117,6 +120,7 @@ pub fn draw(
             .color_intensity = color_intensity,
         },
     );
+    sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 }
 
 pub fn update(self: *Container, time: i64) void {
