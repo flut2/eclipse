@@ -70,7 +70,7 @@ pub var add_list: struct {
 pub var remove_list: std.ArrayListUnmanaged(usize) = .empty;
 
 pub var lights: std.ArrayListUnmanaged(Renderer.LightData) = .empty;
-pub var draw_data: [main.frames_in_flight]MapData = @splat(.{});
+pub var draw_data: [main.frames_in_flight * 2]MapData = @splat(.{});
 pub var draw_data_index: u8 = 0;
 
 pub var interactive: struct {
@@ -423,7 +423,7 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
         }
     }
 
-    defer draw_data_index = (draw_data_index + 1) % main.frames_in_flight;
+    defer draw_data_index = (draw_data_index + 1) % (main.frames_in_flight * 2);
     var cur_draw_data = &draw_data[draw_data_index];
     cur_draw_data.clear();
 
