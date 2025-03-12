@@ -2,7 +2,7 @@ const std = @import("std");
 
 const utils = @import("shared").utils;
 const f32i = utils.f32i;
-const i64f = utils.i64f;
+const i32f = utils.i32f;
 
 const Ally = @import("../../map/Ally.zig");
 const Enemy = @import("../../map/Enemy.zig");
@@ -69,8 +69,8 @@ pub const DwarvenCoil = struct {
         const owner = world.find(Player, host.owner_map_id, .con) orelse return;
         const fint = f32i(owner.stats[Player.intelligence_stat] + owner.stat_boosts[Player.intelligence_stat]);
         const fwit = f32i(owner.stats[Player.wit_stat] + owner.stat_boosts[Player.wit_stat]);
-        self.damage = i64f(300.0 + fwit * 2.0);
-        self.range = i64f(3.0 + fint * 0.05);
+        self.damage = i32f(300.0 + fwit * 2.0);
+        self.range = 3.0 + fint * 0.05;
     }
 
     pub fn tick(self: *DwarvenCoil, host: *Ally, time: i64, _: i64) !void {
