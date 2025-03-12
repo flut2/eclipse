@@ -556,7 +556,6 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
             const byte_size = data.byteSize();
             const next_size = size_tally + byte_size;
             if (next_size > max_bytes and idx > last_idx) {
-                // std.log.err("sending " ++ mapping[0] ++ ": {} bytes", .{size_tally});
                 self.client.sendPacket(@unionInit(network_data.S2CPacket, mapping[0], .{
                     .list = mapping[1][last_idx .. idx - 1],
                 }));
@@ -565,19 +564,11 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
             } else size_tally = next_size;
         }
 
-        // std.log.err("sending " ++ mapping[0] ++ ": {} bytes", .{size_tally});
-        if (last_idx < mapping[1].len - 1)
+        if (last_idx < mapping[1].len)
             self.client.sendPacket(@unionInit(network_data.S2CPacket, mapping[0], .{
                 .list = mapping[1][last_idx..],
             }));
     }
-
-    if (self.objs.player.items.len > 0) self.client.sendPacket(.{ .new_players = .{ .list = self.objs.player.items } });
-    if (self.objs.entity.items.len > 0) self.client.sendPacket(.{ .new_entities = .{ .list = self.objs.entity.items } });
-    if (self.objs.enemy.items.len > 0) self.client.sendPacket(.{ .new_enemies = .{ .list = self.objs.enemy.items } });
-    if (self.objs.portal.items.len > 0) self.client.sendPacket(.{ .new_portals = .{ .list = self.objs.portal.items } });
-    if (self.objs.container.items.len > 0) self.client.sendPacket(.{ .new_containers = .{ .list = self.objs.container.items } });
-    if (self.objs.ally.items.len > 0) self.client.sendPacket(.{ .new_allies = .{ .list = self.objs.ally.items } });
 }
 
 fn statTypeToId(stat_type: anytype) u16 {

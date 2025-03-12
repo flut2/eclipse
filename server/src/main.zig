@@ -94,7 +94,7 @@ pub fn main() !void {
     if (run_status != 0 and run_status != 1) std.log.err("Run failed: {s}", .{uv.uv_strerror(run_status)});
 }
 
-fn listenToServer(comptime acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.C) void, server_handle: [*c]uv.uv_tcp_t, port: u16) void {
+fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.C) void, server_handle: [*c]uv.uv_tcp_t, port: u16) void {
     const accept_socket_status = uv.uv_tcp_init(uv.uv_default_loop(), server_handle);
     if (accept_socket_status != 0) std.debug.panic("Setting up accept socket failed: {s}", .{uv.uv_strerror(accept_socket_status)});
 
