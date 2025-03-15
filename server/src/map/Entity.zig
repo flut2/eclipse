@@ -31,7 +31,9 @@ conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .empty,
 damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.EntityData = undefined,
+owner_map_id: u32 = std.math.maxInt(u32),
 world_id: i32 = std.math.minInt(i32),
+disappear_time: i64 = std.math.maxInt(i64),
 spawn: packed struct {
     command: bool = false,
 } = .{},
@@ -104,6 +106,11 @@ pub fn delete(self: *Entity) !void {
 }
 
 pub fn tick(self: *Entity, time: i64, dt: i64) !void {
+    if (time >= self.disappear_time) {
+        try self.delete();
+        return;
+    }
+
     const world = maps.worlds.getPtr(self.world_id) orelse return;
     if (self.data.health > 0 and self.hp <= 0) try world.remove(Entity, self);
 

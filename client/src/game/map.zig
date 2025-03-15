@@ -89,8 +89,6 @@ pub var minimap_copy: []u8 = undefined;
 pub var frames: std.atomic.Value(u32) = .init(0);
 pub var fps_time_start: i64 = 0;
 
-var last_tile_update: i64 = 0;
-
 pub fn listForType(comptime T: type) *std.ArrayListUnmanaged(T) {
     return switch (T) {
         Entity => &list.entity,
@@ -291,11 +289,6 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
         }
     };
 
-    if (time - last_tile_update > 16 * std.time.us_per_ms) {
-        last_tile_update = time;
-        for (squares) |*square| square.updateAnims(time);
-    }
-
     const cam_x = main.camera.x;
     const cam_y = main.camera.y;
     const cam_min_x = f32i(main.camera.min_x);
@@ -439,7 +432,7 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
         const float_time_ms = f32i(time) / std.time.us_per_ms;
 
         for (main.camera.min_y..main.camera.max_y) |y| for (main.camera.min_x..main.camera.max_x) |x|
-            getSquare(f32i(x), f32i(y), false, .con).?.draw(&cur_draw_data.grounds, &cur_draw_data.lights, float_time_ms);
+            getSquare(f32i(x), f32i(y), false, .ref).?.draw(&cur_draw_data.grounds, &cur_draw_data.lights, float_time_ms);
 
         inline for (.{ Enemy, Player, Ally }) |T|
             for (listForType(T).items) |*obj| obj.draw(

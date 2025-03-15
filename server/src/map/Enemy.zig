@@ -13,6 +13,7 @@ const main = @import("../main.zig");
 const maps = @import("../map/maps.zig");
 const World = @import("../World.zig");
 const Ally = @import("Ally.zig");
+const Entity = @import("Entity.zig");
 const Player = @import("Player.zig");
 const stat_util = @import("stat_util.zig");
 
@@ -274,6 +275,15 @@ pub fn deinit(self: *Enemy) !void {
                 .color = 0x0000FF,
             } });
         }
+    }
+
+    addSoul: {
+        _ = try world.add(Entity, .{
+            .x = self.x,
+            .y = self.y,
+            .data_id = (game_data.entity.from_name.get("Enemy Soul") orelse break :addSoul).id,
+            .disappear_time = main.current_time + 30 * std.time.us_per_s,
+        });
     }
 
     self.storages.deinit();

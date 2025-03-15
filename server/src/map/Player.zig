@@ -360,6 +360,9 @@ fn exportObject(self: *Player, world: *World, comptime T: type) !void {
             object.owner_map_id != std.math.maxInt(u32) and
             object.owner_map_id != self.map_id) continue;
 
+        // demon soul check, have to hardcode things since this is the hot path
+        if (T == Enemy and object.data_id == 49 and self.data_id != 0) continue;
+
         const x_dt = object.x - self.x;
         const y_dt = object.y - self.y;
         if (T == Enemy and object.data.elite or x_dt * x_dt + y_dt * y_dt <= 16 * 16) {

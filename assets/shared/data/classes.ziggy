@@ -33,17 +33,17 @@
             .name = "Ethereal Harvest",
             .description = 
             \\Gain the ability to see into the spirit world, allowing you to see the &type="med_it"Souls&reset of dead enemies.
-            \\When this ability is cast within 3 tiles of a &type="med_it"Soul&reset: Collect all &type="med_it"Souls&reset within 3 tiles, spawning ally Demons to join you in the fight for $wittxt10 (+15%$witicon) seconds&reset.
+            \\Consume all &type="med_it"Souls&reset within $inttxt6 (+9%$inticon) tiles&reset, receiving a +25% (additive) damage boost for $hsttxt6 (+6%$hsticon) seconds&reset per each &type="med_it"Soul&reset consumed.
             \\$footnotetxtSouls disappear after 30 seconds.
             ,
             .health_cost = 100,
-            .cooldown = 8.0,
+            .cooldown = 23.0,
             .icon = { "ability_icons": 8 },
         },
         {
             .name = "Space Shift",
             .description = 
-            \\Tear a Rift within space-time for $statxt10 (+10%$staicon) seconds&reset, granting yourself and other players up to $mptxt10 (+1%$mpicon) Mana&reset every second, with this regeneration becoming weaker the further they are from the Rift.
+            \\Tear a Rift in space-time for $statxt6 (+6%$staicon) seconds&reset, periodically sending out pulses restoring $hptxt50 (+5%$hpicon)&reset within $inttxt7 (+7%$inticon) tiles&reset.
             ,
             .mana_cost = 150,
             .health_cost = 200,
@@ -53,22 +53,22 @@
         {
             .name = "Bloodfont",
             .description = 
-            \\Delay all damage received for $hptxt13 (+1%$hpicon) seconds&reset, after which you receive all the stored damage excluding the damage received from enemies that are now dead.
+            \\Delay all damage received for $3 (+0.33%$hpicon) seconds&reset, after which you receive all the stored damage excluding the damage received from enemies that are now dead.
             \\$footnotetxtYou can not die from this ability, you will be set to 1 HP after the effect if it would've killed you.
             ,
             .mana_cost = 100,
-            .cooldown = 28.0,
+            .cooldown = 35.0,
             .icon = { "ability_icons": 10 },
         },
         {
             .name = "Ravenous Hunger",
             .description = 
-            \\Execute all monsters below or at 10% HP within $hsttxt1 (+10%$hsticon) tiles&reset, and gain $multitxt10 Overheal&reset for every 100 HP the killed mobs had.
+            \\Execute all monsters below or at 10% HP within $hsttxt2 (+5%$hsticon) tiles&reset, and gain $multitxt10 Overheal&reset for every 100 HP the killed mobs had.
             \\$footnotetxtThe Overheal is capped at $hptxt1000 (+10%$hpicon)$footnotetxt.
             ,
             .health_cost = 300,
             .mana_cost = 200,
-            .cooldown = 80.0,
+            .cooldown = 125.0,
             .icon = { "ability_icons": 11 },
         },
     ],

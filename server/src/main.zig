@@ -50,11 +50,11 @@ pub fn main() !void {
         defer rpmalloc.deinit();
     }
 
-    const child_allocator = if (enable_gpa) gpa.allocator() else rpmalloc.allocator();
-    allocator = if (build_options.enable_tracy) blk: {
-        var tracy_alloc: tracy.TracyAllocator = .init(child_allocator);
-        break :blk tracy_alloc.allocator();
-    } else child_allocator;
+    allocator = if (enable_gpa) gpa.allocator() else rpmalloc.allocator();
+    // allocator = if (build_options.enable_tracy) blk: {
+    //     var tracy_alloc: tracy.TracyAllocator = .init(child_allocator);
+    //     break :blk tracy_alloc.allocator();
+    // } else child_allocator;
 
     settings = try .init(allocator);
     defer Settings.deinit();

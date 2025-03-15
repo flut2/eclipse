@@ -143,7 +143,7 @@ fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, 
 }
 
 pub fn draw(
-    self: Square,
+    self: *Square,
     grounds: *std.ArrayListUnmanaged(Renderer.GroundData),
     lights: *std.ArrayListUnmanaged(Renderer.LightData),
     float_time_ms: f32,
@@ -158,32 +158,7 @@ pub fn draw(
     if (main.settings.enable_lights)
         Renderer.drawLight(lights, data.light, screen_pos.x, screen_pos.y, px_per_tile, px_per_tile, main.camera.scale, float_time_ms);
 
-    grounds.append(main.allocator, .{
-        .pos = .{ screen_pos.x, screen_pos.y },
-        .uv = .{ self.atlas_data.tex_u, self.atlas_data.tex_v },
-        .offset_uv = @bitCast(self.current_offset),
-        .left_blend_uv = @bitCast(self.blends[0]),
-        .left_blend_offset_uv = @bitCast(self.blend_offsets[0]),
-        .top_blend_uv = @bitCast(self.blends[1]),
-        .top_blend_offset_uv = @bitCast(self.blend_offsets[1]),
-        .right_blend_uv = @bitCast(self.blends[2]),
-        .right_blend_offset_uv = @bitCast(self.blend_offsets[2]),
-        .bottom_blend_uv = @bitCast(self.blends[3]),
-        .bottom_blend_offset_uv = @bitCast(self.blend_offsets[3]),
-        .rotation = self.rotation,
-        .color = self.color,
-    }) catch main.oomPanic();
-}
-
-fn equals(square: ?*Square, data_id: u16) bool {
-    return if (square) |sq| sq.data_id == data_id else false;
-}
-
-pub fn updateAnims(self: *Square, time: i64) void {
-    if (self.data_id == editor_tile or self.data_id == empty_tile) return;
-    const data = game_data.ground.from_id.get(self.data_id) orelse return;
-    if (data.animation.type == .unset and data.animations == null) return;
-
+    const time = main.current_time;
     updateTexAnim: {
         if (data.animations) |animations| {
             std.debug.assert(data.anim_sync_id != std.math.maxInt(u16));
@@ -241,8 +216,8 @@ pub fn updateAnims(self: *Square, time: i64) void {
             .v = @sin(data.animation.delta_y * time_sec) * assets.base_texel_h,
         },
         .flow => self.current_offset = .{
-            .u = (data.animation.delta_x * time_sec) * assets.base_texel_w,
-            .v = (data.animation.delta_y * time_sec) * assets.base_texel_h,
+            .u = data.animation.delta_x * time_sec * assets.base_texel_w,
+            .v = data.animation.delta_y * time_sec * assets.base_texel_h,
         },
         .unset => {},
     }
@@ -257,25 +232,32 @@ pub fn updateAnims(self: *Square, time: i64) void {
     updateBlendAtDir(self, top_sq, current_prio, disable_blend, top_blend_dir);
     updateBlendAtDir(self, right_sq, current_prio, disable_blend, right_blend_dir);
     updateBlendAtDir(self, bottom_sq, current_prio, disable_blend, bottom_blend_dir);
+
+    grounds.append(main.allocator, .{
+        .pos = .{ screen_pos.x, screen_pos.y },
+        .uv = .{ self.atlas_data.tex_u, self.atlas_data.tex_v },
+        .offset_uv = @bitCast(self.current_offset),
+        .left_blend_uv = @bitCast(self.blends[0]),
+        .left_blend_offset_uv = @bitCast(self.blend_offsets[0]),
+        .top_blend_uv = @bitCast(self.blends[1]),
+        .top_blend_offset_uv = @bitCast(self.blend_offsets[1]),
+        .right_blend_uv = @bitCast(self.blends[2]),
+        .right_blend_offset_uv = @bitCast(self.blend_offsets[2]),
+        .bottom_blend_uv = @bitCast(self.blends[3]),
+        .bottom_blend_offset_uv = @bitCast(self.blend_offsets[3]),
+        .rotation = self.rotation,
+        .color = self.color,
+    }) catch main.oomPanic();
+}
+
+fn equals(square: ?*Square, data_id: u16) bool {
+    return if (square) |sq| sq.data_id == data_id else false;
 }
 
 pub fn update(square: *Square) void {
     if (square.data_id == editor_tile or square.data_id == empty_tile) return;
 
     const data = game_data.ground.from_id.get(square.data_id) orelse return;
-
-    const time_sec = f32i(main.current_time) / std.time.ms_per_s;
-    switch (data.animation.type) {
-        .wave => square.current_offset = .{
-            .u = @sin(data.animation.delta_x * time_sec) * assets.base_texel_w,
-            .v = @sin(data.animation.delta_y * time_sec) * assets.base_texel_h,
-        },
-        .flow => square.current_offset = .{
-            .u = (data.animation.delta_x * time_sec) * assets.base_texel_w,
-            .v = (data.animation.delta_y * time_sec) * assets.base_texel_h,
-        },
-        .unset => {},
-    }
 
     const current_prio = data.blend_prio;
     const disable_blend = data.disable_blend;

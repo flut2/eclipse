@@ -1,6 +1,6 @@
 const std = @import("std");
-const builtin = @import("builtin");
 const Src = std.builtin.SourceLocation;
+const builtin = @import("builtin");
 
 // check for a decl named tracy_enabled in root or build_options
 pub const enabled = blk: {
@@ -644,8 +644,8 @@ const tracy_full = struct {
             ra: usize,
         ) void {
             const self: *TracyAllocator = @ptrCast(@alignCast(ctx));
-            self.child_allocator.rawFree(buf, alignment, ra);
             Free(buf.ptr);
+            self.child_allocator.rawFree(buf, alignment, ra);
         }
     };
 };
