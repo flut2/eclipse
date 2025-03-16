@@ -129,16 +129,18 @@ pub const DemonRift = struct {
 
         for (world.listForType(Player).items) |*player| {
             if (utils.distSqr(player.x, player.y, host.x, host.y) > radius_sqr) continue;
+            const max_hp = player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat];
+            if (player.hp >= max_hp) continue; 
             const pre_hp = player.hp;
-            player.hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + self.restore_amount);
+            player.hp = @min(max_hp, player.hp + self.restore_amount);
             const hp_delta = player.hp - pre_hp;
-            if (hp_delta <= 0) return;
+            if (hp_delta <= 0) continue;
 
             var buf: [64]u8 = undefined;
             player.client.sendPacket(.{ .notification = .{
                 .obj_type = .player,
                 .map_id = player.map_id,
-                .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
+                .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch continue,
                 .color = 0x00FF00,
             } });
 

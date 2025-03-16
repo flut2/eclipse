@@ -333,7 +333,8 @@ pub fn damage(
 
     if (dmg > 0 and self.ability_state.time_lock) self.stored_damage += @intCast(dmg * 5);
     if (unscaled_dmg > 0 and self.ability_state.bloodfont) self.stored_damage += @intCast(i32f(unscaled_dmg));
-    if (dmg > 100 and self.hasCard("Absorption")) self.hp = @min(self.data.stats.health, i32f(f32i(dmg) * 0.15));
+    if (dmg > 100 and self.hasCard("Absorption"))
+        self.hp = @min(self.stats[Player.health_stat] + self.stat_boosts[Player.health_stat], i32f(f32i(dmg) * 0.15));
 }
 
 fn CacheType(comptime T: type) type {
@@ -415,17 +416,23 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
 
     const scaled_dt = f32i(dt) / std.time.us_per_s;
 
-    const fstam = f32i(self.stats[stamina_stat] + self.stat_boosts[stamina_stat]);
-    self.hp_regen += (1.0 + fstam * 0.12) * scaled_dt;
-    const hp_regen_whole = i32f(self.hp_regen);
-    self.hp = @min(self.stats[health_stat] + self.stat_boosts[health_stat], self.hp + hp_regen_whole);
-    self.hp_regen -= f32i(hp_regen_whole);
+    const max_hp = self.stats[health_stat] + self.stat_boosts[health_stat];
+    if (self.hp < max_hp) {
+        const fstam = f32i(self.stats[stamina_stat] + self.stat_boosts[stamina_stat]);
+        self.hp_regen += (1.0 + fstam * 0.12) * scaled_dt;
+        const hp_regen_whole = i32f(self.hp_regen);
+        self.hp = @min(max_hp, self.hp + hp_regen_whole);
+        self.hp_regen -= f32i(hp_regen_whole);
+    }
 
-    const fint = f32i(self.stats[intelligence_stat] + self.stat_boosts[intelligence_stat]);
-    self.mp_regen += (0.5 + fint * 0.06) * scaled_dt;
-    const mp_regen_whole = i32f(self.mp_regen);
-    self.mp = @min(self.stats[mana_stat] + self.stat_boosts[mana_stat], self.mp + mp_regen_whole);
-    self.mp_regen -= f32i(mp_regen_whole);
+    const max_mp = self.stats[mana_stat] + self.stat_boosts[mana_stat];
+    if (self.mp < max_mp) {
+        const fint = f32i(self.stats[intelligence_stat] + self.stat_boosts[intelligence_stat]);
+        self.mp_regen += (0.5 + fint * 0.06) * scaled_dt;
+        const mp_regen_whole = i32f(self.mp_regen);
+        self.mp = @min(max_mp, self.mp + mp_regen_whole);
+        self.mp_regen -= f32i(mp_regen_whole);
+    }
 
     if (self.hp <= 0) try self.death("Unknown");
 

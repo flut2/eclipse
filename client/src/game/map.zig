@@ -202,7 +202,7 @@ pub fn setMapInfo(data: network_data.MapInfo) void {
     squares = if (squares.len == 0)
         main.allocator.alloc(Square, @as(u32, data.width) * @as(u32, data.height)) catch main.oomPanic()
     else
-        main.allocator.remap(squares, @as(u32, data.width) * @as(u32, data.height)) orelse main.oomPanic();
+        main.allocator.realloc(squares, @as(u32, data.width) * @as(u32, data.height)) catch main.oomPanic();
 
     @memset(squares, Square{});
 

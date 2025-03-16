@@ -1002,9 +1002,9 @@ fn layerCallback(dc: *DropdownContainer) void {
     const next_layer = layers[dc.index];
     const screen = ui_systems.screen.editor;
     screen.active_layer = next_layer;
-    inline for (@typeInfo(@TypeOf(screen.palette_containers)).@"struct".fields) |field| {
+    inline for (@typeInfo(@TypeOf(screen.palette_containers)).@"struct".fields) |field|
         @field(screen.palette_containers, field.name).base.visible = false;
-    }
+        
     switch (next_layer) {
         inline else => |tag| @field(screen.palette_containers, @tagName(tag)).base.visible = true,
     }
@@ -1020,7 +1020,7 @@ fn initialize(self: *MapEditorScreen) void {
     self.map_tile_data = if (self.map_tile_data.len == 0)
         main.allocator.alloc(MapEditorTile, @as(u32, self.map_size) * @as(u32, self.map_size)) catch main.oomPanic()
     else
-        main.allocator.remap(self.map_tile_data, @as(u32, self.map_size) * @as(u32, self.map_size)) orelse main.oomPanic();
+        main.allocator.realloc(self.map_tile_data, @as(u32, self.map_size) * @as(u32, self.map_size)) catch main.oomPanic();
 
     @memset(self.map_tile_data, MapEditorTile{});
 

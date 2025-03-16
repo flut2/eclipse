@@ -399,8 +399,8 @@ pub fn handleRavenousHunger(player: *Player) !void {
     const fhp = f32i(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat]);
     const radius = 2.0 + fhst * 0.05;
     const radius_sqr = radius * radius;
-    const max_overheal = 1000 + i32f(0.1 * fhp);
-    const kill_perc = 0.1;
+    const max_overheal = i32f(1000.0 + 0.1 * fhp);
+    const kill_perc = 1.1;
     const prev_hp = player.hp;
 
     var total_hp_gain: i32 = 0;
@@ -435,12 +435,12 @@ pub fn handleRavenousHunger(player: *Player) !void {
 
     player.hp = @min(
         player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat] + max_overheal,
-        @divFloor(player.hp + total_hp_gain, 10),
+        player.hp + @divFloor(total_hp_gain, 10),
     );
     const hp_delta = player.hp - prev_hp;
 
     var buf: [64]u8 = undefined;
-    const hp_gain_text = if (hp_delta > 0) "" else std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return;
+    const hp_gain_text = if (hp_delta <= 0) "" else std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return;
     for (world.listForType(Player).items) |*other_player| {
         for (show_effects.items) |show_eff| other_player.client.sendPacket(.{ .show_effect = show_eff });
 

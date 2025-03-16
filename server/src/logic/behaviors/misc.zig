@@ -25,8 +25,10 @@ pub const HealthShrine = struct {
 
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
+        const max_hp = player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat];
+        if (player.hp >= max_hp) return; // TODO: select random player instead
         const pre_hp = player.hp;
-        player.hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + 75);
+        player.hp = @min(max_hp, player.hp + 75);
         const hp_delta = player.hp - pre_hp;
         if (hp_delta <= 0) return;
 
@@ -65,8 +67,10 @@ pub const MagicShrine = struct {
 
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
+        const max_mp = player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat];
+        if (player.mp >= max_mp) return; // TODO: select random player instead
         const pre_mp = player.mp;
-        player.mp = @min(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat], player.mp + 40);
+        player.mp = @min(max_mp, player.mp + 40);
         const mp_delta = player.mp - pre_mp;
         if (mp_delta <= 0) return;
 
@@ -105,8 +109,10 @@ pub const RetrieveHealthBeacon = struct {
 
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
+        const max_hp = player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat];
+        if (player.hp >= max_hp) return; // TODO: select random player instead
         const pre_hp = player.hp;
-        player.hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + 75);
+        player.hp = @min(max_hp, player.hp + 75);
         const hp_delta = player.hp - pre_hp;
         if (hp_delta <= 0) return;
 
@@ -145,8 +151,10 @@ pub const RetrieveManaBeacon = struct {
 
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
+        const max_mp = player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat];
+        if (player.mp >= max_mp) return; // TODO: select random player instead
         const pre_mp = player.mp;
-        player.mp = @min(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat], player.mp + 40);
+        player.mp = @min(max_mp, player.mp + 40);
         const mp_delta = player.mp - pre_mp;
         if (mp_delta <= 0) return;
 
