@@ -1018,9 +1018,9 @@ fn initialize(self: *MapEditorScreen) void {
     self.command_queue.clear();
 
     self.map_tile_data = if (self.map_tile_data.len == 0)
-        main.allocator.alloc(MapEditorTile, @as(u32, self.map_size) * @as(u32, self.map_size)) catch return
+        main.allocator.alloc(MapEditorTile, @as(u32, self.map_size) * @as(u32, self.map_size)) catch main.oomPanic()
     else
-        main.allocator.realloc(self.map_tile_data, @as(u32, self.map_size) * @as(u32, self.map_size)) catch return;
+        main.allocator.remap(self.map_tile_data, @as(u32, self.map_size) * @as(u32, self.map_size)) orelse main.oomPanic();
 
     @memset(self.map_tile_data, MapEditorTile{});
 

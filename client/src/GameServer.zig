@@ -655,9 +655,9 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     }
 
     for (data.tiles) |tile| Square.addToMap(.{
-        .data_id = tile.data_id,
         .x = f32i(tile.x) + 0.5,
         .y = f32i(tile.y) + 0.5,
+        .data_id = tile.data_id,
     });
 
     main.need_minimap_update = data.tiles.len > 0;
