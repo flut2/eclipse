@@ -1053,6 +1053,7 @@ fn loadMap(screen: *MapEditorScreen, data_reader: anytype) !void {
     var arena: std.heap.ArenaAllocator = .init(main.allocator);
     defer arena.deinit();
     const parsed_map = try map_data.parseMap(data_reader, &arena);
+    screen.map_size = @max(screen.map_size, utils.nextPowerOfTwo(@max(parsed_map.w, parsed_map.h)));
     const start_x = (screen.map_size - parsed_map.w) / 2;
     const start_y = (screen.map_size - parsed_map.h) / 2;
     screen.start_x_override = start_x;
