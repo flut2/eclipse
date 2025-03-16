@@ -335,7 +335,11 @@ pub fn draw(
     var screen_pos = main.camera.worldToScreen(self.x, self.y);
     screen_pos.x += x_offset;
     screen_pos.y += self.z * -px_per_tile - h + assets.padding * size;
-
+    if (self.data.float.time > 0) {
+        const time_us = self.data.float.time * std.time.us_per_s;
+        screen_pos.y -= self.data.float.height / 2.0 * (@sin(f32i(main.current_time) / time_us) + 1) * px_per_tile;
+    }
+    
     var alpha_mult: f32 = self.alpha;
     if (self.condition.invisible)
         alpha_mult = 0.6;

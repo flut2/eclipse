@@ -13,6 +13,10 @@
         { .time = 0.4, .texture = {"props_large": 24} },
         { .time = 0.4, .texture = {"props_large": 23} },
     ],
+    .float = {
+        .time = 0.6,
+        .height = 0.5,
+    },
 },
 {
     .id = 1,

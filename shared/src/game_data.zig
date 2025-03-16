@@ -343,6 +343,7 @@ pub const ClassData = struct {
     rpc_name: []const u8 = "Unknown",
     abilities: [4]AbilityData,
     light: LightData = .{},
+    float: FloatData = .{},
     talents: []const TalentData,
 };
 
@@ -353,6 +354,7 @@ pub const ContainerData = struct {
     size_mult: f32 = 1.0,
     item_types: [8]ItemType = @splat(.any),
     light: LightData = .{},
+    float: FloatData = .{},
     show_name: bool = false,
     draw_on_ground: bool = false,
     animations: ?[]const FrameData = null,
@@ -387,6 +389,7 @@ pub const ProjectileData = struct {
     heat_seek_radius: f32 = 0.0,
     heat_seek_delay: f32 = 0,
     light: LightData = .{},
+    float: FloatData = .{},
     conditions: ?[]const TimedCondition = null,
 
     pub fn range(self: ProjectileData) f32 {
@@ -405,11 +408,17 @@ pub const EnemyData = struct {
     projectiles: ?[]const ProjectileData = null,
     size_mult: f32 = 1.0,
     light: LightData = .{},
+    float: FloatData = .{},
     hit_sound: []const u8 = "Unknown.mp3",
     death_sound: []const u8 = "Unknown.mp3",
     show_name: bool = false,
     draw_on_ground: bool = false,
     elite: bool = false,
+};
+
+pub const FloatData = struct {
+    time: f32 = 0.0,
+    height: f32 = 0.0,
 };
 
 pub const EntityData = struct {
@@ -421,6 +430,7 @@ pub const EntityData = struct {
     resistance: i32 = 0,
     size_mult: f32 = 1.0,
     light: LightData = .{},
+    float: FloatData = .{},
     draw_on_ground: bool = false,
     occupy_square: bool = false,
     full_occupy: bool = false,
@@ -443,6 +453,7 @@ pub const AllyData = struct {
     size_mult: f32 = 1.0,
     textures: []const TextureData,
     light: LightData = .{},
+    float: FloatData = .{},
     show_name: bool = false,
     draw_on_ground: bool = false,
     hit_sound: []const u8 = "Unknown.mp3",
@@ -668,6 +679,7 @@ pub const PortalData = struct {
     textures: []const TextureData,
     draw_on_ground: bool = false,
     light: LightData = .{},
+    float: FloatData = .{},
     size_mult: f32 = 1.0,
     show_name: bool = true,
     animations: ?[]FrameData = null,

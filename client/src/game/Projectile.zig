@@ -214,12 +214,17 @@ pub fn draw(
     const size = Camera.size_mult * main.camera.scale * self.data.size_mult;
     const w = self.atlas_data.texWRaw() * size;
     const h = self.atlas_data.texHRaw() * size;
-    const screen_pos = main.camera.worldToScreen(self.x, self.y);
+    var screen_pos = main.camera.worldToScreen(self.x, self.y);
     const z_offset = self.z * -px_per_tile - h + assets.padding * size;
     const rotation = self.data.rotation;
     const angle_correction = f32i(self.data.angle_correction) * std.math.degreesToRadians(45);
     const angle = -(self.visual_angle + angle_correction +
         (if (rotation == 0.0) 0.0 else std.math.degreesToRadians(float_time_ms / (1 / rotation))));
+
+    if (self.data.float.time > 0) {
+        const time_us = self.data.float.time * std.time.us_per_s;
+        screen_pos.y -= self.data.float.height / 2.0 * (@sin(f32i(main.current_time) / time_us) + 1) * px_per_tile;
+    }
 
     if (main.settings.enable_lights)
         Renderer.drawLight(

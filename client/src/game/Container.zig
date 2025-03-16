@@ -4,6 +4,7 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
+const f32i = utils.f32i;
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -69,6 +70,10 @@ pub fn draw(
     const h = atlas_data.texHRaw() * size;
 
     screen_pos.y += self.z * -px_per_tile - h + assets.padding * size;
+    if (self.data.float.time > 0) {
+        const time_us = self.data.float.time * std.time.us_per_s;
+        screen_pos.y -= self.data.float.height / 2.0 * (@sin(f32i(main.current_time) / time_us) + 1) * px_per_tile;
+    }
 
     const alpha_mult: f32 = self.alpha;
     var color: u32 = 0;

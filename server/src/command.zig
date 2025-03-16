@@ -60,8 +60,7 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
         break :blk int;
     };
     if (iter.index) |i| {
-        if (name_stream.pos != 0)
-            _ = name_stream.write(" ") catch return;
+        if (name_stream.pos != 0) _ = name_stream.write(" ") catch return;
         _ = name_stream.write(iter.buffer[i..]) catch return;
     }
 
@@ -90,10 +89,8 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
 
     if (name) |name_inner| {
         player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Spawned {}x \"{s}\"", .{ count, name_inner }) catch return);
-    } else {
+    } else
         player.client.sendMessage(std.fmt.bufPrint(&response_buf, "\"{s}\" not found in game data", .{written_name}) catch return);
-        return;
-    }
 }
 
 fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
