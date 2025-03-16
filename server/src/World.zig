@@ -410,7 +410,8 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
         obj.damage(owner_type, owner_id, opts.phys_dmg, opts.magic_dmg, opts.true_dmg, opts.conditions);
     }
 
-    if (T == Enemy and opts.aoe_color != 0xFFFFFFFF) for (self.listForType(Player).items) |*player| {
+    for (self.listForType(Player).items) |*player| {
+        if (utils.distSqr(player.x, player.y, x, y) > 16 * 16) continue;
         player.client.sendPacket(.{ .show_effect = .{
             .obj_type = owner_type,
             .map_id = owner_id,
@@ -421,7 +422,7 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
             .y2 = 0.0,
             .color = opts.aoe_color,
         } });
-    };
+    }
 }
 
 pub fn getAmountWithin(self: *World, comptime T: type, name: []const u8, x: f32, y: f32, radius_sqr: f32) u32 {
