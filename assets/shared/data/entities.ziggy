@@ -439,8 +439,8 @@
     .textures = [{"misc": 3}],
     .light = {
         .color = "0xB49DFF",
-        .intensity = 0.1,
-        .radius = 3.0,
+        .intensity = 0.05,
+        .radius = 0.5,
     },
     .static = true,
     .animations = [
@@ -460,8 +460,8 @@
     .textures = [{"misc_big": 13}],
     .light = {
         .color = "0x5F3CD6",
-        .intensity = 0.1,
-        .radius = 3.0,
+        .intensity = 0.05,
+        .radius = 2.0,
     },
     .static = true,
 },
