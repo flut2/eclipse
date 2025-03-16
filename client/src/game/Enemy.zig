@@ -45,11 +45,16 @@ attack_start: i64 = 0,
 attack_angle: f32 = 0.0,
 data: *const game_data.EnemyData = undefined,
 colors: []u32 = &.{},
+playing_anim: union(enum) {
+    none: void,
+    repeat: u8,
+    single: u8,
+} = .{ .none = {} },
 anim_idx: u8 = 0,
+next_anim: i64 = -1,
 facing: f32 = std.math.nan(f32),
 status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
 speech_balloon: ?SpeechBalloon = null,
-next_anim: i64 = -1,
 sort_random: u16 = 0xAAAA,
 
 pub fn addToMap(enemy_data: Enemy) void {

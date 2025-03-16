@@ -2,6 +2,8 @@ const std = @import("std");
 
 const shared = @import("shared");
 const game_data = shared.game_data;
+const utils = shared.utils;
+const i64f = utils.i64f;
 
 const Enemy = @import("../../map/Enemy.zig");
 const Entity = @import("../../map/Entity.zig");
@@ -209,12 +211,31 @@ pub const DormantHealthShrine = struct {
         .name = "Dormant Health Shrine",
     };
 
-    pub fn tick(_: *DormantHealthShrine, host: *Entity, _: i64, _: i64) !void {
+    transform_at: i64 = std.math.maxInt(i64),
+
+    pub fn tick(self: *DormantHealthShrine, host: *Entity, time: i64, _: i64) !void {
         const world = maps.worlds.getPtr(host.world_id) orelse return;
-        if (world.getAmountWithin(Enemy, "Health Wisp", host.x, host.y, 20 * 20) == 0) {
-            const shrine_data = game_data.entity.from_name.get("Health Shrine") orelse return;
-            _ = try world.add(Entity, .{ .data_id = shrine_data.id, .x = host.x, .y = host.y });
-            try host.delete();
+
+        if (self.transform_at != std.math.maxInt(i64)) {
+            if (time >= self.transform_at) {
+                const shrine_data = game_data.entity.from_name.get("Health Shrine") orelse return;
+                _ = try world.add(Entity, .{ .data_id = shrine_data.id, .x = host.x, .y = host.y });
+                try host.delete();
+                return;
+            }
+        } else {
+            if (world.getAmountWithin(Enemy, "Health Wisp", host.x, host.y, 20 * 20) == 0) {
+                self.transform_at = time + i64f(1.15 * std.time.us_per_s);
+                for (world.listForType(Player).items) |*player| {
+                    if (utils.distSqr(host.x, host.y, player.x, player.y) > 16 * 16) continue;
+                    player.client.sendPacket(.{ .play_animation = .{
+                        .obj_type = .entity,
+                        .map_id = host.map_id,
+                        .animation_idx = 0,
+                        .repeating = false,
+                    } });
+                }
+            }
         }
     }
 };
@@ -225,12 +246,31 @@ pub const DormantMagicShrine = struct {
         .name = "Dormant Magic Shrine",
     };
 
-    pub fn tick(_: *DormantMagicShrine, host: *Entity, _: i64, _: i64) !void {
+    transform_at: i64 = std.math.maxInt(i64),
+
+    pub fn tick(self: *DormantMagicShrine, host: *Entity, time: i64, _: i64) !void {
         const world = maps.worlds.getPtr(host.world_id) orelse return;
-        if (world.getAmountWithin(Enemy, "Magic Wisp", host.x, host.y, 20 * 20) == 0) {
-            const shrine_data = game_data.entity.from_name.get("Magic Shrine") orelse return;
-            _ = try world.add(Entity, .{ .data_id = shrine_data.id, .x = host.x, .y = host.y });
-            try host.delete();
+
+        if (self.transform_at != std.math.maxInt(i64)) {
+            if (time >= self.transform_at) {
+                const shrine_data = game_data.entity.from_name.get("Magic Shrine") orelse return;
+                _ = try world.add(Entity, .{ .data_id = shrine_data.id, .x = host.x, .y = host.y });
+                try host.delete();
+                return;
+            }
+        } else {
+            if (world.getAmountWithin(Enemy, "Magic Wisp", host.x, host.y, 20 * 20) == 0) {
+                self.transform_at = time + i64f(1.15 * std.time.us_per_s);
+                for (world.listForType(Player).items) |*player| {
+                    if (utils.distSqr(host.x, host.y, player.x, player.y) > 16 * 16) continue;
+                    player.client.sendPacket(.{ .play_animation = .{
+                        .obj_type = .entity,
+                        .map_id = host.map_id,
+                        .animation_idx = 0,
+                        .repeating = false,
+                    } });
+                }
+            }
         }
     }
 };

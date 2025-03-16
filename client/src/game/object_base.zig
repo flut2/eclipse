@@ -126,7 +126,72 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
         else => @compileError("Invalid type"),
     };
 
-    if (self.data.animations) |animations| {
+    if (self.data.playable_animations) |playable_animations| {
+        const index = switch (self.playing_anim) {
+            .none => return,
+            inline else => |value| value,
+        };
+        if (index >= playable_animations.len) {
+            std.log.err("The amount of playable animations ({}) was not enough for {s} with data id {}", .{
+                playable_animations.len,
+                type_name,
+                self.data_id,
+            });
+            return;
+        }
+        const animations = playable_animations[index];
+
+        if (time >= self.next_anim) {
+            const frame_len = animations.len;
+            if (frame_len < 2) {
+                std.log.err("The amount of frames ({}) was not enough for {s} with data id {}", .{ frame_len, type_name, self.data_id });
+                return;
+            }
+
+            const frame_data = animations[self.anim_idx];
+            const tex_data = frame_data.texture;
+            if (@hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall) {
+                if (assets.walls.get(tex_data.sheet)) |tex| {
+                    if (tex_data.index >= tex.len) {
+                        std.log.err("Incorrect index ({}) given to anim with sheet {s}, {s} with data id: {}", .{ tex_data.index, tex_data.sheet, type_name, self.data_id });
+                        return;
+                    }
+                    if (self.playing_anim == .single and self.anim_idx == frame_len - 1) {
+                        self.anim_idx = 0;
+                        self.next_anim = -1;
+                        self.playing_anim = .{ .none = {} };
+                        return;
+                    }
+                    self.wall_data = tex[tex_data.index];
+                    self.anim_idx = @intCast((self.anim_idx + 1) % frame_len);
+                    self.next_anim = time + i64f(frame_data.time * std.time.us_per_s);
+                } else {
+                    std.log.err("Could not find sheet {s} for anim on {s} with data id {}", .{ tex_data.sheet, type_name, self.data_id });
+                    return;
+                }
+            } else {
+                if (assets.atlas_data.get(tex_data.sheet)) |tex| {
+                    if (tex_data.index >= tex.len) {
+                        std.log.err("Incorrect index ({}) given to anim with sheet {s}, {s} with data id: {}", .{ tex_data.index, tex_data.sheet, type_name, self.data_id });
+                        return;
+                    }
+                    if (self.playing_anim == .single and self.anim_idx == frame_len - 1) {
+                        self.anim_idx = 0;
+                        self.next_anim = -1;
+                        self.playing_anim = .{ .none = {} };
+                        return;
+                    }
+                    self.atlas_data = tex[tex_data.index];
+                    if (self.data.draw_on_ground) self.atlas_data.removePadding();
+                    self.anim_idx = @intCast((self.anim_idx + 1) % frame_len);
+                    self.next_anim = time + i64f(frame_data.time * std.time.us_per_s);
+                } else {
+                    std.log.err("Could not find sheet {s} for anim on {s} with data id {}", .{ tex_data.sheet, type_name, self.data_id });
+                    return;
+                }
+            }
+        }
+    } else if (self.data.animations) |animations| {
         if (time >= self.next_anim) {
             const frame_len = animations.len;
             if (frame_len < 2) {

@@ -358,6 +358,7 @@ pub const ContainerData = struct {
     show_name: bool = false,
     draw_on_ground: bool = false,
     animations: ?[]const FrameData = null,
+    playable_animations: ?[][]FrameData = null,
 };
 
 pub const ProjectileData = struct {
@@ -442,6 +443,7 @@ pub const EntityData = struct {
     hit_sound: []const u8 = "Unknown.mp3",
     death_sound: []const u8 = "Unknown.mp3",
     animations: ?[]FrameData = null,
+    playable_animations: ?[][]FrameData = null,
 };
 
 pub const AllyData = struct {
@@ -683,6 +685,7 @@ pub const PortalData = struct {
     size_mult: f32 = 1.0,
     show_name: bool = true,
     animations: ?[]FrameData = null,
+    playable_animations: ?[][]FrameData = null,
 };
 
 pub const RegionData = struct {

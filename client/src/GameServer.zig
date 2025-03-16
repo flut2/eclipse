@@ -80,6 +80,7 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?
         .text => handleText,
         .card_options => handleCardOptions,
         .talent_upgrade_response => handleTalentUpgradeResponse,
+        .play_animation => handlePlayAnimation,
         .new_tick => handleNewTick,
         .dropped_players => handleDroppedPlayers,
         .dropped_entities => handleDroppedEntities,
@@ -625,6 +626,25 @@ fn handleCardOptions(_: *Server, data: PacketData(.card_options)) void {
 }
 
 fn handleTalentUpgradeResponse(_: *Server, _: PacketData(.talent_upgrade_response)) void {}
+
+fn handlePlayAnimation(_: *Server, data: PacketData(.play_animation)) void {
+    switch (data.obj_type) {
+        .enemy, .player, .ally => |value| std.log.err("Unsupported PlayAnimation for type {}", .{value}),
+        inline else => |inner| {
+            const T = ObjEnumToType(inner);
+            if (map.findObject(T, data.map_id, .ref)) |obj| {
+                obj.anim_idx = 0;
+                obj.next_anim = -1;
+                if (data.repeating)
+                    obj.playing_anim = .{ .repeat = data.animation_idx }
+                else
+                    obj.playing_anim = .{ .single = data.animation_idx };
+            }
+        },
+    }
+
+    if (logRead(.non_tick)) std.log.debug("Recv - PlayAnimation: {}", .{data});
+}
 
 fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     defer {

@@ -360,6 +360,22 @@
     .size_mult = 1.6,
     .static = true,
     .occupy_square = true,
+    .playable_animations = [
+        [
+            { .time = 0.1, .texture = { "props_big": 82 } },
+            { .time = 0.1, .texture = { "props_big": 83 } },
+            { .time = 0.1, .texture = { "props_big": 84 } },
+            { .time = 0.1, .texture = { "props_big": 85 } },
+            { .time = 0.1, .texture = { "props_big": 86 } },
+            { .time = 0.1, .texture = { "props_big": 87 } },
+            { .time = 0.1, .texture = { "props_big": 88 } },
+            { .time = 0.1, .texture = { "props_big": 89 } },
+            { .time = 0.1, .texture = { "props_big": 90 } },
+            { .time = 0.1, .texture = { "props_big": 91 } },
+            { .time = 0.1, .texture = { "props_big": 92 } },
+            { .time = 0.1, .texture = { "props_big": 93 } },
+        ]
+    ],
 },
 {
     .id = 45,
@@ -368,6 +384,22 @@
     .size_mult = 1.6,
     .static = true,
     .occupy_square = true,
+    .playable_animations = [
+        [
+            { .time = 0.1, .texture = { "props_big": 95 } },
+            { .time = 0.1, .texture = { "props_big": 96 } },
+            { .time = 0.1, .texture = { "props_big": 97 } },
+            { .time = 0.1, .texture = { "props_big": 98 } },
+            { .time = 0.1, .texture = { "props_big": 99 } },
+            { .time = 0.1, .texture = { "props_big": 100 } },
+            { .time = 0.1, .texture = { "props_big": 101 } },
+            { .time = 0.1, .texture = { "props_big": 102 } },
+            { .time = 0.1, .texture = { "props_big": 103 } },
+            { .time = 0.1, .texture = { "props_big": 104 } },
+            { .time = 0.1, .texture = { "props_big": 105 } },
+            { .time = 0.1, .texture = { "props_big": 106 } },
+        ]
+    ],
 },
 {
     .id = 46,

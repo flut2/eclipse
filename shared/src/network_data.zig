@@ -381,6 +381,7 @@ pub const S2CPacket = union(enum) {
     },
     card_options: struct { cards: [3]u16 },
     talent_upgrade_response: struct { success: bool, message: []const u8 },
+    play_animation: struct { obj_type: ObjectType, map_id: u32, animation_idx: u8, repeating: bool },
     @"error": struct { type: ErrorType, description: []const u8 },
 };
 

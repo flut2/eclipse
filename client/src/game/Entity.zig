@@ -40,6 +40,11 @@ atlas_data: assets.AtlasData = .default,
 wall_data: assets.WallData = .default,
 data: *const game_data.EntityData = undefined,
 colors: []u32 = &.{},
+playing_anim: union(enum) {
+    none: void,
+    repeat: u8,
+    single: u8,
+} = .{ .none = {} },
 anim_idx: u8 = 0,
 next_anim: i64 = -1,
 wall_outline_cull: packed struct {

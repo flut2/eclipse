@@ -282,4 +282,21 @@
     .stat_increases = [ wit { .amount = 10 }, resistance { .amount = 10 } ],
     .mana_gain_incr = 0.33,
 },
+{
+    .id = 20,
+    .name = "Admin Sword",
+    .description = "admin sword",
+    .rarity = @ItemRarity("mythic"),
+    .item_type = @ItemType("sword"),
+    .texture = { "basic_items": 24 },
+    .projectile_count = 1,
+    .projectile = {
+        .textures = [{ "basic_projectiles": 8 }],
+        .angle_correction = 1,
+        .speed = 1.5,
+        .duration = 2.0,
+        .phys_dmg = 10000,
+    },
+    .sound = "items/swish_light.mp3",
+},
 ]
