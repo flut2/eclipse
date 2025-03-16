@@ -400,7 +400,7 @@ pub fn handleRavenousHunger(player: *Player) !void {
     const radius = 2.0 + fhst * 0.05;
     const radius_sqr = radius * radius;
     const max_overheal = i32f(1000.0 + 0.1 * fhp);
-    const kill_perc = 1.1;
+    const kill_perc = 0.1;
     const prev_hp = player.hp;
 
     var total_hp_gain: i32 = 0;
