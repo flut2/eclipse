@@ -28,6 +28,7 @@ const Dropdown = @import("../elements/Dropdown.zig");
 const DropdownContainer = @import("../elements/DropdownContainer.zig");
 const element = @import("../elements/element.zig");
 const Image = @import("../elements/Image.zig");
+const Input = @import("../elements/Input.zig");
 const KeyMapper = @import("../elements/KeyMapper.zig");
 const ScrollableContainer = @import("../elements/ScrollableContainer.zig");
 const Slider = @import("../elements/Slider.zig");
@@ -240,6 +241,7 @@ palette_containers: struct {
 layer_dropdown: *Dropdown = undefined,
 layer_container: *UiContainer = undefined,
 layer_button: *Button = undefined,
+search_bar: *Input = undefined,
 
 place_key: Settings.Button = .{ .mouse = .left },
 sample_key: Settings.Button = .{ .mouse = .middle },
@@ -1004,7 +1006,7 @@ fn layerCallback(dc: *DropdownContainer) void {
     screen.active_layer = next_layer;
     inline for (@typeInfo(@TypeOf(screen.palette_containers)).@"struct".fields) |field|
         @field(screen.palette_containers, field.name).base.visible = false;
-        
+
     switch (next_layer) {
         inline else => |tag| @field(screen.palette_containers, @tagName(tag)).base.visible = true,
     }
@@ -1051,14 +1053,15 @@ fn loadMap(screen: *MapEditorScreen, data_reader: anytype) !void {
     var arena: std.heap.ArenaAllocator = .init(main.allocator);
     defer arena.deinit();
     const parsed_map = try map_data.parseMap(data_reader, &arena);
-    screen.start_x_override = parsed_map.w / 2;
-    screen.start_y_override = parsed_map.h / 2;
-    screen.map_size = @max(parsed_map.w, parsed_map.h);
+    const start_x = (screen.map_size - parsed_map.w) / 2;
+    const start_y = (screen.map_size - parsed_map.h) / 2;
+    screen.start_x_override = start_x;
+    screen.start_y_override = start_y;
     screen.initialize();
 
     for (parsed_map.tiles, 0..) |tile, i| {
-        const ux: u16 = @intCast(i % parsed_map.w);
-        const uy: u16 = @intCast(i / parsed_map.w);
+        const ux = start_x + @as(u16, @intCast(i % parsed_map.w));
+        const uy = start_y + @as(u16, @intCast(i / parsed_map.w));
         if (tile.ground_name.len > 0) screen.setTile(ux, uy, game_data.ground.from_name.get(tile.ground_name).?.id);
         if (tile.region_name.len > 0) screen.setRegion(ux, uy, game_data.region.from_name.get(tile.region_name).?.id);
         if (tile.entity_name.len > 0) screen.setObject(Entity, ux, uy, game_data.entity.from_name.get(tile.entity_name).?.id);
