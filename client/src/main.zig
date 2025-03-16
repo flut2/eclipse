@@ -29,7 +29,7 @@ const dialog = @import("ui/dialogs/dialog.zig");
 const element = @import("ui/elements/element.zig");
 const ui_systems = @import("ui/systems.zig");
 
-pub const frames_in_flight = 3;
+pub const frames_in_flight = 2;
 
 /// Data must have pointer stability and must be deallocated manually, usually in the callback (for type information)
 pub const TimedCallback = struct { trigger_on: i64, callback: *const fn (*anyopaque) void, data: *anyopaque };

@@ -91,26 +91,30 @@ pub const PacketReader = struct {
 pub fn SpscQueue(comptime T: type, capacity: comptime_int) type {
     return struct {
         comptime {
-            if (capacity < 3) @compileError("SpscQueue capacity has to be greater than two");
+            if (capacity < 2) @compileError("SpscQueue capacity has to be at least two");
         }
 
         data: [capacity]T = @splat(.{}),
         write_index: std.atomic.Value(usize) align(std.atomic.cache_line) = .init(0),
+        cached_write_index: usize align(std.atomic.cache_line) = 0,
         read_index: std.atomic.Value(usize) align(std.atomic.cache_line) = .init(0),
+        cached_read_index: usize align(std.atomic.cache_line) = 0,
 
         pub fn push(self: *@This(), item: T) void {
             const write = self.write_index.load(.unordered);
             const next_write = (write + 1) % capacity;
-            var read = self.read_index.load(.acquire);
-            while (next_write == read) read = self.read_index.load(.acquire);
+            while (next_write == self.cached_read_index)
+                self.cached_read_index = self.read_index.load(.acquire);
             self.data[write] = item;
             self.write_index.store(next_write, .release);
         }
 
         pub fn pop(self: *@This()) ?T {
             const current_read = self.read_index.load(.unordered);
-            const write = self.write_index.load(.acquire);
-            if (current_read == write) return null;
+            if (current_read == self.cached_write_index) {
+                self.cached_write_index = self.write_index.load(.acquire);
+                if (current_read == self.cached_write_index) return null;
+            }
             const value = self.data[current_read];
             self.read_index.store((current_read + 1) % capacity, .release);
             return value;
