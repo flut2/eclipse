@@ -153,10 +153,15 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
     }
 }
 
-pub fn clampToSpawn(host: anytype, dt: i64, radius: f32, speed: f32) void {
+pub fn clampToSpawn(host: anytype, dt: i64, radius: f32, safe_radius: f32, speed: f32) bool {
     verifyType(@TypeOf(host));
-    if (utils.distSqr(host.spawn_x, host.spawn_y, host.x, host.y) > radius * radius)
+    const dist_sqr = utils.distSqr(host.spawn_x, host.spawn_y, host.x, host.y);
+    if (dist_sqr <= safe_radius * safe_radius) return true;
+    if (dist_sqr >= radius * radius) {
         World.moveToward(host, host.spawn_x, host.spawn_y, speed, dt);
+        return false;
+    }
+    return true;
 }
 
 pub fn orbit(host: anytype, dt: i64, opts: struct {

@@ -96,8 +96,8 @@ pub const EnemySoul = struct {
     };
 
     pub fn tick(_: *EnemySoul, host: *Entity, _: i64, dt: i64) !void {
-        logic.wander(@src(), host, dt, 1.0);
-        logic.clampToSpawn(host, dt, 9.0, 2.0);
+        if (logic.clampToSpawn(host, dt, 9.0, 7.0, 2.0)) 
+            logic.wander(@src(), host, dt, 1.0);
     }
 };
 
@@ -130,7 +130,7 @@ pub const DemonRift = struct {
         for (world.listForType(Player).items) |*player| {
             if (utils.distSqr(player.x, player.y, host.x, host.y) > radius_sqr) continue;
             const max_hp = player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat];
-            if (player.hp >= max_hp) continue; 
+            if (player.hp >= max_hp) continue;
             const pre_hp = player.hp;
             player.hp = @min(max_hp, player.hp + self.restore_amount);
             const hp_delta = player.hp - pre_hp;

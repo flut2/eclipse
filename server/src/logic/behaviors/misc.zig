@@ -188,8 +188,8 @@ pub const HealthWisp = struct {
     };
 
     pub fn tick(_: *HealthWisp, host: *Enemy, _: i64, dt: i64) !void {
-        logic.wander(@src(), host, dt, 2.5);
-        logic.clampToSpawn(host, dt, 4.0, 5.0);
+        if (logic.clampToSpawn(host, dt, 6.0, 4.0, 2.5))
+            logic.wander(@src(), host, dt, 2.5);
     }
 };
 
@@ -200,8 +200,8 @@ pub const MagicWisp = struct {
     };
 
     pub fn tick(_: *MagicWisp, host: *Enemy, _: i64, dt: i64) !void {
-        logic.wander(@src(), host, dt, 2.5);
-        logic.clampToSpawn(host, dt, 4.0, 5.0);
+        if (logic.clampToSpawn(host, dt, 6.0, 4.0, 2.5))
+            logic.wander(@src(), host, dt, 2.5);
     }
 };
 
