@@ -96,7 +96,7 @@ pub const EnemySoul = struct {
     };
 
     pub fn tick(_: *EnemySoul, host: *Entity, _: i64, dt: i64) !void {
-        if (logic.clampToSpawn(host, dt, 9.0, 7.0, 2.0)) 
+        if (logic.clampToSpawn(@src(), host, dt, 9.0, 7.0, 2.0)) 
             logic.wander(@src(), host, dt, 1.0);
     }
 };

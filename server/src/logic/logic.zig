@@ -23,6 +23,7 @@ pub const Storages = struct {
     follow: std.AutoHashMapUnmanaged(u64, FollowStorage) = .empty,
     wander: std.AutoHashMapUnmanaged(u64, WanderStorage) = .empty,
     shoot: std.AutoHashMapUnmanaged(u64, ShootStorage) = .empty,
+    clamp_to_spawn: std.AutoHashMapUnmanaged(u64, ClampToSpawnStorage) = .empty,
 
     pub fn clear(self: *Storages) void {
         inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field| {
@@ -153,15 +154,34 @@ pub fn charge(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i
     }
 }
 
-pub fn clampToSpawn(host: anytype, dt: i64, radius: f32, safe_radius: f32, speed: f32) bool {
+const ClampToSpawnStorage = struct { move_back: bool = false };
+pub fn clampToSpawn(
+    comptime src_loc: std.builtin.SourceLocation,
+    host: anytype,
+    dt: i64,
+    radius: f32,
+    safe_radius: f32,
+    speed: f32,
+) bool {
     verifyType(@TypeOf(host));
+
+    const storage_id = getStorageId(src_loc);
+    var storage = host.storages.clamp_to_spawn.getPtr(storage_id) orelse blk: {
+        host.storages.clamp_to_spawn.put(main.allocator, storage_id, .{}) catch return false;
+        break :blk host.storages.clamp_to_spawn.getPtr(storage_id).?;
+    };
+    if (storage.move_back) World.moveToward(host, host.spawn_x, host.spawn_y, speed, dt);
+
     const dist_sqr = utils.distSqr(host.spawn_x, host.spawn_y, host.x, host.y);
-    if (dist_sqr <= safe_radius * safe_radius) return true;
+    if (dist_sqr <= safe_radius * safe_radius) {
+        storage.move_back = false;
+        return true;
+    }
     if (dist_sqr >= radius * radius) {
-        World.moveToward(host, host.spawn_x, host.spawn_y, speed, dt);
+        storage.move_back = true;
         return false;
     }
-    return true;
+    return !storage.move_back;
 }
 
 pub fn orbit(host: anytype, dt: i64, opts: struct {
