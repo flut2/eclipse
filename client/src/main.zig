@@ -129,8 +129,7 @@ fn updateCharIdSort(selected_char_id: u32) void {
 pub fn enterGame(selected_server: network_data.ServerData, char_id: u32, class_data_id: u16) void {
     if (current_account == null) return;
 
-    // TODO: readd RLS when fixed
-    game_server.hello_data = network_data.C2SPacket{ .hello = .{
+    game_server.hello_data = .{ .hello = .{
         .build_ver = build_options.version,
         .email = current_account.?.email,
         .token = current_account.?.token,
@@ -152,8 +151,7 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
     const fragment_size = 50000;
     const fragments = test_map.len / 50000 + 1;
     if (fragments == 1) {
-        // TODO: readd RLS when fixed
-        game_server.hello_data = network_data.C2SPacket{ .map_hello = .{
+        game_server.hello_data = .{ .map_hello = .{
             .build_ver = build_options.version,
             .email = current_account.?.email,
             .token = current_account.?.token,
@@ -165,8 +163,7 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
         for (0..fragments) |i| {
             const map_slice = test_map[fragment_size * i .. @min(test_map.len, fragment_size * (i + 1))];
             if (i == fragments - 1) {
-                // TODO: readd RLS when fixed
-                game_server.hello_data = network_data.C2SPacket{ .map_hello = .{
+                game_server.hello_data = .{ .map_hello = .{
                     .build_ver = build_options.version,
                     .email = current_account.?.email,
                     .token = current_account.?.token,

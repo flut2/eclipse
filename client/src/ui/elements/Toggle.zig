@@ -56,7 +56,7 @@ pub fn mouseMove(self: *Toggle, x: f32, y: f32, x_offset: f32, y_offset: f32) bo
             return true;
         }
 
-        systems.hover_target = element.UiElement{ .toggle = self }; // TODO: re-add RLS when fixed
+        systems.hover_target = .{ .toggle = self };
         self.state = .hovered;
     } else self.state = .none;
 

@@ -55,7 +55,7 @@ pub fn mouseMove(self: *Button, x: f32, y: f32, x_offset: f32, y_offset: f32) bo
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
-        systems.hover_target = element.UiElement{ .button = self }; // TODO: re-add RLS when fixed
+        systems.hover_target = .{ .button = self };
         if (self.enabled) self.state = .hovered;
 
         if (self.char) |char| {

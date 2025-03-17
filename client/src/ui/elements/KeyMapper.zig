@@ -62,7 +62,7 @@ pub fn mouseMove(self: *KeyMapper, x: f32, y: f32, x_offset: f32, y_offset: f32)
             return true;
         }
 
-        systems.hover_target = element.UiElement{ .key_mapper = self }; // TODO: re-add RLS when fixed
+        systems.hover_target = .{ .key_mapper = self };
         self.state = .hovered;
     } else self.state = .none;
 

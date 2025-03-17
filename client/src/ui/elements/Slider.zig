@@ -74,7 +74,7 @@ pub fn mouseRelease(self: *Slider, x: f32, y: f32, _: f32, _: f32) bool {
         };
 
         if (utils.isInBounds(x, y, self.knob_x, self.knob_y, knob_w, knob_h)) {
-            systems.hover_target = element.UiElement{ .slider = self }; // TODO: re-add RLS when fixed
+            systems.hover_target = .{ .slider = self };
             self.state = .hovered;
         } else self.state = .none;
 
@@ -108,7 +108,7 @@ pub fn mouseMove(self: *Slider, x: f32, y: f32, x_offset: f32, y_offset: f32) bo
     if (self.state == .pressed) {
         self.pressed(x, y, knob_h, knob_w);
     } else if (utils.isInBounds(x, y, self.base.x + self.knob_x, self.base.y + self.knob_y, knob_w, knob_h)) {
-        systems.hover_target = element.UiElement{ .slider = self }; // todo re-add RLS when fixed
+        systems.hover_target = .{ .slider = self };
         self.state = .hovered;
     } else if (self.state == .hovered) self.state = .none;
 

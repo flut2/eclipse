@@ -41,7 +41,6 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
 }
 
 pub fn handleHeartOfStone(player: *Player) ![]u8 {
-    // TODO: needs VFX
     player.ability_state.heart_of_stone = true;
     return &.{};
 }
@@ -53,7 +52,6 @@ pub fn handleTimeDilation(player: *Player) ![]u8 {
 }
 
 pub fn handleRewind() ![]u8 {
-    // TODO: needs VFX
     return &.{};
 }
 
@@ -94,7 +92,7 @@ pub fn handleTimeLock(player: *Player) ![]u8 {
 }
 
 pub fn handleBloodfont(player: *Player) ![]u8 {
-    // TODO: needs VFX, impl
+    // TODO: needs VFX
     player.ability_state.bloodfont = true;
     return &.{};
 }

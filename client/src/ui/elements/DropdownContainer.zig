@@ -51,7 +51,7 @@ pub fn mouseMove(self: *DropdownContainer, x: f32, y: f32, _: f32, _: f32) bool 
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
-        systems.hover_target = element.UiElement{ .dropdown_container = self }; // TODO: re-add RLS when fixed
+        systems.hover_target = .{ .dropdown_container = self };
         self.state = .hovered;
     } else self.state = .none;
 

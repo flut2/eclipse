@@ -80,7 +80,7 @@ var current_point_idx: u32 = 0;
 var last_point_switch: i64 = 0;
 
 pub fn init() !void {
-    screen = Screen{ .empty = {} }; // TODO: re-add RLS when fixed
+    screen = .{ .empty = {} };
 
     try tooltip.init();
     try dialog.init();

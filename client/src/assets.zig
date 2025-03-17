@@ -1175,7 +1175,6 @@ pub fn playSfx(name: []const u8) void {
 
         sfx_map.put(arena.allocator(), name, audio) catch return;
     } else |_| {
-        // TODO: maybe an actual unknown sound? can't imagine debugging this being great with users
         if (!std.mem.eql(u8, name, "Unknown.mp3")) {
             std.log.err("Could not find sound effect for \"{s}\"", .{name});
             playSfx("error.mp3");

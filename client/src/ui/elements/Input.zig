@@ -51,7 +51,7 @@ pub fn mouseMove(self: *Input, x: f32, y: f32, _: f32, _: f32) bool {
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
-        systems.hover_target = element.UiElement{ .input_field = self }; // TODO: re-add RLS when fixed
+        systems.hover_target = .{ .input_field = self };
         self.state = .hovered;
     } else self.state = .none;
 
