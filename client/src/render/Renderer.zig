@@ -1793,23 +1793,3 @@ pub fn draw(self: *Renderer) !bool {
     }
     return true;
 }
-
-fn sortGenerics(self: *Renderer) void {
-    const SortContext = struct {
-        items: []GenericData,
-        sort_prios: []f32,
-
-        pub fn lessThan(ctx: @This(), a: usize, b: usize) bool {
-            const item_a = ctx.items[a];
-            const item_b = ctx.items[b];
-            return item_a.pos[1] + item_a.size[1] + ctx.sort_prios[a] < item_b.pos[1] + item_b.size[1] + ctx.sort_prios[b];
-        }
-
-        pub fn swap(ctx: @This(), a: usize, b: usize) void {
-            std.mem.swap(f32, &ctx.sort_prios[a], &ctx.sort_prios[b]);
-            std.mem.swap(GenericData, &ctx.items[a], &ctx.items[b]);
-        }
-    };
-
-    std.sort.pdqContext(0, self.generics.items.len, SortContext{ .items = self.generics.items, .sort_prios = self.sort_extras.items });
-}

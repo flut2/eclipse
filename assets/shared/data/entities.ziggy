@@ -442,7 +442,6 @@
         .intensity = 0.05,
         .radius = 0.5,
     },
-    .static = true,
     .animations = [
         { .time = 0.4, .texture = {"misc": 3} },
         { .time = 0.4, .texture = {"misc": 4} },
@@ -462,6 +461,10 @@
         .color = "0x5F3CD6",
         .intensity = 0.05,
         .radius = 2.0,
+    },
+    .float = {
+        .time = 1.0,
+        .height = 0.5,
     },
     .static = true,
 },
