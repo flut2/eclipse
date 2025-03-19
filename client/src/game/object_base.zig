@@ -99,6 +99,28 @@ pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
             if (@hasField(T, "anim_data")) self.anim_data.removePadding() else self.atlas_data.removePadding();
     }
 
+    subtexParse: {
+        if (!@hasField(@TypeOf(self.data.*), "subtexture")) break :subtexParse;
+        const subtex_data = self.data.subtexture orelse break :subtexParse;
+        if (subtex_data.textures.len == 0) {
+            std.log.err("{s} with data id {} has an empty subtexture list, parsing failed", .{ type_name, self.data_id });
+            break :subtexParse;
+        }
+
+        const tex = subtex_data.textures[utils.rng.next() % subtex_data.textures.len];
+
+        if (assets.atlas_data.get(tex.sheet)) |data| {
+            self.subtex_atlas_data = data[tex.index];
+        } else {
+            std.log.err("Could not find subtex sheet {s} for {s} with data id {}. Using error texture", .{
+                tex.sheet,
+                type_name,
+                self.data_id,
+            });
+            self.subtex_atlas_data = assets.error_data;
+        }
+    }
+
     if (self.name_text_data == null and self.data.show_name) {
         self.name_text_data = .{
             .text = undefined,
@@ -124,6 +146,31 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
         Portal => "portal",
         Container => "container",
         else => @compileError("Invalid type"),
+    };
+
+    if (@hasField(@TypeOf(self.data.*), "subtexture")) if (self.data.subtexture) |subtex_data| if (subtex_data.animations) |animations| {
+        if (time >= self.subtex_next_anim) {
+            const frame_len = animations.len;
+            if (frame_len < 2) {
+                std.log.err("The amount of frames ({}) was not enough for {s} with data id {}", .{ frame_len, type_name, self.data_id });
+                return;
+            }
+
+            const frame_data = animations[self.subtex_anim_idx];
+            const tex_data = frame_data.texture;
+            if (assets.atlas_data.get(tex_data.sheet)) |tex| {
+                if (tex_data.index >= tex.len) {
+                    std.log.err("Incorrect index ({}) given to subtex anim with sheet {s}, {s} with data id: {}", .{ tex_data.index, tex_data.sheet, type_name, self.data_id });
+                    return;
+                }
+                self.subtex_atlas_data = tex[tex_data.index];
+                self.subtex_anim_idx = @intCast((self.subtex_anim_idx + 1) % frame_len);
+                self.subtex_next_anim = time + i64f(frame_data.time * std.time.us_per_s);
+            } else {
+                std.log.err("Could not find sheet {s} for anim on {s} with data id {}", .{ tex_data.sheet, type_name, self.data_id });
+                return;
+            }
+        }
     };
 
     if (self.data.playable_animations) |playable_animations| {

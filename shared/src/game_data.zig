@@ -422,10 +422,21 @@ pub const FloatData = struct {
     height: f32 = 0.0,
 };
 
+pub const SubtextureData = struct {
+    textures: []const TextureData,
+    animations: ?[]FrameData = null,
+    x_offset: i8 = 0,
+    y_offset: i8 = 0,
+    size_mult: f32 = 1.0,
+    light: LightData = .{},
+    float: FloatData = .{},
+};
+
 pub const EntityData = struct {
     id: u16,
     name: []const u8,
     textures: []const TextureData,
+    subtexture: ?SubtextureData = null,
     health: i32 = 0, // Having no health means it can't be hit/die
     defense: i32 = 0,
     resistance: i32 = 0,
@@ -703,7 +714,7 @@ pub const StringContext = struct {
     pub fn eql(_: @This(), a: []const u8, b: []const u8) bool {
         if (a.len != b.len) return false;
         if (a.len == 0 or a.ptr == b.ptr) return true;
-        for (a, b) |a_elem, b_elem| if (a_elem != b_elem and a_elem != std.ascii.toLower(b_elem)) return false;
+        for (a, b) |a_elem, b_elem| if (std.ascii.toLower(a_elem) != std.ascii.toLower(b_elem)) return false;
         return true;
     }
 };

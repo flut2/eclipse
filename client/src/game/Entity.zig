@@ -37,6 +37,7 @@ resistance: i16 = 0,
 render_color_override: u32 = std.math.maxInt(u32),
 condition: utils.Condition = .{},
 atlas_data: assets.AtlasData = .default,
+subtex_atlas_data: assets.AtlasData = .default,
 wall_data: assets.WallData = .default,
 data: *const game_data.EntityData = undefined,
 colors: []u32 = &.{},
@@ -47,6 +48,8 @@ playing_anim: union(enum) {
 } = .{ .none = {} },
 anim_idx: u8 = 0,
 next_anim: i64 = -1,
+subtex_anim_idx: u8 = 0,
+subtex_next_anim: i64 = -1,
 wall_outline_cull: packed struct {
     top: bool = false,
     bottom: bool = false,
@@ -387,6 +390,47 @@ pub fn draw(
         },
     );
     sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
+
+    if (self.data.subtexture) |subtex_data| {
+        const st_size = Camera.size_mult * main.camera.scale * subtex_data.size_mult;
+        const st_w = self.subtex_atlas_data.texWRaw() * st_size;
+        const st_h = self.subtex_atlas_data.texHRaw() * st_size;
+
+        var screen_y_off: f32 = 0.0;
+        if (subtex_data.float.time > 0) {
+            const time_us = subtex_data.float.time * std.time.us_per_s;
+            screen_y_off -= subtex_data.float.height / 2.0 * (@sin(f32i(main.current_time) / time_us) + 1) * px_per_tile * main.camera.scale;
+        }
+
+        if (main.settings.enable_lights)
+            Renderer.drawLight(
+                lights,
+                subtex_data.light,
+                screen_pos.x - st_w / 2.0 + f32i(subtex_data.x_offset) * st_size,
+                screen_pos.y + f32i(subtex_data.y_offset) * st_size - screen_y_off,
+                st_w,
+                st_h,
+                main.camera.scale,
+                float_time_ms,
+            );
+
+        Renderer.drawQuad(
+            generics,
+            sort_extras,
+            screen_pos.x - st_w / 2.0 + f32i(subtex_data.x_offset) * st_size,
+            screen_pos.y + f32i(subtex_data.y_offset) * st_size - screen_y_off,
+            st_w,
+            st_h,
+            self.subtex_atlas_data,
+            .{
+                .shadow_texel_mult = 2.0 / st_size,
+                .alpha_mult = alpha_mult,
+                .color = color,
+                .color_intensity = color_intensity,
+            },
+        );
+        sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
+    }
 
     var y_pos: f32 = if (sink != 1.0) 15.0 else 5.0;
 
