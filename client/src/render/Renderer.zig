@@ -464,9 +464,9 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
     return self;
 }
 
-pub fn destroy(self: *Renderer) void {
-    self.swapchain.waitForAllFences(self.context) catch @panic("TODO");
-    self.context.device.deviceWaitIdle() catch @panic("TODO");
+pub fn destroy(self: *Renderer) !void {
+    try self.swapchain.waitForAllFences(self.context);
+    try self.context.device.deviceWaitIdle();
 
     self.medium_text.destroy(self.context, self.vk_allocator);
     self.medium_italic_text.destroy(self.context, self.vk_allocator);

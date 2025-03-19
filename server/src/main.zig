@@ -119,7 +119,10 @@ fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.C) void {
     defer current_time = time;
     const dt = if (current_time == -1) 0 else time - current_time;
     var iter = maps.worlds.iterator();
-    while (iter.next()) |entry| entry.value_ptr.tick(time, dt) catch @panic("TODO: Tick error, handle this appropriately later");
+    while (iter.next()) |entry| entry.value_ptr.tick(time, dt) catch |e| {
+        std.log.err("Error while ticking world: {}", .{e});
+        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+    };
 }
 
 fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {

@@ -87,11 +87,8 @@ pub fn addToMap(square_data: Square) void {
         }
     }
 
-    const current_idx = floor_y * map.info.width + floor_x;
-    // todo: maybe something less clusterfucked than this?
-    self.entity_map_id = map.squares[current_idx].entity_map_id;
-    map.squares[current_idx] = self;
-    map.squares[current_idx].update();
+    self.update();
+    map.squares[floor_y * map.info.width + floor_x] = self;
 }
 
 fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, disable_blend: bool, comptime blend_dir: comptime_int) void {

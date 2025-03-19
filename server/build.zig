@@ -18,12 +18,13 @@ pub fn buildWithoutDupes(
     behaviorGen: {
         var gen_file = b.build_root.handle.createFile(root_add ++ "src/_gen_behavior_file_dont_use.zig", .{}) catch break :behaviorGen;
         try gen_file.writeAll("pub const behaviors = .{\n");
-        defer gen_file.writeAll("};\n") catch @panic("TODO");
 
         const dir = b.build_root.handle.openDir(root_add ++ "src/logic/behaviors/", .{ .iterate = true }) catch break :behaviorGen;
         var walker = try dir.walk(b.allocator);
         while (try walker.next()) |entry| if (std.mem.endsWith(u8, entry.path, ".zig"))
             try gen_file.writeAll(try std.fmt.allocPrint(b.allocator, "    @import(\"logic/behaviors/{s}\"),\n", .{entry.path}));
+
+        gen_file.writeAll("};\n") catch break :behaviorGen;
     }
 
     inline for (.{ true, false }) |check| {

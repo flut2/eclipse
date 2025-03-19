@@ -293,7 +293,10 @@ fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.C) void {
     const dt = f32i(time - current_time);
     current_time = time;
 
-    ui_systems.update(time, dt) catch @panic("todo");
+    ui_systems.update(time, dt) catch |e| {
+        std.log.err("Error while updating UI: {}", .{e});
+        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+    };
     if (tick_frame or needs_map_bg) map.update(renderer, time, dt);
 
     var callback_indices_to_remove: std.ArrayListUnmanaged(usize) = .empty;
@@ -481,7 +484,10 @@ pub fn main() !void {
     _ = window.setFramebufferSizeCallback(onResize);
 
     var renderer: Renderer = try .create(if (settings.enable_vsync) .fifo_khr else .immediate_khr);
-    defer renderer.destroy();
+    defer renderer.destroy() catch |e| {
+        std.log.err("Error while destroying renderer: {}", .{e});
+        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+    };
 
     render_thread = try .spawn(.{ .allocator = allocator }, renderTick, .{&renderer});
     defer {
