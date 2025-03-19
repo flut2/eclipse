@@ -232,6 +232,7 @@
             { .time = 0.4, .texture = { "retrieve_beacons": 2 } },
             { .time = 0.4, .texture = { "retrieve_beacons": 3 } },
             { .time = 0.4, .texture = { "retrieve_beacons": 4 } },
+            { .time = 0.4, .texture = { "retrieve_beacons": 5 } },
         ],
         .subtexture = {
             .textures = [{ "retrieve_beacons": 6 }],
@@ -266,6 +267,7 @@
             { .time = 0.4, .texture = { "retrieve_beacons": 2 } },
             { .time = 0.4, .texture = { "retrieve_beacons": 3 } },
             { .time = 0.4, .texture = { "retrieve_beacons": 4 } },
+            { .time = 0.4, .texture = { "retrieve_beacons": 5 } },
         ],
         .subtexture = {
             .textures = [{ "retrieve_beacons": 9 }],
