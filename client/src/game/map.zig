@@ -662,10 +662,14 @@ pub fn takeDamage(
 
                 self.condition.set(eff, true);
 
+                const texts_len = self.status_texts.items.len;
+                const last_add = if (texts_len > 0) self.status_texts.items[texts_len - 1].show_at else -1;
+                const cur_time = main.current_time;
+                const cooldown: i64 = 0.05 * std.time.us_per_s;
                 self.status_texts.append(main.allocator, .{
                     .initial_size = 16.0,
                     .dispose_text = true,
-                    .show_at = main.current_time + i64f(0.2 * std.time.us_per_s),
+                    .show_at = if (cur_time - last_add >= cooldown) main.current_time else last_add + cooldown,
                     .text_data = .{
                         .text = std.fmt.allocPrint(main.allocator, "{s}", .{cond_str}) catch main.oomPanic(),
                         .text_type = .bold,
@@ -677,10 +681,14 @@ pub fn takeDamage(
         }
     }
 
+    const texts_len = self.status_texts.items.len;
+    const last_add = if (texts_len > 0) self.status_texts.items[texts_len - 1].show_at else -1;
+    const cur_time = main.current_time;
+    const cooldown: i64 = 0.05 * std.time.us_per_s;
     self.status_texts.append(main.allocator, .{
         .initial_size = 16.0,
         .dispose_text = true,
-        .show_at = main.current_time,
+        .show_at = if (cur_time - last_add >= cooldown) main.current_time else last_add + cooldown,
         .text_data = .{
             .text = std.fmt.allocPrint(main.allocator, "-{}", .{damage}) catch main.oomPanic(),
             .text_type = .bold,

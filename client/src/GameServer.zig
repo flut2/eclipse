@@ -490,18 +490,24 @@ fn handleNotification(_: *Server, data: PacketData(.notification)) void {
     switch (data.obj_type) {
         inline .player, .ally, .enemy, .entity => |inner| {
             const T = ObjEnumToType(inner);
-            if (map.findObject(T, data.map_id, .ref)) |obj| obj.status_texts.append(main.allocator, .{
-                .initial_size = 16.0,
-                .dispose_text = true,
-                .show_at = main.current_time,
-                .duration = 2.0 * std.time.us_per_s,
-                .text_data = .{
-                    .text = main.allocator.dupe(u8, data.message) catch main.oomPanic(),
-                    .text_type = .bold,
-                    .size = 16,
-                    .color = data.color,
-                },
-            }) catch main.oomPanic();
+            if (map.findObject(T, data.map_id, .ref)) |obj| {
+                const texts_len = obj.status_texts.items.len;
+                const last_add = if (texts_len > 0) obj.status_texts.items[texts_len - 1].show_at else -1;
+                const cur_time = main.current_time;
+                const cooldown: i64 = 0.05 * std.time.us_per_s;
+                obj.status_texts.append(main.allocator, .{
+                    .initial_size = 16.0,
+                    .dispose_text = true,
+                    .show_at = if (cur_time - last_add >= cooldown) main.current_time else last_add + cooldown,
+                    .duration = 2.0 * std.time.us_per_s,
+                    .text_data = .{
+                        .text = main.allocator.dupe(u8, data.message) catch main.oomPanic(),
+                        .text_type = .bold,
+                        .size = 16,
+                        .color = data.color,
+                    },
+                }) catch main.oomPanic();
+            }
         },
         else => {
             std.log.err("Invalid type: {}", .{data.obj_type});
