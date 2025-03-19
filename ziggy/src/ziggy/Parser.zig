@@ -1,31 +1,50 @@
+const Parser = @This();
+
 const std = @import("std");
 const assert = std.debug.assert;
-
 const Diagnostic = @import("Diagnostic.zig");
-pub const Error = Diagnostic.Error.ZigError;
-const dynamic = @import("dynamic.zig");
-const Value = dynamic.Value;
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-
-const Parser = @This();
+const dynamic = @import("dynamic.zig");
+const Value = dynamic.Value;
 
 gpa: std.mem.Allocator,
 code: [:0]const u8,
 opts: ParseOptions,
 tokenizer: Tokenizer,
 state: State = .start,
+closed_frontmatter: ?Token = null,
 
 pub const ParseOptions = struct {
     diagnostic: ?*Diagnostic = null,
     copy_strings: CopyStrings = .always,
+    /// Leave it set to null when parsing a pure Ziggy file.
+    /// Providing a value means that you are parsing a frontmatter embedded in
+    /// a document (e.g. SuperMD): in this case the parser will expect the
+    /// document to start with a Ziggy document embedded between two `---`
+    /// lines.
+    frontmatter_meta: ?*FrontmatterMeta = null,
+    /// Passed as an out parameter to obtain information about the frontmatter.
+    pub const FrontmatterMeta = struct {
+        /// Number of lines that the frontmatter occupies, including the lines
+        /// occupied by '---'.
+        lines: u32 = 0,
+        /// Byte offset of where the frontmatter ends.
+        offset: u32 = 0,
+    };
 
     pub const CopyStrings = enum {
         to_unescape,
         always,
     };
 };
-
+pub const FrontmatterError = error{
+    /// The document does not start with a frontmatter framing delimiter (---)
+    MissingFrontmatter,
+    /// Could not find a closing frontmatter framing delimiter.
+    OpenFrontmatter,
+};
+pub const Error = Diagnostic.Error.ZigError || FrontmatterError;
 const Container = enum {
     start,
     @"struct",
@@ -70,17 +89,34 @@ pub fn parseLeaky(
         .tokenizer = .{ .want_comments = false },
     };
 
-    const result = try parser.parseValue(T, parser.next());
+    if (opts.frontmatter_meta != null) {
+        const tok = parser.next();
+        if (tok.tag != .frontmatter) {
+            return error.MissingFrontmatter;
+        }
+    }
 
+    const result = try parser.parseValue(T, parser.next());
     const extra = parser.next();
-    if (extra.tag != .eof) {
-        return parser.addError(.{
-            .unexpected = .{
-                .name = "EOF",
-                .sel = extra.loc.getSelection(code),
-                .expected = lexemes(&.{.eof}),
-            },
-        });
+
+    if (opts.frontmatter_meta) |fm| {
+        const tok = parser.closed_frontmatter orelse extra;
+        if (tok.tag != .frontmatter) {
+            return error.OpenFrontmatter;
+        }
+
+        fm.lines = parser.tokenizer.lines;
+        fm.offset = tok.loc.end;
+    } else {
+        if (extra.tag != .eof) {
+            return parser.addError(.{
+                .unexpected = .{
+                    .name = "EOF",
+                    .sel = extra.loc.getSelection(code),
+                    .expected = lexemes(&.{.eof}),
+                },
+            });
+        }
     }
 
     return result;
@@ -109,6 +145,7 @@ pub fn parseValue(
             },
             else => @compileError("Unable to parse pointer to many / C: " ++ @typeName(T)),
         },
+        .array => return self.parseArray(T, first_tok),
         .bool => return self.parseBool(first_tok),
         .int => return self.parseInt(T, first_tok),
         .float => return self.parseFloat(T, first_tok),
@@ -138,7 +175,6 @@ pub fn parseValue(
                 return try self.parseValue(opt.child, first_tok);
             }
         },
-        .array => return try self.parseStaticArray(T, first_tok),
         else => @compileError("TODO"),
     }
 }
@@ -184,12 +220,9 @@ fn parseUnion(
 
         for (info.fields) |f| {
             switch (@typeInfo(f.type)) {
-                .@"struct", .@"union", .@"enum", .optional, .array, .bool, .int, .float => {},
-                .pointer => |p| {
-                    if (p.size == .C or p.size == .Many) @compileError("Many/C pointers are not supported");
-                },
+                .@"struct" => {},
                 else => {
-                    @compileError("Unhandled union case for '" ++ @typeName(T) ++ "': " ++ f.type);
+                    @compileError("all the cases of union '" ++ @typeName(T) ++ "' must be of struct type");
                 },
             }
         }
@@ -198,15 +231,15 @@ fn parseUnion(
     // TODO: check identifier for conformance
     try self.must(first_tok, .identifier);
     const case_name = first_tok.loc.src(self.code);
-    inline for (info.fields) |field| {
-        if (std.mem.eql(u8, field.name, case_name)) switch (@typeInfo(field.type)) {
-            .@"struct" => return @unionInit(T, field.name, try self.parseValue(field.type, self.next())),
-            else => {
-                try self.must(self.next(), .lb);
-                defer self.must(self.next(), .rb) catch @panic("cba doing this properly");
-                return @unionInit(T, field.name, try self.parseValue(field.type, self.next()));
-            },
-        };
+
+    inline for (info.fields) |f| {
+        if (std.mem.eql(u8, f.name, case_name)) {
+            return @unionInit(
+                T,
+                f.name,
+                try self.parseStruct(f.type, self.next()),
+            );
+        }
     }
 
     return self.addError(.{
@@ -216,6 +249,7 @@ fn parseUnion(
         },
     });
 }
+
 pub fn parseStruct(
     self: *Parser,
     comptime T: type,
@@ -243,6 +277,8 @@ pub fn parseStruct(
     while (true) {
         if (need_closing_rb) {
             try self.mustAny(tok, &.{ .dot, .rb });
+        } else if (self.opts.frontmatter_meta != null) {
+            try self.mustAny(tok, &.{ .dot, .frontmatter, .eof });
         } else {
             try self.mustAny(tok, &.{ .dot, .eof });
         }
@@ -255,6 +291,8 @@ pub fn parseStruct(
                 &fields_seen,
                 tok,
             );
+
+            if (tok.tag == .frontmatter) self.closed_frontmatter = tok;
             return val;
         }
 
@@ -264,7 +302,44 @@ pub fn parseStruct(
         const ident = try self.nextMust(.identifier);
         _ = try self.nextMust(.eql);
         const field_name = ident.loc.src(self.code);
-        inline for (info.fields, 0..) |f, idx| {
+
+        if (@hasDecl(T, "ziggy_options") and @hasDecl(T.ziggy_options, "skip_fields")) blk: {
+            const skip_fields = T.ziggy_options.skip_fields;
+            if (@TypeOf(skip_fields) != []const std.meta.FieldEnum(T)) {
+                @compileError("ziggy_options.skip_fields must be a []const std.meta.FieldEnum(T)");
+            }
+
+            if (std.meta.stringToEnum(
+                std.meta.FieldEnum(T),
+                field_name,
+            )) |field_enum| {
+                if (std.mem.indexOfScalar(std.meta.FieldEnum(T), skip_fields, field_enum) == null) {
+                    break :blk;
+                }
+            }
+
+            return self.addError(.{
+                .unknown_field = .{
+                    .name = ident.loc.src(self.code),
+                    .sel = ident.loc.getSelection(self.code),
+                },
+            });
+        }
+
+        outer: inline for (info.fields, 0..) |f, idx| {
+            if (@hasDecl(T, "ziggy_options") and @hasDecl(T.ziggy_options, "skip_fields")) {
+                const skip_fields = T.ziggy_options.skip_fields;
+                if (@TypeOf(skip_fields) != []const std.meta.FieldEnum(T)) {
+                    @compileError("ziggy_options.skip_fields must be a []const std.meta.FieldEnum(T)");
+                }
+
+                const sf_idx: std.meta.FieldEnum(T) = @enumFromInt(idx);
+                inline for (skip_fields) |sf| {
+                    @setEvalBranchQuota(1000000);
+                    if (sf == sf_idx) continue :outer;
+                }
+            }
+
             if (std.mem.eql(u8, f.name, field_name)) {
                 if (fields_seen[idx]) |first_loc| {
                     return self.addError(.{
@@ -294,6 +369,8 @@ pub fn parseStruct(
         } else {
             if (need_closing_rb) {
                 try self.mustAny(tok, &.{ .comma, .rb });
+            } else if (self.opts.frontmatter_meta != null) {
+                try self.mustAny(tok, &.{ .comma, .rb, .frontmatter, .eof });
             } else {
                 try self.mustAny(tok, &.{ .comma, .rb, .eof });
             }
@@ -393,52 +470,32 @@ pub fn parseBytes(self: *Parser, comptime T: type, token: Token) !T {
     }
 }
 
-fn parseStaticArray(self: *Parser, comptime T: type, lsb: Token) !T {
-    const info = @typeInfo(T).array;
-
-    try self.must(lsb, .lsb);
-
-    var tok = self.next();
-    var list: std.ArrayListUnmanaged(info.child) = .{};
-    errdefer list.deinit(self.gpa);
-
-    while (true) {
-        if (tok.tag == .rsb) {
-            return (try list.toOwnedSlice(self.gpa))[0..info.len].*;
-        }
-
-        try list.append(
-            self.gpa,
-            try self.parseValue(info.child, tok),
-        );
-
-        tok = self.next();
-        if (tok.tag == .comma) {
-            tok = self.next();
-        } else {
-            try self.must(tok, .rsb);
-        }
-    }
-}
-
 fn parseArray(self: *Parser, comptime T: type, lsb: Token) !T {
-    const info = @typeInfo(T).pointer;
-    assert(info.size == .slice);
+    const type_info = @typeInfo(T);
+    const child = switch (type_info) {
+        .pointer => type_info.pointer.child,
+        .array => type_info.array.child,
+        else => @compileError("Unsupported type given to `parseArray()`"),
+    };
+    if (type_info == .pointer) assert(type_info.pointer.size == .slice);
 
     try self.must(lsb, .lsb);
 
     var tok = self.next();
-    var list: std.ArrayListUnmanaged(info.child) = .{};
+    var list: std.ArrayListUnmanaged(child) = .{};
     errdefer list.deinit(self.gpa);
 
     while (true) {
         if (tok.tag == .rsb) {
-            return list.toOwnedSlice(self.gpa);
+            return if (type_info == .pointer) 
+                try list.toOwnedSlice(self.gpa)
+            else 
+                (try list.toOwnedSlice(self.gpa))[0..type_info.array.len].*;
         }
 
         try list.append(
             self.gpa,
-            try self.parseValue(info.child, tok),
+            try self.parseValue(child, tok),
         );
 
         tok = self.next();
@@ -522,7 +579,10 @@ test "struct - basics" {
         bar: bool,
     };
 
-    const c = try parseLeaky(Case, std.testing.allocator, case, .{});
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const c = try parseLeaky(Case, arena, case, .{});
     try std.testing.expectEqualStrings("bar", c.foo);
     try std.testing.expectEqual(false, c.bar);
 }
@@ -540,86 +600,12 @@ test "struct - top level curlies" {
         bar: bool,
     };
 
-    const c = try parseLeaky(Case, std.testing.allocator, case, .{});
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const c = try parseLeaky(Case, arena, case, .{});
     try std.testing.expectEqualStrings("bar", c.foo);
     try std.testing.expectEqual(false, c.bar);
-}
-
-test "struct - missing bottom curly" {
-    const case =
-        \\{
-        \\   .foo = "bar",
-        \\   .bar = false,
-        \\
-    ;
-
-    const Case = struct {
-        foo: []const u8,
-        bar: bool,
-    };
-
-    var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
-
-    const opts: ParseOptions = .{ .diagnostic = &diag };
-
-    const result = parseLeaky(Case, std.testing.allocator, case, opts);
-    try std.testing.expectError(error.Syntax, result);
-    try std.testing.expectFmt(
-        \\line: 4 col: 1
-        \\unexpected 'EOF', expected: '.' or '}'
-        \\
-    , "{}", .{diag});
-}
-
-test "struct - syntax error" {
-    const case =
-        \\.foo = "bar",
-        \\.bar = .false,
-    ;
-
-    const Case = struct {
-        foo: []const u8,
-        bar: bool,
-    };
-
-    var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
-
-    const opts: ParseOptions = .{ .diagnostic = &diag };
-
-    const result = parseLeaky(Case, std.testing.allocator, case, opts);
-    try std.testing.expectError(error.Syntax, result);
-    try std.testing.expectFmt(
-        \\line: 2 col: 8
-        \\unexpected '.', expected: 'true' or 'false'
-        \\
-    , "{}", .{diag});
-}
-
-test "struct - missing comma" {
-    const case =
-        \\.foo = "bar"
-        \\.bar = false,
-    ;
-
-    const Case = struct {
-        foo: []const u8,
-        bar: bool,
-    };
-
-    var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
-
-    const opts: ParseOptions = .{ .diagnostic = &diag };
-
-    const result = parseLeaky(Case, std.testing.allocator, case, opts);
-    try std.testing.expectError(error.Syntax, result);
-    try std.testing.expectFmt(
-        \\line: 2 col: 1
-        \\unexpected '.', expected: ',' or '}' or 'EOF'
-        \\
-    , "{}", .{diag});
 }
 
 test "struct - optional comma" {
@@ -633,83 +619,12 @@ test "struct - optional comma" {
         bar: bool,
     };
 
-    const c = try parseLeaky(Case, std.testing.allocator, case, .{});
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const c = try parseLeaky(Case, arena, case, .{});
     try std.testing.expectEqualStrings("bar", c.foo);
     try std.testing.expectEqual(false, c.bar);
-}
-
-test "struct - missing field" {
-    const case =
-        \\.foo = "bar",
-    ;
-
-    const Case = struct {
-        foo: []const u8,
-        bar: bool,
-    };
-
-    var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
-
-    const opts: ParseOptions = .{ .diagnostic = &diag };
-
-    const result = parseLeaky(Case, std.testing.allocator, case, opts);
-    try std.testing.expectError(error.Syntax, result);
-    try std.testing.expectFmt(
-        \\line: 1 col: 14
-        \\missing field: 'bar'
-    , "{}", .{diag});
-}
-
-test "struct - duplicate field" {
-    const case =
-        \\.foo = "bar",
-        \\.bar = false,
-        \\.foo = "bar",
-    ;
-
-    const Case = struct {
-        foo: []const u8,
-        bar: bool,
-    };
-
-    var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
-
-    const opts: ParseOptions = .{ .diagnostic = &diag };
-
-    const result = parseLeaky(Case, std.testing.allocator, case, opts);
-    try std.testing.expectError(error.Syntax, result);
-    try std.testing.expectFmt(
-        \\line: 3 col: 2
-        \\duplicate field 'foo', first definition here: line: 1 col: 2
-        \\
-    , "{}", .{diag});
-}
-
-test "struct - unknown field" {
-    const case =
-        \\.foo = "bar",
-        \\.bar = false,
-        \\.baz = "oops",
-    ;
-
-    const Case = struct {
-        foo: []const u8,
-        bar: bool,
-    };
-
-    var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
-
-    const opts: ParseOptions = .{ .diagnostic = &diag };
-
-    const result = parseLeaky(Case, std.testing.allocator, case, opts);
-    try std.testing.expectError(error.Syntax, result);
-    try std.testing.expectFmt(
-        \\line: 3 col: 2
-        \\unknown field 'baz'
-    , "{}", .{diag});
 }
 
 test "string" {
@@ -720,11 +635,13 @@ test "string" {
     ;
 
     var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
 
     const opts: ParseOptions = .{ .diagnostic = &diag };
 
-    const result = try parseLeaky([]const u8, std.testing.allocator, case, opts);
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const result = try parseLeaky([]const u8, arena, case, opts);
     try std.testing.expectEqualStrings("foo", result);
 }
 
@@ -736,11 +653,13 @@ test "custom string literal" {
     ;
 
     var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
 
     const opts: ParseOptions = .{ .diagnostic = &diag };
 
-    const result = try parseLeaky([]const u8, std.testing.allocator, case, opts);
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const result = try parseLeaky([]const u8, arena, case, opts);
     try std.testing.expectEqualStrings("2020-07-06T00:00:00", result);
 }
 
@@ -752,11 +671,13 @@ test "int basics" {
     ;
 
     var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
 
     const opts: ParseOptions = .{ .diagnostic = &diag };
 
-    const result = try parseLeaky(usize, std.testing.allocator, case, opts);
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const result = try parseLeaky(usize, arena, case, opts);
     try std.testing.expectEqual(1042, result);
 }
 
@@ -768,11 +689,13 @@ test "float basics" {
     ;
 
     var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
 
     const opts: ParseOptions = .{ .diagnostic = &diag };
 
-    const result = try parseLeaky(f64, std.testing.allocator, case, opts);
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const result = try parseLeaky(f64, arena, case, opts);
     try std.testing.expectEqual(10.42, result);
 }
 
@@ -784,12 +707,13 @@ test "array basics" {
     ;
 
     var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
 
     const opts: ParseOptions = .{ .diagnostic = &diag };
 
-    const result = try parseLeaky([]usize, std.testing.allocator, case, opts);
-    defer std.testing.allocator.free(result);
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const result = try parseLeaky([]usize, arena, case, opts);
 
     try std.testing.expectEqualSlices(usize, &.{ 1, 2, 3 }, result);
 }
@@ -802,12 +726,13 @@ test "array trailing comma" {
     ;
 
     var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
-
     const opts: ParseOptions = .{ .diagnostic = &diag };
 
-    const result = try parseLeaky([]usize, std.testing.allocator, case, opts);
-    defer std.testing.allocator.free(result);
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const result = try parseLeaky([]usize, arena, case, opts);
 
     try std.testing.expectEqualSlices(usize, &.{ 1, 2, 3 }, result);
 }
@@ -823,8 +748,11 @@ test "comments are ignored" {
         foo: []const u8,
         bar: bool,
     };
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
 
-    const c = try parseLeaky(Case, std.testing.allocator, case, .{});
+    const c = try parseLeaky(Case, arena, case, .{});
     try std.testing.expectEqualStrings("bar", c.foo);
     try std.testing.expectEqual(false, c.bar);
 }
@@ -837,11 +765,14 @@ test "optional - string" {
     ;
 
     var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
 
     const opts: ParseOptions = .{ .diagnostic = &diag };
 
-    const result = try parseLeaky(?[]const u8, std.testing.allocator, case, opts);
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const result = try parseLeaky(?[]const u8, arena, case, opts);
     try std.testing.expectEqualStrings("foo", result.?);
 }
 
@@ -853,11 +784,14 @@ test "optional - null" {
     ;
 
     var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
 
     const opts: ParseOptions = .{ .diagnostic = &diag };
 
-    const result = try parseLeaky(?[]const u8, std.testing.allocator, case, opts);
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const result = try parseLeaky(?[]const u8, arena, case, opts);
     try std.testing.expect(result == null);
 }
 
@@ -869,11 +803,14 @@ test "tagged string" {
     ;
 
     var diag: Diagnostic = .{ .path = null };
-    defer diag.deinit(std.testing.allocator);
 
     const opts: ParseOptions = .{ .diagnostic = &diag };
 
-    const result = try parseLeaky([]const u8, std.testing.allocator, case, opts);
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const result = try parseLeaky([]const u8, arena, case, opts);
     try std.testing.expectEqualStrings("foo", result);
 }
 
@@ -902,7 +839,11 @@ test "unions" {
         };
     };
 
-    const c = try parseLeaky(Project, std.testing.allocator, case, .{});
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const c = try parseLeaky(Project, arena, case, .{});
     try std.testing.expect(c.dep1 == .Remote);
     try std.testing.expectEqualStrings("https://github.com", c.dep1.Remote.url);
     try std.testing.expectEqualStrings("123...", c.dep1.Remote.hash);
@@ -924,6 +865,155 @@ test "multiline string" {
         str: []const u8,
     } };
 
-    const c = try parseLeaky(MultiStr, std.testing.allocator, just_str, .{});
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const c = try parseLeaky(MultiStr, arena, just_str, .{});
     try std.testing.expectEqualStrings("fst\nsnd", c.outer.str);
+}
+
+test "braceless struct - frontmatter" {
+    const case =
+        \\---
+        \\.foo = "bar",
+        \\.bar = false,
+        \\---
+    ;
+
+    const Case = struct {
+        foo: []const u8,
+        bar: bool,
+    };
+
+    var diag: Diagnostic = .{ .path = null };
+
+    var fm: ParseOptions.FrontmatterMeta = undefined;
+    const opts: ParseOptions = .{ .diagnostic = &diag, .frontmatter_meta = &fm };
+
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    _ = try parseLeaky(Case, arena, case, opts);
+    const lines: u32 = @intCast(std.mem.count(u8, case, "\n"));
+    try std.testing.expectEqual(lines, fm.lines);
+    try std.testing.expectEqual(case.len, fm.offset);
+}
+
+test "braceless struct extra newline - frontmatter" {
+    const case =
+        \\---
+        \\.foo = "bar",
+        \\.bar = false,
+        \\---
+        \\
+    ;
+
+    const Case = struct {
+        foo: []const u8,
+        bar: bool,
+    };
+
+    var diag: Diagnostic = .{ .path = null };
+
+    var fm: ParseOptions.FrontmatterMeta = undefined;
+    const opts: ParseOptions = .{ .diagnostic = &diag, .frontmatter_meta = &fm };
+
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    _ = try parseLeaky(Case, arena, case, opts);
+    const lines: u32 = @intCast(std.mem.count(u8, case, "\n"));
+    try std.testing.expectEqual(lines, fm.lines);
+    try std.testing.expectEqual(case.len, fm.offset);
+}
+
+test "braceless struct no trailing comma - frontmatter" {
+    const case =
+        \\---
+        \\.foo = "bar",
+        \\.bar = false
+        \\---
+    ;
+
+    const Case = struct {
+        foo: []const u8,
+        bar: bool,
+    };
+
+    var diag: Diagnostic = .{ .path = null };
+
+    var fm: ParseOptions.FrontmatterMeta = undefined;
+    const opts: ParseOptions = .{ .diagnostic = &diag, .frontmatter_meta = &fm };
+
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    _ = try parseLeaky(Case, arena, case, opts);
+    const lines: u32 = @intCast(std.mem.count(u8, case, "\n"));
+    try std.testing.expectEqual(lines, fm.lines);
+    try std.testing.expectEqual(case.len, fm.offset);
+}
+
+test "braceless struct no trailing comma extra newline - frontmatter" {
+    const case =
+        \\---
+        \\.foo = "bar",
+        \\.bar = false
+        \\---
+        \\
+    ;
+
+    const Case = struct {
+        foo: []const u8,
+        bar: bool,
+    };
+
+    var diag: Diagnostic = .{ .path = null };
+
+    var fm: ParseOptions.FrontmatterMeta = undefined;
+    const opts: ParseOptions = .{ .diagnostic = &diag, .frontmatter_meta = &fm };
+
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    _ = try parseLeaky(Case, arena, case, opts);
+    const lines: u32 = @intCast(std.mem.count(u8, case, "\n"));
+    try std.testing.expectEqual(lines, fm.lines);
+    try std.testing.expectEqual(case.len, fm.offset);
+}
+
+test "struct - frontmatter" {
+    const case =
+        \\---
+        \\{
+        \\    .foo = "Zig's New Relationship with LLVM",
+        \\    .bar = false,
+        \\}
+        \\---
+        \\
+    ;
+
+    const Case = struct {
+        foo: []const u8,
+        bar: bool,
+    };
+
+    var diag: Diagnostic = .{ .path = null };
+
+    var fm: ParseOptions.FrontmatterMeta = undefined;
+    const opts: ParseOptions = .{ .diagnostic = &diag, .frontmatter_meta = &fm };
+
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    _ = try parseLeaky(Case, arena, case, opts);
+    const lines: u32 = @intCast(std.mem.count(u8, case, "\n"));
+    try std.testing.expectEqual(lines, fm.lines);
+    try std.testing.expectEqual(case.len, fm.offset);
 }

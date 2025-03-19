@@ -1,13 +1,12 @@
+const Ast = @This();
+
 const std = @import("std");
 const assert = std.debug.assert;
-
 const ziggy = @import("../root.zig");
-const Rule = ziggy.schema.Schema.Rule;
 const Diagnostic = @import("Diagnostic.zig");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-
-const Ast = @This();
+const Rule = ziggy.schema.Schema.Rule;
 
 const log = std.log.scoped(.ziggy_ast);
 
@@ -47,6 +46,7 @@ pub const Node = struct {
         tag,
         comment,
         value,
+        frontmatter,
 
         // errros
         // error_node,
@@ -160,6 +160,9 @@ pub fn init(
     code: [:0]const u8,
     want_comments: bool,
     stop_on_first_error: bool,
+    /// Set to true when parsing a Ziggy frontmatter inside of another
+    /// document, like SuperMD for example.
+    frontmatter: bool,
     diagnostic: ?*Diagnostic,
 ) !Ast {
     var p: Parser = .{
@@ -175,6 +178,8 @@ pub fn init(
     const root_node = try p.nodes.addOne(gpa);
     root_node.* = .{ .tag = .root, .parent_id = 0 };
 
+    var dashes = false;
+
     p.node = root_node;
     try p.next();
     while (true) {
@@ -182,6 +187,27 @@ pub fn init(
         switch (p.node.tag) {
             .comment, .multiline_string, .top_comment_line, .line_string => unreachable,
             .root => switch (p.token.tag) {
+                .frontmatter => if (frontmatter) {
+                    if (dashes) {
+                        try p.addChild(.frontmatter);
+                        p.node.loc = p.token.loc;
+                        return p.ast();
+                    }
+
+                    dashes = true;
+                    try p.addChild(.frontmatter);
+                    p.node.loc = p.token.loc;
+                    p.parent();
+                    try p.next();
+                } else {
+                    return p.addError(.{
+                        .unexpected = .{
+                            .name = p.token.loc.src(p.code),
+                            .sel = p.token.loc.getSelection(code),
+                            .expected = &.{},
+                        },
+                    });
+                },
                 .top_comment_line => {
                     try p.addChild(.top_comment);
                     p.node.loc.start = p.token.loc.start;
@@ -204,9 +230,9 @@ pub fn init(
                 else => p.parent(),
             },
             .braceless_struct => switch (p.token.tag) {
-                .eof => {
+                .eof, .frontmatter => {
                     p.node.loc.end = p.token.loc.end;
-                    return p.ast();
+                    p.parent();
                 },
                 .comment => {
                     try p.addChild(.comment);
@@ -307,7 +333,11 @@ pub fn init(
                             try p.next();
                         } else {
                             p.node.loc.end = p.token.loc.start;
-                            try p.mustAny(&.{ .rb, .eof });
+                            if (frontmatter) {
+                                try p.mustAny(&.{ .rb, .eof, .frontmatter });
+                            } else {
+                                try p.mustAny(&.{ .rb, .eof });
+                            }
                         }
                         p.parent();
                     },
@@ -505,6 +535,7 @@ pub fn init(
                 },
             },
 
+            .frontmatter,
             .map_field_key,
             .tag,
             .identifier,
@@ -822,7 +853,14 @@ const ContainerLayout = enum { @"struct", map };
 pub fn render(nodes: []const Node, code: [:0]const u8, w: anytype) anyerror!void {
     var value_idx: u32 = 1;
     if (value_idx >= nodes.len) return; // skip empty files
-    const value = nodes[value_idx];
+    var value = nodes[value_idx];
+
+    if (value.tag == .frontmatter) {
+        try w.writeAll("---\n");
+        value_idx += 1;
+        value = nodes[value_idx];
+    }
+
     if (value.tag == .top_comment) {
         value_idx = value.next_id;
         var line_idx = value.first_child_id;
@@ -835,6 +873,10 @@ pub fn render(nodes: []const Node, code: [:0]const u8, w: anytype) anyerror!void
         try w.writeAll("\n");
     }
     try renderValue(0, nodes[value_idx], nodes, code, true, w);
+
+    if (nodes[1].tag == .frontmatter) {
+        try w.writeAll("\n---");
+    }
 }
 
 fn renderValue(
@@ -882,11 +924,12 @@ fn renderValue(
             try renderFields(indent + 1, mode, .@"struct", idx, nodes, code, w);
             switch (mode) {
                 .vertical => {
+                    try w.writeAll("\n");
                     try printIndent(indent, w);
+                    try w.writeAll("}");
                 },
-                .horizontal => try w.writeAll(" "),
+                .horizontal => try w.writeAll(" }"),
             }
-            try w.writeAll("}");
         },
 
         .map => {
@@ -919,11 +962,12 @@ fn renderValue(
 
             switch (mode) {
                 .vertical => {
+                    try w.writeAll("\n");
                     try printIndent(indent, w);
+                    try w.writeAll("}");
                 },
-                .horizontal => try w.writeAll(" "),
+                .horizontal => try w.writeAll(" }"),
             }
-            try w.writeAll("}");
         },
 
         .array => {
@@ -947,8 +991,14 @@ fn renderValue(
                 .horizontal => try w.writeAll("["),
             }
             try renderArray(indent + 1, mode, node.first_child_id, nodes, code, w);
-            if (mode == .vertical) try printIndent(indent, w);
-            try w.writeAll("]");
+            switch (mode) {
+                .vertical => {
+                    try w.writeAll("\n");
+                    try printIndent(indent, w);
+                    try w.writeAll("]");
+                },
+                .horizontal => try w.writeAll("]"),
+            }
         },
 
         .tag => {
@@ -1064,7 +1114,12 @@ fn renderArray(
         }
 
         switch (mode) {
-            .vertical => try w.writeAll(",\n"),
+            .vertical => {
+                try w.writeAll(",");
+                if (maybe_value != null) {
+                    try w.writeAll("\n");
+                }
+            },
             .horizontal => {
                 if (maybe_value != null) {
                     try w.writeAll(", ");
@@ -1122,7 +1177,12 @@ fn renderFields(
         }
 
         switch (mode) {
-            .vertical => try w.writeAll(",\n"),
+            .vertical => {
+                try w.writeAll(",");
+                if (maybe_field != null) {
+                    try w.writeAll("\n");
+                }
+            },
             .horizontal => {
                 if (maybe_field != null) {
                     try w.writeAll(", ");
@@ -1132,39 +1192,98 @@ fn renderFields(
     }
 }
 
-test "basics" {
+test "struct - empty" {
     const case =
-        \\.foo = "bar",
-        \\.bar = [1, 2, 3],
-        \\
+        \\{}
     ;
 
     var diag: Diagnostic = .{ .path = null };
     errdefer std.debug.print("diag: {}", .{diag});
-    const ast = try Ast.init(std.testing.allocator, case, true, true, &diag);
+    const ast = try Ast.init(std.testing.allocator, case, true, true, false, &diag);
     defer ast.deinit(std.testing.allocator);
     try std.testing.expectFmt(case, "{}", .{ast});
 }
 
-test "vertical" {
+test "array - empty" {
     const case =
-        \\.foo = "bar",
+        \\[]
+    ;
+
+    var diag: Diagnostic = .{ .path = null };
+    errdefer std.debug.print("diag: {}", .{diag});
+    const ast = try Ast.init(std.testing.allocator, case, true, true, false, &diag);
+    defer ast.deinit(std.testing.allocator);
+    try std.testing.expectFmt(case, "{}", .{ast});
+}
+
+test "struct - basic" {
+    const case =
+        \\{
+        \\    .foo = 1,
+        \\    .bar = 2,
+        \\    .baz = 3,
+        \\}
+    ;
+
+    var diag: Diagnostic = .{ .path = null };
+    errdefer std.debug.print("diag: {}", .{diag});
+    const ast = try Ast.init(std.testing.allocator, case, true, true, false, &diag);
+    defer ast.deinit(std.testing.allocator);
+    try std.testing.expectFmt(case, "{}", .{ast});
+}
+
+test "array - basic" {
+    const case =
+        \\[
+        \\    1,
+        \\    2,
+        \\    3,
+        \\]
+    ;
+
+    var diag: Diagnostic = .{ .path = null };
+    errdefer std.debug.print("diag: {}", .{diag});
+    const ast = try Ast.init(std.testing.allocator, case, true, true, false, &diag);
+    defer ast.deinit(std.testing.allocator);
+    try std.testing.expectFmt(case, "{}", .{ast});
+}
+
+test "braceless struct - basic" {
+    const case =
+        \\.foo = "hello",
+        \\.bar = [1, 2, 3],
+    ;
+
+    var diag: Diagnostic = .{ .path = null };
+    errdefer std.debug.print("diag: {}", .{diag});
+    const ast = try Ast.init(std.testing.allocator, case, true, true, false, &diag);
+    defer ast.deinit(std.testing.allocator);
+    try std.testing.expectFmt(case, "{}", .{ast});
+}
+
+test "braceless struct - vertical" {
+    const case =
+        \\.foo = "hello",
         \\.bar = [
         \\    1,
         \\    2,
         \\    3,
         \\],
-        \\
+        \\.baz = {
+        \\    "a": 1,
+        \\    "b": 2,
+        \\    "c": 3,
+        \\},
     ;
 
     var diag: Diagnostic = .{ .path = null };
     errdefer std.debug.print("diag: {}", .{diag});
-    const ast = try Ast.init(std.testing.allocator, case, true, true, &diag);
+    const ast = try Ast.init(std.testing.allocator, case, true, true, false, &diag);
     defer ast.deinit(std.testing.allocator);
     try std.testing.expectFmt(case, "{}", .{ast});
 }
 
-test "complex" {
+test "braceless struct - complex" {
     const case =
         \\.foo = "bar",
         \\.bar = [
@@ -1174,13 +1293,40 @@ test "complex" {
         \\        "abc": "foo",
         \\        "baz": ["foo", "bar"],
         \\    },
+        \\    [
+        \\        123456789,
+        \\    ],
         \\],
-        \\
     ;
 
     var diag: Diagnostic = .{ .path = null };
     errdefer std.debug.print("diag: {}", .{diag});
-    const ast = try Ast.init(std.testing.allocator, case, true, true, &diag);
+    const ast = try Ast.init(std.testing.allocator, case, true, true, false, &diag);
+    defer ast.deinit(std.testing.allocator);
+    try std.testing.expectFmt(case, "{}", .{ast});
+}
+
+test "frontmatter - complex" {
+    const case =
+        \\---
+        \\.foo = "bar",
+        \\.bar = [
+        \\    1,
+        \\    2,
+        \\    {
+        \\        "abc": "foo",
+        \\        "baz": ["foo", "bar"],
+        \\    },
+        \\    [
+        \\        123456789,
+        \\    ],
+        \\],
+        \\---
+    ;
+
+    var diag: Diagnostic = .{ .path = null };
+    errdefer std.debug.print("diag: {}", .{diag});
+    const ast = try Ast.init(std.testing.allocator, case, true, true, true, &diag);
     defer ast.deinit(std.testing.allocator);
     try std.testing.expectFmt(case, "{}", .{ast});
 }

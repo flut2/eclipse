@@ -5,10 +5,11 @@ const Handler = @import("../lsp.zig").Handler;
 const Document = @import("Document.zig");
 const Schema = @import("Schema.zig");
 
-pub const Language = enum { ziggy, ziggy_schema };
+pub const Language = enum { ziggy, ziggy_schema, supermd };
 pub const File = union(Language) {
     ziggy: Document,
     ziggy_schema: Schema,
+    supermd: Document,
 
     pub fn deinit(f: *File) void {
         switch (f.*) {
@@ -87,12 +88,13 @@ pub fn loadFile(
                 },
             }
         },
-        .ziggy => {
+        .supermd, .ziggy => {
             const schema = try schemaForZiggy(self, arena, uri);
 
             var doc = try Document.init(
                 self.gpa,
                 new_text,
+                language == .supermd,
                 schema,
             );
             errdefer doc.deinit();
@@ -108,13 +110,17 @@ pub fn loadFile(
                 gop.key_ptr.* = try self.gpa.dupe(u8, uri);
             }
 
-            gop.value_ptr.* = .{ .ziggy = doc };
+            gop.value_ptr.* = switch (language) {
+                else => unreachable,
+                .supermd => .{ .supermd = doc },
+                .ziggy => .{ .ziggy = doc },
+            };
 
             log.debug("sending {} diagnostic errors", .{doc.diagnostic.errors.items.len});
 
             const diags = try arena.alloc(lsp.types.Diagnostic, doc.diagnostic.errors.items.len);
             for (doc.diagnostic.errors.items, 0..) |e, idx| {
-                const msg = try std.fmt.allocPrint(arena, "{lsp}", .{e.fmt(null)});
+                const msg = try std.fmt.allocPrint(arena, "{lsp}", .{e.fmt(doc.bytes, null)});
                 const sel = e.getErrorSelection();
                 diags[idx] = .{
                     .range = .{

@@ -504,7 +504,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "string"
+          "name": "quoted_string"
         },
         {
           "type": "STRING",
@@ -1355,4 +1355,3 @@
   "inline": [],
   "supertypes": []
 }
-

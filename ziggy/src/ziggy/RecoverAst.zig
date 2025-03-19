@@ -1,13 +1,12 @@
+const RecoverAst = @This();
+
 const std = @import("std");
 const assert = std.debug.assert;
-
 const ziggy = @import("../root.zig");
-const Rule = ziggy.schema.Schema.Rule;
 const Diagnostic = @import("Diagnostic.zig");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-
-const RecoverAst = @This();
+const Rule = ziggy.schema.Schema.Rule;
 
 const log = std.log.scoped(.ziggy_ast);
 
@@ -925,7 +924,7 @@ pub fn check(
         .doc_node = doc_root_val,
     });
 
-    while (stack.pop()) |elem| {
+    while (stack.popOrNull()) |elem| {
         const rule = rules.nodes[elem.rule.node];
         const doc_node = self.nodes[elem.doc_node];
         {
@@ -1428,7 +1427,9 @@ fn renderValue(
                 .horizontal => try w.writeAll("["),
             }
             try renderArray(indent + 1, mode, node.first_child_id, nodes, code, w);
-            if (mode == .vertical) try printIndent(indent, w);
+            if (mode == .vertical) {
+                try printIndent(indent, w);
+            }
             try w.writeAll("]");
         },
 
@@ -1675,6 +1676,9 @@ test "complex" {
         \\        "abc": "foo",
         \\        "baz": ["foo", "bar"],
         \\    },
+        \\    [
+        \\        123456789,
+        \\    ],
         \\],
         \\
     );

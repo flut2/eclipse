@@ -1,62 +1,62 @@
 [
-{
-    .id = 0,
-    .name = "Spawn",
-    .color = "0x00FF00",
-},
-{
-    .id = 1,
-    .name = "Store 1",
-    .color = "0xFFDCF3",
-},
-{
-    .id = 2,
-    .name = "Store 2",
-    .color = "0xD9FFF3",
-},
-{
-    .id = 3,
-    .name = "Store 3",
-    .color = "0xC6B1FF",
-},
-{
-    .id = 4,
-    .name = "Biome 1 Monster Spawn",
-    .color = "0x640D5F",
-},
-{
-    .id = 5,
-    .name = "Biome 1 Encounter Spawn",
-    .color = "0xFEB5B00",
-},
-{
-    .id = 6,
-    .name = "Dungeon Monster Spawn",
-    .color = "0xD91656",
-},
-{
-    .id = 7,
-    .name = "Dungeon Treasure Spawn",
-    .color = "0xFFB200",
-},
-{
-    .id = 8,
-    .name = "Biome 2 Monster Spawn",
-    .color = "0x640D5F",
-},
-{
-    .id = 9,
-    .name = "Biome 2 Encounter Spawn",
-    .color = "0xFEB5B00",
-},
-{
-    .id = 10,
-    .name = "Biome 3 Monster Spawn",
-    .color = "0x640D5F",
-},
-{
-    .id = 11,
-    .name = "Biome 3 Encounter Spawn",
-    .color = "0xFEB5B00",
-},
+    {
+        .id = 0,
+        .name = "Spawn",
+        .color = "0x00FF00",
+    },
+    {
+        .id = 1,
+        .name = "Store 1",
+        .color = "0xFFDCF3",
+    },
+    {
+        .id = 2,
+        .name = "Store 2",
+        .color = "0xD9FFF3",
+    },
+    {
+        .id = 3,
+        .name = "Store 3",
+        .color = "0xC6B1FF",
+    },
+    {
+        .id = 4,
+        .name = "Biome 1 Monster Spawn",
+        .color = "0x640D5F",
+    },
+    {
+        .id = 5,
+        .name = "Biome 1 Encounter Spawn",
+        .color = "0xFEB5B00",
+    },
+    {
+        .id = 6,
+        .name = "Dungeon Monster Spawn",
+        .color = "0xD91656",
+    },
+    {
+        .id = 7,
+        .name = "Dungeon Treasure Spawn",
+        .color = "0xFFB200",
+    },
+    {
+        .id = 8,
+        .name = "Biome 2 Monster Spawn",
+        .color = "0x640D5F",
+    },
+    {
+        .id = 9,
+        .name = "Biome 2 Encounter Spawn",
+        .color = "0xFEB5B00",
+    },
+    {
+        .id = 10,
+        .name = "Biome 3 Monster Spawn",
+        .color = "0x640D5F",
+    },
+    {
+        .id = 11,
+        .name = "Biome 3 Encounter Spawn",
+        .color = "0xFEB5B00",
+    },
 ]

@@ -1,27 +1,27 @@
 [
-{
-    .id = 0,
-    .name = "Common Capsule",
-    .textures = [{"containers": 0}],
-},
-{
-    .id = 1,
-    .name = "Rare Capsule",
-    .textures = [{"containers": 1}],
-},
-{
-    .id = 2,
-    .name = "Epic Capsule",
-    .textures = [{"containers": 2}],
-},
-{
-    .id = 3,
-    .name = "Legendary Capsule",
-    .textures = [{"containers": 3}],
-},
-{
-    .id = 4,
-    .name = "Mythic Capsule",
-    .textures = [{"containers": 4}],
-},
+    {
+        .id = 0,
+        .name = "Common Capsule",
+        .textures = [{ "containers": 0 }],
+    },
+    {
+        .id = 1,
+        .name = "Rare Capsule",
+        .textures = [{ "containers": 1 }],
+    },
+    {
+        .id = 2,
+        .name = "Epic Capsule",
+        .textures = [{ "containers": 2 }],
+    },
+    {
+        .id = 3,
+        .name = "Legendary Capsule",
+        .textures = [{ "containers": 3 }],
+    },
+    {
+        .id = 4,
+        .name = "Mythic Capsule",
+        .textures = [{ "containers": 4 }],
+    },
 ]

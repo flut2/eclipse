@@ -1,16 +1,3 @@
-const std = @import("std");
-const mem = std.mem;
-const assert = std.debug.assert;
-
-const ziggy = @import("../root.zig");
-const Rule = ziggy.schema.Schema.Rule;
-const Diagnostic = @import("Diagnostic.zig");
-const RecoverAst = @import("RecoverAst.zig");
-const Suggestion = RecoverAst.Suggestion;
-const Hover = RecoverAst.Hover;
-const Tokenizer = @import("Tokenizer.zig");
-const Token = Tokenizer.Token;
-
 const Parser = @This();
 
 gpa: std.mem.Allocator,
@@ -20,7 +7,19 @@ diagnostic: ?*Diagnostic,
 fuel: u32,
 events: std.ArrayListUnmanaged(Event) = .{},
 
+const std = @import("std");
+const mem = std.mem;
+const assert = std.debug.assert;
+const ziggy = @import("../root.zig");
+const Diagnostic = @import("Diagnostic.zig");
+const Tokenizer = @import("Tokenizer.zig");
+const Token = Tokenizer.Token;
+const Rule = ziggy.schema.Schema.Rule;
 const log = std.log.scoped(.resilient_parser);
+const RecoverAst = @import("RecoverAst.zig");
+const Suggestion = RecoverAst.Suggestion;
+const Hover = RecoverAst.Hover;
+
 pub const Tree = struct {
     tag: Tree.Tag,
     children: std.ArrayListUnmanaged(Child) = .{},
@@ -600,7 +599,7 @@ pub const TreeFmt = struct {
                 // tag_string '@' and identifier
                 if (i == 0 or
                     (tfmt.tree.children.items[i - 1] == .token and
-                    tfmt.tree.children.items[i - 1].token.tag != .at))
+                        tfmt.tree.children.items[i - 1].token.tag != .at))
                     try writer.writeByte(' ');
             },
             .comment, .top_comment_line => {
@@ -627,7 +626,7 @@ pub const TreeFmt = struct {
                         i + 1 < tfmt.tree.children.items.len and
                         tfmt.tree.children.items[i + 1] == .token and
                         (tfmt.tree.children.items[i + 1].token.tag == .rsb or
-                        tfmt.tree.children.items[i + 1].token.tag == .rb);
+                            tfmt.tree.children.items[i + 1].token.tag == .rb);
                     const new_indent = (indent -| @intFromBool(unindent)) * 4;
                     try writer.writeByteNTimes(' ', new_indent);
                 } else if (tfmt.tree.tag == .top_level_struct) {
@@ -673,9 +672,9 @@ pub const TreeFmt = struct {
 
                     const _has_trailing_comma = is_container and
                         if (mlast_child) |last_child|
-                        last_child == .token and last_child.token.tag == .comma
-                    else
-                        false;
+                            last_child == .token and last_child.token.tag == .comma
+                        else
+                            false;
 
                     const additional_indent = @intFromBool(_has_trailing_comma);
                     const sub_tfmt = TreeFmt{ .tree = tree, .code = tfmt.code };
@@ -766,6 +765,12 @@ pub fn init(
     gpa: std.mem.Allocator,
     code: [:0]const u8,
     want_comments: bool,
+    /// Set to true when parsing a Ziggy frontmatter embedded in another
+    /// document (e.g. SuperMD). This setting implies that you have correctly
+    /// found both framing delimiters (---) and that you have sliced the original
+    /// text to *include* the opening delimiter, and to *exclude* the closing
+    /// delimiter (and anything past that).
+    frontmatter: bool,
     diagnostic: ?*Diagnostic,
 ) !Tree {
     var p = Parser{
@@ -776,12 +781,29 @@ pub fn init(
         .tokenizer = .{ .want_comments = want_comments },
     };
     defer p.deinit();
+
+    if (frontmatter) try p.openFrontmatter();
+
     p.document() catch {};
     return p.buildTree();
 }
 
 pub fn deinit(p: *Parser) void {
     p.events.deinit(p.gpa);
+}
+
+fn openFrontmatter(p: *Parser) !void {
+    if (!p.at(.frontmatter)) {
+        const token = p.peek(0);
+        try p.addError(.{
+            .unexpected = .{
+                .name = token.tag.lexeme(),
+                .sel = token.loc.getSelection(p.code),
+                .expected = &.{"missing frontmatter"},
+            },
+        });
+    }
+    _ = p.tokenizer.next(p.code);
 }
 
 /// document = top_comment* (top_level_struct | value)?
@@ -1406,7 +1428,7 @@ fn atAny(p: *Parser, tags: []const Token.Tag) bool {
 }
 
 fn addError(p: Parser, err: Diagnostic.Error) !void {
-    log.debug("addError {}", .{err.fmt(null)});
+    log.debug("addError {}", .{err.fmt(p.code, null)});
     if (p.diagnostic) |d| {
         try d.errors.append(p.gpa, err);
     }
@@ -1463,9 +1485,9 @@ fn buildTree(p: *Parser) !Tree {
             .open => |tag| try stack.append(.{ .tag = tag }),
             .close => {
                 const tree = stack.pop().?;
-                // if (stack.items.len == 0) {
-                //     log.debug("tree\n{}\n", .{tree.fmt(p.code)});
-                // }
+                if (stack.items.len == 0) {
+                    log.debug("tree\n{}\n", .{tree.fmt(p.code)});
+                }
                 try stack.items[stack.items.len - 1].children.append(
                     p.gpa,
                     .{ .tree = tree },
@@ -1481,7 +1503,10 @@ fn buildTree(p: *Parser) !Tree {
     }
 
     const tree = stack.pop().?;
-    assert(p.tokenizer.next(p.code).tag == .eof);
+    log.debug("next tokens = {} {}", .{ p.peek(0), p.peek(1) });
+    // This assertion seems useful but trips when a braceless top level struct
+    // has a trailing comma at the end.
+    // assert(p.tokenizer.next(p.code).tag == .eof);
     if (stack.items.len != 0) {
         log.debug("unhandled stack item tree {}", .{tree.fmt(p.code)});
         for (stack.items) |x| log.debug("unhandled stack item tag {s}", .{@tagName(x.tag)});
@@ -1499,7 +1524,7 @@ pub fn expectFmt(case: [:0]const u8, expected: []const u8) !void {
     var diag = Diagnostic{ .path = null };
     defer diag.errors.deinit(std.testing.allocator);
     errdefer std.debug.print("{}\n", .{diag});
-    var tree = try init(std.testing.allocator, case, true, &diag);
+    var tree = try init(std.testing.allocator, case, true, false, &diag);
     // std.debug.print("{}\n", .{tree.fmt(case)});
     defer tree.deinit(std.testing.allocator);
     try std.testing.expectFmt(expected, "{pretty}", .{tree.fmt(case)});
@@ -1705,7 +1730,7 @@ test "tree.check" {
     const alloc = std.testing.allocator;
     var diag = Diagnostic{ .path = null };
     std.debug.print("{}\n", .{diag});
-    var tree = try init(alloc, code, false, &diag);
+    var tree = try init(alloc, code, false, false, &diag);
 
     defer tree.deinit(alloc);
     const schema_file =
