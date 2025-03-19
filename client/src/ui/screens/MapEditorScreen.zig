@@ -195,6 +195,9 @@ const layer_decor_h = 400;
 const dropdown_w = 200;
 const dropdown_h = 130;
 
+const search_bar_w = 200;
+const search_bar_h = 40;
+
 next_map_ids: struct {
     entity: u32 = 0,
     enemy: u32 = 0,
@@ -640,170 +643,34 @@ pub fn init(self: *MapEditorScreen) !void {
         },
     });
 
+    const input_data_base = assets.getUiData("text_input", 0);
+    const input_data_hover = assets.getUiData("text_input", 1);
+    const input_data_press = assets.getUiData("text_input", 2);
+
+    const cursor_data = assets.getUiData("chatbox_cursor", 0);
+
+    self.search_bar = try element.create(Input, .{
+        .base = .{ .x = main.camera.width - search_bar_w - 5, .y = 5 },
+        .text_inlay_x = 9,
+        .text_inlay_y = 8,
+        .image_data = .fromNineSlices(input_data_base, input_data_hover, input_data_press, search_bar_w, search_bar_h, 53, 20, 1, 1, 1.0),
+        .cursor_image_data = .{ .normal = .{ .atlas_data = cursor_data } },
+        .changeCallback = onSearchChange,
+        .text_data = .{
+            .text = "",
+            .size = 16,
+            .text_type = .bold,
+            .max_chars = 256,
+            .handle_special_chars = false,
+        },
+    });
+
     self.palette_decor = try element.create(Image, .{
-        .base = .{ .x = main.camera.width - palette_decor_w - 5, .y = 5 },
+        .base = .{ .x = main.camera.width - palette_decor_w - 5, .y = 5 + search_bar_h + 5 },
         .image_data = .{ .nine_slice = .fromAtlasData(background_decor, palette_decor_w, palette_decor_h, 34, 34, 1, 1, 1.0) },
     });
 
-    self.palette_containers.ground = try element.create(ScrollableContainer, .{
-        .base = .{ .x = self.palette_decor.base.x + 8, .y = self.palette_decor.base.y + 9 },
-        .scissor_w = palette_decor_w - 20 - 6,
-        .scissor_h = palette_decor_h - 17,
-        .scroll_x = 174,
-        .scroll_y = 0,
-        .scroll_w = 4,
-        .scroll_h = palette_decor_h - 17,
-        .scroll_side_x = 174 - 6,
-        .scroll_side_y = 0,
-        .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
-        .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-        .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
-    });
-
-    var tile_iter = game_data.ground.from_id.iterator();
-    var i: isize = 0;
-    while (tile_iter.next()) |entry| : (i += 1) {
-        if (entry.key_ptr.* == Square.editor_tile) {
-            i -= 1;
-            continue;
-        }
-
-        var atlas_data = blk: {
-            if (entry.value_ptr.textures.len <= 0) {
-                std.log.err("Tile with data id {} has an empty texture list. Using error texture", .{entry.key_ptr.*});
-                break :blk assets.error_data;
-            }
-
-            const tex = if (entry.value_ptr.textures.len == 1) entry.value_ptr.textures[0] else entry.value_ptr.textures[utils.rng.next() % entry.value_ptr.textures.len];
-
-            if (assets.atlas_data.get(tex.sheet)) |data| {
-                if (tex.index >= data.len) {
-                    std.log.err("Could not find index {} for tile with data id {}. Using error texture", .{ tex.index, entry.key_ptr.* });
-                    break :blk assets.error_data;
-                }
-
-                break :blk data[tex.index];
-            } else {
-                std.log.err("Could not find sheet {s} for tile with data id {}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
-                break :blk assets.error_data;
-            }
-        };
-
-        if (atlas_data.tex_w <= 0 or atlas_data.tex_h <= 0) {
-            std.log.err("Tile with data id {} has an empty texture. Using error texture", .{entry.key_ptr.*});
-            atlas_data = assets.error_data;
-        }
-
-        _ = try self.palette_containers.ground.createChild(Button, .{
-            .base = .{
-                .x = f32i(@mod(i, 5) * 34),
-                .y = f32i(@divFloor(i, 5) * 34),
-            },
-            .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = 4.0, .scale_y = 4.0 } } },
-            .userdata = entry.key_ptr,
-            .pressCallback = groundClicked,
-            .tooltip_text = .{
-                .text = (game_data.ground.from_id.get(entry.key_ptr.*) orelse {
-                    std.log.err("Could find name for tile with data id {}. Not adding to tile list", .{entry.key_ptr.*});
-                    i -= 1;
-                    continue;
-                }).name,
-                .size = 12,
-                .text_type = .bold_italic,
-            },
-        });
-    }
-
-    try addObjectContainer(
-        &self.palette_containers.entity,
-        self.palette_decor.base.x,
-        self.palette_decor.base.y,
-        scroll_background_data,
-        scroll_knob_base,
-        scroll_knob_hover,
-        scroll_knob_press,
-        scroll_decor_data,
-        game_data.EntityData,
-        game_data.entity,
-        entityClicked,
-    );
-    try addObjectContainer(
-        &self.palette_containers.enemy,
-        self.palette_decor.base.x,
-        self.palette_decor.base.y,
-        scroll_background_data,
-        scroll_knob_base,
-        scroll_knob_hover,
-        scroll_knob_press,
-        scroll_decor_data,
-        game_data.EnemyData,
-        game_data.enemy,
-        enemyClicked,
-    );
-    try addObjectContainer(
-        &self.palette_containers.portal,
-        self.palette_decor.base.x,
-        self.palette_decor.base.y,
-        scroll_background_data,
-        scroll_knob_base,
-        scroll_knob_hover,
-        scroll_knob_press,
-        scroll_decor_data,
-        game_data.PortalData,
-        game_data.portal,
-        portalClicked,
-    );
-    try addObjectContainer(
-        &self.palette_containers.container,
-        self.palette_decor.base.x,
-        self.palette_decor.base.y,
-        scroll_background_data,
-        scroll_knob_base,
-        scroll_knob_hover,
-        scroll_knob_press,
-        scroll_decor_data,
-        game_data.ContainerData,
-        game_data.container,
-        containerClicked,
-    );
-
-    self.palette_containers.region = try element.create(ScrollableContainer, .{
-        .base = .{ .x = self.palette_decor.base.x + 8, .y = self.palette_decor.base.y + 9, .visible = false },
-        .scissor_w = palette_decor_w - 20 - 6,
-        .scissor_h = palette_decor_h - 17,
-        .scroll_x = 174,
-        .scroll_y = 0,
-        .scroll_w = 4,
-        .scroll_h = palette_decor_h - 17,
-        .scroll_side_x = 174 - 6,
-        .scroll_side_y = 0,
-        .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
-        .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
-        .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
-    });
-
-    var region_iter = game_data.region.from_id.iterator();
-    i = 0;
-    while (region_iter.next()) |entry| : (i += 1) {
-        _ = try self.palette_containers.region.createChild(Button, .{
-            .base = .{ .x = f32i(@mod(i, 5) * 34), .y = f32i(@divFloor(i, 5) * 34) },
-            .image_data = .{ .base = .{ .normal = .{
-                .atlas_data = assets.generic_8x8,
-                .scale_x = 4.0,
-                .scale_y = 4.0,
-                .alpha = 0.6,
-                .color = entry.value_ptr.color,
-                .color_intensity = 1.0,
-            } } },
-            .userdata = entry.key_ptr,
-            .pressCallback = regionClicked,
-            .tooltip_text = .{
-                .text = entry.value_ptr.name,
-                .size = 12,
-                .text_type = .bold_italic,
-            },
-        });
-    }
+    try self.addContainers(null);
 
     self.layer_dropdown = try element.create(Dropdown, .{
         .base = .{ .x = self.palette_decor.base.x, .y = self.palette_decor.base.y + self.palette_decor.height() + 5 },
@@ -853,6 +720,188 @@ pub fn init(self: *MapEditorScreen) !void {
     } else self.initialize();
 }
 
+fn addContainers(self: *MapEditorScreen, filter: ?[]const u8) !void {
+    if (filter != null)
+        inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field|
+            element.destroy(@field(self.palette_containers, field.name));
+
+    const scroll_background_data = assets.getUiData("scroll_background", 0);
+    const scroll_knob_base = assets.getUiData("scroll_wheel_base", 0);
+    const scroll_knob_hover = assets.getUiData("scroll_wheel_hover", 0);
+    const scroll_knob_press = assets.getUiData("scroll_wheel_press", 0);
+    const scroll_decor_data = assets.getUiData("scrollbar_decor", 0);
+
+    self.palette_containers.ground = try element.create(ScrollableContainer, .{
+        .base = .{ .x = self.palette_decor.base.x + 8, .y = self.palette_decor.base.y + 9 },
+        .scissor_w = palette_decor_w - 20 - 6,
+        .scissor_h = palette_decor_h - 17,
+        .scroll_x = 174,
+        .scroll_y = 0,
+        .scroll_w = 4,
+        .scroll_h = palette_decor_h - 17,
+        .scroll_side_x = 174 - 6,
+        .scroll_side_y = 0,
+        .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
+        .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+        .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
+    });
+
+    var tile_iter = game_data.ground.from_id.iterator();
+    var i: isize = 0;
+    while (tile_iter.next()) |entry| : (i += 1) {
+        if (entry.key_ptr.* == Square.editor_tile) {
+            i -= 1;
+            continue;
+        }
+
+        if (filter) |f| if (f.len > 0 and std.ascii.indexOfIgnoreCase(entry.value_ptr.name, f) == null) {
+            i -= 1;
+            continue;
+        };
+
+        var atlas_data = blk: {
+            if (entry.value_ptr.textures.len <= 0) {
+                std.log.err("Tile with data id {} has an empty texture list. Using error texture", .{entry.key_ptr.*});
+                break :blk assets.error_data;
+            }
+
+            const tex = if (entry.value_ptr.textures.len == 1) entry.value_ptr.textures[0] else entry.value_ptr.textures[utils.rng.next() % entry.value_ptr.textures.len];
+
+            if (assets.atlas_data.get(tex.sheet)) |data| {
+                if (tex.index >= data.len) {
+                    std.log.err("Could not find index {} for tile with data id {}. Using error texture", .{ tex.index, entry.key_ptr.* });
+                    break :blk assets.error_data;
+                }
+
+                break :blk data[tex.index];
+            } else {
+                std.log.err("Could not find sheet {s} for tile with data id {}. Using error texture", .{ tex.sheet, entry.key_ptr.* });
+                break :blk assets.error_data;
+            }
+        };
+
+        if (atlas_data.tex_w <= 0 or atlas_data.tex_h <= 0) {
+            std.log.err("Tile with data id {} has an empty texture. Using error texture", .{entry.key_ptr.*});
+            atlas_data = assets.error_data;
+        }
+
+        _ = try self.palette_containers.ground.createChild(Button, .{
+            .base = .{
+                .x = f32i(@mod(i, 5) * 34),
+                .y = f32i(@divFloor(i, 5) * 34),
+            },
+            .image_data = .{ .base = .{ .normal = .{ .atlas_data = atlas_data, .scale_x = 4.0, .scale_y = 4.0 } } },
+            .userdata = entry.key_ptr,
+            .pressCallback = groundClicked,
+            .tooltip_text = .{
+                .text = entry.value_ptr.name,
+                .size = 12,
+                .text_type = .bold_italic,
+            },
+        });
+    }
+
+    try addObjectContainer(
+        &self.palette_containers.entity,
+        self.palette_decor.base.x,
+        self.palette_decor.base.y,
+        scroll_background_data,
+        scroll_knob_base,
+        scroll_knob_hover,
+        scroll_knob_press,
+        scroll_decor_data,
+        game_data.EntityData,
+        game_data.entity,
+        filter,
+        entityClicked,
+    );
+    try addObjectContainer(
+        &self.palette_containers.enemy,
+        self.palette_decor.base.x,
+        self.palette_decor.base.y,
+        scroll_background_data,
+        scroll_knob_base,
+        scroll_knob_hover,
+        scroll_knob_press,
+        scroll_decor_data,
+        game_data.EnemyData,
+        game_data.enemy,
+        filter,
+        enemyClicked,
+    );
+    try addObjectContainer(
+        &self.palette_containers.portal,
+        self.palette_decor.base.x,
+        self.palette_decor.base.y,
+        scroll_background_data,
+        scroll_knob_base,
+        scroll_knob_hover,
+        scroll_knob_press,
+        scroll_decor_data,
+        game_data.PortalData,
+        game_data.portal,
+        filter,
+        portalClicked,
+    );
+    try addObjectContainer(
+        &self.palette_containers.container,
+        self.palette_decor.base.x,
+        self.palette_decor.base.y,
+        scroll_background_data,
+        scroll_knob_base,
+        scroll_knob_hover,
+        scroll_knob_press,
+        scroll_decor_data,
+        game_data.ContainerData,
+        game_data.container,
+        filter,
+        containerClicked,
+    );
+
+    self.palette_containers.region = try element.create(ScrollableContainer, .{
+        .base = .{ .x = self.palette_decor.base.x + 8, .y = self.palette_decor.base.y + 9, .visible = false },
+        .scissor_w = palette_decor_w - 20 - 6,
+        .scissor_h = palette_decor_h - 17,
+        .scroll_x = 174,
+        .scroll_y = 0,
+        .scroll_w = 4,
+        .scroll_h = palette_decor_h - 17,
+        .scroll_side_x = 174 - 6,
+        .scroll_side_y = 0,
+        .scroll_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_background_data, 4, palette_decor_h - 17, 0, 0, 2, 2, 1.0) },
+        .scroll_knob_image_data = .fromNineSlices(scroll_knob_base, scroll_knob_hover, scroll_knob_press, 10, 16, 4, 4, 1, 2, 1.0),
+        .scroll_side_decor_image_data = .{ .nine_slice = .fromAtlasData(scroll_decor_data, 6, palette_decor_h - 17, 0, 41, 6, 3, 1.0) },
+    });
+
+    var region_iter = game_data.region.from_id.iterator();
+    i = 0;
+    while (region_iter.next()) |entry| : (i += 1) {
+        if (filter) |f| if (f.len > 0 and std.ascii.indexOfIgnoreCase(entry.value_ptr.name, f) == null) {
+            i -= 1;
+            continue;
+        };
+
+        _ = try self.palette_containers.region.createChild(Button, .{
+            .base = .{ .x = f32i(@mod(i, 5) * 34), .y = f32i(@divFloor(i, 5) * 34) },
+            .image_data = .{ .base = .{ .normal = .{
+                .atlas_data = assets.generic_8x8,
+                .scale_x = 4.0,
+                .scale_y = 4.0,
+                .alpha = 0.6,
+                .color = entry.value_ptr.color,
+                .color_intensity = 1.0,
+            } } },
+            .userdata = entry.key_ptr,
+            .pressCallback = regionClicked,
+            .tooltip_text = .{
+                .text = entry.value_ptr.name,
+                .size = 12,
+                .text_type = .bold_italic,
+            },
+        });
+    }
+}
+
 fn addObjectContainer(
     container: **ScrollableContainer,
     px: f32,
@@ -864,6 +913,7 @@ fn addObjectContainer(
     scroll_decor_data: assets.AtlasData,
     comptime T: type,
     data: game_data.Maps(T),
+    filter: ?[]const u8,
     callback: *const fn (?*anyopaque) void,
 ) !void {
     container.* = try element.create(ScrollableContainer, .{
@@ -886,6 +936,9 @@ fn addObjectContainer(
     while (iter.next()) |entry| {
         // region placeholder
         if (T == game_data.EntityData and entry.key_ptr.* == 65534) continue;
+
+        if (filter) |f| if (f.len > 0 and std.ascii.indexOfIgnoreCase(entry.value_ptr.name, f) == null)
+            continue;
 
         defer i += 1;
 
@@ -1284,6 +1337,7 @@ pub fn deinit(self: *MapEditorScreen) void {
 
     element.destroy(self.selection_image);
     element.destroy(self.details_text);
+    element.destroy(self.search_bar);
     element.destroy(self.palette_decor);
     inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field|
         element.destroy(@field(self.palette_containers, field.name));
@@ -1309,6 +1363,7 @@ pub fn resize(self: *MapEditorScreen, w: f32, _: f32) void {
     self.layer_button.base.x = palette_x - layer_decor_w - 5;
     self.layer_container.base.x = palette_x - layer_decor_w - 5;
 
+    self.search_bar.base.x = w - search_bar_w - 5;
     self.palette_decor.base.x = palette_x;
     inline for (@typeInfo(@TypeOf(self.palette_containers)).@"struct".fields) |field| {
         @field(self.palette_containers, field.name).base.x = cont_x;
@@ -1354,6 +1409,13 @@ fn processRectSelect(self: *MapEditorScreen) void {
         positions.append(main.allocator, .{ .x = @intCast(x), .y = @intCast(y) }) catch main.oomPanic();
     self.clearSelection();
     self.selected_tiles = positions.toOwnedSlice(main.allocator) catch main.oomPanic();
+}
+
+fn onSearchChange(text: []const u8) void {
+    if (ui_systems.screen == .editor) ui_systems.screen.editor.addContainers(text) catch |e| {
+        std.log.err("Error while updating search filter: {}", .{e});
+        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+    };
 }
 
 pub fn onMousePress(self: *MapEditorScreen, button: glfw.MouseButton) void {

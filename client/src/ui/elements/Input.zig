@@ -18,6 +18,7 @@ image_data: element.InteractableImageData,
 cursor_image_data: element.ImageData,
 text_data: element.TextData,
 enterCallback: ?*const fn ([]const u8) void = null,
+changeCallback: ?*const fn ([]const u8) void = null,
 state: element.InteractableState = .none,
 is_chat: bool = false,
 // -1 means not selected
@@ -155,4 +156,6 @@ pub fn inputUpdate(self: *Input) void {
     self.x_offset = -offset;
     self.text_data.scissor.min_x = offset;
     self.text_data.scissor.max_x = offset + img_width;
+
+    if (self.changeCallback) |cb| cb(self.text_data.text);
 }
