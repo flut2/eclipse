@@ -860,7 +860,7 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
                                     }) catch main.oomPanic(),
                                     .text_type = .bold,
                                     .size = 16,
-                                    .color = 0x91C8E0,
+                                    .color = 0x64BEE5,
                                 },
                             }) catch main.oomPanic();
                         }
@@ -886,7 +886,7 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
                         }) catch main.oomPanic(),
                         .text_type = .bold,
                         .size = 16,
-                        .color = 0x91C8E0,
+                        .color = 0x64BEE5,
                     },
                 }) catch main.oomPanic();
             }
