@@ -215,7 +215,14 @@ pub const AllyStat = union(enum) {
 };
 
 pub fn DataIdWithCount(CountType: type) type {
-    return packed struct { count: CountType, data_id: u16 };
+    return packed struct {
+        count: CountType,
+        data_id: u16,
+
+        pub fn eql(self: @This(), other: @This()) bool {
+            return self.count == other.count and self.data_id == other.data_id;
+        }
+    };
 }
 
 pub const TileData = packed struct {
@@ -245,8 +252,8 @@ pub const ObjectData = struct {
     stats: []const u8,
 
     pub fn byteSize(self: ObjectData) usize {
-        return @sizeOf(@TypeOf(self.data_id)) + 
-            @sizeOf(@TypeOf(self.map_id)) + 
+        return @sizeOf(@TypeOf(self.data_id)) +
+            @sizeOf(@TypeOf(self.map_id)) +
             @sizeOf(u16) + // array len
             @sizeOf(@typeInfo(@TypeOf(self.stats)).pointer.child) * self.stats.len;
     }

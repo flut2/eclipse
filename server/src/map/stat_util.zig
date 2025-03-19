@@ -19,13 +19,12 @@ pub fn write(
             const is_array = type_info == .array;
             const is_slice = type_info == .pointer and type_info.pointer.size == .slice;
             const is_condition = T == utils.Condition;
-            const cond_int = if (is_condition) type_info.@"struct".backing_integer.? else {};
 
             const tag_id = @intFromEnum(tag);
             if (cache[tag_id] != null and
                 (is_array and std.mem.eql(type_info.array.child, @field(cache[tag_id].?, @tagName(tag)), inner_value) or
                 is_slice and std.mem.eql(type_info.pointer.child, @field(cache[tag_id].?, @tagName(tag)), inner_value) or
-                is_condition and @as(cond_int, @bitCast(@field(cache[tag_id].?, @tagName(tag)))) == @as(cond_int, @bitCast(inner_value)) or
+                is_condition and inner_value.eql(@field(cache[tag_id].?, @tagName(tag))) or
                 !is_condition and !is_array and !is_slice and @field(cache[tag_id].?, @tagName(tag)) == inner_value))
                 return;
 

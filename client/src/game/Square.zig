@@ -87,8 +87,10 @@ pub fn addToMap(square_data: Square) void {
         }
     }
 
+    const cur = &map.squares[floor_y * map.info.width + floor_x];
+    self.entity_map_id = cur.entity_map_id;
     self.update();
-    map.squares[floor_y * map.info.width + floor_x] = self;
+    cur.* = self;
 }
 
 fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, disable_blend: bool, comptime blend_dir: comptime_int) void {

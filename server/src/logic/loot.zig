@@ -188,7 +188,7 @@ pub fn dropCards(host: anytype, comptime loots: []const CardLoot) void {
             if (loot.chance >= utils.rng.random().float(f32)) {
                 const data = game_data.card.from_name.get(loot.name) orelse {
                     std.log.err("Card not found for name \"{s}\"", .{loot.name});
-                    return;
+                    break :@"continue";
                 };
                 cards[card_idx] = data.id;
                 card_idx += 1;
@@ -219,11 +219,8 @@ pub fn dropResources(host: anytype, comptime loots: []const ResourceLoot) void {
         }
     }
 
-    // TODO: some vfx
-
     const world = maps.worlds.getPtr(host.world_id) orelse return;
 
-    var buf: [256]u8 = undefined;
     var rand = utils.rng.random();
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
@@ -232,36 +229,21 @@ pub fn dropResources(host: anytype, comptime loots: []const ResourceLoot) void {
 
         const fdamage = f32i(entry.value_ptr.*);
         inline for (loots) |loot| @"continue": {
-            if (fdamage / fmax_hp <= loot.threshold) break :@"continue";
+            if (fdamage / fmax_hp <= loot.threshold or loot.chance < rand.float(f32)) break :@"continue";
 
-            if (loot.chance >= rand.float(f32)) {
-                const data = game_data.resource.from_name.get(loot.name) orelse {
-                    std.log.err("Resource not found for name \"{s}\"", .{loot.name});
-                    return;
-                };
-                const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
-                incrementResource: {
-                    for (player.resources.items) |*res| if (res.data_id == data.id) {
-                        res.count += amount;
-                        break :incrementResource;
-                    };
-                    player.resources.append(main.allocator, .{
-                        .data_id = data.id,
-                        .count = amount,
-                    }) catch main.oomPanic();
-                }
-
-                player.client.sendPacket(.{ .text = .{
-                    .name = "Server",
-                    .obj_type = .entity,
-                    .map_id = std.math.maxInt(u32),
-                    .bubble_time = 0,
-                    .recipient = "",
-                    .text = std.fmt.bufPrint(&buf, "You've received {} " ++ loot.name, .{amount}) catch break :@"continue",
-                    .name_color = 0xCC00CC,
-                    .text_color = 0xFF99FF,
-                } });
-            }
+            const data = game_data.resource.from_name.get(loot.name) orelse {
+                std.log.err("Resource not found for name \"{s}\"", .{loot.name});
+                break :@"continue";
+            };
+            const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
+            for (player.resources.items) |*res| if (res.data_id == data.id) {
+                res.count += amount;
+                break :@"continue";
+            };
+            player.resources.append(main.allocator, .{
+                .data_id = data.id,
+                .count = amount,
+            }) catch main.oomPanic();
         }
     }
 }
@@ -277,11 +259,8 @@ pub fn dropCurrency(host: anytype, comptime loots: []const CurrencyLoot) void {
         }
     }
 
-    // TODO: some vfx
-
     const world = maps.worlds.getPtr(host.world_id) orelse return;
 
-    var buf: [256]u8 = undefined;
     var rand = utils.rng.random();
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
@@ -290,27 +269,11 @@ pub fn dropCurrency(host: anytype, comptime loots: []const CurrencyLoot) void {
 
         const fdamage = f32i(entry.value_ptr.*);
         inline for (loots) |loot| @"continue": {
-            if (fdamage / fmax_hp <= loot.threshold) break :@"continue";
-
-            if (loot.chance >= rand.float(f32)) {
-                const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
-                switch (loot.type) {
-                    .gems => player.gems += amount,
-                    .gold => player.gold += amount,
-                }
-                player.client.sendPacket(.{ .text = .{
-                    .name = "Server",
-                    .obj_type = .entity,
-                    .map_id = std.math.maxInt(u32),
-                    .bubble_time = 0,
-                    .recipient = "",
-                    .text = std.fmt.bufPrint(&buf, "You've received {} " ++ switch (loot.type) {
-                        .gems => "Gems",
-                        .gold => "Gold",
-                    }, .{amount}) catch break :@"continue",
-                    .name_color = 0xCC00CC,
-                    .text_color = 0xFF99FF,
-                } });
+            if (fdamage / fmax_hp <= loot.threshold or loot.chance < rand.float(f32)) break :@"continue";
+            const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
+            switch (loot.type) {
+                .gems => player.gems += amount,
+                .gold => player.gold += amount,
             }
         }
     }
@@ -325,11 +288,8 @@ pub fn dropSpirits(host: anytype, comptime loot: SpiritLoot) void {
         if (loot.min > loot.max) @compileError("The minimum amount can't be larger than the maximum amount");
     }
 
-    // TODO: some vfx
-
     const world = maps.worlds.getPtr(host.world_id) orelse return;
 
-    var buf: [256]u8 = undefined;
     var rand = utils.rng.random();
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
@@ -337,66 +297,46 @@ pub fn dropSpirits(host: anytype, comptime loot: SpiritLoot) void {
         const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
-        if (fdamage / fmax_hp <= loot.threshold) continue;
+        if (fdamage / fmax_hp <= loot.threshold or loot.chance < rand.float(f32)) continue;
 
-        if (loot.chance >= rand.float(f32)) {
-            const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
-            var total_item_spirits = amount / 2;
-            const aether_spirits = amount - total_item_spirits;
-            var total_recv: [4]u32 = @splat(0);
-            while (total_item_spirits > 0) {
-                var ways_to_slice: u8 = 0;
-                for (player.inventory[0..4]) |item| {
-                    if (item == std.math.maxInt(u16)) continue;
-                    const data = game_data.item.from_id.get(item) orelse continue;
-                    if (data.level_spirits == 0) continue;
-                    ways_to_slice += 1;
-                }
-                if (ways_to_slice == 0) break;
-
-                const slice_amount = @max(1, total_item_spirits / ways_to_slice);
-                for (player.inventory[0..4], 0..) |item, i| {
-                    if (item == std.math.maxInt(u16) or total_item_spirits <= 0) continue;
-                    const data = game_data.item.from_id.get(item) orelse continue;
-                    if (data.level_spirits == 0) continue;
-                    const old_spirits = player.inv_data[i].amount;
-                    const new_spirits = @min(data.level_spirits, player.inv_data[i].amount + slice_amount);
-                    const spirit_delta = new_spirits - old_spirits;
-                    total_item_spirits -= spirit_delta;
-                    if (new_spirits == data.level_spirits) {
-                        const next_data = game_data.item.from_name.get(data.level_transform_item.?).?;
-                        player.inventory[i] = next_data.id;
-                        player.inv_data[i].amount = 0;
-                        player.client.sendMessage(
-                            std.fmt.bufPrint(&buf, "Your \"{s}\" has leveled up, transforming into \"{s}\"", .{
-                                data.name,
-                                next_data.name,
-                            }) catch continue,
-                        );
-                        player.recalculateBoosts();
-                        total_recv[i] = 0;
-                    } else {
-                        player.inv_data[i].amount = new_spirits;
-                        total_recv[i] += spirit_delta;
-                    }
-                }
+        const amount = rand.intRangeAtMost(u32, loot.min, loot.max);
+        var total_item_spirits = amount / 2;
+        const aether_spirits = amount - total_item_spirits;
+        var total_recv: [4]u32 = @splat(0);
+        while (total_item_spirits > 0) {
+            var ways_to_slice: u8 = 0;
+            for (player.inventory[0..4]) |item| {
+                if (item == std.math.maxInt(u16)) continue;
+                const data = game_data.item.from_id.get(item) orelse continue;
+                if (data.level_spirits == 0) continue;
+                ways_to_slice += 1;
             }
+            if (ways_to_slice == 0) break;
 
-            for (total_recv, 0..) |recv, i| if (recv > 0) {
-                const data = game_data.item.from_id.get(player.inventory[i]) orelse continue;
-                player.client.sendMessage(
-                    std.fmt.bufPrint(&buf, "Your \"{s}\" has received {} Spirits", .{ data.name, recv }) catch continue,
-                );
-            };
-
-            const clamped_spirits = @min(game_data.spiritGoal(player.aether), player.spirits_communed + aether_spirits + total_item_spirits);
-            const spirit_delta = clamped_spirits - player.spirits_communed;
-            if (spirit_delta > 0) {
-                player.client.sendMessage(
-                    std.fmt.bufPrint(&buf, "You've received {} Spirits", .{spirit_delta}) catch continue,
-                );
-                player.spirits_communed = clamped_spirits;
+            const slice_amount = @max(1, total_item_spirits / ways_to_slice);
+            for (player.inventory[0..4], 0..) |item, i| {
+                if (item == std.math.maxInt(u16) or total_item_spirits <= 0) continue;
+                const data = game_data.item.from_id.get(item) orelse continue;
+                if (data.level_spirits == 0) continue;
+                const old_spirits = player.inv_data[i].amount;
+                const new_spirits = @min(data.level_spirits, player.inv_data[i].amount + slice_amount);
+                const spirit_delta = new_spirits - old_spirits;
+                total_item_spirits -= spirit_delta;
+                if (new_spirits == data.level_spirits) {
+                    const next_data = game_data.item.from_name.get(data.level_transform_item.?).?;
+                    player.inventory[i] = next_data.id;
+                    player.inv_data[i].amount = 0;
+                    player.recalculateBoosts();
+                    total_recv[i] = 0;
+                } else {
+                    player.inv_data[i].amount = new_spirits;
+                    total_recv[i] += spirit_delta;
+                }
             }
         }
+
+        const clamped_spirits = @min(game_data.spiritGoal(player.aether), player.spirits_communed + aether_spirits + total_item_spirits);
+        const spirit_delta = clamped_spirits - player.spirits_communed;
+        if (spirit_delta > 0) player.spirits_communed = clamped_spirits;
     }
 }

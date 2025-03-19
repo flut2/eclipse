@@ -36,6 +36,10 @@ pub const min_move_speed = 4.0 / float_us;
 pub const max_move_speed = 9.6 / float_us;
 pub const attack_frequency = 5.0 / float_us;
 pub const max_sink_level = 18.0;
+pub const default_resource: network_data.DataIdWithCount(u32) = .{
+    .count = std.math.maxInt(u32),
+    .data_id = std.math.maxInt(u16),
+};
 
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
@@ -47,14 +51,14 @@ name: ?[]const u8 = null,
 name_text_data: ?element.TextData = null,
 name_text_data_inited: bool = false,
 cards: []const u16 = &.{},
-resources: []const network_data.DataIdWithCount(u32) = &.{},
+resources: []const network_data.DataIdWithCount(u32) = &.{default_resource},
 talents: []const network_data.DataIdWithCount(u16) = &.{},
 in_combat: bool = false,
 aether: u8 = 1,
-spirits_communed: u32 = 0,
+spirits_communed: u32 = std.math.maxInt(u32),
 muted_until: i64 = 0,
-gold: u32 = 0,
-gems: u32 = 0,
+gold: u32 = std.math.maxInt(u32),
+gems: u32 = std.math.maxInt(u32),
 damage_mult: f32 = 1.0,
 hit_mult: f32 = 1.0,
 size_mult: f32 = 1.0,
@@ -153,7 +157,8 @@ pub fn deinit(self: *Player) void {
     self.status_texts.deinit(main.allocator);
     if (self.speech_balloon) |*balloon| balloon.deinit();
     main.allocator.free(self.cards);
-    main.allocator.free(self.resources);
+    if (self.resources.len != 1 or !self.resources[0].eql(default_resource))
+        main.allocator.free(self.resources);
     main.allocator.free(self.talents);
 }
 
@@ -339,7 +344,7 @@ pub fn draw(
         const time_us = self.data.float.time * std.time.us_per_s;
         screen_pos.y -= self.data.float.height / 2.0 * (@sin(f32i(main.current_time) / time_us) + 1) * px_per_tile * main.camera.scale;
     }
-    
+
     var alpha_mult: f32 = self.alpha;
     if (self.condition.invisible)
         alpha_mult = 0.6;

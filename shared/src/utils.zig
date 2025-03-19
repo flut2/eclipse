@@ -201,6 +201,11 @@ pub const Condition = packed struct(u32) {
         return self == .{};
     }
 
+    pub fn eql(self: Condition, other: Condition) bool {
+        const cond_int = @typeInfo(Condition).@"struct".backing_integer.?;
+        return @as(cond_int, @bitCast(self)) == @as(cond_int, @bitCast(other));
+    }
+
     pub fn fromCondSlice(slice: ?[]const game_data.TimedCondition) Condition {
         if (slice) |s| {
             var ret: Condition = .{};
