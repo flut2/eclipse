@@ -838,32 +838,34 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
                 return;
             }
 
-            for (val) |pair| for (player.resources) |old_pair| {
-                if (old_pair.data_id == pair.data_id) {
-                    if (old_pair.count < pair.count) {
-                        const resource_data = game_data.resource.from_id.get(pair.data_id) orelse continue;
-                        const texts_len = player.status_texts.items.len;
-                        const last_add = if (texts_len > 0) player.status_texts.items[texts_len - 1].show_at else -1;
-                        const cur_time = main.current_time;
-                        const cooldown: i64 = 0.5 * std.time.us_per_s;
-                        player.status_texts.append(main.allocator, .{
-                            .initial_size = 16.0,
-                            .dispose_text = true,
-                            .show_at = if (cur_time - last_add >= cooldown) main.current_time else last_add + cooldown,
-                            .duration = 2.0 * std.time.us_per_s,
-                            .text_data = .{
-                                .text = std.fmt.allocPrint(main.allocator, "+{} &img=\"{s},{}\"", .{
-                                    pair.count - old_pair.count,
-                                    resource_data.icon.sheet,
-                                    resource_data.icon.index,
-                                }) catch main.oomPanic(),
-                                .text_type = .bold,
-                                .size = 16,
-                                .color = 0x91C8E0,
-                            },
-                        }) catch main.oomPanic();
+            mainLoop: for (val) |pair| {
+                for (player.resources) |old_pair| {
+                    if (old_pair.data_id == pair.data_id) {
+                        if (old_pair.count < pair.count) {
+                            const resource_data = game_data.resource.from_id.get(pair.data_id) orelse continue;
+                            const texts_len = player.status_texts.items.len;
+                            const last_add = if (texts_len > 0) player.status_texts.items[texts_len - 1].show_at else -1;
+                            const cur_time = main.current_time;
+                            const cooldown: i64 = 0.5 * std.time.us_per_s;
+                            player.status_texts.append(main.allocator, .{
+                                .initial_size = 16.0,
+                                .dispose_text = true,
+                                .show_at = if (cur_time - last_add >= cooldown) main.current_time else last_add + cooldown,
+                                .duration = 2.0 * std.time.us_per_s,
+                                .text_data = .{
+                                    .text = std.fmt.allocPrint(main.allocator, "+{} &img=\"{s},{}\"", .{
+                                        pair.count - old_pair.count,
+                                        resource_data.icon.sheet,
+                                        resource_data.icon.index,
+                                    }) catch main.oomPanic(),
+                                    .text_type = .bold,
+                                    .size = 16,
+                                    .color = 0x91C8E0,
+                                },
+                            }) catch main.oomPanic();
+                        }
+                        continue :mainLoop;
                     }
-                    continue;
                 }
 
                 const resource_data = game_data.resource.from_id.get(pair.data_id) orelse continue;
@@ -887,7 +889,7 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
                         .color = 0x91C8E0,
                     },
                 }) catch main.oomPanic();
-            };
+            }
             player.resources = val;
         },
         .talents => |val| player.talents = val,
