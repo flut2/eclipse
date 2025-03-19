@@ -3,25 +3,30 @@
         .id = 0,
         .name = "Common Capsule",
         .textures = [{ "containers": 0 }],
+        .size_mult = 0.5,
     },
     {
         .id = 1,
         .name = "Rare Capsule",
         .textures = [{ "containers": 1 }],
+        .size_mult = 0.5,
     },
     {
         .id = 2,
         .name = "Epic Capsule",
         .textures = [{ "containers": 2 }],
+        .size_mult = 0.5,
     },
     {
         .id = 3,
         .name = "Legendary Capsule",
         .textures = [{ "containers": 3 }],
+        .size_mult = 0.5,
     },
     {
         .id = 4,
         .name = "Mythic Capsule",
         .textures = [{ "containers": 4 }],
+        .size_mult = 0.5,
     },
 ]
