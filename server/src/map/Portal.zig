@@ -51,8 +51,10 @@ pub fn exportStats(self: *Portal, cache: *[@typeInfo(network_data.PortalStat).@"
     writer.list.clearRetainingCapacity();
 
     const T = network_data.PortalStat;
-    stat_util.write(T, writer, cache, .{ .x = self.x });
-    stat_util.write(T, writer, cache, .{ .y = self.y });
+    inline for (.{
+        T{ .x = self.x },
+        T{ .y = self.y },
+    }) |stat| stat_util.write(T, writer, cache, stat);
 
     return writer.list.items;
 }

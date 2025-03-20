@@ -739,67 +739,67 @@ pub fn exportStats(
 
     const T = network_data.PlayerStat;
     if (force_export_pos or !is_self) {
-        stat_util.write(T, writer, cache, .{ .x = self.x });
-        stat_util.write(T, writer, cache, .{ .y = self.y });
+        inline for (.{
+            T{ .x = self.x },
+            T{ .y = self.y },
+        }) |stat| stat_util.write(T, writer, cache, stat);
     }
 
-    stat_util.write(T, writer, cache, .{ .name = self.name });
-    stat_util.write(T, writer, cache, .{ .aether = self.aether });
-    stat_util.write(T, writer, cache, .{ .spirits_communed = self.spirits_communed });
-    stat_util.write(T, writer, cache, .{ .max_hp = self.data.stats.health + self.health.base });
-    stat_util.write(T, writer, cache, .{ .max_hp_bonus = self.health.boost });
-    stat_util.write(T, writer, cache, .{ .hp = self.hp });
-    stat_util.write(T, writer, cache, .{ .max_mp = self.data.stats.mana + self.mana.base });
-    stat_util.write(T, writer, cache, .{ .max_mp_bonus = self.mana.boost });
-    stat_util.write(T, writer, cache, .{ .mp = self.mp });
-    stat_util.write(T, writer, cache, .{ .condition = self.condition });
-    stat_util.write(T, writer, cache, .{ .ability_state = self.ability_state });
-    stat_util.write(T, writer, cache, .{ .muted_until = self.muted_until });
-    stat_util.write(T, writer, cache, .{ .rank = self.rank });
-    stat_util.write(T, writer, cache, .{ .damage_mult = self.damage_multiplier });
-    stat_util.write(T, writer, cache, .{ .hit_mult = self.hit_multiplier });
+    inline for (.{
+        T{ .name = self.name },
+        T{ .aether = self.aether },
+        T{ .spirits_communed = self.spirits_communed },
+        T{ .max_hp = self.data.stats.health + self.health.base },
+        T{ .max_hp_bonus = self.health.boost },
+        T{ .hp = self.hp },
+        T{ .max_mp = self.data.stats.mana + self.mana.base },
+        T{ .max_mp_bonus = self.mana.boost },
+        T{ .mp = self.mp },
+        T{ .condition = self.condition },
+        T{ .ability_state = self.ability_state },
+        T{ .muted_until = self.muted_until },
+        T{ .rank = self.rank },
+        T{ .damage_mult = self.damage_multiplier },
+        T{ .hit_mult = self.hit_multiplier },
+    }) |stat| stat_util.write(T, writer, cache, stat);
 
     inline for (0..4) |i| {
-        const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
-            @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_0) + @as(u8, i));
-        stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_tag), self.inventory[i]));
-        const inv_data_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
-            @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_data_0) + @as(u8, i));
-        stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_data_tag), self.inv_data[i]));
+        const inv_tag: @typeInfo(T).@"union".tag_type.? = @enumFromInt(@intFromEnum(T.inv_0) + @as(u8, i));
+        stat_util.write(T, writer, cache, @unionInit(T, @tagName(inv_tag), self.inventory[i]));
+        const inv_data_tag: @typeInfo(T).@"union".tag_type.? = @enumFromInt(@intFromEnum(T.inv_data_0) + @as(u8, i));
+        stat_util.write(T, writer, cache, @unionInit(T, @tagName(inv_data_tag), self.inv_data[i]));
     }
 
     if (is_self) {
-        stat_util.write(T, writer, cache, .{ .gold = self.gold });
-        stat_util.write(T, writer, cache, .{ .gems = self.gems });
-        stat_util.write(T, writer, cache, .{ .cards = self.cards });
-        stat_util.write(T, writer, cache, .{ .resources = self.resources.items });
-        stat_util.write(T, writer, cache, .{ .talents = self.talents.items });
-
-        stat_util.write(T, writer, cache, .{ .strength = self.data.stats.strength + self.strength.base });
-        stat_util.write(T, writer, cache, .{ .wit = self.data.stats.wit + self.wit.base });
-        stat_util.write(T, writer, cache, .{ .defense = self.data.stats.defense + self.defense.base });
-        stat_util.write(T, writer, cache, .{ .resistance = self.data.stats.resistance + self.resistance.base });
-        stat_util.write(T, writer, cache, .{ .speed = self.data.stats.speed + self.speed.base });
-        stat_util.write(T, writer, cache, .{ .haste = self.data.stats.haste + self.haste.base });
-        stat_util.write(T, writer, cache, .{ .stamina = self.data.stats.stamina + self.stamina.base });
-        stat_util.write(T, writer, cache, .{ .intelligence = self.data.stats.intelligence + self.intelligence.base });
-
-        stat_util.write(T, writer, cache, .{ .strength_bonus = self.strength.boost });
-        stat_util.write(T, writer, cache, .{ .wit_bonus = self.wit.boost });
-        stat_util.write(T, writer, cache, .{ .defense_bonus = self.defense.boost });
-        stat_util.write(T, writer, cache, .{ .resistance_bonus = self.resistance.boost });
-        stat_util.write(T, writer, cache, .{ .speed_bonus = self.speed.boost });
-        stat_util.write(T, writer, cache, .{ .haste_bonus = self.haste.boost });
-        stat_util.write(T, writer, cache, .{ .stamina_bonus = self.stamina.boost });
-        stat_util.write(T, writer, cache, .{ .intelligence_bonus = self.intelligence.boost });
+        inline for (.{
+            T{ .gold = self.gold },
+            T{ .gems = self.gems },
+            T{ .cards = self.cards },
+            T{ .resources = self.resources.items },
+            T{ .talents = self.talents.items },
+            T{ .strength = self.data.stats.strength + self.strength.base },
+            T{ .wit = self.data.stats.wit + self.wit.base },
+            T{ .defense = self.data.stats.defense + self.defense.base },
+            T{ .resistance = self.data.stats.resistance + self.resistance.base },
+            T{ .speed = self.data.stats.speed + self.speed.base },
+            T{ .haste = self.data.stats.haste + self.haste.base },
+            T{ .stamina = self.data.stats.stamina + self.stamina.base },
+            T{ .intelligence = self.data.stats.intelligence + self.intelligence.base },
+            T{ .strength_bonus = self.strength.boost },
+            T{ .wit_bonus = self.wit.boost },
+            T{ .defense_bonus = self.defense.boost },
+            T{ .resistance_bonus = self.resistance.boost },
+            T{ .speed_bonus = self.speed.boost },
+            T{ .haste_bonus = self.haste.boost },
+            T{ .stamina_bonus = self.stamina.boost },
+            T{ .intelligence_bonus = self.intelligence.boost },
+        }) |stat| stat_util.write(T, writer, cache, stat);
 
         inline for (4..self.inventory.len) |i| {
-            const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
-                @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_0) + @as(u8, i));
-            stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_tag), self.inventory[i]));
-            const inv_data_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =
-                @enumFromInt(@intFromEnum(network_data.PlayerStat.inv_data_0) + @as(u8, i));
-            stat_util.write(T, writer, cache, @unionInit(network_data.PlayerStat, @tagName(inv_data_tag), self.inv_data[i]));
+            const inv_tag: @typeInfo(T).@"union".tag_type.? = @enumFromInt(@intFromEnum(T.inv_0) + @as(u8, i));
+            stat_util.write(T, writer, cache, @unionInit(T, @tagName(inv_tag), self.inventory[i]));
+            const inv_data_tag: @typeInfo(T).@"union".tag_type.? = @enumFromInt(@intFromEnum(T.inv_data_0) + @as(u8, i));
+            stat_util.write(T, writer, cache, @unionInit(T, @tagName(inv_data_tag), self.inv_data[i]));
         }
     }
 

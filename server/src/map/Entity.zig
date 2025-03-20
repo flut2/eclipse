@@ -173,8 +173,10 @@ pub fn exportStats(self: *Entity, cache: *[@typeInfo(network_data.EntityStat).@"
     writer.list.clearRetainingCapacity();
 
     const T = network_data.EntityStat;
-    stat_util.write(T, writer, cache, .{ .x = self.x });
-    stat_util.write(T, writer, cache, .{ .y = self.y });
+    inline for (.{
+        T{ .x = self.x },
+        T{ .y = self.y },
+    }) |stat| stat_util.write(T, writer, cache, stat);
     if (self.data.health > 0) stat_util.write(T, writer, cache, .{ .hp = self.hp });
 
     return writer.list.items;

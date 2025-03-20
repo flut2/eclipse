@@ -60,28 +60,19 @@ pub fn exportStats(self: *Container, cache: *[@typeInfo(network_data.ContainerSt
     writer.list.clearRetainingCapacity();
 
     const T = network_data.ContainerStat;
-    stat_util.write(T, writer, cache, .{ .x = self.x });
-    stat_util.write(T, writer, cache, .{ .y = self.y });
-    stat_util.write(T, writer, cache, .{ .size_mult = self.size_mult });
+    inline for (.{
+        T{ .x = self.x },
+        T{ .y = self.y },
+        T{ .size_mult = self.size_mult },
+    }) |stat| stat_util.write(T, writer, cache, stat);
     if (self.name) |name| stat_util.write(T, writer, cache, .{ .name = name });
-    stat_util.write(T, writer, cache, .{ .inv_0 = self.inventory[0] });
-    stat_util.write(T, writer, cache, .{ .inv_1 = self.inventory[1] });
-    stat_util.write(T, writer, cache, .{ .inv_2 = self.inventory[2] });
-    stat_util.write(T, writer, cache, .{ .inv_3 = self.inventory[3] });
-    stat_util.write(T, writer, cache, .{ .inv_4 = self.inventory[4] });
-    stat_util.write(T, writer, cache, .{ .inv_5 = self.inventory[5] });
-    stat_util.write(T, writer, cache, .{ .inv_6 = self.inventory[6] });
-    stat_util.write(T, writer, cache, .{ .inv_7 = self.inventory[7] });
-    stat_util.write(T, writer, cache, .{ .inv_8 = self.inventory[8] });
-    stat_util.write(T, writer, cache, .{ .inv_data_0 = self.inv_data[0] });
-    stat_util.write(T, writer, cache, .{ .inv_data_1 = self.inv_data[1] });
-    stat_util.write(T, writer, cache, .{ .inv_data_2 = self.inv_data[2] });
-    stat_util.write(T, writer, cache, .{ .inv_data_3 = self.inv_data[3] });
-    stat_util.write(T, writer, cache, .{ .inv_data_4 = self.inv_data[4] });
-    stat_util.write(T, writer, cache, .{ .inv_data_5 = self.inv_data[5] });
-    stat_util.write(T, writer, cache, .{ .inv_data_6 = self.inv_data[6] });
-    stat_util.write(T, writer, cache, .{ .inv_data_7 = self.inv_data[7] });
-    stat_util.write(T, writer, cache, .{ .inv_data_8 = self.inv_data[8] });
+
+    inline for (0..9) |i| {
+        const inv_tag: @typeInfo(T).@"union".tag_type.? = @enumFromInt(@intFromEnum(T.inv_0) + @as(u8, i));
+        stat_util.write(T, writer, cache, @unionInit(T, @tagName(inv_tag), self.inventory[i]));
+        const inv_data_tag: @typeInfo(T).@"union".tag_type.? = @enumFromInt(@intFromEnum(T.inv_data_0) + @as(u8, i));
+        stat_util.write(T, writer, cache, @unionInit(T, @tagName(inv_data_tag), self.inv_data[i]));
+    }
 
     return writer.list.items;
 }

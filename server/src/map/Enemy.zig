@@ -385,13 +385,15 @@ pub fn exportStats(self: *Enemy, cache: *[@typeInfo(network_data.EnemyStat).@"un
     writer.list.clearRetainingCapacity();
 
     const T = network_data.EnemyStat;
-    stat_util.write(T, writer, cache, .{ .x = self.x });
-    stat_util.write(T, writer, cache, .{ .y = self.y });
-    stat_util.write(T, writer, cache, .{ .size_mult = self.size_mult });
+    inline for (.{
+        T{ .x = self.x },
+        T{ .y = self.y },
+        T{ .size_mult = self.size_mult },
+        T{ .hp = self.hp },
+        T{ .max_hp = self.max_hp },
+        T{ .condition = self.condition },
+    }) |stat| stat_util.write(T, writer, cache, stat);
     if (self.name) |name| stat_util.write(T, writer, cache, .{ .name = name });
-    stat_util.write(T, writer, cache, .{ .hp = self.hp });
-    stat_util.write(T, writer, cache, .{ .max_hp = self.max_hp });
-    stat_util.write(T, writer, cache, .{ .condition = self.condition });
 
     return writer.list.items;
 }
