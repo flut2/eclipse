@@ -246,47 +246,47 @@ pub fn update(self: *PlayerMenu, params: menu.ParamsFor(PlayerMenu)) void {
         }) catch "Buffer overflow",
     );
 
-    const hp_perc = f32i(params.player.hp) / f32i(params.player.max_hp + params.player.max_hp_bonus);
+    const hp_perc = f32i(params.player.hp) / f32i(params.player.data.stats.health + params.player.max_hp_bonus);
     self.health_bar.base.scissor.max_x = self.health_bar.texWRaw() * hp_perc;
 
     var health_text_data = &self.health_bar.text_data;
     if (params.player.max_hp_bonus > 0) {
         health_text_data.setText(std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"65E698\"(+{})", .{
             params.player.hp,
-            params.player.max_hp + params.player.max_hp_bonus,
+            params.player.data.stats.health + params.player.max_hp_bonus,
             params.player.max_hp_bonus,
         }) catch "Buffer overflow");
     } else if (params.player.max_hp_bonus < 0) {
         health_text_data.setText(std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"FF7070\"({})", .{
             params.player.hp,
-            params.player.max_hp + params.player.max_hp_bonus,
+            params.player.data.stats.health + params.player.max_hp_bonus,
             params.player.max_hp_bonus,
         }) catch "Buffer overflow");
     } else {
         health_text_data.setText(
-            std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{}", .{ params.player.hp, params.player.max_hp }) catch "Buffer overflow",
+            std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{}", .{ params.player.hp, params.player.data.stats.health }) catch "Buffer overflow",
         );
     }
 
-    const mp_perc = f32i(params.player.mp) / f32i(params.player.max_mp + params.player.max_mp_bonus);
+    const mp_perc = f32i(params.player.mp) / f32i(params.player.data.stats.mana + params.player.max_mp_bonus);
     self.mana_bar.base.scissor.max_x = self.mana_bar.texWRaw() * mp_perc;
 
     var mana_text_data = &self.mana_bar.text_data;
     if (params.player.max_mp_bonus > 0) {
         mana_text_data.setText(std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"65E698\"(+{})", .{
             params.player.mp,
-            params.player.max_mp + params.player.max_mp_bonus,
+            params.player.data.stats.mana + params.player.max_mp_bonus,
             params.player.max_mp_bonus,
         }) catch "Buffer overflow");
     } else if (params.player.max_mp_bonus < 0) {
         mana_text_data.setText(std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"FF7070\"({})", .{
             params.player.mp,
-            params.player.max_mp + params.player.max_mp_bonus,
+            params.player.data.stats.mana + params.player.max_mp_bonus,
             params.player.max_mp_bonus,
         }) catch "Buffer overflow");
     } else {
         mana_text_data.setText(
-            std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{}", .{ params.player.mp, params.player.max_mp }) catch "Buffer overflow",
+            std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{}", .{ params.player.mp, params.player.data.stats.mana }) catch "Buffer overflow",
         );
     }
 }

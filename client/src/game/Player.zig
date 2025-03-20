@@ -62,18 +62,8 @@ gems: u32 = std.math.maxInt(u32),
 damage_mult: f32 = 1.0,
 hit_mult: f32 = 1.0,
 size_mult: f32 = 1.0,
-max_hp: i32 = 0,
-max_mp: i32 = 0,
 hp: i32 = 0,
 mp: i32 = 0,
-strength: i16 = 0,
-defense: i16 = 0,
-speed: i16 = 0,
-stamina: i16 = 0,
-wit: i16 = 0,
-resistance: i16 = 0,
-intelligence: i16 = 0,
-haste: i16 = 0,
 max_hp_bonus: i32 = 0,
 max_mp_bonus: i32 = 0,
 strength_bonus: i16 = 0,
@@ -171,7 +161,7 @@ pub fn onMove(self: *Player) void {
 pub fn moveSpeedMultiplier(self: Player) f32 {
     if (self.condition.slowed) return min_move_speed * self.move_multiplier * self.walk_speed_multiplier;
 
-    var move_speed = min_move_speed + f32i(self.speed + self.speed_bonus) / 75.0 * (max_move_speed - min_move_speed);
+    var move_speed = min_move_speed + f32i(self.data.stats.speed + self.speed_bonus) / 75.0 * (max_move_speed - min_move_speed);
     if (self.condition.speedy) move_speed *= 1.5;
 
     return move_speed * self.move_multiplier * self.walk_speed_multiplier;
@@ -281,8 +271,8 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
         const x = self.x + @cos(angle_base) * 0.25;
         const y = self.y + @sin(angle_base) * 0.25;
 
-        const str_mult = utils.strengthMult(self.strength, self.strength_bonus, self.condition);
-        const wit_mult = utils.witMult(self.wit, self.wit_bonus);
+        const str_mult = utils.strengthMult(self.data.stats.strength, self.strength_bonus, self.condition);
+        const wit_mult = utils.witMult(self.data.stats.wit, self.wit_bonus);
         Projectile.addToMap(.{
             .x = x,
             .y = y,
@@ -399,7 +389,7 @@ pub fn draw(
 
     var y_pos: f32 = if (sink != 1.0) 15.0 else 5.0;
 
-    if (self.hp >= 0 and self.hp < self.max_hp + self.max_hp_bonus) {
+    if (self.hp >= 0 and self.hp < self.data.stats.health + self.max_hp_bonus) {
         const hp_bar_w = assets.hp_bar_data.texWRaw() * 2 * main.camera.scale;
         const hp_bar_h = assets.hp_bar_data.texHRaw() * 2 * main.camera.scale;
         const hp_bar_y = screen_pos.y + h + y_pos;
@@ -418,7 +408,7 @@ pub fn draw(
         sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         const float_hp = f32i(self.hp);
-        const float_max_hp = f32i(self.max_hp + self.max_hp_bonus);
+        const float_max_hp = f32i(self.data.stats.health + self.max_hp_bonus);
         const left_pad = 2.0;
         const w_no_pad = 20.0;
         const total_w = 24.0;
@@ -442,7 +432,7 @@ pub fn draw(
         y_pos += hp_bar_h + 5.0;
     }
 
-    if (self.mp >= 0 and self.mp < self.max_mp + self.max_mp_bonus) {
+    if (self.mp >= 0 and self.mp < self.data.stats.mana + self.max_mp_bonus) {
         const mp_bar_w = assets.mp_bar_data.width() * 2 * main.camera.scale;
         const mp_bar_h = assets.mp_bar_data.height() * 2 * main.camera.scale;
         const mp_bar_y = screen_pos.y + h + y_pos;
@@ -461,7 +451,7 @@ pub fn draw(
         sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
         const float_mp = f32i(self.mp);
-        const float_max_mp = f32i(self.max_mp + self.max_mp_bonus);
+        const float_max_mp = f32i(self.data.stats.mana + self.max_mp_bonus);
         const left_pad = 2.0;
         const w_no_pad = 20.0;
         const total_w = 24.0;
@@ -680,7 +670,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
     }
 
     if (self.ability_state.time_dilation) {
-        const radius = 3.0 + f32i(self.wit + self.wit_bonus) * 0.06;
+        const radius = 3.0 + f32i(self.data.stats.wit + self.wit_bonus) * 0.06;
         const radius_sqr = radius * radius;
 
         for (map.listForType(Projectile).items) |*p| {

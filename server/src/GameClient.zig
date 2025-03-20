@@ -220,8 +220,8 @@ fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) v
     processItemCosts(player, item_data.*);
 
     const proj_data = item_data.projectile orelse return;
-    const str_mult = utils.strengthMult(player.strength.base, player.strength.boost, player.condition);
-    const wit_mult = utils.witMult(player.wit.base, player.wit.boost);
+    const str_mult = utils.strengthMult(player.data.stats.strength, player.strength_boost, player.condition);
+    const wit_mult = utils.witMult(player.data.stats.wit, player.wit_boost);
     const map_id = self.world.add(Projectile, .{
         .x = data.x,
         .y = data.y,
@@ -661,20 +661,6 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
 
         try player.char_data.set(.{ .class_id = class_id });
         try player.char_data.set(.{ .create_timestamp = timestamp });
-
-        inline for (.{
-            "health",
-            "mana",
-            "strength",
-            "wit",
-            "defense",
-            "resistance",
-            "speed",
-            "haste",
-            "stamina",
-            "intelligence",
-        }) |name|
-            try player.char_data.set(@unionInit(db.CharacterData.Data, name, 0));
 
         try player.char_data.set(.{ .hp = class_data.stats.health });
         try player.char_data.set(.{ .mp = class_data.stats.mana });

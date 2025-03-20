@@ -1094,7 +1094,7 @@ fn initialize(self: *MapEditorScreen) void {
         .y = if (self.start_y_override == std.math.maxInt(u16)) center else f32i(self.start_y_override),
         .map_id = map.info.player_map_id,
         .data_id = 0,
-        .speed = 300,
+        .speed_bonus = 250,
     });
 
     main.needs_map_bg = true;

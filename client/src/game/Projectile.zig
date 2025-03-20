@@ -327,8 +327,8 @@ fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
     switch (@TypeOf(obj.*)) {
         Player => {
             if (map.info.player_map_id != obj.map_id) return self.data.piercing;
-            phys_dmg = i32f(f32i(game_data.physDamage(self.phys_dmg, obj.defense + obj.defense_bonus, obj.condition)) * obj.hit_mult);
-            magic_dmg = i32f(f32i(game_data.magicDamage(self.magic_dmg, obj.resistance + obj.resistance_bonus, obj.condition)) * obj.hit_mult);
+            phys_dmg = i32f(f32i(game_data.physDamage(self.phys_dmg, obj.data.stats.defense + obj.defense_bonus, obj.condition)) * obj.hit_mult);
+            magic_dmg = i32f(f32i(game_data.magicDamage(self.magic_dmg, obj.data.stats.resistance + obj.resistance_bonus, obj.condition)) * obj.hit_mult);
             true_dmg = i32f(f32i(true_dmg) * obj.hit_mult);
             main.game_server.sendPacket(.{ .player_hit = .{ .proj_index = self.index, .enemy_map_id = self.owner_map_id } });
         },
@@ -342,8 +342,8 @@ fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
             } });
         },
         Enemy => {
-            phys_dmg = game_data.physDamage(self.phys_dmg, obj.defense, obj.condition);
-            magic_dmg = game_data.magicDamage(self.magic_dmg, obj.resistance, obj.condition);
+            phys_dmg = game_data.physDamage(self.phys_dmg, obj.data.defense, obj.condition);
+            magic_dmg = game_data.magicDamage(self.magic_dmg, obj.data.resistance, obj.condition);
             main.game_server.sendPacket(.{ .enemy_hit = .{
                 .time = time,
                 .proj_index = self.index,

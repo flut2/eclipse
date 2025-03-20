@@ -22,7 +22,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
     const x = player.x + @cos(attack_angle) * 0.25;
     const y = player.y + @sin(attack_angle) * 0.25;
 
-    const fstr = f32i(player.strength + player.strength_bonus);
+    const fstr = f32i(player.data.stats.strength + player.strength_bonus);
     Projectile.addToMap(.{
         .x = x,
         .y = y,
@@ -57,8 +57,8 @@ pub fn handleRewind() ![]u8 {
 
 pub fn handleNullPulse(player: *Player) ![]u8 {
     // TODO: needs VFX
-    const fint = f32i(player.intelligence + player.intelligence_bonus);
-    const fwit = f32i(player.wit + player.wit_bonus);
+    const fint = f32i(player.data.stats.intelligence + player.intelligence_bonus);
+    const fwit = f32i(player.data.stats.wit + player.wit_bonus);
     const radius = 5.0 + fint * 0.12;
     const radius_sqr = radius * radius;
     const damage_mult = 0.25 + fwit * 0.01 * player.damage_mult;
@@ -69,8 +69,8 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
     for (proj_list.items, 0..) |*p, i|
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
             if (map.findObject(Enemy, p.owner_map_id, .ref)) |e| {
-                const phys_dmg = i32f(f32i(game_data.physDamage(p.phys_dmg, e.defense, e.condition)) * damage_mult);
-                const magic_dmg = i32f(f32i(game_data.magicDamage(p.magic_dmg, e.resistance, e.condition)) * damage_mult);
+                const phys_dmg = i32f(f32i(game_data.physDamage(p.phys_dmg, e.data.defense, e.condition)) * damage_mult);
+                const magic_dmg = i32f(f32i(game_data.magicDamage(p.magic_dmg, e.data.resistance, e.condition)) * damage_mult);
                 const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
                 if (phys_dmg > 0) map.takeDamage(e, phys_dmg, .physical, .{}, p.colors);
                 if (magic_dmg > 0) map.takeDamage(e, magic_dmg, .magic, .{}, p.colors);

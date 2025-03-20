@@ -35,17 +35,6 @@ pub const StatId = enum {
     intelligence,
 };
 
-pub fn Stat(Size: type) type {
-    return struct {
-        base: Size = 0,
-        boost: Size = 0,
-
-        pub fn total(self: @This()) Size {
-            return self.base + self.boost;
-        }
-    };
-}
-
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
 
@@ -64,16 +53,16 @@ hp: i32 = 100,
 mp: i32 = 0,
 hp_regen: f32 = 0.0,
 mp_regen: f32 = 0.0,
-health: Stat(i32) = .{},
-mana: Stat(i32) = .{},
-strength: Stat(i16) = .{},
-wit: Stat(i16) = .{},
-defense: Stat(i16) = .{},
-resistance: Stat(i16) = .{},
-speed: Stat(i16) = .{},
-stamina: Stat(i16) = .{},
-intelligence: Stat(i16) = .{},
-haste: Stat(i16) = .{},
+health_boost: i32 = 0,
+mana_boost: i32 = 0,
+strength_boost: i16 = 0,
+wit_boost: i16 = 0,
+defense_boost: i16 = 0,
+resistance_boost: i16 = 0,
+speed_boost: i16 = 0,
+stamina_boost: i16 = 0,
+intelligence_boost: i16 = 0,
+haste_boost: i16 = 0,
 inventory: [22]u16 = @splat(std.math.maxInt(u16)),
 inv_data: [22]network_data.ItemData = @splat(@bitCast(@as(u32, 0))),
 selecting_cards: ?[3]u16 = null,
@@ -161,21 +150,6 @@ pub fn init(self: *Player) !void {
     self.cards = try main.allocator.dupe(u16, try self.char_data.getWithDefault(.cards, &.{}));
     self.talents.clearRetainingCapacity();
     self.talents.appendSlice(main.allocator, try self.char_data.getWithDefault(.talents, &.{})) catch main.oomPanic();
-    inline for (.{
-        "health",
-        "mana",
-        "strength",
-        "wit",
-        "defense",
-        "resistance",
-        "speed",
-        "haste",
-        "stamina",
-        "intelligence",
-    }) |name| {
-        const EnumType = @typeInfo(db.CharacterData.Data).@"union".tag_type.?;
-        @field(self, name).base = try self.char_data.get(@field(EnumType, name));
-    }
     self.inventory = try self.char_data.get(.inventory);
     self.inv_data = try self.char_data.get(.item_data);
 
@@ -207,16 +181,16 @@ pub fn deinit(self: *Player) !void {
 
 pub inline fn totalStat(self: Player, comptime stat: StatId) i32 {
     return switch (stat) {
-        .health => self.data.stats.health + self.health.total(),
-        .mana => self.data.stats.mana + self.mana.total(),
-        .strength => self.data.stats.strength + self.strength.total(),
-        .wit => self.data.stats.wit + self.wit.total(),
-        .defense => self.data.stats.defense + self.defense.total(),
-        .resistance => self.data.stats.resistance + self.resistance.total(),
-        .speed => self.data.stats.speed + self.speed.total(),
-        .haste => self.data.stats.haste + self.haste.total(),
-        .stamina => self.data.stats.stamina + self.stamina.total(),
-        .intelligence => self.data.stats.intelligence + self.intelligence.total(),
+        .health => self.data.stats.health + self.health_boost,
+        .mana => self.data.stats.mana + self.mana_boost,
+        .strength => self.data.stats.strength + self.strength_boost,
+        .wit => self.data.stats.wit + self.wit_boost,
+        .defense => self.data.stats.defense + self.defense_boost,
+        .resistance => self.data.stats.resistance + self.resistance_boost,
+        .speed => self.data.stats.speed + self.speed_boost,
+        .haste => self.data.stats.haste + self.haste_boost,
+        .stamina => self.data.stats.stamina + self.stamina_boost,
+        .intelligence => self.data.stats.intelligence + self.intelligence_boost,
     };
 }
 
@@ -278,19 +252,6 @@ pub fn save(self: *Player) !void {
     try self.char_data.set(.{ .spirits_communed = self.spirits_communed });
     try self.char_data.set(.{ .inventory = self.inventory });
     try self.char_data.set(.{ .item_data = self.inv_data });
-    inline for (.{
-        "health",
-        "mana",
-        "strength",
-        "wit",
-        "defense",
-        "resistance",
-        "speed",
-        "haste",
-        "stamina",
-        "intelligence",
-    }) |name|
-        try self.char_data.set(@unionInit(db.CharacterData.Data, name, @field(self, name).base));
     try self.char_data.set(.{ .cards = self.cards });
     try self.char_data.set(.{ .talents = self.talents.items });
 }
@@ -657,19 +618,16 @@ fn statTypeToName(stat_type: anytype) []const u8 {
 }
 
 pub fn recalculateBoosts(self: *Player) void {
-    inline for (.{
-        "health",
-        "mana",
-        "strength",
-        "wit",
-        "defense",
-        "resistance",
-        "speed",
-        "haste",
-        "stamina",
-        "intelligence",
-    }) |name|
-        @field(self, name).boost = 0;
+    self.health_boost = 0;
+    self.mana_boost = 0;
+    self.strength_boost = 0;
+    self.wit_boost = 0;
+    self.defense_boost = 0;
+    self.resistance_boost = 0;
+    self.speed_boost = 0;
+    self.haste_boost = 0;
+    self.stamina_boost = 0;
+    self.intelligence_boost = 0;
 
     var perc_boosts: struct {
         health: f32 = 0.0,
@@ -688,7 +646,7 @@ pub fn recalculateBoosts(self: *Player) void {
         const data = game_data.item.from_id.get(item_id) orelse continue;
         if (data.stat_increases) |stat_increases| for (stat_increases) |si|
             switch (si) {
-                inline else => |inner, tag| @field(self, statTypeToName(tag)).boost += @intCast(inner.amount),
+                inline else => |inner, tag| @field(self, statTypeToName(tag) ++ "_boost") += @intCast(inner.amount),
             };
         if (data.perc_stat_increases) |stat_increases| for (stat_increases) |si|
             switch (si) {
@@ -700,7 +658,7 @@ pub fn recalculateBoosts(self: *Player) void {
         const data = game_data.card.from_id.get(card_id) orelse continue;
         if (data.flat_stats) |stat_increases| for (stat_increases) |si|
             switch (si) {
-                inline else => |inner, tag| @field(self, statTypeToName(tag)).boost += @intCast(inner.amount),
+                inline else => |inner, tag| @field(self, statTypeToName(tag) ++ "_boost") += @intCast(inner.amount),
             };
         if (data.perc_stats) |stat_increases| for (stat_increases) |si|
             switch (si) {
@@ -714,7 +672,7 @@ pub fn recalculateBoosts(self: *Player) void {
         const talent_data = class_data.talents[talent.data_id];
         if (talent_data.flat_stats) |stat_increases| for (stat_increases) |si|
             switch (si) {
-                inline else => |inner, tag| @field(self, statTypeToName(tag)).boost += @intCast(inner.amount * talent.count),
+                inline else => |inner, tag| @field(self, statTypeToName(tag) ++ "_boost") += @intCast(inner.amount * talent.count),
             };
         if (talent_data.perc_stats) |stat_increases| for (stat_increases) |si|
             switch (si) {
@@ -724,7 +682,7 @@ pub fn recalculateBoosts(self: *Player) void {
 
     inline for (@typeInfo(@TypeOf(perc_boosts)).@"struct".fields) |field| {
         if (@field(perc_boosts, field.name) != 0.0)
-            @field(self, field.name).boost += @intFromFloat(f32i(@field(self, field.name).boost) * @field(perc_boosts, field.name));
+            @field(self, field.name ++ "_boost") += @intFromFloat(f32i(@field(self, field.name ++ "_boost")) * @field(perc_boosts, field.name));
     }
 }
 
@@ -749,11 +707,9 @@ pub fn exportStats(
         T{ .name = self.name },
         T{ .aether = self.aether },
         T{ .spirits_communed = self.spirits_communed },
-        T{ .max_hp = self.data.stats.health + self.health.base },
-        T{ .max_hp_bonus = self.health.boost },
+        T{ .max_hp_bonus = self.health_boost },
         T{ .hp = self.hp },
-        T{ .max_mp = self.data.stats.mana + self.mana.base },
-        T{ .max_mp_bonus = self.mana.boost },
+        T{ .max_mp_bonus = self.mana_boost },
         T{ .mp = self.mp },
         T{ .condition = self.condition },
         T{ .ability_state = self.ability_state },
@@ -777,22 +733,14 @@ pub fn exportStats(
             T{ .cards = self.cards },
             T{ .resources = self.resources.items },
             T{ .talents = self.talents.items },
-            T{ .strength = self.data.stats.strength + self.strength.base },
-            T{ .wit = self.data.stats.wit + self.wit.base },
-            T{ .defense = self.data.stats.defense + self.defense.base },
-            T{ .resistance = self.data.stats.resistance + self.resistance.base },
-            T{ .speed = self.data.stats.speed + self.speed.base },
-            T{ .haste = self.data.stats.haste + self.haste.base },
-            T{ .stamina = self.data.stats.stamina + self.stamina.base },
-            T{ .intelligence = self.data.stats.intelligence + self.intelligence.base },
-            T{ .strength_bonus = self.strength.boost },
-            T{ .wit_bonus = self.wit.boost },
-            T{ .defense_bonus = self.defense.boost },
-            T{ .resistance_bonus = self.resistance.boost },
-            T{ .speed_bonus = self.speed.boost },
-            T{ .haste_bonus = self.haste.boost },
-            T{ .stamina_bonus = self.stamina.boost },
-            T{ .intelligence_bonus = self.intelligence.boost },
+            T{ .strength_bonus = self.strength_boost },
+            T{ .wit_bonus = self.wit_boost },
+            T{ .defense_bonus = self.defense_boost },
+            T{ .resistance_bonus = self.resistance_boost },
+            T{ .speed_bonus = self.speed_boost },
+            T{ .haste_bonus = self.haste_boost },
+            T{ .stamina_bonus = self.stamina_boost },
+            T{ .intelligence_bonus = self.intelligence_boost },
         }) |stat| stat_util.write(T, writer, cache, stat);
 
         inline for (4..self.inventory.len) |i| {

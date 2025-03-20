@@ -241,10 +241,8 @@ card_page: u8 = 1,
 last_aether: u8 = std.math.maxInt(u8),
 last_spirits_communed: u32 = std.math.maxInt(u32),
 last_hp: i32 = -1,
-last_max_hp: i32 = -1,
 last_max_hp_bonus: i32 = -1,
 last_mp: i32 = -1,
-last_max_mp: i32 = -1,
 last_max_mp_bonus: i32 = -1,
 last_card_count: i32 = -1,
 last_gold: u32 = std.math.maxInt(u32),
@@ -949,55 +947,53 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
             self.last_aether = local_player.aether;
         }
 
-        if (self.last_hp != local_player.hp or self.last_max_hp != local_player.max_hp or self.last_max_hp_bonus != local_player.max_hp_bonus) {
-            const hp_perc = f32i(local_player.hp) / f32i(local_player.max_hp + local_player.max_hp_bonus);
+        if (self.last_hp != local_player.hp or self.last_max_hp_bonus != local_player.max_hp_bonus) {
+            const hp_perc = f32i(local_player.hp) / f32i(local_player.data.stats.health + local_player.max_hp_bonus);
             self.health_bar.base.scissor.max_x = self.health_bar.texWRaw() * hp_perc;
 
             var health_text_data = &self.health_bar.text_data;
             if (local_player.max_hp_bonus > 0) {
                 health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"65E698\"(+{})", .{
                     local_player.hp,
-                    local_player.max_hp + local_player.max_hp_bonus,
+                    local_player.data.stats.health + local_player.max_hp_bonus,
                     local_player.max_hp_bonus,
                 }));
             } else if (local_player.max_hp_bonus < 0) {
                 health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"FF7070\"({})", .{
                     local_player.hp,
-                    local_player.max_hp + local_player.max_hp_bonus,
+                    local_player.data.stats.health + local_player.max_hp_bonus,
                     local_player.max_hp_bonus,
                 }));
             } else {
-                health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{}", .{ local_player.hp, local_player.max_hp }));
+                health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{}", .{ local_player.hp, local_player.data.stats.health }));
             }
 
             self.last_hp = local_player.hp;
-            self.last_max_hp = local_player.max_hp;
             self.last_max_hp_bonus = local_player.max_hp_bonus;
         }
 
-        if (self.last_mp != local_player.mp or self.last_max_mp != local_player.max_mp or self.last_max_mp_bonus != local_player.max_mp_bonus) {
-            const mp_perc = f32i(local_player.mp) / f32i(local_player.max_mp + local_player.max_mp_bonus);
+        if (self.last_mp != local_player.mp or self.last_max_mp_bonus != local_player.max_mp_bonus) {
+            const mp_perc = f32i(local_player.mp) / f32i(local_player.data.stats.mana + local_player.max_mp_bonus);
             self.mana_bar.base.scissor.max_x = self.mana_bar.texWRaw() * mp_perc;
 
             var mana_text_data = &self.mana_bar.text_data;
             if (local_player.max_mp_bonus > 0) {
                 mana_text_data.setText(try std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"65E698\"(+{})", .{
                     local_player.mp,
-                    local_player.max_mp + local_player.max_mp_bonus,
+                    local_player.data.stats.mana + local_player.max_mp_bonus,
                     local_player.max_mp_bonus,
                 }));
             } else if (local_player.max_mp_bonus < 0) {
                 mana_text_data.setText(try std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"FF7070\"({})", .{
                     local_player.mp,
-                    local_player.max_mp + local_player.max_mp_bonus,
+                    local_player.data.stats.mana + local_player.max_mp_bonus,
                     local_player.max_mp_bonus,
                 }));
             } else {
-                mana_text_data.setText(try std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{}", .{ local_player.mp, local_player.max_mp }));
+                mana_text_data.setText(try std.fmt.bufPrint(mana_text_data.backing_buffer, "{}/{}", .{ local_player.mp, local_player.data.stats.mana }));
             }
 
             self.last_mp = local_player.mp;
-            self.last_max_mp = local_player.max_mp;
             self.last_max_mp_bonus = local_player.max_mp_bonus;
         }
     }
@@ -1022,14 +1018,14 @@ fn updateStat(text_data: *element.TextData, base_val: i32, bonus_val: i32) void 
 
 pub fn updateStats(self: *GameScreen) void {
     if (map.localPlayer(.con)) |player| {
-        updateStat(&self.strength_stat_text.text_data, player.strength, player.strength_bonus);
-        updateStat(&self.wit_stat_text.text_data, player.wit, player.wit_bonus);
-        updateStat(&self.defense_stat_text.text_data, player.defense, player.defense_bonus);
-        updateStat(&self.resistance_stat_text.text_data, player.resistance, player.resistance_bonus);
-        updateStat(&self.stamina_stat_text.text_data, player.stamina, player.stamina);
-        updateStat(&self.intelligence_stat_text.text_data, player.intelligence, player.intelligence_bonus);
-        updateStat(&self.speed_stat_text.text_data, player.speed, player.speed_bonus);
-        updateStat(&self.haste_stat_text.text_data, player.haste, player.haste_bonus);
+        updateStat(&self.strength_stat_text.text_data, player.data.stats.strength, player.strength_bonus);
+        updateStat(&self.wit_stat_text.text_data, player.data.stats.wit, player.wit_bonus);
+        updateStat(&self.defense_stat_text.text_data, player.data.stats.defense, player.defense_bonus);
+        updateStat(&self.resistance_stat_text.text_data, player.data.stats.resistance, player.resistance_bonus);
+        updateStat(&self.stamina_stat_text.text_data, player.data.stats.stamina, player.stamina_bonus);
+        updateStat(&self.intelligence_stat_text.text_data, player.data.stats.intelligence, player.intelligence_bonus);
+        updateStat(&self.speed_stat_text.text_data, player.data.stats.speed, player.speed_bonus);
+        updateStat(&self.haste_stat_text.text_data, player.data.stats.haste, player.haste_bonus);
     }
 }
 
