@@ -27,7 +27,7 @@ pub const HealthShrine = struct {
 
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
-        const max_hp = player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat];
+        const max_hp = player.totalStat(.health);
         if (player.hp >= max_hp) return; // TODO: select random player instead
         const pre_hp = player.hp;
         player.hp = @min(max_hp, player.hp + 75);
@@ -69,7 +69,7 @@ pub const MagicShrine = struct {
 
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
-        const max_mp = player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat];
+        const max_mp = player.totalStat(.mana);
         if (player.mp >= max_mp) return; // TODO: select random player instead
         const pre_mp = player.mp;
         player.mp = @min(max_mp, player.mp + 40);
@@ -111,7 +111,7 @@ pub const RetrieveHealthBeacon = struct {
 
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
-        const max_hp = player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat];
+        const max_hp = player.totalStat(.health);
         if (player.hp >= max_hp) return; // TODO: select random player instead
         const pre_hp = player.hp;
         player.hp = @min(max_hp, player.hp + 75);
@@ -153,7 +153,7 @@ pub const RetrieveManaBeacon = struct {
 
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const player = world.getNearestWithin(Player, host.x, host.y, 4.0 * 4.0) orelse return;
-        const max_mp = player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat];
+        const max_mp = player.totalStat(.mana);
         if (player.mp >= max_mp) return; // TODO: select random player instead
         const pre_mp = player.mp;
         player.mp = @min(max_mp, player.mp + 40);

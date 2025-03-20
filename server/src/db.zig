@@ -286,13 +286,22 @@ pub const AccountData = struct {
 };
 
 pub const CharacterData = struct {
-    const Data = union(enum) {
+    pub const Data = union(enum) {
         class_id: u16,
         create_timestamp: u64,
         last_login_timestamp: u64,
         aether: u8,
         spirits_communed: u32,
-        stats: [10]i32,
+        health: i32,
+        mana: i32,
+        strength: i16,
+        wit: i16,
+        defense: i16,
+        resistance: i16,
+        speed: i16,
+        haste: i16,
+        stamina: i16,
+        intelligence: i16,
         inventory: [22]u16,
         item_data: [22]network_data.ItemData,
         hp: i32,

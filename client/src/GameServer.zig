@@ -81,6 +81,7 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?
         .card_options => handleCardOptions,
         .talent_upgrade_response => handleTalentUpgradeResponse,
         .play_animation => handlePlayAnimation,
+        .drop_projs => handleDropProjs,
         .new_tick => handleNewTick,
         .dropped_players => handleDroppedPlayers,
         .dropped_entities => handleDroppedEntities,
@@ -652,6 +653,8 @@ fn handlePlayAnimation(_: *Server, data: PacketData(.play_animation)) void {
     if (logRead(.non_tick)) std.log.debug("Recv - PlayAnimation: {}", .{data});
 }
 
+fn handleDropProjs(_: *Server, _: PacketData(.drop_projs)) void {}
+
 fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     defer {
         if (main.tick_frame) {
@@ -972,9 +975,9 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         .defense => |val| player.defense = val,
         .resistance => |val| player.resistance = val,
         .speed => |val| player.speed = val,
+        .haste => |val| player.haste = val,
         .stamina => |val| player.stamina = val,
         .intelligence => |val| player.intelligence = val,
-        .haste => |val| player.haste = val,
         .max_hp_bonus => |val| player.max_hp_bonus = val,
         .max_mp_bonus => |val| player.max_mp_bonus = val,
         .strength_bonus => |val| player.strength_bonus = val,
@@ -982,9 +985,9 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         .defense_bonus => |val| player.defense_bonus = val,
         .resistance_bonus => |val| player.resistance_bonus = val,
         .speed_bonus => |val| player.speed_bonus = val,
+        .haste_bonus => |val| player.haste_bonus = val,
         .stamina_bonus => |val| player.stamina_bonus = val,
         .intelligence_bonus => |val| player.intelligence_bonus = val,
-        .haste_bonus => |val| player.haste_bonus = val,
         .inv_0,
         .inv_1,
         .inv_2,

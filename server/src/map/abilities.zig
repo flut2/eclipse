@@ -21,7 +21,6 @@ const Projectile = @import("Projectile.zig");
 pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.ProjectileData, proj_index: u8, angle: f32) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const fstr = f32i(player.stats[Player.strength_stat] + player.stat_boosts[Player.strength_stat]);
     const x = player.x + @cos(angle) * 0.25;
     const y = player.y + @sin(angle) * 0.25;
     const map_id = world.add(Projectile, .{
@@ -31,7 +30,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
         .owner_map_id = player.map_id,
         .angle = angle,
         .start_time = main.current_time,
-        .phys_dmg = i32f(3000.0 + fstr * 3.0 * player.damage_multiplier),
+        .phys_dmg = i32f(3000.0 + f32i(player.totalStat(.strength)) * 3.0 * player.damage_multiplier),
         .index = proj_index,
         .data = proj_data,
     }) catch return;
@@ -50,8 +49,7 @@ fn heartOfStoneCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 pub fn handleHeartOfStone(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const duration = i64f((10.0 + fint * 0.1) * std.time.us_per_s);
+    const duration = i64f((10.0 + f32i(player.totalStat(.intelligence)) * 0.1) * std.time.us_per_s);
 
     player.hit_multiplier = 0.5;
     player.ability_state.heart_of_stone = true;
@@ -70,8 +68,7 @@ pub fn handleBoulderBuddies(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
     for (0..3) |_| {
-        const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-        const duration = i64f((15.0 + fint * 0.1) * std.time.us_per_s);
+        const duration = i64f((15.0 + f32i(player.totalStat(.intelligence)) * 0.1) * std.time.us_per_s);
         var rand = utils.rng.random();
         const angle = rand.float(f32) * std.math.tau;
         const radius = rand.float(f32) * 2.0;
@@ -86,14 +83,11 @@ pub fn handleBoulderBuddies(player: *Player) !void {
             .disappear_time = main.current_time + duration,
         });
 
-        const fhp = f32i(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat]);
-        const fdef = f32i(player.stats[Player.defense_stat] + player.stat_boosts[Player.defense_stat]);
-        const fres = f32i(player.stats[Player.resistance_stat] + player.stat_boosts[Player.resistance_stat]);
         if (world.find(Ally, map_id, .ref)) |ally| {
-            ally.max_hp = i32f(3600.0 + fhp * 3.6);
+            ally.max_hp = i32f(3600.0 + f32i(player.totalStat(.health)) * 3.6);
             ally.hp = ally.max_hp;
-            ally.defense = i32f(25.0 + fdef * 0.15);
-            ally.resistance = i32f(5.0 + fres * 0.1);
+            ally.defense = i32f(25.0 + f32i(player.totalStat(.defense)) * 0.15);
+            ally.resistance = i32f(5.0 + f32i(player.totalStat(.resistance)) * 0.1);
         } else return;
 
         player.client.sendPacket(.{ .show_effect = .{
@@ -112,13 +106,9 @@ pub fn handleBoulderBuddies(player: *Player) !void {
 pub fn handleEarthenPrison(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
-    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const fdef = f32i(player.stats[Player.defense_stat] + player.stat_boosts[Player.defense_stat]);
-    const fres = f32i(player.stats[Player.resistance_stat] + player.stat_boosts[Player.resistance_stat]);
-    const duration = i64f((15.0 + fhst * 0.2) * std.time.us_per_s);
-    const radius = 9.0 + fint * 0.1;
-    const redirect_perc = @max(0.0, 0.5 - fdef * 0.01 * 0.01 - fres * 0.01 * 0.01);
+    const duration = i64f((15.0 + f32i(player.totalStat(.haste)) * 0.2) * std.time.us_per_s);
+    const radius = 9.0 + f32i(player.totalStat(.intelligence)) * 0.1;
+    const redirect_perc = @max(0.0, 0.5 - f32i(player.totalStat(.defense)) * 0.01 * 0.01 - f32i(player.totalStat(.resistance)) * 0.01 * 0.01);
     const radius_sqr = radius * radius;
 
     const obelisk_map_id = try world.add(Ally, .{
@@ -146,8 +136,7 @@ fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 pub fn handleTimeDilation(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const duration = i64f((5.0 + fint * 0.05) * std.time.us_per_s);
+    const duration = i64f((5.0 + f32i(player.totalStat(.intelligence)) * 0.05) * std.time.us_per_s);
 
     player.ability_state.time_dilation = true;
 
@@ -161,10 +150,9 @@ pub fn handleTimeDilation(player: *Player) !void {
 }
 
 pub fn handleRewind(player: *Player) !void {
-    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const fmana = f32i(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat]);
-    const fwit = f32i(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
-    const duration = i64f((3.0 + fint * 0.01 + fmana * 0.006 + fwit * 0.01) * std.time.us_per_s);
+    const duration = i64f((3.0 + f32i(player.totalStat(.intelligence)) * 0.01 +
+        f32i(player.totalStat(.mana)) * 0.006 +
+        f32i(player.totalStat(.wit)) * 0.01) * std.time.us_per_s);
     if (duration <= 0 or duration > 25 * std.time.us_per_s) {
         player.client.sendError(.message_with_disconnect, "Too many/little seconds elapsed for Rewind");
         return;
@@ -204,15 +192,13 @@ pub fn handleRewind(player: *Player) !void {
 pub fn handleNullPulse(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const fwit = f32i(player.stats[Player.wit_stat] + player.stat_boosts[Player.wit_stat]);
-    const radius = 5.0 + fint * 0.12;
+    const radius = 5.0 + f32i(player.totalStat(.intelligence)) * 0.12;
     const radius_sqr = radius * radius;
-    const damage_mult = 0.25 + fwit * 0.01 * player.damage_multiplier;
+    const damage_mult = 0.25 + f32i(player.totalStat(.wit)) * 0.01 * player.damage_multiplier;
 
     var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
     defer projs_to_remove.deinit(main.allocator);
-    for (world.listForType(Projectile).items, 0..) |*p, i| {
+    for (world.listForType(Projectile).items, 0..) |*p, i|
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
             if (world.find(Enemy, p.owner_map_id, .ref)) |e| {
                 const phys_dmg = i32f(f32i(p.phys_dmg) * damage_mult);
@@ -222,8 +208,8 @@ pub fn handleNullPulse(player: *Player) !void {
             }
             try p.deinit();
             projs_to_remove.append(main.allocator, i) catch main.oomPanic();
-        }
-    }
+        };
+
     var iter = std.mem.reverseIterator(projs_to_remove.items);
     while (iter.next()) |i| _ = world.lists.projectile.orderedRemove(i);
 }
@@ -232,7 +218,7 @@ fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
     if (world.find(Player, player_map_id.*, .ref)) |player| {
-        const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
+        const fint = f32i(player.totalStat(.intelligence));
         const radius = 12.0 + fint * 0.06;
         world.aoe(Enemy, player.x, player.x, .player, player.map_id, radius, .{
             .magic_dmg = @intCast(@min(u32f(30000.0 + fint * 100.0 * player.damage_multiplier), player.stored_damage)),
@@ -248,8 +234,7 @@ fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 pub fn handleTimeLock(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const duration = i64f((10.0 + fint * 0.12) * std.time.us_per_s);
+    const duration = i64f((10.0 + f32i(player.totalStat(.intelligence)) * 0.12) * std.time.us_per_s);
 
     player.ability_state.time_lock = true;
     player.hit_multiplier = 0.5;
@@ -275,10 +260,8 @@ pub fn handleEtherealHarvest(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
     const soul_id = (game_data.entity.from_name.get("Enemy Soul") orelse return).id;
 
-    const fint = f32i(player.stats[Player.intelligence_stat] + player.stat_boosts[Player.intelligence_stat]);
-    const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
-    const duration = i64f((6.0 + fhst * 0.06) * std.time.us_per_s);
-    const radius = 6.0 + fint * 0.09;
+    const duration = i64f((6.0 + f32i(player.totalStat(.haste)) * 0.06) * std.time.us_per_s);
+    const radius = 6.0 + f32i(player.totalStat(.intelligence)) * 0.09;
     const radius_sqr = radius * radius;
 
     var total_damage_boost: f32 = 1.0;
@@ -326,8 +309,7 @@ pub fn handleSpaceShift(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
     const rift_data = game_data.entity.from_name.get("Demon Rift") orelse return;
 
-    const fsta = f32i(player.stats[Player.stamina_stat] + player.stat_boosts[Player.stamina_stat]);
-    const duration = i64f((6.0 + fsta * 0.06) * std.time.us_per_s);
+    const duration = i64f((6.0 + f32i(player.totalStat(.stamina)) * 0.06) * std.time.us_per_s);
 
     var rand = utils.rng.random();
     const angle = rand.float(f32) * std.math.tau;
@@ -377,8 +359,7 @@ fn bloodfontCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 pub fn handleBloodfont(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const fhp = f32i(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat]);
-    const duration = i64f((3.0 + fhp * 0.0033) * std.time.us_per_s);
+    const duration = i64f((3.0 + f32i(player.totalStat(.health)) * 0.0033) * std.time.us_per_s);
 
     player.ability_state.bloodfont = true;
     player.hit_multiplier = 0.0;
@@ -395,11 +376,9 @@ pub fn handleBloodfont(player: *Player) !void {
 pub fn handleRavenousHunger(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
-    const fhp = f32i(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat]);
-    const radius = 2.0 + fhst * 0.05;
+    const radius = 2.0 + f32i(player.totalStat(.haste)) * 0.05;
     const radius_sqr = radius * radius;
-    const max_overheal = i32f(1000.0 + 0.1 * fhp);
+    const max_overheal = i32f(1000.0 + 0.1 * f32i(player.totalStat(.health)));
     const kill_perc = 0.1;
     const prev_hp = player.hp;
 
@@ -434,7 +413,7 @@ pub fn handleRavenousHunger(player: *Player) !void {
     }
 
     player.hp = @min(
-        player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat] + max_overheal,
+        player.totalStat(.health) + max_overheal,
         player.hp + @divFloor(total_hp_gain, 10),
     );
     const hp_delta = player.hp - prev_hp;

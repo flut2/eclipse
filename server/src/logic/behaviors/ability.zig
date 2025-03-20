@@ -71,10 +71,8 @@ pub const DwarvenCoil = struct {
     pub fn spawn(self: *DwarvenCoil, host: *Ally) !void {
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const owner = world.find(Player, host.owner_map_id, .con) orelse return;
-        const fint = f32i(owner.stats[Player.intelligence_stat] + owner.stat_boosts[Player.intelligence_stat]);
-        const fwit = f32i(owner.stats[Player.wit_stat] + owner.stat_boosts[Player.wit_stat]);
-        self.damage = i32f(300.0 + fwit * 2.0);
-        self.range = 3.0 + fint * 0.05;
+        self.damage = i32f(300.0 + f32i(owner.totalStat(.wit)) * 2.0);
+        self.range = 3.0 + f32i(owner.totalStat(.intelligence)) * 0.05;
     }
 
     pub fn tick(self: *DwarvenCoil, host: *Ally, time: i64, _: i64) !void {
@@ -114,10 +112,8 @@ pub const DemonRift = struct {
     pub fn spawn(self: *DemonRift, host: *Entity) !void {
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const owner = world.find(Player, host.owner_map_id, .con) orelse return;
-        const fint = f32i(owner.stats[Player.intelligence_stat] + owner.stat_boosts[Player.intelligence_stat]);
-        const fhp = f32i(owner.stats[Player.health_stat] + owner.stat_boosts[Player.health_stat]);
-        self.restore_amount = i32f(50.0 + fhp * 0.05);
-        self.radius = 7.0 + fint * 0.07;
+        self.restore_amount = i32f(50.0 + f32i(owner.totalStat(.health)) * 0.05);
+        self.radius = 7.0 + f32i(owner.totalStat(.intelligence)) * 0.07;
     }
 
     pub fn tick(self: *DemonRift, host: *Entity, time: i64, _: i64) !void {
@@ -129,7 +125,7 @@ pub const DemonRift = struct {
 
         for (world.listForType(Player).items) |*player| {
             if (utils.distSqr(player.x, player.y, host.x, host.y) > radius_sqr) continue;
-            const max_hp = player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat];
+            const max_hp = player.totalStat(.health);
             if (player.hp >= max_hp) continue;
             const pre_hp = player.hp;
             player.hp = @min(max_hp, player.hp + self.restore_amount);

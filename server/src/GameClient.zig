@@ -171,7 +171,7 @@ pub fn sendPacket(self: *Client, packet: network_data.S2CPacket) void {
             const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
 
             var write_status = uv.UV_EAGAIN;
-            while (write_status == uv.UV_EAGAIN or (write_status >= 0 and write_status != writer.list.items.len)) 
+            while (write_status == uv.UV_EAGAIN or (write_status >= 0 and write_status != writer.list.items.len))
                 write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
             if (write_status < 0) {
                 self.shutdown();
@@ -220,8 +220,8 @@ fn handlePlayerProjectile(self: *Client, data: PacketData(.player_projectile)) v
     processItemCosts(player, item_data.*);
 
     const proj_data = item_data.projectile orelse return;
-    const str_mult = utils.strengthMult(player.stats[Player.strength_stat], player.stat_boosts[Player.strength_stat], player.condition);
-    const wit_mult = utils.witMult(player.stats[Player.wit_stat], player.stat_boosts[Player.wit_stat]);
+    const str_mult = utils.strengthMult(player.strength.base, player.strength.boost, player.condition);
+    const wit_mult = utils.witMult(player.wit.base, player.wit.boost);
     const map_id = self.world.add(Projectile, .{
         .x = data.x,
         .y = data.y,
@@ -436,7 +436,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
     for (activations) |activation| switch (activation) {
         .heal => |val| {
             const old_hp = player.hp;
-            const new_hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + val.amount);
+            const new_hp = @min(player.totalStat(.health), player.hp + val.amount);
             if (new_hp <= old_hp) continue;
             player.hp = new_hp;
 
@@ -461,7 +461,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
         },
         .magic => |val| {
             const old_mp = player.mp;
-            const new_mp = @min(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat], player.mp + val.amount);
+            const new_mp = @min(player.totalStat(.mana), player.mp + val.amount);
             if (new_mp <= old_mp) continue;
             player.mp = new_mp;
 
@@ -490,7 +490,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             for (world.listForType(Player).items) |world_player|
                 if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
                     const old_hp = player.hp;
-                    const new_hp = @min(player.stats[Player.health_stat] + player.stat_boosts[Player.health_stat], player.hp + val.amount);
+                    const new_hp = @min(player.totalStat(.health), player.hp + val.amount);
                     if (new_hp <= old_hp) continue;
                     player.hp = new_hp;
 
@@ -520,7 +520,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             for (world.listForType(Player).items) |world_player|
                 if (utils.distSqr(world_player.x, world_player.y, player.x, player.y) <= 16 * 16) {
                     const old_mp = player.mp;
-                    const new_mp = @min(player.stats[Player.mana_stat] + player.stat_boosts[Player.mana_stat], player.mp + val.amount);
+                    const new_mp = @min(player.totalStat(.mana), player.mp + val.amount);
                     if (new_mp <= old_mp) continue;
                     player.mp = new_mp;
 
@@ -570,8 +570,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
 
             const duration = blk: {
                 if (std.mem.eql(u8, item_name, "Dwarven Coil")) {
-                    const fhst = f32i(player.stats[Player.haste_stat] + player.stat_boosts[Player.haste_stat]);
-                    break :blk i64f((10.0 + fhst * 0.2) * std.time.us_per_s);
+                    break :blk i64f((10.0 + f32i(player.totalStat(.haste)) * 0.2) * std.time.us_per_s);
                 } else break :blk std.math.maxInt(i64) - main.current_time;
             };
             const angle = utils.rng.random().float(f32) * std.math.tau;
@@ -663,20 +662,22 @@ fn createChar(player: *Player, class_id: u16, timestamp: u64) !void {
         try player.char_data.set(.{ .class_id = class_id });
         try player.char_data.set(.{ .create_timestamp = timestamp });
 
-        var stats: [10]i32 = undefined;
-        stats[Player.health_stat] = class_data.stats.health;
-        stats[Player.mana_stat] = class_data.stats.mana;
-        stats[Player.strength_stat] = class_data.stats.strength;
-        stats[Player.wit_stat] = class_data.stats.wit;
-        stats[Player.defense_stat] = class_data.stats.defense;
-        stats[Player.resistance_stat] = class_data.stats.resistance;
-        stats[Player.speed_stat] = class_data.stats.speed;
-        stats[Player.stamina_stat] = class_data.stats.stamina;
-        stats[Player.intelligence_stat] = class_data.stats.intelligence;
-        stats[Player.haste_stat] = class_data.stats.haste;
+        inline for (.{
+            "health",
+            "mana",
+            "strength",
+            "wit",
+            "defense",
+            "resistance",
+            "speed",
+            "haste",
+            "stamina",
+            "intelligence",
+        }) |name|
+            try player.char_data.set(@unionInit(db.CharacterData.Data, name, 0));
+
         try player.char_data.set(.{ .hp = class_data.stats.health });
         try player.char_data.set(.{ .mp = class_data.stats.mana });
-        try player.char_data.set(.{ .stats = stats });
         var starting_inventory: [22]u16 = @splat(std.math.maxInt(u16));
         for (class_data.default_items, 0..) |item, i|
             starting_inventory[i] = (game_data.item.from_name.get(item) orelse return error.UnknownStartItem).id;

@@ -358,14 +358,14 @@ pub fn hslToRgb(h: f32, s: f32, l: f32) RGBA {
     };
 }
 
-pub fn strengthMult(str: i32, str_bonus: i32, cond: Condition) f32 {
+pub fn strengthMult(str: i16, str_bonus: i16, cond: Condition) f32 {
     if (cond.weak) return 0.5;
     var mult = 0.5 + f32i(str + str_bonus) / 75.0;
     if (cond.damaging) mult *= 1.5;
     return mult;
 }
 
-pub fn witMult(wit: i32, wit_bonus: i32) f32 {
+pub fn witMult(wit: i16, wit_bonus: i16) f32 {
     return 0.5 + f32i(wit + wit_bonus) / 75.0;
 }
 

@@ -22,16 +22,29 @@ const stat_util = @import("stat_util.zig");
 
 const Player = @This();
 
-pub const health_stat = 0;
-pub const mana_stat = 1;
-pub const strength_stat = 2;
-pub const wit_stat = 3;
-pub const defense_stat = 4;
-pub const resistance_stat = 5;
-pub const speed_stat = 6;
-pub const stamina_stat = 7;
-pub const intelligence_stat = 8;
-pub const haste_stat = 9;
+pub const StatId = enum {
+    health,
+    mana,
+    strength,
+    wit,
+    defense,
+    resistance,
+    speed,
+    haste,
+    stamina,
+    intelligence,
+};
+
+pub fn Stat(Size: type) type {
+    return struct {
+        base: Size = 0,
+        boost: Size = 0,
+
+        pub fn total(self: @This()) Size {
+            return self.base + self.boost;
+        }
+    };
+}
 
 map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
@@ -51,8 +64,16 @@ hp: i32 = 100,
 mp: i32 = 0,
 hp_regen: f32 = 0.0,
 mp_regen: f32 = 0.0,
-stats: [10]i32 = @splat(0),
-stat_boosts: [10]i32 = @splat(0),
+health: Stat(i32) = .{},
+mana: Stat(i32) = .{},
+strength: Stat(i16) = .{},
+wit: Stat(i16) = .{},
+defense: Stat(i16) = .{},
+resistance: Stat(i16) = .{},
+speed: Stat(i16) = .{},
+stamina: Stat(i16) = .{},
+intelligence: Stat(i16) = .{},
+haste: Stat(i16) = .{},
 inventory: [22]u16 = @splat(std.math.maxInt(u16)),
 inv_data: [22]network_data.ItemData = @splat(@bitCast(@as(u32, 0))),
 selecting_cards: ?[3]u16 = null,
@@ -140,7 +161,21 @@ pub fn init(self: *Player) !void {
     self.cards = try main.allocator.dupe(u16, try self.char_data.getWithDefault(.cards, &.{}));
     self.talents.clearRetainingCapacity();
     self.talents.appendSlice(main.allocator, try self.char_data.getWithDefault(.talents, &.{})) catch main.oomPanic();
-    self.stats = try self.char_data.get(.stats);
+    inline for (.{
+        "health",
+        "mana",
+        "strength",
+        "wit",
+        "defense",
+        "resistance",
+        "speed",
+        "haste",
+        "stamina",
+        "intelligence",
+    }) |name| {
+        const EnumType = @typeInfo(db.CharacterData.Data).@"union".tag_type.?;
+        @field(self, name).base = try self.char_data.get(@field(EnumType, name));
+    }
     self.inventory = try self.char_data.get(.inventory);
     self.inv_data = try self.char_data.get(.item_data);
 
@@ -168,6 +203,21 @@ pub fn deinit(self: *Player) !void {
     self.resources.deinit(main.allocator);
     self.talents.deinit(main.allocator);
     self.stats_writer.list.deinit(main.allocator);
+}
+
+pub inline fn totalStat(self: Player, comptime stat: StatId) i32 {
+    return switch (stat) {
+        .health => self.data.stats.health + self.health.total(),
+        .mana => self.data.stats.mana + self.mana.total(),
+        .strength => self.data.stats.strength + self.strength.total(),
+        .wit => self.data.stats.wit + self.wit.total(),
+        .defense => self.data.stats.defense + self.defense.total(),
+        .resistance => self.data.stats.resistance + self.resistance.total(),
+        .speed => self.data.stats.speed + self.speed.total(),
+        .haste => self.data.stats.haste + self.haste.total(),
+        .stamina => self.data.stats.stamina + self.stamina.total(),
+        .intelligence => self.data.stats.intelligence + self.intelligence.total(),
+    };
 }
 
 pub fn clearEphemerals(self: *Player) void {
@@ -228,7 +278,19 @@ pub fn save(self: *Player) !void {
     try self.char_data.set(.{ .spirits_communed = self.spirits_communed });
     try self.char_data.set(.{ .inventory = self.inventory });
     try self.char_data.set(.{ .item_data = self.inv_data });
-    try self.char_data.set(.{ .stats = self.stats });
+    inline for (.{
+        "health",
+        "mana",
+        "strength",
+        "wit",
+        "defense",
+        "resistance",
+        "speed",
+        "haste",
+        "stamina",
+        "intelligence",
+    }) |name|
+        try self.char_data.set(@unionInit(db.CharacterData.Data, name, @field(self, name).base));
     try self.char_data.set(.{ .cards = self.cards });
     try self.char_data.set(.{ .talents = self.talents.items });
 }
@@ -310,11 +372,11 @@ pub fn damage(
 
     const unscaled_dmg = f32i(game_data.physDamage(
         phys_dmg,
-        self.stats[defense_stat] + self.stat_boosts[defense_stat],
+        self.totalStat(.defense),
         self.condition,
     ) + game_data.magicDamage(
         magic_dmg,
-        self.stats[resistance_stat] + self.stat_boosts[resistance_stat],
+        self.totalStat(.resistance),
         self.condition,
     ) + true_dmg);
     const dmg = i32f(unscaled_dmg * self.hit_multiplier);
@@ -334,7 +396,7 @@ pub fn damage(
     if (dmg > 0 and self.ability_state.time_lock) self.stored_damage += @intCast(dmg * 5);
     if (unscaled_dmg > 0 and self.ability_state.bloodfont) self.stored_damage += @intCast(i32f(unscaled_dmg));
     if (dmg > 100 and self.hasCard("Absorption"))
-        self.hp = @min(self.stats[Player.health_stat] + self.stat_boosts[Player.health_stat], i32f(f32i(dmg) * 0.15));
+        self.hp = @min(self.totalStat(.health), i32f(f32i(dmg) * 0.15));
 }
 
 fn CacheType(comptime T: type) type {
@@ -416,19 +478,17 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
 
     const scaled_dt = f32i(dt) / std.time.us_per_s;
 
-    const max_hp = self.stats[health_stat] + self.stat_boosts[health_stat];
+    const max_hp = self.totalStat(.health);
     if (self.hp < max_hp) {
-        const fstam = f32i(self.stats[stamina_stat] + self.stat_boosts[stamina_stat]);
-        self.hp_regen += (1.0 + fstam * 0.12) * scaled_dt;
+        self.hp_regen += (1.0 + f32i(self.totalStat(.stamina)) * 0.12) * scaled_dt;
         const hp_regen_whole = i32f(self.hp_regen);
         self.hp = @min(max_hp, self.hp + hp_regen_whole);
         self.hp_regen -= f32i(hp_regen_whole);
     }
 
-    const max_mp = self.stats[mana_stat] + self.stat_boosts[mana_stat];
+    const max_mp = self.totalStat(.mana);
     if (self.mp < max_mp) {
-        const fint = f32i(self.stats[intelligence_stat] + self.stat_boosts[intelligence_stat]);
-        self.mp_regen += (0.5 + fint * 0.06) * scaled_dt;
+        self.mp_regen += (0.5 + f32i(self.totalStat(.intelligence)) * 0.06) * scaled_dt;
         const mp_regen_whole = i32f(self.mp_regen);
         self.mp = @min(max_mp, self.mp + mp_regen_whole);
         self.mp_regen -= f32i(mp_regen_whole);
@@ -581,35 +641,58 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
     }
 }
 
-fn statTypeToId(stat_type: anytype) u16 {
+fn statTypeToName(stat_type: anytype) []const u8 {
     return switch (stat_type) {
-        .max_hp => health_stat,
-        .max_mp => mana_stat,
-        .strength => strength_stat,
-        .wit => wit_stat,
-        .defense => defense_stat,
-        .resistance => resistance_stat,
-        .speed => speed_stat,
-        .stamina => stamina_stat,
-        .intelligence => intelligence_stat,
-        .haste => haste_stat,
+        .max_hp => "health",
+        .max_mp => "mana",
+        .strength => "strength",
+        .wit => "wit",
+        .defense => "defense",
+        .resistance => "resistance",
+        .speed => "speed",
+        .stamina => "stamina",
+        .intelligence => "intelligence",
+        .haste => "haste",
     };
 }
 
 pub fn recalculateBoosts(self: *Player) void {
-    @memset(&self.stat_boosts, 0);
+    inline for (.{
+        "health",
+        "mana",
+        "strength",
+        "wit",
+        "defense",
+        "resistance",
+        "speed",
+        "haste",
+        "stamina",
+        "intelligence",
+    }) |name|
+        @field(self, name).boost = 0;
 
-    var perc_boosts: [self.stat_boosts.len]f32 = @splat(0.0);
+    var perc_boosts: struct {
+        health: f32 = 0.0,
+        mana: f32 = 0.0,
+        strength: f32 = 0.0,
+        wit: f32 = 0.0,
+        defense: f32 = 0.0,
+        resistance: f32 = 0.0,
+        speed: f32 = 0.0,
+        haste: f32 = 0.0,
+        stamina: f32 = 0.0,
+        intelligence: f32 = 0.0,
+    } = .{};
 
     for (self.inventory[0..4]) |item_id| {
         const data = game_data.item.from_id.get(item_id) orelse continue;
         if (data.stat_increases) |stat_increases| for (stat_increases) |si|
             switch (si) {
-                inline else => |inner, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(inner.amount),
+                inline else => |inner, tag| @field(self, statTypeToName(tag)).boost += @intCast(inner.amount),
             };
         if (data.perc_stat_increases) |stat_increases| for (stat_increases) |si|
             switch (si) {
-                inline else => |inner, tag| perc_boosts[statTypeToId(tag)] += inner.amount,
+                inline else => |inner, tag| @field(perc_boosts, statTypeToName(tag)) += inner.amount,
             };
     }
 
@@ -617,11 +700,11 @@ pub fn recalculateBoosts(self: *Player) void {
         const data = game_data.card.from_id.get(card_id) orelse continue;
         if (data.flat_stats) |stat_increases| for (stat_increases) |si|
             switch (si) {
-                inline else => |inner, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(inner.amount),
+                inline else => |inner, tag| @field(self, statTypeToName(tag)).boost += @intCast(inner.amount),
             };
         if (data.perc_stats) |stat_increases| for (stat_increases) |si|
             switch (si) {
-                inline else => |inner, tag| perc_boosts[statTypeToId(tag)] += inner.amount,
+                inline else => |inner, tag| @field(perc_boosts, statTypeToName(tag)) += inner.amount,
             };
     }
 
@@ -631,16 +714,17 @@ pub fn recalculateBoosts(self: *Player) void {
         const talent_data = class_data.talents[talent.data_id];
         if (talent_data.flat_stats) |stat_increases| for (stat_increases) |si|
             switch (si) {
-                inline else => |inner, tag| self.stat_boosts[statTypeToId(tag)] += @intCast(inner.amount * talent.count),
+                inline else => |inner, tag| @field(self, statTypeToName(tag)).boost += @intCast(inner.amount * talent.count),
             };
         if (talent_data.perc_stats) |stat_increases| for (stat_increases) |si|
             switch (si) {
-                inline else => |inner, tag| perc_boosts[statTypeToId(tag)] += inner.amount * f32i(talent.count),
+                inline else => |inner, tag| @field(perc_boosts, statTypeToName(tag)) += inner.amount * f32i(talent.count),
             };
     }
 
-    for (perc_boosts, 0..) |perc_boost, i| {
-        if (perc_boost != 0.0) self.stat_boosts[i] += i32f(f32i(self.stat_boosts[i]) * perc_boost);
+    inline for (@typeInfo(@TypeOf(perc_boosts)).@"struct".fields) |field| {
+        if (@field(perc_boosts, field.name) != 0.0)
+            @field(self, field.name).boost += @intFromFloat(f32i(@field(self, field.name).boost) * @field(perc_boosts, field.name));
     }
 }
 
@@ -662,11 +746,11 @@ pub fn exportStats(
     stat_util.write(T, writer, cache, .{ .name = self.name });
     stat_util.write(T, writer, cache, .{ .aether = self.aether });
     stat_util.write(T, writer, cache, .{ .spirits_communed = self.spirits_communed });
-    stat_util.write(T, writer, cache, .{ .max_hp = self.stats[health_stat] });
-    stat_util.write(T, writer, cache, .{ .max_hp_bonus = self.stat_boosts[health_stat] });
+    stat_util.write(T, writer, cache, .{ .max_hp = self.data.stats.health + self.health.base });
+    stat_util.write(T, writer, cache, .{ .max_hp_bonus = self.health.boost });
     stat_util.write(T, writer, cache, .{ .hp = self.hp });
-    stat_util.write(T, writer, cache, .{ .max_mp = self.stats[mana_stat] });
-    stat_util.write(T, writer, cache, .{ .max_mp_bonus = self.stat_boosts[mana_stat] });
+    stat_util.write(T, writer, cache, .{ .max_mp = self.data.stats.mana + self.mana.base });
+    stat_util.write(T, writer, cache, .{ .max_mp_bonus = self.mana.boost });
     stat_util.write(T, writer, cache, .{ .mp = self.mp });
     stat_util.write(T, writer, cache, .{ .condition = self.condition });
     stat_util.write(T, writer, cache, .{ .ability_state = self.ability_state });
@@ -691,23 +775,23 @@ pub fn exportStats(
         stat_util.write(T, writer, cache, .{ .resources = self.resources.items });
         stat_util.write(T, writer, cache, .{ .talents = self.talents.items });
 
-        stat_util.write(T, writer, cache, .{ .strength = @intCast(self.stats[strength_stat]) });
-        stat_util.write(T, writer, cache, .{ .wit = @intCast(self.stats[wit_stat]) });
-        stat_util.write(T, writer, cache, .{ .defense = @intCast(self.stats[defense_stat]) });
-        stat_util.write(T, writer, cache, .{ .resistance = @intCast(self.stats[resistance_stat]) });
-        stat_util.write(T, writer, cache, .{ .speed = @intCast(self.stats[speed_stat]) });
-        stat_util.write(T, writer, cache, .{ .stamina = @intCast(self.stats[stamina_stat]) });
-        stat_util.write(T, writer, cache, .{ .intelligence = @intCast(self.stats[intelligence_stat]) });
-        stat_util.write(T, writer, cache, .{ .haste = @intCast(self.stats[haste_stat]) });
+        stat_util.write(T, writer, cache, .{ .strength = self.data.stats.strength + self.strength.base });
+        stat_util.write(T, writer, cache, .{ .wit = self.data.stats.wit + self.wit.base });
+        stat_util.write(T, writer, cache, .{ .defense = self.data.stats.defense + self.defense.base });
+        stat_util.write(T, writer, cache, .{ .resistance = self.data.stats.resistance + self.resistance.base });
+        stat_util.write(T, writer, cache, .{ .speed = self.data.stats.speed + self.speed.base });
+        stat_util.write(T, writer, cache, .{ .haste = self.data.stats.haste + self.haste.base });
+        stat_util.write(T, writer, cache, .{ .stamina = self.data.stats.stamina + self.stamina.base });
+        stat_util.write(T, writer, cache, .{ .intelligence = self.data.stats.intelligence + self.intelligence.base });
 
-        stat_util.write(T, writer, cache, .{ .strength_bonus = @intCast(self.stat_boosts[strength_stat]) });
-        stat_util.write(T, writer, cache, .{ .wit_bonus = @intCast(self.stat_boosts[wit_stat]) });
-        stat_util.write(T, writer, cache, .{ .defense_bonus = @intCast(self.stat_boosts[defense_stat]) });
-        stat_util.write(T, writer, cache, .{ .resistance_bonus = @intCast(self.stat_boosts[resistance_stat]) });
-        stat_util.write(T, writer, cache, .{ .speed_bonus = @intCast(self.stat_boosts[speed_stat]) });
-        stat_util.write(T, writer, cache, .{ .stamina_bonus = @intCast(self.stat_boosts[stamina_stat]) });
-        stat_util.write(T, writer, cache, .{ .intelligence_bonus = @intCast(self.stat_boosts[intelligence_stat]) });
-        stat_util.write(T, writer, cache, .{ .haste_bonus = @intCast(self.stat_boosts[haste_stat]) });
+        stat_util.write(T, writer, cache, .{ .strength_bonus = self.strength.boost });
+        stat_util.write(T, writer, cache, .{ .wit_bonus = self.wit.boost });
+        stat_util.write(T, writer, cache, .{ .defense_bonus = self.defense.boost });
+        stat_util.write(T, writer, cache, .{ .resistance_bonus = self.resistance.boost });
+        stat_util.write(T, writer, cache, .{ .speed_bonus = self.speed.boost });
+        stat_util.write(T, writer, cache, .{ .haste_bonus = self.haste.boost });
+        stat_util.write(T, writer, cache, .{ .stamina_bonus = self.stamina.boost });
+        stat_util.write(T, writer, cache, .{ .intelligence_bonus = self.intelligence.boost });
 
         inline for (4..self.inventory.len) |i| {
             const inv_tag: @typeInfo(network_data.PlayerStat).@"union".tag_type.? =

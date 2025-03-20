@@ -280,6 +280,11 @@ pub const ErrorType = enum(u8) {
     invalid_teleport_target,
 };
 
+pub const EnemyProjList = struct {
+    enemy_map_id: u32,
+    proj_ids: []const u8,
+};
+
 // All packets without variable length fields (like slices) should be extern, with proper alignment ordering.
 // This allows us to directly copy the struct into/from the buffer
 pub const C2SPacket = union(enum) {
@@ -389,6 +394,7 @@ pub const S2CPacket = union(enum) {
     card_options: struct { cards: [3]u16 },
     talent_upgrade_response: struct { success: bool, message: []const u8 },
     play_animation: struct { obj_type: ObjectType, map_id: u32, animation_idx: u8, repeating: bool },
+    drop_projs: struct { lists: []const EnemyProjList },
     @"error": struct { type: ErrorType, description: []const u8 },
 };
 
