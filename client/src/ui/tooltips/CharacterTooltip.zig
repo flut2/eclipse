@@ -68,33 +68,6 @@ pub fn init(self: *CharacterTooltip) !void {
         });
     }
 
-    // Keystone icon
-    _ = try self.root.createChild(Image, .{
-        .base = .{
-            .x = 14 + (24 - assets.error_data.width() * 3.0),
-            .y = 98 + (24 - assets.error_data.height() * 3.0),
-        },
-        .image_data = .{ .normal = .{ .atlas_data = assets.error_data, .scale_x = 3.0, .scale_y = 3.0, .glow = true } },
-    });
-
-    // Minor icon
-    _ = try self.root.createChild(Image, .{
-        .base = .{
-            .x = 18 + (20 - assets.error_data.width() * 2.0),
-            .y = 136 + (20 - assets.error_data.height() * 2.0),
-        },
-        .image_data = .{ .normal = .{ .atlas_data = assets.error_data, .scale_x = 2.0, .scale_y = 2.0, .glow = true } },
-    });
-
-    // Ability icon
-    _ = try self.root.createChild(Image, .{
-        .base = .{
-            .x = 14 + (24 - assets.error_data.width() * 3.0),
-            .y = 170 + (24 - assets.error_data.height() * 3.0),
-        },
-        .image_data = .{ .normal = .{ .atlas_data = assets.error_data, .scale_x = 3.0, .scale_y = 3.0, .glow = true } },
-    });
-
     self.keystone_talents = try self.root.createChild(Bar, .{
         .base = .{ .x = 46, .y = 99 },
         .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_tooltip_talent_bar_1", 0) } },
@@ -128,35 +101,24 @@ pub fn init(self: *CharacterTooltip) !void {
         },
     });
 
-    const card_icons = assets.ui_atlas_data.get("character_tooltip_card_icons") orelse
-        @panic("Could not find character_tooltip_card_icons in the UI atlas");
     inline for (.{
         &self.common_card_count,
         &self.rare_card_count,
         &self.epic_card_count,
         &self.legendary_card_count,
-    }, 0..) |count, i| {
-        count.* = try self.root.createChild(Text, .{
-            .base = .{ .x = 42 + i * 60, .y = 208 },
-            .text_data = .{
-                .text = "",
-                .size = 10,
-                .max_chars = 32,
-                .text_type = .bold,
-                .hori_align = .middle,
-                .vert_align = .middle,
-                .max_width = 20,
-                .max_height = 20,
-            },
-        });
-        _ = try self.root.createChild(Image, .{
-            .base = .{
-                .x = 16 + i * 60 + (20 - card_icons[i].width()) / 2.0,
-                .y = 208 + (20 - card_icons[i].height()) / 2.0,
-            },
-            .image_data = .{ .normal = .{ .atlas_data = card_icons[i] } },
-        });
-    }
+    }, 0..) |count, i| count.* = try self.root.createChild(Text, .{
+        .base = .{ .x = 42 + i * 60, .y = 208 },
+        .text_data = .{
+            .text = "",
+            .size = 10,
+            .max_chars = 32,
+            .text_type = .bold,
+            .hori_align = .middle,
+            .vert_align = .middle,
+            .max_width = 20,
+            .max_height = 20,
+        },
+    });
 }
 
 pub fn deinit(self: *CharacterTooltip) void {
@@ -170,7 +132,7 @@ pub fn update(self: *CharacterTooltip, params: tooltip.ParamsFor(CharacterToolti
         self.root.base.x = if (left_x < 0) params.x + 5 else left_x;
         self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
     }
-    
+
     self.decor.image_data.normal.atlas_data = if (params.data.celestial)
         assets.getUiData("celestial_character_tooltip", 0)
     else
@@ -191,7 +153,7 @@ pub fn update(self: *CharacterTooltip, params: tooltip.ParamsFor(CharacterToolti
         if (tex_list.len <= data.texture.index) continue;
         const tex = tex_list[data.texture.index];
         item.image_data.normal.atlas_data = tex;
-        
+
         item.background_image_data = switch (data.rarity) {
             .mythic => .{ .normal = .{ .atlas_data = assets.getUiData("mythic_slot", 0) } },
             .legendary => .{ .normal = .{ .atlas_data = assets.getUiData("legendary_slot", 0) } },

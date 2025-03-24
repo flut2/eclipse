@@ -444,6 +444,32 @@
     .path = "elements/tooltip_line_spacer_bottom_locked.png",
 },
 {
+    .name = "death_screen_aether_bar",
+    .path = "death_screen/death_screen_aether_bar.png",
+},
+{
+    .name = "death_screen_background",
+    .path = "death_screen/death_screen_background.png",
+},
+{
+    .name = "death_screen_talent_bar_1",
+    .path = "death_screen/death_screen_talent_bar_1.png",
+},
+{
+    .name = "death_screen_talent_bar_2",
+    .path = "death_screen/death_screen_talent_bar_2.png",
+},
+{
+    .name = "character_create_background",
+    .path = "character_create/character_create_background.png",
+},
+{
+    .name = "character_create_class_button_background",
+    .path = "character_create/character_create_class_button_background.png",
+    .w = 76,
+    .h = 76,
+},
+{
     .name = "player_menu_buttons",
     .path = "menu/player_menu_buttons.png",
     .w = 114,
