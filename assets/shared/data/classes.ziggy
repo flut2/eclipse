@@ -43,7 +43,7 @@
             {
                 .name = "Space Shift",
                 .description = 
-                    \\Tear a Rift in space-time for $statxt6 (+6%$staicon) seconds&reset, periodically sending out pulses restoring $hptxt50 (+5%$hpicon)&reset within $inttxt7 (+7%$inticon) tiles&reset.
+                    \\Tear a Rift in space-time for $statxt6 (+6%$staicon) seconds&reset, periodically sending out pulses restoring $hptxt50 (+5%$hpicon) HP&reset within $inttxt7 (+7%$inticon) tiles&reset.
                 ,
                 .mana_cost = 150,
                 .health_cost = 200,

@@ -77,20 +77,13 @@ pub fn deinit() void {
     map.deinit(main.allocator);
 }
 
-fn fieldName(comptime T: type) []const u8 {
-    var field_name: []const u8 = "";
-    for (@typeInfo(Menu).@"union".fields) |field| {
-        if (field.type == T) field_name = field.name;
-    }
-    if (field_name.len <= 0) @compileError("No params found");
-    return field_name;
-}
-
 pub fn ParamsFor(comptime T: type) type {
-    return std.meta.TagPayloadByName(MenuParams, fieldName(T));
+    for (@typeInfo(Menu).@"union".fields) |field|
+        if (field.type == T) return @FieldType(MenuParams, field.name);
+    @compileError("No params found");
 }
 
-pub fn switchMenu(comptime menu_type: MenuType, params: std.meta.TagPayload(MenuParams, menu_type)) void {
+pub fn switchMenu(comptime menu_type: MenuType, params: @FieldType(MenuParams, @tagName(menu_type))) void {
     if (current.* == menu_type) return;
 
     switch (current.*) {
@@ -103,9 +96,8 @@ pub fn switchMenu(comptime menu_type: MenuType, params: std.meta.TagPayload(Menu
         break :blk map.get(.none) orelse @panic(".none was not a valid menu");
     };
 
-    const T = std.meta.TagPayload(Menu, menu_type);
-    if (T == void) return;
-    var menu = &@field(current, fieldName(T));
+    if (@FieldType(Menu, @tagName(menu_type)) == void) return;
+    var menu = &@field(current, @tagName(menu_type));
     menu.root.base.visible = true;
     menu.update(params);
 }

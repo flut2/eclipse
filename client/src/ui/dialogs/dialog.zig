@@ -86,21 +86,13 @@ pub fn resize(w: f32, h: f32) void {
     }
 }
 
-fn fieldName(comptime T: type) []const u8 {
-    var field_name: []const u8 = "";
-    for (@typeInfo(Dialog).@"union".fields) |field| {
-        if (field.type == T) field_name = field.name;
-    }
-
-    if (field_name.len <= 0) @compileError("No params found");
-    return field_name;
-}
-
 pub fn ParamsFor(comptime T: type) type {
-    return std.meta.TagPayloadByName(DialogParams, fieldName(T));
+    for (@typeInfo(Dialog).@"union".fields) |field|
+        if (field.type == T) return @FieldType(DialogParams, field.name);
+    @compileError("No params found");
 }
 
-pub fn showDialog(comptime dialog_type: DialogType, params: std.meta.TagPayload(DialogParams, dialog_type)) void {
+pub fn showDialog(comptime dialog_type: DialogType, params: @FieldType(DialogParams, @tagName(dialog_type))) void {
     switch (current.*) {
         .none => {},
         inline else => |dialog| dialog.root.base.visible = false,
@@ -114,9 +106,8 @@ pub fn showDialog(comptime dialog_type: DialogType, params: std.meta.TagPayload(
         };
     }
 
-    const T = std.meta.TagPayload(Dialog, dialog_type);
-    if (T == void) return;
-    var dialog = &@field(current, fieldName(T));
+    if (@FieldType(Dialog, @tagName(dialog_type)) == void) return;
+    var dialog = &@field(current, @tagName(dialog_type));
     dialog.root.base.visible = true;
     dialog.setValues(params);
     dialog.root.base.x = (main.camera.width - dialog.root.width()) / 2.0;

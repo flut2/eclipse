@@ -300,7 +300,7 @@ pub const C2SPacket = union(enum) {
     use_portal: extern struct { portal_map_id: u32 },
     ground_damage: extern struct { time: i64, x: f32, y: f32 },
     player_hit: extern struct { enemy_map_id: u32, proj_index: u8 },
-    enemy_hit: extern struct { time: i64, enemy_map_id: u32, proj_index: u8, killed: bool },
+    enemy_hit: extern struct { time: i64, enemy_map_id: u32, proj_index: u8 },
     ally_hit: extern struct { ally_map_id: u32, enemy_map_id: u32, proj_index: u8 },
     escape: extern struct {},
     map_hello: struct { build_ver: []const u8, email: []const u8, token: u128, char_id: u32, map_fragment: []const u8 },

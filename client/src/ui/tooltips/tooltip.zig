@@ -90,20 +90,13 @@ pub fn deinit() void {
     map.deinit(main.allocator);
 }
 
-fn fieldName(comptime T: type) []const u8 {
-    var field_name: []const u8 = "";
-    for (@typeInfo(Tooltip).@"union".fields) |field| {
-        if (field.type == T) field_name = field.name;
-    }
-    if (field_name.len <= 0) @compileError("No params found");
-    return field_name;
-}
-
 pub fn ParamsFor(comptime T: type) type {
-    return std.meta.TagPayloadByName(TooltipParams, fieldName(T));
+    for (@typeInfo(Tooltip).@"union".fields) |field|
+        if (field.type == T) return @FieldType(TooltipParams, field.name);
+    @compileError("No params found");
 }
 
-pub fn switchTooltip(comptime tooltip_type: TooltipType, params: std.meta.TagPayload(TooltipParams, tooltip_type)) void {
+pub fn switchTooltip(comptime tooltip_type: TooltipType, params: @FieldType(TooltipParams, @tagName(tooltip_type))) void {
     if (current.* == tooltip_type) return;
 
     switch (current.*) {
@@ -116,9 +109,8 @@ pub fn switchTooltip(comptime tooltip_type: TooltipType, params: std.meta.TagPay
         break :blk map.get(.none) orelse @panic(".none was not a valid tooltip");
     };
 
-    const T = std.meta.TagPayload(Tooltip, tooltip_type);
-    if (T == void) return;
-    var tooltip = &@field(current, fieldName(T));
+    if (@FieldType(Tooltip, @tagName(tooltip_type)) == void) return;
+    var tooltip = &@field(current, @tagName(tooltip_type));
     tooltip.root.base.visible = true;
     tooltip.update(params);
 }
