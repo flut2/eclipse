@@ -133,7 +133,7 @@ pub fn deinit() void {
 }
 
 pub fn switchScreen(comptime screen_type: ScreenType) void {
-    const T = std.meta.TagPayloadByName(Screen, @tagName(screen_type));
+    const T = @FieldType(Screen, @tagName(screen_type));
     if (T == void or screen == screen_type) return;
 
     main.camera.scale = 1.0;

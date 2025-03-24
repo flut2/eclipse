@@ -348,7 +348,6 @@ fn hit(self: *Projectile, comptime T: type, obj: *T, time: i64) bool {
                 .time = time,
                 .proj_index = self.index,
                 .enemy_map_id = obj.map_id,
-                .killed = obj.hp <= phys_dmg + magic_dmg + true_dmg,
             } });
         },
         else => @compileError("Invalid type"),

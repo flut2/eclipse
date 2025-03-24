@@ -196,6 +196,8 @@ pub fn handleNullPulse(player: *Player) !void {
     const radius_sqr = radius * radius;
     const damage_mult = 0.25 + f32i(player.totalStat(.wit)) * 0.01 * player.damage_multiplier;
 
+    var proj_lists: std.AutoHashMapUnmanaged(u32, std.ArrayListUnmanaged(u8)) = .empty;
+    defer proj_lists.deinit(main.allocator);
     var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
     defer projs_to_remove.deinit(main.allocator);
     for (world.listForType(Projectile).items, 0..) |*p, i|
@@ -206,9 +208,25 @@ pub fn handleNullPulse(player: *Player) !void {
                 const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
                 e.damage(.player, player.map_id, phys_dmg, magic_dmg, true_dmg, null);
             }
+            if (proj_lists.getPtr(p.owner_map_id)) |list| {
+                list.append(main.allocator, p.index) catch main.oomPanic();
+            } else proj_lists.put(main.allocator, p.owner_map_id, .empty) catch main.oomPanic();
             try p.deinit();
             projs_to_remove.append(main.allocator, i) catch main.oomPanic();
         };
+
+    var enemy_proj_lists: std.ArrayListUnmanaged(network_data.EnemyProjList) = .empty;
+    defer enemy_proj_lists.deinit(main.allocator);
+    var proj_list_iter = proj_lists.iterator();
+    while (proj_list_iter.next()) |entry| enemy_proj_lists.append(main.allocator, .{
+        .enemy_map_id = entry.key_ptr.*,
+        .proj_ids = entry.value_ptr.items,
+    }) catch main.oomPanic();
+
+    for (world.listForType(Player).items) |*p| {
+        if (p.map_id == player.map_id or utils.distSqr(p.x, p.y, player.x, player.y) > 16 * 16) continue;
+        p.client.sendPacket(.{ .drop_projs = .{ .lists = enemy_proj_lists.items } });
+    }
 
     var iter = std.mem.reverseIterator(projs_to_remove.items);
     while (iter.next()) |i| _ = world.lists.projectile.orderedRemove(i);

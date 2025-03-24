@@ -653,7 +653,29 @@ fn handlePlayAnimation(_: *Server, data: PacketData(.play_animation)) void {
     if (logRead(.non_tick)) std.log.debug("Recv - PlayAnimation: {}", .{data});
 }
 
-fn handleDropProjs(_: *Server, _: PacketData(.drop_projs)) void {}
+fn handleDropProjs(_: *Server, data: PacketData(.drop_projs)) void {
+    var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
+    defer projs_to_remove.deinit(main.allocator);
+
+    const proj_list = map.listForType(Projectile);
+    for (data.lists) |list| {
+        projs_to_remove.clearRetainingCapacity();
+
+        for (proj_list.items, 0..) |*proj, i| {
+            if (proj.damage_players and
+                proj.owner_map_id == list.enemy_map_id and
+                std.mem.indexOfScalar(u8, list.proj_ids, proj.index) != null and
+                std.mem.indexOfScalar(usize, projs_to_remove.items, i) == null)
+            {
+                proj.deinit();
+                projs_to_remove.append(main.allocator, i) catch main.oomPanic();
+            }
+        }
+
+        var iter = std.mem.reverseIterator(projs_to_remove.items);
+        while (iter.next()) |i| _ = proj_list.orderedRemove(i);
+    }
+}
 
 fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     defer {
