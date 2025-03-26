@@ -251,6 +251,8 @@ name_text: *Text = undefined,
 gold_text: *Text = undefined,
 gems_text: *Text = undefined,
 
+inited: bool = false,
+
 pub fn init(self: *CharSelectScreen) !void {
     try self.refresh();
 }
@@ -263,7 +265,8 @@ pub fn resize(self: *CharSelectScreen, w: f32, h: f32) void {
 }
 
 fn deinitExceptSelf(self: *CharSelectScreen) void {
-    if (self.char_boxes.len == 0) return;
+    if (!self.inited) return;
+    defer self.inited = false;
     self.char_create.destroy();
     element.destroy(self.box_container);
     element.destroy(self.name_text);
@@ -277,10 +280,11 @@ pub fn deinit(self: *CharSelectScreen) void {
 
 pub fn refresh(self: *CharSelectScreen) !void {
     self.deinitExceptSelf();
+    defer self.inited = true;
 
     // TODO: dialog for these
     const char_list = main.character_list orelse return;
-    if (char_list.characters.len == 0 or char_list.servers.len == 0) return;
+    if (char_list.servers.len == 0) return;
 
     const button_base = assets.getUiData("button_base", 0);
     const button_hover = assets.getUiData("button_hover", 0);
