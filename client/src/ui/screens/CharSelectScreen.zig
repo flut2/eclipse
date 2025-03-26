@@ -9,6 +9,7 @@ const f32i = shared.utils.f32i;
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
 const Settings = @import("../../Settings.zig");
+const CharacterCreate = @import("../composed/CharacterCreate.zig");
 const Bar = @import("../elements/Bar.zig");
 const Button = @import("../elements/Button.zig");
 const Container = @import("../elements/Container.zig");
@@ -244,6 +245,7 @@ box_container: *Container = undefined,
 decor: *Image = undefined,
 char_boxes: []CharacterBox = &.{},
 new_char_button: *Button = undefined,
+char_create: *CharacterCreate = undefined,
 
 name_text: *Text = undefined,
 gold_text: *Text = undefined,
@@ -257,10 +259,12 @@ pub fn resize(self: *CharSelectScreen, w: f32, h: f32) void {
     self.box_container.base = .{ .x = (w - self.decor.width()) / 2.0, .y = (h - self.decor.height()) / 2.0 };
     self.name_text.text_data.max_width = w;
     self.name_text.text_data.max_height = self.box_container.base.y;
+    self.char_create.resize(w, h);
 }
 
 fn deinitExceptSelf(self: *CharSelectScreen) void {
     if (self.char_boxes.len == 0) return;
+    self.char_create.destroy();
     element.destroy(self.box_container);
     element.destroy(self.name_text);
     main.allocator.free(self.char_boxes);
@@ -317,6 +321,7 @@ pub fn refresh(self: *CharSelectScreen) !void {
             if (num_normal >= 3) assets.getUiData("celestial_new_character_line", 1) else assets.getUiData("new_character_line", 1),
             if (num_normal >= 3) assets.getUiData("celestial_new_character_line", 2) else assets.getUiData("new_character_line", 2),
         ),
+        .userdata = self,
         .pressCallback = newCharCallback,
         .text_offset_x = 77,
         .text_offset_y = 12,
@@ -399,6 +404,8 @@ pub fn refresh(self: *CharSelectScreen) !void {
         });
 
     self.rearrange();
+
+    self.char_create = try .create();
 }
 
 fn loginLessThan(_: void, a: CharacterBox, b: CharacterBox) bool {
@@ -425,8 +432,9 @@ pub fn rearrange(self: *CharSelectScreen) void {
     for (self.char_boxes, 0..) |*char_box, i| char_box.reposition(i);
 }
 
-fn newCharCallback(_: ?*anyopaque) void {
-    ui_systems.switchScreen(.char_create);
+fn newCharCallback(ud: ?*anyopaque) void {
+    const self: *CharSelectScreen = @alignCast(@ptrCast(ud));
+    self.char_create.setVisible(true);
 }
 
 fn editorCallback(_: ?*anyopaque) void {

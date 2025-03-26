@@ -284,10 +284,7 @@ fn handleLoginResponse(_: *Server, data: PacketData(.login_response)) void {
     main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.current_account) |*acc| acc.token = main.character_list.?.token;
 
-    if (main.character_list.?.characters.len > 0)
-        ui_systems.switchScreen(.char_select)
-    else
-        ui_systems.switchScreen(.char_create);
+    ui_systems.switchScreen(.char_select);
 }
 
 fn handleRegisterResponse(_: *Server, data: PacketData(.register_response)) void {
@@ -296,10 +293,7 @@ fn handleRegisterResponse(_: *Server, data: PacketData(.register_response)) void
     main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.current_account) |*acc| acc.token = main.character_list.?.token;
 
-    if (main.character_list.?.characters.len > 0)
-        ui_systems.switchScreen(.char_select)
-    else
-        ui_systems.switchScreen(.char_create);
+    ui_systems.switchScreen(.char_select);
 }
 
 fn handleVerifyResponse(_: *Server, data: PacketData(.verify_response)) void {

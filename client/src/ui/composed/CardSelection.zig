@@ -143,6 +143,7 @@ skip_button: *Button = undefined,
 
 pub fn create() !*CardSelection {
     var self = try main.allocator.create(CardSelection);
+    self.* = .{};
 
     self.base = try element.create(Container, .{ .base = .{ .x = 0, .y = 0, .visible = false } });
 

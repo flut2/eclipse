@@ -1302,10 +1302,8 @@ fn exitCallback(ud: ?*anyopaque) void {
 
     if (main.character_list == null)
         ui_systems.switchScreen(.main_menu)
-    else if (main.character_list.?.characters.len > 0)
-        ui_systems.switchScreen(.char_select)
-    else
-        ui_systems.switchScreen(.char_create);
+    else 
+        ui_systems.switchScreen(.char_select);
 }
 
 fn testCallback(ud: ?*anyopaque) void {

@@ -28,7 +28,6 @@ const Text = @import("elements/Text.zig");
 const menu = @import("menus/menu.zig");
 const AccountLoginScreen = @import("screens/AccountLoginScreen.zig");
 const AccountRegisterScreen = @import("screens/AccountRegisterScreen.zig");
-const CharCreateScreen = @import("screens/CharCreateScreen.zig");
 const CharSelectScreen = @import("screens/CharSelectScreen.zig");
 const GameScreen = @import("screens/GameScreen.zig");
 const MapEditorScreen = @import("screens/MapEditorScreen.zig");
@@ -39,7 +38,6 @@ pub const ScreenType = enum {
     main_menu,
     register,
     char_select,
-    char_create,
     game,
     editor,
 };
@@ -49,7 +47,6 @@ pub const Screen = union(ScreenType) {
     main_menu: *AccountLoginScreen,
     register: *AccountRegisterScreen,
     char_select: *CharSelectScreen,
-    char_create: *CharCreateScreen,
     game: *GameScreen,
     editor: *MapEditorScreen,
 };

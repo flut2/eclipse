@@ -320,10 +320,8 @@ pub fn disconnect() void {
     } else {
         if (character_list == null)
             ui_systems.switchScreen(.main_menu)
-        else if (character_list.?.characters.len > 0)
-            ui_systems.switchScreen(.char_select)
         else
-            ui_systems.switchScreen(.char_create);
+            ui_systems.switchScreen(.char_select);
     }
 }
 

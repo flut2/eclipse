@@ -16,12 +16,24 @@ image_data: element.ImageData,
 tooltip_text: ?element.TextData = null,
 ability_data: ?game_data.AbilityData = null,
 card_data: ?game_data.CardData = null,
+talent_data: ?*const game_data.TalentData = null,
+talent_index: u8 = std.math.maxInt(u8),
 
 pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
     if (!self.base.visible) return false;
 
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
+        if (self.talent_data) |data| {
+            tooltip.switchTooltip(.talent, .{
+                .x = x + x_offset,
+                .y = y + y_offset,
+                .data = data,
+                .index = self.talent_index,
+            });
+            return true;
+        }
+
         if (self.card_data) |data| {
             tooltip.switchTooltip(.card, .{
                 .x = x + x_offset,

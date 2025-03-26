@@ -154,6 +154,8 @@ quit_button: *Button = undefined,
 
 pub fn create() !*TalentView {
     var self = try main.allocator.create(TalentView);
+    self.* = .{};
+
     const background = assets.getUiData("dark_background", 0);
     self.background = try element.create(Image, .{
         .base = .{ .x = 0, .y = 0 },

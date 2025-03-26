@@ -85,7 +85,7 @@ slots: []ResourceSlot = &.{},
 
 pub fn create() !*ResourceView {
     var self = try main.allocator.create(ResourceView);
-    self.slots = &.{};
+    self.* = .{};
 
     const background = assets.getUiData("dark_background", 0);
     self.background = try element.create(Image, .{

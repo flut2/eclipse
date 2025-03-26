@@ -14,6 +14,7 @@ const element = @import("../elements/element.zig");
 const Image = @import("../elements/Image.zig");
 const Text = @import("../elements/Text.zig");
 const tooltip = @import("tooltip.zig");
+const Player = @import("../../game/Player.zig");
 
 const LabelledIcon = struct {
     base: *Container,
@@ -186,7 +187,7 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
     }
 
-    const player = map.localPlayer(.con) orelse return;
+    const player: Player = map.localPlayer(.con) orelse .{}; // TODO: dog hack
     if (player.aether < 1) return;
 
     if (self.last_aether == player.aether and
