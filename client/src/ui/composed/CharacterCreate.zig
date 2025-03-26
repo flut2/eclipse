@@ -211,7 +211,7 @@ pub fn create() !*CharacterCreate {
 
     for (&self.stat_texts, 0..) |*stat_text, i|
         stat_text.* = try self.base.createChild(Text, .{
-            .base = .{ .x = 486 + f32i(i % 2) * 107, .y = 70 + f32i(i / 2) * 50, .visible = false },
+            .base = .{ .x = 488 + f32i(i % 2) * 107, .y = 70 + f32i(i / 2) * 50, .visible = false },
             .text_data = .{
                 .text = "",
                 .size = 18,
