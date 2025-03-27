@@ -18,6 +18,7 @@ ability_data: ?game_data.AbilityData = null,
 card_data: ?game_data.CardData = null,
 talent_data: ?*const game_data.TalentData = null,
 talent_index: u8 = std.math.maxInt(u8),
+talent_class_id: u16 = std.math.maxInt(u16),
 
 pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) bool {
     if (!self.base.visible) return false;
@@ -25,11 +26,12 @@ pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) boo
     const in_bounds = element.intersects(self, x, y);
     if (in_bounds) {
         if (self.talent_data) |data| {
-            tooltip.switchTooltip(.talent, .{
+            tooltip.switchTooltip(.info_talent, .{
                 .x = x + x_offset,
                 .y = y + y_offset,
                 .data = data,
                 .index = self.talent_index,
+                .class_id = self.talent_class_id,
             });
             return true;
         }

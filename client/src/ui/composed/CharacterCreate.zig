@@ -120,6 +120,7 @@ const ClassButton = struct {
             talent_icon.base.y = base_y + (inner_size - icon.height() * 2.0) / 2.0;
             talent_icon.talent_data = &data.talents[i];
             talent_icon.talent_index = @intCast(i);
+            talent_icon.talent_class_id = self.class_id;
         }
 
         inline for (.{ "class_icon", "class_name", "class_desc" }) |field|

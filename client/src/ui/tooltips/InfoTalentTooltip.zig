@@ -8,13 +8,13 @@ const f32i = utils.f32i;
 
 const assets = @import("../../assets.zig");
 const map = @import("../../game/map.zig");
+const Player = @import("../../game/Player.zig");
 const main = @import("../../main.zig");
 const Container = @import("../elements/Container.zig");
 const element = @import("../elements/element.zig");
 const Image = @import("../elements/Image.zig");
 const Text = @import("../elements/Text.zig");
 const tooltip = @import("tooltip.zig");
-const Player = @import("../../game/Player.zig");
 
 const LabelledIcon = struct {
     base: *Container,
@@ -27,8 +27,7 @@ const LabelledIcon = struct {
         x: f32,
         y: f32,
         resource_name: []const u8,
-        current_amount: u32,
-        next_amount: u32,
+        req_amount: u32,
     ) !LabelledIcon {
         const tex_list = assets.atlas_data.get(data.sheet) orelse
             assets.ui_atlas_data.get(data.sheet) orelse
@@ -43,8 +42,6 @@ const LabelledIcon = struct {
             .image_data = .{ .normal = .{ .atlas_data = icon } },
         });
 
-        const norm_current_amount = @min(current_amount, next_amount);
-        const perc = f32i(norm_current_amount) / f32i(next_amount);
         const label = try base.createChild(Text, .{
             .base = .{ .x = icon.width() + 5, .y = 0 },
             .text_data = .{
@@ -52,13 +49,12 @@ const LabelledIcon = struct {
                 .size = 12,
                 .text_type = .medium_italic,
                 .max_chars = 128,
-                .color = utils.redToGreen(perc).toColor(),
+                .color = 0xB3B3B3,
             },
         });
         label.text_data.setText(
-            try std.fmt.bufPrint(label.text_data.backing_buffer, "{}/{} {s}", .{
-                norm_current_amount,
-                next_amount,
+            try std.fmt.bufPrint(label.text_data.backing_buffer, "{}x {s}", .{
+                req_amount,
                 resource_name,
             }),
         );
@@ -75,7 +71,7 @@ const LabelledIcon = struct {
     }
 };
 
-const TalentTooltip = @This();
+const InfoTalentTooltip = @This();
 root: *Container = undefined,
 
 decor: *Image = undefined,
@@ -90,12 +86,10 @@ requires_text: *Text = undefined,
 costs: []LabelledIcon = &.{},
 reqs: []LabelledIcon = &.{},
 
-last_aether: u8 = std.math.maxInt(u8),
 last_data_id: u16 = std.math.maxInt(u16),
-last_resources: []const network_data.DataIdWithCount(u32) = &.{},
-last_talents: []const network_data.DataIdWithCount(u16) = &.{},
+last_class_id: u16 = std.math.maxInt(u16),
 
-pub fn init(self: *TalentTooltip) !void {
+pub fn init(self: *InfoTalentTooltip) !void {
     const tooltip_background_data = assets.getUiData("tooltip_background", 0);
     self.decor = try self.root.createChild(Image, .{
         .base = .{ .x = 0, .y = 0 },
@@ -171,7 +165,7 @@ pub fn init(self: *TalentTooltip) !void {
     });
 }
 
-pub fn deinit(self: *TalentTooltip) void {
+pub fn deinit(self: *InfoTalentTooltip) void {
     for (self.costs) |*cost| cost.destroy(self.root);
     main.allocator.free(self.costs);
     for (self.reqs) |*req| req.destroy(self.root);
@@ -179,7 +173,7 @@ pub fn deinit(self: *TalentTooltip) void {
     element.destroy(self.root);
 }
 
-pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) void {
+pub fn update(self: *InfoTalentTooltip, params: tooltip.ParamsFor(InfoTalentTooltip)) void {
     defer {
         const left_x = params.x - self.decor.width() - 5;
         const up_y = params.y - self.decor.height() - 5;
@@ -187,17 +181,11 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
     }
 
-    const player = map.localPlayer(.con) orelse return;
-    if (player.aether < 1) return;
-
-    if (self.last_aether == player.aether and
-        self.last_data_id == params.index and
-        std.mem.eql(network_data.DataIdWithCount(u32), self.last_resources, player.resources) and
-        std.mem.eql(network_data.DataIdWithCount(u16), self.last_talents, player.talents)) return;
-    self.last_aether = player.aether;
+    if (self.last_data_id == params.index and self.last_class_id == params.class_id) return;
     self.last_data_id = params.index;
-    self.last_resources = player.resources;
-    self.last_talents = player.talents;
+    self.last_class_id = params.class_id;
+
+    const class_data = game_data.class.from_id.get(params.class_id) orelse return;
 
     const atlas_data = assets.ui_atlas_data.get(params.data.icon.sheet) orelse assets.atlas_data.get(params.data.icon.sheet);
     if (atlas_data) |data| {
@@ -207,48 +195,11 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         self.icon.base.y = 13 + (44 - icon.height() * self.icon.image_data.normal.scale_y) / 2.0;
     }
 
-    const talent_level = blk: {
-        for (player.talents) |talent| if (talent.data_id == params.index) break :blk talent.count;
-        break :blk 0;
-    };
-    const meets_reqs = blk: {
-        reqLoop: for (params.data.requires) |req| {
-            for (player.talents) |talent|
-                if (talent.data_id == req.index and talent.count >= req.level_per_aether * player.aether)
-                    continue :reqLoop;
-            break :blk false;
-        }
-
-        break :blk true;
-    };
-    const meets_level_costs = blk: {
-        reqLoop: for (params.data.level_costs[player.aether - 1]) |req| {
-            const resource_data = game_data.resource.from_name.get(req.name) orelse break :blk false;
-            for (player.resources) |resource| {
-                if (resource.data_id == resource_data.id and resource.count >= req.amount)
-                    continue :reqLoop;
-            }
-
-            break :blk false;
-        }
-
-        break :blk true;
-    };
-
-    self.decor.image_data.nine_slice = .fromAtlasData(if (meets_reqs)
-        assets.getUiData("tooltip_background", 0)
-    else
-        assets.getUiData("tooltip_background_locked", 0), 360, 0, 34, 34, 1, 1, 1.0);
-
-    self.line_break_one.image_data.nine_slice = .fromAtlasData(if (meets_reqs)
-        assets.getUiData("tooltip_line_spacer_top", 0)
-    else
-        assets.getUiData("tooltip_line_spacer_top_locked", 0), self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
-
-    self.line_break_two.image_data.nine_slice = .fromAtlasData(if (meets_reqs)
-        assets.getUiData("tooltip_line_spacer_bottom", 0)
-    else
-        assets.getUiData("tooltip_line_spacer_bottom_locked", 0), self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+    self.decor.image_data.nine_slice = .fromAtlasData(assets.getUiData("tooltip_background", 0), 360, 0, 34, 34, 1, 1, 1.0);
+    self.line_break_one.image_data.nine_slice =
+        .fromAtlasData(assets.getUiData("tooltip_line_spacer_top", 0), self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
+    self.line_break_two.image_data.nine_slice =
+        .fromAtlasData(assets.getUiData("tooltip_line_spacer_bottom", 0), self.decor.width() - 40, 6, 16, 0, 1, 6, 1.0);
 
     const talent_type_name = switch (params.data.type) {
         .keystone => "Keystone",
@@ -256,17 +207,10 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         .minor => "Minor",
     };
 
-    const state = if (meets_level_costs and meets_reqs)
-        "&col=\"00FF00\"Levelable&reset"
-    else if (meets_reqs)
-        "&col=\"FFFF00\"Unlocked&reset"
-    else
-        "&col=\"FF0000\"Locked&reset";
-
     self.subtext.text_data.setText(std.fmt.bufPrint(
         self.subtext.text_data.backing_buffer,
-        "Level {} {s} Talent &col=\"222222\"|&reset {s}",
-        .{ talent_level, talent_type_name, state },
+        "{s} Talent",
+        .{talent_type_name},
     ) catch "Buffer overflow");
 
     self.title.text_data.setText(params.data.name);
@@ -286,29 +230,9 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
     var costs: std.ArrayListUnmanaged(LabelledIcon) = .empty;
     const x = self.cost_text.base.x;
     var y = self.cost_text.base.y + self.cost_text.height() + 5;
-    lvlLoop: for (params.data.level_costs[player.aether - 1]) |lvl_cost| {
-        const resource_data = game_data.resource.from_name.get(lvl_cost.name) orelse continue :lvlLoop;
-        for (player.resources) |resource| {
-            if (resource.data_id == resource_data.id) {
-                const cost = LabelledIcon.create(
-                    self.root,
-                    resource_data.icon,
-                    x,
-                    y,
-                    resource_data.name,
-                    resource.count,
-                    lvl_cost.amount,
-                ) catch |e| {
-                    std.log.err("Adding cost labelled icon failed: {}", .{e});
-                    continue :lvlLoop;
-                };
-                costs.append(main.allocator, cost) catch main.oomPanic();
-                y += cost.base.height() + 5;
-                continue :lvlLoop;
-            }
-        }
-
-        const cost = LabelledIcon.create(self.root, resource_data.icon, x, y, resource_data.name, 0, lvl_cost.amount) catch |e| {
+    for (params.data.level_costs[0]) |lvl_cost| {
+        const resource_data = game_data.resource.from_name.get(lvl_cost.name) orelse continue;
+        const cost = LabelledIcon.create(self.root, resource_data.icon, x, y, resource_data.name, lvl_cost.amount) catch |e| {
             std.log.err("Adding cost labelled icon failed: {}", .{e});
             continue;
         };
@@ -323,31 +247,9 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         y += self.requires_text.height() + 5;
 
         var reqs: std.ArrayListUnmanaged(LabelledIcon) = .empty;
-        reqLoop: for (params.data.requires) |talent_req| {
-            if (talent_req.index >= player.data.talents.len - 1) continue;
-
-            const talent_data = player.data.talents[talent_req.index];
-            const level_req = talent_req.level_per_aether * player.aether;
-            for (player.talents) |talent|
-                if (talent.data_id == talent_req.index and talent.count >= level_req) {
-                    const req = LabelledIcon.create(
-                        self.root,
-                        talent_data.icon,
-                        x,
-                        y,
-                        talent_data.name,
-                        talent.count,
-                        level_req,
-                    ) catch |e| {
-                        std.log.err("Adding requirement labelled icon failed: {}", .{e});
-                        continue :reqLoop;
-                    };
-                    reqs.append(main.allocator, req) catch main.oomPanic();
-                    y += req.base.height() + 5;
-                    continue :reqLoop;
-                };
-
-            const req = LabelledIcon.create(self.root, talent_data.icon, x, y, talent_data.name, 0, level_req) catch |e| {
+        for (params.data.requires) |talent_req| {
+            const talent_data = class_data.talents[talent_req.index];
+            const req = LabelledIcon.create(self.root, talent_data.icon, x, y, talent_data.name, talent_req.level_per_aether) catch |e| {
                 std.log.err("Adding requirement labelled icon failed: {}", .{e});
                 continue;
             };

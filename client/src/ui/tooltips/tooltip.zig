@@ -10,6 +10,7 @@ const element = @import("../elements/element.zig");
 const AbilityTooltip = @import("AbilityTooltip.zig");
 const CardTooltip = @import("CardTooltip.zig");
 const CharacterTooltip = @import("CharacterTooltip.zig");
+const InfoTalentTooltip = @import("InfoTalentTooltip.zig");
 const ItemTooltip = @import("ItemTooltip.zig");
 const PlayerListTooltip = @import("PlayerListTooltip.zig");
 const TalentTooltip = @import("TalentTooltip.zig");
@@ -26,6 +27,7 @@ pub const TooltipType = enum {
     talent,
     character,
     player_list,
+    info_talent,
 };
 pub const Tooltip = union(TooltipType) {
     none: void,
@@ -36,6 +38,7 @@ pub const Tooltip = union(TooltipType) {
     talent: TalentTooltip,
     character: CharacterTooltip,
     player_list: PlayerListTooltip,
+    info_talent: InfoTalentTooltip,
 };
 pub const TooltipParams = union(TooltipType) {
     none: void,
@@ -46,6 +49,7 @@ pub const TooltipParams = union(TooltipType) {
     talent: struct { x: f32, y: f32, index: u8, data: *const game_data.TalentData },
     character: struct { x: f32, y: f32, data: *const network_data.CharacterData },
     player_list: struct { x: f32, y: f32, items: []const PlayerListItem },
+    info_talent: struct { x: f32, y: f32, index: u8, class_id: u16, data: *const game_data.TalentData },
 };
 
 pub var map: std.AutoHashMapUnmanaged(TooltipType, *Tooltip) = .empty;
