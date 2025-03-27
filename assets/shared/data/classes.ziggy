@@ -2,7 +2,7 @@
     {
         .id = 0,
         .name = "Demon",
-        .description = "placeholder",
+        .description = "A brawler focused on manipulating life essence",
         .texture = { "players": 2 },
         .item_types = [
             @ItemType("sword"),
@@ -74,8 +74,8 @@
         ],
         .talents = [
             {
-                .name = "Hyper Dilation",
-                .description = "Boost the range of &type=\"med_it\"Time Dilation&reset by $multitxt2.5% (additive) per level&reset.",
+                .name = "Essence Harvest",
+                .description = "Increase the range of &type=\"med_it\"Essence Harvest&reset by $multitxt0.5 tiles per level&reset.",
                 .icon = { "ability_icons": 8 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -93,8 +93,8 @@
                 ],
             },
             {
-                .name = "Event Horizon",
-                .description = "Increase the slowing effect of &type=\"med_it\"Time Dilation&reset by $multitxt5% (additive) per level&reset.",
+                .name = "Life Drain",
+                .description = "Restore $multitxt30 Health per level&reset per &type=\"med_it\"Soul&reset consumed.",
                 .icon = { "ability_icons": 8 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -105,9 +105,9 @@
                 .requires = [{ .index = 0, .level_per_aether = 5 }],
             },
             {
-                .name = "Intelligence Boost",
-                .description = "Gain $inttxt+10$inticon per level&reset.",
-                .icon = { "misc_big": 7 },
+                .name = "Health Boost",
+                .description = "Gain $hptxt+35$hpicon per level&reset.",
+                .icon = { "misc_big": 0 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -115,12 +115,12 @@
                     [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
                 ],
                 .requires = [{ .index = 1, .level_per_aether = 1 }],
-                .flat_stats = [intelligence { .amount = 10 }],
+                .flat_stats = [max_hp { .amount = 35 }],
             },
             {
-                .name = "Haste Boost",
-                .description = "Gain $hsttxt+5$hsticon per level&reset.",
-                .icon = { "misc_big": 9 },
+                .name = "Strength Boost",
+                .description = "Gain $strtxt+5$stricon per level&reset.",
+                .icon = { "misc_big": 2 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -128,51 +128,7 @@
                     [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
                 ],
                 .requires = [{ .index = 2, .level_per_aether = 1 }],
-                .flat_stats = [haste { .amount = 5 }],
-            },
-            {
-                .name = "Mana Boost",
-                .description = "Gain $mptxt+35$mpicon per level&reset.",
-                .icon = { "misc_big": 1 },
-                .type = @TalentType("minor"),
-                .max_level = [1, 2],
-                .level_costs = [
-                    [{ "Solid Magma": 75 }, { "Phoenix Feather": 15 }, { "Bottled Flame": 5 }],
-                    [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
-                ],
-                .requires = [{ .index = 3, .level_per_aether = 1 }],
-                .flat_stats = [max_mp { .amount = 35 }],
-            },
-            {
-                .name = "Heightened Perception",
-                .description = "Gain Invulnerability after using &type=\"med_it\"Rewind&reset for $multitxt0.2s per level&reset.",
-                .icon = { "ability_icons": 9 },
-                .type = @TalentType("ability"),
-                .max_level = [5, 10],
-                .level_costs = [
-                    [{ "Solid Magma": 10 }],
-                    [{ "Solid Magma": 25 }],
-                    [{ "Solid Magma": 40 }, { "Phoenix Feather": 5 }],
-                    [{ "Solid Magma": 70 }, { "Phoenix Feather": 15 }, { "Bottled Flame": 5 }],
-                    [{ "Solid Magma": 125 }, { "Phoenix Feather": 30 }, { "Bottled Flame": 10 }],
-                    [{ "Solid Magma": 200 }, { "Phoenix Feather": 55 }, { "Bottled Flame": 20 }],
-                    [{ "Solid Magma": 350 }, { "Phoenix Feather": 90 }, { "Bottled Flame": 35 }],
-                    [{ "Solid Magma": 600 }, { "Phoenix Feather": 135 }, { "Bottled Flame": 55 }],
-                    [{ "Solid Magma": 1000 }, { "Phoenix Feather": 190 }, { "Bottled Flame": 80 }],
-                    [{ "Solid Magma": 1700 }, { "Phoenix Feather": 255 }, { "Bottled Flame": 110 }],
-                ],
-            },
-            {
-                .name = "Damage Prevention",
-                .description = "Restore $hptxt50 Health per level&reset after using &type=\"med_it\"Rewind&reset.",
-                .icon = { "ability_icons": 9 },
-                .type = @TalentType("keystone"),
-                .max_level = [1, 2],
-                .level_costs = [
-                    [{ "Solid Magma": 500 }, { "Phoenix Feather": 75 }, { "Bottled Flame": 35 }],
-                    [{ "Solid Magma": 3300 }, { "Phoenix Feather": 650 }, { "Bottled Flame": 200 }],
-                ],
-                .requires = [{ .index = 5, .level_per_aether = 5 }],
+                .flat_stats = [strength { .amount = 5 }],
             },
             {
                 .name = "Stamina Boost",
@@ -184,13 +140,57 @@
                     [{ "Solid Magma": 75 }, { "Phoenix Feather": 15 }, { "Bottled Flame": 5 }],
                     [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
                 ],
-                .requires = [{ .index = 6, .level_per_aether = 1 }],
+                .requires = [{ .index = 3, .level_per_aether = 1 }],
                 .flat_stats = [stamina { .amount = 10 }],
             },
             {
-                .name = "Speed Boost",
-                .description = "Gain $spdtxt+5$spdicon per level&reset.",
-                .icon = { "misc_big": 8 },
+                .name = "Space Shift",
+                .description = "Increase the Health restored by &type=\"med_it\"Space Shift&reset by $multitxt5 HP per level&reset.",
+                .icon = { "ability_icons": 9 },
+                .type = @TalentType("ability"),
+                .max_level = [5, 10],
+                .level_costs = [
+                    [{ "Solid Magma": 10 }],
+                    [{ "Solid Magma": 25 }],
+                    [{ "Solid Magma": 40 }, { "Phoenix Feather": 5 }],
+                    [{ "Solid Magma": 70 }, { "Phoenix Feather": 15 }, { "Bottled Flame": 5 }],
+                    [{ "Solid Magma": 125 }, { "Phoenix Feather": 30 }, { "Bottled Flame": 10 }],
+                    [{ "Solid Magma": 200 }, { "Phoenix Feather": 55 }, { "Bottled Flame": 20 }],
+                    [{ "Solid Magma": 350 }, { "Phoenix Feather": 90 }, { "Bottled Flame": 35 }],
+                    [{ "Solid Magma": 600 }, { "Phoenix Feather": 135 }, { "Bottled Flame": 55 }],
+                    [{ "Solid Magma": 1000 }, { "Phoenix Feather": 190 }, { "Bottled Flame": 80 }],
+                    [{ "Solid Magma": 1700 }, { "Phoenix Feather": 255 }, { "Bottled Flame": 110 }],
+                ],
+            },
+            {
+                .name = "Enhanced Restoration",
+                .description = "&type=\"med_it\"Space Shift&reset can now &type=\"med_it\"Overheal&reset for $multitxt50 Health per level&reset.",
+                .icon = { "ability_icons": 9 },
+                .type = @TalentType("keystone"),
+                .max_level = [1, 2],
+                .level_costs = [
+                    [{ "Solid Magma": 500 }, { "Phoenix Feather": 75 }, { "Bottled Flame": 35 }],
+                    [{ "Solid Magma": 3300 }, { "Phoenix Feather": 650 }, { "Bottled Flame": 200 }],
+                ],
+                .requires = [{ .index = 5, .level_per_aether = 5 }],
+            },
+            {
+                .name = "Strength Boost",
+                .description = "Gain $strtxt+5$stricon per level&reset.",
+                .icon = { "misc_big": 2 },
+                .type = @TalentType("minor"),
+                .max_level = [1, 2],
+                .level_costs = [
+                    [{ "Solid Magma": 75 }, { "Phoenix Feather": 15 }, { "Bottled Flame": 5 }],
+                    [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
+                ],
+                .requires = [{ .index = 6, .level_per_aether = 1 }],
+                .flat_stats = [strength { .amount = 5 }],
+            },
+            {
+                .name = "Stamina Boost",
+                .description = "Gain $statxt+10$staicon per level&reset.",
+                .icon = { "misc_big": 6 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -198,7 +198,7 @@
                     [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
                 ],
                 .requires = [{ .index = 7, .level_per_aether = 1 }],
-                .flat_stats = [haste { .amount = 5 }],
+                .flat_stats = [stamina { .amount = 10 }],
             },
             {
                 .name = "Health Boost",
@@ -211,11 +211,11 @@
                     [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
                 ],
                 .requires = [{ .index = 8, .level_per_aether = 1 }],
-                .flat_stats = [max_mp { .amount = 35 }],
+                .flat_stats = [max_hp { .amount = 35 }],
             },
             {
-                .name = "Double Tap",
-                .description = "Cast another &type=\"med_it\"Null Pulse&reset 0.5 seconds after the first one, with the second one having a range of $multitxt0.2 tiles per level&reset.",
+                .name = "Bloodfont",
+                .description = "Increase the duration of &type=\"med_it\"Bloodfont&reset by $multitxt0.25s per level&reset.",
                 .icon = { "ability_icons": 10 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -233,8 +233,8 @@
                 ],
             },
             {
-                .name = "Essence Harvest",
-                .description = "Restore $mptxt30 Mana per level&reset for every enemy killed by &type=\"med_it\"Null Pulse&reset.",
+                .name = "Reduced Sensitivity",
+                .description = "Reduce the damage taken at the end of &type=\"med_it\"Bloodfont&reset by $multitxt10% per level&reset.",
                 .icon = { "ability_icons": 10 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -245,9 +245,9 @@
                 .requires = [{ .index = 10, .level_per_aether = 5 }],
             },
             {
-                .name = "Wit Boost",
-                .description = "Gain $wittxt+10$witicon per level&reset.",
-                .icon = { "misc_big": 3 },
+                .name = "Stamina Boost",
+                .description = "Gain $statxt+10$staicon per level&reset.",
+                .icon = { "misc_big": 6 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -255,7 +255,20 @@
                     [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
                 ],
                 .requires = [{ .index = 11, .level_per_aether = 1 }],
-                .flat_stats = [wit { .amount = 10 }],
+                .flat_stats = [stamina { .amount = 10 }],
+            },
+            {
+                .name = "Health Boost",
+                .description = "Gain $hptxt+35$hpicon per level&reset.",
+                .icon = { "misc_big": 0 },
+                .type = @TalentType("minor"),
+                .max_level = [1, 2],
+                .level_costs = [
+                    [{ "Solid Magma": 75 }, { "Phoenix Feather": 15 }, { "Bottled Flame": 5 }],
+                    [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
+                ],
+                .requires = [{ .index = 12, .level_per_aether = 1 }],
+                .flat_stats = [max_hp { .amount = 35 }],
             },
             {
                 .name = "Strength Boost",
@@ -267,25 +280,12 @@
                     [{ "Solid Magma": 75 }, { "Phoenix Feather": 15 }, { "Bottled Flame": 5 }],
                     [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
                 ],
-                .requires = [{ .index = 12, .level_per_aether = 1 }],
+                .requires = [{ .index = 13, .level_per_aether = 1 }],
                 .flat_stats = [strength { .amount = 5 }],
             },
             {
-                .name = "Defense Boost",
-                .description = "Gain $deftxt+5$deficon per level&reset.",
-                .icon = { "misc_big": 4 },
-                .type = @TalentType("minor"),
-                .max_level = [1, 2],
-                .level_costs = [
-                    [{ "Solid Magma": 75 }, { "Phoenix Feather": 15 }, { "Bottled Flame": 5 }],
-                    [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
-                ],
-                .requires = [{ .index = 13, .level_per_aether = 1 }],
-                .flat_stats = [defense { .amount = 5 }],
-            },
-            {
-                .name = "Phase Shift",
-                .description = "Return $multitxt2.5% (additive) per level&reset of damage received in &type=\"med_it\"Time Lock&reset immediately.",
+                .name = "Ravenous Hunger",
+                .description = "Increase the execution HP threshold of &type=\"med_it\"Ravenous Hunger&reset by $multitxt0.25% (additive) per level&reset.",
                 .icon = { "ability_icons": 11 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -303,11 +303,8 @@
                 ],
             },
             {
-                .name = "Excellent Service",
-                .description = 
-                    \\Receive an Ephemeral &type="med_it"Magic Corp Turret&reset every time you hit the damage cap on Time Lock.
-                    \\The &type="med_it"Magic Corp Turret&reset scales in rarity per level, going from &type="bold_it"&col="B3B3B3"Common&reset to &type="bold_it"&col="B80000"Mythic&reset.
-                ,
+                .name = "Demonic Fervor",
+                .description = "Gain a $multitxt150% damage boost per level&reset per each enemy killed by &type=\"med_it\"Ravenous Hunger&reset for 4 seconds.",
                 .icon = { "ability_icons": 11 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -318,9 +315,9 @@
                 .requires = [{ .index = 15, .level_per_aether = 5 }],
             },
             {
-                .name = "Resistance Boost",
-                .description = "Gain $restxt+10$resicon per level&reset.",
-                .icon = { "misc_big": 5 },
+                .name = "Strength Boost",
+                .description = "Gain $strtxt+5$stricon per level&reset.",
+                .icon = { "misc_big": 2 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -328,7 +325,7 @@
                     [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
                 ],
                 .requires = [{ .index = 16, .level_per_aether = 1 }],
-                .flat_stats = [wit { .amount = 10 }],
+                .flat_stats = [strength { .amount = 5 }],
             },
             {
                 .name = "Health Boost",
@@ -344,9 +341,9 @@
                 .flat_stats = [max_hp { .amount = 35 }],
             },
             {
-                .name = "Mana Boost",
-                .description = "Gain $mptxt+35$mpicon per level&reset.",
-                .icon = { "misc_big": 1 },
+                .name = "Stamina Boost",
+                .description = "Gain $statxt+10$staicon per level&reset.",
+                .icon = { "misc_big": 6 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -354,14 +351,14 @@
                     [{ "Solid Magma": 1100 }, { "Phoenix Feather": 175 }, { "Bottled Flame": 75 }],
                 ],
                 .requires = [{ .index = 18, .level_per_aether = 1 }],
-                .flat_stats = [max_mp { .amount = 35 }],
+                .flat_stats = [stamina { .amount = 10 }],
             },
         ],
     },
     {
         .id = 1,
         .name = "Golem",
-        .description = "placeholder",
+        .description = "An earth-bending tank specializing in damage prevention",
         .texture = { "players": 1 },
         .item_types = [
             @ItemType("bow"),
@@ -396,23 +393,21 @@
                 .mana_cost = 28,
                 .cooldown = 9.0,
                 .icon = { "ability_icons": 4 },
-                .projectiles = [{
-                        .textures = [
-                            { "projectiles_big": 0 },
-                            { "projectiles_big": 1 },
-                            { "projectiles_big": 2 },
-                        ],
+                .projectiles = [
+                    {
+                        .textures = [{ "projectiles_big": 0 }, { "projectiles_big": 1 }, { "projectiles_big": 2 }],
                         .phys_dmg = 3000,
                         .speed = 1.5,
                         .duration = 0.4,
                         .rotation = 0.33,
                         .conditions = [{ .type = @Condition("slowed"), .duration = 5.0 }],
-                    }],
+                    },
+                ],
             },
             {
                 .name = "Heart of Stone",
                 .description = 
-                    \\Grow in size for $inttxt10 (+10%$inticon)&reset seconds, receiving halved damage and moving slower.
+                    \\Grow in size for $inttxt10 (+10%$inticon)&reset seconds, receiving halved damage and becoming slowed.
                 ,
                 .mana_cost = 120,
                 .cooldown = 49.0,
@@ -442,8 +437,8 @@
         ],
         .talents = [
             {
-                .name = "Hyper Dilation",
-                .description = "Boost the range of &type=\"med_it\"Time Dilation&reset by $multitxt2.5% (additive) per level&reset.",
+                .name = "Terrain Expulsion",
+                .description = "Increase the damage of &type=\"med_it\"Terrain Expulsion&reset by $multitxt250 per level&reset.",
                 .icon = { "ability_icons": 4 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -461,8 +456,8 @@
                 ],
             },
             {
-                .name = "Event Horizon",
-                .description = "Increase the slowing effect of &type=\"med_it\"Time Dilation&reset by $multitxt5% (additive) per level&reset.",
+                .name = "Reanimate",
+                .description = "Spawn $multitxt1 Boulder Buddy per level&reset when &type=\"med_it\"Terrain Expulsion&reset kills an enemy.",
                 .icon = { "ability_icons": 4 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -473,9 +468,9 @@
                 .requires = [{ .index = 0, .level_per_aether = 5 }],
             },
             {
-                .name = "Intelligence Boost",
-                .description = "Gain $inttxt+10$inticon per level&reset.",
-                .icon = { "misc_big": 7 },
+                .name = "Health Boost",
+                .description = "Gain $hptxt+35$hpicon per level&reset.",
+                .icon = { "misc_big": 0 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -483,12 +478,12 @@
                     [{ "Solid Magma": 550 }, { "Pine Driftwood": 550 }, { "Maple Batten": 85 }, { "Phoenix Feather": 90 }, { "Flawless Mahogany": 40 }, { "Bottled Flame": 45 }],
                 ],
                 .requires = [{ .index = 1, .level_per_aether = 1 }],
-                .flat_stats = [intelligence { .amount = 10 }],
+                .flat_stats = [max_hp { .amount = 35 }],
             },
             {
-                .name = "Haste Boost",
-                .description = "Gain $hsttxt+5$hsticon per level&reset.",
-                .icon = { "misc_big": 9 },
+                .name = "Stamina Boost",
+                .description = "Gain $statxt+10$staicon per level&reset.",
+                .icon = { "misc_big": 6 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -496,12 +491,12 @@
                     [{ "Solid Magma": 550 }, { "Pine Driftwood": 550 }, { "Maple Batten": 85 }, { "Phoenix Feather": 90 }, { "Flawless Mahogany": 40 }, { "Bottled Flame": 45 }],
                 ],
                 .requires = [{ .index = 2, .level_per_aether = 1 }],
-                .flat_stats = [haste { .amount = 5 }],
+                .flat_stats = [stamina { .amount = 10 }],
             },
             {
-                .name = "Mana Boost",
-                .description = "Gain $mptxt+35$mpicon per level&reset.",
-                .icon = { "misc_big": 1 },
+                .name = "Defense Boost",
+                .description = "Gain $deftxt+10$deficon per level&reset.",
+                .icon = { "misc_big": 4 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -509,11 +504,11 @@
                     [{ "Solid Magma": 550 }, { "Pine Driftwood": 550 }, { "Maple Batten": 85 }, { "Phoenix Feather": 90 }, { "Flawless Mahogany": 40 }, { "Bottled Flame": 45 }],
                 ],
                 .requires = [{ .index = 3, .level_per_aether = 1 }],
-                .flat_stats = [max_mp { .amount = 35 }],
+                .flat_stats = [defense { .amount = 10 }],
             },
             {
-                .name = "Heightened Perception",
-                .description = "Gain Invulnerability after using &type=\"med_it\"Rewind&reset for $multitxt0.2s per level&reset.",
+                .name = "Heart of Stone",
+                .description = "Further reduce damage taken by $multitxt1.5% per level&reset when under the effect of &type=\"med_it\"Heart of Stone&reset.",
                 .icon = { "ability_icons": 5 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -531,8 +526,8 @@
                 ],
             },
             {
-                .name = "Damage Prevention",
-                .description = "Restore $hptxt50 Health per level&reset after using &type=\"med_it\"Rewind&reset.",
+                .name = "Spiked Shell",
+                .description = "Encase in stone all enemies who have dealt at least 500 damage to you while under the effect of &type=\"med_it\"Heart of Stone&reset for $multitxt1s per level&reset.",
                 .icon = { "ability_icons": 5 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -556,9 +551,9 @@
                 .flat_stats = [stamina { .amount = 10 }],
             },
             {
-                .name = "Speed Boost",
-                .description = "Gain $spdtxt+5$spdicon per level&reset.",
-                .icon = { "misc_big": 8 },
+                .name = "Defense Boost",
+                .description = "Gain $deftxt+10$deficon per level&reset.",
+                .icon = { "misc_big": 4 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -566,12 +561,12 @@
                     [{ "Solid Magma": 550 }, { "Pine Driftwood": 550 }, { "Maple Batten": 85 }, { "Phoenix Feather": 90 }, { "Flawless Mahogany": 40 }, { "Bottled Flame": 45 }],
                 ],
                 .requires = [{ .index = 7, .level_per_aether = 1 }],
-                .flat_stats = [haste { .amount = 5 }],
+                .flat_stats = [defense { .amount = 10 }],
             },
             {
-                .name = "Health Boost",
-                .description = "Gain $hptxt+35$hpicon per level&reset.",
-                .icon = { "misc_big": 0 },
+                .name = "Resistance Boost",
+                .description = "Gain $restxt+10$resicon per level&reset.",
+                .icon = { "misc_big": 5 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -579,11 +574,11 @@
                     [{ "Solid Magma": 550 }, { "Pine Driftwood": 550 }, { "Maple Batten": 85 }, { "Phoenix Feather": 90 }, { "Flawless Mahogany": 40 }, { "Bottled Flame": 45 }],
                 ],
                 .requires = [{ .index = 8, .level_per_aether = 1 }],
-                .flat_stats = [max_mp { .amount = 35 }],
+                .flat_stats = [resistance { .amount = 10 }],
             },
             {
-                .name = "Double Tap",
-                .description = "Cast another &type=\"med_it\"Null Pulse&reset 0.5 seconds after the first one, with the second one having a range of $multitxt0.2 tiles per level&reset.",
+                .name = "Boulder Buddies",
+                .description = "Increase the health of each &type=\"med_it\"Boulder Buddy&reset by $multitxt250 per level&reset.",
                 .icon = { "ability_icons": 6 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -601,8 +596,11 @@
                 ],
             },
             {
-                .name = "Essence Harvest",
-                .description = "Restore $mptxt30 Mana per level&reset for every enemy killed by &type=\"med_it\"Null Pulse&reset.",
+                .name = "Self Sacrifice",
+                .description = 
+                    \\Each &type="med_it"Boulder Buddy&reset now deals $multitxt2000 Physical Damage per level&reset when it dies.
+                    \\$footnotetxtThis does not apply to the despawn due to the duration expiring.
+                ,
                 .icon = { "ability_icons": 6 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -613,9 +611,9 @@
                 .requires = [{ .index = 10, .level_per_aether = 5 }],
             },
             {
-                .name = "Wit Boost",
-                .description = "Gain $wittxt+10$witicon per level&reset.",
-                .icon = { "misc_big": 3 },
+                .name = "Health Boost",
+                .description = "Gain $hptxt+35$hpicon per level&reset.",
+                .icon = { "misc_big": 0 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -623,12 +621,12 @@
                     [{ "Solid Magma": 550 }, { "Pine Driftwood": 550 }, { "Maple Batten": 85 }, { "Phoenix Feather": 90 }, { "Flawless Mahogany": 40 }, { "Bottled Flame": 45 }],
                 ],
                 .requires = [{ .index = 11, .level_per_aether = 1 }],
-                .flat_stats = [wit { .amount = 10 }],
+                .flat_stats = [max_hp { .amount = 35 }],
             },
             {
-                .name = "Strength Boost",
-                .description = "Gain $strtxt+5$stricon per level&reset.",
-                .icon = { "misc_big": 2 },
+                .name = "Resistance Boost",
+                .description = "Gain $restxt+10$resicon per level&reset.",
+                .icon = { "misc_big": 5 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -636,11 +634,11 @@
                     [{ "Solid Magma": 550 }, { "Pine Driftwood": 550 }, { "Maple Batten": 85 }, { "Phoenix Feather": 90 }, { "Flawless Mahogany": 40 }, { "Bottled Flame": 45 }],
                 ],
                 .requires = [{ .index = 12, .level_per_aether = 1 }],
-                .flat_stats = [strength { .amount = 5 }],
+                .flat_stats = [resistance { .amount = 10 }],
             },
             {
                 .name = "Defense Boost",
-                .description = "Gain $deftxt+5$deficon per level&reset.",
+                .description = "Gain $deftxt+10$deficon per level&reset.",
                 .icon = { "misc_big": 4 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
@@ -649,11 +647,11 @@
                     [{ "Solid Magma": 550 }, { "Pine Driftwood": 550 }, { "Maple Batten": 85 }, { "Phoenix Feather": 90 }, { "Flawless Mahogany": 40 }, { "Bottled Flame": 45 }],
                 ],
                 .requires = [{ .index = 13, .level_per_aether = 1 }],
-                .flat_stats = [defense { .amount = 5 }],
+                .flat_stats = [defense { .amount = 10 }],
             },
             {
-                .name = "Phase Shift",
-                .description = "Return $multitxt2.5% (additive) per level&reset of damage received in &type=\"med_it\"Time Lock&reset immediately.",
+                .name = "Earthen Prison",
+                .description = "Increase the duration of &type=\"med_it\"Earthen Prison&reset by $multitxt0.5s per level&reset.",
                 .icon = { "ability_icons": 7 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -671,11 +669,8 @@
                 ],
             },
             {
-                .name = "Excellent Service",
-                .description = 
-                    \\Receive an Ephemeral &type="med_it"Magic Corp Turret&reset every time you hit the damage cap on Time Lock.
-                    \\The &type="med_it"Magic Corp Turret&reset scales in rarity per level, going from &type="bold_it"&col="B3B3B3"Common&reset to &type="bold_it"&col="B80000"Mythic&reset.
-                ,
+                .name = "Quicksand Decay",
+                .description = "All enemies under the effect of &type=\"med_it\"Earthen Prison&reset become slowed for $multitxt2.5s per level&reset when the ability expires.",
                 .icon = { "ability_icons": 7 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -712,9 +707,9 @@
                 .flat_stats = [max_hp { .amount = 35 }],
             },
             {
-                .name = "Mana Boost",
-                .description = "Gain $mptxt+35$mpicon per level&reset.",
-                .icon = { "misc_big": 1 },
+                .name = "Stamina Boost",
+                .description = "Gain $statxt+10$staicon per level&reset.",
+                .icon = { "misc_big": 6 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -722,14 +717,14 @@
                     [{ "Solid Magma": 550 }, { "Pine Driftwood": 550 }, { "Maple Batten": 85 }, { "Phoenix Feather": 90 }, { "Flawless Mahogany": 40 }, { "Bottled Flame": 45 }],
                 ],
                 .requires = [{ .index = 18, .level_per_aether = 1 }],
-                .flat_stats = [max_mp { .amount = 35 }],
+                .flat_stats = [stamina { .amount = 10 }],
             },
         ],
     },
     {
         .id = 2,
         .name = "Chronomancer",
-        .description = "placeholder",
+        .description = "A tough bruiser mending time to deal and to prevent damage",
         .texture = { "players": 0 },
         .item_types = [
             @ItemType("staff"),
@@ -797,7 +792,7 @@
         ],
         .talents = [
             {
-                .name = "Hyper Dilation",
+                .name = "Time Dilation",
                 .description = "Boost the range of &type=\"med_it\"Time Dilation&reset by $multitxt2.5% (additive) per level&reset.",
                 .icon = { "ability_icons": 0 },
                 .type = @TalentType("ability"),
@@ -817,7 +812,7 @@
             },
             {
                 .name = "Event Horizon",
-                .description = "Increase the slowing effect of &type=\"med_it\"Time Dilation&reset by $multitxt5% (additive) per level&reset.",
+                .description = "Reduce projectiles' damage within &type=\"med_it\"Time Dilation&reset by $multitxt5% (additive) per level&reset.",
                 .icon = { "ability_icons": 0 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -867,8 +862,8 @@
                 .flat_stats = [max_mp { .amount = 35 }],
             },
             {
-                .name = "Heightened Perception",
-                .description = "Gain Invulnerability after using &type=\"med_it\"Rewind&reset for $multitxt0.2s per level&reset.",
+                .name = "Rewind",
+                .description = "Increase the amount of time of &type=\"med_it\"Rewind&reset by $multitxt0.2s per level&reset.",
                 .icon = { "ability_icons": 1 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -887,7 +882,7 @@
             },
             {
                 .name = "Damage Prevention",
-                .description = "Restore $hptxt50 Health per level&reset after using &type=\"med_it\"Rewind&reset.",
+                .description = "Restore $multitxt50 Health per level&reset after using &type=\"med_it\"Rewind&reset.",
                 .icon = { "ability_icons": 1 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -898,9 +893,9 @@
                 .requires = [{ .index = 5, .level_per_aether = 5 }],
             },
             {
-                .name = "Stamina Boost",
-                .description = "Gain $statxt+10$staicon per level&reset.",
-                .icon = { "misc_big": 6 },
+                .name = "Haste Boost",
+                .description = "Gain $hsttxt+5$hsticon per level&reset.",
+                .icon = { "misc_big": 9 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -908,12 +903,12 @@
                     [{ "Tiny Magisteel Alloy": 1100 }, { "Large Magisteel Alloy": 175 }, { "Huge Magisteel Alloy": 75 }],
                 ],
                 .requires = [{ .index = 6, .level_per_aether = 1 }],
-                .flat_stats = [stamina { .amount = 10 }],
+                .flat_stats = [haste { .amount = 5 }],
             },
             {
-                .name = "Speed Boost",
-                .description = "Gain $spdtxt+5$spdicon per level&reset.",
-                .icon = { "misc_big": 8 },
+                .name = "Wit Boost",
+                .description = "Gain $wittxt+10$witicon per level&reset.",
+                .icon = { "misc_big": 3 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -921,7 +916,7 @@
                     [{ "Tiny Magisteel Alloy": 1100 }, { "Large Magisteel Alloy": 175 }, { "Huge Magisteel Alloy": 75 }],
                 ],
                 .requires = [{ .index = 7, .level_per_aether = 1 }],
-                .flat_stats = [haste { .amount = 5 }],
+                .flat_stats = [wit { .amount = 10 }],
             },
             {
                 .name = "Health Boost",
@@ -934,11 +929,11 @@
                     [{ "Tiny Magisteel Alloy": 1100 }, { "Large Magisteel Alloy": 175 }, { "Huge Magisteel Alloy": 75 }],
                 ],
                 .requires = [{ .index = 8, .level_per_aether = 1 }],
-                .flat_stats = [max_mp { .amount = 35 }],
+                .flat_stats = [max_hp { .amount = 35 }],
             },
             {
-                .name = "Double Tap",
-                .description = "Cast another &type=\"med_it\"Null Pulse&reset 0.5 seconds after the first one, with the second one having a range of $multitxt0.2 tiles per level&reset.",
+                .name = "Null Pulse",
+                .description = "Increase the damage of &type=\"med_it\"Null Pulse&reset by $multitxt5% per level&reset.",
                 .icon = { "ability_icons": 2 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -956,8 +951,8 @@
                 ],
             },
             {
-                .name = "Essence Harvest",
-                .description = "Restore $mptxt30 Mana per level&reset for every enemy killed by &type=\"med_it\"Null Pulse&reset.",
+                .name = "Double Tap",
+                .description = "Cast another &type=\"med_it\"Null Pulse&reset 0.5 seconds after the first one, with the second one having a range of $multitxt0.2 tiles per level&reset.",
                 .icon = { "ability_icons": 2 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -981,9 +976,9 @@
                 .flat_stats = [wit { .amount = 10 }],
             },
             {
-                .name = "Strength Boost",
-                .description = "Gain $strtxt+5$stricon per level&reset.",
-                .icon = { "misc_big": 2 },
+                .name = "Resistance Boost",
+                .description = "Gain $restxt+10$resicon per level&reset.",
+                .icon = { "misc_big": 5 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -991,12 +986,12 @@
                     [{ "Tiny Magisteel Alloy": 1100 }, { "Large Magisteel Alloy": 175 }, { "Huge Magisteel Alloy": 75 }],
                 ],
                 .requires = [{ .index = 12, .level_per_aether = 1 }],
-                .flat_stats = [strength { .amount = 5 }],
+                .flat_stats = [resistance { .amount = 10 }],
             },
             {
-                .name = "Defense Boost",
-                .description = "Gain $deftxt+5$deficon per level&reset.",
-                .icon = { "misc_big": 4 },
+                .name = "Intelligence Boost",
+                .description = "Gain $inttxt+10$inticon per level&reset.",
+                .icon = { "misc_big": 7 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -1004,11 +999,11 @@
                     [{ "Tiny Magisteel Alloy": 1100 }, { "Large Magisteel Alloy": 175 }, { "Huge Magisteel Alloy": 75 }],
                 ],
                 .requires = [{ .index = 13, .level_per_aether = 1 }],
-                .flat_stats = [defense { .amount = 5 }],
+                .flat_stats = [intelligence { .amount = 10 }],
             },
             {
-                .name = "Phase Shift",
-                .description = "Return $multitxt2.5% (additive) per level&reset of damage received in &type=\"med_it\"Time Lock&reset immediately.",
+                .name = "Time Lock",
+                .description = "Increase damage dealt during &type=\"med_it\"Time Lock&reset by $multitxt2.5% (additive) per level&reset.",
                 .icon = { "ability_icons": 3 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -1026,11 +1021,8 @@
                 ],
             },
             {
-                .name = "Excellent Service",
-                .description = 
-                    \\Receive an Ephemeral &type="med_it"Magic Corp Turret&reset every time you hit the damage cap on Time Lock.
-                    \\The &type="med_it"Magic Corp Turret&reset scales in rarity per level, going from &type="bold_it"&col="B3B3B3"Common&reset to &type="bold_it"&col="B80000"Mythic&reset.
-                ,
+                .name = "Phase Shift",
+                .description = "Return $multitxt2.5% (additive) per level&reset of damage received in &type=\"med_it\"Time Lock&reset immediately.",
                 .icon = { "ability_icons": 3 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -1041,9 +1033,9 @@
                 .requires = [{ .index = 15, .level_per_aether = 5 }],
             },
             {
-                .name = "Resistance Boost",
-                .description = "Gain $restxt+10$resicon per level&reset.",
-                .icon = { "misc_big": 5 },
+                .name = "Mana Boost",
+                .description = "Gain $mptxt+35$mpicon per level&reset.",
+                .icon = { "misc_big": 1 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -1051,7 +1043,7 @@
                     [{ "Tiny Magisteel Alloy": 1100 }, { "Large Magisteel Alloy": 175 }, { "Huge Magisteel Alloy": 75 }],
                 ],
                 .requires = [{ .index = 16, .level_per_aether = 1 }],
-                .flat_stats = [wit { .amount = 10 }],
+                .flat_stats = [max_mp { .amount = 35 }],
             },
             {
                 .name = "Health Boost",
@@ -1067,9 +1059,9 @@
                 .flat_stats = [max_hp { .amount = 35 }],
             },
             {
-                .name = "Mana Boost",
-                .description = "Gain $mptxt+35$mpicon per level&reset.",
-                .icon = { "misc_big": 1 },
+                .name = "Resistance Boost",
+                .description = "Gain $restxt+10$resicon per level&reset.",
+                .icon = { "misc_big": 5 },
                 .type = @TalentType("minor"),
                 .max_level = [1, 2],
                 .level_costs = [
@@ -1077,7 +1069,7 @@
                     [{ "Tiny Magisteel Alloy": 1100 }, { "Large Magisteel Alloy": 175 }, { "Huge Magisteel Alloy": 75 }],
                 ],
                 .requires = [{ .index = 18, .level_per_aether = 1 }],
-                .flat_stats = [max_mp { .amount = 35 }],
+                .flat_stats = [resistance { .amount = 10 }],
             },
         ],
     },
