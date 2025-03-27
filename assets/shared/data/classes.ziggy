@@ -2,7 +2,7 @@
     {
         .id = 0,
         .name = "Demon",
-        .description = "A brawler focused on manipulating life essence",
+        .description = "A brawler focused on manipulating life essence.",
         .texture = { "players": 2 },
         .item_types = [
             @ItemType("sword"),
@@ -234,7 +234,7 @@
             },
             {
                 .name = "Reduced Sensitivity",
-                .description = "Reduce the damage taken at the end of &type=\"med_it\"Bloodfont&reset by $multitxt10% per level&reset.",
+                .description = "Reduce the damage taken at the end of &type=\"med_it\"Bloodfont&reset by $multitxt10% (additive) per level&reset.",
                 .icon = { "ability_icons": 10 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -304,7 +304,7 @@
             },
             {
                 .name = "Demonic Fervor",
-                .description = "Gain a $multitxt150% damage boost per level&reset per each enemy killed by &type=\"med_it\"Ravenous Hunger&reset for 4 seconds.",
+                .description = "Gain a $multitxt150% (additive) damage boost per level&reset per each enemy killed by &type=\"med_it\"Ravenous Hunger&reset for 4 seconds.",
                 .icon = { "ability_icons": 11 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -358,7 +358,7 @@
     {
         .id = 1,
         .name = "Golem",
-        .description = "An earth-bending tank specializing in damage prevention",
+        .description = "An earth-bending tank specializing in damage prevention.",
         .texture = { "players": 1 },
         .item_types = [
             @ItemType("bow"),
@@ -508,7 +508,7 @@
             },
             {
                 .name = "Heart of Stone",
-                .description = "Further reduce damage taken by $multitxt1.5% per level&reset when under the effect of &type=\"med_it\"Heart of Stone&reset.",
+                .description = "Further reduce damage taken by $multitxt1.5% (additive) per level&reset when under the effect of &type=\"med_it\"Heart of Stone&reset.",
                 .icon = { "ability_icons": 5 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -724,7 +724,7 @@
     {
         .id = 2,
         .name = "Chronomancer",
-        .description = "A tough bruiser mending time to deal and to prevent damage",
+        .description = "A tough bruiser mending time to deal and to prevent damage.",
         .texture = { "players": 0 },
         .item_types = [
             @ItemType("staff"),
@@ -933,7 +933,7 @@
             },
             {
                 .name = "Null Pulse",
-                .description = "Increase the damage of &type=\"med_it\"Null Pulse&reset by $multitxt5% per level&reset.",
+                .description = "Increase the damage of &type=\"med_it\"Null Pulse&reset by $multitxt5% (additive) per level&reset.",
                 .icon = { "ability_icons": 2 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
