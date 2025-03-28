@@ -224,5 +224,13 @@
     .w = 9,
     .h = 9,
     .dont_trim = true,
+},
+{
+    .type = @SheetType("image"),
+    .name = "retrieve_asteroids",
+    .path = "retrieve_asteroids.png",
+    .w = 18,
+    .h = 18,
+    .dont_trim = true,
 }
 ]
