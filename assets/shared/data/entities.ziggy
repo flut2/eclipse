@@ -668,4 +668,9 @@
         .textures = [{"props":249}],
         .draw_on_ground = true,
     },
+    {
+        .id = 82,
+        .name = "Retrieve Asteroids",
+        .textures = [{"retrieve_asteroids": 0 }, {"retrieve_asteroids": 1 }, {"retrieve_asteroids": 2 }],
+    }
 ]
