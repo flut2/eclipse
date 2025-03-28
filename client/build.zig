@@ -44,6 +44,7 @@ pub fn buildWithoutDupes(
                 .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
             }),
         });
+        if (!check) exe.addWin32ResourceFile(.{ .file = b.path("../assets/resources.rc") });
 
         if (check) check_step.dependOn(&exe.step);
 
