@@ -428,6 +428,7 @@ pub const SubtextureData = struct {
     x_offset: i8 = 0,
     y_offset: i8 = 0,
     size_mult: f32 = 1.0,
+    rotation: f32 = 0.0,
     light: LightData = .{},
     float: FloatData = .{},
 };
@@ -441,6 +442,7 @@ pub const EntityData = struct {
     defense: i32 = 0,
     resistance: i32 = 0,
     size_mult: f32 = 1.0,
+    rotation: f32 = 0.0,
     light: LightData = .{},
     float: FloatData = .{},
     draw_on_ground: bool = false,

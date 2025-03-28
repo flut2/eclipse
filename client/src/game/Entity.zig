@@ -374,6 +374,7 @@ pub fn draw(
         for (0..data.text.len) |_| sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
     };
 
+    const rotation = -(if (self.data.rotation == 0.0) 0.0 else std.math.degreesToRadians(float_time_ms / (1 / self.data.rotation)));
     Renderer.drawQuad(
         generics,
         sort_extras,
@@ -383,7 +384,7 @@ pub fn draw(
         h,
         atlas_data,
         .{
-            .shadow_texel_mult = 2.0 / size,
+            .rotation = rotation,
             .alpha_mult = alpha_mult,
             .color = color,
             .color_intensity = color_intensity,
@@ -414,6 +415,7 @@ pub fn draw(
                 float_time_ms,
             );
 
+        const sub_rotation = -(if (subtex_data.rotation == 0.0) 0.0 else std.math.degreesToRadians(float_time_ms / (1 / subtex_data.rotation)));
         Renderer.drawQuad(
             generics,
             sort_extras,
@@ -423,7 +425,7 @@ pub fn draw(
             st_h,
             self.subtex_atlas_data,
             .{
-                .shadow_texel_mult = 2.0 / st_size,
+                .rotation = sub_rotation,
                 .alpha_mult = alpha_mult,
                 .color = color,
                 .color_intensity = color_intensity,
