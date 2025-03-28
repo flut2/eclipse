@@ -263,17 +263,7 @@
         .blend_prio = 1,
         .speed_mult = 1.10,
     },
-    {
-        .id = 36,
-        .name = "Rug Example",
-        .textures = [{ "ground": 83 }, { "ground": 84 }, { "ground": 85 }],
-        .rug_textures = {
-            .corners = [{ "ground": 86 }],
-            .inner_corners = [{ "ground": 87 }],
-            .edges = [{ "ground": 88 }, { "ground": 89 }, { "ground": 90 }],
-        },
-        .blend_prio = 1,
-    },
+    // TODO: fill id 36
     {
         .id = 37,
         .name = "Crown Cove Dirt",
