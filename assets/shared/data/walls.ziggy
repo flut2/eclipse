@@ -287,4 +287,47 @@
         ],
         .is_wall = true,
     },
+    {
+        .id = 1029,
+        .name = "Retrieve Electronic Pillar 1 Off",
+        .textures = [
+            { "walls": 110 },
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1030,
+        .name = "Retrieve Electronic Pillar 2 Off",
+        .textures = [
+            { "walls": 111 },
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1031,
+        .name = "Retrieve Electronic Pillar 3 Off",
+        .textures = [
+            { "walls": 112 },
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1032,
+        .name = "Retrieve Glass Pillar",
+        .textures = [
+            { "walls": 113 },
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1033,
+        .name = "Retrieve Glass Wall",
+        .textures = [
+            { "walls": 114 },
+            { "walls": 115 },
+            { "walls": 116 },
+            { "walls": 117 },
+        ],
+        .is_wall = true,
+    },
 ]

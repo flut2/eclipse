@@ -1,23 +1,21 @@
 [
-    {
-        .id = 0,
-        .name = "Luntaer",
-        .textures = [{ "props_large": 22 }],
-        .animations = [
-            { .time = 0.4, .texture = { "props_large": 22 } },
-            { .time = 0.4, .texture = { "props_large": 23 } },
-            { .time = 0.4, .texture = { "props_large": 24 } },
-            { .time = 0.4, .texture = { "props_large": 25 } },
-            { .time = 0.4, .texture = { "props_large": 26 } },
-            { .time = 0.4, .texture = { "props_large": 25 } },
-            { .time = 0.4, .texture = { "props_large": 24 } },
-            { .time = 0.4, .texture = { "props_large": 23 } },
-        ],
-        .float = {
-            .time = 0.6,
-            .height = 0.5,
-        },
+{
+    .id = 0,
+    .name = "Luntaer",
+    .textures = [{"props_large": 22}],
+    .animations = [
+        { .time = 0.4, .texture = {"props_large": 22} },
+        { .time = 0.4, .texture = {"props_large": 23} },
+        { .time = 0.4, .texture = {"props_large": 24} },
+        { .time = 0.4, .texture = {"props_large": 25} },
+        { .time = 0.4, .texture = {"props_large": 26} },
+        { .time = 0.4, .texture = {"props_large": 27} },
+    ],
+    .float = {
+        .time = 0.6,
+        .height = 0.5,
     },
+},
     {
         .id = 1,
         .name = "Crown Cove",

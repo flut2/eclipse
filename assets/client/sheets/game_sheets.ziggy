@@ -216,5 +216,13 @@
     .w = 24,
     .h = 24,
     .dont_trim = true,
+},
+{
+    .type = @SheetType("image"),
+    .name = "retrieve_space_tiles",
+    .path = "retrieve_space_tiles.png",
+    .w = 9,
+    .h = 9,
+    .dont_trim = true,
 }
 ]
