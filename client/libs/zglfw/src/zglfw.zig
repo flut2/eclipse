@@ -1,5 +1,6 @@
-const builtin = @import("builtin");
 const std = @import("std");
+const expect = std.testing.expect;
+const builtin = @import("builtin");
 
 const options = @import("zglfw_options");
 
@@ -813,6 +814,12 @@ pub const Window = opaque {
     pub const setCursor = glfwSetCursor;
     extern fn glfwSetCursor(window: *Window, cursor: ?*Cursor) void;
 
+    pub fn setWindowIcon(window: *Window, images: []const Image) !void {
+        glfwSetWindowIcon(window, @intCast(images.len), images.ptr);
+        try maybeError();
+    }
+    extern fn glfwSetWindowIcon(window: *Window, count: i32, images: [*]const Image) void;
+
     pub fn setInputMode(window: *Window, mode: InputMode, value: anytype) void {
         const T = @TypeOf(value);
         const i32_value = switch (@typeInfo(T)) {
@@ -1082,8 +1089,6 @@ fn _isLinuxDesktopLike() bool {
 test {
     std.testing.refAllDeclsRecursive(@This());
 }
-
-const expect = std.testing.expect;
 
 fn contentScaleCallback(window: *Window, xscale: f32, yscale: f32) callconv(.C) void {
     _ = window;
