@@ -474,11 +474,11 @@ pub fn main() !void {
         .target_ally => assets.target_ally_cursor,
     });
 
-    {
-        var img: zstbi.Image = try .loadFromFile("./assets/logo.png", 4);
-        defer img.deinit();
-        try window.setWindowIcon(&.{.{ .w = @intCast(img.width), .h = @intCast(img.height), .pixels = img.data.ptr }});
-    }
+    // {
+    //     var img: zstbi.Image = try .loadFromFile("./assets/logo.png", 4);
+    //     defer img.deinit();
+    //     try window.setWindowIcon(&.{.{ .w = @intCast(img.width), .h = @intCast(img.height), .pixels = img.data.ptr }});
+    // }
 
     _ = window.setKeyCallback(input.keyEvent);
     _ = window.setCharCallback(input.charEvent);
