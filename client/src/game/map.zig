@@ -406,12 +406,9 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
                     }
                     obj.update(time);
                 },
-                Projectile => if (!obj.update(time, dt))
-                    remove_list.append(main.allocator, i) catch @panic("Removing projectile failed"),
-                particles.Particle => if (!obj.update(time, dt))
-                    remove_list.append(main.allocator, i) catch @panic("Removing particle failed"),
-                particles.ParticleEffect => if (!obj.update(time, dt))
-                    remove_list.append(main.allocator, i) catch @panic("Removing particle effect failed"),
+                Projectile => if (!obj.update(time, dt)) remove_list.append(main.allocator, i) catch main.oomPanic(),
+                particles.Particle => if (!obj.update(time, dt)) remove_list.append(main.allocator, i) catch main.oomPanic(),
+                particles.ParticleEffect => if (!obj.update(time, dt)) remove_list.append(main.allocator, i) catch main.oomPanic(),
                 Entity => obj.update(time),
                 Enemy => obj.update(time, dt),
                 Ally => obj.update(time, dt),

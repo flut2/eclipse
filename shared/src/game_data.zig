@@ -3,6 +3,7 @@ const std = @import("std");
 const ziggy = @import("ziggy");
 
 const utils = @import("utils.zig");
+const network_data = @import("network_data.zig");
 
 pub var resource: Maps(ResourceData) = .{};
 pub var card: Maps(CardData) = .{};
@@ -358,7 +359,7 @@ pub const ContainerData = struct {
     show_name: bool = false,
     draw_on_ground: bool = false,
     animations: ?[]const FrameData = null,
-    playable_animations: ?[][]FrameData = null,
+    playable_animations: ?[]const []const FrameData = null,
 };
 
 pub const ProjectileData = struct {
@@ -424,13 +425,20 @@ pub const FloatData = struct {
 
 pub const SubtextureData = struct {
     textures: []const TextureData,
-    animations: ?[]FrameData = null,
+    animations: ?[]const FrameData = null,
     x_offset: i8 = 0,
     y_offset: i8 = 0,
     size_mult: f32 = 1.0,
     rotation: f32 = 0.0,
     light: LightData = .{},
     float: FloatData = .{},
+};
+
+pub const ShowEffData = struct {
+    effect: network_data.ShowEffect,
+    radius: f32,
+    cooldown: f32,
+    color: u32,
 };
 
 pub const EntityData = struct {
@@ -455,8 +463,9 @@ pub const EntityData = struct {
     is_wall: bool = false,
     hit_sound: []const u8 = "Unknown.mp3",
     death_sound: []const u8 = "Unknown.mp3",
-    animations: ?[]FrameData = null,
-    playable_animations: ?[][]FrameData = null,
+    show_effects: ?[]const ShowEffData = null,
+    animations: ?[]const FrameData = null,
+    playable_animations: ?[]const []const FrameData = null,
 };
 
 pub const AllyData = struct {
@@ -499,7 +508,7 @@ pub const GroundData = struct {
     blend_prio: i16 = 0,
     disable_blend: bool = false,
     anim_sync_id: u16 = std.math.maxInt(u16),
-    animations: ?[]FrameData = null,
+    animations: ?[]const FrameData = null,
 };
 
 pub const StatIncreaseData = union(enum) {
@@ -697,8 +706,8 @@ pub const PortalData = struct {
     float: FloatData = .{},
     size_mult: f32 = 1.0,
     show_name: bool = true,
-    animations: ?[]FrameData = null,
-    playable_animations: ?[][]FrameData = null,
+    animations: ?[]const FrameData = null,
+    playable_animations: ?[]const []const FrameData = null,
 };
 
 pub const RegionData = struct {

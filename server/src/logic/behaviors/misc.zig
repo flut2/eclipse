@@ -5,6 +5,7 @@ const game_data = shared.game_data;
 const utils = shared.utils;
 const i64f = utils.i64f;
 
+const main = @import("../../main.zig");
 const Enemy = @import("../../map/Enemy.zig");
 const Entity = @import("../../map/Entity.zig");
 const maps = @import("../../map/maps.zig");
@@ -42,7 +43,7 @@ pub const HealthShrine = struct {
             .color = 0x00FF00,
         } });
 
-        player.client.sendPacket(.{ .show_effect = .{
+        player.show_effects.append(main.allocator, .{
             .eff_type = .trail,
             .obj_type = .entity,
             .map_id = host.map_id,
@@ -51,7 +52,7 @@ pub const HealthShrine = struct {
             .x2 = 0,
             .y2 = 0,
             .color = 0x00FF00,
-        } });
+        }) catch main.oomPanic();
     }
 };
 
@@ -84,7 +85,7 @@ pub const MagicShrine = struct {
             .color = 0x0000FF,
         } });
 
-        player.client.sendPacket(.{ .show_effect = .{
+        player.show_effects.append(main.allocator, .{
             .eff_type = .trail,
             .obj_type = .entity,
             .map_id = host.map_id,
@@ -93,7 +94,7 @@ pub const MagicShrine = struct {
             .x2 = 0,
             .y2 = 0,
             .color = 0x0000FF,
-        } });
+        }) catch main.oomPanic();
     }
 };
 
@@ -126,7 +127,7 @@ pub const RetrieveHealthBeacon = struct {
             .color = 0x00FF00,
         } });
 
-        player.client.sendPacket(.{ .show_effect = .{
+        player.show_effects.append(main.allocator, .{
             .eff_type = .trail,
             .obj_type = .entity,
             .map_id = host.map_id,
@@ -135,7 +136,7 @@ pub const RetrieveHealthBeacon = struct {
             .x2 = 0,
             .y2 = 0,
             .color = 0x00FF00,
-        } });
+        }) catch main.oomPanic();
     }
 };
 
@@ -168,7 +169,7 @@ pub const RetrieveManaBeacon = struct {
             .color = 0x0000FF,
         } });
 
-        player.client.sendPacket(.{ .show_effect = .{
+        player.show_effects.append(main.allocator, .{
             .eff_type = .trail,
             .obj_type = .entity,
             .map_id = host.map_id,
@@ -177,7 +178,7 @@ pub const RetrieveManaBeacon = struct {
             .x2 = 0,
             .y2 = 0,
             .color = 0x0000FF,
-        } });
+        }) catch main.oomPanic();
     }
 };
 
@@ -186,6 +187,38 @@ pub const HealthWisp = struct {
         .type = .enemy,
         .name = "Health Wisp",
     };
+
+    pub fn death(_: *HealthWisp, host: *Enemy) !void {
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        for (world.listForType(Entity).items) |e| {
+            if (utils.distSqr(host.x, host.y, e.x, e.y) > 20 * 20 or
+                !std.mem.eql(u8, e.data.name, "Dormant Health Shrine")) continue;
+
+            for (world.listForType(Player).items) |*p| {
+                if (utils.distSqr(host.x, host.y, p.x, p.y) > 16 * 16) continue;
+                p.show_effects.append(main.allocator, .{
+                    .eff_type = .trail,
+                    .obj_type = .entity,
+                    .map_id = e.map_id,
+                    .x1 = host.x,
+                    .y1 = host.y,
+                    .x2 = 0,
+                    .y2 = 0,
+                    .color = 0xE54242,
+                }) catch main.oomPanic();
+                p.show_effects.append(main.allocator, .{
+                    .eff_type = .potion,
+                    .obj_type = .entity,
+                    .map_id = e.map_id,
+                    .x1 = 0,
+                    .x2 = 0,
+                    .y1 = 0,
+                    .y2 = 0,
+                    .color = 0xE54242,
+                }) catch main.oomPanic();
+            }
+        }
+    }
 
     pub fn tick(_: *HealthWisp, host: *Enemy, _: i64, dt: i64) !void {
         if (logic.clampToSpawn(@src(), host, dt, 6.0, 4.0, 2.5))
@@ -198,6 +231,38 @@ pub const MagicWisp = struct {
         .type = .enemy,
         .name = "Magic Wisp",
     };
+
+    pub fn death(_: *MagicWisp, host: *Enemy) !void {
+        const world = maps.worlds.getPtr(host.world_id) orelse return;
+        for (world.listForType(Entity).items) |e| {
+            if (utils.distSqr(host.x, host.y, e.x, e.y) > 20 * 20 or
+                !std.mem.eql(u8, e.data.name, "Dormant Magic Shrine")) continue;
+
+            for (world.listForType(Player).items) |*p| {
+                if (utils.distSqr(host.x, host.y, p.x, p.y) > 16 * 16) continue;
+                p.show_effects.append(main.allocator, .{
+                    .eff_type = .trail,
+                    .obj_type = .entity,
+                    .map_id = e.map_id,
+                    .x1 = host.x,
+                    .y1 = host.y,
+                    .x2 = 0,
+                    .y2 = 0,
+                    .color = 0x4C8AED,
+                }) catch main.oomPanic();
+                p.show_effects.append(main.allocator, .{
+                    .eff_type = .potion,
+                    .obj_type = .entity,
+                    .map_id = e.map_id,
+                    .x1 = 0,
+                    .x2 = 0,
+                    .y1 = 0,
+                    .y2 = 0,
+                    .color = 0x4C8AED,
+                }) catch main.oomPanic();
+            }
+        }
+    }
 
     pub fn tick(_: *MagicWisp, host: *Enemy, _: i64, dt: i64) !void {
         if (logic.clampToSpawn(@src(), host, dt, 6.0, 4.0, 2.5))

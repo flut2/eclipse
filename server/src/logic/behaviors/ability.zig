@@ -140,7 +140,7 @@ pub const DemonRift = struct {
                 .color = 0x00FF00,
             } });
 
-            player.client.sendPacket(.{ .show_effect = .{
+            player.show_effects.append(main.allocator, .{
                 .eff_type = .potion,
                 .color = 0x00FF00,
                 .map_id = player.map_id,
@@ -149,11 +149,11 @@ pub const DemonRift = struct {
                 .x2 = 0,
                 .y1 = 0,
                 .y2 = 0,
-            } });
+            }) catch main.oomPanic();
         }
 
         for (world.listForType(Player).items) |*player| {
-            player.client.sendPacket(.{ .show_effect = .{
+            player.show_effects.append(main.allocator, .{
                 .obj_type = .entity,
                 .map_id = host.map_id,
                 .eff_type = .area_blast,
@@ -162,7 +162,7 @@ pub const DemonRift = struct {
                 .x2 = self.radius,
                 .y2 = 0.0,
                 .color = 0x00FF00,
-            } });
+            }) catch main.oomPanic();
         }
     }
 };

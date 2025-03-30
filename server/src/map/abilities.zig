@@ -90,7 +90,7 @@ pub fn handleBoulderBuddies(player: *Player) !void {
             ally.resistance = i32f(5.0 + f32i(player.totalStat(.resistance)) * 0.1);
         } else return;
 
-        player.client.sendPacket(.{ .show_effect = .{
+        player.show_effects.append(main.allocator, .{
             .obj_type = .ally,
             .map_id = map_id,
             .eff_type = .area_blast,
@@ -99,14 +99,15 @@ pub fn handleBoulderBuddies(player: *Player) !void {
             .x2 = 1.5,
             .y2 = 0.0,
             .color = 0xA13A2F,
-        } });
+        }) catch main.oomPanic();
     }
 }
 
 pub fn handleEarthenPrison(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const duration = i64f((15.0 + f32i(player.totalStat(.haste)) * 0.2) * std.time.us_per_s);
+    const fduration = 15.0 + f32i(player.totalStat(.haste)) * 0.2;
+    const duration = i64f(fduration * std.time.us_per_s);
     const radius = 9.0 + f32i(player.totalStat(.intelligence)) * 0.1;
     const redirect_perc = @max(0.0, 0.5 - f32i(player.totalStat(.defense)) * 0.01 * 0.01 - f32i(player.totalStat(.resistance)) * 0.01 * 0.01);
     const radius_sqr = radius * radius;
@@ -125,6 +126,20 @@ pub fn handleEarthenPrison(player: *Player) !void {
             e.obelisk_map_id = obelisk_map_id;
             e.applyCondition(.encased_in_stone, duration);
         };
+
+    for (world.listForType(Player).items) |*p| {
+        if (utils.distSqr(player.x, player.y, p.x, p.y) > 20 * 20) continue;
+        p.show_effects.append(main.allocator, .{
+            .eff_type = .ring,
+            .obj_type = .ally,
+            .map_id = obelisk_map_id,
+            .x1 = radius,
+            .y1 = 1.0,
+            .x2 = fduration,
+            .y2 = 0.0,
+            .color = 0x00FF00,
+        }) catch main.oomPanic();
+    }
 }
 
 fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
@@ -136,9 +151,24 @@ fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 pub fn handleTimeDilation(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const duration = i64f((5.0 + f32i(player.totalStat(.intelligence)) * 0.05) * std.time.us_per_s);
+    const radius = 3.0 + f32i(player.totalStat(.wit)) * 0.06;
+    const fduration = 5.0 + f32i(player.totalStat(.intelligence)) * 0.05;
+    const duration = i64f(fduration * std.time.us_per_s);
 
     player.ability_state.time_dilation = true;
+    for (world.listForType(Player).items) |*p| {
+        if (utils.distSqr(player.x, player.y, p.x, p.y) > 20 * 20) continue;
+        p.show_effects.append(main.allocator, .{
+            .eff_type = .ring,
+            .obj_type = .player,
+            .map_id = player.map_id,
+            .x1 = radius,
+            .y1 = 0.5,
+            .x2 = fduration,
+            .y2 = 0.0,
+            .color = 0x0000FF,
+        }) catch main.oomPanic();
+    }
 
     const map_id_copy = try main.allocator.create(u32);
     map_id_copy.* = player.map_id;
@@ -173,7 +203,7 @@ pub fn handleRewind(player: *Player) !void {
             .color = 0x00FF00,
         } });
 
-        player.client.sendPacket(.{ .show_effect = .{
+        player.show_effects.append(main.allocator, .{
             .eff_type = .potion,
             .obj_type = .player,
             .map_id = player.map_id,
@@ -182,7 +212,7 @@ pub fn handleRewind(player: *Player) !void {
             .x2 = 0,
             .y2 = 0,
             .color = 0x00FF00,
-        } });
+        }) catch main.oomPanic();
     }
     player.x = player.position_records[tick].x;
     player.y = player.position_records[tick].y;
@@ -285,8 +315,7 @@ pub fn handleEtherealHarvest(player: *Player) !void {
     var total_damage_boost: f32 = 1.0;
     var entities_to_kill: std.ArrayListUnmanaged(usize) = .empty;
     defer entities_to_kill.deinit(main.allocator);
-    const ShowEffectData = @typeInfo(network_data.S2CPacket).@"union".fields[@intFromEnum(network_data.S2CPacket.show_effect)].type;
-    var show_effects: std.ArrayListUnmanaged(ShowEffectData) = .empty;
+    var show_effects: std.ArrayListUnmanaged(network_data.ShowEffectItem) = .empty;
     defer show_effects.deinit(main.allocator);
     for (world.listForType(Entity).items, 0..) |*e, i| {
         if (utils.distSqr(e.x, e.y, player.x, player.y) > radius_sqr or e.data_id != soul_id) continue;
@@ -308,7 +337,7 @@ pub fn handleEtherealHarvest(player: *Player) !void {
     while (iter.next()) |i| _ = try world.lists.entity.items[i].delete();
 
     for (world.listForType(Player).items) |*other_player| {
-        for (show_effects.items) |show_eff| other_player.client.sendPacket(.{ .show_effect = show_eff });
+        other_player.show_effects.appendSlice(main.allocator, show_effects.items) catch main.oomPanic();
     }
 
     if (total_damage_boost > 1.0) {
@@ -327,18 +356,34 @@ pub fn handleSpaceShift(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
     const rift_data = game_data.entity.from_name.get("Demon Rift") orelse return;
 
-    const duration = i64f((6.0 + f32i(player.totalStat(.stamina)) * 0.06) * std.time.us_per_s);
+    const fduration = 6.0 + f32i(player.totalStat(.stamina)) * 0.06;
+    const duration = i64f(fduration * std.time.us_per_s);
 
     var rand = utils.rng.random();
     const angle = rand.float(f32) * std.math.tau;
     const radius = rand.float(f32) * 2.0;
-    _ = try world.add(Entity, .{
+    const rift_id = try world.add(Entity, .{
         .x = player.x + radius * @cos(angle),
         .y = player.y + radius * @sin(angle),
         .data_id = rift_data.id,
         .disappear_time = main.current_time + duration,
         .owner_map_id = player.map_id,
     });
+
+    const heal_radius = 7.0 + f32i(player.totalStat(.intelligence)) * 0.07;
+    for (world.listForType(Player).items) |*p| {
+        if (utils.distSqr(player.x, player.y, p.x, p.y) > 20 * 20) continue;
+        p.show_effects.append(main.allocator, .{
+            .eff_type = .ring,
+            .obj_type = .entity,
+            .map_id = rift_id,
+            .x1 = heal_radius,
+            .y1 = 1.0,
+            .x2 = fduration,
+            .y2 = 0.0,
+            .color = 0x00FF00,
+        }) catch main.oomPanic();
+    }
 }
 
 fn bloodfontCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
@@ -357,7 +402,7 @@ fn bloodfontCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
                 .color = 0xFF0000,
             } });
 
-            player.client.sendPacket(.{ .show_effect = .{
+            player.show_effects.append(main.allocator, .{
                 .eff_type = .potion,
                 .obj_type = .player,
                 .map_id = player.map_id,
@@ -366,7 +411,7 @@ fn bloodfontCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
                 .x2 = 0,
                 .y2 = 0,
                 .color = 0xFF0000,
-            } });
+            }) catch main.oomPanic();
         }
         player.ability_state.bloodfont = false;
         player.hit_multiplier = 1.0;
@@ -403,8 +448,7 @@ pub fn handleRavenousHunger(player: *Player) !void {
     var total_hp_gain: i32 = 0;
     var enemies_to_kill: std.ArrayListUnmanaged(usize) = .empty;
     defer enemies_to_kill.deinit(main.allocator);
-    const ShowEffectData = @typeInfo(network_data.S2CPacket).@"union".fields[@intFromEnum(network_data.S2CPacket.show_effect)].type;
-    var show_effects: std.ArrayListUnmanaged(ShowEffectData) = .empty;
+    var show_effects: std.ArrayListUnmanaged(network_data.ShowEffectItem) = .empty;
     defer show_effects.deinit(main.allocator);
     for (world.listForType(Enemy).items, 0..) |*e, i| {
         if (utils.distSqr(e.x, e.y, player.x, player.y) > radius_sqr or f32i(e.hp) / f32i(e.max_hp) > kill_perc) continue;
@@ -439,7 +483,7 @@ pub fn handleRavenousHunger(player: *Player) !void {
     var buf: [64]u8 = undefined;
     const hp_gain_text = if (hp_delta <= 0) "" else std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return;
     for (world.listForType(Player).items) |*other_player| {
-        for (show_effects.items) |show_eff| other_player.client.sendPacket(.{ .show_effect = show_eff });
+        other_player.show_effects.appendSlice(main.allocator, show_effects.items) catch main.oomPanic();
 
         if (hp_delta > 0) {
             other_player.client.sendPacket(.{ .notification = .{
@@ -449,7 +493,7 @@ pub fn handleRavenousHunger(player: *Player) !void {
                 .color = 0x00FF00,
             } });
 
-            other_player.client.sendPacket(.{ .show_effect = .{
+            other_player.show_effects.append(main.allocator, .{
                 .eff_type = .potion,
                 .obj_type = .player,
                 .map_id = player.map_id,
@@ -458,7 +502,7 @@ pub fn handleRavenousHunger(player: *Player) !void {
                 .x2 = 0,
                 .y2 = 0,
                 .color = 0x00FF00,
-            } });
+            }) catch main.oomPanic();
         }
     }
 }

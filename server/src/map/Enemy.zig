@@ -240,7 +240,7 @@ pub fn deinit(self: *Enemy) !void {
                 .color = 0x00FF00,
             } });
 
-            player.client.sendPacket(.{ .show_effect = .{
+            player.show_effects.append(main.allocator, .{
                 .eff_type = .potion,
                 .obj_type = .player,
                 .map_id = player.map_id,
@@ -249,7 +249,7 @@ pub fn deinit(self: *Enemy) !void {
                 .x2 = 0,
                 .y2 = 0,
                 .color = 0x00FF00,
-            } });
+            }) catch main.oomPanic();
         }
 
         if (player.hasCard("Ritual Sacrifice")) {
@@ -264,7 +264,7 @@ pub fn deinit(self: *Enemy) !void {
                 .color = 0x0000FF,
             } });
 
-            player.client.sendPacket(.{ .show_effect = .{
+            player.show_effects.append(main.allocator, .{
                 .eff_type = .potion,
                 .obj_type = .player,
                 .map_id = player.map_id,
@@ -273,7 +273,7 @@ pub fn deinit(self: *Enemy) !void {
                 .x2 = 0,
                 .y2 = 0,
                 .color = 0x0000FF,
-            } });
+            }) catch main.oomPanic();
         }
     }
 

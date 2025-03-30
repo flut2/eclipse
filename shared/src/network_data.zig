@@ -275,6 +275,36 @@ pub const EnemyProjList = struct {
     proj_ids: []const u8,
 };
 
+pub const ShowEffect = enum(u8) {
+    potion,
+    teleport,
+    stream,
+    throw,
+    area_blast,
+    dead,
+    trail,
+    diffuse,
+    flow,
+    trap,
+    lightning,
+    concentrate,
+    blast_wave,
+    earthquake,
+    flashing,
+    ring,
+};
+
+pub const ShowEffectItem = extern struct {
+    map_id: u32,
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+    color: u32,
+    eff_type: ShowEffect,
+    obj_type: ObjectType,
+};
+
 // All packets without variable length fields (like slices) should be extern, with proper alignment ordering.
 // This allows us to directly copy the struct into/from the buffer
 pub const C2SPacket = union(enum) {
@@ -335,33 +365,8 @@ pub const S2CPacket = union(enum) {
     dropped_portals: struct { map_ids: []const u32 },
     dropped_containers: struct { map_ids: []const u32 },
     dropped_allies: struct { map_ids: []const u32 },
+    show_effects: struct { effs: []const ShowEffectItem },
     notification: struct { obj_type: ObjectType, map_id: u32, message: []const u8, color: u32 },
-    show_effect: extern struct {
-        map_id: u32,
-        x1: f32,
-        y1: f32,
-        x2: f32,
-        y2: f32,
-        color: u32,
-        eff_type: enum(u8) {
-            potion,
-            teleport,
-            stream,
-            throw,
-            area_blast,
-            dead,
-            trail,
-            diffuse,
-            flow,
-            trap,
-            lightning,
-            concentrate,
-            blast_wave,
-            earthquake,
-            flashing,
-        },
-        obj_type: ObjectType,
-    },
     inv_result: extern struct { result: u8 },
     ping: extern struct { time: i64 },
     map_info: MapInfo,

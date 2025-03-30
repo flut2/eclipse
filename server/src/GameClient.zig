@@ -441,7 +441,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             player.hp = new_hp;
 
             var buf: [32]u8 = undefined;
-            player.client.sendPacket(.{ .show_effect = .{
+            player.show_effects.append(main.allocator, .{
                 .eff_type = .potion,
                 .color = 0xFFFFFF,
                 .map_id = player.map_id,
@@ -450,7 +450,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                 .x2 = 0,
                 .y1 = 0,
                 .y2 = 0,
-            } });
+            }) catch main.oomPanic();
 
             player.client.sendPacket(.{ .notification = .{
                 .message = std.fmt.bufPrint(&buf, "+{}", .{new_hp - old_hp}) catch continue,
@@ -466,7 +466,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
             player.mp = new_mp;
 
             var buf: [32]u8 = undefined;
-            player.client.sendPacket(.{ .show_effect = .{
+            player.show_effects.append(main.allocator, .{
                 .eff_type = .potion,
                 .color = 0xFFFFFF,
                 .map_id = player.map_id,
@@ -475,7 +475,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                 .x2 = 0,
                 .y1 = 0,
                 .y2 = 0,
-            } });
+            }) catch main.oomPanic();
 
             player.client.sendPacket(.{ .notification = .{
                 .message = std.fmt.bufPrint(&buf, "+{}", .{new_mp - old_mp}) catch continue,
@@ -495,7 +495,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                     player.hp = new_hp;
 
                     var buf: [32]u8 = undefined;
-                    player.client.sendPacket(.{ .show_effect = .{
+                    player.show_effects.append(main.allocator, .{
                         .eff_type = .potion,
                         .color = 0xFFFFFF,
                         .map_id = player.map_id,
@@ -504,7 +504,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                         .x2 = 0,
                         .y1 = 0,
                         .y2 = 0,
-                    } });
+                    }) catch main.oomPanic();
 
                     player.client.sendPacket(.{ .notification = .{
                         .message = std.fmt.bufPrint(&buf, "+{}", .{new_hp - old_hp}) catch continue,
@@ -525,7 +525,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                     player.mp = new_mp;
 
                     var buf: [32]u8 = undefined;
-                    player.client.sendPacket(.{ .show_effect = .{
+                    player.show_effects.append(main.allocator, .{
                         .eff_type = .potion,
                         .color = 0xFFFFFF,
                         .map_id = player.map_id,
@@ -534,7 +534,7 @@ fn processActivations(player: *Player, activations: []const game_data.Activation
                         .x2 = 0,
                         .y1 = 0,
                         .y2 = 0,
-                    } });
+                    }) catch main.oomPanic();
 
                     player.client.sendPacket(.{ .notification = .{
                         .message = std.fmt.bufPrint(&buf, "+{}", .{new_mp - old_mp}) catch continue,

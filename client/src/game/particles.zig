@@ -325,7 +325,7 @@ pub const Particle = union(enum) {
                     h,
                     assets.particle,
                     .{
-                        .shadow_texel_mult = 1.0 / particle.size,
+                        .sort_extra = px_per_tile / 2.0 - z_off,
                         .alpha_mult = particle.alpha_mult,
                         .color = particle.color,
                         .color_intensity = 1.0,
@@ -581,19 +581,35 @@ pub const HealEffect = struct {
 };
 
 pub const RingEffect = struct {
-    start_x: f32,
-    start_y: f32,
     radius: f32,
     color: u32,
     cooldown: i64,
+    owner_type: network_data.ObjectType,
+    owner_map_id: u32,
     last_activate: i64 = -1,
+    start_time: i64 = -1,
+    duration: i64 = std.math.maxInt(i64),
 
     pub fn addToMap(effect: RingEffect) void {
         map.addListForType(ParticleEffect).append(main.allocator, .{ .ring = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *RingEffect, time: i64, _: f32) bool {
+        if (self.duration != std.math.maxInt(i64)) {
+            if (self.start_time == -1) {
+                self.start_time = main.current_time;
+            } else if (time - self.start_time >= self.duration) return false;
+        }
+
         if (self.cooldown > 0 and time < self.last_activate + self.cooldown) return true;
+
+        const x, const y = blk: switch (self.owner_type) {
+            inline else => |obj_enum| {
+                if (map.findObjectCon(GameServer.ObjEnumToType(obj_enum), self.owner_map_id)) |obj| {
+                    break :blk .{ obj.x, obj.y };
+                } else return false;
+            },
+        };
 
         const duration = 0.2 * std.time.us_per_s;
         for (0..12) |i| {
@@ -602,10 +618,10 @@ pub const RingEffect = struct {
             const cos_angle = @cos(angle);
             const sin_angle = @sin(angle);
 
-            const start_x = self.start_x + self.radius * cos_angle;
-            const start_y = self.start_y + self.radius * sin_angle;
-            const end_x = self.start_x + self.radius * 0.9 * cos_angle;
-            const end_y = self.start_y + self.radius * 0.9 * sin_angle;
+            const start_x = x + self.radius * cos_angle;
+            const start_y = y + self.radius * sin_angle;
+            const end_x = x + self.radius * 0.9 * cos_angle;
+            const end_y = y + self.radius * 0.9 * sin_angle;
 
             SparkerParticle.addToMap(.{
                 .size = 1.0,

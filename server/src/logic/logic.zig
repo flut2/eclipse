@@ -84,7 +84,7 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
             const msg = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return false;
 
             const obj_type: network_data.ObjectType = if (@TypeOf(host.*) == Enemy) .enemy else .entity;
-            for (world.listForType(Player).items) |p| {
+            for (world.listForType(Player).items) |*p| {
                 p.client.sendPacket(.{ .notification = .{
                     .obj_type = obj_type,
                     .map_id = e.map_id,
@@ -92,7 +92,7 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
                     .color = 0x00FF00,
                 } });
 
-                p.client.sendPacket(.{ .show_effect = .{
+                p.show_effects.append(main.allocator, .{
                     .eff_type = .trail,
                     .obj_type = obj_type,
                     .map_id = host.map_id,
@@ -101,7 +101,7 @@ pub fn heal(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64
                     .x2 = 0,
                     .y2 = 0,
                     .color = 0x00FF00,
-                } });
+                }) catch main.oomPanic();
             }
 
             return true;
@@ -247,6 +247,8 @@ pub fn aoe(comptime src_loc: std.builtin.SourceLocation, host: anytype, dt: i64,
     color: u32 = 0xFFFFFF,
 }) void {
     verifyType(@TypeOf(host));
+
+    if (host.condition.stunned or host.condition.encased_in_stone) return;
 
     const world = maps.worlds.getPtr(host.world_id) orelse return;
 

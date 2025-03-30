@@ -99,6 +99,7 @@ drops: struct {
     container: std.ArrayListUnmanaged(u32) = .empty,
     ally: std.ArrayListUnmanaged(u32) = .empty,
 } = .{},
+show_effects: std.ArrayListUnmanaged(network_data.ShowEffectItem) = .empty,
 projectiles: [256]?u32 = @splat(null),
 position_records: [256]struct { x: f32, y: f32 } = @splat(.{ .x = std.math.maxInt(u16), .y = std.math.maxInt(u16) }),
 hp_records: [256]i32 = @splat(-1),
@@ -599,6 +600,11 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
             self.client.sendPacket(@unionInit(network_data.S2CPacket, mapping[0], .{
                 .list = mapping[1][last_idx..],
             }));
+    }
+
+    if (self.show_effects.items.len > 0) {
+        self.client.sendPacket(.{ .show_effects = .{ .effs = self.show_effects.items } });
+        self.show_effects.clearRetainingCapacity();
     }
 }
 

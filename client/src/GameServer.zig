@@ -76,7 +76,7 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?
         .map_info => handleMapInfo,
         .notification => handleNotification,
         .ping => handlePing,
-        .show_effect => handleShowEffect,
+        .show_effects => handleShowEffects,
         .text => handleText,
         .card_options => handleCardOptions,
         .talent_upgrade_response => handleTalentUpgradeResponse,
@@ -523,82 +523,92 @@ fn handlePing(self: *Server, data: PacketData(.ping)) void {
     if (logRead(.tick)) std.log.debug("Recv - Ping: {}", .{data});
 }
 
-fn handleShowEffect(_: *Server, data: PacketData(.show_effect)) void {
-    switch (data.eff_type) {
-        .area_blast => {
-            particles.AoeEffect.addToMap(.{
-                .x = data.x1,
-                .y = data.y1,
-                .radius = data.x2,
-                .color = data.color,
-            });
-        },
-        .throw => {
-            var start_x = data.x2;
-            var start_y = data.y2;
+fn handleShowEffects(_: *Server, data_list: PacketData(.show_effects)) void {
+    for (data_list.effs) |data| {
+        switch (data.eff_type) {
+            .area_blast => {
+                particles.AoeEffect.addToMap(.{
+                    .x = data.x1,
+                    .y = data.y1,
+                    .radius = data.x2,
+                    .color = data.color,
+                });
+            },
+            .throw => {
+                var start_x = data.x2;
+                var start_y = data.y2;
 
-            switch (data.obj_type) {
-                inline else => |inner| {
-                    const T = ObjEnumToType(inner);
-                    if (map.findObjectCon(T, data.map_id)) |obj| {
-                        start_x = obj.x;
-                        start_y = obj.y;
-                    }
-                },
-            }
-            particles.ThrowEffect.addToMap(.{
-                .start_x = start_x,
-                .start_y = start_y,
-                .end_x = data.x1,
-                .end_y = data.y1,
-                .color = data.color,
-                .duration = 1500,
-            });
-        },
-        .teleport => {
-            particles.TeleportEffect.addToMap(.{
-                .x = data.x1,
-                .y = data.y1,
-            });
-        },
-        .trail => {
-            var start_x = data.x2;
-            var start_y = data.y2;
+                switch (data.obj_type) {
+                    inline else => |inner| {
+                        const T = ObjEnumToType(inner);
+                        if (map.findObjectCon(T, data.map_id)) |obj| {
+                            start_x = obj.x;
+                            start_y = obj.y;
+                        }
+                    },
+                }
+                particles.ThrowEffect.addToMap(.{
+                    .start_x = start_x,
+                    .start_y = start_y,
+                    .end_x = data.x1,
+                    .end_y = data.y1,
+                    .color = data.color,
+                    .duration = 1500,
+                });
+            },
+            .teleport => {
+                particles.TeleportEffect.addToMap(.{
+                    .x = data.x1,
+                    .y = data.y1,
+                });
+            },
+            .trail => {
+                var start_x = data.x2;
+                var start_y = data.y2;
 
-            switch (data.obj_type) {
-                inline else => |inner| {
-                    const T = ObjEnumToType(inner);
-                    if (map.findObjectCon(T, data.map_id)) |obj| {
-                        start_x = obj.x;
-                        start_y = obj.y;
-                    }
-                },
-            }
+                switch (data.obj_type) {
+                    inline else => |inner| {
+                        const T = ObjEnumToType(inner);
+                        if (map.findObjectCon(T, data.map_id)) |obj| {
+                            start_x = obj.x;
+                            start_y = obj.y;
+                        }
+                    },
+                }
 
-            particles.LineEffect.addToMap(.{
-                .start_x = start_x,
-                .start_y = start_y,
-                .end_x = data.x1,
-                .end_y = data.y1,
+                particles.LineEffect.addToMap(.{
+                    .start_x = start_x,
+                    .start_y = start_y,
+                    .end_x = data.x1,
+                    .end_y = data.y1,
+                    .color = data.color,
+                });
+            },
+            .potion => {
+                // the effect itself handles checks for invalid entity
+                particles.HealEffect.addToMap(.{
+                    .target_obj_type = data.obj_type,
+                    .target_map_id = data.map_id,
+                    .color = data.color,
+                });
+            },
+            .earthquake => {
+                main.camera.quake = true;
+                main.camera.quake_amount = 0.0;
+            },
+            .ring => particles.RingEffect.addToMap(.{
+                .owner_type = data.obj_type,
+                .owner_map_id = data.map_id,
+                .radius = data.x1,
+                .cooldown = i64f(data.y1 * std.time.us_per_s),
+                .duration = if (data.x2 == 0.0) std.math.maxInt(i64) else i64f(data.x2 * std.time.us_per_s),
                 .color = data.color,
-            });
-        },
-        .potion => {
-            // the effect itself handles checks for invalid entity
-            particles.HealEffect.addToMap(.{
-                .target_obj_type = data.obj_type,
-                .target_map_id = data.map_id,
-                .color = data.color,
-            });
-        },
-        .earthquake => {
-            main.camera.quake = true;
-            main.camera.quake_amount = 0.0;
-        },
-        else => {},
+            }),
+            else => {},
+        }
     }
 
-    if (logRead(.non_tick)) std.log.debug("Recv - ShowEffect: {}", .{data});
+    if (logRead(.non_tick)) std.log.debug("Recv - ShowEffects: {}", .{data_list});
 }
 
 fn handleText(_: *Server, data: PacketData(.text)) void {

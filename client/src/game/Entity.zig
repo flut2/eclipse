@@ -66,6 +66,17 @@ pub fn addToMap(entity_data: Entity) void {
         return;
     };
 
+    if (self.data.show_effects) |effs| for (effs) |eff| switch (eff.effect) {
+        .ring => particles.RingEffect.addToMap(.{
+            .color = eff.color,
+            .cooldown = i64f(eff.cooldown * std.time.us_per_s),
+            .radius = eff.radius,
+            .owner_type = .entity,
+            .owner_map_id = self.map_id,
+        }),
+        else => std.log.err("Unimplemented ShowEffect data: {}", .{eff.effect}),
+    };
+
     texParse: {
         if (self.data.textures.len == 0) {
             std.log.err("Entity with data id {} has an empty texture list, parsing failed", .{self.data_id});
@@ -148,7 +159,6 @@ pub fn addToMap(entity_data: Entity) void {
 
 pub fn deinit(self: *Entity) void {
     base.deinit(self);
-
     if (self.data.occupy_square or self.data.full_occupy or self.data.is_wall)
         if (map.getSquareRef(self.x, self.y, true)) |square| {
             if (square.entity_map_id == self.map_id) square.entity_map_id = std.math.maxInt(u32);

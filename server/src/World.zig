@@ -414,7 +414,7 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
 
     for (self.listForType(Player).items) |*player| {
         if (utils.distSqr(player.x, player.y, x, y) > 16 * 16) continue;
-        player.client.sendPacket(.{ .show_effect = .{
+        player.show_effects.append(main.allocator, .{
             .obj_type = owner_type,
             .map_id = owner_id,
             .eff_type = .area_blast,
@@ -423,7 +423,7 @@ pub fn aoe(self: *World, comptime T: type, x: f32, y: f32, owner_type: network_d
             .x2 = radius,
             .y2 = 0.0,
             .color = opts.aoe_color,
-        } });
+        }) catch main.oomPanic();
     }
 }
 
