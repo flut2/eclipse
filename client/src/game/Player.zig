@@ -155,7 +155,7 @@ pub fn setRpc(self: Player) !void {
             .small_image = .create(self.data.rpc_name),
             .small_text = try .createFromFormat("{s} (Aether {})", .{ self.data.name, self.aether }),
         },
-        .state = try .createFromFormat("In {s}", .{map.info.name}),
+        .state = try .createFromFormat("In {s}", .{if (map.info.name.len == 0) "the Retrieve" else map.info.name}),
         .timestamps = .{ .start = main.rpc_start },
     });
 }
