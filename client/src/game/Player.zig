@@ -1,6 +1,7 @@
 const std = @import("std");
 const float_us: comptime_float = std.time.us_per_s;
 
+const build_options = @import("options");
 const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
@@ -138,7 +139,25 @@ pub fn addToMap(player_data: Player) void {
         self.name_text_data.?.setText(if (self.name) |player_name| player_name else self.data.name);
     }
 
+    if (self.map_id == map.info.player_map_id)
+        self.setRpc() catch |e| {
+            std.log.err("Setting Discord RPC failed: {}", .{e});
+        };
+
     map.addListForType(Player).append(main.allocator, self) catch @panic("Adding player failed");
+}
+
+fn setRpc(self: Player) !void {
+    try main.rpc_client.setPresence(.{
+        .assets = .{
+            .large_image = .create("logo"),
+            .large_text = .create("Alpha v" ++ build_options.version),
+            .small_image = .create(self.data.rpc_name),
+            .small_text = try .createFromFormat("Aether {} {s}", .{ self.aether, self.data.name }),
+        },
+        .state = try .createFromFormat("In {s}", .{map.info.name}),
+        .timestamps = .{ .start = main.rpc_start },
+    });
 }
 
 pub fn deinit(self: *Player) void {

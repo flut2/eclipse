@@ -2,6 +2,7 @@
     {
         .id = 0,
         .name = "Demon",
+        .rpc_name = "demon",
         .description = "A brawler focused on manipulating life essence.",
         .texture = { "players": 2 },
         .item_types = [
@@ -358,6 +359,7 @@
     {
         .id = 1,
         .name = "Golem",
+        .rpc_name = "golem",
         .description = "An earth-bending tank specializing in damage prevention.",
         .texture = { "players": 1 },
         .item_types = [
@@ -724,6 +726,7 @@
     {
         .id = 2,
         .name = "Chronomancer",
+        .rpc_name = "chrono",
         .description = "A tough bruiser mending time to deal and to prevent damage.",
         .texture = { "players": 0 },
         .item_types = [

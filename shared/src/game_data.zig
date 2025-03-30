@@ -334,6 +334,7 @@ pub const TalentData = struct {
 pub const ClassData = struct {
     id: u16,
     name: []const u8,
+    rpc_name: []const u8,
     description: []const u8,
     texture: TextureData,
     item_types: []const ItemType,
@@ -341,7 +342,6 @@ pub const ClassData = struct {
     stats: ClassStats,
     hit_sound: []const u8 = "Unknown.mp3",
     death_sound: []const u8 = "Unknown.mp3",
-    rpc_name: []const u8 = "Unknown",
     abilities: [4]AbilityData,
     light: LightData = .{},
     float: FloatData = .{},
