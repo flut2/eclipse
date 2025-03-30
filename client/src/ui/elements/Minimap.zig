@@ -73,7 +73,7 @@ pub fn mouseMove(self: *Minimap, x: f32, y: f32, x_offset: f32, y_offset: f32) b
             x,
             y,
         ) < 20 * 20) {
-            const player = map.findObject(Player, icon.map_id, .con) orelse continue;
+            const player = map.findObjectCon(Player, icon.map_id) orelse continue;
             self.list_items[self.list_item_idx] = .{
                 .data_id = player.data_id,
                 .name = player.name orelse "Unknown",

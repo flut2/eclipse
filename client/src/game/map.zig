@@ -222,33 +222,39 @@ pub fn setMapInfo(data: network_data.MapInfo) void {
     // main.need_force_update = true;
 }
 
-const Constness = enum { con, ref };
-pub fn findObject(comptime T: type, map_id: u32, comptime constness: Constness) if (constness == .con) ?T else ?*T {
-    switch (constness) {
-        .con => for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj,
-        .ref => for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj,
-    }
+pub fn findObjectCon(comptime T: type, map_id: u32) ?T {
+    for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
     return null;
 }
 
-// Using this is a bad idea if you don't know what you're doing
-pub fn findObjectWithAddList(comptime T: type, map_id: u32, comptime constness: Constness) if (constness == .con) ?T else ?*T {
-    switch (constness) {
-        .con => {
-            for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
-            for (addListForType(T).items) |obj| if (obj.map_id == map_id) return obj;
-        },
-        .ref => {
-            for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
-            for (addListForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
-        },
-    }
+pub fn findObjectRef(comptime T: type, map_id: u32) ?*T {
+    for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
     return null;
 }
 
-pub fn localPlayer(comptime constness: Constness) if (constness == .con) ?Player else ?*Player {
+/// Using this is a bad idea if you don't know what you're doing
+pub fn findObjectWithAddListCon(comptime T: type, map_id: u32) ?T {
+    for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
+    for (addListForType(T).items) |obj| if (obj.map_id == map_id) return obj;
+    return null;
+}
+
+/// Using this is a bad idea if you don't know what you're doing
+pub fn findObjectWithAddListRef(comptime T: type, map_id: u32) ?*T {
+    for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
+    for (addListForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
+    return null;
+}
+
+pub fn localPlayerRef() ?*Player {
     if (info.player_map_id == std.math.maxInt(u32)) return null;
-    if (findObject(Player, info.player_map_id, constness)) |player| return player;
+    if (findObjectRef(Player, info.player_map_id)) |player| return player;
+    return null;
+}
+
+pub fn localPlayerCon() ?Player {
+    if (info.player_map_id == std.math.maxInt(u32)) return null;
+    if (findObjectCon(Player, info.player_map_id)) |player| return player;
     return null;
 }
 
@@ -432,7 +438,7 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
         const float_time_ms = f32i(time) / std.time.us_per_ms;
 
         for (main.camera.min_y..main.camera.max_y) |y| for (main.camera.min_x..main.camera.max_x) |x|
-            getSquare(f32i(x), f32i(y), false, .ref).?.draw(&cur_draw_data.grounds, &cur_draw_data.lights, float_time_ms);
+            getSquareRef(f32i(x), f32i(y), false).?.draw(&cur_draw_data.grounds, &cur_draw_data.lights, float_time_ms);
 
         inline for (.{ Enemy, Player, Ally }) |T|
             for (listForType(T).items) |*obj| obj.draw(
@@ -564,9 +570,9 @@ pub fn validPos(x: u32, y: u32) bool {
     return !(info.width == 0 or info.height == 0 or x > info.width - 1 or y > info.height - 1);
 }
 
-// check_validity should always be on, unless you profiled that it causes clear slowdowns in your code.
-// even then, you should be very sure that the input can't ever go wrong or that it going wrong is inconsequential
-pub fn getSquare(x: f32, y: f32, comptime check_validity: bool, comptime constness: Constness) if (constness == .con) ?Square else ?*Square {
+/// `check_validity` should always be on, unless you profiled that it causes clear slowdowns in your code.
+/// Even then, you should be very sure that the input can't ever go wrong or that it going wrong is inconsequential
+pub fn getSquareCon(x: f32, y: f32, comptime check_validity: bool) ?Square {
     if (check_validity and (x < 0 or y < 0)) {
         @branchHint(.unlikely);
         return null;
@@ -579,10 +585,27 @@ pub fn getSquare(x: f32, y: f32, comptime check_validity: bool, comptime constne
         return null;
     }
 
-    const square = switch (constness) {
-        .con => squares[floor_y * info.width + floor_x],
-        .ref => &squares[floor_y * info.width + floor_x],
-    };
+    const square = squares[floor_y * info.width + floor_x];
+    if (check_validity and square.data_id == Square.empty_tile) return null;
+    return square;
+}
+
+/// `check_validity` should always be on, unless you profiled that it causes clear slowdowns in your code.
+/// Even then, you should be very sure that the input can't ever go wrong or that it going wrong is inconsequential
+pub fn getSquareRef(x: f32, y: f32, comptime check_validity: bool) ?*Square {
+    if (check_validity and (x < 0 or y < 0)) {
+        @branchHint(.unlikely);
+        return null;
+    }
+
+    const floor_x = u32f(x);
+    const floor_y = u32f(y);
+    if (check_validity and !validPos(floor_x, floor_y)) {
+        @branchHint(.unlikely);
+        return null;
+    }
+
+    const square = &squares[floor_y * info.width + floor_x];
     if (check_validity and square.data_id == Square.empty_tile) return null;
     return square;
 }

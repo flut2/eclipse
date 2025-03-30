@@ -66,7 +66,7 @@ pub fn draw(
     var atlas_data = self.atlas_data;
 
     var sink: f32 = 1.0;
-    if (map.getSquare(self.x, self.y, true, .con)) |square| {
+    if (map.getSquareCon(self.x, self.y, true)) |square| {
         if (game_data.ground.from_id.get(square.data_id)) |data| sink += if (data.sink) 0.75 else 0;
     }
     atlas_data.tex_h /= sink;

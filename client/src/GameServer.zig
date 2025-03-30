@@ -263,7 +263,7 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
         std.log.info("Send: {}", .{packet}); // TODO: custom formatting
 
     if (packet == .use_portal or packet == .escape)
-        if (map.localPlayer(.ref)) |player| {
+        if (map.localPlayerRef()) |player| {
             player.x = -1.0;
             player.y = -1.0;
             map.clearMoveRecords(main.current_time);
@@ -344,7 +344,7 @@ fn logRead(comptime tick: enum { non_tick, tick }) bool {
 fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
     if (logRead(.non_tick)) std.log.debug("Recv - AllyProjectile: {}", .{data});
 
-    if (map.findObject(Player, data.player_map_id, .ref)) |player| {
+    if (map.findObjectRef(Player, data.player_map_id)) |player| {
         const item_data = game_data.item.from_id.getPtr(data.item_data_id) orelse return;
         Projectile.addToMap(.{
             .x = player.x,
@@ -374,7 +374,7 @@ fn handleAoe(_: *Server, data: PacketData(.aoe)) void {
 }
 
 fn handleDamage(_: *Server, data: PacketData(.damage)) void {
-    if (map.findObject(Player, data.player_map_id, .ref)) |player|
+    if (map.findObjectRef(Player, data.player_map_id)) |player|
         map.takeDamage(
             player,
             data.amount,
@@ -396,7 +396,7 @@ fn handleDeath(self: *Server, data: PacketData(.death)) void {
 fn handleEnemyProjectile(_: *Server, data: PacketData(.enemy_projectile)) void {
     if (logRead(.non_tick)) std.log.debug("Recv - EnemyProjectile: {}", .{data});
 
-    var owner = if (map.findObject(Enemy, data.enemy_map_id, .ref)) |enemy| enemy else return;
+    var owner = if (map.findObjectRef(Enemy, data.enemy_map_id)) |enemy| enemy else return;
 
     const owner_data = game_data.enemy.from_id.getPtr(owner.data_id);
     if (owner_data == null or owner_data.?.projectiles == null or data.proj_data_id >= owner_data.?.projectiles.?.len)
@@ -491,7 +491,7 @@ fn handleNotification(_: *Server, data: PacketData(.notification)) void {
     switch (data.obj_type) {
         inline .player, .ally, .enemy, .entity => |inner| {
             const T = ObjEnumToType(inner);
-            if (map.findObject(T, data.map_id, .ref)) |obj| {
+            if (map.findObjectRef(T, data.map_id)) |obj| {
                 const texts_len = obj.status_texts.items.len;
                 const last_add = if (texts_len > 0) obj.status_texts.items[texts_len - 1].show_at else -1;
                 const cur_time = main.current_time;
@@ -540,7 +540,7 @@ fn handleShowEffect(_: *Server, data: PacketData(.show_effect)) void {
             switch (data.obj_type) {
                 inline else => |inner| {
                     const T = ObjEnumToType(inner);
-                    if (map.findObject(T, data.map_id, .con)) |obj| {
+                    if (map.findObjectCon(T, data.map_id)) |obj| {
                         start_x = obj.x;
                         start_y = obj.y;
                     }
@@ -568,7 +568,7 @@ fn handleShowEffect(_: *Server, data: PacketData(.show_effect)) void {
             switch (data.obj_type) {
                 inline else => |inner| {
                     const T = ObjEnumToType(inner);
-                    if (map.findObject(T, data.map_id, .con)) |obj| {
+                    if (map.findObjectCon(T, data.map_id)) |obj| {
                         start_x = obj.x;
                         start_y = obj.y;
                     }
@@ -610,7 +610,7 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
     if (data.map_id != std.math.maxInt(u32)) {
         switch (data.obj_type) {
             inline .player, .enemy => |inner| {
-                if (map.findObject(ObjEnumToType(inner), data.map_id, .ref)) |obj| {
+                if (map.findObjectRef(ObjEnumToType(inner), data.map_id)) |obj| {
                     if (obj.speech_balloon) |*balloon| balloon.deinit();
                     obj.speech_balloon = .create(
                         main.current_time,
@@ -639,7 +639,7 @@ fn handlePlayAnimation(_: *Server, data: PacketData(.play_animation)) void {
         .enemy, .player, .ally => |value| std.log.err("Unsupported PlayAnimation for type {}", .{value}),
         inline else => |inner| {
             const T = ObjEnumToType(inner);
-            if (map.findObject(T, data.map_id, .ref)) |obj| {
+            if (map.findObjectRef(T, data.map_id)) |obj| {
                 obj.anim_idx = 0;
                 obj.next_anim = -1;
                 if (data.repeating)
@@ -661,7 +661,7 @@ fn handleDropProjs(_: *Server, data: PacketData(.drop_projs)) void {
     for (data.lists) |list| {
         projs_to_remove.clearRetainingCapacity();
 
-        for (proj_list.items, 0..) |*proj, i| {
+        for (proj_list.items, 0..) |*proj, i|
             if (proj.damage_players and
                 proj.owner_map_id == list.enemy_map_id and
                 std.mem.indexOfScalar(u8, list.proj_ids, proj.index) != null and
@@ -669,8 +669,7 @@ fn handleDropProjs(_: *Server, data: PacketData(.drop_projs)) void {
             {
                 proj.deinit();
                 projs_to_remove.append(main.allocator, i) catch main.oomPanic();
-            }
-        }
+            };
 
         var iter = std.mem.reverseIterator(projs_to_remove.items);
         while (iter.next()) |i| _ = proj_list.orderedRemove(i);
@@ -681,7 +680,7 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     defer {
         if (main.tick_frame) {
             const time = main.current_time;
-            if (map.localPlayer(.ref)) |local_player| {
+            if (map.localPlayerRef()) |local_player| {
                 self.sendPacket(.{ .move = .{
                     .tick_id = data.tick_id,
                     .time = time,
@@ -756,7 +755,7 @@ fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
 
     for (list) |obj| {
         var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };
-        const current_obj = map.findObject(T, obj.map_id, .ref) orelse findAddObj: {
+        const current_obj = map.findObjectRef(T, obj.map_id) orelse findAddObj: {
             for (map.addListForType(T).items) |*add_obj| {
                 if (add_obj.map_id == obj.map_id) break :findAddObj add_obj;
             }

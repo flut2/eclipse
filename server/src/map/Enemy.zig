@@ -226,7 +226,7 @@ pub fn deinit(self: *Enemy) !void {
 
     var iter = self.damages_dealt.iterator();
     while (iter.next()) |entry| {
-        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+        const player = world.findRef(Player, entry.key_ptr.*) orelse continue;
         const dmg = entry.value_ptr.*;
         if (player.hasCard("Vampiric Enchantment")) {
             const old_hp = player.hp;
@@ -353,11 +353,11 @@ pub fn damage(
         self.condition,
     ) + true_dmg);
     if (owner_type == .player) {
-        if (world.find(Player, owner_id, .con)) |player| fdmg *= player.damage_multiplier;
+        if (world.findCon(Player, owner_id)) |player| fdmg *= player.damage_multiplier;
     }
     const dmg = i32f(fdmg);
     if (self.condition.encased_in_stone) {
-        if (world.find(Ally, self.obelisk_map_id, .ref)) |obelisk| {
+        if (world.findRef(Ally, self.obelisk_map_id)) |obelisk| {
             obelisk.damage(.enemy, self.map_id, 0, 0, dmg, null);
         } else self.clearCondition(.encased_in_stone);
     }
@@ -365,7 +365,7 @@ pub fn damage(
 
     const map_id = switch (owner_type) {
         .player => owner_id,
-        .ally => (world.find(Ally, owner_id, .con) orelse return).owner_map_id,
+        .ally => (world.findCon(Ally, owner_id) orelse return).owner_map_id,
         else => return,
     };
 

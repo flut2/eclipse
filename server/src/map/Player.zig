@@ -346,7 +346,7 @@ pub fn damage(
     if (self.hp <= 0) {
         const owner_name = blk: {
             const world = maps.worlds.getPtr(self.world_id) orelse break :blk "Unknown";
-            break :blk (world.find(Enemy, owner_id, .con) orelse break :blk "Unknown").data.name;
+            break :blk (world.findCon(Enemy, owner_id) orelse break :blk "Unknown").data.name;
         };
         self.death(owner_name) catch return;
         return;

@@ -238,10 +238,10 @@ pub fn draw(
     if (update_blends) {
         const current_prio = data.blend_prio;
         const disable_blend = data.disable_blend or data.rug_textures != null;
-        const left_sq = map.getSquare(self.x - 1, self.y, true, .ref);
-        const top_sq = map.getSquare(self.x, self.y - 1, true, .ref);
-        const right_sq = if (self.x < std.math.maxInt(u32)) map.getSquare(self.x + 1, self.y, true, .ref) else null;
-        const bottom_sq = if (self.y < std.math.maxInt(u32)) map.getSquare(self.x, self.y + 1, true, .ref) else null;
+        const left_sq = map.getSquareRef(self.x - 1, self.y, true);
+        const top_sq = map.getSquareRef(self.x, self.y - 1, true);
+        const right_sq = if (self.x < std.math.maxInt(u32)) map.getSquareRef(self.x + 1, self.y, true) else null;
+        const bottom_sq = if (self.y < std.math.maxInt(u32)) map.getSquareRef(self.x, self.y + 1, true) else null;
         updateBlendAtDir(self, left_sq, current_prio, disable_blend, left_blend_dir);
         updateBlendAtDir(self, top_sq, current_prio, disable_blend, top_blend_dir);
         updateBlendAtDir(self, right_sq, current_prio, disable_blend, right_blend_dir);
@@ -276,10 +276,10 @@ pub fn update(square: *Square) void {
     const current_prio = data.blend_prio;
     const has_rugs = data.rug_textures != null;
     const disable_blend = data.disable_blend or has_rugs;
-    const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
-    const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
-    const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
-    const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
+    const left_sq = map.getSquareRef(square.x - 1, square.y, true);
+    const top_sq = map.getSquareRef(square.x, square.y - 1, true);
+    const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquareRef(square.x + 1, square.y, true) else null;
+    const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquareRef(square.x, square.y + 1, true) else null;
     updateBlendAtDir(square, left_sq, current_prio, disable_blend, left_blend_dir);
     updateBlendAtDir(square, top_sq, current_prio, disable_blend, top_blend_dir);
     updateBlendAtDir(square, right_sq, current_prio, disable_blend, right_blend_dir);
@@ -291,11 +291,11 @@ pub fn update(square: *Square) void {
         if (top_sq) |sq| sq.updateRugs(current_data_id);
         if (right_sq) |sq| sq.updateRugs(current_data_id);
         if (bottom_sq) |sq| sq.updateRugs(current_data_id);
-        const top_left_sq = map.getSquare(square.x - 1, square.y - 1, true, .ref);
-        const top_right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y - 1, true, .ref) else null;
-        const bottom_left_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x - 1, square.y + 1, true, .ref) else null;
+        const top_left_sq = map.getSquareRef(square.x - 1, square.y - 1, true);
+        const top_right_sq = if (square.x < std.math.maxInt(u32)) map.getSquareRef(square.x + 1, square.y - 1, true) else null;
+        const bottom_left_sq = if (square.y < std.math.maxInt(u32)) map.getSquareRef(square.x - 1, square.y + 1, true) else null;
         const bottom_right_sq = if (square.x < std.math.maxInt(u32) and square.y < std.math.maxInt(u32))
-            map.getSquare(square.x + 1, square.y + 1, true, .ref)
+            map.getSquareRef(square.x + 1, square.y + 1, true)
         else
             null;
         if (top_left_sq) |sq| sq.updateRugs(current_data_id);
@@ -309,10 +309,10 @@ fn updateRugs(square: *Square, current_data_id: u16) void {
     const data = game_data.ground.from_id.get(square.data_id) orelse return;
     const rug_tex = data.rug_textures orelse return;
 
-    const left_sq = map.getSquare(square.x - 1, square.y, true, .ref);
-    const top_sq = map.getSquare(square.x, square.y - 1, true, .ref);
-    const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y, true, .ref) else null;
-    const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x, square.y + 1, true, .ref) else null;
+    const left_sq = map.getSquareRef(square.x - 1, square.y, true);
+    const top_sq = map.getSquareRef(square.x, square.y - 1, true);
+    const right_sq = if (square.x < std.math.maxInt(u32)) map.getSquareRef(square.x + 1, square.y, true) else null;
+    const bottom_sq = if (square.y < std.math.maxInt(u32)) map.getSquareRef(square.x, square.y + 1, true) else null;
     defer {
         const current_prio = data.blend_prio;
         updateBlendAtDir(square, left_sq, current_prio, true, left_blend_dir);
@@ -321,11 +321,11 @@ fn updateRugs(square: *Square, current_data_id: u16) void {
         updateBlendAtDir(square, bottom_sq, current_prio, true, bottom_blend_dir);
     }
 
-    const top_left_sq = map.getSquare(square.x - 1, square.y - 1, true, .ref);
-    const top_right_sq = if (square.x < std.math.maxInt(u32)) map.getSquare(square.x + 1, square.y - 1, true, .ref) else null;
-    const bottom_left_sq = if (square.y < std.math.maxInt(u32)) map.getSquare(square.x - 1, square.y + 1, true, .ref) else null;
+    const top_left_sq = map.getSquareRef(square.x - 1, square.y - 1, true);
+    const top_right_sq = if (square.x < std.math.maxInt(u32)) map.getSquareRef(square.x + 1, square.y - 1, true) else null;
+    const bottom_left_sq = if (square.y < std.math.maxInt(u32)) map.getSquareRef(square.x - 1, square.y + 1, true) else null;
     const bottom_right_sq = if (square.x < std.math.maxInt(u32) and square.y < std.math.maxInt(u32))
-        map.getSquare(square.x + 1, square.y + 1, true, .ref)
+        map.getSquareRef(square.x + 1, square.y + 1, true)
     else
         null;
     const left_eq = equals(left_sq, current_data_id);

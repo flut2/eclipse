@@ -72,7 +72,7 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
-        const player = world.find(Player, entry.key_ptr.*, .con) orelse continue;
+        const player = world.findCon(Player, entry.key_ptr.*) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
         var max_rarity: game_data.ItemRarity = .common;
@@ -176,7 +176,7 @@ pub fn dropCards(host: anytype, comptime loots: []const CardLoot) void {
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     playerLoop: while (iter.next()) |entry| {
-        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue :playerLoop;
+        const player = world.findRef(Player, entry.key_ptr.*) orelse continue :playerLoop;
         if (player.selecting_cards != null or player.cards.len >= player.aether * 5) continue;
 
         const fdamage = f32i(entry.value_ptr.*);
@@ -225,7 +225,7 @@ pub fn dropResources(host: anytype, comptime loots: []const ResourceLoot) void {
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
-        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+        const player = world.findRef(Player, entry.key_ptr.*) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
         inline for (loots) |loot| @"continue": {
@@ -265,7 +265,7 @@ pub fn dropCurrency(host: anytype, comptime loots: []const CurrencyLoot) void {
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
-        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+        const player = world.findRef(Player, entry.key_ptr.*) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
         inline for (loots) |loot| @"continue": {
@@ -294,7 +294,7 @@ pub fn dropSpirits(host: anytype, comptime loot: SpiritLoot) void {
     var iter = host.damages_dealt.iterator();
     const fmax_hp = f32i(host.max_hp);
     while (iter.next()) |entry| {
-        const player = world.find(Player, entry.key_ptr.*, .ref) orelse continue;
+        const player = world.findRef(Player, entry.key_ptr.*) orelse continue;
 
         const fdamage = f32i(entry.value_ptr.*);
         if (fdamage / fmax_hp <= loot.threshold or loot.chance < rand.float(f32)) continue;

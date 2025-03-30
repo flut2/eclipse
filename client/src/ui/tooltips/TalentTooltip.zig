@@ -187,7 +187,7 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         self.root.base.y = if (up_y < 0) params.y + 5 else up_y;
     }
 
-    const player = map.localPlayer(.con) orelse return;
+    const player = map.localPlayerCon() orelse return;
     if (player.aether < 1) return;
 
     if (self.last_aether == player.aether and

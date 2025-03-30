@@ -223,7 +223,7 @@ pub fn orbitPlayer(host: anytype, dt: i64, opts: struct {
     const world = maps.worlds.getPtr(host.world_id) orelse return false;
 
     const acq_sqr = opts.acquire_range * opts.acquire_range;
-    if (world.find(Player, opts.target_map_id, .con)) |p| {
+    if (world.findCon(Player, opts.target_map_id)) |p| {
         const dx = host.x - p.x;
         const dy = host.y - p.y;
         if (dx * dx + dy * dy <= acq_sqr) {

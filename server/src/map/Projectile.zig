@@ -35,7 +35,7 @@ pub fn deinit(self: *Projectile) !void {
 
 pub fn delete(self: *Projectile) !void {
     const world = maps.worlds.getPtr(self.world_id) orelse return;
-    if (world.find(Player, self.owner_map_id, .ref)) |player| player.projectiles[self.index] = null;
+    if (world.findRef(Player, self.owner_map_id)) |player| player.projectiles[self.index] = null;
     try world.remove(Projectile, self);
 }
 

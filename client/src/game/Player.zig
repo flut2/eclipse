@@ -153,7 +153,7 @@ pub fn deinit(self: *Player) void {
 }
 
 pub fn onMove(self: *Player) void {
-    if (map.getSquare(self.x, self.y, true, .con)) |square| if (game_data.ground.from_id.get(square.data_id)) |data| {
+    if (map.getSquareCon(self.x, self.y, true)) |square| if (game_data.ground.from_id.get(square.data_id)) |data| {
         self.move_multiplier = data.speed_mult;
     };
 }
@@ -312,7 +312,7 @@ pub fn draw(
 
     var atlas_data = self.atlas_data;
     var sink: f32 = 1.0;
-    if (map.getSquare(self.x, self.y, true, .con)) |square| {
+    if (map.getSquareCon(self.x, self.y, true)) |square| {
         if (game_data.ground.from_id.get(square.data_id)) |data| sink += if (data.sink) 0.75 else 0;
     }
     atlas_data.tex_h /= sink;
@@ -588,7 +588,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
                     self.y = @max(0, @min(new_y, f32i(map.info.height - 1)));
                 }
             } else {
-                if (map.getSquare(self.x, self.y, true, .con)) |square| if (game_data.ground.from_id.get(square.data_id)) |data| {
+                if (map.getSquareCon(self.x, self.y, true)) |square| if (game_data.ground.from_id.get(square.data_id)) |data| {
                     const slide_amount = data.slide_amount;
                     if (!std.math.isNan(self.move_angle)) {
                         const move_speed = self.moveSpeedMultiplier();
@@ -642,9 +642,9 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
         }
 
         if (!self.condition.invulnerable and time - self.last_ground_damage_time >= 0.5 * std.time.us_per_s) {
-            if (map.getSquare(self.x, self.y, true, .con)) |square| {
+            if (map.getSquareCon(self.x, self.y, true)) |square| {
                 const protect = blk: {
-                    const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk false;
+                    const e = map.findObjectCon(Entity, square.entity_map_id) orelse break :blk false;
                     break :blk e.data.block_ground_damage;
                 };
                 if (game_data.ground.from_id.get(square.data_id)) |data| if (data.damage > 0 and !protect) {
@@ -680,10 +680,10 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
 }
 
 fn isWalkable(x: f32, y: f32) bool {
-    if (map.getSquare(x, y, true, .con)) |square| {
+    if (map.getSquareCon(x, y, true)) |square| {
         const walkable = if (game_data.ground.from_id.get(square.data_id)) |data| !data.no_walk else false;
         const not_occupied = blk: {
-            const e = map.findObject(Entity, square.entity_map_id, .con) orelse break :blk true;
+            const e = map.findObjectCon(Entity, square.entity_map_id) orelse break :blk true;
             break :blk !e.data.occupy_square and !e.data.is_wall;
         };
         return square.data_id != Square.editor_tile and square.data_id != Square.empty_tile and walkable and not_occupied;
@@ -691,8 +691,8 @@ fn isWalkable(x: f32, y: f32) bool {
 }
 
 fn isFullOccupy(x: f32, y: f32) bool {
-    if (map.getSquare(x, y, true, .con)) |square| {
-        const e = map.findObject(Entity, square.entity_map_id, .con) orelse return false;
+    if (map.getSquareCon(x, y, true)) |square| {
+        const e = map.findObjectCon(Entity, square.entity_map_id) orelse return false;
         return e.data.full_occupy or e.data.is_wall;
     } else return true;
 }

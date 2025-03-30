@@ -170,19 +170,19 @@ fn handleTogglePerfStats() void {
 }
 
 fn handleAbility1() void {
-    if (map.localPlayer(.ref)) |player| player.useAbility(0);
+    if (map.localPlayerRef()) |player| player.useAbility(0);
 }
 
 fn handleAbility2() void {
-    if (map.localPlayer(.ref)) |player| player.useAbility(1);
+    if (map.localPlayerRef()) |player| player.useAbility(1);
 }
 
 fn handleAbility3() void {
-    if (map.localPlayer(.ref)) |player| player.useAbility(2);
+    if (map.localPlayerRef()) |player| player.useAbility(2);
 }
 
 fn handleAbility4() void {
-    if (map.localPlayer(.ref)) |player| player.useAbility(3);
+    if (map.localPlayerRef()) |player| player.useAbility(3);
 }
 
 pub fn charEvent(_: *glfw.Window, char: u32) callconv(.C) void {

@@ -277,10 +277,10 @@ pub fn update(self: *Projectile, time: i64, dt: f32) bool {
 
     self.last_hit_check = time;
 
-    const square = map.getSquare(self.x, self.y, false, .con).?;
+    const square = map.getSquareCon(self.x, self.y, false).?;
     if (square.data_id == Square.editor_tile or square.data_id == Square.empty_tile) return false;
 
-    if (map.findObject(Entity, square.entity_map_id, .con)) |e|
+    if (map.findObjectCon(Entity, square.entity_map_id)) |e|
         if (e.data.occupy_square or e.data.full_occupy or e.data.is_wall) {
             particles.HitEffect.addToMap(.{
                 .x = self.x,

@@ -40,7 +40,7 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
 fn heartOfStoneCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.find(Player, player_map_id.*, .ref)) |player| {
+    if (world.findRef(Player, player_map_id.*)) |player| {
         player.hit_multiplier = 1.0;
         player.ability_state.heart_of_stone = false;
     }
@@ -83,7 +83,7 @@ pub fn handleBoulderBuddies(player: *Player) !void {
             .disappear_time = main.current_time + duration,
         });
 
-        if (world.find(Ally, map_id, .ref)) |ally| {
+        if (world.findRef(Ally, map_id)) |ally| {
             ally.max_hp = i32f(3600.0 + f32i(player.totalStat(.health)) * 3.6);
             ally.hp = ally.max_hp;
             ally.defense = i32f(25.0 + f32i(player.totalStat(.defense)) * 0.15);
@@ -130,7 +130,7 @@ pub fn handleEarthenPrison(player: *Player) !void {
 fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.find(Player, player_map_id.*, .ref)) |player| player.ability_state.time_dilation = false;
+    if (world.findRef(Player, player_map_id.*)) |player| player.ability_state.time_dilation = false;
 }
 
 pub fn handleTimeDilation(player: *Player) !void {
@@ -202,7 +202,7 @@ pub fn handleNullPulse(player: *Player) !void {
     defer projs_to_remove.deinit(main.allocator);
     for (world.listForType(Projectile).items, 0..) |*p, i|
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
-            if (world.find(Enemy, p.owner_map_id, .ref)) |e| {
+            if (world.findRef(Enemy, p.owner_map_id)) |e| {
                 const phys_dmg = i32f(f32i(p.phys_dmg) * damage_mult);
                 const magic_dmg = i32f(f32i(p.magic_dmg) * damage_mult);
                 const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
@@ -235,7 +235,7 @@ pub fn handleNullPulse(player: *Player) !void {
 fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.find(Player, player_map_id.*, .ref)) |player| {
+    if (world.findRef(Player, player_map_id.*)) |player| {
         const fint = f32i(player.totalStat(.intelligence));
         const radius = 12.0 + fint * 0.06;
         world.aoe(Enemy, player.x, player.x, .player, player.map_id, radius, .{
@@ -271,7 +271,7 @@ pub fn handleTimeLock(player: *Player) !void {
 fn etherealHarvestCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.find(Player, player_map_id.*, .ref)) |player| player.damage_multiplier = 1.0;
+    if (world.findRef(Player, player_map_id.*)) |player| player.damage_multiplier = 1.0;
 }
 
 pub fn handleEtherealHarvest(player: *Player) !void {
@@ -344,7 +344,7 @@ pub fn handleSpaceShift(player: *Player) !void {
 fn bloodfontCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
-    if (world.find(Player, player_map_id.*, .ref)) |player| {
+    if (world.findRef(Player, player_map_id.*)) |player| {
         const old_hp = player.hp;
         player.hp = @max(1, player.hp - @as(i32, @intCast(player.stored_damage)));
         const hp_delta = player.hp - old_hp;

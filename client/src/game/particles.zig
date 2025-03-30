@@ -272,7 +272,7 @@ pub const HealParticle = struct {
         switch (self.target_obj_type) {
             inline else => |obj_enum| {
                 const T = GameServer.ObjEnumToType(obj_enum);
-                if (map.findObject(T, self.target_map_id, .con)) |obj| {
+                if (map.findObjectCon(T, self.target_map_id)) |obj| {
                     self.x = obj.x + self.dist * @cos(self.angle);
                     self.y = obj.y + self.dist * @sin(self.angle);
                     const displacement = 8.0 / @as(f32, std.time.us_per_s);
@@ -550,7 +550,7 @@ pub const HealEffect = struct {
         switch (self.target_obj_type) {
             inline else => |obj_enum| {
                 const T = GameServer.ObjEnumToType(obj_enum);
-                if (map.findObject(T, self.target_map_id, .con)) |obj| {
+                if (map.findObjectCon(T, self.target_map_id)) |obj| {
                     for (0..10) |i| {
                         const float_i: f32 = f32i(i);
                         const angle = std.math.tau * (float_i / 10.0);

@@ -114,7 +114,7 @@ const TalentButton = struct {
     fn pressCallback(ud: ?*anyopaque) void {
         if (ud == null) return;
         const self: *TalentButton = @ptrCast(@alignCast(ud));
-        if (map.localPlayer(.con)) |player|
+        if (map.localPlayerCon()) |player|
             if (self.index >= 0 and self.index <= player.data.talents.len - 1)
                 main.game_server.sendPacket(.{ .talent_upgrade = .{ .index = self.index } });
     }

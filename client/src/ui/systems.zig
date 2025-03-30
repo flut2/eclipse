@@ -362,7 +362,7 @@ pub fn update(time: i64, dt: f32) !void {
             const current_point = points[current_point_idx];
             const next_point = points[next_point_idx];
             const frac = f32i(time - last_point_switch) / f32i(current_point.time);
-            var player = map.localPlayer(.ref) orelse break :backgroundUpdate;
+            var player = map.localPlayerRef() orelse break :backgroundUpdate;
             player.x = lerp(current_point.x, next_point.x, frac);
             player.y = lerp(current_point.y, next_point.y, frac);
         },

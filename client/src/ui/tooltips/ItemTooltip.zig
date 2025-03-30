@@ -496,7 +496,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
             .{ footer_text, "All Classes" },
         ) catch footer_text;
     } else if (data.item_type != .any and data.item_type != .consumable) {
-        if (map.localPlayer(.con)) |player| {
+        if (map.localPlayerCon()) |player| {
             const has_type = blk: {
                 for (player.data.item_types) |item_type| {
                     if (item_type != .any and item_type.typesMatch(data.item_type))

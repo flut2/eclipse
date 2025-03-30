@@ -153,7 +153,7 @@ pub fn damage(
 
     const map_id = switch (owner_type) {
         .player => owner_id,
-        .ally => (world.find(Ally, owner_id) orelse return).owner_map_id,
+        .ally => (world.findCon(Ally, owner_id) orelse return).owner_map_id,
         else => return,
     };
 

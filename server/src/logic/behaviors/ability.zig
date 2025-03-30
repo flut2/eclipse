@@ -24,7 +24,7 @@ pub const BoulderBuddy = struct {
 
     pub fn tick(_: *BoulderBuddy, host: *Ally, _: i64, dt: i64) !void {
         const world = maps.worlds.getPtr(host.world_id) orelse return;
-        const owner = world.find(Player, host.owner_map_id, .ref) orelse {
+        const owner = world.findRef(Player, host.owner_map_id) orelse {
             logic.wander(@src(), host, dt, 2.5);
             return;
         };
@@ -70,7 +70,7 @@ pub const DwarvenCoil = struct {
 
     pub fn spawn(self: *DwarvenCoil, host: *Ally) !void {
         const world = maps.worlds.getPtr(host.world_id) orelse return;
-        const owner = world.find(Player, host.owner_map_id, .con) orelse return;
+        const owner = world.findCon(Player, host.owner_map_id) orelse return;
         self.damage = i32f(300.0 + f32i(owner.totalStat(.wit)) * 2.0);
         self.range = 3.0 + f32i(owner.totalStat(.intelligence)) * 0.05;
     }
@@ -111,7 +111,7 @@ pub const DemonRift = struct {
 
     pub fn spawn(self: *DemonRift, host: *Entity) !void {
         const world = maps.worlds.getPtr(host.world_id) orelse return;
-        const owner = world.find(Player, host.owner_map_id, .con) orelse return;
+        const owner = world.findCon(Player, host.owner_map_id) orelse return;
         self.restore_amount = i32f(50.0 + f32i(owner.totalStat(.health)) * 0.05);
         self.radius = 7.0 + f32i(owner.totalStat(.intelligence)) * 0.07;
     }

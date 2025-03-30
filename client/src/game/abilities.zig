@@ -68,7 +68,7 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
     defer projs_to_remove.deinit(main.allocator);
     for (proj_list.items, 0..) |*p, i|
         if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
-            if (map.findObject(Enemy, p.owner_map_id, .ref)) |e| {
+            if (map.findObjectRef(Enemy, p.owner_map_id)) |e| {
                 const phys_dmg = i32f(f32i(game_data.physDamage(p.phys_dmg, e.data.defense, e.condition)) * damage_mult);
                 const magic_dmg = i32f(f32i(game_data.magicDamage(p.magic_dmg, e.data.resistance, e.condition)) * damage_mult);
                 const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);

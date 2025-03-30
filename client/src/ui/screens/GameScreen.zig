@@ -815,7 +815,7 @@ pub fn resize(self: *GameScreen, w: f32, h: f32) void {
 pub fn update(self: *GameScreen, time: i64, _: f32) !void {
     self.fps_text.base.visible = main.settings.stats_enabled;
 
-    if (map.localPlayer(.con)) |local_player| {
+    if (map.localPlayerCon()) |local_player| {
         if (!self.abilities_inited) {
             for (0..4) |i| try addAbility(self, local_player.data.abilities[i], i);
             self.abilities_inited = true;
@@ -1017,7 +1017,7 @@ fn updateStat(text_data: *element.TextData, base_val: i32, bonus_val: i32) void 
 }
 
 pub fn updateStats(self: *GameScreen) void {
-    if (map.localPlayer(.con)) |player| {
+    if (map.localPlayerCon()) |player| {
         updateStat(&self.strength_stat_text.text_data, player.data.stats.strength, player.strength_bonus);
         updateStat(&self.wit_stat_text.text_data, player.data.stats.wit, player.wit_bonus);
         updateStat(&self.defense_stat_text.text_data, player.data.stats.defense, player.defense_bonus);
@@ -1096,7 +1096,7 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
             return;
         }
     } else {
-        if (map.localPlayer(.con)) |local_player| {
+        if (map.localPlayerCon()) |local_player| {
             const start_data = game_data.item.from_id.get(start_item) orelse {
                 self.swapError(start_slot, start_item, start_item_data);
                 return;
@@ -1104,7 +1104,7 @@ pub fn swapSlots(self: *GameScreen, start_slot: Slot, end_slot: Slot) void {
 
             const end_item_types = blk: {
                 if (end_slot.is_container) {
-                    const container = map.findObject(Container, self.container_id, .con) orelse {
+                    const container = map.findObjectCon(Container, self.container_id) orelse {
                         self.swapError(start_slot, start_item, start_item_data);
                         return;
                     };
@@ -1165,7 +1165,7 @@ fn itemDoubleClickCallback(item: *Item) void {
 
     const start_slot = Slot.findSlotId(systems.screen.game.*, item.base.x + 4, item.base.y + 4);
     const data = game_data.item.from_id.get(item.data_id) orelse return;
-    const local_player = map.localPlayer(.con) orelse return;
+    const local_player = map.localPlayerCon() orelse return;
 
     if (data.item_type == .consumable and !start_slot.is_container) {
         main.game_server.sendPacket(.{ .use_item = .{
@@ -1243,7 +1243,7 @@ fn leftCardFlipperCallback(ud: ?*anyopaque) void {
 
 fn rightCardFlipperCallback(ud: ?*anyopaque) void {
     const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
-    if (map.localPlayer(.con)) |player| screen.card_page = @min(@divFloor(player.cards.len, 5), screen.card_page + 1);
+    if (map.localPlayerCon()) |player| screen.card_page = @min(@divFloor(player.cards.len, 5), screen.card_page + 1);
 }
 
 fn chatCallback(input_text: []const u8) void {
@@ -1291,7 +1291,7 @@ fn itemShiftClickCallback(item: *Item) void {
     const data = game_data.item.from_id.get(@intCast(item.data_id)) orelse return;
     if (data.item_type != .consumable) return;
 
-    const local_player = map.localPlayer(.con) orelse return;
+    const local_player = map.localPlayerCon() orelse return;
 
     main.game_server.sendPacket(.{ .use_item = .{
         .obj_type = if (slot.is_container) .container else .player,

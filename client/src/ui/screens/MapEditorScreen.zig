@@ -1211,10 +1211,10 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
             const tile: map_data.Tile = .{
                 .ground_name = if (map_tile.ground == defaultType(.ground)) "" else game_data.ground.from_id.get(map_tile.ground).?.name,
                 .region_name = if (map_tile.region == defaultType(.region)) "" else game_data.region.from_id.get(map_tile.region).?.name,
-                .enemy_name = if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "",
-                .entity_name = if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "",
-                .portal_name = if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "",
-                .container_name = if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "",
+                .enemy_name = if (map.findObjectCon(Enemy, map_tile.enemy)) |e| e.data.name else "",
+                .entity_name = if (map.findObjectCon(Entity, map_tile.entity)) |e| e.data.name else "",
+                .portal_name = if (map.findObjectCon(Portal, map_tile.portal)) |p| p.data.name else "",
+                .container_name = if (map.findObjectCon(Container, map_tile.container)) |c| c.data.name else "",
             };
 
             if (indexOfTile(tiles.items, tile) == null) try tiles.append(main.allocator, tile);
@@ -1237,10 +1237,10 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
             const tile: map_data.Tile = .{
                 .ground_name = if (map_tile.ground == defaultType(.ground)) "" else game_data.ground.from_id.get(map_tile.ground).?.name,
                 .region_name = if (map_tile.region == defaultType(.region)) "" else game_data.region.from_id.get(map_tile.region).?.name,
-                .enemy_name = if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data.name else "",
-                .entity_name = if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data.name else "",
-                .portal_name = if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data.name else "",
-                .container_name = if (map.findObject(Container, map_tile.container, .con)) |c| c.data.name else "",
+                .enemy_name = if (map.findObjectCon(Enemy, map_tile.enemy)) |e| e.data.name else "",
+                .entity_name = if (map.findObjectCon(Entity, map_tile.entity)) |e| e.data.name else "",
+                .portal_name = if (map.findObjectCon(Portal, map_tile.portal)) |p| p.data.name else "",
+                .container_name = if (map.findObjectCon(Container, map_tile.container)) |c| c.data.name else "",
             };
 
             if (indexOfTile(tiles.items, tile)) |idx| {
@@ -1385,7 +1385,7 @@ pub fn hideRectSelect(self: *MapEditorScreen) void {
 
 pub fn clearSelection(self: *MapEditorScreen) void {
     for (self.selected_tiles) |pos| {
-        const square = map.getSquare(f32i(pos.x), f32i(pos.y), true, .ref) orelse continue;
+        const square = map.getSquareRef(f32i(pos.x), f32i(pos.y), true) orelse continue;
         square.color = .{};
     }
 
@@ -1549,7 +1549,7 @@ fn setRegion(self: *MapEditorScreen, x: u16, y: u16, data_id: u16) void {
         };
 
         if (tile.region_map_id != std.math.maxInt(u32)) {
-            if (map.findObject(Entity, tile.region_map_id, .con)) |obj| if (std.mem.eql(u8, obj.name orelse "", data.name)) return;
+            if (map.findObjectCon(Entity, tile.region_map_id)) |obj| if (std.mem.eql(u8, obj.name orelse "", data.name)) return;
             _ = map.removeEntity(Entity, tile.region_map_id);
         }
 
@@ -1605,7 +1605,7 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
         }
 
         if (field.* != std.math.maxInt(u32)) {
-            if (map.findObject(ObjType, field.*, .con)) |obj| if (obj.data_id == data_id) return;
+            if (map.findObjectCon(ObjType, field.*)) |obj| if (obj.data_id == data_id) return;
             _ = map.removeEntity(ObjType, field.*);
         }
 
@@ -1651,10 +1651,10 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
                 switch (self.active_layer) {
                     .ground => break :blk tile.ground,
                     .region => break :blk tile.region,
-                    .entity => break :blk if (map.findObject(Entity, tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16),
-                    .enemy => break :blk if (map.findObject(Enemy, tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16),
-                    .portal => break :blk if (map.findObject(Portal, tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16),
-                    .container => break :blk if (map.findObject(Container, tile.container, .con)) |c| c.data_id else std.math.maxInt(u16),
+                    .entity => break :blk if (map.findObjectCon(Entity, tile.entity)) |e| e.data_id else std.math.maxInt(u16),
+                    .enemy => break :blk if (map.findObjectCon(Enemy, tile.enemy)) |e| e.data_id else std.math.maxInt(u16),
+                    .portal => break :blk if (map.findObjectCon(Portal, tile.portal)) |p| p.data_id else std.math.maxInt(u16),
+                    .container => break :blk if (map.findObjectCon(Container, tile.container)) |c| c.data_id else std.math.maxInt(u16),
                 }
 
                 break :blk defaultType(self.active_layer);
@@ -1718,10 +1718,10 @@ fn typeAt(layer: Layer, screen: *MapEditorScreen, x: u16, y: u16) u16 {
     return switch (layer) {
         .ground => map_tile.ground,
         .region => map_tile.region,
-        .enemy => if (map.findObject(Enemy, map_tile.enemy, .con)) |e| e.data_id else std.math.maxInt(u16),
-        .entity => if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16),
-        .portal => if (map.findObject(Portal, map_tile.portal, .con)) |p| p.data_id else std.math.maxInt(u16),
-        .container => if (map.findObject(Container, map_tile.container, .con)) |c| c.data_id else std.math.maxInt(u16),
+        .enemy => if (map.findObjectCon(Enemy, map_tile.enemy)) |e| e.data_id else std.math.maxInt(u16),
+        .entity => if (map.findObjectCon(Entity, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16),
+        .portal => if (map.findObjectCon(Portal, map_tile.portal)) |p| p.data_id else std.math.maxInt(u16),
+        .container => if (map.findObjectCon(Container, map_tile.container)) |c| c.data_id else std.math.maxInt(u16),
     };
 }
 
@@ -1839,7 +1839,7 @@ pub fn update(self: *MapEditorScreen, time: i64, _: f32) !void {
 
     const time_sec = f32i(time) / std.time.us_per_s * 2;
     for (self.selected_tiles) |pos| {
-        const square = map.getSquare(f32i(pos.x), f32i(pos.y), true, .ref) orelse continue;
+        const square = map.getSquareRef(f32i(pos.x), f32i(pos.y), true) orelse continue;
         square.color = .fromColor(0xFF00FF, (@sin(time_sec) + 1) * 0.25);
     }
 
@@ -1882,13 +1882,13 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
             .ground => self.selected.ground = map_tile.ground,
             .region => self.selected.region = map_tile.region,
             .enemy => self.selected.enemy =
-                if (map.findObject(Enemy, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16),
+                if (map.findObjectCon(Enemy, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16),
             .entity => self.selected.entity =
-                if (map.findObject(Entity, map_tile.entity, .con)) |e| e.data_id else std.math.maxInt(u16),
+                if (map.findObjectCon(Entity, map_tile.entity)) |e| e.data_id else std.math.maxInt(u16),
             .portal => self.selected.portal =
-                if (map.findObject(Portal, map_tile.entity, .con)) |p| p.data_id else std.math.maxInt(u16),
+                if (map.findObjectCon(Portal, map_tile.entity)) |p| p.data_id else std.math.maxInt(u16),
             .container => self.selected.container =
-                if (map.findObject(Container, map_tile.entity, .con)) |c| c.data_id else std.math.maxInt(u16),
+                if (map.findObjectCon(Container, map_tile.entity)) |c| c.data_id else std.math.maxInt(u16),
         },
         .fill => fill(self, ux, uy, false),
         .wand => {
@@ -1908,7 +1908,7 @@ pub fn updateFps(self: *MapEditorScreen, fps: u32, mem: f32) void {
 
 pub fn updateDetailsText(self: *MapEditorScreen) void {
     const player_x, const player_y = blk: {
-        const player = map.localPlayer(.con) orelse break :blk .{ -1.0, -1.0 };
+        const player = map.localPlayerCon() orelse break :blk .{ -1.0, -1.0 };
         break :blk .{ player.x, player.y };
     };
 
