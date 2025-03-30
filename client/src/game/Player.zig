@@ -147,13 +147,13 @@ pub fn addToMap(player_data: Player) void {
     map.addListForType(Player).append(main.allocator, self) catch @panic("Adding player failed");
 }
 
-fn setRpc(self: Player) !void {
+pub fn setRpc(self: Player) !void {
     try main.rpc_client.setPresence(.{
         .assets = .{
             .large_image = .create("logo"),
             .large_text = .create("Alpha v" ++ build_options.version),
             .small_image = .create(self.data.rpc_name),
-            .small_text = try .createFromFormat("Aether {} {s}", .{ self.aether, self.data.name }),
+            .small_text = try .createFromFormat("{s} (Aether {})", .{ self.data.name, self.aether }),
         },
         .state = try .createFromFormat("In {s}", .{map.info.name}),
         .timestamps = .{ .start = main.rpc_start },

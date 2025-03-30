@@ -1,7 +1,7 @@
 [
     {
         .id = -1,
-        .name = "The Retrieve",
+        .name = "the Retrieve",
         .file = "retrieve.map",
         .light = {
             .intensity = 0.8,
