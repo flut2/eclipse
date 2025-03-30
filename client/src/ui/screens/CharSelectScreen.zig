@@ -254,6 +254,15 @@ gems_text: *Text = undefined,
 inited: bool = false,
 
 pub fn init(self: *CharSelectScreen) !void {
+    try main.rpc_client.setPresence(.{
+        .assets = .{
+            .large_image = .create("logo"),
+            .large_text = .create("Alpha v" ++ build_options.version),
+        },
+        .state = .create("Character Select"),
+        .timestamps = .{ .start = main.rpc_start },
+    });
+
     try self.refresh();
 }
 

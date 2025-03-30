@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const build_options = @import("options");
 const glfw = @import("glfw");
 const nfd = @import("nfd");
 const shared = @import("shared");
@@ -284,6 +285,15 @@ pub fn nextMapIdForType(self: *MapEditorScreen, comptime T: type) *u32 {
 }
 
 pub fn init(self: *MapEditorScreen) !void {
+    try main.rpc_client.setPresence(.{
+        .assets = .{
+            .large_image = .create("logo"),
+            .large_text = .create("Alpha v" ++ build_options.version),
+        },
+        .state = .create("Map Editor"),
+        .timestamps = .{ .start = main.rpc_start },
+    });
+
     const button_data_base = assets.getUiData("button_base", 0);
     const button_data_hover = assets.getUiData("button_hover", 0);
     const button_data_press = assets.getUiData("button_press", 0);
@@ -1302,7 +1312,7 @@ fn exitCallback(ud: ?*anyopaque) void {
 
     if (main.character_list == null)
         ui_systems.switchScreen(.main_menu)
-    else 
+    else
         ui_systems.switchScreen(.char_select);
 }
 

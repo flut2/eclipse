@@ -543,12 +543,10 @@ pub fn main() !void {
 
 fn ready(cli: *rpc) !void {
     rpc_start = @intCast(std.time.timestamp());
-    var large_text = rpc.Packet.ArrayString(128).create("");
-    large_text.len = (try std.fmt.bufPrint(&large_text.buf, "v{s}", .{build_options.version})).len;
     try cli.setPresence(.{
         .assets = .{
-            .large_image = rpc.Packet.ArrayString(256).create("logo"),
-            .large_text = large_text,
+            .large_image = .create("logo"),
+            .large_text = .create("Alpha v" ++ build_options.version),
         },
         .timestamps = .{ .start = rpc_start },
     });

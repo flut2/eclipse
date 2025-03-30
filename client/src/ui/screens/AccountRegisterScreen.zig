@@ -27,6 +27,15 @@ confirm_button: *Button = undefined,
 back_button: *Button = undefined,
 
 pub fn init(self: *AccountRegisterScreen) !void {
+    try main.rpc_client.setPresence(.{
+        .assets = .{
+            .large_image = .create("logo"),
+            .large_text = .create("Alpha v" ++ build_options.version),
+        },
+        .state = .create("Register Screen"),
+        .timestamps = .{ .start = main.rpc_start },
+    });
+
     const input_w = 300;
     const input_h = 50;
 

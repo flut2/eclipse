@@ -26,6 +26,15 @@ remember_login_text: *Text = undefined,
 remember_login_toggle: *Toggle = undefined,
 
 pub fn init(self: *AccountLoginScreen) !void {
+    try main.rpc_client.setPresence(.{
+        .assets = .{
+            .large_image = .create("logo"),
+            .large_text = .create("Alpha v" ++ build_options.version),
+        },
+        .state = .create("Login Screen"),
+        .timestamps = .{ .start = main.rpc_start },
+    });
+
     const input_w = 300;
     const input_h = 50;
     const input_data_base = assets.getUiData("text_input", 0);
