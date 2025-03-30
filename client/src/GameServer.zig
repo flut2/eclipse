@@ -453,9 +453,6 @@ fn handleMapInfo(_: *Server, data: PacketData(.map_info)) void {
 
     map.setMapInfo(data);
     map.info.name = main.allocator.dupe(u8, data.name) catch main.oomPanic();
-    if (map.localPlayerCon()) |player| player.setRpc() catch |e| {
-        std.log.err("Setting Discord RPC failed: {}", .{e});
-    };
 
     main.tick_frame = true;
 }
