@@ -6,6 +6,7 @@
         .shared = .{ .path = "../shared" },
         .system_sdk = .{ .path = "../shared/libs/system-sdk" },
         .native_file_dialog = .{ .path = "libs/native-file-dialog" },
+        .discord_rpc = .{ .path = "libs/discord-rpc" },
         .zaudio = .{ .path = "libs/zaudio" },
         .zstbi = .{ .path = "libs/zstbi" },
         .zglfw = .{ .path = "libs/zglfw" },

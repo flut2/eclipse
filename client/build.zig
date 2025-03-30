@@ -83,6 +83,8 @@ pub fn buildWithoutDupes(
             .optimize = optimize,
         }).module("turbopack"));
 
+        exe.root_module.addImport("rpc", b.dependency("discord_rpc", .{}).module("root"));
+
         const vulkan = b.dependency("vulkan_zig", .{ .registry = b.path(root_add ++ "libs/vk.xml") }).module("vulkan-zig");
         exe.root_module.addImport("vulkan", vulkan);
         exe.linkLibCpp();

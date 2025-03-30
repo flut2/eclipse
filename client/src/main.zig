@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 const build_options = @import("options");
 const glfw = @import("glfw");
 const gpu = @import("zgpu");
+const rpc = @import("rpc");
 const rpmalloc = @import("rpmalloc");
 const shared = @import("shared");
 const network_data = shared.network_data;
@@ -79,7 +80,6 @@ pub var minimap_update: struct {
     min_y: u32 = std.math.maxInt(u32),
     max_y: u32 = std.math.minInt(u32),
 } = .{};
-pub var version_text: []const u8 = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var start_time: i64 = 0;
 pub var game_server: GameServer = undefined;
@@ -88,6 +88,8 @@ pub var camera: Camera = .{};
 pub var settings: Settings = .{};
 pub var main_loop: *uv.uv_loop_t = undefined;
 pub var window: *glfw.Window = undefined;
+pub var rpc_client: *rpc = undefined;
+pub var rpc_start: u64 = 0;
 pub var callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty;
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
@@ -428,6 +430,9 @@ pub fn main() !void {
     current_account = AccountData.load() catch null;
     defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
 
+    rpc_client = try rpc.init(allocator, &ready);
+    defer rpc_client.deinit();
+
     try glfw.init();
     defer glfw.terminate();
 
@@ -487,6 +492,12 @@ pub fn main() !void {
         if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
     };
 
+    var rpc_thread: std.Thread = try .spawn(.{ .allocator = allocator }, runRpc, .{rpc_client});
+    defer {
+        rpc_client.stop();
+        rpc_thread.join();
+    }
+
     render_thread = try .spawn(.{ .allocator = allocator }, renderTick, .{&renderer});
     defer {
         tick_render = false;
@@ -529,3 +540,30 @@ pub fn main() !void {
         return error.RunFailed;
     }
 }
+
+fn ready(cli: *rpc) !void {
+    rpc_start = @intCast(std.time.timestamp());
+    var large_text = rpc.Packet.ArrayString(128).create("");
+    large_text.len = (try std.fmt.bufPrint(&large_text.buf, "v{s}", .{build_options.version})).len;
+    try cli.setPresence(.{
+        .assets = .{
+            .large_image = rpc.Packet.ArrayString(256).create("logo"),
+            .large_text = large_text,
+        },
+        .timestamps = .{ .start = rpc_start },
+    });
+}
+
+fn runRpc(cli: *rpc) void {
+    if (build_options.enable_tracy) tracy.SetThreadName("RPC");
+
+    if (!build_options.enable_gpa) {
+        rpmalloc.initThread();
+        defer rpmalloc.deinitThread();
+    }
+
+    cli.run(.{ .client_id = "1356002897095295047" }) catch |e| {
+        std.log.err("Setting up RPC failed: {}", .{e});
+    };
+}
+
