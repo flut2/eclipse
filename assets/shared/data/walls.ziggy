@@ -330,4 +330,70 @@
         ],
         .is_wall = true,
     },
+    {
+        .id = 1034,
+        .name = "Goblin Lair Wall",
+        .textures = [
+            { "walls": 118 },
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1035,
+        .name = "Goblin Lair Dart Wall West",
+        .textures = [
+            { "walls": 119 },
+            { "walls": 120 },
+            { "walls": 121 },
+            { "walls": 122 }
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1036,
+        .name = "Goblin Lair Dart Wall East",
+        .textures = [
+            { "walls": 123 },
+            { "walls": 124 },
+            { "walls": 125 },
+            { "walls": 126 }
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1037,
+        .name = "Goblin Lair Dart Wall South",
+        .textures = [
+            { "walls": 127 },
+            { "walls": 128 },
+            { "walls": 129 },
+            { "walls": 130 }
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1038,
+        .name = "Goblin Lair Dart Wall North",
+        .textures = [
+            { "walls": 131 },
+            { "walls": 132 },
+            { "walls": 133 },
+            { "walls": 134 }
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1039,
+        .name = "Goblin Lair Candle Wall",
+        .textures = [{ "walls": 135 }],
+        .is_wall = true,
+        .animations = [
+            { .time = 0.3, .texture = { "walls": 135 } },
+            { .time = 0.3, .texture = { "walls": 136 } },
+            { .time = 0.3, .texture = { "walls": 137 } },
+            { .time = 0.3, .texture = { "walls": 138 } },
+            { .time = 0.3, .texture = { "walls": 139 } },
+            { .time = 0.3, .texture = { "walls": 140 } },
+        ],
+    },
 ]

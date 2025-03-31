@@ -991,4 +991,108 @@
         .textures = [{ "retrieve_space_tiles": 143 }],
         .disable_blend = true,
     },
+    {
+        .id = 139,
+        .name = "Goblin Lair Gravel",
+        .textures = [{ "ground": 197 }, { "ground": 197 }, { "ground": 197 }, { "ground": 198 }, { "ground": 199 }, { "ground": 200 }, { "ground": 201 }, { "ground": 202 }],
+        .blend_prio = 3,
+    },
+    {
+        .id = 140,
+        .name = "Goblin Lair 2x2 Emerald Vein TL",
+        .textures = [{ "ground": 203 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 141,
+        .name = "Goblin Lair 2x2 Emerald Vein TR",
+        .textures = [{ "ground": 204 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 142,
+        .name = "Goblin Lair 2x2 Emerald Vein BL",
+        .textures = [{ "ground": 205 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 143,
+        .name = "Goblin Lair 2x2 Emerald Vein BR",
+        .textures = [{ "ground": 206 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 144,
+        .name = "Goblin Lair 2x2 Gold Vein TL",
+        .textures = [{ "ground": 207 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 145,
+        .name = "Goblin Lair 2x2 Gold Vein TR",
+        .textures = [{ "ground": 208 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 146,
+        .name = "Goblin Lair 2x2 Gold Vein BL",
+        .textures = [{ "ground": 209 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 147,
+        .name = "Goblin Lair 2x2 Gold Vein BR",
+        .textures = [{ "ground": 210 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 148,
+        .name = "Goblin Lair 2x2 Ruby Vein TL",
+        .textures = [{ "ground": 211 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 149,
+        .name = "Goblin Lair 2x2 Ruby Vein TR",
+        .textures = [{ "ground": 212 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 150,
+        .name = "Goblin Lair 2x2 Ruby Vein BL",
+        .textures = [{ "ground": 213 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 151,
+        .name = "Goblin Lair 2x2 Ruby Vein BR",
+        .textures = [{ "ground": 214 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 152,
+        .name = "Goblin Lair 2x2 Diamond Vein TL",
+        .textures = [{ "ground": 215 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 153,
+        .name = "Goblin Lair 2x2 Diamond Vein TR",
+        .textures = [{ "ground": 216 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 154,
+        .name = "Goblin Lair 2x2 Diamond Vein BL",
+        .textures = [{ "ground": 217 }],
+        .disable_blend = true,
+    },
+    {
+        .id = 155,
+        .name = "Goblin Lair 2x2 Diamond Vein BR",
+        .textures = [{ "ground": 218 }],
+        .disable_blend = true,
+    },
+    
+
 ]

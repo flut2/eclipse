@@ -232,5 +232,13 @@
     .w = 18,
     .h = 18,
     .dont_trim = true,
-}
+},
+{
+    .type = @SheetType("image"),
+    .name = "ground_props",
+    .path = "ground_props.png",
+    .w = 9,
+    .h = 9,
+    .dont_trim = true,
+},
 ]
