@@ -20,11 +20,12 @@ map_id: u32 = std.math.maxInt(u32),
 data_id: u16 = std.math.maxInt(u16),
 x: f32 = 0.0,
 y: f32 = 0.0,
+size_mult: f32 = 1.0,
 spawn_x: f32 = 0.0,
 spawn_y: f32 = 0.0,
 hp: i32 = 0,
 max_hp: i32 = 0,
-name: []const u8 = &.{},
+name: ?[]const u8 = null,
 condition: utils.Condition = .{},
 conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .empty,
 conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .empty,
@@ -85,7 +86,7 @@ pub fn deinit(self: *Entity) !void {
 
     self.damages_dealt.deinit(main.allocator);
     self.stats_writer.list.deinit(main.allocator);
-    main.allocator.free(self.name);
+    if (self.name) |name| main.allocator.free(name);
 }
 
 pub fn applyCondition(self: *Entity, condition: utils.ConditionEnum, duration: i64) void {
@@ -176,8 +177,10 @@ pub fn exportStats(self: *Entity, cache: *[@typeInfo(network_data.EntityStat).@"
     inline for (.{
         T{ .x = self.x },
         T{ .y = self.y },
+        T{ .size_mult = self.size_mult },
     }) |stat| stat_util.write(T, writer, cache, stat);
     if (self.data.health > 0) stat_util.write(T, writer, cache, .{ .hp = self.hp });
+    if (self.name) |name| stat_util.write(T, writer, cache, .{ .name = name });
 
     return writer.list.items;
 }

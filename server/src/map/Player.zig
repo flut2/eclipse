@@ -295,6 +295,7 @@ pub fn death(self: *Player, killer: []const u8) !void {
             .y = self.y,
             .data_id = gravestone_id,
             .name = main.allocator.dupe(u8, self.name) catch main.oomPanic(),
+            .disappear_time = main.current_time + std.time.us_per_min,
         }) catch |e| std.log.err("Populating gravestone for {s} failed: {}", .{ self.name, e });
 
     var common_card_count: u8 = 0;
