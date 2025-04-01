@@ -305,6 +305,21 @@ pub const ShowEffectItem = extern struct {
     obj_type: ObjectType,
 };
 
+pub const DeathData = struct {
+    class_id: u16,
+    killer: []const u8,
+    aether: u8,
+    spirits: u32,
+    keystone_perc: f32,
+    minor_perc: f32,
+    ability_perc: f32,
+    common_card_count: u16,
+    rare_card_count: u16,
+    epic_card_count: u16,
+    legendary_card_count: u16,
+    mythic_card_count: u16,
+};
+
 // All packets without variable length fields (like slices) should be extern, with proper alignment ordering.
 // This allows us to directly copy the struct into/from the buffer
 pub const C2SPacket = union(enum) {
@@ -370,7 +385,7 @@ pub const S2CPacket = union(enum) {
     inv_result: extern struct { result: u8 },
     ping: extern struct { time: i64 },
     map_info: MapInfo,
-    death: struct { killer_name: []const u8 },
+    death: DeathData,
     aoe: struct { x: f32, y: f32, radius: f32, damage: u16, eff: utils.Condition, duration: f32, orig_type: u8, color: u32 },
     ally_projectile: extern struct { player_map_id: u32, angle: f32, item_data_id: u16, proj_index: u8 },
     enemy_projectile: extern struct {

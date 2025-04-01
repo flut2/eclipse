@@ -10,6 +10,7 @@ const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
 const Settings = @import("../../Settings.zig");
 const CharacterCreate = @import("../composed/CharacterCreate.zig");
+const DeathView = @import("../composed/DeathView.zig");
 const Bar = @import("../elements/Bar.zig");
 const Button = @import("../elements/Button.zig");
 const Container = @import("../elements/Container.zig");
@@ -246,6 +247,7 @@ decor: *Image = undefined,
 char_boxes: []CharacterBox = &.{},
 new_char_button: *Button = undefined,
 char_create: *CharacterCreate = undefined,
+death_view: *DeathView = undefined,
 
 name_text: *Text = undefined,
 gold_text: *Text = undefined,
@@ -277,6 +279,7 @@ fn deinitExceptSelf(self: *CharSelectScreen) void {
     if (!self.inited) return;
     defer self.inited = false;
     self.char_create.destroy();
+    self.death_view.destroy();
     element.destroy(self.box_container);
     element.destroy(self.name_text);
     main.allocator.free(self.char_boxes);
@@ -419,6 +422,7 @@ pub fn refresh(self: *CharSelectScreen) !void {
     self.rearrange();
 
     self.char_create = try .create();
+    self.death_view = try .create();
 }
 
 fn loginLessThan(_: void, a: CharacterBox, b: CharacterBox) bool {

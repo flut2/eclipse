@@ -387,8 +387,14 @@ fn handleDamage(_: *Server, data: PacketData(.damage)) void {
 }
 
 fn handleDeath(self: *Server, data: PacketData(.death)) void {
+    main.disconnect();
     self.shutdown();
     dialog.showDialog(.none, {});
+    if (ui_systems.screen == .char_select)
+        ui_systems.screen.char_select.death_view.show(data) catch |e| {
+            std.log.err("Setting death view failed: {}", .{e});
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        };
 
     if (logRead(.non_tick)) std.log.debug("Recv - Death: {}", .{data});
 }

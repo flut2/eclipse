@@ -258,11 +258,6 @@ pub fn save(self: *Player) !void {
 }
 
 pub fn death(self: *Player, killer: []const u8) !void {
-    if (self.rank == .admin) {
-        self.hp = 1;
-        return;
-    }
-
     const alive_char_ids = self.acc_data.get(.alive_char_ids) catch {
         self.client.sendError(.message_with_disconnect, "Death failed: Database Error");
         return;
@@ -302,7 +297,39 @@ pub fn death(self: *Player, killer: []const u8) !void {
             .name = main.allocator.dupe(u8, self.name) catch main.oomPanic(),
         }) catch |e| std.log.err("Populating gravestone for {s} failed: {}", .{ self.name, e });
 
-    self.client.sendPacket(.{ .death = .{ .killer_name = killer } });
+    var common_card_count: u8 = 0;
+    var rare_card_count: u8 = 0;
+    var epic_card_count: u8 = 0;
+    var legendary_card_count: u8 = 0;
+    var mythic_card_count: u8 = 0;
+
+    countCards: {
+        for (self.char_data.get(.cards) catch break :countCards) |card| {
+            const card_data = game_data.card.from_id.get(card) orelse continue;
+            switch (card_data.rarity) {
+                .common => common_card_count += 1,
+                .rare => rare_card_count += 1,
+                .epic => epic_card_count += 1,
+                .legendary => legendary_card_count += 1,
+                .mythic => mythic_card_count += 1,
+            }
+        }
+    }
+
+    self.client.sendPacket(.{ .death = .{
+        .class_id = self.data_id,
+        .killer = killer,
+        .aether = self.aether,
+        .spirits = self.spirits_communed,
+        .keystone_perc = 0.0,
+        .minor_perc = 0.0,
+        .ability_perc = 0.0,
+        .common_card_count = common_card_count,
+        .rare_card_count = rare_card_count,
+        .epic_card_count = epic_card_count,
+        .legendary_card_count = legendary_card_count,
+        .mythic_card_count = mythic_card_count,
+    } });
     self.client.shutdown();
 }
 
