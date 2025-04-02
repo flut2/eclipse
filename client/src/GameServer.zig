@@ -387,6 +387,19 @@ fn handleDamage(_: *Server, data: PacketData(.damage)) void {
 }
 
 fn handleDeath(self: *Server, data: PacketData(.death)) void {
+    if (main.character_list) |*list| {
+        for (list.characters, 0..) |char, i| {
+            if (char.char_id != data.char_id) continue;
+            if (i == list.characters.len - 1) {
+                list.characters.len -= 1;
+                break;
+            }
+            std.mem.copyBackwards(network_data.CharacterData, list.characters[i..list.characters.len - 1], list.characters[i + 1..]);
+            list.characters.len -= 1;
+            break;
+        }
+    }
+    
     main.disconnect();
     self.shutdown();
     dialog.showDialog(.none, {});

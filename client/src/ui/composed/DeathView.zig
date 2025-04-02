@@ -228,7 +228,18 @@ pub fn show(self: *DeathView, death_data: network_data.DeathData) !void {
     self.class_icon.base.y = 24 + (44 - icon.height() * 4.0) / 2.0;
 
     self.death_text.text_data.setText(
-        try std.fmt.bufPrint(self.death_text.text_data.backing_buffer, "You have been killed by a &type=\"bold_it\"{s}&reset", .{death_data.killer}),
+        try std.fmt.bufPrint(self.death_text.text_data.backing_buffer, "You have been killed by a\n&type=\"bold_it\"{s}&reset", .{death_data.killer}),
+    );
+
+    const next_spirits = game_data.spiritGoal(death_data.aether);
+    const aether_perc = f32i(death_data.spirits) / f32i(next_spirits);
+    self.aether_bar.image_data.normal.scale_x = aether_perc;
+    self.aether_bar.text_data.setText(
+        try std.fmt.bufPrint(
+            self.aether_bar.text_data.backing_buffer,
+            "Aether {} - {}/{}",
+            .{ death_data.aether, death_data.spirits, next_spirits },
+        ),
     );
 
     inline for (.{

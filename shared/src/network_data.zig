@@ -26,7 +26,7 @@ pub const CharacterListData = struct {
     next_char_id: u32,
     gold: u32,
     gems: u32,
-    characters: []const CharacterData,
+    characters: []CharacterData,
     servers: []const ServerData,
 };
 
@@ -307,6 +307,7 @@ pub const ShowEffectItem = extern struct {
 
 pub const DeathData = struct {
     class_id: u16,
+    char_id: u32,
     killer: []const u8,
     aether: u8,
     spirits: u32,

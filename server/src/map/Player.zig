@@ -319,6 +319,7 @@ pub fn death(self: *Player, killer: []const u8) !void {
 
     self.client.sendPacket(.{ .death = .{
         .class_id = self.data_id,
+        .char_id = self.char_data.char_id,
         .killer = killer,
         .aether = self.aether,
         .spirits = self.spirits_communed,

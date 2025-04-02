@@ -54,7 +54,7 @@
             {
                 .name = "Bloodfont",
                 .description = 
-                    \\Delay all damage received for $hptxt3 (+0.33%$hpicon) seconds&reset, after which you receive all the stored damage excluding the damage received from enemies that are now dead.
+                    \\Delay all damage received for $hptxt3 (+0.33%$hpicon) seconds&reset, after which you receive all the stored damage.
                     \\$footnotetxtYou can not die from this ability, you will be set to 1 HP after the effect if it would've killed you.
                 ,
                 .mana_cost = 100,
@@ -64,7 +64,7 @@
             {
                 .name = "Ravenous Hunger",
                 .description = 
-                    \\Execute all monsters below or at 10% HP within $hsttxt2 (+5%$hsticon) tiles&reset, and gain $multitxt10 Overheal&reset for every 100 HP the killed mobs had.
+                    \\Execute all monsters below or at 10% HP within $hsttxt2 (+5%$hsticon) tiles&reset, and gain $type="med_it"Overheal&reset for 10% of killed monster HP.
                     \\$footnotetxtThe Overheal is capped at $hptxt1000 (+10%$hpicon)$footnotetxt.
                 ,
                 .health_cost = 300,
