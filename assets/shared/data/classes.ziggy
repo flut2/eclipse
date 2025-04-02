@@ -64,7 +64,7 @@
             {
                 .name = "Ravenous Hunger",
                 .description = 
-                    \\Execute all monsters below or at 10% HP within $hsttxt2 (+5%$hsticon) tiles&reset, and gain $type="med_it"Overheal&reset for 10% of killed monster HP.
+                    \\Execute all monsters below or at 10% HP within $hsttxt2 (+5%$hsticon) tiles&reset, and gain &type="med_it"Overheal&reset for 10% of killed monster HP.
                     \\$footnotetxtThe Overheal is capped at $hptxt1000 (+10%$hpicon)$footnotetxt.
                 ,
                 .health_cost = 300,
