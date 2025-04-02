@@ -67,27 +67,27 @@ pub fn addToMap(square_data: Square) void {
     const floor_x = u32f(self.x);
 
     const cur = &map.squares[floor_y * map.info.width + floor_x];
-    if (cur.entity_map_id == std.math.maxInt(u32))
-        if (game_data.ground.from_id.get(self.data_id)) |ground_data| {
-            const tex_list = ground_data.textures;
-            self.selectTexture(tex_list);
 
-            if (ui_systems.screen != .editor and tex_list.len > 0) {
-                const tex = if (tex_list.len == 1) tex_list[0] else tex_list[utils.rng.next() % tex_list.len];
-                if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
-                    const color = color_data[tex.index];
-                    const base_data_idx: usize = @intCast(floor_y * map.minimap.num_components * map.minimap.width + floor_x * map.minimap.num_components);
-                    @memcpy(map.minimap.data[base_data_idx .. base_data_idx + 4], &@as([4]u8, @bitCast(color)));
+    if (game_data.ground.from_id.get(self.data_id)) |ground_data| {
+        const tex_list = ground_data.textures;
+        self.selectTexture(tex_list);
 
-                    main.minimap_update = .{
-                        .min_x = @min(main.minimap_update.min_x, floor_x),
-                        .max_x = @max(main.minimap_update.max_x, floor_x),
-                        .min_y = @min(main.minimap_update.min_y, floor_y),
-                        .max_y = @max(main.minimap_update.max_y, floor_y),
-                    };
-                }
+        if (cur.entity_map_id == std.math.maxInt(u32) and ui_systems.screen != .editor and tex_list.len > 0) {
+            const tex = if (tex_list.len == 1) tex_list[0] else tex_list[utils.rng.next() % tex_list.len];
+            if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
+                const color = color_data[tex.index];
+                const base_data_idx: usize = @intCast(floor_y * map.minimap.num_components * map.minimap.width + floor_x * map.minimap.num_components);
+                @memcpy(map.minimap.data[base_data_idx .. base_data_idx + 4], &@as([4]u8, @bitCast(color)));
+
+                main.minimap_update = .{
+                    .min_x = @min(main.minimap_update.min_x, floor_x),
+                    .max_x = @max(main.minimap_update.max_x, floor_x),
+                    .min_y = @min(main.minimap_update.min_y, floor_y),
+                    .max_y = @max(main.minimap_update.max_y, floor_y),
+                };
             }
-        };
+        }
+    }
 
     self.entity_map_id = cur.entity_map_id;
     cur.* = self;
