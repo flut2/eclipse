@@ -24,6 +24,7 @@ pub fn draw(
     time: i64,
     obj_x: f32,
     obj_y: f32,
+    offset: f32,
     scale: f32,
 ) bool {
     const elapsed = time - self.show_at;
@@ -35,7 +36,8 @@ pub fn draw(
     self.text_data.alpha = 1.0 - frac + 0.33;
     self.text_data.recalculateAttributes(); // not great doing this per frame for each instance but oh well
     const x = obj_x - self.text_data.width / 2;
-    const y = obj_y - self.text_data.height - frac * 40;
+    const y = obj_y - offset - self.text_data.height - frac * 40;
+    self.text_data.sort_extra = obj_y - y;
 
     Renderer.drawText(generics, sort_extras, x, y, scale, &self.text_data, .{});
     return true;

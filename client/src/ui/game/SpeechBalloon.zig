@@ -82,8 +82,10 @@ pub fn draw(
     time: i64,
     obj_x: f32,
     obj_y: f32,
+    offset: f32,
     scale: f32,
 ) bool {
+    _ = offset; // autofix
     const elapsed = time - self.show_at;
     if (elapsed <= 0) return true;
     if (elapsed > self.duration) return false;

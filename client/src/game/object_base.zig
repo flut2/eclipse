@@ -336,13 +336,14 @@ pub fn drawStatusTexts(
     time: i64,
     x: f32,
     y: f32,
+    offset: f32,
     scale: f32,
     sort_random: u16,
 ) void {
     var status_texts_to_dispose: std.ArrayListUnmanaged(usize) = .empty;
     defer status_texts_to_dispose.deinit(main.allocator);
     for (self.status_texts.items, 0..) |*text, i| {
-        if (!text.draw(generics, sort_extras, time, x, y, scale)) {
+        if (!text.draw(generics, sort_extras, time, x, y, offset, scale)) {
             status_texts_to_dispose.append(main.allocator, i) catch main.oomPanic();
         } else for (0..text.text_data.text.len) |_| sort_randoms.append(main.allocator, sort_random) catch main.oomPanic();
     }
@@ -362,10 +363,11 @@ pub fn drawSpeechBalloon(
     time: i64,
     x: f32,
     y: f32,
+    offset: f32,
     scale: f32,
     sort_random: u16,
 ) void {
-    if (self.speech_balloon) |*balloon| if (!balloon.draw(generics, sort_extras, time, x, y, scale)) {
+    if (self.speech_balloon) |*balloon| if (!balloon.draw(generics, sort_extras, time, x, y, offset, scale)) {
         balloon.deinit();
         self.speech_balloon = null;
     } else for (0..balloon.text_data.text.len + 1) |_| sort_randoms.append(main.allocator, sort_random) catch main.oomPanic();

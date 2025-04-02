@@ -492,6 +492,7 @@ pub fn draw(
         i64f(float_time_ms) * std.time.us_per_ms,
         screen_pos.x,
         screen_pos.y,
+        5,
         main.camera.scale,
         self.sort_random,
     );
