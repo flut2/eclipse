@@ -87,7 +87,18 @@ pub fn addToMap(entity_data: Entity) void {
         if (ui_systems.screen != .editor and self.data.static and
             (self.data.occupy_square or self.data.full_occupy or self.data.is_wall))
         {
-            if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
+            if (self.data.minimap_color != std.math.maxInt(u32)) {
+                const floor_y = u32f(self.y);
+                const floor_x = u32f(self.x);
+                const base_data_idx: usize = @intCast(floor_y * map.minimap.num_components * map.minimap.width + floor_x * map.minimap.num_components);
+                @memcpy(map.minimap.data[base_data_idx .. base_data_idx + 4], &@as([4]u8, @bitCast(self.data.minimap_color + 0xFF000000)));
+                main.minimap_update = .{
+                    .min_x = @min(main.minimap_update.min_x, floor_x),
+                    .max_x = @max(main.minimap_update.max_x, floor_x),
+                    .min_y = @min(main.minimap_update.min_y, floor_y),
+                    .max_y = @max(main.minimap_update.max_y, floor_y),
+                };
+            } else if (assets.dominant_color_data.get(tex.sheet)) |color_data| {
                 const floor_y = u32f(self.y);
                 const floor_x = u32f(self.x);
 

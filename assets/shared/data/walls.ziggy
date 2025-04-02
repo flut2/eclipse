@@ -4,42 +4,49 @@
         .name = "Retrieve Sheet Metal Wall",
         .textures = [{ "walls": 0 }],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1001,
         .name = "Retrieve Electronic Wall Off",
         .textures = [{ "walls": 1 }],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1002,
         .name = "Retrieve Electronic Wall On",
         .textures = [{ "walls": 2 }],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1003,
         .name = "Retrieve Electronic Pillar 1",
         .textures = [{ "walls": 3 }],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1004,
         .name = "Retrieve Electronic Pillar 2",
         .textures = [{ "walls": 4 }],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1005,
         .name = "Retrieve Electronic Pillar 3",
         .textures = [{ "walls": 5 }],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1006,
         .name = "Retrieve Terminal Off",
         .textures = [{ "walls": 6 }],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1007,
@@ -57,6 +64,7 @@
             { .time = 0.3, .texture = { "walls": 14 } },
             { .time = 0.3, .texture = { "walls": 15 } },
         ],
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1008,
@@ -74,6 +82,7 @@
             { .time = 0.3, .texture = { "walls": 23 } },
             { .time = 0.3, .texture = { "walls": 24 } },
         ],
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1009,
@@ -91,12 +100,14 @@
             { .time = 0.3, .texture = { "walls": 32 } },
             { .time = 0.3, .texture = { "walls": 33 } },
         ],
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1010,
         .name = "Retrieve Terminal Error",
         .textures = [{ "walls": 34 }],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1011,
@@ -294,6 +305,7 @@
             { "walls": 110 },
         ],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1030,
@@ -302,6 +314,7 @@
             { "walls": 111 },
         ],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1031,
@@ -310,6 +323,7 @@
             { "walls": 112 },
         ],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1032,
@@ -318,6 +332,7 @@
             { "walls": 113 },
         ],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1033,
@@ -329,6 +344,7 @@
             { "walls": 117 },
         ],
         .is_wall = true,
+        .minimap_color = "0xD3C3D2",
     },
     {
         .id = 1034,

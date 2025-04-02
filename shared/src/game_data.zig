@@ -446,6 +446,7 @@ pub const EntityData = struct {
     name: []const u8,
     textures: []const TextureData,
     subtexture: ?SubtextureData = null,
+    minimap_color: u32 = std.math.maxInt(u32),
     health: i32 = 0, // Having no health means it can't be hit/die
     defense: i32 = 0,
     resistance: i32 = 0,
