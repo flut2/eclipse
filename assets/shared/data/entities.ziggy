@@ -765,4 +765,29 @@
         .name = "Goblin Lair Diamond  Ore",
         .textures = [{ "props_big": 133 }],
     },
+    {
+        .id = 92,
+        .name = "Marble Rocks",
+        .textures = [{ "props": 256 }, { "props": 257 }, { "props": 258 }, { "props": 259 }],
+    },
+    {
+        .id = 93,
+        .name = "Greek Vases",
+        .textures = [{ "props": 260 }, { "props": 261 }, { "props": 262 }],
+    },
+    {
+        .id = 94,
+        .name = "Candle",
+        .textures = [{ "props": 216 }],
+        .animations = [
+            { .time = 0.3, .texture = { "props": 216 } },
+            { .time = 0.3, .texture = { "props": 217 } },
+            { .time = 0.3, .texture = { "props": 218 } },
+            { .time = 0.3, .texture = { "props": 219 } },
+            { .time = 0.3, .texture = { "props": 220 } },
+            { .time = 0.3, .texture = { "props": 221 } },
+            { .time = 0.3, .texture = { "props": 222 } },
+
+        ],
+    },
 ]

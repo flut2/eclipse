@@ -412,4 +412,41 @@
             { .time = 0.3, .texture = { "walls": 140 } },
         ],
     },
+    {
+        .id = 1040,
+        .name = "Marble Wall",
+        .textures = [
+            { "walls": 141 }
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1041,
+        .name = "Marble Brick Wall",
+        .textures = [
+            { "walls": 142 }
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1042,
+        .name = "Marble Pillar",
+        .textures = [
+            { "walls": 143 },
+            { "walls": 144 },
+            { "walls": 145 }
+        ],
+        .is_wall = true,
+    },
+    {
+        .id = 1043,
+        .name = "Marble Candle Wall",
+        .textures = [{ "walls": 146 }],
+        .is_wall = true,
+        .animations = [
+            { .time = 0.3, .texture = { "walls": 146 } },
+            { .time = 0.3, .texture = { "walls": 147 } },
+        ],
+    },
+    
 ]

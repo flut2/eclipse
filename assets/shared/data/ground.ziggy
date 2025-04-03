@@ -1093,6 +1093,34 @@
         .textures = [{ "ground": 218 }],
         .disable_blend = true,
     },
+    {
+        .id = 156,
+        .name = "Marble Sand",
+        .textures = [{ "ground": 219 }, { "ground": 220 }, { "ground": 221 }],
+        .blend_prio = 4,
+    },
+    {
+        .id = 157,
+        .name = "Marble Cobble",
+        .textures = [{ "ground": 222 }, { "ground": 223 }, { "ground": 224 }],
+        .blend_prio = 5,
+    },
+    {
+        .id = 158,
+        .name = "Marble Eclipse Tile",
+        .textures = [{ "ground": 225 }],
+    },
+    {
+        .id = 159,
+        .name = "Marble Tile",
+        .textures = [{ "ground": 226 }],
+    },
+    {
+        .id = 160,
+        .name = "Marble Road",
+        .textures = [{ "ground": 227 }, { "ground": 228 }],
+        .blend_prio = 7,
+    },
     
 
 ]
