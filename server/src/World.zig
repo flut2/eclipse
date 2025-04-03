@@ -28,6 +28,7 @@ pub const TimedCallback = struct { trigger_on: i64, callback: *const fn (*World,
 
 id: i32 = std.math.minInt(i32),
 owner_portal_id: u32 = std.math.maxInt(u32),
+owner_world_id: i32 = std.math.minInt(i32),
 next_map_ids: struct {
     entity: u32 = 0,
     enemy: u32 = 0,

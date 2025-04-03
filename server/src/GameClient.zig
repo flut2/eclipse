@@ -792,7 +792,7 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
         return;
     };
 
-    const player = self.world.findRef(Player, self.player_map_id) orelse {
+    const player = self.world.findRef(Player, self.player_map_5id) orelse {
         self.sendError(.message_with_disconnect, "Player does not exist");
         return;
     };
@@ -807,7 +807,7 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
         return;
     };
 
-    self.world = maps.portalWorld(portal_data_id, data.portal_map_id) catch {
+    self.world = maps.portalWorld(portal_data_id, data.portal_map_id, self.world.id) catch {
         self.sendMessage("Map load failed");
         return;
     } orelse {

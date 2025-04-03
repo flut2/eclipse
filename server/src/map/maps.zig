@@ -233,9 +233,11 @@ pub fn deinit() void {
     worlds.deinit(main.allocator);
 }
 
-pub fn portalWorld(portal_type: u16, portal_map_id: u32) !?*World {
+pub fn portalWorld(portal_type: u16, portal_map_id: u32, owner_world_id: i32) !?*World {
     var world_iter = worlds.iterator();
-    while (world_iter.next()) |w| if (w.value_ptr.owner_portal_id == portal_map_id) return w.value_ptr;
+    while (world_iter.next()) |w|
+        if (w.value_ptr.owner_portal_id == portal_map_id and
+            (w.value_ptr.owner_world_id == owner_world_id)) return w.value_ptr;
 
     if (maps.get(portal_type)) |map| {
         if (map.details.id < 0) return worlds.getPtr(map.details.id);
