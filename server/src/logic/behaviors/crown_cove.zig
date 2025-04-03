@@ -32,24 +32,31 @@ pub const TribeChief = struct {
 
     pub fn death(_: *TribeChief, host: *Enemy) !void {
         loot.dropItems(host, &.{
-            .{ .name = "Tiki Torch", .chance = 1.0 / 33.0, .threshold = 0.01 },
-            .{ .name = "Tribal Topper", .chance = 1.0 / 33.0, .threshold = 0.01 },
-            .{ .name = "Spirit Shank", .chance = 1.0 / 100.0, .threshold = 0.05 },
+            .{ .name = "Tiki Torch", .chance = 1.0 / 5.0, .threshold = 0.01 },
+            .{ .name = "Tribal Topper", .chance = 1.0 / 5.0, .threshold = 0.01 },
+            .{ .name = "Spirit Shank", .chance = 1.0 / 10.0, .threshold = 0.05 },
         });
         loot.dropCards(host, &.{
-            .{ .name = "Absorption", .chance = 1.0 / 80.0, .threshold = 0.05 },
-            .{ .name = "Ritual Sacrifice", .chance = 1.0 / 20.0, .threshold = 0.01 },
-            .{ .name = "Titan's Resolve", .chance = 1.0 / 10.0, .threshold = 0.005 },
-            .{ .name = "Boundless Aptitude", .chance = 1.0 / 5.0, .threshold = 0.005 },
-            .{ .name = "Enhanced Fortitude", .chance = 1.0 / 5.0, .threshold = 0.005 },
-            .{ .name = "Time Distortion", .chance = 1.0 / 5.0, .threshold = 0.005 },
-            .{ .name = "Nimble Feet", .chance = 1.0 / 5.0, .threshold = 0.005 },
+            .{ .name = "Absorption", .chance = 1.0 / 15.0, .threshold = 0.05 },
+            .{ .name = "Ritual Sacrifice", .chance = 1.0 / 10.0, .threshold = 0.01 },
+            .{ .name = "Titan's Resolve", .chance = 1.0 / 5.0, .threshold = 0.005 },
+            .{ .name = "Boundless Aptitude", .chance = 1.0 / 2.0, .threshold = 0.005 },
+            .{ .name = "Enhanced Fortitude", .chance = 1.0 / 2.0, .threshold = 0.005 },
+            .{ .name = "Time Distortion", .chance = 1.0 / 2.0, .threshold = 0.005 },
+            .{ .name = "Nimble Feet", .chance = 1.0 / 2.0, .threshold = 0.005 },
         });
         loot.dropResources(host, &.{
-            .{ .name = "Pine Driftwood", .chance = 1.0 / 5.0, .min = 3, .max = 6, .threshold = 0.01 },
-            .{ .name = "Maple Batten", .chance = 1.0 / 20.0, .min = 1, .max = 3, .threshold = 0.01 },
+            .{ .name = "Tiny Magisteel Alloy", .chance = 1.0 / 1.0, .min = 30, .max = 60, .threshold = 0.01 },
+            .{ .name = "Large Magisteel Alloy", .chance = 1.0 / 3.0, .min = 10, .max = 30, .threshold = 0.01 },
+            .{ .name = "Huge Magisteel Alloy", .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.01 },
+            .{ .name = "Pine Driftwood", .chance = 1.0 / 1.0, .min = 30, .max = 60, .threshold = 0.01 },
+            .{ .name = "Maple Batten", .chance = 1.0 / 3.0, .min = 10, .max = 30, .threshold = 0.01 },
+            .{ .name = "Flawless Mahogany", .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.01 },
+            .{ .name = "Solid Magma", .chance = 1.0 / 1.0, .min = 30, .max = 60, .threshold = 0.01 },
+            .{ .name = "Phoenix Feather", .chance = 1.0 / 3.0, .min = 10, .max = 30, .threshold = 0.01 },
+            .{ .name = "Bottled Flame", .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.01 },
         });
-        loot.dropSpirits(host, .{ .chance = 1.0 / 2.0, .min = 15, .max = 30, .threshold = 0.03 });
+        loot.dropSpirits(host, .{ .chance = 1.0 / 1.0, .min = 150, .max = 300, .threshold = 0.03 });
     }
 
     pub fn tick(self: *TribeChief, host: *Enemy, time: i64, dt: i64) !void {

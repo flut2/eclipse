@@ -6,41 +6,6 @@ const Metadata = @import("../behavior.zig").BehaviorMetadata;
 const logic = @import("../logic.zig");
 const loot = @import("../loot.zig");
 
-// TODO: remove this later
-pub const LootTester = struct {
-    pub const data: Metadata = .{
-        .type = .enemy,
-        .name = "Loot Tester",
-    };
-
-    pub fn death(_: *LootTester, host: *Enemy) !void {
-        loot.dropItems(host, &.{
-            .{ .name = "Bloodied Blade", .chance = 1.0 / 1.0, .min = 2, .max = 4, .threshold = 0.001 },
-            .{ .name = "Dwarven Coil", .chance = 1.0 / 1.0, .min = 2, .max = 7, .threshold = 0.001 },
-        });
-        loot.dropCards(host, &.{
-            .{ .name = "Heavy Strikes", .chance = 1.0 / 5.0, .threshold = 0.001 },
-            .{ .name = "Titan's Resolve", .chance = 1.0 / 10.0, .threshold = 0.001 },
-            .{ .name = "Deft Hands", .chance = 1.0 / 20.0, .threshold = 0.001 },
-            .{ .name = "Absorption", .chance = 1.0 / 40.0, .threshold = 0.001 },
-        });
-        loot.dropResources(host, &.{
-            .{ .name = "Tiny Magisteel Alloy", .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.001 },
-            .{ .name = "Large Magisteel Alloy", .chance = 1.0 / 20.0, .min = 2, .max = 7, .threshold = 0.001 },
-            .{ .name = "Huge Magisteel Alloy", .chance = 1.0 / 1.0, .min = 1, .max = 3, .threshold = 0.001 },
-        });
-        loot.dropCurrency(host, &.{
-            .{ .type = .gems, .chance = 1.0 / 5.0, .min = 5, .max = 15, .threshold = 0.001 },
-            .{ .type = .gold, .chance = 1.0 / 1.0, .min = 2, .max = 7, .threshold = 0.001 },
-        });
-        loot.dropSpirits(host, .{ .chance = 1.0 / 1.0, .min = 50, .max = 100, .threshold = 0.001 });
-    }
-
-    pub fn tick(_: *LootTester, host: *Enemy, _: i64, dt: i64) !void {
-        logic.wander(@src(), host, dt, 2.5);
-    }
-};
-
 pub const Crocodile = struct {
     pub const data: Metadata = .{
         .type = .enemy,
@@ -48,7 +13,25 @@ pub const Crocodile = struct {
     };
 
     pub fn death(_: *Crocodile, host: *Enemy) !void {
-        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 20.0 }});
+        loot.dropCards(host, &.{
+            .{ .name = "Thick Plating", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Inpenetrable Ward", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Heavy Strikes", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Arcane Incantations", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Vital Essence", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Font of Magic", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Nimble Feet", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Time Distortion", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Enhanced Fortitude", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Boundless Aptitude", .chance = 1.0 / 50.0, .threshold = 0.01 },
+        });
+        loot.dropResources(host, &.{
+            .{ .name = "Tiny Magisteel Alloy", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Pine Driftwood", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Solid Magma", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+        });
+        loot.dropCurrency(host, &.{.{ .type = .gold, .chance = 1.0 / 20.0, .min = 10, .max = 17, .threshold = 0.001 }});
+        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 10.0 }});
     }
 
     pub fn tick(_: *Crocodile, host: *Enemy, time: i64, dt: i64) !void {
@@ -82,7 +65,25 @@ pub const SpikeBall = struct {
     };
 
     pub fn death(_: *SpikeBall, host: *Enemy) !void {
-        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 20.0 }});
+        loot.dropCards(host, &.{
+            .{ .name = "Thick Plating", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Inpenetrable Ward", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Heavy Strikes", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Arcane Incantations", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Vital Essence", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Font of Magic", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Nimble Feet", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Time Distortion", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Enhanced Fortitude", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Boundless Aptitude", .chance = 1.0 / 50.0, .threshold = 0.01 },
+        });
+        loot.dropResources(host, &.{
+            .{ .name = "Tiny Magisteel Alloy", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Pine Driftwood", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Solid Magma", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+        });
+        loot.dropCurrency(host, &.{.{ .type = .gold, .chance = 1.0 / 20.0, .min = 10, .max = 17, .threshold = 0.001 }});
+        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 10.0 }});
     }
 
     pub fn tick(_: *SpikeBall, host: *Enemy, time: i64, dt: i64) !void {
@@ -104,7 +105,25 @@ pub const GoblinGrunt = struct {
     };
 
     pub fn death(_: *GoblinGrunt, host: *Enemy) !void {
-        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 20.0 }});
+        loot.dropCards(host, &.{
+            .{ .name = "Thick Plating", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Inpenetrable Ward", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Heavy Strikes", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Arcane Incantations", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Vital Essence", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Font of Magic", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Nimble Feet", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Time Distortion", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Enhanced Fortitude", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Boundless Aptitude", .chance = 1.0 / 50.0, .threshold = 0.01 },
+        });
+        loot.dropResources(host, &.{
+            .{ .name = "Tiny Magisteel Alloy", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Pine Driftwood", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Solid Magma", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+        });
+        loot.dropCurrency(host, &.{.{ .type = .gold, .chance = 1.0 / 20.0, .min = 10, .max = 17, .threshold = 0.001 }});
+        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 10.0 }});
     }
 
     pub fn tick(_: *GoblinGrunt, host: *Enemy, time: i64, dt: i64) !void {
@@ -131,7 +150,25 @@ pub const GoblinGuard = struct {
     };
 
     pub fn death(_: *GoblinGuard, host: *Enemy) !void {
-        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 20.0 }});
+        loot.dropCards(host, &.{
+            .{ .name = "Thick Plating", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Inpenetrable Ward", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Heavy Strikes", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Arcane Incantations", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Vital Essence", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Font of Magic", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Nimble Feet", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Time Distortion", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Enhanced Fortitude", .chance = 1.0 / 50.0, .threshold = 0.01 },
+            .{ .name = "Boundless Aptitude", .chance = 1.0 / 50.0, .threshold = 0.01 },
+        });
+        loot.dropResources(host, &.{
+            .{ .name = "Tiny Magisteel Alloy", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Pine Driftwood", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Solid Magma", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+        });
+        loot.dropCurrency(host, &.{.{ .type = .gold, .chance = 1.0 / 20.0, .min = 10, .max = 17, .threshold = 0.001 }});
+        loot.dropPortals(host, &.{.{ .name = "Crown Cove", .chance = 1.0 / 10.0 }});
     }
 
     pub fn tick(_: *GoblinGuard, host: *Enemy, time: i64, dt: i64) !void {
@@ -176,7 +213,6 @@ pub const Imp = struct {
 
     pub fn death(_: *Imp, host: *Enemy) !void {
         loot.dropPortals(host, &.{.{ .name = "Crimson Chasm", .chance = 1.0 / 20.0 }});
-        loot.dropItems(host, &.{.{ .name = "Staff of Solstice", .chance = 1.0 / 1.0, .threshold = 0.001 }});
     }
 
     pub fn tick(_: *Imp, host: *Enemy, time: i64, dt: i64) !void {

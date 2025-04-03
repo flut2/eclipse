@@ -13,6 +13,7 @@ const Player = @import("../../map/Player.zig");
 const World = @import("../../World.zig");
 const Metadata = @import("../behavior.zig").BehaviorMetadata;
 const logic = @import("../logic.zig");
+const loot = @import("../loot.zig");
 
 pub const HealthShrine = struct {
     pub const data: Metadata = .{
@@ -189,6 +190,13 @@ pub const HealthWisp = struct {
     };
 
     pub fn death(_: *HealthWisp, host: *Enemy) !void {
+        loot.dropResources(host, &.{
+            .{ .name = "Tiny Magisteel Alloy", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Pine Driftwood", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Solid Magma", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+        });
+        loot.dropCurrency(host, &.{.{ .type = .gold, .chance = 1.0 / 20.0, .min = 10, .max = 17, .threshold = 0.001 }});
+
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         for (world.listForType(Entity).items) |e| {
             if (utils.distSqr(host.x, host.y, e.x, e.y) > 20 * 20 or
@@ -233,6 +241,13 @@ pub const MagicWisp = struct {
     };
 
     pub fn death(_: *MagicWisp, host: *Enemy) !void {
+        loot.dropResources(host, &.{
+            .{ .name = "Tiny Magisteel Alloy", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Pine Driftwood", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+            .{ .name = "Solid Magma", .chance = 1.0 / 10.0, .min = 5, .max = 10, .threshold = 0.01 },
+        });
+        loot.dropCurrency(host, &.{.{ .type = .gold, .chance = 1.0 / 20.0, .min = 10, .max = 17, .threshold = 0.001 }});
+
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         for (world.listForType(Entity).items) |e| {
             if (utils.distSqr(host.x, host.y, e.x, e.y) > 20 * 20 or

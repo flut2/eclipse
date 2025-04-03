@@ -31,7 +31,7 @@
         ],
         .biome_1_encounters = ["Loot Tester"],
         .biome_1_spawn_target = 600,
-        .biome_1_encounter_chance = 0.005,
+        .biome_1_encounter_chance = 0.05,
         .biome_1_name = "Forest",
         .biome_2_mobs = [],
         .biome_2_encounters = [],
@@ -72,7 +72,7 @@
             "Possessed Short Totem",
             "Possessed Totem",
         ],
-        .treasure_chance = 0.03,
+        .treasure_chance = 0.5,
         .treasure_mobs = ["Possessed Gilded Totem"],
     },
 ]
