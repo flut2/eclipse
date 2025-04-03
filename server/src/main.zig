@@ -26,6 +26,7 @@ pub const c = @cImport({
 pub var game_client_pool: std.heap.MemoryPool(GameClient) = undefined;
 pub var login_client_pool: std.heap.MemoryPool(LoginClient) = undefined;
 pub var socket_pool: std.heap.MemoryPool(uv.uv_tcp_t) = undefined;
+pub var world_ids_to_remove: std.ArrayListUnmanaged(i32) = .empty;
 pub var game_timer: uv.uv_timer_t = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var tick_id: u8 = 0;
@@ -118,11 +119,18 @@ fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.C) void {
     const time = std.time.microTimestamp();
     defer current_time = time;
     const dt = if (current_time == -1) 0 else time - current_time;
+
+    world_ids_to_remove.clearRetainingCapacity();
+
     var iter = maps.worlds.iterator();
-    while (iter.next()) |entry| entry.value_ptr.tick(time, dt) catch |e| {
+    while (iter.next()) |entry| if (!(entry.value_ptr.tick(time, dt) catch |e| blk: {
         std.log.err("Error while ticking world: {}", .{e});
         if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
-    };
+        break :blk false;
+    })) world_ids_to_remove.append(allocator, entry.value_ptr.id) catch oomPanic();
+
+    var id_iter = std.mem.reverseIterator(world_ids_to_remove.items);
+    while (id_iter.next()) |id| _ = maps.worlds.orderedRemove(id);
 }
 
 fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {

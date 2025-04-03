@@ -233,11 +233,11 @@ pub fn deinit() void {
     worlds.deinit(main.allocator);
 }
 
-pub fn portalWorld(portal_type: u16, portal_map_id: u32, owner_world_id: i32) !?*World {
+pub fn portalWorld(portal_type: u16, portal_map_id: u32, world_id: i32) !?*World {
     var world_iter = worlds.iterator();
     while (world_iter.next()) |w|
         if (w.value_ptr.owner_portal_id == portal_map_id and
-            (w.value_ptr.owner_world_id == owner_world_id)) return w.value_ptr;
+            (w.value_ptr.owner_world_id == world_id)) return w.value_ptr;
 
     if (maps.get(portal_type)) |map| {
         if (map.details.id < 0) return worlds.getPtr(map.details.id);
@@ -250,6 +250,7 @@ pub fn portalWorld(portal_type: u16, portal_map_id: u32, owner_world_id: i32) !?
         var new_world = worlds.getPtr(next_world_id).?;
         try new_world.appendMap(map);
         new_world.owner_portal_id = portal_map_id;
+        new_world.owner_world_id = world_id;
         return new_world;
     } else return null;
 }

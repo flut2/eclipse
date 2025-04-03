@@ -62,6 +62,7 @@ lists: struct {
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{},
 callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty,
+callback_indices_to_remove: std.ArrayListUnmanaged(usize) = .empty,
 biome_1_spawn: u32 = 0,
 biome_2_spawn: u32 = 0,
 biome_3_spawn: u32 = 0,
@@ -225,8 +226,9 @@ pub fn deinit(self: *World) void {
     inline for (.{ &self.lists, &self.drops }) |list| {
         inline for (@typeInfo(@TypeOf(list.*)).@"struct".fields) |field| @field(list, field.name).deinit(main.allocator);
     }
+    self.callbacks.deinit(main.allocator);
+    self.callback_indices_to_remove.deinit(main.allocator);
     main.allocator.free(self.tiles);
-    _ = maps.worlds.swapRemove(self.id);
 }
 
 pub fn add(self: *World, comptime T: type, data: T) !u32 {
@@ -267,23 +269,22 @@ pub fn findRef(self: *World, comptime T: type, map_id: u32) ?*T {
     return null;
 }
 
-pub fn tick(self: *World, time: i64, dt: i64) !void {
+pub fn tick(self: *World, time: i64, dt: i64) !bool {
     if (self.id >= 0 and self.details.map_type != .realm and
         time > self.time_added + 30 * std.time.us_per_s and self.listForType(Player).items.len == 0)
     {
         self.deinit();
-        return;
+        return false;
     }
 
-    var callback_indices_to_remove: std.ArrayListUnmanaged(usize) = .empty;
-    defer callback_indices_to_remove.deinit(main.allocator);
+    self.callback_indices_to_remove.clearRetainingCapacity();
     for (self.callbacks.items, 0..) |timed_cb, i| {
         if (timed_cb.trigger_on <= time) {
             timed_cb.callback(self, timed_cb.data);
-            callback_indices_to_remove.append(main.allocator, i) catch main.oomPanic();
+            self.callback_indices_to_remove.append(main.allocator, i) catch main.oomPanic();
         }
     }
-    var iter = std.mem.reverseIterator(callback_indices_to_remove.items);
+    var iter = std.mem.reverseIterator(self.callback_indices_to_remove.items);
     while (iter.next()) |i| _ = self.callbacks.swapRemove(i);
 
     inline for (.{ Entity, Enemy, Portal, Container, Projectile, Player, Ally }) |ObjType| {
@@ -350,6 +351,8 @@ pub fn tick(self: *World, time: i64, dt: i64) !void {
         }
         self.last_realm_spawn = time;
     }
+
+    return true;
 }
 
 pub fn moveToward(host: anytype, x: f32, y: f32, speed: f32, dt: i64) void {
