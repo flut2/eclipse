@@ -1107,10 +1107,12 @@ fn handleSelectCard(self: *Client, data: PacketData(.select_card)) void {
         },
     }
 
+    player.applyCondition(.invulnerable, 3 * std.time.us_per_s);
     player.recalculateBoosts();
 }
 
-fn handleTalentUpgrade(self: *Client, _: PacketData(.talent_upgrade)) void {
+fn handleTalentUpgrade(self: *Client, data: PacketData(.talent_upgrade)) void {
+    _ = data; // autofix
     const player = self.world.findRef(Player, self.player_map_id) orelse {
         self.sendError(.message_with_disconnect, "Player does not exist");
         return;
