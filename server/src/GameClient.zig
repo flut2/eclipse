@@ -792,7 +792,7 @@ fn handleUsePortal(self: *Client, data: PacketData(.use_portal)) void {
         return;
     };
 
-    const player = self.world.findRef(Player, self.player_map_5id) orelse {
+    const player = self.world.findRef(Player, self.player_map_id) orelse {
         self.sendError(.message_with_disconnect, "Player does not exist");
         return;
     };
