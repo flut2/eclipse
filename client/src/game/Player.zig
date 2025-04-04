@@ -200,7 +200,8 @@ pub fn useAbility(self: *Player, index: comptime_int) void {
     if (index < 0 or index >= 4) @compileError("Invalid index");
     const abil_data = self.data.abilities[index];
     const time = main.current_time;
-    if (time - self.last_ability_use[index] < i64f(abil_data.cooldown) * std.time.us_per_s) {
+    const cooldown_us = i64f(abil_data.cooldown / (1.0 + f32i(self.data.stats.haste + self.haste_bonus) / 150.0) * std.time.us_per_s);
+    if (time - self.last_ability_use[index] < cooldown_us) {
         assets.playSfx("error.mp3");
         return;
     }

@@ -1033,7 +1033,8 @@ fn handleUseAbility(self: *Client, data: PacketData(.use_ability)) void {
 
     const abil_data = player.data.abilities[data.index];
     const time = main.current_time;
-    if (time - player.last_ability_use[data.index] < i64f(abil_data.cooldown) * std.time.us_per_s) {
+    const cooldown = i64f(abil_data.cooldown / (1.0 + f32i(player.totalStat(.haste)) / 150.0) * std.time.us_per_s);
+    if (time - player.last_ability_use[data.index] < cooldown) {
         self.sendError(.message_with_disconnect, "Ability on cooldown");
         return;
     }

@@ -829,12 +829,13 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
 
         for (0..4) |i| {
             const time_elapsed = time - local_player.last_ability_use[i];
-            const cooldown_us = i64f(local_player.data.abilities[i].cooldown) * std.time.us_per_s;
+            const cooldown_us = i64f(local_player.data.abilities[i].cooldown /
+                (1.0 + f32i(local_player.data.stats.haste + local_player.haste_bonus) / 150.0) * std.time.us_per_s);
             if (time_elapsed < cooldown_us) {
                 const cooldown_left = f32i(cooldown_us - time_elapsed) / std.time.us_per_s;
 
                 self.ability_cd_overlays[i].image_data.normal.scissor.max_x =
-                    self.ability_cd_overlays[i].texWRaw() * (cooldown_left / local_player.data.abilities[i].cooldown);
+                    self.ability_cd_overlays[i].texWRaw() * (cooldown_left / cooldown_us);
 
                 self.ability_cd_overlay_texts[i].text_data.setText(try std.fmt.bufPrint(
                     self.ability_cd_overlay_texts[i].text_data.backing_buffer,
