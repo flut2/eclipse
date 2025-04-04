@@ -199,7 +199,8 @@ stats_container: *UiContainer = undefined,
 cards_container: *UiContainer = undefined,
 ability_container: *UiContainer = undefined,
 ability_overlays: [4]*Image = undefined,
-ability_overlay_texts: [4]*Text = undefined,
+ability_cd_overlays: [4]*Image = undefined,
+ability_cd_overlay_texts: [4]*Text = undefined,
 
 stats_decor: *Image = undefined,
 cards_decor: *Image = undefined,
@@ -666,12 +667,12 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
         });
     } else @panic("Could not initiate ability for GameScreen, sheet was missing");
 
-    self.ability_overlays[idx] = try self.ability_container.createChild(Image, .{
+    self.ability_cd_overlays[idx] = try self.ability_container.createChild(Image, .{
         .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false, .event_policy = .pass_all },
-        .image_data = undefined,
+        .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("on_cooldown_slot", 0) } },
     });
 
-    self.ability_overlay_texts[idx] = try self.ability_container.createChild(Text, .{
+    self.ability_cd_overlay_texts[idx] = try self.ability_container.createChild(Text, .{
         .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false, .event_policy = .pass_all },
         .text_data = .{
             .text = "",
@@ -683,6 +684,11 @@ fn addAbility(self: *GameScreen, ability: game_data.AbilityData, idx: usize) !vo
             .max_width = 44.0,
             .max_height = 44.0,
         },
+    });
+
+    self.ability_overlays[idx] = try self.ability_container.createChild(Image, .{
+        .base = .{ .x = fidx * 56.0, .y = 0.0, .visible = false, .event_policy = .pass_all },
+        .image_data = undefined,
     });
 }
 
@@ -822,11 +828,31 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
         }
 
         for (0..4) |i| {
+            const time_elapsed = time - local_player.last_ability_use[i];
+            const cooldown_us = i64f(local_player.data.abilities[i].cooldown) * std.time.us_per_s;
+            if (time_elapsed < cooldown_us) {
+                const cooldown_left = f32i(cooldown_us - time_elapsed) / std.time.us_per_s;
+
+                self.ability_cd_overlays[i].image_data.normal.scissor.max_x =
+                    self.ability_cd_overlays[i].texWRaw() * (cooldown_left / local_player.data.abilities[i].cooldown);
+
+                self.ability_cd_overlay_texts[i].text_data.setText(try std.fmt.bufPrint(
+                    self.ability_cd_overlay_texts[i].text_data.backing_buffer,
+                    "{d:.1}s",
+                    .{cooldown_left},
+                ));
+
+                self.ability_cd_overlays[i].base.visible = true;
+                self.ability_cd_overlay_texts[i].base.visible = true;
+            } else {
+                self.ability_cd_overlays[i].base.visible = false;
+                self.ability_cd_overlay_texts[i].base.visible = false;
+            }
+
             const mana_cost = local_player.data.abilities[i].mana_cost;
             if (mana_cost != 0 and mana_cost > local_player.mp) {
                 self.ability_overlays[i].image_data = .{ .normal = .{ .atlas_data = assets.getUiData("out_of_mana_slot", 0) } };
                 self.ability_overlays[i].base.visible = true;
-                self.ability_overlay_texts[i].base.visible = false;
                 continue;
             }
 
@@ -834,7 +860,6 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
             if (health_cost != 0 and health_cost > local_player.hp) {
                 self.ability_overlays[i].image_data = .{ .normal = .{ .atlas_data = assets.getUiData("out_of_health_slot", 0) } };
                 self.ability_overlays[i].base.visible = true;
-                self.ability_overlay_texts[i].base.visible = false;
                 continue;
             }
 
@@ -842,32 +867,10 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
             if (gold_cost != 0 and gold_cost > local_player.gold) {
                 self.ability_overlays[i].image_data = .{ .normal = .{ .atlas_data = assets.getUiData("out_of_gold_slot", 0) } };
                 self.ability_overlays[i].base.visible = true;
-                self.ability_overlay_texts[i].base.visible = false;
-                continue;
-            }
-
-            const time_elapsed = time - local_player.last_ability_use[i];
-            const cooldown_us = i64f(local_player.data.abilities[i].cooldown) * std.time.us_per_s;
-            if (time_elapsed < cooldown_us) {
-                const cooldown_left = f32i(cooldown_us - time_elapsed) / std.time.us_per_s;
-
-                self.ability_overlays[i].image_data = .{ .normal = .{ .atlas_data = assets.getUiData("on_cooldown_slot", 0) } };
-                self.ability_overlays[i].image_data.normal.scissor.max_x =
-                    self.ability_overlays[i].texWRaw() * (cooldown_left / local_player.data.abilities[i].cooldown);
-
-                self.ability_overlay_texts[i].text_data.setText(try std.fmt.bufPrint(
-                    self.ability_overlay_texts[i].text_data.backing_buffer,
-                    "{d:.1}s",
-                    .{cooldown_left},
-                ));
-
-                self.ability_overlays[i].base.visible = true;
-                self.ability_overlay_texts[i].base.visible = true;
                 continue;
             }
 
             self.ability_overlays[i].base.visible = false;
-            self.ability_overlay_texts[i].base.visible = false;
         }
 
         if (!std.mem.eql(network_data.DataIdWithCount(u32), self.last_resources, local_player.resources)) {
