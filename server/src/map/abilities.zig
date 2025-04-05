@@ -228,22 +228,26 @@ pub fn handleNullPulse(player: *Player) !void {
 
     var proj_lists: std.AutoHashMapUnmanaged(u32, std.ArrayListUnmanaged(u8)) = .empty;
     defer proj_lists.deinit(main.allocator);
-    var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
-    defer projs_to_remove.deinit(main.allocator);
-    for (world.listForType(Projectile).items, 0..) |*p, i|
-        if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
-            if (world.findRef(Enemy, p.owner_map_id)) |e| {
-                const phys_dmg = i32f(f32i(p.phys_dmg) * damage_mult);
-                const magic_dmg = i32f(f32i(p.magic_dmg) * damage_mult);
-                const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
-                e.damage(.player, player.map_id, phys_dmg, magic_dmg, true_dmg, null);
-            }
-            if (proj_lists.getPtr(p.owner_map_id)) |list| {
-                list.append(main.allocator, p.index) catch main.oomPanic();
-            } else proj_lists.put(main.allocator, p.owner_map_id, .empty) catch main.oomPanic();
-            try p.deinit();
-            projs_to_remove.append(main.allocator, i) catch main.oomPanic();
-        };
+    const proj_list = world.listForType(Projectile);
+    const projs_len = proj_list.items.len;
+    if (projs_len > 0) {
+        var iter = std.mem.reverseIterator(proj_list.items);
+        var i = projs_len - 1;
+        while (iter.nextPtr()) |p| : (i -%= 1)
+            if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
+                if (world.findRef(Enemy, p.owner_map_id)) |e| {
+                    const phys_dmg = i32f(f32i(p.phys_dmg) * damage_mult);
+                    const magic_dmg = i32f(f32i(p.magic_dmg) * damage_mult);
+                    const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
+                    e.damage(.player, player.map_id, phys_dmg, magic_dmg, true_dmg, null);
+                }
+                if (proj_lists.getPtr(p.owner_map_id)) |list| {
+                    list.append(main.allocator, p.index) catch main.oomPanic();
+                } else proj_lists.put(main.allocator, p.owner_map_id, .empty) catch main.oomPanic();
+                try p.deinit();
+                _ = proj_list.swapRemove(i);
+            };
+    }
 
     var enemy_proj_lists: std.ArrayListUnmanaged(network_data.EnemyProjList) = .empty;
     defer enemy_proj_lists.deinit(main.allocator);
@@ -257,9 +261,6 @@ pub fn handleNullPulse(player: *Player) !void {
         if (p.map_id == player.map_id or utils.distSqr(p.x, p.y, player.x, player.y) > 16 * 16) continue;
         p.client.sendPacket(.{ .drop_projs = .{ .lists = enemy_proj_lists.items } });
     }
-
-    var iter = std.mem.reverseIterator(projs_to_remove.items);
-    while (iter.next()) |i| _ = world.lists.projectile.orderedRemove(i);
 }
 
 fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {

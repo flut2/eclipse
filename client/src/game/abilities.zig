@@ -14,7 +14,6 @@ const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
 
 pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.ProjectileData) ![]u8 {
-    // TODO: needs VFX
     const proj_index = player.next_proj_index;
     player.next_proj_index +%= 1;
 
@@ -46,7 +45,6 @@ pub fn handleHeartOfStone(player: *Player) ![]u8 {
 }
 
 pub fn handleTimeDilation(player: *Player) ![]u8 {
-    // TODO: needs VFX
     player.ability_state.time_dilation = true;
     return &.{};
 }
@@ -56,7 +54,6 @@ pub fn handleRewind() ![]u8 {
 }
 
 pub fn handleNullPulse(player: *Player) ![]u8 {
-    // TODO: needs VFX
     const fint = f32i(player.data.stats.intelligence + player.intelligence_bonus);
     const fwit = f32i(player.data.stats.wit + player.wit_bonus);
     const radius = 5.0 + fint * 0.12;
@@ -64,35 +61,34 @@ pub fn handleNullPulse(player: *Player) ![]u8 {
     const damage_mult = 0.25 + fwit * 0.01 * player.damage_mult;
 
     var proj_list = map.listForType(Projectile);
-    var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
-    defer projs_to_remove.deinit(main.allocator);
-    for (proj_list.items, 0..) |*p, i|
-        if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
-            if (map.findObjectRef(Enemy, p.owner_map_id)) |e| {
-                const phys_dmg = i32f(f32i(game_data.physDamage(p.phys_dmg, e.data.defense, e.condition)) * damage_mult);
-                const magic_dmg = i32f(f32i(game_data.magicDamage(p.magic_dmg, e.data.resistance, e.condition)) * damage_mult);
-                const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
-                if (phys_dmg > 0) map.takeDamage(e, phys_dmg, .physical, .{}, p.colors);
-                if (magic_dmg > 0) map.takeDamage(e, magic_dmg, .magic, .{}, p.colors);
-                if (true_dmg > 0) map.takeDamage(e, true_dmg, .true, .{}, p.colors);
-            }
-            p.deinit();
-            projs_to_remove.append(main.allocator, i) catch main.oomPanic();
-        };
-        
-    var iter = std.mem.reverseIterator(projs_to_remove.items);
-    while (iter.next()) |i| _ = proj_list.orderedRemove(i);
+    const proj_len = proj_list.items.len;
+    if (proj_len > 0) {
+        var iter = std.mem.reverseIterator(proj_list.items);
+        var i = proj_len - 1;
+        while (iter.nextPtr()) |p| : (i -%= 1)
+            if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
+                if (map.findObjectRef(Enemy, p.owner_map_id)) |e| {
+                    const phys_dmg = i32f(f32i(game_data.physDamage(p.phys_dmg, e.data.defense, e.condition)) * damage_mult);
+                    const magic_dmg = i32f(f32i(game_data.magicDamage(p.magic_dmg, e.data.resistance, e.condition)) * damage_mult);
+                    const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
+                    if (phys_dmg > 0) map.takeDamage(e, phys_dmg, .physical, .{}, p.colors);
+                    if (magic_dmg > 0) map.takeDamage(e, magic_dmg, .magic, .{}, p.colors);
+                    if (true_dmg > 0) map.takeDamage(e, true_dmg, .true, .{}, p.colors);
+                }
+                p.deinit();
+                _ = proj_list.swapRemove(i);
+            };
+    }
+
     return &.{};
 }
 
 pub fn handleTimeLock(player: *Player) ![]u8 {
-    // TODO: needs VFX
     player.ability_state.time_lock = true;
     return &.{};
 }
 
 pub fn handleBloodfont(player: *Player) ![]u8 {
-    // TODO: needs VFX
     player.ability_state.bloodfont = true;
     return &.{};
 }

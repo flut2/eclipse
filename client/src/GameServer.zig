@@ -394,12 +394,12 @@ fn handleDeath(self: *Server, data: PacketData(.death)) void {
                 list.characters.len -= 1;
                 break;
             }
-            std.mem.copyBackwards(network_data.CharacterData, list.characters[i..list.characters.len - 1], list.characters[i + 1..]);
+            std.mem.copyBackwards(network_data.CharacterData, list.characters[i .. list.characters.len - 1], list.characters[i + 1 ..]);
             list.characters.len -= 1;
             break;
         }
     }
-    
+
     main.disconnect();
     self.shutdown();
     dialog.showDialog(.none, {});
@@ -683,25 +683,20 @@ fn handlePlayAnimation(_: *Server, data: PacketData(.play_animation)) void {
 }
 
 fn handleDropProjs(_: *Server, data: PacketData(.drop_projs)) void {
-    var projs_to_remove: std.ArrayListUnmanaged(usize) = .empty;
-    defer projs_to_remove.deinit(main.allocator);
-
     const proj_list = map.listForType(Projectile);
-    for (data.lists) |list| {
-        projs_to_remove.clearRetainingCapacity();
+    if (proj_list.items.len == 0) return;
 
-        for (proj_list.items, 0..) |*proj, i|
+    for (data.lists) |list| {
+        var iter = std.mem.reverseIterator(proj_list.items);
+        var i = proj_list.items.len - 1;
+        while (iter.nextPtr()) |proj| : (i -%= 1)
             if (proj.damage_players and
                 proj.owner_map_id == list.enemy_map_id and
-                std.mem.indexOfScalar(u8, list.proj_ids, proj.index) != null and
-                std.mem.indexOfScalar(usize, projs_to_remove.items, i) == null)
+                std.mem.indexOfScalar(u8, list.proj_ids, proj.index) != null)
             {
                 proj.deinit();
-                projs_to_remove.append(main.allocator, i) catch main.oomPanic();
+                _ = proj_list.swapRemove(i);
             };
-
-        var iter = std.mem.reverseIterator(projs_to_remove.items);
-        while (iter.next()) |i| _ = proj_list.orderedRemove(i);
     }
 }
 
@@ -784,14 +779,7 @@ fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
 
     for (list) |obj| {
         var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };
-        const current_obj = map.findObjectRef(T, obj.map_id) orelse findAddObj: {
-            for (map.addListForType(T).items) |*add_obj| {
-                if (add_obj.map_id == obj.map_id) break :findAddObj add_obj;
-            }
-
-            break :findAddObj null;
-        };
-        if (current_obj) |object| {
+        if (map.findObjectRef(T, obj.map_id)) |object| {
             const pre_x = switch (T) {
                 Player, Enemy, Ally => object.x,
                 else => 0.0,

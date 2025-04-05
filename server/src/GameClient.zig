@@ -1113,11 +1113,82 @@ fn handleSelectCard(self: *Client, data: PacketData(.select_card)) void {
 }
 
 fn handleTalentUpgrade(self: *Client, data: PacketData(.talent_upgrade)) void {
-    _ = data; // autofix
     const player = self.world.findRef(Player, self.player_map_id) orelse {
-        self.sendError(.message_with_disconnect, "Player does not exist");
+        self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Player does not exist" } });
         return;
     };
 
+    if (data.index > player.data.talents.len - 1) {
+        self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Invalid selected talent" } });
+        return;
+    }
+
+    const talent_data = player.data.talents[data.index];
+    const max_level = talent_data.max_level[@max(0, @min(talent_data.max_level.len - 1, player.aether - 1))];
+
+    lvlLoop: for (talent_data.requires) |req| {
+        for (player.talents.items) |talent|
+            if (talent.data_id == req.index and talent.count >= req.level_per_aether * player.aether)
+                continue :lvlLoop;
+        self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Level requirements not met" } });
+        return;
+    }
+
+    var talent_index: ?usize = null;
+    for (player.talents.items, 0..) |*talent, i| {
+        if (talent.data_id != data.index) continue;
+        if (talent.count < talent_data.level_costs.len)
+            for (talent_data.level_costs[talent.count]) |req| {
+                const resource_data = game_data.resource.from_name.get(req.name) orelse {
+                    self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Invalid resource requirement" } });
+                    return;
+                };
+
+                for (player.resources.items) |res| {
+                    if (res.data_id != resource_data.id) continue;
+                    if (res.count < req.amount) {
+                        self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
+                        return;
+                    }
+                }
+            };
+        talent_index = i;
+    }
+
+    var prev_talent_level: u16 = 0;
+    if (talent_index) |i| {
+        if (player.talents.items[i].count + 1 > max_level) {
+            self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Talent can't be leveled further" } });
+            return;
+        }
+
+        prev_talent_level = player.talents.items[i].count;
+        player.talents.items[i].count += 1;
+    } else player.talents.append(main.allocator, .{ .data_id = data.index, .count = 1 }) catch main.oomPanic();
+
+    if (prev_talent_level < talent_data.level_costs.len)
+        for (talent_data.level_costs[prev_talent_level]) |req| {
+            const resource_data = game_data.resource.from_name.get(req.name) orelse {
+                self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Invalid resource requirement" } });
+                return;
+            };
+
+            const res_len = player.resources.items.len;
+            if (res_len > 0) {
+                var iter = std.mem.reverseIterator(player.resources.items);
+                var i = res_len - 1;
+                while (iter.nextPtr()) |res| : (i -%= 1) {
+                    if (res.data_id != resource_data.id) continue;
+                    if (res.count < req.amount) {
+                        self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
+                        return;
+                    }
+                    res.count -= req.amount;
+                    if (res.count == 0) _ = player.resources.swapRemove(i);
+                }
+            }
+        };
+
+    self.sendPacket(.{ .talent_upgrade_response = .{ .success = true, .message = "" } });
     player.recalculateBoosts();
 }

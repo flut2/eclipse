@@ -133,7 +133,7 @@ pub fn addToMap(entity_data: Entity) void {
 
             if (self.y > 0)
                 if (map.getSquareCon(self.x, self.y - 1, false)) |square|
-                    if (map.findObjectWithAddListRef(Entity, square.entity_map_id)) |wall|
+                    if (map.findObjectRef(Entity, square.entity_map_id)) |wall|
                         if (wall.data.is_wall) {
                             wall.wall_outline_cull.bottom = true;
                             self.wall_outline_cull.top = true;
@@ -141,7 +141,7 @@ pub fn addToMap(entity_data: Entity) void {
 
             if (u32f(self.y) < map.info.height - 2)
                 if (map.getSquareCon(self.x, self.y + 1, false)) |square|
-                    if (map.findObjectWithAddListRef(Entity, square.entity_map_id)) |wall|
+                    if (map.findObjectRef(Entity, square.entity_map_id)) |wall|
                         if (wall.data.is_wall) {
                             wall.wall_outline_cull.top = true;
                             self.wall_outline_cull.bottom = true;
@@ -149,7 +149,7 @@ pub fn addToMap(entity_data: Entity) void {
 
             if (self.x > 0)
                 if (map.getSquareCon(self.x - 1, self.y, false)) |square|
-                    if (map.findObjectWithAddListRef(Entity, square.entity_map_id)) |wall|
+                    if (map.findObjectRef(Entity, square.entity_map_id)) |wall|
                         if (wall.data.is_wall) {
                             wall.wall_outline_cull.right = true;
                             self.wall_outline_cull.left = true;
@@ -157,7 +157,7 @@ pub fn addToMap(entity_data: Entity) void {
 
             if (u32f(self.x) < map.info.width - 2)
                 if (map.getSquareCon(self.x + 1, self.y, false)) |square|
-                    if (map.findObjectWithAddListRef(Entity, square.entity_map_id)) |wall|
+                    if (map.findObjectRef(Entity, square.entity_map_id)) |wall|
                         if (wall.data.is_wall) {
                             wall.wall_outline_cull.left = true;
                             self.wall_outline_cull.right = true;

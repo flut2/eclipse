@@ -36,7 +36,6 @@ stats_writer: utils.PacketWriter = .{},
 condition: utils.Condition = .{},
 damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
 conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .empty,
-conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .empty,
 data: *const game_data.EnemyData = undefined,
 world_id: i32 = std.math.minInt(i32),
 spawn: packed struct {
@@ -311,19 +310,18 @@ pub fn delete(self: *Enemy) !void {
 pub fn tick(self: *Enemy, time: i64, dt: i64) !void {
     if (self.data.health > 0 and self.hp <= 0) try self.delete();
 
-    self.conditions_to_remove.clearRetainingCapacity();
-    for (self.conditions_active.values(), self.conditions_active.keys()) |*d, k| {
-        if (d.* <= dt) {
-            self.conditions_to_remove.append(main.allocator, k) catch main.oomPanic();
-            continue;
+    const conds_len = self.conditions_active.count();
+    if (conds_len > 0) {
+        var iter = utils.mapReverseIterator(utils.ConditionEnum, i64, self.conditions_active);
+        var i = conds_len - 1;
+        while (iter.next()) |entry| : (i -%= 1) {
+            if (entry.value_ptr.* <= dt) {
+                self.condition.set(entry.key_ptr.*, false);
+                _ = self.conditions_active.swapRemoveAt(i);
+                continue;
+            }
+            entry.value_ptr.* -= dt;
         }
-
-        d.* -= dt;
-    }
-
-    for (self.conditions_to_remove.items) |c| {
-        self.condition.set(c, false);
-        _ = self.conditions_active.swapRemove(c);
     }
 
     if (self.behavior) |behav| switch (behav.*) {

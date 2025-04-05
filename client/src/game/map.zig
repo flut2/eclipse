@@ -58,18 +58,6 @@ pub var list: struct {
     particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
-pub var add_list: struct {
-    player: std.ArrayListUnmanaged(Player) = .empty,
-    entity: std.ArrayListUnmanaged(Entity) = .empty,
-    enemy: std.ArrayListUnmanaged(Enemy) = .empty,
-    container: std.ArrayListUnmanaged(Container) = .empty,
-    portal: std.ArrayListUnmanaged(Portal) = .empty,
-    projectile: std.ArrayListUnmanaged(Projectile) = .empty,
-    particle: std.ArrayListUnmanaged(particles.Particle) = .empty,
-    particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
-    ally: std.ArrayListUnmanaged(Ally) = .empty,
-} = .{};
-pub var remove_list: std.ArrayListUnmanaged(usize) = .empty;
 
 pub var lights: std.ArrayListUnmanaged(Renderer.LightData) = .empty;
 pub var draw_data: [main.frames_in_flight * 2]MapData = @splat(.{});
@@ -104,21 +92,6 @@ pub fn listForType(comptime T: type) *std.ArrayListUnmanaged(T) {
     };
 }
 
-pub fn addListForType(comptime T: type) *std.ArrayListUnmanaged(T) {
-    return switch (T) {
-        Entity => &add_list.entity,
-        Enemy => &add_list.enemy,
-        Player => &add_list.player,
-        Portal => &add_list.portal,
-        Container => &add_list.container,
-        Projectile => &add_list.projectile,
-        particles.Particle => &add_list.particle,
-        particles.ParticleEffect => &add_list.particle_effect,
-        Ally => &add_list.ally,
-        else => @compileError("Invalid type"),
-    };
-}
-
 pub fn init() !void {
     minimap = try zstbi.Image.createEmpty(1024, 1024, 4, .{});
     minimap_copy = try main.allocator.alloc(u8, 1024 * 1024 * 4);
@@ -131,15 +104,6 @@ pub fn deinit() void {
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
             for (child_list.items) |*obj| obj.deinit();
     }
-
-    inline for (@typeInfo(@TypeOf(add_list)).@"struct".fields) |field| {
-        var child_list = &@field(add_list, field.name);
-        defer child_list.deinit(main.allocator);
-        if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
-            for (child_list.items) |*obj| obj.deinit();
-    }
-
-    remove_list.deinit(main.allocator);
 
     move_records.deinit(main.allocator);
     main.allocator.free(info.name);
@@ -158,13 +122,6 @@ pub fn dispose() void {
 
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
         var child_list = &@field(list, field.name);
-        defer child_list.clearRetainingCapacity();
-        if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
-            for (child_list.items) |*obj| obj.deinit();
-    }
-
-    inline for (@typeInfo(@TypeOf(add_list)).@"struct".fields) |field| {
-        var child_list = &@field(add_list, field.name);
         defer child_list.clearRetainingCapacity();
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
             for (child_list.items) |*obj| obj.deinit();
@@ -232,20 +189,6 @@ pub fn findObjectRef(comptime T: type, map_id: u32) ?*T {
     return null;
 }
 
-/// Using this is a bad idea if you don't know what you're doing
-pub fn findObjectWithAddListCon(comptime T: type, map_id: u32) ?T {
-    for (listForType(T).items) |obj| if (obj.map_id == map_id) return obj;
-    for (addListForType(T).items) |obj| if (obj.map_id == map_id) return obj;
-    return null;
-}
-
-/// Using this is a bad idea if you don't know what you're doing
-pub fn findObjectWithAddListRef(comptime T: type, map_id: u32) ?*T {
-    for (listForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
-    for (addListForType(T).items) |*obj| if (obj.map_id == map_id) return obj;
-    return null;
-}
-
 pub fn localPlayerRef() ?*Player {
     if (info.player_map_id == std.math.maxInt(u32)) return null;
     if (findObjectRef(Player, info.player_map_id)) |player| return player;
@@ -262,7 +205,7 @@ pub fn removeEntity(comptime T: type, map_id: u32) bool {
     var obj_list = listForType(T);
     for (obj_list.items, 0..) |*obj, i| if (obj.map_id == map_id) {
         obj.deinit();
-        _ = obj_list.orderedRemove(i);
+        _ = obj_list.swapRemove(i);
         return true;
     };
 
@@ -314,17 +257,13 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
         particles.Particle,
         particles.ParticleEffect,
         Ally,
-    }) |ObjType| {
+    }) |ObjType| @"continue": {
         var obj_list = listForType(ObjType);
-        {
-            var obj_add_list = addListForType(ObjType);
-            defer obj_add_list.clearRetainingCapacity();
-            obj_list.appendSlice(main.allocator, obj_add_list.items) catch @panic("Failed to add objects");
-        }
-
-        remove_list.clearRetainingCapacity();
-
-        for (obj_list.items, 0..) |*obj, i| {
+        if (obj_list.items.len == 0) break :@"continue";
+        
+        var iter = std.mem.reverseIterator(obj_list.items);
+        var i = obj_list.items.len - 1;
+        while (iter.nextPtr()) |obj| : (i -%= 1) {
             if (ObjType != particles.ParticleEffect and (ObjType != Player or obj.map_id != info.player_map_id)) {
                 const obj_x = switch (ObjType) {
                     particles.Particle => switch (obj.*) {
@@ -406,21 +345,17 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
                     }
                     obj.update(time);
                 },
-                Projectile => if (!obj.update(time, dt)) remove_list.append(main.allocator, i) catch main.oomPanic(),
-                particles.Particle => if (!obj.update(time, dt)) remove_list.append(main.allocator, i) catch main.oomPanic(),
-                particles.ParticleEffect => if (!obj.update(time, dt)) remove_list.append(main.allocator, i) catch main.oomPanic(),
+                Projectile => if (!obj.update(time, dt)) {
+                    obj.deinit();
+                    _ = obj_list.swapRemove(i);
+                },
+                particles.Particle => _ = if (!obj.update(time, dt)) obj_list.swapRemove(i),
+                particles.ParticleEffect => _ = if (!obj.update(time, dt)) obj_list.swapRemove(i),
                 Entity => obj.update(time),
                 Enemy => obj.update(time, dt),
                 Ally => obj.update(time, dt),
                 else => @compileError("Invalid type"),
             }
-        }
-
-        var iter = std.mem.reverseIterator(remove_list.items);
-        while (iter.next()) |i| {
-            const T = @TypeOf(obj_list.items[i]);
-            if (T != particles.Particle and T != particles.ParticleEffect) obj_list.items[i].deinit();
-            _ = obj_list.orderedRemove(i);
         }
     }
 

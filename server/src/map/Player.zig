@@ -80,7 +80,6 @@ caches: struct {
     ally: std.AutoHashMapUnmanaged(u32, [@typeInfo(network_data.AllyStat).@"union".fields.len]?network_data.AllyStat) = .empty,
 } = .{},
 conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .empty,
-conditions_to_remove: std.ArrayListUnmanaged(utils.ConditionEnum) = .empty,
 tiles: std.ArrayListUnmanaged(network_data.TileData) = .empty,
 tiles_seen: std.AutoHashMapUnmanaged(u32, u16) = .empty,
 objs: struct {
@@ -493,19 +492,18 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
         self.position_records[self.chunked_tick_id] = .{ .x = self.x, .y = self.y };
     }
 
-    self.conditions_to_remove.clearRetainingCapacity();
-    for (self.conditions_active.values(), self.conditions_active.keys()) |*d, k| {
-        if (d.* <= dt) {
-            try self.conditions_to_remove.append(main.allocator, k);
-            continue;
+    const conds_len = self.conditions_active.count();
+    if (conds_len > 0) {
+        var iter = utils.mapReverseIterator(utils.ConditionEnum, i64, self.conditions_active);
+        var i = conds_len - 1;
+        while (iter.next()) |entry| : (i -%= 1) {
+            if (entry.value_ptr.* <= dt) {
+                self.condition.set(entry.key_ptr.*, false);
+                _ = self.conditions_active.swapRemoveAt(i);
+                continue;
+            }
+            entry.value_ptr.* -= dt;
         }
-
-        d.* -= dt;
-    }
-
-    for (self.conditions_to_remove.items) |c| {
-        self.condition.set(c, false);
-        _ = self.conditions_active.swapRemove(c);
     }
 
     const ux = u16f(self.x);

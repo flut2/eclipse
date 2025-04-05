@@ -122,6 +122,34 @@ pub fn SpscQueue(comptime T: type, capacity: comptime_int) type {
     };
 }
 
+pub fn mapReverseIterator(comptime K: type, comptime V: type, map: std.AutoArrayHashMapUnmanaged(K, V)) MapReverseIterator(K, V) {
+    const slice = map.entries.slice();
+    return .{
+        .keys = slice.items(.key).ptr,
+        .values = slice.items(.value).ptr,
+        .index = slice.len,
+    };
+}
+fn MapReverseIterator(comptime K: type, comptime V: type) type {
+    return struct {
+        keys: [*]K,
+        values: [*]V,
+        index: usize = 0,
+
+        pub fn next(iter: *@This()) ?struct {
+            key_ptr: *K,
+            value_ptr: *V,
+        } {
+            if (iter.index == 0) return null;
+            iter.index -%= 1;
+            return .{
+                .key_ptr = &iter.keys[iter.index],
+                .value_ptr = if (@sizeOf(*V) == 0) undefined else &iter.values[iter.index],
+            };
+        }
+    };
+}
+
 pub const ConditionEnum = enum {
     weak,
     slowed,

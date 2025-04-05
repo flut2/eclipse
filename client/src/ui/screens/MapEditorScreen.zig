@@ -1688,16 +1688,15 @@ fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_ty
     }
 
     if (self.selected_tiles.len > 0) {
-        var places_to_remove: std.ArrayListUnmanaged(usize) = .empty;
-        defer places_to_remove.deinit(main.allocator);
-
-        placeIter: for (places.items, 0..) |p, i| {
-            for (self.selected_tiles) |pos| if (p.x == pos.x and p.y == pos.y) continue :placeIter;
-            places_to_remove.append(main.allocator, i) catch main.oomPanic();
+        const places_len = places.items.len;
+        if (places_len > 0) {
+            var iter = std.mem.reverseIterator(places.items);
+            var i = places_len - 1;
+            placeIter: while (iter.next()) |p| : (i -%= 1) {
+                for (self.selected_tiles) |pos| if (p.x == pos.x and p.y == pos.y) continue :placeIter;
+                _ = places.swapRemove(i);
+            }
         }
-
-        var iter = std.mem.reverseIterator(places_to_remove.items);
-        while (iter.next()) |i| _ = places.orderedRemove(i);
     }
 
     if (places.items.len <= 1) {
@@ -1811,16 +1810,15 @@ fn fill(self: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
     }
 
     if (self.selected_tiles.len > 0) {
-        var places_to_remove: std.ArrayListUnmanaged(usize) = .empty;
-        defer places_to_remove.deinit(main.allocator);
-
-        placeIter: for (places.items, 0..) |p, i| {
-            for (self.selected_tiles) |pos| if (p.x == pos.x and p.y == pos.y) continue :placeIter;
-            places_to_remove.append(main.allocator, i) catch main.oomPanic();
+        const places_len = places.items.len;
+        if (places_len > 0) {
+            var iter = std.mem.reverseIterator(places.items);
+            var i = places_len - 1;
+            placeIter: while (iter.next()) |p| : (i -%= 1) {
+                for (self.selected_tiles) |pos| if (p.x == pos.x and p.y == pos.y) continue :placeIter;
+                _ = places.swapRemove(i);
+            }
         }
-
-        var iter = std.mem.reverseIterator(places_to_remove.items);
-        while (iter.next()) |i| _ = places.orderedRemove(i);
     }
 
     if (selection) {

@@ -62,7 +62,6 @@ lists: struct {
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{},
 callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty,
-callback_indices_to_remove: std.ArrayListUnmanaged(usize) = .empty,
 biome_1_spawn: u32 = 0,
 biome_2_spawn: u32 = 0,
 biome_3_spawn: u32 = 0,
@@ -227,7 +226,6 @@ pub fn deinit(self: *World) void {
         inline for (@typeInfo(@TypeOf(list.*)).@"struct".fields) |field| @field(list, field.name).deinit(main.allocator);
     }
     self.callbacks.deinit(main.allocator);
-    self.callback_indices_to_remove.deinit(main.allocator);
     main.allocator.free(self.tiles);
 }
 
@@ -277,15 +275,16 @@ pub fn tick(self: *World, time: i64, dt: i64) !bool {
         return false;
     }
 
-    self.callback_indices_to_remove.clearRetainingCapacity();
-    for (self.callbacks.items, 0..) |timed_cb, i| {
-        if (timed_cb.trigger_on <= time) {
-            timed_cb.callback(self, timed_cb.data);
-            self.callback_indices_to_remove.append(main.allocator, i) catch main.oomPanic();
-        }
+    const cb_len = self.callbacks.items.len;
+    if (cb_len > 0) {
+        var iter = std.mem.reverseIterator(self.callbacks.items);
+        var i = cb_len - 1;
+        while (iter.next()) |timed_cb| : (i -%= 1)
+            if (timed_cb.trigger_on <= time) {
+                timed_cb.callback(self, timed_cb.data);
+                _ = self.callbacks.swapRemove(i);
+            };
     }
-    var iter = std.mem.reverseIterator(self.callback_indices_to_remove.items);
-    while (iter.next()) |i| _ = self.callbacks.swapRemove(i);
 
     inline for (.{ Entity, Enemy, Portal, Container, Projectile, Player, Ally }) |ObjType| {
         for (self.listForType(ObjType).items) |*obj|

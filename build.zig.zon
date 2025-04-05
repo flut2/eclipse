@@ -13,10 +13,6 @@
             .url = "git+https://github.com/redis/hiredis.git#77bcc73ebbc562d8e8173832b710bfbfa4327b13",
             .hash = "N-V-__8AAMeyCAC7f33pfuk8OlGD4qqGI2OwGeP-9KamyBcb",
         },
-        .rpmalloc = .{
-            .url = "git+https://github.com/flut2/rpmalloc-zig.git#8cf613e29251ac9070cb10dd31dff2411cd96531",
-            .hash = "rpmalloc_zig-1.0.0-AAAAAGdGAAA8rbHQViIKm-CbxG3e1l4cBTJgRnqnDvXe",
-        },
         .turbopack = .{
             .url = "git+https://github.com/flut2/turbopack.git#10fc67d55533e2d495f302755f1ec4e7a4d90317",
             .hash = "turbopack-1.0.0-rSxRju8bAAB6-FV36FgBYVI36EIeFwQee7KJXZp9BiAe",

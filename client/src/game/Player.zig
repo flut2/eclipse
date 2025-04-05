@@ -144,7 +144,7 @@ pub fn addToMap(player_data: Player) void {
             std.log.err("Setting Discord RPC failed: {}", .{e});
         };
 
-    map.addListForType(Player).append(main.allocator, self) catch @panic("Adding player failed");
+    map.listForType(Player).append(main.allocator, self) catch main.oomPanic();
 }
 
 pub fn setRpc(self: Player) !void {

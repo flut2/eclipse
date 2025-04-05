@@ -5,7 +5,6 @@ const build_options = @import("options");
 const glfw = @import("glfw");
 const gpu = @import("zgpu");
 const rpc = @import("rpc");
-const rpmalloc = @import("rpmalloc");
 const shared = @import("shared");
 const network_data = shared.network_data;
 const game_data = shared.game_data;
@@ -192,11 +191,6 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
 fn renderTick(renderer: *Renderer) !void {
     if (build_options.enable_tracy) tracy.SetThreadName("Render");
 
-    if (!build_options.enable_gpa) {
-        rpmalloc.initThread();
-        defer rpmalloc.deinitThread();
-    }
-
     var last_vsync = settings.enable_vsync;
     var fps_time_start: i64 = 0;
     var frames: u32 = 0;
@@ -301,16 +295,16 @@ fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.C) void {
     };
     if (tick_frame or needs_map_bg) map.update(renderer, time, dt);
 
-    var callback_indices_to_remove: std.ArrayListUnmanaged(usize) = .empty;
-    defer callback_indices_to_remove.deinit(allocator);
-    for (callbacks.items, 0..) |timed_cb, i| {
-        if (timed_cb.trigger_on <= time) {
-            timed_cb.callback(timed_cb.data);
-            callback_indices_to_remove.append(allocator, i) catch oomPanic();
-        }
+    const cb_len = callbacks.items.len;
+    if (cb_len > 0) {
+        var iter = std.mem.reverseIterator(callbacks.items);
+        var i = cb_len - 1;
+        while (iter.next()) |timed_cb| : (i -%= 1)
+            if (timed_cb.trigger_on <= time) {
+                timed_cb.callback(timed_cb.data);
+                _ = callbacks.swapRemove(i);
+            };
     }
-    var iter = std.mem.reverseIterator(callback_indices_to_remove.items);
-    while (iter.next()) |i| _ = callbacks.swapRemove(i);
 }
 
 pub fn disconnect() void {
@@ -398,18 +392,13 @@ pub fn main() !void {
     utils.rng.seed(@intCast(start_time));
 
     const use_gpa = build_options.enable_gpa;
-    var gpa = if (use_gpa) std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 10 }).init else {};
+    var gpa = if (use_gpa) std.heap.DebugAllocator(.{ .stack_trace_frames = 10 }).init else {};
     defer _ = if (use_gpa) gpa.deinit();
-
-    if (!use_gpa) {
-        rpmalloc.init(.{}, .{});
-        defer rpmalloc.deinit();
-    }
 
     allocator = if (use_gpa)
         gpa.allocator()
     else
-        rpmalloc.allocator();
+        std.heap.smp_allocator;
     // allocator = if (build_options.enable_tracy) blk: {
     //     var tracy_alloc: tracy.TracyAllocator = .init(child_allocator);
     //     break :blk tracy_alloc.allocator();
@@ -555,13 +544,7 @@ fn ready(cli: *rpc) !void {
 fn runRpc(cli: *rpc) void {
     if (build_options.enable_tracy) tracy.SetThreadName("RPC");
 
-    if (!build_options.enable_gpa) {
-        rpmalloc.initThread();
-        defer rpmalloc.deinitThread();
-    }
-
     cli.run(.{ .client_id = "1356002897095295047" }) catch |e| {
         std.log.err("Setting up RPC failed: {}", .{e});
     };
 }
-

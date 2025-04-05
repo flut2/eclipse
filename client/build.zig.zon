@@ -14,10 +14,6 @@
             .url = "git+https://github.com/flut2/turbopack.git#10fc67d55533e2d495f302755f1ec4e7a4d90317",
             .hash = "turbopack-1.0.0-rSxRju8bAAB6-FV36FgBYVI36EIeFwQee7KJXZp9BiAe",
         },
-        .rpmalloc = .{
-            .url = "git+https://github.com/flut2/rpmalloc-zig.git#8cf613e29251ac9070cb10dd31dff2411cd96531",
-            .hash = "rpmalloc_zig-1.0.0-AAAAAGdGAAA8rbHQViIKm-CbxG3e1l4cBTJgRnqnDvXe",
-        },
         .vulkan_zig = .{
             .url = "git+https://github.com/Snektron/vulkan-zig.git#dcd538828c513919c3abf0bd55afacdce0576c61",
             .hash = "vulkan-0.0.0-r7Ytxy5bAwASnqFlLMD4V42z3LolS8n7xv3RlbXhAhv0",

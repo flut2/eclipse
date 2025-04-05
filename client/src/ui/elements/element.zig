@@ -858,7 +858,7 @@ pub fn create(comptime T: type, data: T) !*@TypeOf(data) {
 
     if (field_name.len == 0) @compileError("Could not find field name");
 
-    try systems.elements_to_add.append(main.allocator, @unionInit(UiElement, field_name, elem));
+    try systems.elements.append(main.allocator, @unionInit(UiElement, field_name, elem));
     return elem;
 }
 
@@ -880,12 +880,9 @@ pub fn destroy(self: anytype) void {
         self == @field(systems.hover_target.?, field_name))
         systems.hover_target = null;
 
-    removeFromList: inline for (.{ &systems.elements, &systems.elements_to_add }) |elems| {
-        for (elems.items, 0..) |element, i| if (element == tag.? and @field(element, field_name) == self) {
-            _ = elems.orderedRemove(i);
-            break :removeFromList;
-        };
-    }
+    for (systems.elements.items, 0..) |element, i|
+        _ = if (element == tag.? and @field(element, field_name) == self)
+            systems.elements.orderedRemove(i);
 
     if (std.meta.hasFn(@typeInfo(@TypeOf(self)).pointer.child, "deinit")) self.deinit();
     main.allocator.destroy(self);

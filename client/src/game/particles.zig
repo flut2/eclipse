@@ -33,7 +33,7 @@ pub const ThrowParticle = struct {
     pub fn addToMap(part: ThrowParticle) void {
         var mod_part = part;
         mod_part.sort_random = utils.rng.random().int(u16);
-        map.addListForType(Particle).append(main.allocator, .{ .throw = mod_part }) catch main.oomPanic();
+        map.listForType(Particle).append(main.allocator, .{ .throw = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *ThrowParticle, time: i64, dt: f32) bool {
@@ -85,7 +85,7 @@ pub const SparkerParticle = struct {
     pub fn addToMap(part: SparkerParticle) void {
         var mod_part = part;
         mod_part.sort_random = utils.rng.random().int(u16);
-        map.addListForType(Particle).append(main.allocator, .{ .sparker = mod_part }) catch main.oomPanic();
+        map.listForType(Particle).append(main.allocator, .{ .sparker = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *SparkerParticle, time: i64, dt: f32) bool {
@@ -135,7 +135,7 @@ pub const SparkParticle = struct {
     pub fn addToMap(part: SparkParticle) void {
         var mod_part = part;
         mod_part.sort_random = utils.rng.random().int(u16);
-        map.addListForType(Particle).append(main.allocator, .{ .spark = mod_part }) catch main.oomPanic();
+        map.listForType(Particle).append(main.allocator, .{ .spark = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *SparkParticle, _: i64, dt: f32) bool {
@@ -164,7 +164,7 @@ pub const TeleportParticle = struct {
     pub fn addToMap(part: TeleportParticle) void {
         var mod_part = part;
         mod_part.sort_random = utils.rng.random().int(u16);
-        map.addListForType(Particle).append(main.allocator, .{ .teleport = mod_part }) catch main.oomPanic();
+        map.listForType(Particle).append(main.allocator, .{ .teleport = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *TeleportParticle, _: i64, dt: f32) bool {
@@ -195,7 +195,7 @@ pub const ExplosionParticle = struct {
     pub fn addToMap(part: ExplosionParticle) void {
         var mod_part = part;
         mod_part.sort_random = utils.rng.random().int(u16);
-        map.addListForType(Particle).append(main.allocator, .{ .explosion = mod_part }) catch main.oomPanic();
+        map.listForType(Particle).append(main.allocator, .{ .explosion = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *ExplosionParticle, _: i64, dt: f32) bool {
@@ -228,7 +228,7 @@ pub const HitParticle = struct {
     pub fn addToMap(part: HitParticle) void {
         var mod_part = part;
         mod_part.sort_random = utils.rng.random().int(u16);
-        map.addListForType(Particle).append(main.allocator, .{ .hit = mod_part }) catch main.oomPanic();
+        map.listForType(Particle).append(main.allocator, .{ .hit = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *HitParticle, _: i64, dt: f32) bool {
@@ -262,7 +262,7 @@ pub const HealParticle = struct {
     pub fn addToMap(part: HealParticle) void {
         var mod_part = part;
         mod_part.sort_random = utils.rng.random().int(u16);
-        map.addListForType(Particle).append(main.allocator, .{ .heal = mod_part }) catch main.oomPanic();
+        map.listForType(Particle).append(main.allocator, .{ .heal = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *HealParticle, _: i64, dt: f32) bool {
@@ -347,7 +347,7 @@ pub const ThrowEffect = struct {
     duration: i64,
 
     pub fn addToMap(effect: ThrowEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .throw = effect }) catch main.oomPanic();
+        map.listForType(ParticleEffect).append(main.allocator, .{ .throw = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *ThrowEffect, _: i64, _: f32) bool {
@@ -375,7 +375,7 @@ pub const AoeEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: AoeEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .aoe = effect }) catch main.oomPanic();
+        map.listForType(ParticleEffect).append(main.allocator, .{ .aoe = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *AoeEffect, _: i64, _: f32) bool {
@@ -408,7 +408,7 @@ pub const TeleportEffect = struct {
     y: f32,
 
     pub fn addToMap(effect: TeleportEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .teleport = effect }) catch main.oomPanic();
+        map.listForType(ParticleEffect).append(main.allocator, .{ .teleport = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *TeleportEffect, _: i64, _: f32) bool {
@@ -439,7 +439,7 @@ pub const LineEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: LineEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .line = effect }) catch main.oomPanic();
+        map.listForType(ParticleEffect).append(main.allocator, .{ .line = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *LineEffect, _: i64, _: f32) bool {
@@ -472,7 +472,7 @@ pub const ExplosionEffect = struct {
     amount: u32,
 
     pub fn addToMap(effect: ExplosionEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .explosion = effect }) catch main.oomPanic();
+        map.listForType(ParticleEffect).append(main.allocator, .{ .explosion = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *ExplosionEffect, _: i64, _: f32) bool {
@@ -508,7 +508,7 @@ pub const HitEffect = struct {
     amount: u32,
 
     pub fn addToMap(effect: HitEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .hit = effect }) catch main.oomPanic();
+        map.listForType(ParticleEffect).append(main.allocator, .{ .hit = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *HitEffect, _: i64, _: f32) bool {
@@ -543,7 +543,7 @@ pub const HealEffect = struct {
     color: u32,
 
     pub fn addToMap(effect: HealEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .heal = effect }) catch main.oomPanic();
+        map.listForType(ParticleEffect).append(main.allocator, .{ .heal = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *HealEffect, _: i64, _: f32) bool {
@@ -591,7 +591,7 @@ pub const RingEffect = struct {
     duration: i64 = std.math.maxInt(i64),
 
     pub fn addToMap(effect: RingEffect) void {
-        map.addListForType(ParticleEffect).append(main.allocator, .{ .ring = effect }) catch main.oomPanic();
+        map.listForType(ParticleEffect).append(main.allocator, .{ .ring = effect }) catch main.oomPanic();
     }
 
     pub fn update(self: *RingEffect, time: i64, _: f32) bool {

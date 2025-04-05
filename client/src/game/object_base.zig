@@ -130,7 +130,7 @@ pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
         self.name_text_data.?.setText(if (self.name) |obj_name| obj_name else self.data.name);
     }
 
-    map.addListForType(ObjType).append(main.allocator, self) catch @panic("Adding " ++ type_name ++ " failed");
+    map.listForType(ObjType).append(main.allocator, self) catch main.oomPanic();
 }
 
 pub fn deinit(self: anytype) void {
@@ -351,7 +351,7 @@ pub fn drawStatusTexts(
     var iter = std.mem.reverseIterator(status_texts_to_dispose.items);
     while (iter.next()) |i| {
         self.status_texts.items[i].deinit();
-        _ = self.status_texts.orderedRemove(i);
+        _ = self.status_texts.swapRemove(i);
     }
 }
 

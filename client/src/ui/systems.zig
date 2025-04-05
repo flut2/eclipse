@@ -60,7 +60,6 @@ const points = [_]TimedPoint{
 };
 
 pub var elements: std.ArrayListUnmanaged(element.UiElement) = .empty;
-pub var elements_to_add: std.ArrayListUnmanaged(element.UiElement) = .empty;
 pub var screen: Screen = undefined;
 pub var darken_bg: *Image = undefined;
 pub var version_text: *Text = undefined;
@@ -123,7 +122,6 @@ pub fn deinit() void {
         inline else => |inner_screen| inner_screen.deinit(),
     }
 
-    elements_to_add.deinit(main.allocator);
     elements.deinit(main.allocator);
 
     if (last_map_data) |data| main.allocator.free(data);
@@ -367,14 +365,7 @@ pub fn update(time: i64, dt: f32) !void {
             player.y = lerp(current_point.y, next_point.y, frac);
         },
     }
-
-    elements.appendSlice(main.allocator, elements_to_add.items) catch |e| {
-        @branchHint(.cold);
-        std.log.err("Adding new elements failed: {}, returning", .{e});
-        return;
-    };
-    elements_to_add.clearRetainingCapacity();
-
+    
     std.sort.block(element.UiElement, elements.items, {}, lessThan);
 
     switch (screen) {

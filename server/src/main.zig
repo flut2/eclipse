@@ -2,7 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const build_options = @import("options");
-const rpmalloc = @import("rpmalloc");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
@@ -15,6 +14,7 @@ const behavior_logic = @import("logic/logic.zig");
 const LoginClient = @import("LoginClient.zig");
 const maps = @import("map/maps.zig");
 const Settings = @import("Settings.zig");
+const World = @import("World.zig");
 
 const tracy = if (build_options.enable_tracy) @import("tracy") else {};
 pub const c = @cImport({
@@ -26,7 +26,6 @@ pub const c = @cImport({
 pub var game_client_pool: std.heap.MemoryPool(GameClient) = undefined;
 pub var login_client_pool: std.heap.MemoryPool(LoginClient) = undefined;
 pub var socket_pool: std.heap.MemoryPool(uv.uv_tcp_t) = undefined;
-pub var world_ids_to_remove: std.ArrayListUnmanaged(i32) = .empty;
 pub var game_timer: uv.uv_timer_t = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var tick_id: u8 = 0;
@@ -43,15 +42,10 @@ pub fn main() !void {
     utils.rng.seed(@intCast(std.time.microTimestamp()));
 
     const enable_gpa = build_options.enable_gpa;
-    var gpa = if (enable_gpa) std.heap.GeneralPurposeAllocator(.{}).init else {};
+    var gpa = if (enable_gpa) std.heap.DebugAllocator(.{}).init else std.heap.smp_allocator;
     defer _ = if (enable_gpa) gpa.deinit();
 
-    if (!enable_gpa) {
-        rpmalloc.init(.{}, .{});
-        defer rpmalloc.deinit();
-    }
-
-    allocator = if (enable_gpa) gpa.allocator() else rpmalloc.allocator();
+    allocator = if (enable_gpa) gpa.allocator() else std.heap.smp_allocator;
     // allocator = if (build_options.enable_tracy) blk: {
     //     var tracy_alloc: tracy.TracyAllocator = .init(child_allocator);
     //     break :blk tracy_alloc.allocator();
@@ -120,17 +114,16 @@ fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.C) void {
     defer current_time = time;
     const dt = if (current_time == -1) 0 else time - current_time;
 
-    world_ids_to_remove.clearRetainingCapacity();
-
-    var iter = maps.worlds.iterator();
-    while (iter.next()) |entry| if (!(entry.value_ptr.tick(time, dt) catch |e| blk: {
-        std.log.err("Error while ticking world: {}", .{e});
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
-        break :blk false;
-    })) world_ids_to_remove.append(allocator, entry.value_ptr.id) catch oomPanic();
-
-    var id_iter = std.mem.reverseIterator(world_ids_to_remove.items);
-    while (id_iter.next()) |id| _ = maps.worlds.orderedRemove(id);
+    const worlds_len = maps.worlds.count();
+    if (worlds_len > 0) {
+        var iter = utils.mapReverseIterator(i32, World, maps.worlds);
+        var i = worlds_len - 1;
+        while (iter.next()) |entry| : (i -%= 1) _ = if (!(entry.value_ptr.tick(time, dt) catch |e| blk: {
+            std.log.err("Error while ticking world: {}", .{e});
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            break :blk false;
+        })) maps.worlds.swapRemoveAt(i);
+    }
 }
 
 fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {

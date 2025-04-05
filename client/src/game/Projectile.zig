@@ -70,7 +70,7 @@ pub fn addToMap(proj_data: Projectile) void {
 
     self.sort_random = utils.rng.random().int(u16);
 
-    map.addListForType(Projectile).append(main.allocator, self) catch @panic("Adding projectile failed");
+    map.listForType(Projectile).append(main.allocator, self) catch main.oomPanic();
 }
 
 pub fn deinit(self: *Projectile) void {
