@@ -259,10 +259,11 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
         Ally,
     }) |ObjType| @"continue": {
         var obj_list = listForType(ObjType);
-        if (obj_list.items.len == 0) break :@"continue";
+        const objs_len = obj_list.items.len;
+        if (objs_len == 0) break :@"continue";
         
         var iter = std.mem.reverseIterator(obj_list.items);
-        var i = obj_list.items.len - 1;
+        var i = objs_len - 1;
         while (iter.nextPtr()) |obj| : (i -%= 1) {
             if (ObjType != particles.ParticleEffect and (ObjType != Player or obj.map_id != info.player_map_id)) {
                 const obj_x = switch (ObjType) {
@@ -347,10 +348,10 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
                 },
                 Projectile => if (!obj.update(time, dt)) {
                     obj.deinit();
-                    _ = obj_list.swapRemove(i);
+                    _ = obj_list.orderedRemove(i);
                 },
-                particles.Particle => _ = if (!obj.update(time, dt)) obj_list.swapRemove(i),
-                particles.ParticleEffect => _ = if (!obj.update(time, dt)) obj_list.swapRemove(i),
+                particles.Particle => _ = if (!obj.update(time, dt)) obj_list.orderedRemove(i),
+                particles.ParticleEffect => _ = if (!obj.update(time, dt)) obj_list.orderedRemove(i),
                 Entity => obj.update(time),
                 Enemy => obj.update(time, dt),
                 Ally => obj.update(time, dt),
