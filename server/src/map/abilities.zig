@@ -310,17 +310,17 @@ pub fn handleEtherealHarvest(player: *Player) !void {
     const soul_id = (game_data.entity.from_name.get("Enemy Soul") orelse return).id;
 
     const duration = i64f((6.0 + f32i(player.totalStat(.haste)) * 0.06) * std.time.us_per_s);
-    const radius = 6.0 + f32i(player.totalStat(.intelligence)) * 0.09;
+    const radius = 6.0 + f32i(player.totalStat(.intelligence)) * 0.09 + f32i(player.abilityTalentLevel(0)) * 0.5;
     const radius_sqr = radius * radius;
 
-    var total_damage_boost: f32 = 1.0;
+    var num_souls: u32 = 0;
     var entities_to_kill: std.ArrayListUnmanaged(usize) = .empty;
     defer entities_to_kill.deinit(main.allocator);
     var show_effects: std.ArrayListUnmanaged(network_data.ShowEffectItem) = .empty;
     defer show_effects.deinit(main.allocator);
     for (world.listForType(Entity).items, 0..) |*e, i| {
         if (utils.distSqr(e.x, e.y, player.x, player.y) > radius_sqr or e.data_id != soul_id) continue;
-        total_damage_boost += 0.25;
+        num_souls += 1;
         show_effects.append(main.allocator, .{
             .obj_type = .enemy,
             .map_id = e.map_id,
@@ -337,12 +337,35 @@ pub fn handleEtherealHarvest(player: *Player) !void {
     var iter = std.mem.reverseIterator(entities_to_kill.items);
     while (iter.next()) |i| _ = try world.lists.entity.items[i].delete();
 
-    for (world.listForType(Player).items) |*other_player| {
-        other_player.show_effects.appendSlice(main.allocator, show_effects.items) catch main.oomPanic();
-    }
+    if (num_souls > 0) {
+        const pre_hp = player.hp;
+        player.restoreHealth(player.keystoneTalentLevel(0) * 30, 0);
+        const hp_delta = player.hp - pre_hp;
+        if (hp_delta > 0) {
+            var buf: [64]u8 = undefined;
+            for (world.listForType(Player).items) |*other_player| {
+                if (utils.distSqr(other_player.x, other_player.y, player.x, player.y) > 16 * 16) continue;
+                other_player.client.sendPacket(.{ .notification = .{
+                    .obj_type = .player,
+                    .map_id = player.map_id,
+                    .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
+                    .color = 0x00FF00,
+                } });
 
-    if (total_damage_boost > 1.0) {
-        player.damage_multiplier = total_damage_boost;
+                other_player.show_effects.append(main.allocator, .{
+                    .eff_type = .potion,
+                    .color = 0x00FF00,
+                    .map_id = player.map_id,
+                    .obj_type = .player,
+                    .x1 = 0,
+                    .x2 = 0,
+                    .y1 = 0,
+                    .y2 = 0,
+                }) catch main.oomPanic();
+            }
+        }
+
+        player.damage_multiplier = f32i(num_souls) * 0.25;
         const map_id_copy = try main.allocator.create(u32);
         map_id_copy.* = player.map_id;
         world.callbacks.append(main.allocator, .{
@@ -350,6 +373,11 @@ pub fn handleEtherealHarvest(player: *Player) !void {
             .callback = etherealHarvestCallback,
             .data = map_id_copy,
         }) catch main.oomPanic();
+    }
+
+    for (world.listForType(Player).items) |*other_player| {
+        if (utils.distSqr(other_player.x, other_player.y, player.x, player.y) > 16 * 16) continue;
+        other_player.show_effects.appendSlice(main.allocator, show_effects.items) catch main.oomPanic();
     }
 }
 
@@ -392,7 +420,7 @@ fn bloodfontCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     defer main.allocator.destroy(player_map_id);
     if (world.findRef(Player, player_map_id.*)) |player| {
         const old_hp = player.hp;
-        player.hp = @max(1, player.hp - @as(i32, @intCast(player.stored_damage)));
+        player.hp = @max(1, player.hp - i32f(f32i(player.stored_damage) * (1.0 - 0.1 * f32i(player.keystoneTalentLevel(2)))));
         const hp_delta = player.hp - old_hp;
         if (hp_delta < 0) {
             var buf: [64]u8 = undefined;
@@ -423,7 +451,7 @@ fn bloodfontCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 pub fn handleBloodfont(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const duration = i64f((3.0 + f32i(player.totalStat(.health)) * 0.0033) * std.time.us_per_s);
+    const duration = i64f((3.0 + f32i(player.totalStat(.health)) * 0.0033 + 0.25 * f32i(player.abilityTalentLevel(2))) * std.time.us_per_s);
 
     player.ability_state.bloodfont = true;
     player.hit_multiplier = 0.0;
@@ -437,15 +465,23 @@ pub fn handleBloodfont(player: *Player) !void {
     }) catch main.oomPanic();
 }
 
+fn ravenousHungerCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
+    const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
+    defer main.allocator.destroy(player_map_id);
+    if (world.findRef(Player, player_map_id.*)) |player| player.hit_multiplier = 1.0;
+}
+
 pub fn handleRavenousHunger(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
     const radius = 2.0 + f32i(player.totalStat(.haste)) * 0.05;
     const radius_sqr = radius * radius;
     const max_overheal = i32f(1000.0 + 0.1 * f32i(player.totalStat(.health)));
-    const kill_perc = 0.1;
+    const kill_perc = 0.1 + 0.0025 * f32i(player.abilityTalentLevel(3));
     const prev_hp = player.hp;
+    const dmg_boost_per_kill = f32i(player.keystoneTalentLevel(3)) * 1.5;
 
+    var dmg_boost: f32 = 1.0;
     var total_hp_gain: i32 = 0;
     var enemies_to_kill: std.ArrayListUnmanaged(usize) = .empty;
     defer enemies_to_kill.deinit(main.allocator);
@@ -453,6 +489,7 @@ pub fn handleRavenousHunger(player: *Player) !void {
     defer show_effects.deinit(main.allocator);
     for (world.listForType(Enemy).items, 0..) |*e, i| {
         if (utils.distSqr(e.x, e.y, player.x, player.y) > radius_sqr or f32i(e.hp) / f32i(e.max_hp) > kill_perc) continue;
+        dmg_boost += dmg_boost_per_kill;
         total_hp_gain += e.hp;
         show_effects.append(main.allocator, .{
             .obj_type = .enemy,
@@ -475,15 +512,13 @@ pub fn handleRavenousHunger(player: *Player) !void {
         _ = try enemy.delete();
     }
 
-    player.hp = @min(
-        player.totalStat(.health) + max_overheal,
-        player.hp + @divFloor(total_hp_gain, 10),
-    );
+    player.restoreHealth(@intCast(@divFloor(total_hp_gain, 10)), max_overheal);
     const hp_delta = player.hp - prev_hp;
 
     var buf: [64]u8 = undefined;
     const hp_gain_text = if (hp_delta <= 0) "" else std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return;
     for (world.listForType(Player).items) |*other_player| {
+        if (utils.distSqr(other_player.x, other_player.y, player.x, player.y) > 16 * 16) continue;
         other_player.show_effects.appendSlice(main.allocator, show_effects.items) catch main.oomPanic();
 
         if (hp_delta > 0) {
@@ -505,5 +540,15 @@ pub fn handleRavenousHunger(player: *Player) !void {
                 .color = 0x00FF00,
             }) catch main.oomPanic();
         }
+    }
+
+    if (dmg_boost > 1.0) {
+        const map_id_copy = try main.allocator.create(u32);
+        map_id_copy.* = player.map_id;
+        world.callbacks.append(main.allocator, .{
+            .trigger_on = main.current_time + 4 * std.time.us_per_s,
+            .callback = ravenousHungerCallback,
+            .data = map_id_copy,
+        }) catch main.oomPanic();
     }
 }

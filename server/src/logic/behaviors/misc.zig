@@ -32,7 +32,7 @@ pub const HealthShrine = struct {
         const max_hp = player.totalStat(.health);
         if (player.hp >= max_hp) return; // TODO: select random player instead
         const pre_hp = player.hp;
-        player.hp = @min(max_hp, player.hp + 75);
+        player.restoreHealth(75, 0);
         const hp_delta = player.hp - pre_hp;
         if (hp_delta <= 0) return;
 
@@ -74,7 +74,7 @@ pub const MagicShrine = struct {
         const max_mp = player.totalStat(.mana);
         if (player.mp >= max_mp) return; // TODO: select random player instead
         const pre_mp = player.mp;
-        player.mp = @min(max_mp, player.mp + 40);
+        player.restoreMana(40, 0);
         const mp_delta = player.mp - pre_mp;
         if (mp_delta <= 0) return;
 
@@ -116,7 +116,7 @@ pub const RetrieveHealthBeacon = struct {
         const max_hp = player.totalStat(.health);
         if (player.hp >= max_hp) return; // TODO: select random player instead
         const pre_hp = player.hp;
-        player.hp = @min(max_hp, player.hp + 75);
+        player.restoreHealth(75, 0);
         const hp_delta = player.hp - pre_hp;
         if (hp_delta <= 0) return;
 
@@ -158,7 +158,7 @@ pub const RetrieveManaBeacon = struct {
         const max_mp = player.totalStat(.mana);
         if (player.mp >= max_mp) return; // TODO: select random player instead
         const pre_mp = player.mp;
-        player.mp = @min(max_mp, player.mp + 40);
+        player.restoreMana(40, 0);
         const mp_delta = player.mp - pre_mp;
         if (mp_delta <= 0) return;
 

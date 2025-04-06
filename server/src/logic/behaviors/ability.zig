@@ -5,6 +5,7 @@ const network_data = shared.network_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
 const i32f = utils.i32f;
+const u32f = utils.u32f;
 
 const main = @import("../../main.zig");
 const Ally = @import("../../map/Ally.zig");
@@ -94,7 +95,7 @@ pub const EnemySoul = struct {
     };
 
     pub fn tick(_: *EnemySoul, host: *Entity, _: i64, dt: i64) !void {
-        if (logic.clampToSpawn(@src(), host, dt, 9.0, 7.0, 2.0)) 
+        if (logic.clampToSpawn(@src(), host, dt, 9.0, 7.0, 2.0))
             logic.wander(@src(), host, dt, 1.0);
     }
 };
@@ -107,12 +108,14 @@ pub const DemonRift = struct {
 
     last_healed: i64 = -1,
     radius: f32 = 0.0,
-    restore_amount: i32 = 0,
+    restore_amount: u32 = 0,
+    overheal_amount: i32 = 0,
 
     pub fn spawn(self: *DemonRift, host: *Entity) !void {
         const world = maps.worlds.getPtr(host.world_id) orelse return;
         const owner = world.findCon(Player, host.owner_map_id) orelse return;
-        self.restore_amount = i32f(50.0 + f32i(owner.totalStat(.health)) * 0.05);
+        self.restore_amount = u32f(50.0 + f32i(owner.totalStat(.health)) * 0.05) + 5 * owner.abilityTalentLevel(1);
+        self.overheal_amount = owner.keystoneTalentLevel(1) * 50;
         self.radius = 7.0 + f32i(owner.totalStat(.intelligence)) * 0.07;
     }
 
@@ -128,7 +131,7 @@ pub const DemonRift = struct {
             const max_hp = player.totalStat(.health);
             if (player.hp >= max_hp) continue;
             const pre_hp = player.hp;
-            player.hp = @min(max_hp, player.hp + self.restore_amount);
+            player.restoreHealth(self.restore_amount, self.overheal_amount);
             const hp_delta = player.hp - pre_hp;
             if (hp_delta <= 0) continue;
 
@@ -153,6 +156,7 @@ pub const DemonRift = struct {
         }
 
         for (world.listForType(Player).items) |*player| {
+            if (utils.distSqr(player.x, player.y, host.x, host.y) > 16 * 16) continue;
             player.show_effects.append(main.allocator, .{
                 .obj_type = .entity,
                 .map_id = host.map_id,

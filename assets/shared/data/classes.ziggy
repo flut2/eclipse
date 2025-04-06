@@ -75,8 +75,8 @@
         ],
         .talents = [
             {
-                .name = "Essence Harvest",
-                .description = "Increase the range of &type=\"med_it\"Essence Harvest&reset by $multitxt0.5 tiles per level&reset.",
+                .name = "Ethereal Harvest",
+                .description = "Increase the range of &type=\"med_it\"Ethereal Harvest&reset by $multitxt0.5 tiles per level&reset.",
                 .icon = { "ability_icons": 8 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],

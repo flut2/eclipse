@@ -109,6 +109,8 @@ last_ability_use: [4]i64 = @splat(-1),
 last_lock_update: i64 = -1,
 damage_multiplier: f32 = 1.0,
 hit_multiplier: f32 = 1.0,
+health_restore_mult: f32 = 1.0,
+mana_restore_mult: f32 = 1.0,
 ability_state: network_data.AbilityState = .{},
 stats_writer: utils.PacketWriter = .{},
 data: *const game_data.ClassData = undefined,
@@ -192,6 +194,24 @@ pub inline fn totalStat(self: Player, comptime stat: StatId) i32 {
         .stamina => self.data.stats.stamina + self.stamina_boost,
         .intelligence => self.data.stats.intelligence + self.intelligence_boost,
     };
+}
+
+pub fn abilityTalentLevel(self: Player, index: comptime_int) u16 {
+    for (self.talents.items) |talent| if (talent.data_id == index * 5) return talent.count;
+    return 0;
+}
+
+pub fn keystoneTalentLevel(self: Player, index: comptime_int) u16 {
+    for (self.talents.items) |talent| if (talent.data_id == 1 + index * 5) return talent.count;
+    return 0;
+}
+
+pub fn restoreHealth(self: *Player, amount: u32, max_overheal: i32) void {
+    self.hp = @min(self.totalStat(.health) + max_overheal, self.hp + i32f(f32i(amount) * self.health_restore_mult));
+}
+
+pub fn restoreMana(self: *Player, amount: u32, max_overheal: i32) void {
+    self.mp = @min(self.totalStat(.mana) + max_overheal, self.mp + i32f(f32i(amount) * self.mana_restore_mult));
 }
 
 pub fn clearEphemerals(self: *Player) void {
@@ -470,7 +490,7 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
 
     const max_hp = self.totalStat(.health);
     if (self.hp < max_hp) {
-        self.hp_regen += (1.0 + f32i(self.totalStat(.stamina)) * 0.12) * scaled_dt;
+        self.hp_regen += (1.0 + f32i(self.totalStat(.stamina)) * 0.12) * scaled_dt * self.health_restore_mult;
         const hp_regen_whole = i32f(self.hp_regen);
         self.hp = @min(max_hp, self.hp + hp_regen_whole);
         self.hp_regen -= f32i(hp_regen_whole);
@@ -478,7 +498,7 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
 
     const max_mp = self.totalStat(.mana);
     if (self.mp < max_mp) {
-        self.mp_regen += (0.5 + f32i(self.totalStat(.intelligence)) * 0.06) * scaled_dt;
+        self.mp_regen += (0.5 + f32i(self.totalStat(.intelligence)) * 0.06) * scaled_dt * self.mana_restore_mult;
         const mp_regen_whole = i32f(self.mp_regen);
         self.mp = @min(max_mp, self.mp + mp_regen_whole);
         self.mp_regen -= f32i(mp_regen_whole);
@@ -661,6 +681,8 @@ pub fn recalculateBoosts(self: *Player) void {
     self.haste_boost = 0;
     self.stamina_boost = 0;
     self.intelligence_boost = 0;
+    self.health_restore_mult = 1.0;
+    self.mana_restore_mult = 1.0;
 
     var perc_boosts: struct {
         health: f32 = 0.0,
@@ -685,6 +707,8 @@ pub fn recalculateBoosts(self: *Player) void {
             switch (si) {
                 inline else => |inner, tag| @field(perc_boosts, statTypeToName(tag)) += inner.amount,
             };
+        self.health_restore_mult += data.health_gain_incr;
+        self.mana_restore_mult += data.mana_gain_incr;
     }
 
     for (self.cards) |card_id| {
