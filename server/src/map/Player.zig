@@ -701,7 +701,7 @@ pub fn recalculateBoosts(self: *Player) void {
 
     for (self.talents.items) |talent| {
         const class_data = game_data.class.from_id.get(self.data_id) orelse continue;
-        if (class_data.talents.len >= talent.data_id) continue;
+        if (talent.data_id >= class_data.talents.len) continue;
         const talent_data = class_data.talents[talent.data_id];
         if (talent_data.flat_stats) |stat_increases| for (stat_increases) |si|
             switch (si) {
@@ -715,7 +715,9 @@ pub fn recalculateBoosts(self: *Player) void {
 
     inline for (@typeInfo(@TypeOf(perc_boosts)).@"struct".fields) |field| {
         if (@field(perc_boosts, field.name) != 0.0)
-            @field(self, field.name ++ "_boost") += @intFromFloat(f32i(@field(self, field.name ++ "_boost")) * @field(perc_boosts, field.name));
+            @field(self, field.name ++ "_boost") +=
+                @intFromFloat(f32i(@field(self.data.stats, field.name) + @field(self, field.name ++ "_boost")) *
+                @field(perc_boosts, field.name));
     }
 }
 
