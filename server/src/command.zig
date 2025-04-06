@@ -30,7 +30,7 @@ pub fn handle(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
         .{ "/give", network_data.Rank.admin, handleGive },
         .{ "/setgold", network_data.Rank.admin, handleSetGold },
         .{ "/setgems", network_data.Rank.admin, handleSetGems },
-        .{ "/setresource", network_data.Rank.admin, handleSetResource },
+        .{ "/giveresource", network_data.Rank.admin, handleGiveResource },
         .{ "/rank", network_data.Rank.admin, handleRank },
         .{ "/ban", network_data.Rank.mod, handleBan },
         .{ "/unban", network_data.Rank.mod, handleUnban },
@@ -432,7 +432,7 @@ fn handleSetGems(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) voi
     player.client.sendMessage(std.fmt.bufPrint(&response_buf, "You've given \"{s}\" {} Gems", .{ player_name, amount - old_gems }) catch return);
 }
 
-fn handleSetResource(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
+fn handleGiveResource(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {
     var response_buf: [256]u8 = undefined;
 
     const player_name = iter.next() orelse {
@@ -456,11 +456,6 @@ fn handleSetResource(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player)
     if (maps.worlds.getPtr(player.world_id)) |world|
         for (world.listForType(Player).items) |*other_player|
             if (std.mem.eql(u8, other_player.name, player_name)) {
-                const old_resources = blk: {
-                    for (player.resources.items) |*res| if (res.data_id == resource_data.id) break :blk res.count;
-                    break :blk 0;
-                };
-
                 incrementResource: {
                     for (player.resources.items) |*res| if (res.data_id == resource_data.id) {
                         res.count += amount;
@@ -476,18 +471,18 @@ fn handleSetResource(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player)
                     player.client.sendMessage(std.fmt.bufPrint(
                         &response_buf,
                         "You've given yourself {}x {s}",
-                        .{ amount - old_resources, resource_data.name },
+                        .{ amount, resource_data.name },
                     ) catch return)
                 else {
                     other_player.client.sendMessage(std.fmt.bufPrint(
                         &response_buf,
                         "You've received {}x {s} from \"{s}\"",
-                        .{ amount - old_resources, resource_data.name, player.name },
+                        .{ amount, resource_data.name, player.name },
                     ) catch return);
                     player.client.sendMessage(std.fmt.bufPrint(
                         &response_buf,
                         "You've given \"{s}\" {}x {s}",
-                        .{ other_player.name, amount - old_resources, resource_data.name },
+                        .{ other_player.name, amount, resource_data.name },
                     ) catch return);
                 }
                 return;
@@ -516,11 +511,6 @@ fn handleSetResource(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player)
     const new_resources = main.allocator.alloc(network_data.DataIdWithCount(u32), resources.len + 1) catch main.oomPanic();
     defer main.allocator.free(new_resources);
     @memcpy(new_resources[0..resources.len], resources);
-
-    const old_resources = blk: {
-        for (resources) |res| if (res.data_id == resource_data.id) break :blk res.count;
-        break :blk 0;
-    };
 
     incrementResource: {
         for (new_resources) |*res| if (res.data_id == resource_data.id) {
@@ -553,7 +543,7 @@ fn handleSetResource(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player)
     player.client.sendMessage(std.fmt.bufPrint(
         &response_buf,
         "You've given \"{s}\" {}x {s}",
-        .{ player_name, amount - old_resources, resource_data.name },
+        .{ player_name, amount, resource_data.name },
     ) catch return);
 }
 

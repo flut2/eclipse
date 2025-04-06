@@ -1144,13 +1144,18 @@ fn handleTalentUpgrade(self: *Client, data: PacketData(.talent_upgrade)) void {
                     return;
                 };
 
-                for (player.resources.items) |res| {
-                    if (res.data_id != resource_data.id) continue;
-                    if (res.count < req.amount) {
-                        self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
-                        return;
+                resLoop: {
+                    for (player.resources.items) |res| {
+                        if (res.data_id != resource_data.id) continue;
+                        if (res.count < req.amount) {
+                            self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
+                            return;
+                        }
+                        break :resLoop;
                     }
-                    break;
+
+                    self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
+                    return;
                 }
             };
         talent_index = i;
@@ -1165,7 +1170,30 @@ fn handleTalentUpgrade(self: *Client, data: PacketData(.talent_upgrade)) void {
 
         prev_talent_level = player.talents.items[i].count;
         player.talents.items[i].count += 1;
-    } else player.talents.append(main.allocator, .{ .data_id = data.index, .count = 1 }) catch main.oomPanic();
+    } else {
+        if (talent_data.level_costs.len > 0)
+            for (talent_data.level_costs[0]) |req| {
+                const resource_data = game_data.resource.from_name.get(req.name) orelse {
+                    self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Invalid resource requirement" } });
+                    return;
+                };
+
+                resLoop: {
+                    for (player.resources.items) |res| {
+                        if (res.data_id != resource_data.id) continue;
+                        if (res.count < req.amount) {
+                            self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
+                            return;
+                        }
+                        break :resLoop;
+                    }
+
+                    self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
+                    return;
+                }
+            };
+        player.talents.append(main.allocator, .{ .data_id = data.index, .count = 1 }) catch main.oomPanic();
+    }
 
     if (prev_talent_level < talent_data.level_costs.len)
         for (talent_data.level_costs[prev_talent_level]) |req| {
@@ -1178,15 +1206,21 @@ fn handleTalentUpgrade(self: *Client, data: PacketData(.talent_upgrade)) void {
             if (res_len > 0) {
                 var iter = std.mem.reverseIterator(player.resources.items);
                 var i = res_len - 1;
-                while (iter.nextPtr()) |res| : (i -%= 1) {
-                    if (res.data_id != resource_data.id) continue;
-                    if (res.count < req.amount) {
-                        self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
-                        return;
+
+                resLoop: {
+                    while (iter.nextPtr()) |res| : (i -%= 1) {
+                        if (res.data_id != resource_data.id) continue;
+                        if (res.count < req.amount) {
+                            self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
+                            return;
+                        }
+                        res.count -= req.amount;
+                        if (res.count == 0) _ = player.resources.swapRemove(i);
+                        break :resLoop;
                     }
-                    res.count -= req.amount;
-                    if (res.count == 0) _ = player.resources.swapRemove(i);
-                    break;
+
+                    self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
+                    return;
                 }
             }
         };
