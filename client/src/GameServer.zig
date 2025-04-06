@@ -661,7 +661,15 @@ fn handleCardOptions(_: *Server, data: PacketData(.card_options)) void {
     if (logRead(.non_tick)) std.log.debug("Recv - CardOptions: {}", .{data});
 }
 
-fn handleTalentUpgradeResponse(_: *Server, _: PacketData(.talent_upgrade_response)) void {}
+fn handleTalentUpgradeResponse(_: *Server, data: PacketData(.talent_upgrade_response)) void {
+    if (ui_systems.screen == .game) if (map.localPlayerCon()) |player| ui_systems.screen.game.talent_view.update(player);
+    if (data.success) return;
+    dialog.showDialog(.text, .{
+        .title = "Talent Error",
+        .body = main.allocator.dupe(u8, data.message) catch main.oomPanic(),
+        .dispose_body = true,
+    });
+}
 
 fn handlePlayAnimation(_: *Server, data: PacketData(.play_animation)) void {
     switch (data.obj_type) {

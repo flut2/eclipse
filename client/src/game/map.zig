@@ -55,10 +55,10 @@ pub var list: struct {
     portal: std.ArrayListUnmanaged(Portal) = .empty,
     projectile: std.ArrayListUnmanaged(Projectile) = .empty,
     particle: std.ArrayListUnmanaged(particles.Particle) = .empty,
+    particle_add: std.ArrayListUnmanaged(particles.Particle) = .empty,
     particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
-pub var particle_add_list: std.ArrayListUnmanaged(particles.Particle) = .empty;
 
 pub var lights: std.ArrayListUnmanaged(Renderer.LightData) = .empty;
 pub var draw_data: [main.frames_in_flight * 2]MapData = @splat(.{});
@@ -102,10 +102,11 @@ pub fn deinit() void {
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
         var child_list = &@field(list, field.name);
         defer child_list.deinit(main.allocator);
-        if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
+        if (comptime !std.mem.eql(u8, field.name, "particle") and
+            !std.mem.eql(u8, field.name, "particle_add") and
+            !std.mem.eql(u8, field.name, "particle_effect"))
             for (child_list.items) |*obj| obj.deinit();
     }
-    particle_add_list.deinit(main.allocator);
 
     move_records.deinit(main.allocator);
     main.allocator.free(info.name);
@@ -125,10 +126,11 @@ pub fn dispose() void {
     inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
         var child_list = &@field(list, field.name);
         defer child_list.clearRetainingCapacity();
-        if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
+        if (comptime !std.mem.eql(u8, field.name, "particle") and
+            !std.mem.eql(u8, field.name, "particle_add") and
+            !std.mem.eql(u8, field.name, "particle_effect"))
             for (child_list.items) |*obj| obj.deinit();
     }
-    particle_add_list.clearRetainingCapacity();
 
     move_records.clearRetainingCapacity();
     main.allocator.free(info.name);
@@ -263,8 +265,8 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
     }) |ObjType| @"continue": {
         var obj_list = listForType(ObjType);
         if (ObjType == particles.Particle) {
-            obj_list.appendSlice(main.allocator, particle_add_list.items) catch main.oomPanic();
-            particle_add_list.clearRetainingCapacity();
+            obj_list.appendSlice(main.allocator, list.particle_add.items) catch main.oomPanic();
+            list.particle_add.clearRetainingCapacity();
         }
 
         const objs_len = obj_list.items.len;

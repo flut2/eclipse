@@ -222,7 +222,7 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         break :blk true;
     };
     const meets_level_costs = blk: {
-        reqLoop: for (params.data.level_costs[player.aether - 1]) |req| {
+        reqLoop: for (params.data.level_costs[talent_level]) |req| {
             const resource_data = game_data.resource.from_name.get(req.name) orelse break :blk false;
             for (player.resources) |resource| {
                 if (resource.data_id == resource_data.id and resource.count >= req.amount)
@@ -286,7 +286,7 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
     var costs: std.ArrayListUnmanaged(LabelledIcon) = .empty;
     const x = self.cost_text.base.x;
     var y = self.cost_text.base.y + self.cost_text.height() + 5;
-    lvlLoop: for (params.data.level_costs[player.aether - 1]) |lvl_cost| {
+    lvlLoop: for (params.data.level_costs[talent_level]) |lvl_cost| {
         const resource_data = game_data.resource.from_name.get(lvl_cost.name) orelse continue :lvlLoop;
         for (player.resources) |resource| {
             if (resource.data_id == resource_data.id) {
@@ -329,7 +329,7 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
             const talent_data = player.data.talents[talent_req.index];
             const level_req = talent_req.level_per_aether * player.aether;
             for (player.talents) |talent|
-                if (talent.data_id == talent_req.index and talent.count >= level_req) {
+                if (talent.data_id == talent_req.index) {
                     const req = LabelledIcon.create(
                         self.root,
                         talent_data.icon,

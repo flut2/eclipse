@@ -1150,6 +1150,7 @@ fn handleTalentUpgrade(self: *Client, data: PacketData(.talent_upgrade)) void {
                         self.sendPacket(.{ .talent_upgrade_response = .{ .success = false, .message = "Not enough resources" } });
                         return;
                     }
+                    break;
                 }
             };
         talent_index = i;
@@ -1185,6 +1186,7 @@ fn handleTalentUpgrade(self: *Client, data: PacketData(.talent_upgrade)) void {
                     }
                     res.count -= req.amount;
                     if (res.count == 0) _ = player.resources.swapRemove(i);
+                    break;
                 }
             }
         };

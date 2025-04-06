@@ -106,7 +106,8 @@ const TalentButton = struct {
         self.icon.base.x = 6 + (inner_size - icon.width() * scale) / 2.0;
         self.icon.base.y = 6 + (inner_size - icon.height() * scale) / 2.0;
         self.locked_overlay.base.visible = locked;
-        self.button.enabled = !locked;
+        self.button.enabled = !locked and talent_data.max_level[aether - 1] > talent_level;
+        self.button.userdata = self;
         self.button.talent = talent_data;
         self.button.talent_index = self.index;
     }
