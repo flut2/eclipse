@@ -64,7 +64,6 @@ pub var account_arena_allocator: std.mem.Allocator = undefined;
 pub var current_account: ?AccountData = null;
 pub var character_list: ?network_data.CharacterListData = null;
 pub var current_time: i64 = 0;
-pub var win_freq: u64 = 0;
 pub var render_thread: std.Thread = undefined;
 pub var skip_verify_loop = false;
 pub var tick_frame = false;
@@ -278,14 +277,7 @@ fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.C) void {
 
     glfw.pollEvents();
 
-    const instant = std.time.Instant.now() catch {
-        std.log.err("Platform not supported", .{});
-        std.posix.exit(0);
-    };
-    const time = switch (builtin.os.tag) {
-        .windows => @as(i64, @intCast(@divFloor(instant.timestamp * std.time.us_per_s, win_freq))),
-        else => @divFloor(instant.timestamp.nsec, std.time.ns_per_us) + instant.timestamp.sec * std.time.us_per_s,
-    } - start_time;
+    const time = std.time.microTimestamp() - start_time;
     const dt = f32i(time - current_time);
     current_time = time;
 
@@ -380,15 +372,7 @@ fn uvFree(ptr: ?*anyopaque) callconv(.C) void {
 pub fn main() !void {
     if (build_options.enable_tracy) tracy.SetThreadName("Main");
 
-    win_freq = if (builtin.os.tag == .windows) std.os.windows.QueryPerformanceFrequency() else 0;
-    const start_instant = std.time.Instant.now() catch {
-        std.log.err("Platform not supported", .{});
-        std.posix.exit(0);
-    };
-    start_time = switch (builtin.os.tag) {
-        .windows => @intCast(@divFloor(start_instant.timestamp * std.time.us_per_s, win_freq)),
-        else => @divFloor(start_instant.timestamp.nsec, std.time.ns_per_us) + start_instant.timestamp.sec * std.time.us_per_s,
-    };
+    start_time = std.time.microTimestamp();
     utils.rng.seed(@intCast(start_time));
 
     const use_gpa = build_options.enable_gpa;
