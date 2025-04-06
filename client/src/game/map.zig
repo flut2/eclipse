@@ -58,6 +58,7 @@ pub var list: struct {
     particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
+pub var particle_add_list: std.ArrayListUnmanaged(particles.Particle) = .empty;
 
 pub var lights: std.ArrayListUnmanaged(Renderer.LightData) = .empty;
 pub var draw_data: [main.frames_in_flight * 2]MapData = @splat(.{});
@@ -104,6 +105,7 @@ pub fn deinit() void {
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
             for (child_list.items) |*obj| obj.deinit();
     }
+    particle_add_list.deinit(main.allocator);
 
     move_records.deinit(main.allocator);
     main.allocator.free(info.name);
@@ -126,6 +128,7 @@ pub fn dispose() void {
         if (comptime !std.mem.eql(u8, field.name, "particle") and !std.mem.eql(u8, field.name, "particle_effect"))
             for (child_list.items) |*obj| obj.deinit();
     }
+    particle_add_list.clearRetainingCapacity();
 
     move_records.clearRetainingCapacity();
     main.allocator.free(info.name);
@@ -259,9 +262,14 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
         Ally,
     }) |ObjType| @"continue": {
         var obj_list = listForType(ObjType);
+        if (ObjType == particles.Particle) {
+            obj_list.appendSlice(main.allocator, particle_add_list.items) catch main.oomPanic();
+            particle_add_list.clearRetainingCapacity();
+        }
+
         const objs_len = obj_list.items.len;
         if (objs_len == 0) break :@"continue";
-        
+
         var iter = std.mem.reverseIterator(obj_list.items);
         var i = objs_len - 1;
         while (iter.nextPtr()) |obj| : (i -%= 1) {
@@ -348,10 +356,10 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
                 },
                 Projectile => if (!obj.update(time, dt)) {
                     obj.deinit();
-                    _ = obj_list.orderedRemove(i);
+                    _ = obj_list.swapRemove(i);
                 },
-                particles.Particle => _ = if (!obj.update(time, dt)) obj_list.orderedRemove(i),
-                particles.ParticleEffect => _ = if (!obj.update(time, dt)) obj_list.orderedRemove(i),
+                particles.Particle => _ = if (!obj.update(time, dt)) obj_list.swapRemove(i),
+                particles.ParticleEffect => _ = if (!obj.update(time, dt)) obj_list.swapRemove(i),
                 Entity => obj.update(time),
                 Enemy => obj.update(time, dt),
                 Ally => obj.update(time, dt),

@@ -135,7 +135,7 @@ pub const SparkParticle = struct {
     pub fn addToMap(part: SparkParticle) void {
         var mod_part = part;
         mod_part.sort_random = utils.rng.random().int(u16);
-        map.listForType(Particle).append(main.allocator, .{ .spark = mod_part }) catch main.oomPanic();
+        map.particle_add_list.append(main.allocator, .{ .spark = mod_part }) catch main.oomPanic();
     }
 
     pub fn update(self: *SparkParticle, _: i64, dt: f32) bool {
