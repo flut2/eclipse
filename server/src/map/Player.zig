@@ -490,7 +490,7 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
 
     const max_hp = self.totalStat(.health);
     if (self.hp < max_hp) {
-        self.hp_regen += (1.0 + f32i(self.totalStat(.stamina)) * 0.12) * scaled_dt * self.health_restore_mult;
+        self.hp_regen += (1.0 + f32i(self.totalStat(.stamina)) * 0.06) * scaled_dt * self.health_restore_mult;
         const hp_regen_whole = i32f(self.hp_regen);
         self.hp = @min(max_hp, self.hp + hp_regen_whole);
         self.hp_regen -= f32i(hp_regen_whole);

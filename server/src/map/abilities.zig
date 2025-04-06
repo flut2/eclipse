@@ -365,7 +365,7 @@ pub fn handleEtherealHarvest(player: *Player) !void {
             }
         }
 
-        player.damage_multiplier = f32i(num_souls) * 0.25;
+        player.damage_multiplier = 1.0 + f32i(num_souls) * 0.25;
         const map_id_copy = try main.allocator.create(u32);
         map_id_copy.* = player.map_id;
         world.callbacks.append(main.allocator, .{
