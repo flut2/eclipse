@@ -177,6 +177,16 @@ pub fn onMove(self: *Player) void {
     };
 }
 
+pub fn abilityTalentLevel(self: Player, index: comptime_int) u16 {
+    for (self.talents) |talent| if (talent.data_id == index * 5) return talent.count;
+    return 0;
+}
+
+pub fn keystoneTalentLevel(self: Player, index: comptime_int) u16 {
+    for (self.talents) |talent| if (talent.data_id == 1 + index * 5) return talent.count;
+    return 0;
+}
+
 pub fn moveSpeedMultiplier(self: Player) f32 {
     if (self.condition.slowed) return min_move_speed * self.move_multiplier * self.walk_speed_multiplier;
 
@@ -692,11 +702,12 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
     }
 
     if (self.ability_state.time_dilation) {
-        const radius = 3.0 + f32i(self.data.stats.wit + self.wit_bonus) * 0.06;
+        const radius = 3.0 + f32i(self.data.stats.wit + self.wit_bonus) * 0.06 * (1.0 + f32i(self.abilityTalentLevel(0)) * 0.025);
         const radius_sqr = radius * radius;
 
         for (map.listForType(Projectile).items) |*p| {
-            if (p.damage_players and utils.distSqr(p.x, p.y, self.x, self.y) <= radius_sqr) p.time_dilation_active = true;
+            if (p.damage_players and utils.distSqr(p.x, p.y, self.x, self.y) <= radius_sqr) 
+                p.time_dilation_slow = 0.3 + f32i(self.keystoneTalentLevel(0)) * 0.05;
         }
     }
 }

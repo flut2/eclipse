@@ -815,7 +815,7 @@
             },
             {
                 .name = "Event Horizon",
-                .description = "Reduce projectiles' damage within &type=\"med_it\"Time Dilation&reset by $multitxt5% (additive) per level&reset.",
+                .description = "Increase &type=\"med_it\"Time Dilation's&reset slowing effect by $multitxt5% (additive) per level&reset.",
                 .icon = { "ability_icons": 0 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -866,7 +866,7 @@
             },
             {
                 .name = "Rewind",
-                .description = "Increase the amount of time of &type=\"med_it\"Rewind&reset by $multitxt0.2s per level&reset.",
+                .description = "Increase the &type=\"med_it\"Rewind&reset time by $multitxt0.2s per level&reset.",
                 .icon = { "ability_icons": 1 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -955,7 +955,7 @@
             },
             {
                 .name = "Double Tap",
-                .description = "Cast another &type=\"med_it\"Null Pulse&reset 0.5 seconds after the first one, with the second one having a range of $multitxt0.2 tiles per level&reset.",
+                .description = "Cast another &type=\"med_it\"Null Pulse&reset 1 second after the first one, with the second one having a range of $multitxt1.5 tiles per level&reset.",
                 .icon = { "ability_icons": 2 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],

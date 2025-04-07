@@ -44,7 +44,7 @@ data: *const game_data.ProjectileData,
 colors: []u32 = &.{},
 hit_list: std.AutoHashMapUnmanaged(u32, void) = .empty,
 heat_seek_fired: bool = false,
-time_dilation_active: bool = false,
+time_dilation_slow: f32 = 0.0,
 last_hit_check: i64 = 0,
 sort_random: u16 = 0xAAAA,
 
@@ -207,7 +207,7 @@ pub fn draw(
     sort_randoms: *std.ArrayListUnmanaged(u16),
     float_time_ms: f32,
 ) void {
-    defer self.time_dilation_active = false;
+    defer self.time_dilation_slow = 0.0;
 
     if (!main.camera.visibleInCamera(self.x, self.y)) return;
 
@@ -238,8 +238,8 @@ pub fn draw(
             float_time_ms,
         );
 
-    const color: u32 = if (self.time_dilation_active) 0x0000FF else 0x000000;
-    const color_intensity: f32 = if (self.time_dilation_active) 0.33 else 0.0;
+    const color: u32 = if (self.time_dilation_slow > 0.0) 0x0000FF else 0x000000;
+    const color_intensity: f32 = if (self.time_dilation_slow > 0.0) 0.33 else 0.0;
 
     Renderer.drawQuad(
         generics,
@@ -262,7 +262,7 @@ pub fn update(self: *Projectile, time: i64, dt: f32) bool {
     const last_x = self.x;
     const last_y = self.y;
 
-    self.updatePosition(elapsed_sec, dt_sec * @as(f32, if (self.time_dilation_active) 0.7 else 1.0));
+    self.updatePosition(elapsed_sec, dt_sec * (1.0 - self.time_dilation_slow));
     if (self.x < 0 or self.y < 0 or
         self.x >= f32i(map.info.width - 1) or self.y >= f32i(map.info.height - 1))
         return false;

@@ -403,7 +403,26 @@ pub fn damage(
 
     if (conditions) |conds| for (conds) |cond| self.applyCondition(cond.type, i32f(cond.duration));
 
-    if (dmg > 0 and self.ability_state.time_lock) self.stored_damage += @intCast(dmg * 5);
+    if (dmg > 0 and self.ability_state.time_lock) {
+        self.stored_damage += @intCast(dmg * 5);
+        const keystone_level = self.keystoneTalentLevel(3);
+        reboundDamage: {
+            if (keystone_level > 0) {
+                const world = maps.worlds.getPtr(self.world_id) orelse break :reboundDamage;
+                if (world.findRef(Enemy, owner_id)) |e| {
+                    const dmg_mult = f32i(keystone_level) * 0.025;
+                    e.damage(
+                        .player,
+                        self.map_id,
+                        i32f(f32i(phys_dmg) * dmg_mult),
+                        i32f(f32i(magic_dmg) * dmg_mult),
+                        i32f(f32i(true_dmg) * dmg_mult),
+                        null,
+                    );
+                }
+            }
+        }
+    }
     if (unscaled_dmg > 0 and self.ability_state.bloodfont) self.stored_damage += @intCast(i32f(unscaled_dmg));
     if (dmg > 100 and self.hasCard("Absorption"))
         self.hp = @min(self.totalStat(.health), i32f(f32i(dmg) * 0.15));

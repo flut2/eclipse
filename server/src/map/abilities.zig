@@ -151,7 +151,7 @@ fn timeDilationCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 pub fn handleTimeDilation(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const radius = 3.0 + f32i(player.totalStat(.wit)) * 0.06;
+    const radius = 3.0 + f32i(player.totalStat(.wit)) * 0.06 * (1.0 + f32i(player.abilityTalentLevel(0)) * 0.025);
     const fduration = 5.0 + f32i(player.totalStat(.intelligence)) * 0.05;
     const duration = i64f(fduration * std.time.us_per_s);
 
@@ -182,7 +182,8 @@ pub fn handleTimeDilation(player: *Player) !void {
 pub fn handleRewind(player: *Player) !void {
     const duration = i64f((3.0 + f32i(player.totalStat(.intelligence)) * 0.01 +
         f32i(player.totalStat(.mana)) * 0.006 +
-        f32i(player.totalStat(.wit)) * 0.01) * std.time.us_per_s);
+        f32i(player.totalStat(.wit)) * 0.01 +
+        f32i(player.abilityTalentLevel(1)) * 0.2) * std.time.us_per_s);
     if (duration <= 0 or duration > 25 * std.time.us_per_s) {
         player.client.sendError(.message_with_disconnect, "Too many/little seconds elapsed for Rewind");
         return;
@@ -192,9 +193,10 @@ pub fn handleRewind(player: *Player) !void {
         @as(u8, @intCast(@divFloor(@as(u64, @intCast(duration)), @as(u64, std.time.us_per_s) / main.settings.tps * 3)));
     if (player.hp_records[tick] == -1) return;
 
-    const hp_delta = player.hp_records[tick] - player.hp;
+    const next_hp = @min(player.totalStat(.health), player.hp_records[tick] + player.keystoneTalentLevel(1) * 50);
+    const hp_delta = next_hp - player.hp;
     if (hp_delta > 0) {
-        player.hp = player.hp_records[tick];
+        player.hp = next_hp;
         var buf: [64]u8 = undefined;
         player.client.sendPacket(.{ .notification = .{
             .obj_type = .player,
@@ -219,12 +221,22 @@ pub fn handleRewind(player: *Player) !void {
     player.export_pos = true;
 }
 
-pub fn handleNullPulse(player: *Player) !void {
-    const world = maps.worlds.getPtr(player.world_id) orelse return;
+fn nullPulseCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
+    const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
+    defer main.allocator.destroy(player_map_id);
+    if (world.findRef(Player, player_map_id.*)) |player| {
+        const keystone_level = player.keystoneTalentLevel(2);
+        if (keystone_level > 0) nullPulseCore(player, world, f32i(keystone_level) * 1.5) catch |e| {
+            std.log.err("Null Pulse recast failed: {}", .{e});
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        };
+    }
+}
 
-    const radius = 5.0 + f32i(player.totalStat(.intelligence)) * 0.12;
+fn nullPulseCore(player: *Player, world: *World, radius: f32) !void {
     const radius_sqr = radius * radius;
-    const damage_mult = 0.25 + f32i(player.totalStat(.wit)) * 0.01 * player.damage_multiplier;
+    const damage_mult = 0.25 + f32i(player.totalStat(.wit)) * 0.01 * player.damage_multiplier *
+        (1.0 + f32i(player.abilityTalentLevel(2)) * 0.05);
 
     var proj_lists: std.AutoHashMapUnmanaged(u32, std.ArrayListUnmanaged(u8)) = .empty;
     defer proj_lists.deinit(main.allocator);
@@ -263,6 +275,21 @@ pub fn handleNullPulse(player: *Player) !void {
     }
 }
 
+pub fn handleNullPulse(player: *Player) !void {
+    const world = maps.worlds.getPtr(player.world_id) orelse return;
+    const radius = 5.0 + f32i(player.totalStat(.intelligence)) * 0.12;
+    try nullPulseCore(player, world, radius);
+    if (player.keystoneTalentLevel(2) > 0) {
+        const map_id_copy = try main.allocator.create(u32);
+        map_id_copy.* = player.map_id;
+        world.callbacks.append(main.allocator, .{
+            .trigger_on = main.current_time + 1 * std.time.us_per_s,
+            .callback = nullPulseCallback,
+            .data = map_id_copy,
+        }) catch main.oomPanic();
+    }
+}
+
 fn timeLockCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
     defer main.allocator.destroy(player_map_id);
@@ -287,7 +314,7 @@ pub fn handleTimeLock(player: *Player) !void {
 
     player.ability_state.time_lock = true;
     player.hit_multiplier = 0.5;
-    player.damage_multiplier = 0.75;
+    player.damage_multiplier = 0.75 + 0.025 * f32i(player.abilityTalentLevel(3));
     player.applyCondition(.slowed, duration);
 
     const map_id_copy = try main.allocator.create(u32);
