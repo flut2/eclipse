@@ -23,18 +23,35 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
 
     const x = player.x + @cos(angle) * 0.25;
     const y = player.y + @sin(angle) * 0.25;
-    const map_id = world.add(Projectile, .{
-        .x = x,
-        .y = y,
-        .owner_obj_type = .player,
-        .owner_map_id = player.map_id,
-        .angle = angle,
-        .start_time = main.current_time,
-        .phys_dmg = i32f(3000.0 + f32i(player.totalStat(.strength)) * 3.0 * player.damage_multiplier),
-        .index = proj_index,
-        .data = proj_data,
-    }) catch return;
-    player.projectiles[proj_index] = map_id;
+
+    const projs_len = player.keystoneTalentLevel(0) + 1;
+    const arc_gap = std.math.rad_per_deg;
+    const total_angle = arc_gap * f32i(projs_len - 1);
+    var mod_angle = angle - total_angle / 2.0;
+
+    for (0..projs_len) |i| {
+        const map_id = world.add(Projectile, .{
+            .x = x,
+            .y = y,
+            .owner_obj_type = .player,
+            .owner_map_id = player.map_id,
+            .angle = mod_angle,
+            .start_time = main.current_time,
+            .phys_dmg = i32f((3000.0 + f32i(player.totalStat(.strength)) * 3.0 + f32i(player.abilityTalentLevel(0)) * 250.0) * player.damage_multiplier),
+            .index = proj_index,
+            .data = proj_data,
+        }) catch return;
+        mod_angle += arc_gap;
+        player.projectiles[proj_index +% i] = map_id;
+    }
+}
+
+fn heartOfStoneKeystoneCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
+    const player_map_id: *u32 = @ptrCast(@alignCast(plr_id_opaque.?));
+    defer main.allocator.destroy(player_map_id);
+    if (world.findRef(Player, player_map_id.*)) |player| {
+        player.damage_multiplier = 1.0;
+    }
 }
 
 fn heartOfStoneCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
@@ -43,6 +60,17 @@ fn heartOfStoneCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
     if (world.findRef(Player, player_map_id.*)) |player| {
         player.hit_multiplier = 1.0;
         player.ability_state.heart_of_stone = false;
+        const keystone_level = player.keystoneTalentLevel(1);
+        if (keystone_level > 0) {
+            player.damage_multiplier = 1.0 + f32i(keystone_level) * f32i(player.stored_damage) * 0.1;
+            const map_id_copy = main.allocator.create(u32) catch main.oomPanic();
+            map_id_copy.* = player.map_id;
+            world.callbacks.append(main.allocator, .{
+                .trigger_on = main.current_time + 5 * std.time.us_per_s,
+                .callback = heartOfStoneKeystoneCallback,
+                .data = map_id_copy,
+            }) catch main.oomPanic();
+        }
     }
 }
 
@@ -51,11 +79,11 @@ pub fn handleHeartOfStone(player: *Player) !void {
 
     const duration = i64f((10.0 + f32i(player.totalStat(.intelligence)) * 0.1) * std.time.us_per_s);
 
-    player.hit_multiplier = 0.5;
+    player.hit_multiplier = 0.5 - f32i(player.abilityTalentLevel(1)) * 0.05;
     player.ability_state.heart_of_stone = true;
     player.applyCondition(.slowed, duration);
 
-    const map_id_copy = try main.allocator.create(u32);
+    const map_id_copy = main.allocator.create(u32) catch main.oomPanic();
     map_id_copy.* = player.map_id;
     world.callbacks.append(main.allocator, .{
         .trigger_on = main.current_time + duration,
@@ -81,10 +109,11 @@ pub fn handleBoulderBuddies(player: *Player) !void {
             .data_id = 0,
             .owner_map_id = player.map_id,
             .disappear_time = main.current_time + duration,
+            .death_explosion = player.keystoneTalentLevel(2) * 2000,
         });
 
         if (world.findRef(Ally, map_id)) |ally| {
-            ally.max_hp = i32f(3600.0 + f32i(player.totalStat(.health)) * 3.6);
+            ally.max_hp = i32f(3600.0 + f32i(player.totalStat(.health)) * 3.6) + player.abilityTalentLevel(2) * 250;
             ally.hp = ally.max_hp;
             ally.defense = i32f(25.0 + f32i(player.totalStat(.defense)) * 0.15);
             ally.resistance = i32f(5.0 + f32i(player.totalStat(.resistance)) * 0.1);
@@ -106,11 +135,12 @@ pub fn handleBoulderBuddies(player: *Player) !void {
 pub fn handleEarthenPrison(player: *Player) !void {
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
-    const fduration = 15.0 + f32i(player.totalStat(.haste)) * 0.2;
+    const fduration = 15.0 + f32i(player.totalStat(.haste)) * 0.2 + f32i(player.abilityTalentLevel(3)) * 0.5;
     const duration = i64f(fduration * std.time.us_per_s);
     const radius = 9.0 + f32i(player.totalStat(.intelligence)) * 0.1;
     const redirect_perc = @max(0.0, 0.5 - f32i(player.totalStat(.defense)) * 0.01 * 0.01 - f32i(player.totalStat(.resistance)) * 0.01 * 0.01);
     const radius_sqr = radius * radius;
+    const incr_perc = 1.0 + f32i(player.keystoneTalentLevel(3)) * 0.1;
 
     const obelisk_map_id = try world.add(Ally, .{
         .x = player.x,
@@ -118,12 +148,13 @@ pub fn handleEarthenPrison(player: *Player) !void {
         .data_id = 2,
         .owner_map_id = player.map_id,
         .disappear_time = main.current_time + duration,
-        .hit_multiplier = redirect_perc,
     });
 
     for (world.listForType(Enemy).items) |*e|
         if (utils.distSqr(e.x, e.y, player.x, player.y) <= radius_sqr) {
             e.obelisk_map_id = obelisk_map_id;
+            e.obelisk_redir_perc = redirect_perc;
+            e.obelisk_incr_perc = incr_perc;
             e.applyCondition(.encased_in_stone, duration);
         };
 
@@ -137,7 +168,7 @@ pub fn handleEarthenPrison(player: *Player) !void {
             .y1 = 1.0,
             .x2 = fduration,
             .y2 = 0.0,
-            .color = 0x00FF00,
+            .color = 0xA13A2F,
         }) catch main.oomPanic();
     }
 }
@@ -170,7 +201,7 @@ pub fn handleTimeDilation(player: *Player) !void {
         }) catch main.oomPanic();
     }
 
-    const map_id_copy = try main.allocator.create(u32);
+    const map_id_copy = main.allocator.create(u32) catch main.oomPanic();
     map_id_copy.* = player.map_id;
     world.callbacks.append(main.allocator, .{
         .trigger_on = main.current_time + duration,
@@ -198,23 +229,28 @@ pub fn handleRewind(player: *Player) !void {
     if (hp_delta > 0) {
         player.hp = next_hp;
         var buf: [64]u8 = undefined;
-        player.client.sendPacket(.{ .notification = .{
-            .obj_type = .player,
-            .map_id = player.map_id,
-            .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
-            .color = 0x00FF00,
-        } });
 
-        player.show_effects.append(main.allocator, .{
-            .eff_type = .potion,
-            .obj_type = .player,
-            .map_id = player.map_id,
-            .x1 = 0,
-            .y1 = 0,
-            .x2 = 0,
-            .y2 = 0,
-            .color = 0x00FF00,
-        }) catch main.oomPanic();
+        const world = maps.worlds.getPtr(player.world_id) orelse return;
+        for (world.listForType(Player).items) |*p| {
+            if (utils.distSqr(p.x, p.y, player.x, player.y) > 16 * 16) continue;
+            p.client.sendPacket(.{ .notification = .{
+                .obj_type = .player,
+                .map_id = player.map_id,
+                .message = std.fmt.bufPrint(&buf, "+{}", .{hp_delta}) catch return,
+                .color = 0x00FF00,
+            } });
+
+            p.show_effects.append(main.allocator, .{
+                .eff_type = .potion,
+                .obj_type = .player,
+                .map_id = player.map_id,
+                .x1 = 0,
+                .y1 = 0,
+                .x2 = 0,
+                .y2 = 0,
+                .color = 0x00FF00,
+            }) catch main.oomPanic();
+        }
     }
     player.x = player.position_records[tick].x;
     player.y = player.position_records[tick].y;
@@ -235,7 +271,7 @@ fn nullPulseCallback(world: *World, plr_id_opaque: ?*anyopaque) void {
 
 fn nullPulseCore(player: *Player, world: *World, radius: f32) !void {
     const radius_sqr = radius * radius;
-    const damage_mult = 0.25 + f32i(player.totalStat(.wit)) * 0.01 * player.damage_multiplier *
+    const damage_mult = (0.25 + f32i(player.totalStat(.wit)) * 0.01 * player.damage_multiplier) *
         (1.0 + f32i(player.abilityTalentLevel(2)) * 0.05);
 
     var proj_lists: std.AutoHashMapUnmanaged(u32, std.ArrayListUnmanaged(u8)) = .empty;
@@ -270,7 +306,7 @@ fn nullPulseCore(player: *Player, world: *World, radius: f32) !void {
     }) catch main.oomPanic();
 
     for (world.listForType(Player).items) |*p| {
-        if (p.map_id == player.map_id or utils.distSqr(p.x, p.y, player.x, player.y) > 16 * 16) continue;
+        if (utils.distSqr(p.x, p.y, player.x, player.y) > 16 * 16) continue;
         p.client.sendPacket(.{ .drop_projs = .{ .lists = enemy_proj_lists.items } });
     }
 }
@@ -280,7 +316,7 @@ pub fn handleNullPulse(player: *Player) !void {
     const radius = 5.0 + f32i(player.totalStat(.intelligence)) * 0.12;
     try nullPulseCore(player, world, radius);
     if (player.keystoneTalentLevel(2) > 0) {
-        const map_id_copy = try main.allocator.create(u32);
+        const map_id_copy = main.allocator.create(u32) catch main.oomPanic();
         map_id_copy.* = player.map_id;
         world.callbacks.append(main.allocator, .{
             .trigger_on = main.current_time + 1 * std.time.us_per_s,
@@ -317,7 +353,7 @@ pub fn handleTimeLock(player: *Player) !void {
     player.damage_multiplier = 0.75 + 0.025 * f32i(player.abilityTalentLevel(3));
     player.applyCondition(.slowed, duration);
 
-    const map_id_copy = try main.allocator.create(u32);
+    const map_id_copy = main.allocator.create(u32) catch main.oomPanic();
     map_id_copy.* = player.map_id;
     world.callbacks.append(main.allocator, .{
         .trigger_on = main.current_time + duration,
@@ -393,7 +429,7 @@ pub fn handleEtherealHarvest(player: *Player) !void {
         }
 
         player.damage_multiplier = 1.0 + f32i(num_souls) * 0.25;
-        const map_id_copy = try main.allocator.create(u32);
+        const map_id_copy = main.allocator.create(u32) catch main.oomPanic();
         map_id_copy.* = player.map_id;
         world.callbacks.append(main.allocator, .{
             .trigger_on = main.current_time + duration,
@@ -483,7 +519,7 @@ pub fn handleBloodfont(player: *Player) !void {
     player.ability_state.bloodfont = true;
     player.hit_multiplier = 0.0;
 
-    const map_id_copy = try main.allocator.create(u32);
+    const map_id_copy = main.allocator.create(u32) catch main.oomPanic();
     map_id_copy.* = player.map_id;
     world.callbacks.append(main.allocator, .{
         .trigger_on = main.current_time + duration,
@@ -570,7 +606,7 @@ pub fn handleRavenousHunger(player: *Player) !void {
     }
 
     if (dmg_boost > 1.0) {
-        const map_id_copy = try main.allocator.create(u32);
+        const map_id_copy = main.allocator.create(u32) catch main.oomPanic();
         map_id_copy.* = player.map_id;
         world.callbacks.append(main.allocator, .{
             .trigger_on = main.current_time + 4 * std.time.us_per_s,

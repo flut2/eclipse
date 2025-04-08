@@ -14,27 +14,37 @@ const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
 
 pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.ProjectileData) ![]u8 {
-    const proj_index = player.next_proj_index;
-    player.next_proj_index +%= 1;
-
     const attack_angle = std.math.atan2(input.mouse_y - main.camera.height / 2.0, input.mouse_x - main.camera.width / 2.0);
     const x = player.x + @cos(attack_angle) * 0.25;
     const y = player.y + @sin(attack_angle) * 0.25;
 
-    const fstr = f32i(player.data.stats.strength + player.strength_bonus);
-    Projectile.addToMap(.{
-        .x = x,
-        .y = y,
-        .data = proj_data,
-        .angle = attack_angle,
-        .index = proj_index,
-        .owner_map_id = player.map_id,
-        .phys_dmg = i32f(3000.0 + fstr * 3.0 * player.damage_mult),
-    });
+    const projs_len = player.keystoneTalentLevel(0) + 1;
+    const arc_gap = std.math.rad_per_deg;
+    const total_angle = arc_gap * f32i(projs_len - 1);
+    var angle = attack_angle - total_angle / 2.0;
 
-    var buf: [@sizeOf(@TypeOf(proj_index)) + @sizeOf(@TypeOf(attack_angle))]u8 = undefined;
+    const first_proj_index = player.next_proj_index;
+    for (0..projs_len) |_| {
+        const proj_index = player.next_proj_index;
+        player.next_proj_index +%= 1;
+
+        const fstr = f32i(player.data.stats.strength + player.strength_bonus);
+        Projectile.addToMap(.{
+            .x = x,
+            .y = y,
+            .data = proj_data,
+            .angle = attack_angle,
+            .index = proj_index,
+            .owner_map_id = player.map_id,
+            .phys_dmg = i32f((3000.0 + fstr * 3.0 + f32i(player.abilityTalentLevel(0)) * 250.0) * player.damage_mult),
+        });
+
+        angle += arc_gap;
+    }
+
+    var buf: [@sizeOf(@TypeOf(first_proj_index)) + @sizeOf(@TypeOf(attack_angle))]u8 = undefined;
     var fba = std.io.fixedBufferStream(&buf);
-    _ = fba.write(&std.mem.toBytes(proj_index)) catch main.oomPanic();
+    _ = fba.write(&std.mem.toBytes(first_proj_index)) catch main.oomPanic();
     _ = fba.write(&std.mem.toBytes(attack_angle)) catch main.oomPanic();
     return fba.getWritten();
 }
@@ -53,33 +63,7 @@ pub fn handleRewind() ![]u8 {
     return &.{};
 }
 
-pub fn handleNullPulse(player: *Player) ![]u8 {
-    const fint = f32i(player.data.stats.intelligence + player.intelligence_bonus);
-    const fwit = f32i(player.data.stats.wit + player.wit_bonus);
-    const radius = 5.0 + fint * 0.12;
-    const radius_sqr = radius * radius;
-    const damage_mult = 0.25 + fwit * 0.01 * player.damage_mult;
-
-    var proj_list = map.listForType(Projectile);
-    const proj_len = proj_list.items.len;
-    if (proj_len > 0) {
-        var iter = std.mem.reverseIterator(proj_list.items);
-        var i = proj_len - 1;
-        while (iter.nextPtr()) |p| : (i -%= 1)
-            if (utils.distSqr(p.x, p.y, player.x, player.y) <= radius_sqr) {
-                if (map.findObjectRef(Enemy, p.owner_map_id)) |e| {
-                    const phys_dmg = i32f(f32i(game_data.physDamage(p.phys_dmg, e.data.defense, e.condition)) * damage_mult);
-                    const magic_dmg = i32f(f32i(game_data.magicDamage(p.magic_dmg, e.data.resistance, e.condition)) * damage_mult);
-                    const true_dmg = i32f(f32i(p.true_dmg) * damage_mult);
-                    if (phys_dmg > 0) map.takeDamage(e, phys_dmg, .physical, .{}, p.colors);
-                    if (magic_dmg > 0) map.takeDamage(e, magic_dmg, .magic, .{}, p.colors);
-                    if (true_dmg > 0) map.takeDamage(e, true_dmg, .true, .{}, p.colors);
-                }
-                p.deinit();
-                _ = proj_list.swapRemove(i);
-            };
-    }
-
+pub fn handleNullPulse() ![]u8 {
     return &.{};
 }
 

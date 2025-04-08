@@ -241,7 +241,7 @@ pub fn useAbility(self: *Player, index: comptime_int) void {
         hash("Boulder Buddies"), hash("Earthen Prison") => &.{},
         hash("Time Dilation") => abilities.handleTimeDilation(self),
         hash("Rewind") => abilities.handleRewind(),
-        hash("Null Pulse") => abilities.handleNullPulse(self),
+        hash("Null Pulse") => abilities.handleNullPulse(),
         hash("Time Lock") => abilities.handleTimeLock(self),
         hash("Ethereal Harvest"), hash("Space Shift"), hash("Ravenous Hunger") => &.{},
         hash("Bloodfont") => abilities.handleBloodfont(self),

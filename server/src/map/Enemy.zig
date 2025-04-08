@@ -29,6 +29,8 @@ max_hp: i32 = 100,
 hp: i32 = 100,
 size_mult: f32 = 1.0,
 obelisk_map_id: u32 = std.math.maxInt(u32),
+obelisk_redir_perc: f32 = 1.0,
+obelisk_incr_perc: f32 = 1.0,
 name: ?[]const u8 = null,
 next_proj_index: u8 = 0,
 projectiles: [256]?u32 = @splat(null),
@@ -349,16 +351,21 @@ pub fn damage(
         magic_dmg,
         self.data.resistance,
         self.condition,
-    ) + true_dmg);
+    ) + true_dmg) * self.obelisk_incr_perc;
     if (owner_type == .player) {
         if (world.findCon(Player, owner_id)) |player| fdmg *= player.damage_multiplier;
     }
-    const dmg = i32f(fdmg);
     if (self.condition.encased_in_stone) {
         if (world.findRef(Ally, self.obelisk_map_id)) |obelisk| {
-            obelisk.damage(.enemy, self.map_id, 0, 0, dmg, null);
-        } else self.clearCondition(.encased_in_stone);
+            obelisk.damage(.enemy, self.map_id, 0, 0, i32f(fdmg * self.obelisk_redir_perc), null);
+        } else {
+            self.obelisk_map_id = std.math.maxInt(u32);
+            self.obelisk_redir_perc = 1.0;
+            self.obelisk_incr_perc = 1.0;
+            self.clearCondition(.encased_in_stone);
+        }
     }
+    const dmg = i32f(fdmg);
     self.hp -= dmg;
 
     const map_id = switch (owner_type) {

@@ -12,6 +12,7 @@ const behavior_logic = @import("../logic/logic.zig");
 const main = @import("../main.zig");
 const maps = @import("../map/maps.zig");
 const World = @import("../World.zig");
+const Enemy = @import("Enemy.zig");
 const stat_util = @import("stat_util.zig");
 
 const Ally = @This();
@@ -23,7 +24,6 @@ y: f32 = 0.0,
 spawn_x: f32 = 0.0,
 spawn_y: f32 = 0.0,
 size_mult: f32 = 1.0,
-hit_multiplier: f32 = 1.0,
 condition: utils.Condition = .{},
 hp: i32 = 0,
 max_hp: i32 = 0,
@@ -39,6 +39,7 @@ storages: behavior_logic.Storages = .{},
 spawn: packed struct {
     command: bool = false,
 } = .{},
+death_explosion: u32 = std.math.maxInt(u32),
 
 pub fn init(self: *Ally) !void {
     if (behavior_data.ally_behavior_map.get(self.data_id)) |behav| {
@@ -77,6 +78,12 @@ pub fn deinit(self: *Ally) !void {
 
 pub fn delete(self: *Ally) !void {
     const world = maps.worlds.getPtr(self.world_id) orelse return;
+    if (self.death_explosion != std.math.maxInt(u32))
+        world.aoe(Enemy, self.x, self.y, .player, self.owner_map_id, 5.0, .{
+            .phys_dmg = @intCast(self.death_explosion),
+            .aoe_color = 0xA13A2F,
+        });
+
     try world.remove(Ally, self);
 }
 
@@ -99,7 +106,7 @@ pub fn damage(
         magic_dmg,
         self.data.resistance,
         self.condition,
-    ) + true_dmg) * self.hit_multiplier);
+    ) + true_dmg));
     self.hp -= dmg;
 
     if (self.hp <= 0) self.delete() catch return;

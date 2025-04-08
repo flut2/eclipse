@@ -7,13 +7,13 @@
         .texture = { "players": 2 },
         .item_types = [
             @ItemType("sword"),
-            @ItemType("plate"),
+            @ItemType("leather"),
             @ItemType("boots"),
             @ItemType("artifact"),
         ],
         .default_items = [
             "Silver Blade",
-            "Rusted Plate",
+            "Worn-out Hide",
             "Scrap Boots",
             "Dim Jade Nanobot",
         ],
@@ -458,8 +458,8 @@
                 ],
             },
             {
-                .name = "Reanimate",
-                .description = "Spawn $multitxt1 Boulder Buddy per level&reset when &type=\"med_it\"Terrain Expulsion&reset kills an enemy.",
+                .name = "Rock Barrage",
+                .description = "Add $multitxt1 extra projectile per level&reset to &type=\"med_it\"Terrain Expulsion&reset.",
                 .icon = { "ability_icons": 4 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -510,7 +510,7 @@
             },
             {
                 .name = "Heart of Stone",
-                .description = "Further reduce damage taken by $multitxt1.5% (additive) per level&reset when under the effect of &type=\"med_it\"Heart of Stone&reset.",
+                .description = "Further reduce damage taken by $multitxt0.5% (additive) per level&reset when under the effect of &type=\"med_it\"Heart of Stone&reset.",
                 .icon = { "ability_icons": 5 },
                 .type = @TalentType("ability"),
                 .max_level = [5, 10],
@@ -529,7 +529,7 @@
             },
             {
                 .name = "Spiked Shell",
-                .description = "Encase in stone all enemies who have dealt at least 500 damage to you while under the effect of &type=\"med_it\"Heart of Stone&reset for $multitxt1s per level&reset.",
+                .description = "Gain a damage boost equal to $multitxt10% (additive) of damage taken under &type=\"med_it\"Heart of Stone$multitxt per level&reset for 5 seconds.",
                 .icon = { "ability_icons": 5 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -599,10 +599,7 @@
             },
             {
                 .name = "Self Sacrifice",
-                .description = 
-                    \\Each &type="med_it"Boulder Buddy&reset now deals $multitxt2000 Physical Damage per level&reset when it dies.
-                    \\$footnotetxtThis does not apply to the despawn due to the duration expiring.
-                ,
+                .description = "Each &type=\"med_it\"Boulder Buddy&reset now deals $multitxt2000 Physical Damage per level&reset within 5 tiles when it dies.",
                 .icon = { "ability_icons": 6 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
@@ -672,7 +669,7 @@
             },
             {
                 .name = "Quicksand Decay",
-                .description = "All enemies under the effect of &type=\"med_it\"Earthen Prison&reset become slowed for $multitxt2.5s per level&reset when the ability expires.",
+                .description = "All enemies under the effect of &type=\"med_it\"Earthen Prison&reset take $multitxt10% (additive) more damage per level&reset.",
                 .icon = { "ability_icons": 7 },
                 .type = @TalentType("keystone"),
                 .max_level = [1, 2],
