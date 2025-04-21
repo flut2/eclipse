@@ -185,7 +185,7 @@ pub fn init() !void {
     const file = try std.fs.cwd().openFile("./assets/worlds/maps.ziggy", .{});
     defer file.close();
 
-    const file_data = try file.readToEndAllocOptions(main.allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
+    const file_data = try file.readToEndAllocOptions(main.allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);
     defer main.allocator.free(file_data);
 
     for (try ziggy.parseLeaky([]MapDetails, main.allocator, file_data, .{})) |details| {
