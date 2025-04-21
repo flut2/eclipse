@@ -2620,7 +2620,7 @@ fn zaudioMalloc(size: usize, _: ?*anyopaque) callconv(.C) ?*anyopaque {
 
     const mem = mem_allocator.?.alignedAlloc(
         u8,
-        mem_alignment,
+        .fromByteUnits(mem_alignment),
         size,
     ) catch @panic("zaudio: out of memory");
 

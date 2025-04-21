@@ -1090,7 +1090,7 @@ fn parseFontData(comptime path: []const u8) !ParsedFontData {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    const file_data = try file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
+    const file_data = try file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);
     defer arena_allocator.free(file_data);
 
     const font_data = try ziggy.parseLeaky(InternalFontData, arena_allocator, file_data, .{});
@@ -1269,7 +1269,13 @@ pub fn init() !void {
     const game_sheets_data = try std.fs.cwd().openFile("./assets/sheets/game_sheets.ziggy", .{});
     defer game_sheets_data.close();
 
-    const game_sheets_file_data = try game_sheets_data.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
+    const game_sheets_file_data = try game_sheets_data.readToEndAllocOptions(
+        arena_allocator,
+        std.math.maxInt(u32),
+        null,
+        .fromByteUnits(@alignOf(u8)),
+        0,
+    );
 
     for (try ziggy.parseLeaky([]GameSheet, arena_allocator, game_sheets_file_data, .{})) |game_sheet| {
         switch (game_sheet.type) {
@@ -1301,7 +1307,13 @@ pub fn init() !void {
     const wall_sheets_file = try std.fs.cwd().openFile("./assets/sheets/wall_sheets.ziggy", .{});
     defer wall_sheets_file.close();
 
-    const wall_sheets_file_data = try wall_sheets_file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
+    const wall_sheets_file_data = try wall_sheets_file.readToEndAllocOptions(
+        arena_allocator,
+        std.math.maxInt(u32),
+        null,
+        .fromByteUnits(@alignOf(u8)),
+        0,
+    );
 
     for (try ziggy.parseLeaky([]WallSheet, arena_allocator, wall_sheets_file_data, .{})) |wall_sheet|
         try addWall(
@@ -1317,7 +1329,13 @@ pub fn init() !void {
     const ui_sheets_data = try std.fs.cwd().openFile("./assets/ui/ui_sheets.ziggy", .{});
     defer ui_sheets_data.close();
 
-    const ui_sheets_file_data = try ui_sheets_data.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
+    const ui_sheets_file_data = try ui_sheets_data.readToEndAllocOptions(
+        arena_allocator,
+        std.math.maxInt(u32),
+        null,
+        .fromByteUnits(@alignOf(u8)),
+        0,
+    );
 
     for (try ziggy.parseLeaky([]UiSheet, arena_allocator, ui_sheets_file_data, .{})) |ui_sheet|
         try addUiImage(ui_sheet.name, ui_sheet.path, ui_sheet.w, ui_sheet.h, &ui_ctx);

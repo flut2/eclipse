@@ -30,7 +30,7 @@ fn parseGeneric(allocator: std.mem.Allocator, path: []const u8, comptime DataTyp
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    const file_data = try file.readToEndAllocOptions(allocator, std.math.maxInt(u32), null, @alignOf(u8), 0);
+    const file_data = try file.readToEndAllocOptions(allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);
     defer allocator.free(file_data);
 
     const data_slice = try ziggy.parseLeaky([]DataType, allocator, file_data, .{});
