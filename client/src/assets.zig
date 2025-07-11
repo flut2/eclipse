@@ -99,15 +99,8 @@ const ParsedFontData = struct {
 };
 
 const AudioState = struct {
-    const num_sets = 100;
-    const samples_per_set = 512;
-    const usable_samples_per_set = 480;
-
     device: *zaudio.Device,
     engine: *zaudio.Engine,
-    mutex: std.Thread.Mutex = .{},
-    current_set: u32 = num_sets - 1,
-    samples: [num_sets * samples_per_set]f32 = @splat(0.0),
 
     fn audioCallback(
         device: *zaudio.Device,
@@ -116,19 +109,7 @@ const AudioState = struct {
         num_frames: u32,
     ) callconv(.C) void {
         const audio: *AudioState = @ptrCast(@alignCast(device.getUserData()));
-
         audio.engine.asNodeGraphMut().readPcmFrames(output.?, num_frames, null) catch {};
-
-        audio.mutex.lock();
-        defer audio.mutex.unlock();
-
-        audio.current_set = (audio.current_set + 1) % num_sets;
-
-        const num_channels = 2;
-        const base_index = samples_per_set * audio.current_set;
-        const frames: [*]f32 = @ptrCast(@alignCast(output));
-        for (0..@min(num_frames, usable_samples_per_set)) |i|
-            audio.samples[base_index + i] = frames[i * num_channels];
     }
 
     fn create() !*AudioState {
