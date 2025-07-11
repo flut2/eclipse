@@ -14,36 +14,21 @@ const required_layers: []const [*:0]const u8 =
         &.{};
     // zig fmt: on
 const required_device_extensions: []const [*:0]const u8 = &.{
-    khr_swapchain.name,
-};
-
-// need to have a modded version for RenderDoc...
-pub const khr_swapchain: vk.ApiInfo = .{
-    .name = "VK_KHR_swapchain",
-    .version = 70,
-    .base_commands = .{},
-    .instance_commands = .{},
-    .device_commands = .{
-        .getSwapchainImagesKHR = true,
-        .acquireNextImageKHR = true,
-        .queuePresentKHR = true,
-        .destroySwapchainKHR = true,
-        .createSwapchainKHR = true,
-    },
+    vk.extensions.khr_swapchain.name,
 };
 
 const apis: []const vk.ApiInfo = &.{
     vk.features.version_1_0,
     vk.extensions.khr_surface,
-    khr_swapchain,
+    vk.extensions.khr_swapchain,
 };
 
-const BaseDispatch = vk.BaseWrapper(apis);
-const InstanceDispatch = vk.InstanceWrapper(apis);
-const DeviceDispatch = vk.DeviceWrapper(apis);
+const BaseWrapper = vk.BaseWrapper;
+const InstanceWrapper = vk.InstanceWrapper;
+const DeviceWrapper = vk.DeviceWrapper;
 
-const Instance = vk.InstanceProxy(apis);
-const Device = vk.DeviceProxy(apis);
+const Instance = vk.InstanceProxy;
+const Device = vk.DeviceProxy;
 
 const DeviceCandidate = struct {
     phys_device: vk.PhysicalDevice,
@@ -68,7 +53,7 @@ pub const Queue = struct {
 const Context = @This();
 pub const CommandBuffer = vk.CommandBufferProxy(apis);
 
-base_dispatch: BaseDispatch,
+base_dispatch: BaseWrapper,
 instance: Instance,
 surface: vk.SurfaceKHR,
 phys_device: vk.PhysicalDevice,
@@ -83,16 +68,16 @@ extern fn glfwGetInstanceProcAddress(instance: vk.Instance, procname: [*:0]const
 
 pub fn init(window: *glfw.Window) !Context {
     var self: Context = undefined;
-    self.base_dispatch = try .load(glfwGetInstanceProcAddress);
+    self.base_dispatch = .load(glfwGetInstanceProcAddress);
 
     const glfw_exts = try glfw.getRequiredInstanceExtensions();
 
     const app_info: vk.ApplicationInfo = .{
         .p_application_name = "Eclipse",
-        .application_version = vk.makeApiVersion(1, 1, 0, 0),
+        .application_version = @bitCast(vk.makeApiVersion(1, 1, 0, 0)),
         .p_engine_name = "Eclipse",
-        .engine_version = vk.makeApiVersion(1, 1, 0, 0),
-        .api_version = vk.API_VERSION_1_0,
+        .engine_version = @bitCast(vk.makeApiVersion(1, 1, 0, 0)),
+        .api_version = @bitCast(vk.API_VERSION_1_0),
     };
 
     const instance = try self.base_dispatch.createInstance(&.{
@@ -103,9 +88,9 @@ pub fn init(window: *glfw.Window) !Context {
         .pp_enabled_extension_names = @ptrCast(glfw_exts),
     }, null);
 
-    const vki = try main.allocator.create(InstanceDispatch);
+    const vki = try main.allocator.create(InstanceWrapper);
     errdefer main.allocator.destroy(vki);
-    vki.* = try .load(instance, self.base_dispatch.dispatch.vkGetInstanceProcAddr);
+    vki.* = .load(instance, self.base_dispatch.dispatch.vkGetInstanceProcAddr.?);
     self.instance = .init(instance, vki);
     errdefer self.instance.destroyInstance(null);
 
@@ -118,9 +103,9 @@ pub fn init(window: *glfw.Window) !Context {
 
     const dev = try initializeCandidate(self.instance, candidate);
 
-    const vkd = try main.allocator.create(DeviceDispatch);
+    const vkd = try main.allocator.create(DeviceWrapper);
     errdefer main.allocator.destroy(vkd);
-    vkd.* = try .load(dev, self.instance.wrapper.dispatch.vkGetDeviceProcAddr);
+    vkd.* = .load(dev, self.instance.wrapper.dispatch.vkGetDeviceProcAddr.?);
     self.device = .init(dev, vkd);
     errdefer self.device.destroyDevice(null);
 

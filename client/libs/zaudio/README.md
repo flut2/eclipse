@@ -1,6 +1,6 @@
-# zaudio v0.10.0 - Cross-platform audio
+# [zaudio](https://github.com/zig-gamedev/zaudio)
 
-Zig build package and wrapper for [miniaudio](https://github.com/mackron/miniaudio) v0.11.21
+Zig build package and wrapper for [miniaudio](https://github.com/mackron/miniaudio) v0.11.22
 
 As an example program please see [audio experiments (wgpu)](https://github.com/michal-z/zig-gamedev/tree/main/samples/audio_experiments_wgpu).
 
@@ -36,13 +36,7 @@ Provided structs:
 
 ## Getting started
 
-Copy `zaudio` and `system-sdk` to a subdirectory of your project and add the following to your `build.zig.zon` .dependencies:
-```zig
-    .system_sdk = .{ .path = "local/path/to/system-sdk" },
-    .zaudio = .{ .path = "local/path/to/zaudio" },
-```
-
-Then in your `build.zig` add:
+In your `build.zig` add:
 
 ```zig
 pub fn build(b: *std.Build) void {

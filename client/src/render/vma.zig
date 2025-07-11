@@ -99,7 +99,6 @@ pub const AllocatorCreateFlags = packed struct(Flags) {
     _reserved_bit_29: bool = false,
     _reserved_bit_30: bool = false,
     _reserved_bit_31: bool = false,
-    pub usingnamespace vk.FlagsMixin(@This());
 };
 pub const PfnVmaAllocateDeviceMemoryFunction = ?*const fn (AllocatorHandle, u32, vk.DeviceMemory, vk.DeviceSize, ?*anyopaque) callconv(.C) void;
 pub const PfnVmaFreeDeviceMemoryFunction = ?*const fn (AllocatorHandle, u32, vk.DeviceMemory, vk.DeviceSize, ?*anyopaque) callconv(.C) void;
@@ -173,7 +172,7 @@ pub const AllocatorCreateInfo = extern struct {
     p_heap_size_limit: ?[*]const vk.DeviceSize = null,
     p_vulkan_functions: ?[*]const VulkanFunctions = null,
     instance: vk.Instance,
-    vulkan_api_version: u32 = vk.API_VERSION_1_0,
+    vulkan_api_version: u32 = @bitCast(vk.API_VERSION_1_0),
     p_type_external_memory_handle_types: ?[*]const vk.ExternalMemoryHandleTypeFlagsKHR = null,
 };
 pub const AllocatorInfo = extern struct {
@@ -246,8 +245,6 @@ pub const AllocationCreateFlags = packed struct(Flags) {
         .strategy_min_time_bit = true,
         .strategy_min_offset_bit = true,
     };
-
-    pub usingnamespace vk.FlagsMixin(@This());
 };
 pub const MemoryUsage = enum(c_uint) {
     unknown = 0,
@@ -307,8 +304,6 @@ pub const PoolCreateFlags = packed struct(Flags) {
     _reserved_bit_31: bool = false,
 
     pub const algorithm_mask: @This() = .{ .linear_algorithm_bit = true };
-
-    pub usingnamespace vk.FlagsMixin(@This());
 };
 pub const PoolCreateInfo = extern struct {
     memory_type_index: u32 = 0,
@@ -375,8 +370,6 @@ pub const DefragmentationFlags = packed struct(Flags) {
         .algorithm_full_bit = true,
         .algorithm_extensive_bit = true,
     };
-
-    pub usingnamespace vk.FlagsMixin(@This());
 };
 pub const PfnVmaCheckDefragmentationBreakFunction = ?*const fn (?*anyopaque) callconv(.C) vk.Bool32;
 pub const DefragmentationInfo = extern struct {
@@ -443,8 +436,6 @@ pub const VirtualBlockCreateFlags = packed struct(Flags) {
     _reserved_bit_31: bool = false,
 
     pub const algorithm_mask: @This() = .{ .linear_algorithm_bit = true };
-
-    pub usingnamespace vk.FlagsMixin(@This());
 };
 pub const VirtualBlockCreateInfo = extern struct {
     size: vk.DeviceSize = 0,
@@ -496,8 +487,6 @@ pub const VirtualAllocationCreateFlags = packed struct(Flags) {
         .strategy_min_time_bit = true,
         .strategy_min_offset_bit = true,
     };
-
-    pub usingnamespace vk.FlagsMixin(@This());
 };
 pub const VirtualAllocationCreateInfo = extern struct {
     size: vk.DeviceSize = 0,

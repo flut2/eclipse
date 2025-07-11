@@ -39,7 +39,7 @@ pub const Handler = struct {
     server: *ZiggyLsp,
     files: std.StringHashMapUnmanaged(Handler.File) = .{},
 
-    usingnamespace @import("lsp/logic.zig");
+    // usingnamespace @import("lsp/logic.zig");
 
     pub fn initialize(
         self: Handler,

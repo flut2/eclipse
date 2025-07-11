@@ -99,33 +99,56 @@ const ParsedFontData = struct {
 };
 
 const AudioState = struct {
+    const num_sets = 100;
+    const samples_per_set = 512;
+    const usable_samples_per_set = 480;
+
     device: *zaudio.Device,
     engine: *zaudio.Engine,
+    mutex: std.Thread.Mutex = .{},
+    current_set: u32 = num_sets - 1,
+    samples: [num_sets * samples_per_set]f32 = @splat(0.0),
 
-    fn audioCallback(device: *zaudio.Device, output: ?*anyopaque, _: ?*const anyopaque, num_frames: u32) callconv(.C) void {
+    fn audioCallback(
+        device: *zaudio.Device,
+        output: ?*anyopaque,
+        _: ?*const anyopaque,
+        num_frames: u32,
+    ) callconv(.C) void {
         const audio: *AudioState = @ptrCast(@alignCast(device.getUserData()));
-        audio.engine.readPcmFrames(output.?, num_frames, null) catch {};
+
+        audio.engine.asNodeGraphMut().readPcmFrames(output.?, num_frames, null) catch {};
+
+        audio.mutex.lock();
+        defer audio.mutex.unlock();
+
+        audio.current_set = (audio.current_set + 1) % num_sets;
+
+        const num_channels = 2;
+        const base_index = samples_per_set * audio.current_set;
+        const frames: [*]f32 = @ptrCast(@alignCast(output));
+        for (0..@min(num_frames, usable_samples_per_set)) |i|
+            audio.samples[base_index + i] = frames[i * num_channels];
     }
 
     fn create() !*AudioState {
         const audio = try arena.allocator().create(AudioState);
 
-        var device_config: zaudio.Device.Config = .init(.playback);
-        device_config.data_callback = audioCallback;
-        device_config.user_data = audio;
-        device_config.sample_rate = 48000;
-        device_config.period_size_in_frames = 480;
-        device_config.period_size_in_milliseconds = 10;
-        device_config.playback.format = .float32;
-        device_config.playback.channels = 2;
-        const device = try zaudio.Device.create(null, device_config);
+        var dvc_cfg: zaudio.Device.Config = .init(.playback);
+        dvc_cfg.data_callback = audioCallback;
+        dvc_cfg.user_data = audio;
+        dvc_cfg.sample_rate = 48000;
+        dvc_cfg.period_size_in_frames = 480;
+        dvc_cfg.period_size_in_milliseconds = 10;
+        dvc_cfg.playback.format = .float32;
+        dvc_cfg.playback.channels = 2;
+        const device = try zaudio.Device.create(null, dvc_cfg);
 
-        var engine_config: zaudio.Engine.Config = .init();
-        engine_config.device = device;
-        engine_config.no_auto_start = .true32;
-        const engine = try zaudio.Engine.create(engine_config);
+        var eng_cfg: zaudio.Engine.Config = .init();
+        eng_cfg.device = device;
+        eng_cfg.no_auto_start = .true32;
 
-        audio.* = .{ .device = device, .engine = engine };
+        audio.* = .{ .device = device, .engine = try zaudio.Engine.create(eng_cfg) };
         return audio;
     }
 
@@ -348,7 +371,7 @@ pub var anim_enemies: std.StringHashMapUnmanaged([]AnimEnemyData) = .empty;
 pub var anim_players: std.StringHashMapUnmanaged([]AnimPlayerData) = .empty;
 pub var walls: std.StringHashMapUnmanaged([]WallData) = .empty;
 
-pub var interact_key_tex: AtlasData = AtlasData.fromRawF32(0.0, 0.0, 0.0, 0.0, .ui);
+pub var interact_key_tex: AtlasData = .fromRawF32(0.0, 0.0, 0.0, 0.0, .ui);
 pub var key_tex_map: std.AutoHashMapUnmanaged(Settings.Button, u16) = .empty;
 
 pub var left_mask_uv: [2]f32 = undefined;
