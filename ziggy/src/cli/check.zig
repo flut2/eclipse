@@ -11,7 +11,7 @@ pub fn run(gpa: std.mem.Allocator, args: []const []const u8) !void {
         cmd.schema_path,
         ziggy.max_size,
         null,
-        1,
+        .fromByteUnits(1),
         0,
     ) catch |err| {
         std.debug.print("Error reading '{s}': {s}\n", .{
@@ -91,7 +91,7 @@ fn checkFile(
         sub_path,
         ziggy.max_size,
         null,
-        1,
+        .fromByteUnits(1),
         0,
     );
     var diag: ziggy.Diagnostic = .{ .path = sub_path };

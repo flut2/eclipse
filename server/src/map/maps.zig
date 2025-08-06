@@ -90,7 +90,7 @@ pub var maps: std.AutoHashMapUnmanaged(u16, MapData) = .{};
 pub var worlds: std.AutoArrayHashMapUnmanaged(i32, World) = .{};
 pub var next_world_id: i32 = 0;
 
-pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
+pub fn parseMap(buffer: []const u8, details: MapDetails) !MapData {
     var tiles: std.ArrayListUnmanaged(Tile) = .empty;
     var entities: std.ArrayListUnmanaged(Entity) = .empty;
     var enemies: std.ArrayListUnmanaged(Enemy) = .empty;
@@ -119,7 +119,7 @@ pub fn parseMap(reader: anytype, details: MapDetails) !MapData {
 
     var map_arena: std.heap.ArenaAllocator = .init(main.allocator);
     defer map_arena.deinit();
-    const parsed_map = try map_data.parseMap(reader, &map_arena);
+    const parsed_map = try map_data.parseMap(buffer, &map_arena);
     for (parsed_map.tiles, 0..) |tile, i| {
         const ux: u16 = @intCast(i % parsed_map.w);
         const uy: u16 = @intCast(@divFloor(i, parsed_map.w));
@@ -195,7 +195,10 @@ pub fn init() !void {
         const map_file = try std.fs.cwd().openFile(path, .{});
         defer map_file.close();
 
-        var map = try parseMap(map_file.reader(), details);
+        const file_buf = try map_file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
+        defer main.allocator.free(file_buf);
+
+        var map = try parseMap(file_buf, details);
 
         const portal_id = if (details.portal_name) |name|
             (game_data.portal.from_name.get(name) orelse @panic("Given portal name has no data")).id
@@ -256,8 +259,7 @@ pub fn portalWorld(portal_type: u16, portal_map_id: u32, world_id: i32) !?*World
 }
 
 pub fn testWorld(data: []const u8) !*World {
-    var fbs = std.io.fixedBufferStream(data);
-    const map = try parseMap(fbs.reader(), .test_details);
+    const map = try parseMap(data, .test_details);
 
     try worlds.put(main.allocator, next_world_id, try .create(map.w, map.h, next_world_id));
     defer next_world_id += 1;

@@ -37,10 +37,12 @@ pub fn build(b: *std.Build) void {
     });
     ztracy.addIncludePath(b.path("libs/tracy/tracy"));
 
-    const tracy = b.addStaticLibrary(.{
+    const tracy = b.addLibrary(.{
         .name = "tracy",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     tracy.addIncludePath(b.path("libs/tracy/tracy"));
@@ -78,9 +80,11 @@ pub fn build(b: *std.Build) void {
 
     const tests = b.addTest(.{
         .name = "ztracy-tests",
-        .root_source_file = b.path("src/ztracy.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/ztracy.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     tests.linkLibrary(tracy);
     b.installArtifact(tests);

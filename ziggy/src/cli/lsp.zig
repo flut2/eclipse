@@ -35,11 +35,10 @@ pub fn run(gpa: std.mem.Allocator, args: []const []const u8) !void {
 }
 
 pub const Handler = struct {
+    const logic = @import("lsp/logic.zig");
     gpa: std.mem.Allocator,
     server: *ZiggyLsp,
-    files: std.StringHashMapUnmanaged(Handler.File) = .{},
-
-    // usingnamespace @import("lsp/logic.zig");
+    files: std.StringHashMapUnmanaged(logic.File) = .{},
 
     pub fn initialize(
         self: Handler,
@@ -134,11 +133,12 @@ pub const Handler = struct {
         errdefer self.gpa.free(new_text);
 
         const language_id = notification.textDocument.languageId;
-        const language = std.meta.stringToEnum(Handler.Language, language_id) orelse {
+        const language = std.meta.stringToEnum(logic.Language, language_id) orelse {
             log.debug("unrecognized language id: '{s}'", .{language_id});
             return;
         };
-        try self.loadFile(
+        try logic.loadFile(
+            self,
             arena,
             new_text,
             notification.textDocument.uri,
@@ -163,7 +163,8 @@ pub const Handler = struct {
             notification.textDocument.uri,
             @tagName(file),
         });
-        try self.loadFile(
+        try logic.loadFile(
+            self,
             arena,
             new_text,
             notification.textDocument.uri,

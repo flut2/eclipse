@@ -14,12 +14,12 @@
             .hash = "N-V-__8AAMeyCAC7f33pfuk8OlGD4qqGI2OwGeP-9KamyBcb",
         },
         .turbopack = .{
-            .url = "git+https://github.com/flut2/turbopack.git#10fc67d55533e2d495f302755f1ec4e7a4d90317",
-            .hash = "turbopack-1.0.0-rSxRju8bAAB6-FV36FgBYVI36EIeFwQee7KJXZp9BiAe",
+            .url = "git+https://github.com/flut2/turbopack.git#8fc71a37a798bcf31ab0bd65d7e3089d1569bc35",
+            .hash = "turbopack-1.0.0-rSxRjjsfAACcX7QYHoziFhTQPaHid-inIg_X2NEo4QIQ",
         },
         .vulkan_zig = .{
-            .url = "git+https://github.com/Snektron/vulkan-zig.git#604416bf44baf95568c428e1aa55499aa8e07607",
-            .hash = "vulkan-0.0.0-AAAAAC5bAwASnqFlLMD4V42z3LolS8n7xv3RlbXhAhv0",
+            .url = "git+https://github.com/Snektron/vulkan-zig.git#ed429842b8ad60966bc3b8b214606d8a5714f99e",
+            .hash = "vulkan-0.0.0-r7Ytx5w-AwC04xBpfzcuIjGyYv2z6xb1i49ZUeNUgT5H",
         },
     },
     .paths = .{

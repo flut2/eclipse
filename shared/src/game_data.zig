@@ -2,8 +2,8 @@ const std = @import("std");
 
 const ziggy = @import("ziggy");
 
-const utils = @import("utils.zig");
 const network_data = @import("network_data.zig");
+const utils = @import("utils.zig");
 
 pub var resource: Maps(ResourceData) = .{};
 pub var card: Maps(CardData) = .{};
@@ -334,7 +334,6 @@ pub const TalentData = struct {
 pub const ClassData = struct {
     id: u16,
     name: []const u8,
-    rpc_name: []const u8,
     description: []const u8,
     texture: TextureData,
     item_types: []const ItemType,

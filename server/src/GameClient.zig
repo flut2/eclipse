@@ -5,7 +5,7 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
-const uv = shared.uv;
+const uv = @import("uv");
 const f32i = utils.f32i;
 const u32f = utils.u32f;
 const u16f = utils.u16f;
@@ -72,14 +72,14 @@ fn handlerFn(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?
     };
 }
 
-pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
+pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.c) void {
     buf.* = .{
         .base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic()),
         .len = @intCast(suggested_size),
     };
 }
 
-fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.C) void {
+fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.c) void {
     const client: *Client = @ptrCast(@alignCast(socket.*.data));
 
     removePlayer: {
@@ -92,7 +92,7 @@ fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.C) void {
     main.game_client_pool.destroy(client);
 }
 
-fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
+fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.c) void {
     const wr: *WriteRequest = @ptrCast(ud);
     const client: *Client = @ptrCast(@alignCast(wr.request.data));
 
@@ -105,7 +105,7 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
     main.allocator.destroy(wr);
 }
 
-pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
+pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.c) void {
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const client: *Client = @ptrCast(@alignCast(socket.data));
 
@@ -147,9 +147,9 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
     main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
 }
 
-fn asyncCloseCallback(_: [*c]uv.uv_handle_t) callconv(.C) void {}
+fn asyncCloseCallback(_: [*c]uv.uv_handle_t) callconv(.c) void {}
 
-pub fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.C) void {
+pub fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.c) void {
     const client: *Client = @ptrCast(@alignCast(handle.*.data));
     client.shutdown();
 }

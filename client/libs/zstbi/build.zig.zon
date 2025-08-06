@@ -1,4 +1,5 @@
 .{
+    .fingerprint = 0x3c971054c7af1fe6,
     .name = .zstbi,
     .version = "0.10.0",
     .paths = .{

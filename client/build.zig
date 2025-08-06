@@ -68,13 +68,12 @@ pub fn buildWithoutDupes(
         exe.root_module.addImport("shared", shared_dep.module("shared"));
         if (enable_tracy) exe.root_module.addImport("tracy", shared_dep.module("tracy"));
         exe.root_module.addImport("ziggy", shared_dep.module("ziggy"));
+        exe.root_module.addImport("uv", shared_dep.module("uv"));
 
         exe.root_module.addImport("turbopack", b.dependency("turbopack", .{
             .target = target,
             .optimize = optimize,
         }).module("turbopack"));
-
-        exe.root_module.addImport("rpc", b.dependency("discord_rpc", .{}).module("root"));
 
         const vulkan = b.dependency("vulkan_zig", .{ .registry = b.path(root_add ++ "libs/vk.xml") }).module("vulkan-zig");
         exe.root_module.addImport("vulkan", vulkan);

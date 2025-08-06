@@ -174,9 +174,12 @@ fn loadMap() !void {
     const file = try std.fs.cwd().openFile("./assets/background.map", .{});
     defer file.close();
 
+    const file_buf = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
+    defer main.allocator.free(file_buf);
+
     var arena: std.heap.ArenaAllocator = .init(main.allocator);
     defer arena.deinit();
-    const parsed_map = try map_data.parseMap(file.reader(), &arena);
+    const parsed_map = try map_data.parseMap(file_buf, &arena);
 
     map.dispose();
     map.setMapInfo(.{ .width = parsed_map.w, .height = parsed_map.h, .bg_color = 0, .bg_intensity = 0.15 });

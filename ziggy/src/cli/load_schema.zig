@@ -11,7 +11,7 @@ pub fn loadSchema(gpa: std.mem.Allocator, path: ?[]const u8) ziggy.schema.Schema
         p,
         ziggy.max_size,
         null,
-        1,
+        .fromByteUnits(1),
         0,
     ) catch |err| {
         std.debug.print("error while reading the --schema file: {s}\n\n", .{

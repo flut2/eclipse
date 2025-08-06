@@ -5,8 +5,11 @@
     .dependencies = .{
         .system_sdk = .{ .path = "libs/system-sdk" },
         .ztracy = .{ .path = "libs/ztracy" },
-        .libuv = .{ .path = "libs/libuv" },
         .ziggy = .{ .path = "../ziggy" },
+        .libuv = .{
+            .url = "git+https://github.com/libuv/libuv.git#056e180e11c3a2ff7120f484da9d0f15a5776fd4",
+            .hash = "N-V-__8AAGNvRADl5XYzO88cR4KibrlVHoKvtC9yONZmyDGc",
+        },
     },
     .paths = .{
         "build.zig",

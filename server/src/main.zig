@@ -5,7 +5,7 @@ const build_options = @import("options");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
-const uv = shared.uv;
+const uv = @import("uv");
 
 const db = @import("db.zig");
 const GameClient = @import("GameClient.zig");
@@ -89,7 +89,7 @@ pub fn main() !void {
     if (run_status != 0 and run_status != 1) std.log.err("Run failed: {s}", .{uv.uv_strerror(run_status)});
 }
 
-fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.C) void, server_handle: [*c]uv.uv_tcp_t, port: u16) void {
+fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.c) void, server_handle: [*c]uv.uv_tcp_t, port: u16) void {
     const accept_socket_status = uv.uv_tcp_init(uv.uv_default_loop(), server_handle);
     if (accept_socket_status != 0) std.debug.panic("Setting up accept socket failed: {s}", .{uv.uv_strerror(accept_socket_status)});
 
@@ -108,7 +108,7 @@ fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.C) void, se
     if (listen_result != 0) std.debug.panic("Listen error: {s}", .{uv.uv_strerror(listen_result)});
 }
 
-fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.C) void {
+fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.c) void {
     tick_id +%= 1;
     const time = std.time.microTimestamp();
     defer current_time = time;
@@ -126,7 +126,7 @@ fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.C) void {
     }
 }
 
-fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
+fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.c) void {
     if (status < 0) {
         std.log.err("New game connection error: {s}", .{uv.uv_strerror(status)});
         return;
@@ -166,7 +166,7 @@ fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
     }
 }
 
-fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
+fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.c) void {
     if (status < 0) {
         std.log.err("New login connection error: {s}", .{uv.uv_strerror(status)});
         return;
@@ -199,7 +199,7 @@ fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
     }
 }
 
-fn onSocketClose(handle: [*c]uv.uv_handle_t) callconv(.C) void {
+fn onSocketClose(handle: [*c]uv.uv_handle_t) callconv(.c) void {
     socket_pool.destroy(@ptrCast(@alignCast(handle)));
 }
 

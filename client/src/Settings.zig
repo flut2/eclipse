@@ -73,7 +73,7 @@ pub fn save(self: Settings) !void {
     const file = try std.fs.cwd().createFile("settings.json", .{});
     defer file.close();
 
-    const settings_json = try std.json.stringifyAlloc(arena.allocator(), self, .{ .whitespace = .indent_4 });
+    const settings_json = try std.json.Stringify.valueAlloc(arena.allocator(), self, .{ .whitespace = .indent_4 });
     try file.writeAll(settings_json);
 }
 

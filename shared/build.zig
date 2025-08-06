@@ -142,28 +142,25 @@ pub fn build(b: *std.Build) !void {
         // .use_llvm = optimize != .Debug,
     });
 
-    const libuv = b.addStaticLibrary(.{
+    const libuv_lib = b.addLibrary(.{
         .name = "libuv",
-        .root_source_file = b.path("src/" ++ switch (builtin.os.tag) {
-            .windows => "uv_win.zig",
-            .linux => "uv_linux.zig",
-            .macos => "uv_mac.zig",
-            else => @compileError("Unsupported OS"),
+        .linkage = .static,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
         }),
-        .target = target,
-        .optimize = optimize,
     });
-    const libuv_dep = b.dependency("libuv", .{});
 
-    inline for (.{ libuv_dep.path("include"), libuv_dep.path("src") }) |include_path| libuv.addIncludePath(include_path);
+    const libuv_dep = b.dependency("libuv", .{});
+    inline for (.{ libuv_dep.path("include"), libuv_dep.path("src") }) |include_path| libuv_lib.addIncludePath(include_path);
     for (switch (builtin.os.tag) {
         .windows => libuv_libs.windows,
         .linux => libuv_libs.linux,
         .macos => libuv_libs.apple,
         else => @compileError("Unsupported OS"),
-    }) |lib_name| libuv.linkSystemLibrary(lib_name);
-    libuv.linkLibC();
-    libuv.addCSourceFiles(.{
+    }) |lib_name| libuv_lib.linkSystemLibrary(lib_name);
+    libuv_lib.linkLibC();
+    libuv_lib.addCSourceFiles(.{
         .root = libuv_dep.path("."),
         .files = &switch (builtin.os.tag) {
             .windows => libuv_sources.windows,
@@ -178,7 +175,48 @@ pub fn build(b: *std.Build) !void {
             else => @compileError("Unsupported OS"),
         },
     });
-    b.installArtifact(libuv);
+    b.installArtifact(libuv_lib);
+
+    const libuv_tc = b.addTranslateC(.{
+        .optimize = optimize,
+        .target = target,
+        .root_source_file = libuv_dep.path("include/uv.h"),
+    });
+
+    if (target.result.abi == .msvc) {
+        libuv_tc.defineCMacroRaw("MIDL_INTERFACE=struct");
+        libuv_tc.defineCMacroRaw("_UCRT");
+    }
+
+    libuv_tc.addIncludePath(libuv_dep.path("include"));
+
+    const libuv_patcher = b.addExecutable(.{
+        .name = "libuv_patcher",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("libuv_patcher.zig"),
+            .optimize = optimize,
+            .target = target,
+        }),
+    });
+
+    const run_patcher = b.addRunArtifact(libuv_patcher);
+    run_patcher.addFileArg(libuv_tc.getOutput());
+    run_patcher.step.dependOn(&libuv_patcher.step);
+    run_patcher.step.dependOn(&libuv_tc.step);
+
+    const write_file = b.addNamedWriteFiles("uv");
+    const libuv_c_path = write_file.addCopyFile(libuv_tc.getOutput(), "c.zig");
+    write_file.step.dependOn(&run_patcher.step);
+
+    libuv_lib.step.dependOn(&write_file.step);
+
+    const libuv_mod = b.addModule("uv", .{
+        .root_source_file = libuv_c_path,
+        .link_libc = true,
+    });
+    libuv_mod.linkLibrary(libuv_lib);
+
+    b.modules.put(b.dupe("uv"), libuv_mod) catch @panic("OOM");
 
     b.modules.put(b.dupe("ziggy"), b.dependency("ziggy", .{
         .target = target,

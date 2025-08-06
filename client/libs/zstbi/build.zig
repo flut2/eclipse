@@ -8,10 +8,12 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/zstbi.zig"),
     });
 
-    const zstbi_lib = b.addStaticLibrary(.{
+    const zstbi_lib = b.addLibrary(.{
         .name = "zstbi",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     zstbi_lib.addIncludePath(b.path("libs/stbi"));
     if (optimize == .Debug) {
@@ -41,9 +43,11 @@ pub fn build(b: *std.Build) void {
 
     const tests = b.addTest(.{
         .name = "zstbi-tests",
-        .root_source_file = b.path("src/zstbi.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/zstbi.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     tests.linkLibrary(zstbi_lib);
     b.installArtifact(tests);

@@ -59,7 +59,6 @@ pub var list: struct {
     particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
     ally: std.ArrayListUnmanaged(Ally) = .empty,
 } = .{};
-
 pub var lights: std.ArrayListUnmanaged(Renderer.LightData) = .empty;
 pub var draw_data: [main.frames_in_flight * 2]MapData = @splat(.{});
 pub var draw_data_index: u8 = 0;
@@ -99,13 +98,12 @@ pub fn init() !void {
 }
 
 pub fn deinit() void {
-    inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
+    inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| @"continue": {
         var child_list = &@field(list, field.name);
         defer child_list.deinit(main.allocator);
-        if (comptime !std.mem.eql(u8, field.name, "particle") and
-            !std.mem.eql(u8, field.name, "particle_add") and
-            !std.mem.eql(u8, field.name, "particle_effect"))
-            for (child_list.items) |*obj| obj.deinit();
+        inline for (.{ "particle", "particle_add", "particle_effect" }) |field_to_ignore|
+            if (comptime std.mem.eql(u8, field.name, field_to_ignore)) break :@"continue";
+        for (child_list.items) |*obj| obj.deinit();
     }
 
     move_records.deinit(main.allocator);
@@ -123,13 +121,12 @@ pub fn dispose() void {
     interactive.map_id.store(std.math.maxInt(u32), .release);
     interactive.type.store(.unset, .release);
 
-    inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| {
+    inline for (@typeInfo(@TypeOf(list)).@"struct".fields) |field| @"continue": {
         var child_list = &@field(list, field.name);
         defer child_list.clearRetainingCapacity();
-        if (comptime !std.mem.eql(u8, field.name, "particle") and
-            !std.mem.eql(u8, field.name, "particle_add") and
-            !std.mem.eql(u8, field.name, "particle_effect"))
-            for (child_list.items) |*obj| obj.deinit();
+        inline for (.{ "particle", "particle_add", "particle_effect" }) |field_to_ignore|
+            if (comptime std.mem.eql(u8, field.name, field_to_ignore)) break :@"continue";
+        for (child_list.items) |*obj| obj.deinit();
     }
 
     move_records.clearRetainingCapacity();

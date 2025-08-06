@@ -17,32 +17,31 @@ pub const Map = struct {
     tiles: []Tile,
 };
 
-pub fn parseMap(data_reader: anytype, arena: *std.heap.ArenaAllocator) !Map {
+pub fn parseMap(buffer: []const u8, arena: *std.heap.ArenaAllocator) !Map {
     const allocator = arena.allocator();
-    var dcp = std.compress.zlib.decompressor(data_reader);
-    var reader = dcp.reader();
+    var reader: std.io.Reader = .fixed(buffer);
 
-    const version = try reader.readInt(u8, .little);
+    const version = try reader.takeInt(u8, .little);
     if (version != 0) {
         std.log.err("Reading map failed, unsupported version: {}", .{version});
         return error.UnsupportedVersion;
     }
 
     var ret: Map = .{
-        .x = try reader.readInt(u16, .little),
-        .y = try reader.readInt(u16, .little),
-        .w = try reader.readInt(u16, .little),
-        .h = try reader.readInt(u16, .little),
+        .x = try reader.takeInt(u16, .little),
+        .y = try reader.takeInt(u16, .little),
+        .w = try reader.takeInt(u16, .little),
+        .h = try reader.takeInt(u16, .little),
         .tiles = undefined,
     };
     ret.tiles = try allocator.alloc(Tile, @as(u32, ret.w) * @as(u32, ret.h));
 
-    const tiles = try allocator.alloc(Tile, try reader.readInt(u16, .little));
+    const tiles = try allocator.alloc(Tile, try reader.takeInt(u16, .little));
     for (tiles) |*tile| {
         inline for (@typeInfo(Tile).@"struct".fields) |field| {
-            const len = try reader.readInt(u16, .little);
+            const len = try reader.takeInt(u16, .little);
             const buf = try allocator.alloc(u8, len);
-            try reader.readNoEof(buf);
+            try reader.readSliceAll(buf);
             @field(tile, field.name) = buf;
         }
     }
@@ -52,7 +51,7 @@ pub fn parseMap(data_reader: anytype, arena: *std.heap.ArenaAllocator) !Map {
     for (0..ret.h) |_| {
         for (0..ret.w) |_| {
             defer i += 1;
-            const idx = if (byte_len) try reader.readInt(u8, .little) else try reader.readInt(u16, .little);
+            const idx = if (byte_len) try reader.takeInt(u8, .little) else try reader.takeInt(u16, .little);
             ret.tiles[i] = tiles[idx];
         }
     }

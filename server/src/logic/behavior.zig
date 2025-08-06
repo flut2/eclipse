@@ -16,6 +16,8 @@ pub const BehaviorMetadata = struct {
 };
 
 fn getMetadata(comptime T: type) BehaviorMetadata {
+    @setEvalBranchQuota(10000);
+
     var ret: ?BehaviorMetadata = null;
     for (@typeInfo(T).@"struct".decls) |decl| @"continue": {
         if (!std.mem.eql(u8, decl.name, "data")) break :@"continue";

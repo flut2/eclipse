@@ -1,4 +1,5 @@
 .{
+    .fingerprint = 0x6fbada3306f696c8,
     .name = .zglfw,
     .version = "0.9.0",
     .paths = .{

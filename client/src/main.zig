@@ -3,13 +3,11 @@ const builtin = @import("builtin");
 
 const build_options = @import("options");
 const glfw = @import("glfw");
-const gpu = @import("zgpu");
-const rpc = @import("rpc");
 const shared = @import("shared");
 const network_data = shared.network_data;
 const game_data = shared.game_data;
 const utils = shared.utils;
-const uv = shared.uv;
+const uv = @import("uv");
 const f32i = utils.f32i;
 const u32f = utils.u32f;
 const vk = @import("vulkan");
@@ -53,7 +51,7 @@ const AccountData = struct {
         const file = try std.fs.cwd().createFile("login_data_do_not_share.ziggy", .{});
         defer file.close();
 
-        try ziggy.stringify(self, .{ .whitespace = .space_4 }, file.writer());
+        try ziggy.stringify(self, .{ .whitespace = .space_4 }, file.deprecatedWriter());
     }
 };
 
@@ -86,11 +84,9 @@ pub var camera: Camera = .{};
 pub var settings: Settings = .{};
 pub var main_loop: *uv.uv_loop_t = undefined;
 pub var window: *glfw.Window = undefined;
-pub var rpc_client: *rpc = undefined;
-pub var rpc_start: u64 = 0;
 pub var callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty;
 
-fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.C) void {
+fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.c) void {
     const float_w = f32i(w);
     const float_h = f32i(h);
 
@@ -267,7 +263,7 @@ fn renderTick(renderer: *Renderer) !void {
     }
 }
 
-fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.C) void {
+fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.c) void {
     const renderer: *Renderer = @ptrCast(@alignCast(idler.*.data));
     if (window.shouldClose()) {
         @branchHint(.unlikely);
@@ -326,7 +322,7 @@ pub fn audioFailure() void {
     });
 }
 
-fn uvMalloc(len: usize) callconv(.C) ?*anyopaque {
+fn uvMalloc(len: usize) callconv(.c) ?*anyopaque {
     const result = std.c.malloc(len);
     if (result) |addr| {
         tracy.Alloc(addr, len);
@@ -338,7 +334,7 @@ fn uvMalloc(len: usize) callconv(.C) ?*anyopaque {
     return result;
 }
 
-fn uvCalloc(len: usize, elem_size: usize) callconv(.C) ?*anyopaque {
+fn uvCalloc(len: usize, elem_size: usize) callconv(.c) ?*anyopaque {
     const result = std.c.malloc(len * elem_size);
     if (result) |addr| {
         @memset(@as([*]u8, @ptrCast(@alignCast(result)))[0 .. len * elem_size], 0);
@@ -351,7 +347,7 @@ fn uvCalloc(len: usize, elem_size: usize) callconv(.C) ?*anyopaque {
     return result;
 }
 
-fn uvResize(ptr: ?*anyopaque, new_len: usize) callconv(.C) ?*anyopaque {
+fn uvResize(ptr: ?*anyopaque, new_len: usize) callconv(.c) ?*anyopaque {
     const result = std.c.realloc(ptr, new_len);
     if (result != null) {
         tracy.Free(ptr);
@@ -364,7 +360,7 @@ fn uvResize(ptr: ?*anyopaque, new_len: usize) callconv(.C) ?*anyopaque {
     return result;
 }
 
-fn uvFree(ptr: ?*anyopaque) callconv(.C) void {
+fn uvFree(ptr: ?*anyopaque) callconv(.c) void {
     std.c.free(ptr);
     tracy.Free(ptr);
 }
@@ -402,9 +398,6 @@ pub fn main() !void {
 
     current_account = AccountData.load() catch null;
     defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
-
-    rpc_client = try rpc.init(allocator, &ready);
-    defer rpc_client.deinit();
 
     try glfw.init();
     defer glfw.terminate();
@@ -465,12 +458,6 @@ pub fn main() !void {
         if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
     };
 
-    var rpc_thread: std.Thread = try .spawn(.{ .allocator = allocator }, runRpc, .{rpc_client});
-    defer {
-        rpc_client.stop();
-        rpc_thread.join();
-    }
-
     render_thread = try .spawn(.{ .allocator = allocator }, renderTick, .{&renderer});
     defer {
         tick_render = false;
@@ -512,23 +499,4 @@ pub fn main() !void {
         std.log.err("Run error: {s}", .{uv.uv_strerror(run_status)});
         return error.RunFailed;
     }
-}
-
-fn ready(cli: *rpc) !void {
-    rpc_start = @intCast(std.time.timestamp());
-    try cli.setPresence(.{
-        .assets = .{
-            .large_image = .create("logo"),
-            .large_text = .create("Alpha v" ++ build_options.version),
-        },
-        .timestamps = .{ .start = rpc_start },
-    });
-}
-
-fn runRpc(cli: *rpc) void {
-    if (build_options.enable_tracy) tracy.SetThreadName("RPC");
-
-    cli.run(.{ .client_id = "1356002897095295047" }) catch |e| {
-        std.log.err("Setting up RPC failed: {}", .{e});
-    };
 }

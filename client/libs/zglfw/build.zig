@@ -39,19 +39,23 @@ pub fn build(b: *std.Build) void {
     });
 
     const glfw = if (options.shared) blk: {
-        const lib = b.addSharedLibrary(.{
+        const lib = b.addLibrary(.{
             .name = "glfw",
-            .target = target,
-            .optimize = optimize,
+            .root_module = b.createModule(.{
+                .target = target,
+                .optimize = optimize,
+            }),
         });
         if (target.result.os.tag == .windows) {
             lib.root_module.addCMacro("_GLFW_BUILD_DLL", "");
         }
         break :blk lib;
-    } else b.addStaticLibrary(.{
+    } else b.addLibrary(.{
         .name = "glfw",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     b.installArtifact(glfw);
 
@@ -205,9 +209,11 @@ pub fn build(b: *std.Build) void {
 
     const tests = b.addTest(.{
         .name = "zglfw-tests",
-        .root_source_file = b.path("src/zglfw.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/zglfw.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     tests.root_module.addImport("zglfw_options", options_module);
     b.installArtifact(tests);

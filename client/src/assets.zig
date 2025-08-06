@@ -107,7 +107,7 @@ const AudioState = struct {
         output: ?*anyopaque,
         _: ?*const anyopaque,
         num_frames: u32,
-    ) callconv(.C) void {
+    ) callconv(.c) void {
         const audio: *AudioState = @ptrCast(@alignCast(device.getUserData()));
         audio.engine.asNodeGraphMut().readPcmFrames(output.?, num_frames, null) catch {};
     }

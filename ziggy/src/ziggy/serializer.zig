@@ -131,10 +131,12 @@ fn escapeString(writer: anytype, str: []const u8, indent_level: usize, indent_ki
                 try indent(indent_kind, indent_level, writer);
             }
         } else {
-            try writer.print("\"{}\"", .{std.zig.fmtEscapes(str)});
+            // try writer.print("\"{}\"", .{std.zig.fmtEscapes(str)});
+            try writer.print("\"{s}\"", .{str});
         }
     } else {
-        try writer.print("\"{}\"", .{std.zig.fmtEscapes(str)});
+        // try writer.print("\"{}\"", .{std.zig.fmtEscapes(str)});
+        try writer.print("\"{s}\"", .{str});
     }
 }
 

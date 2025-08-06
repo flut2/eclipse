@@ -159,7 +159,7 @@ pub fn schemaForZiggy(self: *Handler, arena: std.mem.Allocator, uri: []const u8)
             path,
             ziggy.max_size,
             null,
-            1,
+            .fromByteUnits(1),
             0,
         ) catch return null;
         log.debug("schema loaded", .{});

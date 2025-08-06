@@ -139,25 +139,7 @@ pub fn addToMap(player_data: Player) void {
         self.name_text_data.?.setText(if (self.name) |player_name| player_name else self.data.name);
     }
 
-    if (self.map_id == map.info.player_map_id)
-        self.setRpc() catch |e| {
-            std.log.err("Setting Discord RPC failed: {}", .{e});
-        };
-
     map.listForType(Player).append(main.allocator, self) catch main.oomPanic();
-}
-
-pub fn setRpc(self: Player) !void {
-    try main.rpc_client.setPresence(.{
-        .assets = .{
-            .large_image = .create("logo"),
-            .large_text = .create("Alpha v" ++ build_options.version),
-            .small_image = .create(self.data.rpc_name),
-            .small_text = try .createFromFormat("{s} (Aether {})", .{ self.data.name, self.aether }),
-        },
-        .state = try .createFromFormat("In {s}", .{if (map.info.name.len == 0) "the Retrieve" else map.info.name}),
-        .timestamps = .{ .start = main.rpc_start },
-    });
 }
 
 pub fn deinit(self: *Player) void {

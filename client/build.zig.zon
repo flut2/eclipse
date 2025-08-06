@@ -6,17 +6,16 @@
         .shared = .{ .path = "../shared" },
         .system_sdk = .{ .path = "../shared/libs/system-sdk" },
         .native_file_dialog = .{ .path = "libs/native-file-dialog" },
-        .discord_rpc = .{ .path = "libs/discord-rpc" },
         .zstbi = .{ .path = "libs/zstbi" },
         .zglfw = .{ .path = "libs/zglfw" },
         .zaudio = .{ .path = "libs/zaudio" },
         .turbopack = .{
-            .url = "git+https://github.com/flut2/turbopack.git#10fc67d55533e2d495f302755f1ec4e7a4d90317",
-            .hash = "turbopack-1.0.0-rSxRju8bAAB6-FV36FgBYVI36EIeFwQee7KJXZp9BiAe",
+            .url = "git+https://github.com/flut2/turbopack.git#8fc71a37a798bcf31ab0bd65d7e3089d1569bc35",
+            .hash = "turbopack-1.0.0-rSxRjjsfAACcX7QYHoziFhTQPaHid-inIg_X2NEo4QIQ",
         },
         .vulkan_zig = .{
-            .url = "git+https://github.com/Snektron/vulkan-zig.git#c66bddee009a8c4b71082ab7af723ed885161650",
-            .hash = "vulkan-0.0.0-r7YtxwZVAwDbCFXX5GpnS436SfBec9INY0zq-2OQ2BUp",
+            .url = "git+https://github.com/Snektron/vulkan-zig.git#ed429842b8ad60966bc3b8b214606d8a5714f99e",
+            .hash = "vulkan-0.0.0-r7Ytx5w-AwC04xBpfzcuIjGyYv2z6xb1i49ZUeNUgT5H",
         },
     },
     .paths = .{

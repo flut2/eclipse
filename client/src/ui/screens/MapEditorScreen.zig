@@ -285,15 +285,6 @@ pub fn nextMapIdForType(self: *MapEditorScreen, comptime T: type) *u32 {
 }
 
 pub fn init(self: *MapEditorScreen) !void {
-    try main.rpc_client.setPresence(.{
-        .assets = .{
-            .large_image = .create("logo"),
-            .large_text = .create("Alpha v" ++ build_options.version),
-        },
-        .state = .create("Map Editor"),
-        .timestamps = .{ .start = main.rpc_start },
-    });
-
     const button_data_base = assets.getUiData("button_base", 0);
     const button_data_hover = assets.getUiData("button_hover", 0);
     const button_data_press = assets.getUiData("button_press", 0);
@@ -724,10 +715,7 @@ pub fn init(self: *MapEditorScreen) !void {
         });
     }
 
-    if (ui_systems.last_map_data) |data| {
-        var fbs = std.io.fixedBufferStream(data);
-        try self.loadMap(fbs.reader());
-    } else self.initialize();
+    if (ui_systems.last_map_data) |data| try self.loadMap(data) else self.initialize();
 }
 
 fn addContainers(self: *MapEditorScreen, filter: ?[]const u8) !void {
@@ -1112,10 +1100,10 @@ fn initialize(self: *MapEditorScreen) void {
     self.start_y_override = std.math.maxInt(u16);
 }
 
-fn loadMap(screen: *MapEditorScreen, data_reader: anytype) !void {
+fn loadMap(screen: *MapEditorScreen, buffer: []const u8) !void {
     var arena: std.heap.ArenaAllocator = .init(main.allocator);
     defer arena.deinit();
-    const parsed_map = try map_data.parseMap(data_reader, &arena);
+    const parsed_map = try map_data.parseMap(buffer, &arena);
     screen.map_size = @max(screen.map_size, utils.nextPowerOfTwo(@max(parsed_map.w, parsed_map.h)));
     const start_x = (screen.map_size - parsed_map.w) / 2;
     const start_y = (screen.map_size - parsed_map.h) / 2;
@@ -1144,7 +1132,11 @@ fn openInner(screen: *MapEditorScreen) !void {
         defer nfd.freePath(path);
         const file = try std.fs.openFileAbsolute(path, .{});
         defer file.close();
-        try screen.loadMap(file.reader());
+
+        const file_buf = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
+        defer main.allocator.free(file_buf);
+
+        try screen.loadMap(file_buf);
     }
 }
 
@@ -1200,7 +1192,6 @@ pub fn indexOfTile(tiles: []const map_data.Tile, value: map_data.Tile) ?usize {
 
 fn mapData(screen: *MapEditorScreen) ![]u8 {
     var data: std.ArrayListUnmanaged(u8) = .empty;
-    defer data.deinit(main.allocator);
 
     const bounds = tileBounds(screen.map_tile_data);
     if (bounds.min_x >= bounds.max_x or bounds.min_y >= bounds.max_y) return error.InvalidMap;
@@ -1262,10 +1253,7 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
         }
     }
 
-    var compressed_data: std.ArrayListUnmanaged(u8) = .empty;
-    var fbs = std.io.fixedBufferStream(data.items);
-    try std.compress.zlib.compress(fbs.reader(), compressed_data.writer(main.allocator), .{});
-    return try compressed_data.toOwnedSlice(main.allocator);
+    return try data.toOwnedSlice(main.allocator);
 }
 
 fn saveInner(screen: *MapEditorScreen) !void {

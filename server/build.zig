@@ -56,6 +56,7 @@ pub fn buildWithoutDupes(
         exe.root_module.addImport("shared", shared_dep.module("shared"));
         if (enable_tracy) exe.root_module.addImport("tracy", shared_dep.module("tracy"));
         exe.root_module.addImport("ziggy", shared_dep.module("ziggy"));
+        exe.root_module.addImport("uv", shared_dep.module("uv"));
 
         const hiredis = b.dependency("hiredis", .{});
         const hiredis_path = hiredis.path(".");

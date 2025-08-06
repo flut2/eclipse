@@ -1,4 +1,5 @@
 .{
+    .fingerprint = 0x8bca3f39179d8fd2,
     .name = .native_file_dialog,
     .version = "1.0.0",
     .dependencies = .{},

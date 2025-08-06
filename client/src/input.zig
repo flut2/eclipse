@@ -185,12 +185,12 @@ fn handleAbility4() void {
     if (map.localPlayerRef()) |player| player.useAbility(3);
 }
 
-pub fn charEvent(_: *glfw.Window, char: u32) callconv(.C) void {
+pub fn charEvent(_: *glfw.Window, char: u32) callconv(.c) void {
     if (selected_input_field) |input_field| {
         if (char > std.math.maxInt(u8) or char < std.math.minInt(u8)) return;
 
         const byte_code: u8 = @intCast(char);
-        if (!std.ascii.isASCII(byte_code) or input_field.index >= 256) return;
+        if (!std.ascii.isAscii(byte_code) or input_field.index >= 256) return;
 
         input_field.text_data.backing_buffer[input_field.index] = byte_code;
         input_field.index += 1;
@@ -200,7 +200,7 @@ pub fn charEvent(_: *glfw.Window, char: u32) callconv(.C) void {
     }
 }
 
-pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action, mods: glfw.Mods) callconv(.c) void {
     if (action == .press or action == .repeat) {
         if (selected_key_mapper) |key_mapper| {
             key_mapper.settings_button.* = if (key == .escape) .{ .key = .unknown } else .{ .key = key };
@@ -316,7 +316,7 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
     menu.cancelMenu();
 }
 
-pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.c) void {
     if (action == .press) {
         window.setCursor(switch (main.settings.cursor_type) {
             .basic => assets.default_cursor_pressed,
@@ -373,7 +373,7 @@ pub fn updateMove() void {
     move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
 }
 
-pub fn mouseMoveEvent(_: *glfw.Window, x_pos: f64, y_pos: f64) callconv(.C) void {
+pub fn mouseMoveEvent(_: *glfw.Window, x_pos: f64, y_pos: f64) callconv(.c) void {
     mouse_x = @floatCast(x_pos);
     mouse_y = @floatCast(y_pos);
 
@@ -381,7 +381,7 @@ pub fn mouseMoveEvent(_: *glfw.Window, x_pos: f64, y_pos: f64) callconv(.C) void
     if (ui_systems.screen == .editor) ui_systems.screen.editor.onMouseMove(mouse_x, mouse_y);
 }
 
-pub fn scrollEvent(_: *glfw.Window, x_offset: f64, y_offset: f64) callconv(.C) void {
+pub fn scrollEvent(_: *glfw.Window, x_offset: f64, y_offset: f64) callconv(.c) void {
     if (!ui_systems.mouseScroll(mouse_x, mouse_y, @floatCast(x_offset), @floatCast(y_offset))) {
         switch (ui_systems.screen) {
             .game => {

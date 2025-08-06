@@ -8,10 +8,12 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/zaudio.zig"),
     });
 
-    const miniaudio = b.addStaticLibrary(.{
+    const miniaudio = b.addLibrary(.{
         .name = "miniaudio",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     b.installArtifact(miniaudio);
@@ -58,9 +60,11 @@ pub fn build(b: *std.Build) void {
 
     const tests = b.addTest(.{
         .name = "zaudio-tests",
-        .root_source_file = b.path("src/zaudio.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/zaudio.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     b.installArtifact(tests);
 

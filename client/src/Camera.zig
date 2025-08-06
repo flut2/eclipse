@@ -80,9 +80,7 @@ pub fn visibleInCamera(self: Camera, x_in: f32, y_in: f32) bool {
     if (std.math.isNan(x_in) or
         std.math.isNan(y_in) or
         x_in < 0 or
-        y_in < 0 or
-        x_in > std.math.maxInt(u32) or
-        y_in > std.math.maxInt(u32))
+        y_in < 0)
         return false;
 
     const floor_x = u32f(x_in);

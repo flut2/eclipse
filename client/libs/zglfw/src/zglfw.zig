@@ -717,7 +717,7 @@ pub const Window = opaque {
         window: *Window,
         width: i32,
         height: i32,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setSizeCallback(window: *Window, callback: ?WindowSizeFn) ?WindowSizeFn`
     pub const setSizeCallback = glfwSetWindowSizeCallback;
@@ -726,7 +726,7 @@ pub const Window = opaque {
         window: *Window,
         width: i32,
         height: i32,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setPosCallback(window: *Window, callback: ?WindowPosFn) ?WindowPosFn`
     pub const setPosCallback = glfwSetWindowPosCallback;
@@ -735,7 +735,7 @@ pub const Window = opaque {
         window: *Window,
         xpos: i32,
         ypos: i32,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub const setContentScaleCallback(window: *Window, callback: ?WindowContentScaleFn) ?WindowContentScaleFn`
     pub const setContentScaleCallback = glfwSetWindowContentScaleCallback;
@@ -744,7 +744,7 @@ pub const Window = opaque {
         window: *Window,
         xscale: f32,
         yscale: f32,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setKeyCallback(window: *Window, callback: ?KeyFn) ?KeyFn`
     pub const setKeyCallback = glfwSetKeyCallback;
@@ -755,7 +755,7 @@ pub const Window = opaque {
         scancode: i32,
         action: Action,
         mods: Mods,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setCharCallback(window: *Window, callback: ?CharFn) ?CharFn`
     pub const setCharCallback = glfwSetCharCallback;
@@ -763,7 +763,7 @@ pub const Window = opaque {
     pub const CharFn = *const fn (
         window: *Window,
         codepoint: u32,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setDropCallback(window: *Window, callback: ?DropFn) ?DropFn`
     pub const setDropCallback = glfwSetDropCallback;
@@ -772,7 +772,7 @@ pub const Window = opaque {
         window: *Window,
         path_count: i32,
         paths: [*][*:0]const u8,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setMouseButtonCallback(window: *Window, callback: ?MouseButtonFn) ?MouseButtonFn`
     pub const setMouseButtonCallback = glfwSetMouseButtonCallback;
@@ -782,7 +782,7 @@ pub const Window = opaque {
         button: MouseButton,
         action: Action,
         mods: Mods,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setCursorPosCallback(window: *Window, callback: ?CursorPosFn) ?CursorPosFn`
     pub const setCursorPosCallback = glfwSetCursorPosCallback;
@@ -791,7 +791,7 @@ pub const Window = opaque {
         window: *Window,
         xpos: f64,
         ypos: f64,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setScrollCallback(window: *Window, callback: ?ScrollFn) ?ScrollFn`
     pub const setScrollCallback = glfwSetScrollCallback;
@@ -800,7 +800,7 @@ pub const Window = opaque {
         window: *Window,
         xoffset: f64,
         yoffset: f64,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setCursorEnterCallback(window: *Window, callback: ?CursorEnterFn) ?CursorEnterFn`
     pub const setCursorEnterCallback = glfwSetCursorEnterCallback;
@@ -808,7 +808,7 @@ pub const Window = opaque {
     pub const CursorEnterFn = *const fn (
         window: *Window,
         entered: i32,
-    ) callconv(.C) void;
+    ) callconv(.c) void;
 
     /// `pub fn setCursor(window: *Window, cursor: ?*Cursor) void`
     pub const setCursor = glfwSetCursor;
@@ -1090,50 +1090,50 @@ test {
     std.testing.refAllDeclsRecursive(@This());
 }
 
-fn contentScaleCallback(window: *Window, xscale: f32, yscale: f32) callconv(.C) void {
+fn contentScaleCallback(window: *Window, xscale: f32, yscale: f32) callconv(.c) void {
     _ = window;
     _ = xscale;
     _ = yscale;
 }
 
-fn framebufferSizeCallback(window: *Window, width: i32, height: i32) callconv(.C) void {
+fn framebufferSizeCallback(window: *Window, width: i32, height: i32) callconv(.c) void {
     _ = window;
     _ = width;
     _ = height;
 }
 
-fn sizeCallback(window: *Window, width: i32, height: i32) callconv(.C) void {
+fn sizeCallback(window: *Window, width: i32, height: i32) callconv(.c) void {
     _ = window;
     _ = width;
     _ = height;
 }
 
-fn posCallback(window: *Window, xpos: i32, ypos: i32) callconv(.C) void {
+fn posCallback(window: *Window, xpos: i32, ypos: i32) callconv(.c) void {
     _ = window;
     _ = xpos;
     _ = ypos;
 }
 
-fn cursorPosCallback(window: *Window, xpos: f64, ypos: f64) callconv(.C) void {
+fn cursorPosCallback(window: *Window, xpos: f64, ypos: f64) callconv(.c) void {
     _ = window;
     _ = xpos;
     _ = ypos;
 }
 
-fn mouseButtonCallback(window: *Window, button: MouseButton, action: Action, mods: Mods) callconv(.C) void {
+fn mouseButtonCallback(window: *Window, button: MouseButton, action: Action, mods: Mods) callconv(.c) void {
     _ = window;
     _ = button;
     _ = action;
     _ = mods;
 }
 
-fn scrollCallback(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
+fn scrollCallback(window: *Window, xoffset: f64, yoffset: f64) callconv(.c) void {
     _ = window;
     _ = xoffset;
     _ = yoffset;
 }
 
-fn keyCallback(window: *Window, key: Key, scancode: i32, action: Action, mods: Mods) callconv(.C) void {
+fn keyCallback(window: *Window, key: Key, scancode: i32, action: Action, mods: Mods) callconv(.c) void {
     _ = window;
     _ = key;
     _ = scancode;
@@ -1141,7 +1141,7 @@ fn keyCallback(window: *Window, key: Key, scancode: i32, action: Action, mods: M
     _ = mods;
 }
 
-fn charCallback(window: *Window, codepoint: u32) callconv(.C) void {
+fn charCallback(window: *Window, codepoint: u32) callconv(.c) void {
     _ = window;
     _ = codepoint;
 }

@@ -1,7 +1,6 @@
 const std = @import("std");
 const Build = std.Build;
-
-// pub usingnamespace @import("src/root.zig");
+const builtin = @import("builtin");
 
 pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -16,9 +15,11 @@ pub fn build(b: *Build) !void {
 
     const cli = b.addExecutable(.{
         .name = "ziggy",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     const folders = b.dependency("known_folders", .{}).module("known-folders");
@@ -27,6 +28,7 @@ pub fn build(b: *Build) !void {
     cli.root_module.addImport("ziggy", ziggy);
     cli.root_module.addImport("known-folders", folders);
     cli.root_module.addImport("lsp", lsp);
+    if (target.result.os.tag == .windows) cli.root_module.linkSystemLibrary("advapi32", .{});
 
     const run_exe = b.addRunArtifact(cli);
     if (b.args) |args| run_exe.addArgs(args);
@@ -37,14 +39,17 @@ pub fn build(b: *Build) !void {
 
     const ziggy_check = b.addExecutable(.{
         .name = "ziggy_check",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     ziggy_check.root_module.addImport("ziggy", ziggy);
     ziggy_check.root_module.addImport("known-folders", folders);
     ziggy_check.root_module.addImport("lsp", lsp);
+    if (target.result.os.tag == .windows) ziggy_check.root_module.linkSystemLibrary("advapi32", .{});
     const check = b.step("check", "Check if the project compiles");
     check.dependOn(&ziggy_check.step);
 
@@ -74,9 +79,11 @@ pub fn setupReleaseStep(
 
         const release_exe = b.addExecutable(.{
             .name = "ziggy",
-            .root_source_file = b.path("src/main.zig"),
-            .target = release_target,
-            .optimize = .ReleaseFast,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/main.zig"),
+                .target = release_target,
+                .optimize = .ReleaseFast,
+            }),
         });
 
         release_exe.root_module.addImport("ziggy", ziggy);
@@ -105,9 +112,11 @@ pub fn setupTests(
     const test_step = b.step("test", "Run unit & snapshot tests");
 
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/root.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
         .filters = b.option([]const []const u8, "test-filter", "test filter") orelse &.{},
     });
 
@@ -193,9 +202,11 @@ pub fn setupTests(
 
             const test_program = b.addExecutable(.{
                 .name = b.fmt("{s}_test", .{basename}),
-                .root_source_file = b.path("tests/type_driven.zig"),
-                .target = target,
-                .optimize = optimize,
+                .root_module = b.createModule(.{
+                    .root_source_file = b.path("tests/type_driven.zig"),
+                    .target = target,
+                    .optimize = optimize,
+                }),
             });
 
             const type_module_name = b.fmt("{s}.zig", .{basename});

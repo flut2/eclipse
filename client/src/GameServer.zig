@@ -5,7 +5,7 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
-const uv = shared.uv;
+const uv = @import("uv");
 const f32i = utils.f32i;
 const i64f = utils.i64f;
 
@@ -120,14 +120,14 @@ fn ObjEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnum
     };
 }
 
-pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
+pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.c) void {
     buf.* = .{
         .base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic()),
         .len = @intCast(suggested_size),
     };
 }
 
-fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
+fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.c) void {
     const wr: *WriteRequest = @ptrCast(@alignCast(ud));
     const server: *Server = @ptrCast(@alignCast(wr.request.data));
     main.allocator.free(wr.buffer.base[0..wr.buffer.len]);
@@ -145,7 +145,7 @@ fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.C) void {
     }
 }
 
-pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
+pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.c) void {
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const server: *Server = @ptrCast(@alignCast(socket.data));
     defer _ = server.read_arena.reset(.{ .retain_with_limit = std.math.maxInt(u16) });
@@ -188,7 +188,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
     main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
 }
 
-fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
+fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.c) void {
     const server: *Server = @ptrCast(@alignCast(conn.*.data));
     defer main.allocator.destroy(@as(*uv.uv_connect_t, @ptrCast(conn)));
 
@@ -227,7 +227,7 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.C) void {
     server.sendPacket(server.hello_data);
 }
 
-fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.C) void {
+fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.c) void {
     const server: *Server = @ptrCast(@alignCast(handle.*.data));
     server.shutdown();
     dialog.showDialog(.none, {});
@@ -326,7 +326,7 @@ pub fn shutdown(self: *Server) void {
     if (uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
 }
 
-fn closeCallback(_: [*c]uv.uv_handle_t) callconv(.C) void {}
+fn closeCallback(_: [*c]uv.uv_handle_t) callconv(.c) void {}
 
 fn logRead(comptime tick: enum { non_tick, tick }) bool {
     return if (tick == .non_tick)

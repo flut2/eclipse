@@ -112,6 +112,7 @@ fn findTargetEnemy(x: f32, y: f32, radius: f32) ?*Enemy {
     var target: ?*Enemy = null;
 
     for (map.listForType(Enemy).items) |*e| {
+        // TODO: just build a hittable enemy list every so often...
         if (e.data.health <= 0) continue;
 
         const dist_sqr = utils.distSqr(e.x, e.y, x, y);
