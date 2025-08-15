@@ -2959,13 +2959,14 @@ test "zaudio.node_graph.basic" {
 }
 
 test "zaudio.audio_buffer" {
-    init(std.testing.allocator);
+    const allocator = std.testing.allocator;
+    init(allocator);
     defer deinit();
 
-    var samples = try std.ArrayList(f32).initCapacity(std.testing.allocator, 1000);
-    defer samples.deinit();
+    var samples: std.ArrayList(f32) = .initCapacity(allocator, 1000);
+    defer samples.deinit(allocator);
 
-    var prng = std.Random.DefaultPrng.init(0);
+    var prng: std.Random.DefaultPrng = .init(0);
     const rand = prng.random();
 
     samples.expandToCapacity();

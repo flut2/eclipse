@@ -5,12 +5,12 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
-const uv = @import("uv");
 const f32i = utils.f32i;
 const u32f = utils.u32f;
 const u16f = utils.u16f;
 const i64f = utils.i64f;
 const i32f = utils.i32f;
+const uv = @import("uv");
 
 const command = @import("command.zig");
 const db = @import("db.zig");
@@ -41,7 +41,7 @@ ip: []const u8 = "",
 acc_id: u32 = std.math.maxInt(u32),
 char_id: u32 = std.math.maxInt(u32),
 player_map_id: u32 = std.math.maxInt(u32),
-map_data_fragments: std.ArrayListUnmanaged(u8) = .empty,
+map_data_fragments: std.ArrayList(u8) = .empty,
 
 fn PacketData(comptime tag: @typeInfo(network_data.C2SPacket).@"union".tag_type.?) type {
     return @typeInfo(network_data.C2SPacket).@"union".fields[@intFromEnum(tag)].type;

@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+
 const ziggy = @import("ziggy");
 const Diagnostic = ziggy.Diagnostic;
 const Ast = ziggy.Ast;
@@ -12,7 +13,7 @@ pub fn toZiggy(
     diag: ?*ziggy.Diagnostic,
     r: anytype,
 ) ![]const u8 {
-    var buf = std.ArrayList(u8).init(gpa);
+    var buf = std.array_list.Managed(u8).init(gpa);
     defer buf.deinit();
 
     try r.readAllArrayList(&buf, ziggy.max_size);
@@ -23,7 +24,7 @@ pub fn toZiggy(
     var scanner = std.json.Scanner.initCompleteInput(gpa, bytes);
     scanner.enableDiagnostics(&js_diag);
 
-    var out = std.ArrayList(u8).init(gpa);
+    var out = std.array_list.Managed(u8).init(gpa);
     errdefer out.deinit();
 
     var c: Converter = .{
@@ -48,7 +49,7 @@ const Converter = struct {
     json_diag: *std.json.Diagnostics,
     diagnostic: ?*Diagnostic,
     schema: ziggy.schema.Schema,
-    out: std.ArrayList(u8).Writer,
+    out: std.array_list.Managed(u8).Writer,
 
     fn jsonSel(p: Converter) Token.Loc.Selection {
         const start: Token.Loc.Selection.Position = .{

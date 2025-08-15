@@ -1,8 +1,10 @@
 const std = @import("std");
+
 const ziggy = @import("ziggy");
-const loadSchema = @import("load_schema.zig").loadSchema;
 const Diagnostic = ziggy.Diagnostic;
 const Ast = ziggy.Ast;
+
+const loadSchema = @import("load_schema.zig").loadSchema;
 
 const FileType = enum { ziggy, ziggy_schema };
 
@@ -12,7 +14,7 @@ pub fn run(gpa: std.mem.Allocator, args: []const []const u8) !void {
     var any_error = false;
     switch (cmd.mode) {
         .stdin => {
-            var buf = std.ArrayList(u8).init(gpa);
+            var buf = std.array_list.Managed(u8).init(gpa);
             try std.io.getStdIn().reader().readAllArrayList(&buf, ziggy.max_size);
             const in_bytes = try buf.toOwnedSliceSentinel(0);
 
@@ -20,7 +22,7 @@ pub fn run(gpa: std.mem.Allocator, args: []const []const u8) !void {
             try std.io.getStdOut().writeAll(out_bytes);
         },
         .stdin_schema => {
-            var buf = std.ArrayList(u8).init(gpa);
+            var buf = std.array_list.Managed(u8).init(gpa);
             try std.io.getStdIn().reader().readAllArrayList(&buf, ziggy.max_size);
             const in_bytes = try buf.toOwnedSliceSentinel(0);
 
@@ -137,7 +139,7 @@ fn formatFile(
         return;
     };
 
-    var buf = std.ArrayList(u8).init(arena);
+    var buf = std.array_list.Managed(u8).init(arena);
     defer buf.deinit();
 
     try file.reader().readAllArrayList(&buf, ziggy.max_size);

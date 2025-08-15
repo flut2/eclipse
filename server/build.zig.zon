@@ -2,6 +2,7 @@
     .fingerprint = 0xf5639e7b35fbd016,
     .name = .eclipse_server,
     .version = "1.0.0",
+    .minimum_zig_version = "0.15.0-dev.1518+749f10af4",
     .dependencies = .{
         .shared = .{ .path = "../shared" },
         .hiredis = .{

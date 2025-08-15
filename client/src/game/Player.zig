@@ -100,7 +100,7 @@ x_dir: f32 = 0.0,
 y_dir: f32 = 0.0,
 last_self_move: i64 = 0,
 facing: f32 = std.math.nan(f32),
-status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
+status_texts: std.ArrayList(StatusText) = .empty,
 speech_balloon: ?SpeechBalloon = null,
 direction: assets.Direction = .right,
 last_ability_use: [4]i64 = @splat(std.math.minInt(i31)),
@@ -312,10 +312,10 @@ pub fn weaponShoot(self: *Player, angle_base: f32, time: i64) void {
 pub fn draw(
     self: *Player,
     renderer: *Renderer,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
-    lights: *std.ArrayListUnmanaged(Renderer.LightData),
-    sort_randoms: *std.ArrayListUnmanaged(u16),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
+    lights: *std.ArrayList(Renderer.LightData),
+    sort_randoms: *std.ArrayList(u16),
     float_time_ms: f32,
 ) void {
     if (main.needs_map_bg or !main.camera.visibleInCamera(self.x, self.y)) return;
@@ -688,7 +688,7 @@ pub fn update(self: *Player, time: i64, dt: f32) void {
         const radius_sqr = radius * radius;
 
         for (map.listForType(Projectile).items) |*p| {
-            if (p.damage_players and utils.distSqr(p.x, p.y, self.x, self.y) <= radius_sqr) 
+            if (p.damage_players and utils.distSqr(p.x, p.y, self.x, self.y) <= radius_sqr)
                 p.time_dilation_slow = 0.3 + f32i(self.keystoneTalentLevel(0)) * 0.05;
         }
     }

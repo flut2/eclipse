@@ -1,10 +1,11 @@
-const Ast = @This();
-
 const std = @import("std");
 const assert = std.debug.assert;
+
 const Diagnostic = @import("Diagnostic.zig");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
+
+const Ast = @This();
 
 pub const Node = struct {
     tag: Tag,
@@ -45,7 +46,7 @@ pub const Node = struct {
 
     pub fn addChild(
         self: *Node,
-        nodes: *std.ArrayList(Node),
+        nodes: *std.array_list.Managed(Node),
         tag: Node.Tag,
     ) !*Node {
         const self_id = self.getId(nodes);
@@ -68,11 +69,11 @@ pub const Node = struct {
         return child;
     }
 
-    pub fn parent(self: *Node, nodes: *std.ArrayList(Node)) *Node {
+    pub fn parent(self: *Node, nodes: *std.array_list.Managed(Node)) *Node {
         return &nodes.items[self.parent_id];
     }
 
-    pub fn getId(self: *Node, nodes: *std.ArrayList(Node)) u32 {
+    pub fn getId(self: *Node, nodes: *std.array_list.Managed(Node)) u32 {
         const idx: u32 = @intCast(
             (@intFromPtr(self) - @intFromPtr(nodes.items.ptr)) / @sizeOf(Node),
         );
@@ -105,7 +106,7 @@ pub const Node = struct {
 };
 
 code: [:0]const u8,
-nodes: std.ArrayList(Node),
+nodes: std.array_list.Managed(Node),
 tokenizer: Tokenizer = .{},
 diag: ?*Diagnostic,
 
@@ -121,7 +122,7 @@ pub fn init(
     var ast: Ast = .{
         .code = code,
         .diag = diagnostic,
-        .nodes = std.ArrayList(Node).init(gpa),
+        .nodes = std.array_list.Managed(Node).init(gpa),
     };
     errdefer ast.nodes.clearAndFree();
 

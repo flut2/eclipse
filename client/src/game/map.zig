@@ -28,13 +28,13 @@ const day_cycle: i32 = 10 * std.time.us_per_min;
 const day_cycle_half: f32 = @as(f32, day_cycle) / 2;
 
 const MapData = struct {
-    grounds: std.ArrayListUnmanaged(Renderer.GroundData) = .empty,
-    sort_randoms: std.ArrayListUnmanaged(u16) = .empty,
-    sort_extras: std.ArrayListUnmanaged(f32) = .empty,
-    generics: std.ArrayListUnmanaged(Renderer.GenericData) = .empty,
-    ui_sort_extras: std.ArrayListUnmanaged(f32) = .empty,
-    ui_generics: std.ArrayListUnmanaged(Renderer.GenericData) = .empty,
-    lights: std.ArrayListUnmanaged(Renderer.LightData) = .empty,
+    grounds: std.ArrayList(Renderer.GroundData) = .empty,
+    sort_randoms: std.ArrayList(u16) = .empty,
+    sort_extras: std.ArrayList(f32) = .empty,
+    generics: std.ArrayList(Renderer.GenericData) = .empty,
+    ui_sort_extras: std.ArrayList(f32) = .empty,
+    ui_generics: std.ArrayList(Renderer.GenericData) = .empty,
+    lights: std.ArrayList(Renderer.LightData) = .empty,
 
     pub fn clear(self: *MapData) void {
         self.grounds.clearRetainingCapacity();
@@ -48,18 +48,18 @@ const MapData = struct {
 };
 
 pub var list: struct {
-    player: std.ArrayListUnmanaged(Player) = .empty,
-    entity: std.ArrayListUnmanaged(Entity) = .empty,
-    enemy: std.ArrayListUnmanaged(Enemy) = .empty,
-    container: std.ArrayListUnmanaged(Container) = .empty,
-    portal: std.ArrayListUnmanaged(Portal) = .empty,
-    projectile: std.ArrayListUnmanaged(Projectile) = .empty,
-    particle: std.ArrayListUnmanaged(particles.Particle) = .empty,
-    particle_add: std.ArrayListUnmanaged(particles.Particle) = .empty,
-    particle_effect: std.ArrayListUnmanaged(particles.ParticleEffect) = .empty,
-    ally: std.ArrayListUnmanaged(Ally) = .empty,
+    player: std.ArrayList(Player) = .empty,
+    entity: std.ArrayList(Entity) = .empty,
+    enemy: std.ArrayList(Enemy) = .empty,
+    container: std.ArrayList(Container) = .empty,
+    portal: std.ArrayList(Portal) = .empty,
+    projectile: std.ArrayList(Projectile) = .empty,
+    particle: std.ArrayList(particles.Particle) = .empty,
+    particle_add: std.ArrayList(particles.Particle) = .empty,
+    particle_effect: std.ArrayList(particles.ParticleEffect) = .empty,
+    ally: std.ArrayList(Ally) = .empty,
 } = .{};
-pub var lights: std.ArrayListUnmanaged(Renderer.LightData) = .empty;
+pub var lights: std.ArrayList(Renderer.LightData) = .empty;
 pub var draw_data: [main.frames_in_flight * 2]MapData = @splat(.{});
 pub var draw_data_index: u8 = 0;
 
@@ -69,7 +69,7 @@ pub var interactive: struct {
     type: std.atomic.Value(InteractiveType) = .init(.unset),
 } = .{};
 pub var squares: []Square = &.{};
-pub var move_records: std.ArrayListUnmanaged(network_data.TimedPosition) = .empty;
+pub var move_records: std.ArrayList(network_data.TimedPosition) = .empty;
 pub var info: network_data.MapInfo = .{};
 pub var last_records_clear_time: i64 = 0;
 pub var minimap: zstbi.Image = undefined;
@@ -77,7 +77,7 @@ pub var minimap_copy: []u8 = undefined;
 pub var frames: std.atomic.Value(u32) = .init(0);
 pub var fps_time_start: i64 = 0;
 
-pub fn listForType(comptime T: type) *std.ArrayListUnmanaged(T) {
+pub fn listForType(comptime T: type) *std.ArrayList(T) {
     return switch (T) {
         Entity => &list.entity,
         Enemy => &list.enemy,

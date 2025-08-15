@@ -76,9 +76,9 @@ pub fn dropItems(host: anytype, comptime loots: []const ItemLoot) void {
 
         const fdamage = f32i(entry.value_ptr.*);
         var max_rarity: game_data.ItemRarity = .common;
-        var received_loot: std.ArrayListUnmanaged(u16) = .empty;
+        var received_loot: std.ArrayList(u16) = .empty;
         defer received_loot.deinit(main.allocator);
-        var received_item_data: std.ArrayListUnmanaged(ItemData) = .empty;
+        var received_item_data: std.ArrayList(ItemData) = .empty;
         defer received_item_data.deinit(main.allocator);
         var loot_idx: usize = 0;
         inline for (loots) |loot| @"continue": {

@@ -274,7 +274,7 @@ fn nullPulseCore(player: *Player, world: *World, radius: f32) !void {
     const damage_mult = (0.25 + f32i(player.totalStat(.wit)) * 0.01 * player.damage_multiplier) *
         (1.0 + f32i(player.abilityTalentLevel(2)) * 0.05);
 
-    var proj_lists: std.AutoHashMapUnmanaged(u32, std.ArrayListUnmanaged(u8)) = .empty;
+    var proj_lists: std.AutoHashMapUnmanaged(u32, std.ArrayList(u8)) = .empty;
     defer proj_lists.deinit(main.allocator);
     const proj_list = world.listForType(Projectile);
     const projs_len = proj_list.items.len;
@@ -297,7 +297,7 @@ fn nullPulseCore(player: *Player, world: *World, radius: f32) !void {
             };
     }
 
-    var enemy_proj_lists: std.ArrayListUnmanaged(network_data.EnemyProjList) = .empty;
+    var enemy_proj_lists: std.ArrayList(network_data.EnemyProjList) = .empty;
     defer enemy_proj_lists.deinit(main.allocator);
     var proj_list_iter = proj_lists.iterator();
     while (proj_list_iter.next()) |entry| enemy_proj_lists.append(main.allocator, .{
@@ -377,9 +377,9 @@ pub fn handleEtherealHarvest(player: *Player) !void {
     const radius_sqr = radius * radius;
 
     var num_souls: u32 = 0;
-    var entities_to_kill: std.ArrayListUnmanaged(usize) = .empty;
+    var entities_to_kill: std.ArrayList(usize) = .empty;
     defer entities_to_kill.deinit(main.allocator);
-    var show_effects: std.ArrayListUnmanaged(network_data.ShowEffectItem) = .empty;
+    var show_effects: std.ArrayList(network_data.ShowEffectItem) = .empty;
     defer show_effects.deinit(main.allocator);
     for (world.listForType(Entity).items, 0..) |*e, i| {
         if (utils.distSqr(e.x, e.y, player.x, player.y) > radius_sqr or e.data_id != soul_id) continue;
@@ -546,9 +546,9 @@ pub fn handleRavenousHunger(player: *Player) !void {
 
     var dmg_boost: f32 = 1.0;
     var total_hp_gain: i32 = 0;
-    var enemies_to_kill: std.ArrayListUnmanaged(usize) = .empty;
+    var enemies_to_kill: std.ArrayList(usize) = .empty;
     defer enemies_to_kill.deinit(main.allocator);
-    var show_effects: std.ArrayListUnmanaged(network_data.ShowEffectItem) = .empty;
+    var show_effects: std.ArrayList(network_data.ShowEffectItem) = .empty;
     defer show_effects.deinit(main.allocator);
     for (world.listForType(Enemy).items, 0..) |*e, i| {
         if (utils.distSqr(e.x, e.y, player.x, player.y) > radius_sqr or f32i(e.hp) / f32i(e.max_hp) > kill_perc) continue;

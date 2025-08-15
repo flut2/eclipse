@@ -152,7 +152,7 @@ fn getListData(self: *Client, acc_data: *db.AccountData, token: u128) !network_d
         return error.AccountBanned;
     }
 
-    var char_list: std.ArrayListUnmanaged(network_data.CharacterData) = .empty;
+    var char_list: std.ArrayList(network_data.CharacterData) = .empty;
     defer char_list.deinit(main.allocator);
     buildList: {
         for (acc_data.get(.alive_char_ids) catch break :buildList) |char_id| {

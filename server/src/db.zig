@@ -43,7 +43,7 @@ inline fn bytesToAny(comptime T: type, bytes: []const u8) T {
 }
 
 pub const BannedHwids = struct {
-    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    reply_list: std.ArrayList(*c.redisReply) = .empty,
 
     pub fn deinit(self: *BannedHwids) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
@@ -78,7 +78,7 @@ pub const BannedHwids = struct {
 };
 
 pub const MutedHwids = struct {
-    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    reply_list: std.ArrayList(*c.redisReply) = .empty,
 
     pub fn deinit(self: *MutedHwids) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
@@ -132,7 +132,7 @@ pub const MutedHwids = struct {
 };
 
 pub const Names = struct {
-    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    reply_list: std.ArrayList(*c.redisReply) = .empty,
 
     pub fn deinit(self: *Names) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
@@ -162,7 +162,7 @@ pub const LoginData = struct {
     };
 
     email: []const u8,
-    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    reply_list: std.ArrayList(*c.redisReply) = .empty,
 
     pub fn deinit(self: *LoginData) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
@@ -234,7 +234,7 @@ pub const AccountData = struct {
     };
 
     acc_id: u32,
-    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    reply_list: std.ArrayList(*c.redisReply) = .empty,
 
     pub fn deinit(self: *AccountData) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);
@@ -303,7 +303,7 @@ pub const CharacterData = struct {
 
     acc_id: u32,
     char_id: u32,
-    reply_list: std.ArrayListUnmanaged(*c.redisReply) = .empty,
+    reply_list: std.ArrayList(*c.redisReply) = .empty,
 
     pub fn deinit(self: *CharacterData) void {
         for (self.reply_list.items) |r| c.freeReplyObject(r);

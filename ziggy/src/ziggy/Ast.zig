@@ -1,12 +1,13 @@
-const Ast = @This();
-
 const std = @import("std");
 const assert = std.debug.assert;
+
 const ziggy = @import("../root.zig");
+const Rule = ziggy.schema.Schema.Rule;
 const Diagnostic = @import("Diagnostic.zig");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-const Rule = ziggy.schema.Schema.Rule;
+
+const Ast = @This();
 
 const log = std.log.scoped(.ziggy_ast);
 
@@ -66,7 +67,7 @@ const Parser = struct {
     tokenizer: Tokenizer,
     stop_on_first_error: bool,
     diagnostic: ?*Diagnostic,
-    nodes: std.ArrayListUnmanaged(Node) = .{},
+    nodes: std.ArrayList(Node) = .empty,
     node: *Node = undefined,
     token: Token = undefined,
 
@@ -582,7 +583,7 @@ pub fn check(
     diag: ?*ziggy.Diagnostic,
 ) !void {
     // TODO: check ziggy file against this ruleset
-    var stack = std.ArrayList(CheckItem).init(gpa);
+    var stack = std.array_list.Managed(CheckItem).init(gpa);
     defer stack.deinit();
 
     var doc_root_val: u32 = 1;

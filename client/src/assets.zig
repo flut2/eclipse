@@ -342,7 +342,7 @@ pub var target_enemy_cursor: *glfw.Cursor = undefined;
 pub var target_ally_cursor_pressed: *glfw.Cursor = undefined;
 pub var target_ally_cursor: *glfw.Cursor = undefined;
 
-pub var sfx_copy_map: std.AutoHashMapUnmanaged(*zaudio.Sound, std.ArrayListUnmanaged(*zaudio.Sound)) = .empty;
+pub var sfx_copy_map: std.AutoHashMapUnmanaged(*zaudio.Sound, std.ArrayList(*zaudio.Sound)) = .empty;
 pub var sfx_map: std.StringHashMapUnmanaged(*zaudio.Sound) = .empty;
 pub var dominant_color_data: std.StringHashMapUnmanaged([]RGBA) = .empty;
 pub var atlas_to_color_data: std.AutoHashMapUnmanaged(u160, []u32) = .empty;
@@ -564,7 +564,7 @@ fn addWall(
             }
         }
 
-        var colors: std.ArrayListUnmanaged(u32) = .empty;
+        var colors: std.ArrayList(u32) = .empty;
         defer colors.deinit(arena.allocator());
 
         var max: u32 = 0;
@@ -703,7 +703,7 @@ fn addImage(
             }
         }
 
-        var colors: std.ArrayListUnmanaged(u32) = .empty;
+        var colors: std.ArrayList(u32) = .empty;
         defer colors.deinit(arena.allocator());
 
         var max: u32 = 0;
@@ -917,7 +917,7 @@ fn addAnimEnemy(
             }
         }
 
-        var colors: std.ArrayListUnmanaged(u32) = .empty;
+        var colors: std.ArrayList(u32) = .empty;
         defer colors.deinit(arena.allocator());
 
         var max: u32 = 0;
@@ -1065,7 +1065,7 @@ fn addAnimPlayer(
             }
         }
 
-        var colors: std.ArrayListUnmanaged(u32) = .empty;
+        var colors: std.ArrayList(u32) = .empty;
         defer colors.deinit(arena.allocator());
 
         var max: u32 = 0;

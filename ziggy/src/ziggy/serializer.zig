@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const log = std.log.scoped(.serizalizer);
 
 pub const StringifyOptions = struct {
@@ -312,7 +313,7 @@ fn stringifyUnion(writer: anytype, un: anytype, indent_level: usize, depth: usiz
 }
 
 fn testStringify(value: anytype, opts: StringifyOptions, expected_output: []const u8) !void {
-    var output_buffer = std.ArrayList(u8).init(std.testing.allocator);
+    var output_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer output_buffer.deinit();
 
     try stringify(value, opts, output_buffer.writer());

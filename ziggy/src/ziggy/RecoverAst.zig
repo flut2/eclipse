@@ -1,12 +1,13 @@
-const RecoverAst = @This();
-
 const std = @import("std");
 const assert = std.debug.assert;
+
 const ziggy = @import("../root.zig");
+const Rule = ziggy.schema.Schema.Rule;
 const Diagnostic = @import("Diagnostic.zig");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-const Rule = ziggy.schema.Schema.Rule;
+
+const RecoverAst = @This();
 
 const log = std.log.scoped(.ziggy_ast);
 
@@ -84,7 +85,7 @@ const Parser = struct {
     code: [:0]const u8,
     tokenizer: Tokenizer,
     diagnostic: ?*Diagnostic,
-    nodes: std.ArrayListUnmanaged(Node) = .{},
+    nodes: std.ArrayList(Node) = .empty,
     node: *Node = undefined,
     token: Token = undefined,
 
@@ -897,11 +898,11 @@ pub fn check(
     _: [:0]const u8,
 ) !void {
     // TODO: check ziggy file against this ruleset
-    var stack = std.ArrayList(CheckItem).init(gpa);
+    var stack = std.array_list.Managed(CheckItem).init(gpa);
     defer stack.deinit();
 
-    var suggestions = std.ArrayList(Suggestion).init(gpa);
-    var hovers = std.ArrayList(Hover).init(gpa);
+    var suggestions = std.array_list.Managed(Suggestion).init(gpa);
+    var hovers = std.array_list.Managed(Hover).init(gpa);
 
     defer {
         self.suggestions = suggestions.toOwnedSlice() catch blk: {
@@ -1106,7 +1107,7 @@ pub fn check(
 
                     if (seen_fields.count() != struct_rule.fields.count()) {
                         var it = struct_rule.fields.iterator();
-                        var completions = std.ArrayList(Suggestion.Completion).init(gpa);
+                        var completions = std.array_list.Managed(Suggestion.Completion).init(gpa);
                         const any_suggestion = suggestions_start != suggestions.items.len;
                         while (it.next()) |kv| {
                             const k = kv.key_ptr.*;
@@ -1161,7 +1162,7 @@ pub fn check(
                             .hover = literal_rule.hover,
                         });
 
-                        var cases = std.ArrayList(Suggestion.Completion).init(gpa);
+                        var cases = std.array_list.Managed(Suggestion.Completion).init(gpa);
                         errdefer cases.deinit();
 
                         var enum_idx = rules.nodes[literal_rule.expr].first_child_id;

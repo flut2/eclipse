@@ -49,10 +49,10 @@ pub fn deinit(self: *Portal) void {
 pub fn draw(
     self: *Portal,
     renderer: *Renderer,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
-    lights: *std.ArrayListUnmanaged(Renderer.LightData),
-    sort_randoms: *std.ArrayListUnmanaged(u16),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
+    lights: *std.ArrayList(Renderer.LightData),
+    sort_randoms: *std.ArrayList(u16),
     float_time_ms: f32,
     int_id: u32,
 ) void {
@@ -156,7 +156,7 @@ pub fn draw(
         const time_us = self.data.float.time * std.time.us_per_s;
         screen_pos.y -= self.data.float.height / 2.0 * (@sin(f32i(main.current_time) / time_us) + 1) * px_per_tile * main.camera.scale;
     }
-        
+
     const alpha_mult: f32 = self.alpha;
     var color: u32 = 0;
     var color_intensity: f32 = 0.0;

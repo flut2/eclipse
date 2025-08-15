@@ -59,7 +59,7 @@ const points = [_]TimedPoint{
     .{ .x = 22.0, .y = 28.0, .time = 3 * std.time.us_per_s },
 };
 
-pub var elements: std.ArrayListUnmanaged(element.UiElement) = .empty;
+pub var elements: std.ArrayList(element.UiElement) = .empty;
 pub var screen: Screen = undefined;
 pub var darken_bg: *Image = undefined;
 pub var version_text: *Text = undefined;
@@ -368,7 +368,7 @@ pub fn update(time: i64, dt: f32) !void {
             player.y = lerp(current_point.y, next_point.y, frac);
         },
     }
-    
+
     std.sort.block(element.UiElement, elements.items, {}, lessThan);
 
     switch (screen) {

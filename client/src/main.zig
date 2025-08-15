@@ -7,9 +7,9 @@ const shared = @import("shared");
 const network_data = shared.network_data;
 const game_data = shared.game_data;
 const utils = shared.utils;
-const uv = @import("uv");
 const f32i = utils.f32i;
 const u32f = utils.u32f;
+const uv = @import("uv");
 const vk = @import("vulkan");
 const zaudio = @import("zaudio");
 const ziggy = @import("ziggy");
@@ -84,7 +84,7 @@ pub var camera: Camera = .{};
 pub var settings: Settings = .{};
 pub var main_loop: *uv.uv_loop_t = undefined;
 pub var window: *glfw.Window = undefined;
-pub var callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty;
+pub var callbacks: std.ArrayList(TimedCallback) = .empty;
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.c) void {
     const float_w = f32i(w);
@@ -104,9 +104,9 @@ fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.c) void {
 
 fn updateCharIdSort(selected_char_id: u32) void {
     const char_list = character_list orelse return;
-    var char_list_ids: std.ArrayListUnmanaged(u32) = .empty;
+    var char_list_ids: std.ArrayList(u32) = .empty;
     for (char_list.characters) |char_data| char_list_ids.append(allocator, char_data.char_id) catch oomPanic();
-    var new_list: std.ArrayListUnmanaged(u32) = .empty;
+    var new_list: std.ArrayList(u32) = .empty;
     new_list.append(allocator, selected_char_id) catch oomPanic();
     for (settings.char_ids_login_sort) |char_id|
         if (std.mem.indexOfScalar(u32, new_list.items, char_id) == null and
@@ -155,7 +155,7 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
             .map_fragment = test_map,
         } };
     } else {
-        var fragment_list: std.ArrayListUnmanaged(network_data.C2SPacket) = .empty;
+        var fragment_list: std.ArrayList(network_data.C2SPacket) = .empty;
         for (0..fragments) |i| {
             const map_slice = test_map[fragment_size * i .. @min(test_map.len, fragment_size * (i + 1))];
             if (i == fragments - 1) {

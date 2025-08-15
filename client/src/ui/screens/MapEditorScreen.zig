@@ -125,7 +125,7 @@ const MultiPlace = struct {
 };
 
 const CommandQueue = struct {
-    command_list: std.ArrayListUnmanaged(EditorCommand) = .empty,
+    command_list: std.ArrayList(EditorCommand) = .empty,
     current_position: usize = 0,
 
     pub fn clear(self: *CommandQueue) void {
@@ -1191,7 +1191,7 @@ pub fn indexOfTile(tiles: []const map_data.Tile, value: map_data.Tile) ?usize {
 }
 
 fn mapData(screen: *MapEditorScreen) ![]u8 {
-    var data: std.ArrayListUnmanaged(u8) = .empty;
+    var data: std.ArrayList(u8) = .empty;
 
     const bounds = tileBounds(screen.map_tile_data);
     if (bounds.min_x >= bounds.max_x or bounds.min_y >= bounds.max_y) return error.InvalidMap;
@@ -1203,7 +1203,7 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
     try writer.writeInt(u16, bounds.max_x - bounds.min_x, .little);
     try writer.writeInt(u16, bounds.max_y - bounds.min_y, .little);
 
-    var tiles: std.ArrayListUnmanaged(map_data.Tile) = .empty;
+    var tiles: std.ArrayList(map_data.Tile) = .empty;
     defer tiles.deinit(main.allocator);
 
     for (bounds.min_y..bounds.max_y) |y| {
@@ -1400,7 +1400,7 @@ fn processRectSelect(self: *MapEditorScreen) void {
     const min_x = @min(end_point.x, start_point.x);
     const max_x = @max(end_point.x, start_point.x);
 
-    var positions: std.ArrayListUnmanaged(Position) = .empty;
+    var positions: std.ArrayList(Position) = .empty;
     for (min_y..max_y + 1) |y| for (min_x..max_x + 1) |x|
         positions.append(main.allocator, .{ .x = @intCast(x), .y = @intCast(y) }) catch main.oomPanic();
     self.clearSelection();
@@ -1622,7 +1622,7 @@ fn setObject(self: *MapEditorScreen, comptime ObjType: type, x: u16, y: u16, dat
 }
 
 fn place(self: *MapEditorScreen, center_x: f32, center_y: f32, comptime place_type: enum { place, erase, random }) void {
-    var places: std.ArrayListUnmanaged(Place) = .empty;
+    var places: std.ArrayList(Place) = .empty;
 
     const size_sqr = self.brush_size * self.brush_size;
     const sel_type = if (place_type == .erase) defaultType(self.active_layer) else switch (self.active_layer) {
@@ -1730,7 +1730,7 @@ fn inside(screen: *MapEditorScreen, places: []Place, x: i32, y: i32, layer: Laye
 fn fill(self: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
     const FillData = struct { x1: i32, x2: i32, y: i32, dy: i32 };
 
-    var places: std.ArrayListUnmanaged(Place) = .empty;
+    var places: std.ArrayList(Place) = .empty;
 
     const layer = self.active_layer;
     const target_id = switch (self.active_layer) {
@@ -1740,7 +1740,7 @@ fn fill(self: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
     const current_id = typeAt(layer, self, x, y);
     if (!selection and (current_id == target_id or target_id == defaultType(layer))) return;
 
-    var stack: std.ArrayListUnmanaged(FillData) = .empty;
+    var stack: std.ArrayList(FillData) = .empty;
     defer stack.deinit(main.allocator);
 
     stack.append(main.allocator, .{ .x1 = x, .x2 = x, .y = y, .dy = 1 }) catch main.oomPanic();
@@ -1810,7 +1810,7 @@ fn fill(self: *MapEditorScreen, x: u16, y: u16, selection: bool) void {
     }
 
     if (selection) {
-        var positions: std.ArrayListUnmanaged(Position) = .empty;
+        var positions: std.ArrayList(Position) = .empty;
         for (places.items) |p| positions.append(main.allocator, .{ .x = p.x, .y = p.y }) catch main.oomPanic();
         self.selected_tiles = positions.toOwnedSlice(main.allocator) catch main.oomPanic();
         places.deinit(main.allocator);

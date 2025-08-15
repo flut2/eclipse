@@ -40,7 +40,7 @@ alpha: f32 = 1.0,
 size_mult: f32 = 0,
 colors: []u32 = &.{},
 facing: f32 = std.math.nan(f32),
-status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
+status_texts: std.ArrayList(StatusText) = .empty,
 data: *const game_data.AllyData = undefined,
 sort_random: u16 = 0xAAAA,
 
@@ -57,10 +57,10 @@ pub fn deinit(self: *Ally) void {
 pub fn draw(
     self: *Ally,
     renderer: *Renderer,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
-    lights: *std.ArrayListUnmanaged(Renderer.LightData),
-    sort_randoms: *std.ArrayListUnmanaged(u16),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
+    lights: *std.ArrayList(Renderer.LightData),
+    sort_randoms: *std.ArrayList(u16),
     float_time_ms: f32,
 ) void {
     if (!main.camera.visibleInCamera(self.x, self.y)) return;

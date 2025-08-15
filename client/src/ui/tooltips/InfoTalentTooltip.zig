@@ -227,7 +227,7 @@ pub fn update(self: *InfoTalentTooltip, params: tooltip.ParamsFor(InfoTalentTool
     main.allocator.free(self.reqs);
     self.reqs = &.{};
 
-    var costs: std.ArrayListUnmanaged(LabelledIcon) = .empty;
+    var costs: std.ArrayList(LabelledIcon) = .empty;
     const x = self.cost_text.base.x;
     var y = self.cost_text.base.y + self.cost_text.height() + 5;
     for (params.data.level_costs[0]) |lvl_cost| {
@@ -246,7 +246,7 @@ pub fn update(self: *InfoTalentTooltip, params: tooltip.ParamsFor(InfoTalentTool
         self.requires_text.base.y = y;
         y += self.requires_text.height() + 5;
 
-        var reqs: std.ArrayListUnmanaged(LabelledIcon) = .empty;
+        var reqs: std.ArrayList(LabelledIcon) = .empty;
         for (params.data.requires) |talent_req| {
             const talent_data = class_data.talents[talent_req.index];
             const req = LabelledIcon.create(self.root, talent_data.icon, x, y, talent_data.name, talent_req.level_per_aether) catch |e| {

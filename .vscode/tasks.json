@@ -6,42 +6,34 @@
         {
             "label": "Debug Client",
             "type": "shell",
-            "command": "cd client && zig build -Doptimize=Debug -freference-trace",
+            "command": "zig build -Doptimize=Debug -freference-trace",
+            "options": {
+                "cwd": "${workspaceFolder}/client"
+            },
         },
         {
             "label": "Debug Client (GPA, Validation)",
             "type": "shell",
-            "command": "cd client && zig build -Doptimize=Debug -Denable_validation_layers=true -Denable_gpa=true -freference-trace",
-        },
-        {
-            "label": "Debug Client (Windows)",
-            "type": "shell",
-            "command": "cd client ; zig build -Doptimize=Debug -freference-trace",
-        },
-        {
-            "label": "Debug Client (Windows, GPA, Validation)",
-            "type": "shell",
-            "command": "cd client ; zig build -Doptimize=Debug -Denable_validation_layers=true -Denable_gpa=true -freference-trace",
+            "command": "zig build -Doptimize=Debug -Denable_validation_layers=true -Denable_gpa=true -freference-trace",
+            "options": {
+                "cwd": "${workspaceFolder}/client"
+            },
         },
         {
             "label": "Debug Server",
             "type": "shell",
-            "command": "cd server && zig build -Doptimize=Debug -freference-trace",
+            "command": "zig build -Doptimize=Debug -freference-trace",
+            "options": {
+                "cwd": "${workspaceFolder}/server"
+            },
         },
         {
             "label": "Debug Server (GPA)",
             "type": "shell",
-            "command": "cd server && zig build -Doptimize=Debug -Denable_gpa=true -freference-trace",
+            "command": "zig build -Doptimize=Debug -Denable_gpa=true -freference-trace",
+            "options": {
+                "cwd": "${workspaceFolder}/server"
+            },
         },
-        {
-            "label": "Debug Server (Windows)",
-            "type": "shell",
-            "command": "cd server ; zig build -Doptimize=Debug -freference-trace",
-        },
-        {
-            "label": "Debug Server (GPA, Windows)",
-            "type": "shell",
-            "command": "cd server ; zig build -Doptimize=Debug -Denable_gpa=true -freference-trace",
-        }
     ]
 }

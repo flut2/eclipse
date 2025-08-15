@@ -19,7 +19,7 @@ is_dragging: bool = false,
 clamp_x: bool = false,
 clamp_y: bool = false,
 clamp_to_screen: bool = false,
-elements: std.ArrayListUnmanaged(element.UiElement) = .empty,
+elements: std.ArrayList(element.UiElement) = .empty,
 
 pub fn mousePress(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
     if (!self.base.visible) return false;
@@ -158,8 +158,8 @@ pub fn deinit(self: *Container) void {
 
 pub fn draw(
     self: Container,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
     x_offset: f32,
     y_offset: f32,
     time: i64,

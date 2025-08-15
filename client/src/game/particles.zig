@@ -303,9 +303,9 @@ pub const Particle = union(enum) {
 
     pub fn draw(
         self: Particle,
-        generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-        sort_extras: *std.ArrayListUnmanaged(f32),
-        sort_randoms: *std.ArrayListUnmanaged(u16),
+        generics: *std.ArrayList(Renderer.GenericData),
+        sort_extras: *std.ArrayList(f32),
+        sort_randoms: *std.ArrayList(u16),
     ) void {
         switch (self) {
             inline else => |particle| {

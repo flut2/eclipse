@@ -51,7 +51,7 @@ playing_anim: union(enum) {
 anim_idx: u8 = 0,
 next_anim: i64 = -1,
 facing: f32 = std.math.nan(f32),
-status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
+status_texts: std.ArrayList(StatusText) = .empty,
 speech_balloon: ?SpeechBalloon = null,
 sort_random: u16 = 0xAAAA,
 
@@ -69,10 +69,10 @@ pub fn deinit(self: *Enemy) void {
 pub fn draw(
     self: *Enemy,
     renderer: *Renderer,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
-    lights: *std.ArrayListUnmanaged(Renderer.LightData),
-    sort_randoms: *std.ArrayListUnmanaged(u16),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
+    lights: *std.ArrayList(Renderer.LightData),
+    sort_randoms: *std.ArrayList(u16),
     float_time_ms: f32,
 ) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_enemy_layer or

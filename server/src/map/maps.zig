@@ -91,12 +91,12 @@ pub var worlds: std.AutoArrayHashMapUnmanaged(i32, World) = .{};
 pub var next_world_id: i32 = 0;
 
 pub fn parseMap(buffer: []const u8, details: MapDetails) !MapData {
-    var tiles: std.ArrayListUnmanaged(Tile) = .empty;
-    var entities: std.ArrayListUnmanaged(Entity) = .empty;
-    var enemies: std.ArrayListUnmanaged(Enemy) = .empty;
-    var portals: std.ArrayListUnmanaged(Portal) = .empty;
-    var containers: std.ArrayListUnmanaged(Container) = .empty;
-    var regions: std.AutoHashMapUnmanaged(u16, std.ArrayListUnmanaged(World.WorldPoint)) = .empty;
+    var tiles: std.ArrayList(Tile) = .empty;
+    var entities: std.ArrayList(Entity) = .empty;
+    var enemies: std.ArrayList(Enemy) = .empty;
+    var portals: std.ArrayList(Portal) = .empty;
+    var containers: std.ArrayList(Container) = .empty;
+    var regions: std.AutoHashMapUnmanaged(u16, std.ArrayList(World.WorldPoint)) = .empty;
     defer {
         tiles.deinit(main.allocator);
         entities.deinit(main.allocator);
@@ -137,7 +137,7 @@ pub fn parseMap(buffer: []const u8, details: MapDetails) !MapData {
             if (regions.getPtr(data.id)) |list| {
                 try list.append(main.allocator, .{ .x = ux, .y = uy });
             } else {
-                var list: std.ArrayListUnmanaged(World.WorldPoint) = .empty;
+                var list: std.ArrayList(World.WorldPoint) = .empty;
                 try list.append(main.allocator, .{ .x = ux, .y = uy });
                 try regions.put(main.allocator, data.id, list);
             }

@@ -1,15 +1,16 @@
-const Diagnostic = @This();
-
 const std = @import("std");
+
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
+
+const Diagnostic = @This();
 
 /// A path to the file, used to display diagnostics.
 /// If not present, error positions will be printed as "line: XX col: XX".
 /// This field should be set as needed by users.
 path: ?[]const u8,
 
-errors: std.ArrayListUnmanaged(Error) = .{},
+errors: std.ArrayList(Error) = .empty,
 
 pub const Error = union(enum) {
     overflow,

@@ -8,13 +8,13 @@ const f32i = utils.f32i;
 
 const assets = @import("../../assets.zig");
 const map = @import("../../game/map.zig");
+const Player = @import("../../game/Player.zig");
 const main = @import("../../main.zig");
 const Container = @import("../elements/Container.zig");
 const element = @import("../elements/element.zig");
 const Image = @import("../elements/Image.zig");
 const Text = @import("../elements/Text.zig");
 const tooltip = @import("tooltip.zig");
-const Player = @import("../../game/Player.zig");
 
 const LabelledIcon = struct {
     base: *Container,
@@ -283,7 +283,7 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
     main.allocator.free(self.reqs);
     self.reqs = &.{};
 
-    var costs: std.ArrayListUnmanaged(LabelledIcon) = .empty;
+    var costs: std.ArrayList(LabelledIcon) = .empty;
     const x = self.cost_text.base.x;
     var y = self.cost_text.base.y + self.cost_text.height() + 5;
     lvlLoop: for (params.data.level_costs[talent_level]) |lvl_cost| {
@@ -322,7 +322,7 @@ pub fn update(self: *TalentTooltip, params: tooltip.ParamsFor(TalentTooltip)) vo
         self.requires_text.base.y = y;
         y += self.requires_text.height() + 5;
 
-        var reqs: std.ArrayListUnmanaged(LabelledIcon) = .empty;
+        var reqs: std.ArrayList(LabelledIcon) = .empty;
         reqLoop: for (params.data.requires) |talent_req| {
             if (talent_req.index >= player.data.talents.len - 1) continue;
 

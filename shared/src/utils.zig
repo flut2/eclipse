@@ -5,7 +5,7 @@ const game_data = @import("game_data.zig");
 
 // Big endian isn't supported on this
 pub const PacketWriter = struct {
-    list: std.ArrayListUnmanaged(u8) = .empty,
+    list: std.ArrayList(u8) = .empty,
 
     pub fn writeLength(self: *PacketWriter, allocator: std.mem.Allocator) void {
         self.list.appendSlice(allocator, &.{ 0, 0 }) catch @panic("OOM");

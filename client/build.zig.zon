@@ -2,6 +2,7 @@
     .fingerprint = 0x684a4fd89382116e,
     .name = .eclipse_client,
     .version = "1.0.0",
+    .minimum_zig_version = "0.15.0-dev.1518+749f10af4",
     .dependencies = .{
         .shared = .{ .path = "../shared" },
         .system_sdk = .{ .path = "../shared/libs/system-sdk" },
@@ -10,12 +11,12 @@
         .zglfw = .{ .path = "libs/zglfw" },
         .zaudio = .{ .path = "libs/zaudio" },
         .turbopack = .{
-            .url = "git+https://github.com/flut2/turbopack.git#8fc71a37a798bcf31ab0bd65d7e3089d1569bc35",
-            .hash = "turbopack-1.0.0-rSxRjjsfAACcX7QYHoziFhTQPaHid-inIg_X2NEo4QIQ",
+            .url = "git+https://github.com/flut2/turbopack.git#1ed6f6e423a82bafbee2a540328f767171ad8cef",
+            .hash = "turbopack-1.0.0-rSxRjiIfAABFC5AKKtsNiX_xd3BR0WNcuOZAMy5389Rf",
         },
         .vulkan_zig = .{
-            .url = "git+https://github.com/Snektron/vulkan-zig.git#ed429842b8ad60966bc3b8b214606d8a5714f99e",
-            .hash = "vulkan-0.0.0-r7Ytx5w-AwC04xBpfzcuIjGyYv2z6xb1i49ZUeNUgT5H",
+            .url = "git+https://github.com/Snektron/vulkan-zig.git#93bc6f1ac3e13dd98d918e242dc892f179a0d0f5",
+            .hash = "vulkan-0.0.0-r7YtxwA_AwAU4rmOITZD_KJs11Kie1sv0t-pcMDQGIqw",
         },
     },
     .paths = .{

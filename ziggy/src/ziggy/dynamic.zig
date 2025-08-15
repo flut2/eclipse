@@ -1,10 +1,11 @@
 const std = @import("std");
 const assert = std.debug.assert;
+
 const Diagnostic = @import("Diagnostic.zig");
 const Parser = @import("Parser.zig");
+const serializer = @import("serializer.zig");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-const serializer = @import("serializer.zig");
 
 pub const Value = union(enum) {
     kv: Map(Value),
@@ -70,7 +71,7 @@ pub const Value = union(enum) {
                 },
 
                 .lsb => {
-                    var array = std.ArrayList(Value).init(p.gpa);
+                    var array = std.array_list.Managed(Value).init(p.gpa);
                     errdefer array.deinit();
                     var elem_tok = try p.nextNoEof();
                     while (elem_tok.tag != .rsb) {
@@ -471,7 +472,7 @@ test "map + union stringify" {
         .name = "zine",
         .dependencies = deps,
     };
-    var output = std.ArrayList(u8).init(std.testing.allocator);
+    var output = std.array_list.Managed(u8).init(std.testing.allocator);
     defer output.deinit();
 
     try serializer.stringify(proj, .{ .whitespace = .space_4 }, output.writer());

@@ -19,8 +19,8 @@ pub fn deinit(self: *Text) void {
 
 pub fn draw(
     self: *Text,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
     x_offset: f32,
     y_offset: f32,
     _: i64,

@@ -1,13 +1,14 @@
-const Schema = @This();
-
 const std = @import("std");
 const assert = std.debug.assert;
+
 const ziggy = @import("../root.zig");
-const Tokenizer = @import("Tokenizer.zig");
-const Token = Tokenizer.Token;
-const Diagnostic = @import("Diagnostic.zig");
 const Ast = @import("Ast.zig");
 const Node = Ast.Node;
+const Diagnostic = @import("Diagnostic.zig");
+const Tokenizer = @import("Tokenizer.zig");
+const Token = Tokenizer.Token;
+
+const Schema = @This();
 
 const log = std.log.scoped(.schema);
 
@@ -54,7 +55,7 @@ pub fn init(
     code: [:0]const u8,
     diagnostic: ?*Diagnostic,
 ) !Schema {
-    var names = std.ArrayList(u32).init(gpa);
+    var names = std.array_list.Managed(u32).init(gpa);
     defer names.deinit();
 
     const root_expr = nodes[1];
@@ -264,7 +265,7 @@ fn snippetString(
     field_name: []const u8,
     rule_id: u32,
 ) ![]const u8 {
-    var out = std.ArrayList(u8).init(gpa);
+    var out = std.array_list.Managed(u8).init(gpa);
     errdefer out.deinit();
     const w = out.writer();
     try w.print("{s} = ", .{field_name});
@@ -291,7 +292,7 @@ fn docString(schema: Schema, gpa: std.mem.Allocator, node_id: u32) ![]const u8 {
     const node = schema.nodes[node_id];
     if (node.tag != .doc_comment) return "";
 
-    var out = std.ArrayList(u8).init(gpa);
+    var out = std.array_list.Managed(u8).init(gpa);
     errdefer out.deinit();
 
     var line_id = node.first_child_id;

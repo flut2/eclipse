@@ -1,12 +1,13 @@
-const Parser = @This();
-
 const std = @import("std");
 const assert = std.debug.assert;
+
 const Diagnostic = @import("Diagnostic.zig");
-const Tokenizer = @import("Tokenizer.zig");
-const Token = Tokenizer.Token;
 const dynamic = @import("dynamic.zig");
 const Value = dynamic.Value;
+const Tokenizer = @import("Tokenizer.zig");
+const Token = Tokenizer.Token;
+
+const Parser = @This();
 
 gpa: std.mem.Allocator,
 code: [:0]const u8,
@@ -272,7 +273,7 @@ pub fn parseStruct(
 
     // TODO: optimization: turn this into an array of bools when
     //       diagnocstics are disabled
-    var fields_seen = [_]?Token.Loc{null} ** info.fields.len;
+    var fields_seen: [info.fields.len]?Token.Loc = @splat(null);
     var val: T = undefined;
     while (true) {
         if (need_closing_rb) {
@@ -452,7 +453,7 @@ pub fn parseBytes(self: *Parser, comptime T: type, token: Token) !T {
             return str.loc.unescape(self.gpa, self.code);
         },
         .line_string => {
-            var str = std.ArrayList(u8).init(self.gpa);
+            var str = std.array_list.Managed(u8).init(self.gpa);
             errdefer str.deinit();
 
             var current = token;
@@ -482,14 +483,14 @@ fn parseArray(self: *Parser, comptime T: type, lsb: Token) !T {
     try self.must(lsb, .lsb);
 
     var tok = self.next();
-    var list: std.ArrayListUnmanaged(child) = .{};
+    var list: std.ArrayList(child) = .empty;
     errdefer list.deinit(self.gpa);
 
     while (true) {
         if (tok.tag == .rsb) {
-            return if (type_info == .pointer) 
+            return if (type_info == .pointer)
                 try list.toOwnedSlice(self.gpa)
-            else 
+            else
                 (try list.toOwnedSlice(self.gpa))[0..type_info.array.len].*;
         }
 

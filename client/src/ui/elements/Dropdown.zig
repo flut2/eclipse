@@ -42,7 +42,7 @@ auto_close: bool = true,
 toggled: bool = false,
 next_index: u32 = 0,
 selected_index: u32 = std.math.maxInt(u32),
-children: std.ArrayListUnmanaged(*DropdownContainer) = .empty,
+children: std.ArrayList(*DropdownContainer) = .empty,
 
 pub fn mousePress(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
     if (!self.base.visible) return false;
@@ -160,8 +160,8 @@ pub fn deinit(self: *Dropdown) void {
 
 pub fn draw(
     self: *Dropdown,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
     x_offset: f32,
     y_offset: f32,
     time: i64,

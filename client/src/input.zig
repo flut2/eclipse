@@ -11,9 +11,9 @@ const Player = @import("game/Player.zig");
 const main = @import("main.zig");
 const Input = @import("ui/elements/Input.zig");
 const KeyMapper = @import("ui/elements/KeyMapper.zig");
+const menu = @import("ui/menus/menu.zig");
 const GameScreen = @import("ui/screens/GameScreen.zig");
 const ui_systems = @import("ui/systems.zig");
-const menu = @import("ui/menus/menu.zig");
 
 const press_mappings = .{
     .{ &main.settings.move_up, handleMoveUpPress, true },
@@ -56,7 +56,7 @@ pub var mouse_y: f32 = 0.0;
 
 pub var selected_key_mapper: ?*KeyMapper = null;
 pub var selected_input_field: ?*Input = null;
-pub var input_history: std.ArrayListUnmanaged([]const u8) = .empty;
+pub var input_history: std.ArrayList([]const u8) = .empty;
 pub var input_history_idx: u16 = 0;
 
 pub var disable_input: bool = false;

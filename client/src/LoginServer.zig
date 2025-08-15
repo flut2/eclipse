@@ -23,7 +23,7 @@ const WriteRequest = extern struct {
 
 socket: *uv.uv_tcp_t = undefined,
 read_arena: std.heap.ArenaAllocator = undefined,
-unsent_packets: std.fifo.LinearFifo(network_data.C2SPacketLogin, .Dynamic) = undefined,
+unsent_packets: std.ArrayList(network_data.C2SPacketLogin),
 initialized: bool = false,
 needs_verify: bool = false,
 
@@ -142,7 +142,7 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.c) void {
         server.needs_verify = false;
     }
 
-    while (server.unsent_packets.readItem()) |packet| server.sendPacket(packet);
+    for (server.unsent_packets.items) |packet| server.sendPacket(packet);
 }
 
 fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.c) void {
@@ -154,7 +154,6 @@ fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.c) void {
 pub fn init(self: *Server) !void {
     self.socket = try main.allocator.create(uv.uv_tcp_t);
     self.read_arena = .init(main.allocator);
-    self.unsent_packets = .init(main.allocator);
     self.connect(build_options.login_server_ip, build_options.login_server_port) catch |e| {
         std.log.err("Login connection failed: {}", .{e});
         return;
@@ -165,13 +164,13 @@ pub fn deinit(self: *Server) void {
     main.disconnect();
     main.allocator.destroy(self.socket);
     self.read_arena.deinit();
-    self.unsent_packets.deinit();
+    self.unsent_packets.deinit(main.allocator);
     self.initialized = false;
 }
 
 pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
     if (!self.initialized) {
-        self.unsent_packets.writeItem(packet) catch main.oomPanic();
+        self.unsent_packets.append(main.allocator, packet) catch main.oomPanic();
         self.connect(build_options.login_server_ip, build_options.login_server_port) catch return;
         return;
     }
@@ -218,7 +217,7 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
     const tcp_status = uv.uv_tcp_init(@ptrCast(main.main_loop), @ptrCast(self.socket));
     if (tcp_status != 0) {
         self.needs_verify = false;
-        self.unsent_packets.discard(self.unsent_packets.count);
+        self.unsent_packets.clearAndFree(main.allocator);
         std.log.err("Login socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
         return error.NoSocket;
     }
@@ -232,7 +231,7 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
     const conn_status = uv.uv_tcp_connect(@ptrCast(connect_data), @ptrCast(self.socket), @ptrCast(&addr.in.sa), connectCallback);
     if (conn_status != 0) {
         self.needs_verify = false;
-        self.unsent_packets.discard(self.unsent_packets.count);
+        self.unsent_packets.clearAndFree(main.allocator);
         std.log.err("Login connection error: {s}", .{uv.uv_strerror(conn_status)});
         return error.ConnectionFailed;
     }
@@ -241,7 +240,7 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
 pub fn shutdown(self: *Server) void {
     self.initialized = false;
     self.needs_verify = false;
-    self.unsent_packets.discard(self.unsent_packets.count);
+    self.unsent_packets.clearAndFree(main.allocator);
 
     ui_systems.switchScreen(.main_menu);
 

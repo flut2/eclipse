@@ -2,13 +2,14 @@
     .fingerprint = 0xbc82bf36214b36ea,
     .name = .eclipse_shared,
     .version = "1.0.0",
+    .minimum_zig_version = "0.15.0-dev.1518+749f10af4",
     .dependencies = .{
         .system_sdk = .{ .path = "libs/system-sdk" },
         .ztracy = .{ .path = "libs/ztracy" },
         .ziggy = .{ .path = "../ziggy" },
         .libuv = .{
-            .url = "git+https://github.com/libuv/libuv.git#056e180e11c3a2ff7120f484da9d0f15a5776fd4",
-            .hash = "N-V-__8AAGNvRADl5XYzO88cR4KibrlVHoKvtC9yONZmyDGc",
+            .url = "git+https://github.com/libuv/libuv.git#173b7633346c1f312dd60f9642409886d44196e0",
+            .hash = "N-V-__8AAFFwRAA9UiZoSIIGHgH6Tq59woHw-GRxfbHJO4D2",
         },
     },
     .paths = .{

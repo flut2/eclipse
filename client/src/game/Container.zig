@@ -51,10 +51,10 @@ pub fn deinit(self: *Container) void {
 
 pub fn draw(
     self: *Container,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
-    lights: *std.ArrayListUnmanaged(Renderer.LightData),
-    sort_randoms: *std.ArrayListUnmanaged(u16),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
+    lights: *std.ArrayList(Renderer.LightData),
+    sort_randoms: *std.ArrayList(u16),
     float_time_ms: f32,
 ) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_container_layer or

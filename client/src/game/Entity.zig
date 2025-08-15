@@ -56,7 +56,7 @@ wall_outline_cull: packed struct {
     left: bool = false,
     right: bool = false,
 } = .{},
-status_texts: std.ArrayListUnmanaged(StatusText) = .empty,
+status_texts: std.ArrayList(StatusText) = .empty,
 sort_random: u16 = 0xAAAA,
 
 pub fn addToMap(entity_data: Entity) void {
@@ -181,10 +181,10 @@ pub fn deinit(self: *Entity) void {
 
 pub fn draw(
     self: *Entity,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
-    lights: *std.ArrayListUnmanaged(Renderer.LightData),
-    sort_randoms: *std.ArrayListUnmanaged(u16),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
+    lights: *std.ArrayList(Renderer.LightData),
+    sort_randoms: *std.ArrayList(u16),
     float_time_ms: f32,
 ) void {
     if (ui_systems.screen == .editor and

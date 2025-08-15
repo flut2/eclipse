@@ -151,8 +151,8 @@ fn updateBlendAtDir(square: *Square, other_square: ?*Square, current_prio: i32, 
 
 pub fn draw(
     self: *Square,
-    grounds: *std.ArrayListUnmanaged(Renderer.GroundData),
-    lights: *std.ArrayListUnmanaged(Renderer.LightData),
+    grounds: *std.ArrayList(Renderer.GroundData),
+    lights: *std.ArrayList(Renderer.LightData),
     float_time_ms: f32,
 ) void {
     if (ui_systems.screen == .editor and !ui_systems.screen.editor.show_ground_layer or

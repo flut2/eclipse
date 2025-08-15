@@ -105,7 +105,7 @@ pub fn update(self: *PlayerListTooltip, params: tooltip.ParamsFor(PlayerListTool
     for (self.list_items) |*list_item| list_item.destroy(self.list_container);
     main.allocator.free(self.list_items);
 
-    var list_items: std.ArrayListUnmanaged(ListItem) = .empty;
+    var list_items: std.ArrayList(ListItem) = .empty;
     var i: usize = 0;
     for (params.items) |player_list_item| {
         list_items.append(main.allocator, ListItem.create(self.list_container, player_list_item, i) catch continue) catch main.oomPanic();

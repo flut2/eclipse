@@ -211,10 +211,10 @@ linear_sampler: vk.Sampler = .null_handle,
 
 condition_rects: [@bitSizeOf(utils.Condition)][]const assets.AtlasData = @splat(&.{}),
 enter_text_data: element.TextData = .{ .text = "", .size = 0 },
-sort_extras: std.ArrayListUnmanaged(f32) = .empty,
-generics: std.ArrayListUnmanaged(GenericData) = .empty,
-grounds: std.ArrayListUnmanaged(GroundData) = .empty,
-lights: std.ArrayListUnmanaged(LightData) = .empty,
+sort_extras: std.ArrayList(f32) = .empty,
+generics: std.ArrayList(GenericData) = .empty,
+grounds: std.ArrayList(GroundData) = .empty,
+lights: std.ArrayList(LightData) = .empty,
 
 render_pass: vk.RenderPass = .null_handle,
 cmd_pool: vk.CommandPool = .null_handle,
@@ -1324,8 +1324,8 @@ fn createGroundMaterial(self: *Renderer) !void {
 }
 
 pub fn drawQuad(
-    generics: *std.ArrayListUnmanaged(GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
+    generics: *std.ArrayList(GenericData),
+    sort_extras: *std.ArrayList(f32),
     x: f32,
     y: f32,
     w: f32,
@@ -1369,8 +1369,8 @@ pub fn drawQuad(
 }
 
 pub fn drawText(
-    generics: *std.ArrayListUnmanaged(GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
+    generics: *std.ArrayList(GenericData),
+    sort_extras: *std.ArrayList(f32),
     x: f32,
     y: f32,
     scale: f32,
@@ -1593,7 +1593,7 @@ pub fn drawText(
 }
 
 pub fn drawLight(
-    lights: *std.ArrayListUnmanaged(LightData),
+    lights: *std.ArrayList(LightData),
     data: game_data.LightData,
     owner_x: f32,
     owner_y: f32,

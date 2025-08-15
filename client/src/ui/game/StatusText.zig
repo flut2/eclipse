@@ -19,8 +19,8 @@ dispose_text: bool = false,
 
 pub fn draw(
     self: *StatusText,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
     time: i64,
     obj_x: f32,
     obj_y: f32,

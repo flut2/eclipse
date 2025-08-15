@@ -1,11 +1,13 @@
 const std = @import("std");
 const assert = std.debug.assert;
+
 const yaml = @import("yaml");
 const ziggy = @import("ziggy");
-const json = @import("convert/json.zig");
-const loadSchema = @import("load_schema.zig").loadSchema;
 const Diagnostic = ziggy.Diagnostic;
 const Ast = ziggy.Ast;
+
+const json = @import("convert/json.zig");
+const loadSchema = @import("load_schema.zig").loadSchema;
 
 pub fn run(gpa: std.mem.Allocator, args: []const []const u8) !void {
     const cmd = try Command.parse(gpa, args);
@@ -232,10 +234,10 @@ pub const Command = struct {
 
     fn parse(gpa: std.mem.Allocator, args: []const []const u8) !Command {
         var stdin: ?Lang = null;
-        var json_paths = std.ArrayList([]const u8).init(gpa);
-        var yaml_paths = std.ArrayList([]const u8).init(gpa);
-        var toml_paths = std.ArrayList([]const u8).init(gpa);
-        var ziggy_paths = std.ArrayList([]const u8).init(gpa);
+        var json_paths = std.array_list.Managed([]const u8).init(gpa);
+        var yaml_paths = std.array_list.Managed([]const u8).init(gpa);
+        var toml_paths = std.array_list.Managed([]const u8).init(gpa);
+        var ziggy_paths = std.array_list.Managed([]const u8).init(gpa);
 
         var to: ?Lang = null;
         var schema: ?[]const u8 = null;

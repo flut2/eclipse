@@ -309,7 +309,7 @@ pub fn refresh(self: *CharSelectScreen) !void {
     });
 
     var num_normal: u8 = 0;
-    var char_boxes: std.ArrayListUnmanaged(CharacterBox) = .empty;
+    var char_boxes: std.ArrayList(CharacterBox) = .empty;
     for (char_list.characters, 0..) |*char, i| {
         char_boxes.append(main.allocator, try .create(self.box_container, char, i)) catch main.oomPanic();
         if (!char.celestial) num_normal += 1;

@@ -175,7 +175,7 @@ pub fn update(self: *ResourceView, resources: []const network_data.DataIdWithCou
     for (self.slots) |*slot| slot.destroy(self.slot_base);
     main.allocator.free(self.slots);
 
-    var slots: std.ArrayListUnmanaged(ResourceSlot) = .empty;
+    var slots: std.ArrayList(ResourceSlot) = .empty;
     var i: usize = 0;
     for (resources) |resource| {
         const resource_data = game_data.resource.from_id.get(resource.data_id) orelse {

@@ -1,3 +1,16 @@
+const std = @import("std");
+const mem = std.mem;
+const assert = std.debug.assert;
+
+const ziggy = @import("../root.zig");
+const Rule = ziggy.schema.Schema.Rule;
+const Diagnostic = @import("Diagnostic.zig");
+const RecoverAst = @import("RecoverAst.zig");
+const Suggestion = RecoverAst.Suggestion;
+const Hover = RecoverAst.Hover;
+const Tokenizer = @import("Tokenizer.zig");
+const Token = Tokenizer.Token;
+
 const Parser = @This();
 
 gpa: std.mem.Allocator,
@@ -5,24 +18,12 @@ code: [:0]const u8,
 tokenizer: Tokenizer,
 diagnostic: ?*Diagnostic,
 fuel: u32,
-events: std.ArrayListUnmanaged(Event) = .{},
+events: std.ArrayList(Event) = .empty,
 
-const std = @import("std");
-const mem = std.mem;
-const assert = std.debug.assert;
-const ziggy = @import("../root.zig");
-const Diagnostic = @import("Diagnostic.zig");
-const Tokenizer = @import("Tokenizer.zig");
-const Token = Tokenizer.Token;
-const Rule = ziggy.schema.Schema.Rule;
 const log = std.log.scoped(.resilient_parser);
-const RecoverAst = @import("RecoverAst.zig");
-const Suggestion = RecoverAst.Suggestion;
-const Hover = RecoverAst.Hover;
-
 pub const Tree = struct {
     tag: Tree.Tag,
-    children: std.ArrayListUnmanaged(Child) = .{},
+    children: std.ArrayList(Child) = .empty,
     suggestions: []const Suggestion = &.{},
     hovers: []const Hover = &.{},
 
@@ -90,11 +91,11 @@ pub const Tree = struct {
         ziggy_code: [:0]const u8,
     ) !void {
         // TODO: check ziggy file against this ruleset
-        var stack = std.ArrayList(CheckItem).init(gpa);
+        var stack = std.array_list.Managed(CheckItem).init(gpa);
         defer stack.deinit();
 
-        var suggestions = std.ArrayList(Suggestion).init(gpa);
-        var hovers = std.ArrayList(Hover).init(gpa);
+        var suggestions = std.array_list.Managed(Suggestion).init(gpa);
+        var hovers = std.array_list.Managed(Hover).init(gpa);
         defer {
             doc.suggestions = suggestions.toOwnedSlice() catch blk: {
                 suggestions.deinit();
@@ -368,7 +369,7 @@ pub const Tree = struct {
                         }
                         log.debug("seen_fields.count {} struct_rule.fields.count {}", .{ seen_fields.count(), struct_rule.fields.count() });
                         if (seen_fields.count() != struct_rule.fields.count()) {
-                            var completions = std.ArrayList(Suggestion.Completion).init(gpa);
+                            var completions = std.array_list.Managed(Suggestion.Completion).init(gpa);
                             const any_suggestion = suggestions_start != suggestions.items.len;
                             log.debug("any_suggestion {} suggestions {}", .{ any_suggestion, suggestions.items.len });
 
@@ -434,7 +435,7 @@ pub const Tree = struct {
                                 .hover = literal_rule.hover,
                             });
 
-                            var cases = std.ArrayList(Suggestion.Completion).init(gpa);
+                            var cases = std.array_list.Managed(Suggestion.Completion).init(gpa);
                             errdefer cases.deinit();
 
                             var enum_idx = rules.nodes[literal_rule.expr].first_child_id;
@@ -1477,7 +1478,7 @@ fn close(p: *Parser, m: MarkOpened, tag: Tree.Tag) MarkClosed {
 fn buildTree(p: *Parser) !Tree {
     assert(p.events.pop().? == .close);
     p.tokenizer.idx = 0;
-    var stack = std.ArrayList(Tree).init(p.gpa);
+    var stack = std.array_list.Managed(Tree).init(p.gpa);
     defer stack.deinit();
     for (p.events.items) |event| {
         // log.debug("build_tree() event={}", .{event});

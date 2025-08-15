@@ -45,23 +45,23 @@ details: maps.MapDetails = .{},
 tiles: []Tile = &.{},
 regions: std.AutoHashMapUnmanaged(u16, []WorldPoint) = .empty,
 drops: struct {
-    entity: std.ArrayListUnmanaged(u32) = .empty,
-    enemy: std.ArrayListUnmanaged(u32) = .empty,
-    player: std.ArrayListUnmanaged(u32) = .empty,
-    portal: std.ArrayListUnmanaged(u32) = .empty,
-    container: std.ArrayListUnmanaged(u32) = .empty,
-    ally: std.ArrayListUnmanaged(u32) = .empty,
+    entity: std.ArrayList(u32) = .empty,
+    enemy: std.ArrayList(u32) = .empty,
+    player: std.ArrayList(u32) = .empty,
+    portal: std.ArrayList(u32) = .empty,
+    container: std.ArrayList(u32) = .empty,
+    ally: std.ArrayList(u32) = .empty,
 } = .{},
 lists: struct {
-    entity: std.ArrayListUnmanaged(Entity) = .empty,
-    enemy: std.ArrayListUnmanaged(Enemy) = .empty,
-    player: std.ArrayListUnmanaged(Player) = .empty,
-    portal: std.ArrayListUnmanaged(Portal) = .empty,
-    container: std.ArrayListUnmanaged(Container) = .empty,
-    projectile: std.ArrayListUnmanaged(Projectile) = .empty,
-    ally: std.ArrayListUnmanaged(Ally) = .empty,
+    entity: std.ArrayList(Entity) = .empty,
+    enemy: std.ArrayList(Enemy) = .empty,
+    player: std.ArrayList(Player) = .empty,
+    portal: std.ArrayList(Portal) = .empty,
+    container: std.ArrayList(Container) = .empty,
+    projectile: std.ArrayList(Projectile) = .empty,
+    ally: std.ArrayList(Ally) = .empty,
 } = .{},
-callbacks: std.ArrayListUnmanaged(TimedCallback) = .empty,
+callbacks: std.ArrayList(TimedCallback) = .empty,
 biome_1_spawn: u32 = 0,
 biome_2_spawn: u32 = 0,
 biome_3_spawn: u32 = 0,
@@ -70,7 +70,7 @@ biome_2_encounter_alive: bool = false,
 biome_3_encounter_alive: bool = false,
 last_realm_spawn: i64 = 0,
 
-pub fn listForType(self: *World, comptime T: type) *std.ArrayListUnmanaged(T) {
+pub fn listForType(self: *World, comptime T: type) *std.ArrayList(T) {
     return switch (T) {
         Entity => &self.lists.entity,
         Enemy => &self.lists.enemy,
@@ -83,7 +83,7 @@ pub fn listForType(self: *World, comptime T: type) *std.ArrayListUnmanaged(T) {
     };
 }
 
-pub fn dropsForType(self: *World, comptime T: type) *std.ArrayListUnmanaged(u32) {
+pub fn dropsForType(self: *World, comptime T: type) *std.ArrayList(u32) {
     return switch (T) {
         Entity => &self.drops.entity,
         Enemy => &self.drops.enemy,

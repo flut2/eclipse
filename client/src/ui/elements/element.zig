@@ -42,8 +42,8 @@ pub const UiElement = union(enum) {
 
     pub fn draw(
         self: UiElement,
-        generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-        sort_extras: *std.ArrayListUnmanaged(f32),
+        generics: *std.ArrayList(Renderer.GenericData),
+        sort_extras: *std.ArrayList(f32),
         x_offset: f32,
         y_offset: f32,
         time: i64,
@@ -130,7 +130,7 @@ pub const TextData = struct {
     height: f32 = 0.0,
     line_count: f32 = 0.0,
     sort_extra: f32 = 0.0,
-    line_widths: ?std.ArrayListUnmanaged(f32) = null,
+    line_widths: ?std.ArrayList(f32) = null,
     break_indices: ?std.AutoHashMapUnmanaged(usize, void) = null,
 
     pub fn setText(self: *TextData, text: []const u8) void {
@@ -143,7 +143,7 @@ pub const TextData = struct {
         if (self.line_widths) |*line_widths| line_widths.clearRetainingCapacity() else self.line_widths = .empty;
         if (self.break_indices) |*break_indices| break_indices.clearRetainingCapacity() else self.break_indices = .empty;
 
-        var word_widths: std.ArrayListUnmanaged(f32) = .empty;
+        var word_widths: std.ArrayList(f32) = .empty;
         defer word_widths.deinit(main.allocator);
         inline for (.{ true, false }) |width_pass| @"continue": {
             var current_type = self.text_type;
@@ -398,8 +398,8 @@ pub const NineSliceImageData = struct {
 
     pub fn draw(
         self: NineSliceImageData,
-        generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-        sort_extras: *std.ArrayListUnmanaged(f32),
+        generics: *std.ArrayList(Renderer.GenericData),
+        sort_extras: *std.ArrayList(f32),
         x: f32,
         y: f32,
         scissor_override: ?ScissorRect,
@@ -645,8 +645,8 @@ pub const NormalImageData = struct {
 
     pub fn draw(
         self: NormalImageData,
-        generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-        sort_extras: *std.ArrayListUnmanaged(f32),
+        generics: *std.ArrayList(Renderer.GenericData),
+        sort_extras: *std.ArrayList(f32),
         x: f32,
         y: f32,
         scissor_override: ?ScissorRect,
@@ -684,8 +684,8 @@ pub const ImageData = union(enum) {
 
     pub fn draw(
         self: ImageData,
-        generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-        sort_extras: *std.ArrayListUnmanaged(f32),
+        generics: *std.ArrayList(Renderer.GenericData),
+        sort_extras: *std.ArrayList(f32),
         x: f32,
         y: f32,
         scissor_override: ScissorRect,

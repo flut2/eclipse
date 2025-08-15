@@ -282,9 +282,9 @@ pub fn update(self: anytype, comptime ObjType: type, time: i64) void {
 
 pub fn drawConditions(
     renderer: *Renderer,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
-    sort_randoms: *std.ArrayListUnmanaged(u16),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
+    sort_randoms: *std.ArrayList(u16),
     cond_int: @typeInfo(utils.Condition).@"struct".backing_integer.?,
     float_time_ms: f32,
     x: f32,
@@ -330,9 +330,9 @@ pub fn drawConditions(
 
 pub fn drawStatusTexts(
     self: anytype,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
-    sort_randoms: *std.ArrayListUnmanaged(u16),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
+    sort_randoms: *std.ArrayList(u16),
     time: i64,
     x: f32,
     y: f32,
@@ -340,7 +340,7 @@ pub fn drawStatusTexts(
     scale: f32,
     sort_random: u16,
 ) void {
-    var status_texts_to_dispose: std.ArrayListUnmanaged(usize) = .empty;
+    var status_texts_to_dispose: std.ArrayList(usize) = .empty;
     defer status_texts_to_dispose.deinit(main.allocator);
     for (self.status_texts.items, 0..) |*text, i| {
         if (!text.draw(generics, sort_extras, time, x, y, offset, scale)) {
@@ -357,9 +357,9 @@ pub fn drawStatusTexts(
 
 pub fn drawSpeechBalloon(
     self: anytype,
-    generics: *std.ArrayListUnmanaged(Renderer.GenericData),
-    sort_extras: *std.ArrayListUnmanaged(f32),
-    sort_randoms: *std.ArrayListUnmanaged(u16),
+    generics: *std.ArrayList(Renderer.GenericData),
+    sort_extras: *std.ArrayList(f32),
+    sort_randoms: *std.ArrayList(u16),
     time: i64,
     x: f32,
     y: f32,
