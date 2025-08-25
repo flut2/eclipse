@@ -2,7 +2,7 @@
     .fingerprint = 0xbd5534bf7da310cf,
     .name = .eclipse,
     .version = "1.0.0",
-    .minimum_zig_version = "0.15.0-dev.1518+749f10af4",
+    .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .shared = .{ .path = "shared" },
         .system_sdk = .{ .path = "shared/libs/system-sdk" },

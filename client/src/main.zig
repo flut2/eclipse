@@ -62,6 +62,7 @@ pub var account_arena_allocator: std.mem.Allocator = undefined;
 pub var current_account: ?AccountData = null;
 pub var character_list: ?network_data.CharacterListData = null;
 pub var current_time: i64 = 0;
+pub var last_update: i64 = 0;
 pub var render_thread: std.Thread = undefined;
 pub var skip_verify_loop = false;
 pub var tick_frame = false;
@@ -274,14 +275,20 @@ fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.c) void {
     glfw.pollEvents();
 
     const time = std.time.microTimestamp() - start_time;
-    const dt = f32i(time - current_time);
     current_time = time;
 
-    ui_systems.update(time, dt) catch |e| {
-        std.log.err("Error while updating UI: {}", .{e});
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
-    };
-    if (tick_frame or needs_map_bg) map.update(renderer, time, dt);
+    // Limited to 10000 updates a second to avoid tiny dt values causing issues (most notably movement).
+    // Using nano time would be an alternate fix, but it could restrict targets due to accuracy.
+    if (time - last_update >= 0.1 * std.time.us_per_ms) {
+        const dt = f32i(time - last_update);
+        last_update = time;
+
+        ui_systems.update(time, dt) catch |e| {
+            std.log.err("Error while updating UI: {}", .{e});
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        };
+        if (tick_frame or needs_map_bg) map.update(renderer, time, dt);
+    }
 
     const cb_len = callbacks.items.len;
     if (cb_len > 0) {
