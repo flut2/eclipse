@@ -470,7 +470,7 @@ pub fn draw(
             hp_bar_w,
             hp_bar_h,
             assets.empty_bar_data,
-            .{ .shadow_texel_mult = 0.5, .sort_extra = hp_bar_sort_extra - 0.0001 },
+            .{ .sort_extra = hp_bar_sort_extra - 0.0001 },
         );
         sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 

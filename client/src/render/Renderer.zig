@@ -57,8 +57,6 @@ pub const QuadOptions = struct {
     color: u32 = 0x000000,
     color_intensity: f32 = 0.0,
     alpha_mult: f32 = 1.0,
-    shadow_texel_mult: f32 = 0.0,
-    shadow_color: u32 = 0x000000,
     scissor: element.ScissorRect = .{},
     sort_extra: f32 = 0,
     render_type_override: ?RenderType = null,
@@ -69,7 +67,7 @@ pub const RenderType = enum(u32) {
     ui_quad = 1,
     minimap = 2,
     text_normal = 3,
-    text_drop_shadow = 4,
+    text_subpixel = 4,
 };
 
 pub const GenericData = extern struct {
@@ -77,7 +75,7 @@ pub const GenericData = extern struct {
     text_type: element.TextType = .bold,
     rotation: f32 = 0.0,
     text_dist_factor: f32 = 0.0,
-    shadow_color: u32 = 0,
+    padding1: u32 = 0,
     alpha_mult: f32 = 1.0,
     outline_color: u32 = 0,
     outline_width: f32 = 0.0,
@@ -87,7 +85,7 @@ pub const GenericData = extern struct {
     size: [2]f32 = .{ 1.0, 1.0 },
     uv: [2]f32 = .{ -1.0, -1.0 },
     uv_size: [2]f32 = .{ 0.0, 0.0 },
-    shadow_texel_size: [2]f32 = .{ 0.0, 0.0 },
+    padding2: [2]f32 = .{ 0.0, 0.0 },
     scissor: [4]f32 = .{ 0.0, 1.0, 0.0, 1.0 }, // min x, max x, min y, max y, in tex coord space
 };
 
@@ -1338,9 +1336,6 @@ pub fn drawQuad(
         .base => .quad,
     };
 
-    const shadow_texel_w = opts.shadow_texel_mult / atlas_data.atlas_type.width();
-    const shadow_texel_h = opts.shadow_texel_mult / atlas_data.atlas_type.height();
-
     const uv_w_per_px = atlas_data.tex_w / w;
     const uv_h_per_px = atlas_data.tex_h / h;
 
@@ -1350,7 +1345,6 @@ pub fn drawQuad(
     generics.append(main.allocator, .{
         .render_type = render_type,
         .rotation = opts.rotation,
-        .shadow_color = opts.shadow_color,
         .alpha_mult = opts.alpha_mult,
         .base_color = opts.color,
         .color_intensity = opts.color_intensity,
@@ -1358,7 +1352,6 @@ pub fn drawQuad(
         .size = .{ w, h },
         .uv = .{ atlas_data.tex_u, atlas_data.tex_v },
         .uv_size = .{ atlas_data.tex_w, atlas_data.tex_h },
-        .shadow_texel_size = .{ shadow_texel_w, shadow_texel_h },
         .scissor = .{
             atlas_data.tex_u + if (opts.scissor.min_x == dont_scissor) 0 else opts.scissor.min_x * uv_w_per_px,
             atlas_data.tex_u + if (opts.scissor.max_x == dont_scissor) atlas_data.tex_w else opts.scissor.max_x * uv_w_per_px,
@@ -1396,7 +1389,10 @@ pub fn drawText(
     const max_width_off = text_data.max_width == std.math.floatMax(f32);
     const max_height_off = text_data.max_height == std.math.floatMax(f32);
 
-    const render_type: RenderType = if (text_data.shadow_texel_offset_mult != 0) .text_drop_shadow else .text_normal;
+    const render_type: RenderType = if (main.settings.enable_subpixel and !text_data.disable_subpixel) 
+        .text_subpixel 
+    else 
+        .text_normal;
 
     const start_x = x;
     const start_y = y + line_height;
@@ -1527,9 +1523,6 @@ pub fn drawText(
         const mod_char = if (text_data.password) '*' else char;
         const char_data = current_font_data.characters[mod_char];
 
-        const shadow_texel_w = text_data.shadow_texel_offset_mult / current_font_data.width;
-        const shadow_texel_h = text_data.shadow_texel_offset_mult / current_font_data.height;
-
         const scaled_advance = char_data.x_advance * current_size;
         var next_x_pointer = x_pointer + scaled_advance;
         defer x_pointer = next_x_pointer;
@@ -1571,17 +1564,15 @@ pub fn drawText(
             .render_type = render_type,
             .text_type = current_type,
             .text_dist_factor = current_font_data.px_range * current_size,
-            .shadow_color = text_data.shadow_color,
             .alpha_mult = text_data.alpha,
             .outline_color = text_data.outline_color,
-            .outline_width = text_data.outline_width * current_size,
+            .outline_width = text_data.outline_width,
             .base_color = current_color,
             .color_intensity = 1.0,
             .pos = pos,
             .size = .{ w, h },
             .uv = .{ char_data.tex_u, char_data.tex_v },
             .uv_size = .{ char_data.tex_w, char_data.tex_h },
-            .shadow_texel_size = .{ shadow_texel_w, shadow_texel_h },
             .scissor = .{
                 char_data.tex_u + if (scissor.min_x == dont_scissor) 0 else (scissor.min_x + x_off) * uv_w_per_px,
                 char_data.tex_u + if (scissor.max_x == dont_scissor) char_data.tex_w else (scissor.max_x + x_off) * uv_w_per_px,

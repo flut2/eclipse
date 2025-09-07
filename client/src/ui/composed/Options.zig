@@ -194,6 +194,7 @@ pub fn create() !*Options {
     try addKeyMap(options.general_tab, &main.settings.walk, "Walk", "Allows you to move slowly");
     try addKeyMap(options.general_tab, &main.settings.toggle_perf_stats, "Toggle Performance Counter", "This toggles whether to show the performance counter");
 
+    try addToggle(options.graphics_tab, &main.settings.enable_subpixel, "Subpixel Anti-Aliasing", "Toggles LCD (RGB) subpixel anti-aliasing on text");
     try addToggle(options.graphics_tab, &main.settings.enable_vsync, "V-Sync", "Toggles vertical syncing, which can reduce screen tearing");
     try addToggle(options.graphics_tab, &main.settings.enable_lights, "Lights", "Toggles lights, which can reduce frame rates");
 
@@ -357,7 +358,7 @@ fn keyCallback(key_mapper: *KeyMapper) void {
 }
 
 fn closeCallback(ud: ?*anyopaque) void {
-    const screen: *Options = @alignCast(@ptrCast(ud.?));
+    const screen: *Options = @ptrCast(@alignCast(ud.?));
     screen.setVisible(false);
     input.disable_input = false;
 
@@ -369,15 +370,15 @@ fn resetToDefaultsCallback(_: ?*anyopaque) void {
 }
 
 fn generalTabCallback(ud: ?*anyopaque) void {
-    switchTab(@alignCast(@ptrCast(ud.?)), .general);
+    switchTab(@ptrCast(@alignCast(ud.?)), .general);
 }
 
 fn graphicsTabCallback(ud: ?*anyopaque) void {
-    switchTab(@alignCast(@ptrCast(ud.?)), .graphics);
+    switchTab(@ptrCast(@alignCast(ud.?)), .graphics);
 }
 
 fn miscTabCallback(ud: ?*anyopaque) void {
-    switchTab(@alignCast(@ptrCast(ud.?)), .misc);
+    switchTab(@ptrCast(@alignCast(ud.?)), .misc);
 }
 
 fn disconnectCallback(ud: ?*anyopaque) void {

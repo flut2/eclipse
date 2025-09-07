@@ -26,7 +26,7 @@ struct InstanceData {
     uint text_type;
     float rotation;
     float text_dist_factor;
-    uint shadow_color;
+    uint padding1;
     float alpha_mult;
     uint outline_color;
     float outline_width;
@@ -36,7 +36,7 @@ struct InstanceData {
     vec2 size;
     vec2 uv;
     vec2 uv_size;
-    vec2 shadow_texel_size;
+    vec2 padding2;
     vec4 scissor;
 };
 

@@ -250,7 +250,7 @@ pub fn draw(
         w,
         h,
         self.atlas_data,
-        .{ .shadow_texel_mult = 2.0 / size, .rotation = angle, .color = color, .color_intensity = color_intensity },
+        .{ .rotation = angle, .color = color, .color_intensity = color_intensity },
     );
     sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 }

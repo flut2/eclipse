@@ -112,13 +112,11 @@ pub const TextData = struct {
     text_type: TextType = .medium,
     color: u32 = 0xFFFFFF,
     alpha: f32 = 1.0,
-    shadow_color: u32 = 0x000000,
-    shadow_alpha_mult: f32 = 0.5,
-    shadow_texel_offset_mult: f32 = 0.0,
     outline_color: u32 = 0x000000,
-    outline_width: f32 = 5.0,
+    outline_width: f32 = 0.33,
     password: bool = false,
     handle_special_chars: bool = true,
+    disable_subpixel: bool = false,
     scissor: ScissorRect = .{},
     // alignments other than default need max width/height defined respectively
     hori_align: AlignHori = .left,
@@ -656,7 +654,6 @@ pub const NormalImageData = struct {
             .scissor = if (scissor_override) |s| s else self.scissor,
             .color = self.color,
             .color_intensity = self.color_intensity,
-            .shadow_texel_mult = if (self.glow) 2.0 / @max(self.scale_x, self.scale_y) else 0.0,
         };
         Renderer.drawQuad(generics, sort_extras, x, y, self.texWRaw(), self.texHRaw(), self.atlas_data, opts);
     }

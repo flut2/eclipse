@@ -9,7 +9,7 @@ const uint quad_render_type = 0;
 const uint ui_quad_render_type = 1;
 const uint minimap_render_type = 2;
 const uint text_normal_render_type = 3;
-const uint text_drop_shadow_render_type = 4;
+const uint text_subpixel_render_type = 4;
 
 layout(location = 0) flat in int instance_id;
 layout(location = 1) in vec2 in_uv;
@@ -21,7 +21,7 @@ struct InstanceData {
     uint text_type;
     float rotation;
     float text_dist_factor;
-    uint shadow_color;
+    uint padding1;
     float alpha_mult;
     uint outline_color;
     float outline_width;
@@ -31,7 +31,7 @@ struct InstanceData {
     vec2 size;
     vec2 uv;
     vec2 uv_size;
-    vec2 shadow_texel_size;
+    vec2 padding2;
     vec4 scissor;
 };
 
@@ -69,12 +69,12 @@ vec3 unpackColor(uint color) {
     );
 }
 
-float median(float r, float g, float b) {
-    return max(min(r, g), min(max(r, g), b));
+float median(vec3 tex) {
+    return max(min(tex.r, tex.g), min(max(tex.r, tex.g), tex.b));
 }
 
-float sampleMsdf(vec4 tex, float dist_factor, float width) {
-    return clamp((median(tex.r, tex.g, tex.b) - 0.5) * dist_factor + 0.5 + width, 0.0, 1.0);
+float sampleMsdf(float msdf, float dist_factor, float width) {
+    return clamp((msdf - 0.5 + width) * dist_factor + 0.5, 0.0, 1.0);
 }
 
 void main() {
@@ -129,63 +129,78 @@ void main() {
                     break;
             }
 
-            float alpha = sampleMsdf(tex, instance.text_dist_factor, 0.0);
+            float msdf = median(tex.rgb);
+            if (msdf == 0.0) discard;
+            
+            float alpha = sampleMsdf(msdf, instance.text_dist_factor, 0.0);
             vec4 base_pixel = vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult);
             if (instance.outline_width <= 0.0) {
                 color = premultiply(base_pixel);
                 return;
             }
 
-            float outline_alpha = sampleMsdf(tex, instance.text_dist_factor, instance.outline_width);
+            float outline_alpha = sampleMsdf(msdf, instance.text_dist_factor, instance.outline_width);
             color = premultiply(mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult));
             return;
         }
 
-        case text_drop_shadow_render_type: {
-            vec4 tex = vec4(0.0, 0.0, 0.0, 0.0);
-            vec4 tex_offset = vec4(0.0, 0.0, 0.0, 0.0);
+        case text_subpixel_render_type: {
+            vec2 subpixel_width = vec2((abs(dx.x) + abs(dy.x)) / 3.0, 0.0);
+
+            vec4 red = vec4(0.0, 0.0, 0.0, 0.0);
+            vec4 green = vec4(0.0, 0.0, 0.0, 0.0);
+            vec4 blue = vec4(0.0, 0.0, 0.0, 0.0);
             switch (instance.text_type) {
                 default: discard;
 
-                case medium_text_type: {
-                    tex = textureGrad(medium_text_tex, in_uv, dx, dy);
-                    tex_offset = textureGrad(medium_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
+                case medium_text_type:
+                    red = textureGrad(medium_text_tex, in_uv - subpixel_width, dx, dy);
+                    green = textureGrad(medium_text_tex, in_uv, dx, dy);
+                    blue = textureGrad(medium_text_tex, in_uv + subpixel_width, dx, dy);
                     break;
-                }
-                case medium_italic_text_type: {
-                    tex = textureGrad(medium_italic_text_tex, in_uv, dx, dy);
-                    tex_offset = textureGrad(medium_italic_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
-                    break;
-                }
 
-                case bold_text_type: {
-                    tex = textureGrad(bold_text_tex, in_uv, dx, dy);
-                    tex_offset = textureGrad(bold_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
+                case medium_italic_text_type:
+                    red = textureGrad(medium_italic_text_tex, in_uv - subpixel_width, dx, dy);
+                    green = textureGrad(medium_italic_text_tex, in_uv, dx, dy);
+                    blue = textureGrad(medium_italic_text_tex, in_uv + subpixel_width, dx, dy);
                     break;
-                }
 
-                case bold_italic_text_type: {
-                    tex = textureGrad(bold_italic_text_tex, in_uv, dx, dy);
-                    tex_offset = textureGrad(bold_italic_text_tex, in_uv - instance.shadow_texel_size, dx, dy);
+                case bold_text_type:
+                    red = textureGrad(bold_text_tex, in_uv - subpixel_width, dx, dy);
+                    green = textureGrad(bold_text_tex, in_uv, dx, dy);
+                    blue = textureGrad(bold_text_tex, in_uv + subpixel_width, dx, dy);
                     break;
-                }
+                
+                case bold_italic_text_type:
+                    red = textureGrad(bold_italic_text_tex, in_uv - subpixel_width, dx, dy);
+                    green = textureGrad(bold_italic_text_tex, in_uv, dx, dy);
+                    blue = textureGrad(bold_italic_text_tex, in_uv + subpixel_width, dx, dy);
+                    break;
             }
 
-            float alpha = sampleMsdf(tex, instance.text_dist_factor, 0.0);
-            vec4 base_pixel = vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult);
+            float red_dist = median(red.rgb);
+            float green_dist = median(green.rgb);
+            float blue_dist = median(blue.rgb);
+            if (red_dist == 0.0 && green_dist == 0.0 && blue_dist == 0.0) discard;
+            
+            float red_alpha = sampleMsdf(red_dist, instance.text_dist_factor, 0.0) * instance.alpha_mult;
+            float green_alpha = sampleMsdf(green_dist, instance.text_dist_factor, 0.0) * instance.alpha_mult;
+            float blue_alpha = sampleMsdf(blue_dist, instance.text_dist_factor, 0.0) * instance.alpha_mult;
 
-            float offset_opacity = sampleMsdf(tex_offset, instance.text_dist_factor, instance.outline_width);
-            vec4 offset_pixel = vec4(unpackColor(instance.shadow_color), offset_opacity * instance.alpha_mult);
-
+            vec3 base_color = unpackColor(instance.base_color);
+            vec4 base_pixel = vec4(
+                base_color.r * red_alpha,
+                base_color.g * green_alpha,
+                base_color.b * blue_alpha,
+                (red_alpha + green_alpha + blue_alpha) / 3.0
+            );
             if (instance.outline_width <= 0.0) {
-                color = premultiply(mix(offset_pixel, base_pixel, alpha));
+                color = premultiply(base_pixel);
                 return;
             }
 
-            float outline_alpha = sampleMsdf(tex, instance.text_dist_factor, instance.outline_width);
-            vec4 outlined_pixel = mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult);
-
-            color = premultiply(mix(offset_pixel, outlined_pixel, outline_alpha));
+            float outline_alpha = sampleMsdf(green_dist, instance.text_dist_factor, instance.outline_width);
+            color = premultiply(mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, green_alpha));
             return;
         }
     }

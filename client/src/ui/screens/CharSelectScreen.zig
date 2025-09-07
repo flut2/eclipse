@@ -379,7 +379,7 @@ pub fn refresh(self: *CharSelectScreen) !void {
             .vert_align = .middle,
             .max_width = cam_w,
             .max_height = self.box_container.base.y,
-            .outline_width = 2.5,
+            .outline_width = 0.17,
         },
     });
     self.name_text.text_data.setText(

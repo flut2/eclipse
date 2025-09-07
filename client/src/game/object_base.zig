@@ -318,7 +318,7 @@ pub fn drawConditions(
                     cond_w,
                     cond_h,
                     current_frame,
-                    .{ .shadow_texel_mult = 1.0, .sort_extra = (base_y - y) + (base_h - cond_h) },
+                    .{ .sort_extra = (base_y - y) + (base_h - cond_h) },
                 );
                 sort_randoms.append(main.allocator, sort_random) catch main.oomPanic();
 

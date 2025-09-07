@@ -163,7 +163,7 @@ pub fn draw(
         player_icon_w,
         player_icon_h,
         player_icon,
-        .{ .shadow_texel_mult = 0.5, .scissor = self.base.scissor },
+        .{ .scissor = self.base.scissor },
     );
 
     for (self.icons.items) |icon| {
@@ -178,7 +178,7 @@ pub fn draw(
             icon_w,
             icon_h,
             icon_data,
-            .{ .shadow_texel_mult = 0.5, .scissor = self.base.scissor },
+            .{ .scissor = self.base.scissor },
         );
     }
 }

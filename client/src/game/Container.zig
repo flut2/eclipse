@@ -124,7 +124,6 @@ pub fn draw(
         h,
         atlas_data,
         .{
-            .shadow_texel_mult = 2.0 / size,
             .alpha_mult = alpha_mult,
             .color = color,
             .color_intensity = color_intensity,
