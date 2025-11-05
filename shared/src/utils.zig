@@ -347,7 +347,7 @@ pub fn halfBound(angle: f32) f32 {
 pub inline fn distSqr(x1: f32, y1: f32, x2: f32, y2: f32) f32 {
     const x_dt = x2 - x1;
     const y_dt = y2 - y1;
-    return x_dt * x_dt + y_dt * y_dt;
+    return @mulAdd(f32, x_dt, x_dt, y_dt * y_dt);
 }
 
 pub inline fn dist(x1: f32, y1: f32, x2: f32, y2: f32) f32 {

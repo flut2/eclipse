@@ -822,8 +822,7 @@ fn updateMove(obj: anytype, pre_x: f32, pre_y: f32, tick_time: f32) void {
 
     obj.move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
     if (!std.math.isNan(obj.move_angle)) {
-        const dist_sqr = y_dt * y_dt + x_dt * x_dt;
-        obj.move_step = @sqrt(dist_sqr) / tick_time;
+        obj.move_step = @sqrt(@mulAdd(f32, x_dt, x_dt, y_dt * y_dt)) / tick_time;
         obj.target_x = obj.x;
         obj.target_y = obj.y;
         obj.x = pre_x;

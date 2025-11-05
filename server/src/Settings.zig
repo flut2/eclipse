@@ -12,7 +12,7 @@ redis_port: u16 = 6379,
 public_ip: []const u8 = "127.0.0.1",
 server_name: []const u8 = "Eclipse",
 build_version: []const u8 = "0.1",
-tps: u16 = 30,
+tps: u16 = 10,
 
 pub fn init(allocator: std.mem.Allocator) !Settings {
     arena = std.heap.ArenaAllocator.init(allocator);
