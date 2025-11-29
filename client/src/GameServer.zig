@@ -59,6 +59,7 @@ read_arena: std.heap.ArenaAllocator = undefined,
 hello_data: network_data.C2SPacket = undefined,
 map_hello_fragments: ?[]network_data.C2SPacket = null,
 initialized: bool = false,
+tick_time: i64 = @as(f32, std.time.us_per_s) / 10.0,
 
 fn PacketData(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?) type {
     return @typeInfo(network_data.S2CPacket).@"union".fields[@intFromEnum(tag)].type;
@@ -709,6 +710,8 @@ fn handleDropProjs(_: *Server, data: PacketData(.drop_projs)) void {
 }
 
 fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
+    self.tick_time = data.tick_time;
+
     defer {
         if (main.tick_frame) {
             const time = main.current_time;
@@ -747,33 +750,33 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     if (logRead(.tick)) std.log.debug("Recv - NewTick: {}", .{data});
 }
 
-fn handleNewPlayers(_: *Server, data: PacketData(.new_players)) void {
-    newObject(Player, data.list);
+fn handleNewPlayers(self: *Server, data: PacketData(.new_players)) void {
+    newObject(Player, data.list, f32i(self.tick_time));
     if (logRead(.tick)) std.log.debug("Recv - NewPlayers: {}", .{data});
 }
 
-fn handleNewEntities(_: *Server, data: PacketData(.new_entities)) void {
-    newObject(Entity, data.list);
+fn handleNewEntities(self: *Server, data: PacketData(.new_entities)) void {
+    newObject(Entity, data.list, f32i(self.tick_time));
     if (logRead(.tick)) std.log.debug("Recv - NewEntities: {}", .{data});
 }
 
-fn handleNewEnemies(_: *Server, data: PacketData(.new_enemies)) void {
-    newObject(Enemy, data.list);
+fn handleNewEnemies(self: *Server, data: PacketData(.new_enemies)) void {
+    newObject(Enemy, data.list, f32i(self.tick_time));
     if (logRead(.tick)) std.log.debug("Recv - NewEnemies: {}", .{data});
 }
 
-fn handleNewPortals(_: *Server, data: PacketData(.new_portals)) void {
-    newObject(Portal, data.list);
+fn handleNewPortals(self: *Server, data: PacketData(.new_portals)) void {
+    newObject(Portal, data.list, f32i(self.tick_time));
     if (logRead(.tick)) std.log.debug("Recv - NewPortals: {}", .{data});
 }
 
-fn handleNewContainers(_: *Server, data: PacketData(.new_containers)) void {
-    newObject(Container, data.list);
+fn handleNewContainers(self: *Server, data: PacketData(.new_containers)) void {
+    newObject(Container, data.list, f32i(self.tick_time));
     if (logRead(.tick)) std.log.debug("Recv - NewContainers: {}", .{data});
 }
 
-fn handleNewAllies(_: *Server, data: PacketData(.new_allies)) void {
-    newObject(Ally, data.list);
+fn handleNewAllies(self: *Server, data: PacketData(.new_allies)) void {
+    newObject(Ally, data.list, f32i(self.tick_time));
     if (logRead(.tick)) std.log.debug("Recv - NewAllies: {}", .{data});
 }
 
@@ -782,9 +785,7 @@ fn droppedObject(comptime T: type, list: []const u32) void {
     for (list) |map_id| _ = map.removeEntity(T, map_id);
 }
 
-fn newObject(comptime T: type, list: []const network_data.ObjectData) void {
-    const tick_time = @as(f32, std.time.us_per_s) / 20.0;
-
+fn newObject(comptime T: type, list: []const network_data.ObjectData, tick_time: f32) void {
     for (list) |obj| {
         var stat_reader: utils.PacketReader = .{ .buffer = obj.stats };
         if (map.findObjectRef(T, obj.map_id)) |object| {

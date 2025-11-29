@@ -70,6 +70,7 @@ cards: []u16 = &.{},
 resources: std.ArrayList(network_data.DataIdWithCount(u32)) = .empty,
 talents: std.ArrayList(network_data.DataIdWithCount(u16)) = .empty,
 muted_until: i64 = 0,
+last_update: i64 = std.math.minInt(i64),
 condition: utils.Condition = .{},
 caches: struct {
     player: std.AutoHashMapUnmanaged(u32, [@typeInfo(network_data.PlayerStat).@"union".fields.len]?network_data.PlayerStat) = .empty,
@@ -621,7 +622,16 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
         }
     }
 
-    self.client.sendPacket(.{ .new_tick = .{ .tick_id = main.tick_id, .tiles = self.tiles.items } });
+    const tick_time = if (self.last_update == std.math.minInt(i64))
+        @divFloor(std.time.us_per_s, @as(i64, main.settings.tps))
+    else
+        time - self.last_update;
+    self.last_update = time;
+    self.client.sendPacket(.{ .new_tick = .{
+        .tick_id = main.tick_id,
+        .tick_time = tick_time,
+        .tiles = self.tiles.items,
+    } });
 
     const max_bytes = std.math.maxInt(u15);
     inline for (.{
@@ -640,7 +650,6 @@ pub fn tick(self: *Player, time: i64, dt: i64) !void {
                 .map_ids = mapping[1][i * max_bytes / child_size .. @min((total_size - i * max_bytes) / child_size, (i + 1) * max_bytes / child_size)],
             }));
     }
-
     inline for (.{
         .{ "new_players", self.objs.player.items },
         .{ "new_entities", self.objs.entity.items },

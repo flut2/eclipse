@@ -368,7 +368,7 @@ pub const S2CPacket = union(enum) {
         text_color: u32,
     },
     damage: extern struct { player_map_id: u32, amount: i32, effects: utils.Condition, damage_type: DamageType },
-    new_tick: struct { tick_id: u8, tiles: []const TileData },
+    new_tick: struct { tick_id: u8, tick_time: i64, tiles: []const TileData },
     new_players: struct { list: []const ObjectData },
     new_enemies: struct { list: []const ObjectData },
     new_entities: struct { list: []const ObjectData },
