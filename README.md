@@ -4,7 +4,7 @@
 
 - Vulkan SDK set up
 - A Redis-compatible server running (or Dragonfly if toggled on in the server build options)
-- Zig 0.15.1
+- Zig 0.15.2
 
 **Usage:**
 
