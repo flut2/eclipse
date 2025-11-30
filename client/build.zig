@@ -113,7 +113,6 @@ pub fn buildWithoutDupes(
         exe.root_module.addImport("zstbi", zstbi_dep.module("root"));
         exe.linkLibrary(zstbi_dep.artifact("zstbi"));
 
-        @import("system_sdk").addLibraryPathsTo(exe);
         const zaudio_dep = b.dependency("zaudio", .{
             .target = target,
             .optimize = optimize,

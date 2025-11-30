@@ -66,11 +66,6 @@ pub fn build(b: *std.Build) void {
             tracy.linkSystemLibrary("ws2_32");
             tracy.linkSystemLibrary("dbghelp");
         },
-        .macos => {
-            if (b.lazyDependency("system_sdk", .{})) |system_sdk| {
-                tracy.addFrameworkPath(system_sdk.path("System/Library/Frameworks"));
-            }
-        },
         else => {},
     }
 

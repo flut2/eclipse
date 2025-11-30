@@ -9,7 +9,4 @@
         "src",
         "README.md",
     },
-    .dependencies = .{
-        .system_sdk = .{ .path = "../../../shared/libs/system-sdk" },
-    },
 }

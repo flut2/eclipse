@@ -5,7 +5,6 @@
     .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .shared = .{ .path = "../shared" },
-        .system_sdk = .{ .path = "../shared/libs/system-sdk" },
         .native_file_dialog = .{ .path = "libs/native-file-dialog" },
         .zstbi = .{ .path = "libs/zstbi" },
         .zglfw = .{ .path = "libs/zglfw" },

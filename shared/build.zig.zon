@@ -4,7 +4,6 @@
     .version = "1.0.0",
     .minimum_zig_version = "0.15.1",
     .dependencies = .{
-        .system_sdk = .{ .path = "libs/system-sdk" },
         .ztracy = .{ .path = "libs/ztracy" },
         .ziggy = .{ .path = "../ziggy" },
         .libuv = .{

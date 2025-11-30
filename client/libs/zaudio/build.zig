@@ -22,11 +22,6 @@ pub fn build(b: *std.Build) void {
     miniaudio.linkLibC();
 
     if (target.result.os.tag == .macos) {
-        if (b.lazyDependency("system_sdk", .{})) |system_sdk| {
-            miniaudio.addFrameworkPath(system_sdk.path("macos12/System/Library/Frameworks"));
-            miniaudio.addSystemIncludePath(system_sdk.path("macos12/usr/include"));
-            miniaudio.addLibraryPath(system_sdk.path("macos12/usr/lib"));
-        }
         miniaudio.linkFramework("CoreAudio");
         miniaudio.linkFramework("CoreFoundation");
         miniaudio.linkFramework("AudioUnit");
