@@ -12,13 +12,35 @@ concurrency:
   group: ${{ github.head_ref || github.run_id }}-${{ github.actor }}
   cancel-in-progress: true
 jobs:
-  build:
+  build-ubuntu:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         build-type: [client, server]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install packages
+        run: |
+          sudo apt update
+          sudo apt install libglfw3 libglfw3-dev libatk1.0-0 libgtk-3-dev libglib2.0-dev
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.2
+        with:
+          version: 1.4.309.0
+          cache: true
+      - name: Build
+        working-directory: ./${{ matrix.build-type }}
+        run: zig build
+  build-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: [client, server]
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
