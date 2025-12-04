@@ -16,22 +16,6 @@ pub const File = union(Language) {
             inline else => |*x| x.deinit(),
         }
     }
-    // Clamps the returned value to code.len
-    pub fn offsetFromPosition(f: File, line: u32, col: u32) u32 {
-        const code = switch (f) {
-            inline else => |d| d.bytes,
-        };
-
-        var count: u32 = 0;
-        var idx: u32 = 0;
-        while (count < line) : (idx += 1) {
-            if (code[idx] == '\n') {
-                count += 1;
-            }
-        }
-
-        return @min(code.len, idx + col);
-    }
 };
 
 const log = std.log.scoped(.ziggy_lsp);
@@ -67,7 +51,9 @@ pub fn loadFile(
             switch (sk.diagnostic.err) {
                 .none => {},
                 else => {
-                    const msg = try std.fmt.allocPrint(arena, "{lsp}", .{sk.diagnostic});
+                    const msg = try std.fmt.allocPrint(arena, "{f}", .{
+                        sk.diagnostic,
+                    });
                     const sel = sk.diagnostic.tok.loc.getSelection(sk.bytes);
                     res.diagnostics = &.{
                         .{
@@ -120,7 +106,10 @@ pub fn loadFile(
 
             const diags = try arena.alloc(lsp.types.Diagnostic, doc.diagnostic.errors.items.len);
             for (doc.diagnostic.errors.items, 0..) |e, idx| {
-                const msg = try std.fmt.allocPrint(arena, "{lsp}", .{e.fmt(doc.bytes, null)});
+                const msg = try std.fmt.allocPrint(arena, "{f}", .{
+                    e.fmt(.lsp, doc.bytes, null),
+                });
+
                 const sel = e.getErrorSelection();
                 diags[idx] = .{
                     .range = .{
@@ -142,12 +131,13 @@ pub fn loadFile(
         },
     }
     log.debug("sending diags!", .{});
-    const msg = try self.server.sendToClientNotification(
+    try self.transport.writeNotification(
+        self.gpa,
         "textDocument/publishDiagnostics",
+        lsp.types.PublishDiagnosticsParams,
         res,
+        .{ .emit_null_optional_fields = false },
     );
-
-    defer self.gpa.free(msg);
 }
 
 pub fn schemaForZiggy(self: *Handler, arena: std.mem.Allocator, uri: []const u8) !?Schema {
@@ -159,7 +149,7 @@ pub fn schemaForZiggy(self: *Handler, arena: std.mem.Allocator, uri: []const u8)
             path,
             ziggy.max_size,
             null,
-            .fromByteUnits(1),
+            .of(u8),
             0,
         ) catch return null;
         log.debug("schema loaded", .{});

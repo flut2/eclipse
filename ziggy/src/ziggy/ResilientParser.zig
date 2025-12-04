@@ -1,16 +1,3 @@
-const std = @import("std");
-const mem = std.mem;
-const assert = std.debug.assert;
-
-const ziggy = @import("../root.zig");
-const Rule = ziggy.schema.Schema.Rule;
-const Diagnostic = @import("Diagnostic.zig");
-const RecoverAst = @import("RecoverAst.zig");
-const Suggestion = RecoverAst.Suggestion;
-const Hover = RecoverAst.Hover;
-const Tokenizer = @import("Tokenizer.zig");
-const Token = Tokenizer.Token;
-
 const Parser = @This();
 
 gpa: std.mem.Allocator,
@@ -18,12 +5,25 @@ code: [:0]const u8,
 tokenizer: Tokenizer,
 diagnostic: ?*Diagnostic,
 fuel: u32,
-events: std.ArrayList(Event) = .empty,
+events: std.ArrayList(Event) = .{},
 
+const std = @import("std");
+const mem = std.mem;
+const assert = std.debug.assert;
+const ziggy = @import("../root.zig");
+const Diagnostic = @import("Diagnostic.zig");
+const Tokenizer = @import("Tokenizer.zig");
+const Token = Tokenizer.Token;
+const Rule = ziggy.schema.Schema.Rule;
 const log = std.log.scoped(.resilient_parser);
+const RecoverAst = @import("RecoverAst.zig");
+const Suggestion = RecoverAst.Suggestion;
+const Hover = RecoverAst.Hover;
+const Writer = std.Io.Writer;
+
 pub const Tree = struct {
     tag: Tree.Tag,
-    children: std.ArrayList(Child) = .empty,
+    children: std.ArrayList(Child) = .{},
     suggestions: []const Suggestion = &.{},
     hovers: []const Hover = &.{},
 
@@ -67,8 +67,8 @@ pub const Tree = struct {
         gpa.free(t.hovers);
     }
 
-    pub fn fmt(t: Tree, code: [:0]const u8) TreeFmt {
-        return .{ .code = code, .tree = t };
+    pub fn fmt(t: Tree, pretty: bool, code: [:0]const u8) TreeFmt {
+        return .{ .pretty = pretty, .code = code, .tree = t };
     }
 
     const CheckItem = struct {
@@ -91,18 +91,18 @@ pub const Tree = struct {
         ziggy_code: [:0]const u8,
     ) !void {
         // TODO: check ziggy file against this ruleset
-        var stack = std.array_list.Managed(CheckItem).init(gpa);
-        defer stack.deinit();
+        var stack: std.ArrayList(CheckItem) = .empty;
+        defer stack.deinit(gpa);
 
-        var suggestions = std.array_list.Managed(Suggestion).init(gpa);
-        var hovers = std.array_list.Managed(Hover).init(gpa);
+        var suggestions: std.ArrayList(Suggestion) = .empty;
+        var hovers: std.ArrayList(Hover) = .empty;
         defer {
-            doc.suggestions = suggestions.toOwnedSlice() catch blk: {
-                suggestions.deinit();
+            doc.suggestions = suggestions.toOwnedSlice(gpa) catch blk: {
+                suggestions.deinit(gpa);
                 break :blk &.{};
             };
-            doc.hovers = hovers.toOwnedSlice() catch blk: {
-                hovers.deinit();
+            doc.hovers = hovers.toOwnedSlice(gpa) catch blk: {
+                hovers.deinit(gpa);
                 break :blk &.{};
             };
         }
@@ -122,7 +122,7 @@ pub const Tree = struct {
                 return;
             }
             assert(doc_root_val < items.len);
-            try stack.append(.{
+            try stack.append(gpa, .{
                 .rule = rules.root,
                 .child = items[doc_root_val],
             });
@@ -134,8 +134,8 @@ pub const Tree = struct {
             const tree = elem.child.tree;
 
             log.debug(
-                "rule {s} {s}, child {}",
-                .{ @tagName(rule.tag), rule.loc.src(rules.code), elem.child },
+                "rule {t} {s}, child {f}",
+                .{ rule.tag, rule.loc.src(rules.code), elem.child },
             );
             if (tree.tag == .err) {
                 // assume error has already been reported. nothing to do here.
@@ -150,7 +150,7 @@ pub const Tree = struct {
                         const child_rule: Rule = .{ .node = rule.first_child_id };
                         assert(child_rule.node != 0);
 
-                        try stack.append(.{
+                        try stack.append(gpa, .{
                             .optional = true,
                             .rule = child_rule,
                             .child = elem.child,
@@ -177,7 +177,7 @@ pub const Tree = struct {
                                     else => {},
                                 }
                             }
-                            try stack.append(.{
+                            try stack.append(gpa, .{
                                 .rule = child_rule,
                                 .child = arr_child,
                             });
@@ -204,12 +204,12 @@ pub const Tree = struct {
                         var child_id: usize = 0;
                         while (child_id < tree.children.items.len) : (child_id += 1) {
                             const map_child = tree.children.items[child_id];
-                            log.debug("map_child {}", .{map_child});
+                            log.debug("map_child {f}", .{map_child});
                             if (map_child == .tree and
                                 map_child.tree.tag == .map_field and
                                 map_child.tree.children.items.len >= 3)
                             {
-                                try stack.append(.{
+                                try stack.append(gpa, .{
                                     .rule = child_rule,
                                     .child = map_child.tree.children.items[2],
                                 });
@@ -250,7 +250,7 @@ pub const Tree = struct {
                             defer ident_id = id_rule.next_id;
                             const id_rule_src = id_rule.loc.src(rules.code);
                             if (std.mem.eql(u8, struct_name, id_rule_src)) {
-                                try stack.append(.{
+                                try stack.append(gpa, .{
                                     .rule = .{ .node = ident_id },
                                     .child = elem.child,
                                 });
@@ -316,7 +316,7 @@ pub const Tree = struct {
                             }
                             // log.debug("field tree {}", .{field.tree.fmt(ziggy_code)});
                             if (field.tree.children.items.len < 2) {
-                                try suggestions.append(.{
+                                try suggestions.append(gpa, .{
                                     .loc = .{
                                         .start = field.loc().start,
                                         .end = field.loc().end,
@@ -331,7 +331,7 @@ pub const Tree = struct {
                             const field_name = field_name_node.token.loc.src(ziggy_code);
                             const field_rule = struct_rule.fields.get(field_name) orelse {
                                 log.debug("appending suggestion at {}", .{field_name_node.token.loc});
-                                try suggestions.append(.{
+                                try suggestions.append(gpa, .{
                                     .loc = .{
                                         .start = field.loc().start,
                                         .end = field_name_node.loc().end,
@@ -351,13 +351,13 @@ pub const Tree = struct {
                             // diagnostic errors produced.  but they appear as
                             // normal struct_field trees here.
                             try seen_fields.put(field_name, {});
-                            try hovers.append(.{
+                            try hovers.append(gpa, .{
                                 .loc = .{ .start = field.loc().start, .end = field_name_node.token.loc.end },
                                 .hover = field_rule.help.doc,
                             });
                             // guard against incomplete fields / errors
                             if (field.tree.children.items.len > 3) {
-                                try stack.append(.{
+                                try stack.append(gpa, .{
                                     .rule = field_rule.rule,
                                     // skip first 3 tokens of struct field: dot, name, equal
                                     .child = field.tree.children.items[3],
@@ -369,14 +369,14 @@ pub const Tree = struct {
                         }
                         log.debug("seen_fields.count {} struct_rule.fields.count {}", .{ seen_fields.count(), struct_rule.fields.count() });
                         if (seen_fields.count() != struct_rule.fields.count()) {
-                            var completions = std.array_list.Managed(Suggestion.Completion).init(gpa);
+                            var completions: std.ArrayList(Suggestion.Completion) = .empty;
                             const any_suggestion = suggestions_start != suggestions.items.len;
                             log.debug("any_suggestion {} suggestions {}", .{ any_suggestion, suggestions.items.len });
 
                             for (struct_rule.fields.keys(), struct_rule.fields.values()) |k, v| {
                                 if (rules.nodes[v.rule.node].tag == .optional) {
                                     if (any_suggestion and !seen_fields.contains(k)) {
-                                        try completions.append(.{
+                                        try completions.append(gpa, .{
                                             .name = k,
                                             .type = rules.nodes[v.rule.node].loc.src(rules.code),
                                             .desc = v.help.doc,
@@ -388,7 +388,7 @@ pub const Tree = struct {
 
                                 if (!seen_fields.contains(k)) {
                                     if (any_suggestion) {
-                                        try completions.append(.{
+                                        try completions.append(gpa, .{
                                             .name = k,
                                             .type = rules.nodes[v.rule.node].loc.src(rules.code),
                                             .desc = v.help.doc,
@@ -430,18 +430,18 @@ pub const Tree = struct {
                             try typeMismatch(gpa, rules, diag, elem, ziggy_code);
                         } else {
                             const literal_rule = rules.literals.get(rule_src).?;
-                            try hovers.append(.{
+                            try hovers.append(gpa, .{
                                 .loc = tree.loc(),
                                 .hover = literal_rule.hover,
                             });
 
-                            var cases = std.array_list.Managed(Suggestion.Completion).init(gpa);
-                            errdefer cases.deinit();
+                            var cases: std.ArrayList(Suggestion.Completion) = .empty;
+                            errdefer cases.deinit(gpa);
 
                             var enum_idx = rules.nodes[literal_rule.expr].first_child_id;
                             while (enum_idx != 0) {
                                 const enum_case = rules.nodes[enum_idx];
-                                try cases.append(.{
+                                try cases.append(gpa, .{
                                     .name = enum_case.loc.src(rules.code),
                                     .type = "bytes",
                                     .desc = "",
@@ -455,7 +455,7 @@ pub const Tree = struct {
                                 string_loc = child.loc();
                                 if (child == .token and child.token.tag == .string) break;
                             }
-                            try suggestions.append(.{
+                            try suggestions.append(gpa, .{
                                 .loc = string_loc,
                                 .completions = cases.items,
                             });
@@ -566,17 +566,15 @@ pub const Tree = struct {
 };
 
 pub const TreeFmt = struct {
+    pretty: bool,
     code: [:0]const u8,
     tree: Tree,
 
     pub fn format(
         tfmt: TreeFmt,
-        comptime fmt_str: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
+        writer: *Writer,
     ) !void {
-        _ = options;
-        if (mem.eql(u8, fmt_str, "pretty"))
+        if (tfmt.pretty)
             try tfmt.prettyPrint(writer, 0, false)
         else
             try tfmt.dump(writer, 0);
@@ -588,7 +586,7 @@ pub const TreeFmt = struct {
         indent: u8,
         i: usize,
         has_trailing_comma: bool,
-        writer: anytype,
+        writer: *Writer,
     ) !void {
         switch (token.tag) {
             .string, .integer, .float => {
@@ -609,12 +607,12 @@ pub const TreeFmt = struct {
             },
             .line_string => {
                 try writer.writeByte('\n');
-                try writer.writeByteNTimes(' ', (indent + 1) * 4);
+                try writer.splatByteAll(' ', (indent + 1) * 4);
                 try writer.writeAll(token.loc.src(tfmt.code));
                 // if this is the last line string, indent for a trailing comma
                 if (i + 1 == tfmt.tree.children.items.len) {
                     try writer.writeByte('\n');
-                    try writer.writeByteNTimes(' ', (indent + 1) * 4);
+                    try writer.splatByteAll(' ', (indent + 1) * 4);
                 }
             },
             else => {
@@ -629,7 +627,7 @@ pub const TreeFmt = struct {
                         (tfmt.tree.children.items[i + 1].token.tag == .rsb or
                             tfmt.tree.children.items[i + 1].token.tag == .rb);
                     const new_indent = (indent -| @intFromBool(unindent)) * 4;
-                    try writer.writeByteNTimes(' ', new_indent);
+                    try writer.splatByteAll(' ', new_indent);
                 } else if (tfmt.tree.tag == .top_level_struct) {
                     try writer.writeByte('\n');
                 } else {
@@ -645,7 +643,7 @@ pub const TreeFmt = struct {
 
     fn prettyPrint(
         tfmt: TreeFmt,
-        writer: anytype,
+        writer: *Writer,
         indent: u8,
         has_trailing_comma: bool,
     ) !void {
@@ -678,7 +676,11 @@ pub const TreeFmt = struct {
                             false;
 
                     const additional_indent = @intFromBool(_has_trailing_comma);
-                    const sub_tfmt = TreeFmt{ .tree = tree, .code = tfmt.code };
+                    const sub_tfmt = TreeFmt{
+                        .pretty = true,
+                        .tree = tree,
+                        .code = tfmt.code,
+                    };
                     try sub_tfmt.prettyPrint(
                         writer,
                         indent + additional_indent,
@@ -689,21 +691,25 @@ pub const TreeFmt = struct {
         }
     }
 
-    fn dump(tfmt: TreeFmt, writer: anytype, indent: usize) !void {
-        try writer.writeByteNTimes(' ', indent * 2);
+    fn dump(tfmt: TreeFmt, writer: *Writer, indent: usize) !void {
+        try writer.splatByteAll(' ', indent * 2);
         _ = try writer.write(@tagName(tfmt.tree.tag));
         try writer.writeByte('\n');
         for (tfmt.tree.children.items) |child| {
             switch (child) {
                 .token => |token| {
-                    try writer.writeByteNTimes(' ', indent * 2);
+                    try writer.splatByteAll(' ', indent * 2);
                     try writer.print(
                         "  '{s}' {}:{}\n",
                         .{ token.loc.src(tfmt.code), token.loc.start, token.loc.end },
                     );
                 },
                 .tree => |tree| {
-                    const sub_tfmt = TreeFmt{ .tree = tree, .code = tfmt.code };
+                    const sub_tfmt = TreeFmt{
+                        .pretty = false,
+                        .tree = tree,
+                        .code = tfmt.code,
+                    };
                     try sub_tfmt.dump(writer, indent + 1);
                 },
             }
@@ -726,12 +732,10 @@ pub const Child = union(enum) {
         if (c.* == .tree) c.tree.deinit(gpa);
     }
 
-    pub fn format(c: Child, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
+    pub fn format(c: Child, writer: *Writer) !void {
         switch (c) {
-            .token => try writer.print("token={s}", .{@tagName(c.token.tag)}),
-            .tree => try writer.print("tree={s}", .{@tagName(c.tree.tag)}),
+            .token => try writer.print("token={t}", .{c.token.tag}),
+            .tree => try writer.print("tree={t}", .{c.tree.tag}),
         }
     }
 };
@@ -1429,7 +1433,7 @@ fn atAny(p: *Parser, tags: []const Token.Tag) bool {
 }
 
 fn addError(p: Parser, err: Diagnostic.Error) !void {
-    log.debug("addError {}", .{err.fmt(p.code, null)});
+    log.debug("addError {f}", .{err.fmt(.cli, p.code, null)});
     if (p.diagnostic) |d| {
         try d.errors.append(p.gpa, err);
     }
@@ -1478,16 +1482,16 @@ fn close(p: *Parser, m: MarkOpened, tag: Tree.Tag) MarkClosed {
 fn buildTree(p: *Parser) !Tree {
     assert(p.events.pop().? == .close);
     p.tokenizer.idx = 0;
-    var stack = std.array_list.Managed(Tree).init(p.gpa);
-    defer stack.deinit();
+    var stack: std.ArrayList(Tree) = .empty;
+    defer stack.deinit(p.gpa);
     for (p.events.items) |event| {
         // log.debug("build_tree() event={}", .{event});
         switch (event) {
-            .open => |tag| try stack.append(.{ .tag = tag }),
+            .open => |tag| try stack.append(p.gpa, .{ .tag = tag }),
             .close => {
                 const tree = stack.pop().?;
                 if (stack.items.len == 0) {
-                    log.debug("tree\n{}\n", .{tree.fmt(p.code)});
+                    log.debug("tree\n{f}\n", .{tree.fmt(false, p.code)});
                 }
                 try stack.items[stack.items.len - 1].children.append(
                     p.gpa,
@@ -1509,8 +1513,8 @@ fn buildTree(p: *Parser) !Tree {
     // has a trailing comma at the end.
     // assert(p.tokenizer.next(p.code).tag == .eof);
     if (stack.items.len != 0) {
-        log.debug("unhandled stack item tree {}", .{tree.fmt(p.code)});
-        for (stack.items) |x| log.debug("unhandled stack item tag {s}", .{@tagName(x.tag)});
+        log.debug("unhandled stack item tree {f}", .{tree.fmt(false, p.code)});
+        for (stack.items) |x| log.debug("unhandled stack item tag {t}", .{x.tag});
         assert(false);
     }
     // log.debug("tree\n{}\n", .{tree.fmt(p.code)});
@@ -1524,11 +1528,11 @@ pub fn expectFmtEql(case: [:0]const u8) !void {
 pub fn expectFmt(case: [:0]const u8, expected: []const u8) !void {
     var diag = Diagnostic{ .path = null };
     defer diag.errors.deinit(std.testing.allocator);
-    errdefer std.debug.print("{}\n", .{diag});
+    errdefer std.debug.print("{f}\n", .{diag.fmt(case)});
     var tree = try init(std.testing.allocator, case, true, false, &diag);
     // std.debug.print("{}\n", .{tree.fmt(case)});
     defer tree.deinit(std.testing.allocator);
-    try std.testing.expectFmt(expected, "{pretty}", .{tree.fmt(case)});
+    try std.testing.expectFmt(expected, "{f}", .{tree.fmt(true, case)});
 }
 
 test "basics" {

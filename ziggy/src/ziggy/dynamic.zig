@@ -1,11 +1,11 @@
 const std = @import("std");
 const assert = std.debug.assert;
-
 const Diagnostic = @import("Diagnostic.zig");
 const Parser = @import("Parser.zig");
-const serializer = @import("serializer.zig");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
+const serializer = @import("serializer.zig");
+const Writer = std.Io.Writer;
 
 pub const Value = union(enum) {
     kv: Map(Value),
@@ -25,7 +25,7 @@ pub const Value = union(enum) {
             opts: serializer.StringifyOptions,
             indent_level: usize,
             depth: usize,
-            writer: anytype,
+            writer: *Writer,
         ) !void {
             switch (value) {
                 .bytes => |b| try writer.print("\"{}\"", .{std.zig.fmtEscapes(b)}),
@@ -71,11 +71,11 @@ pub const Value = union(enum) {
                 },
 
                 .lsb => {
-                    var array = std.array_list.Managed(Value).init(p.gpa);
-                    errdefer array.deinit();
+                    var array: std.ArrayList(Value) = .empty;
+                    errdefer array.deinit(p.gpa);
                     var elem_tok = try p.nextNoEof();
                     while (elem_tok.tag != .rsb) {
-                        const new = try array.addOne();
+                        const new = try array.addOne(p.gpa);
                         new.* = try Value.ziggy_options.parse(p, elem_tok);
 
                         elem_tok = try p.nextMustAny(&.{ .comma, .rsb });
@@ -83,7 +83,7 @@ pub const Value = union(enum) {
                             elem_tok = p.next();
                         }
                     }
-                    return .{ .array = try array.toOwnedSlice() };
+                    return .{ .array = try array.toOwnedSlice(p.gpa) };
                 },
                 else => {
                     return p.addError(.{
@@ -111,6 +111,7 @@ pub fn Map(comptime T: type) type {
         fields: std.StringArrayHashMapUnmanaged(T) = .{},
 
         const Self = @This();
+        const Child = T;
         pub const ziggy_options = struct {
             pub fn parse(
                 parser: *Parser,
@@ -230,7 +231,7 @@ pub fn Map(comptime T: type) type {
                 opts: serializer.StringifyOptions,
                 indent_level: usize,
                 depth: usize,
-                writer: anytype,
+                writer: *Writer,
             ) !void {
                 const omit_curly = opts.omit_top_level_curly and depth == 0;
                 const indent = if (omit_curly) indent_level else indent_level + 1;
@@ -405,7 +406,7 @@ test "map + union stringify" {
                         opts: serializer.StringifyOptions,
                         indent_level: usize,
                         depth: usize,
-                        writer: anytype,
+                        writer: *Writer,
                     ) !void {
                         const omit_curly = opts.omit_top_level_curly and depth == 0;
                         const indent = if (omit_curly) indent_level else indent_level + 1;
@@ -472,9 +473,9 @@ test "map + union stringify" {
         .name = "zine",
         .dependencies = deps,
     };
-    var output = std.array_list.Managed(u8).init(std.testing.allocator);
-    defer output.deinit();
+    var out: Writer.Allocating = .init(std.testing.allocator);
+    defer out.deinit();
 
-    try serializer.stringify(proj, .{ .whitespace = .space_4 }, output.writer());
-    try std.testing.expectEqualStrings(case, output.items);
+    try serializer.stringify(proj, .{ .whitespace = .space_4 }, &out.writer);
+    try std.testing.expectEqualStrings(case, out.written());
 }

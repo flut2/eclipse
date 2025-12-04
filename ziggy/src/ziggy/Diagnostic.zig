@@ -1,16 +1,16 @@
-const std = @import("std");
+const Diagnostic = @This();
 
+const std = @import("std");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-
-const Diagnostic = @This();
+const Writer = std.Io.Writer;
 
 /// A path to the file, used to display diagnostics.
 /// If not present, error positions will be printed as "line: XX col: XX".
 /// This field should be set as needed by users.
 path: ?[]const u8,
 
-errors: std.ArrayList(Error) = .empty,
+errors: std.ArrayListUnmanaged(Error) = .{},
 
 pub const Error = union(enum) {
     overflow,
@@ -27,6 +27,7 @@ pub const Error = union(enum) {
         name: []const u8,
         sel: Token.Loc.Selection,
     },
+
     duplicate_field: struct {
         name: []const u8,
         sel: Token.Loc.Selection,
@@ -97,27 +98,33 @@ pub const Error = union(enum) {
         };
     }
 
-    pub fn fmt(e: Error, src: []const u8, path: ?[]const u8) ErrorFmt {
+    pub fn fmt(
+        e: Error,
+        mode: ErrorFmt.Mode,
+        src: []const u8,
+        path: ?[]const u8,
+    ) ErrorFmt {
         return .{
+            .mode = mode,
             .err = e,
             .src = src,
             .path = path,
         };
     }
+
     pub const ErrorFmt = struct {
+        mode: Mode,
         err: Error,
         src: []const u8,
         path: ?[]const u8,
 
+        pub const Mode = enum { lsp, cli };
+
         pub fn format(
             err_fmt: ErrorFmt,
-            comptime fmt_string: []const u8,
-            options: std.fmt.FormatOptions,
-            out_stream: anytype,
+            out_stream: *Writer,
         ) !void {
-            _ = options;
-
-            const lsp = std.mem.eql(u8, fmt_string, "lsp");
+            const lsp = err_fmt.mode == .lsp;
 
             if (!lsp) {
                 const sel = err_fmt.err.getErrorSelection();
@@ -278,12 +285,10 @@ pub const Formatter = struct {
 
     pub fn format(
         self: Formatter,
-        comptime fmt_string: []const u8,
-        options: std.fmt.FormatOptions,
-        out_stream: anytype,
+        out_stream: *Writer,
     ) !void {
         for (self.diag.errors.items) |e| {
-            try e.fmt(self.src, self.diag.path).format(fmt_string, options, out_stream);
+            try e.fmt(.cli, self.src, self.diag.path).format(out_stream);
         }
     }
 };

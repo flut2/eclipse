@@ -10,10 +10,14 @@ pub const FrontmatterError = Parser.FrontmatterError;
 pub const serializer = @import("ziggy/serializer.zig");
 pub const stringify = serializer.stringify;
 
-pub const lsp_parser: enum { recover, resilient } = .resilient;
-pub const LanguageServerAst = switch (lsp_parser) {
-    .recover => @import("ziggy/RecoverAst.zig"),
-    .resilient => @import("ziggy/ResilientParser.zig"),
+pub const LanguageServerAst = @import("ziggy/ResilientParser.zig");
+
+pub const schema = struct {
+    pub const Diagnostic = @import("schema/Diagnostic.zig");
+    pub const Tokenizer = @import("schema/Tokenizer.zig");
+    pub const Schema = @import("schema/Schema.zig");
+    pub const Ast = @import("schema/Ast.zig");
+    pub const checkType = @import("schema/check_type.zig").checkType;
 };
 
 // Ziggy documents and schemas can have a maximum size of 4GB
@@ -27,20 +31,12 @@ test {
 
     _ = dynamic;
     _ = serializer;
-    _ = @import("ziggy/RecoverAst.zig");
     _ = @import("ziggy/ResilientParser.zig");
 }
-
-pub const schema = struct {
-    pub const Diagnostic = @import("schema/Diagnostic.zig");
-    pub const Tokenizer = @import("schema/Tokenizer.zig");
-    pub const Schema = @import("schema/Schema.zig");
-    pub const Ast = @import("schema/Ast.zig");
-};
-
 test {
     _ = schema.Diagnostic;
     _ = schema.Tokenizer;
     _ = schema.Schema;
     _ = schema.Ast;
+    _ = @import("schema/check_type.zig");
 }

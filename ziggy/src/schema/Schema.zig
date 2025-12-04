@@ -1,14 +1,14 @@
-const std = @import("std");
-const assert = std.debug.assert;
+const Schema = @This();
 
+const std = @import("std");
+const Io = std.Io;
+const assert = std.debug.assert;
 const ziggy = @import("../root.zig");
-const Ast = @import("Ast.zig");
-const Node = Ast.Node;
-const Diagnostic = @import("Diagnostic.zig");
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-
-const Schema = @This();
+const Diagnostic = @import("Diagnostic.zig");
+const Ast = @import("Ast.zig");
+const Node = Ast.Node;
 
 const log = std.log.scoped(.schema);
 
@@ -55,8 +55,8 @@ pub fn init(
     code: [:0]const u8,
     diagnostic: ?*Diagnostic,
 ) !Schema {
-    var names = std.array_list.Managed(u32).init(gpa);
-    defer names.deinit();
+    var names: std.ArrayList(u32) = .empty;
+    defer names.deinit(gpa);
 
     const root_expr = nodes[1];
     assert(root_expr.last_child_id != 0);
@@ -265,9 +265,11 @@ fn snippetString(
     field_name: []const u8,
     rule_id: u32,
 ) ![]const u8 {
-    var out = std.array_list.Managed(u8).init(gpa);
+    var out: Io.Writer.Allocating = .init(gpa);
     errdefer out.deinit();
-    const w = out.writer();
+
+    const w = &out.writer;
+
     try w.print("{s} = ", .{field_name});
 
     var rule = schema.nodes[rule_id];
@@ -292,22 +294,22 @@ fn docString(schema: Schema, gpa: std.mem.Allocator, node_id: u32) ![]const u8 {
     const node = schema.nodes[node_id];
     if (node.tag != .doc_comment) return "";
 
-    var out = std.array_list.Managed(u8).init(gpa);
-    errdefer out.deinit();
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
 
     var line_id = node.first_child_id;
     while (line_id != 0) {
         const line = schema.nodes[line_id];
         assert(line.tag == .doc_comment_line);
         const src = line.loc.src(schema.code)[3..];
-        try out.appendSlice(src);
+        try out.appendSlice(gpa, src);
         line_id = line.next_id;
         if (line_id != 0) {
-            try out.append('\n');
+            try out.append(gpa, '\n');
         }
     }
 
-    return try out.toOwnedSlice();
+    return try out.toOwnedSlice(gpa);
 }
 
 pub fn deinit(self: *Schema, gpa: std.mem.Allocator) void {
@@ -435,10 +437,10 @@ test "basics" {
         \\
     ;
 
-    var diag: Diagnostic = .{ .path = null };
-    errdefer std.debug.print("diag: {}", .{diag});
+    var diag: Diagnostic = .{ .lsp = false, .path = null };
+    errdefer std.debug.print("diag: {f}", .{diag});
     const ast = try Ast.init(std.testing.allocator, case, &diag);
-    defer ast.deinit();
+    defer ast.deinit(std.testing.allocator);
 
     try std.testing.expect(diag.err == .none);
 

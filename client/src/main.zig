@@ -51,7 +51,9 @@ const AccountData = struct {
         const file = try std.fs.cwd().createFile("login_data_do_not_share.ziggy", .{});
         defer file.close();
 
-        try ziggy.stringify(self, .{ .whitespace = .space_4 }, file.deprecatedWriter());
+        var wtr_buf: [4096]u8 = undefined;
+        var wtr = file.writer(&wtr_buf);
+        try ziggy.stringify(self, .{ .whitespace = .space_4 }, &wtr.interface);
     }
 };
 

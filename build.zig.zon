@@ -2,7 +2,7 @@
     .fingerprint = 0xbd5534bf7da310cf,
     .name = .eclipse,
     .version = "1.0.0",
-    .minimum_zig_version = "0.15.1",
+    .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .shared = .{ .path = "shared" },
         .native_file_dialog = .{ .path = "client/libs/native-file-dialog" },
@@ -20,6 +20,14 @@
         .vulkan_zig = .{
             .url = "git+https://github.com/Snektron/vulkan-zig.git#93bc6f1ac3e13dd98d918e242dc892f179a0d0f5",
             .hash = "vulkan-0.0.0-r7YtxwA_AwAU4rmOITZD_KJs11Kie1sv0t-pcMDQGIqw",
+        },
+        .known_folders = .{
+            .url = "git+https://github.com/ziglibs/known-folders#aa24df42183ad415d10bc0a33e6238c437fc0f59",
+            .hash = "known_folders-0.0.0-Fy-PJv3LAAABBRVoZWVrKZdyLoUfl5VRY5fqRRRdnF5L",
+        },
+        .lsp_kit = .{
+            .url = "git+https://github.com/kristoff-it/lsp-kit?ref=zig-0.15#01c14e592d25dc57dfebba27b8bd2b4aa91c1140",
+            .hash = "lsp_kit-0.1.0-bi_PL5YyCgA2QFEza6llr2Uy08QUQsWBu2wKvtr8tbLx",
         },
     },
     .paths = .{

@@ -1,4 +1,5 @@
 const std = @import("std");
+const Writer = std.Io.Writer;
 
 const log = std.log.scoped(.serizalizer);
 
@@ -17,11 +18,15 @@ pub const StringifyOptions = struct {
     };
 };
 
-pub fn stringify(value: anytype, opts: StringifyOptions, writer: anytype) !void {
+pub fn stringify(value: anytype, opts: StringifyOptions, writer: *Writer) !void {
     try stringifyInner(value, opts, 0, 0, writer);
 }
 
-pub fn indent(kind: StringifyOptions.Whitespace, level: usize, writer: anytype) !void {
+pub fn indent(
+    kind: StringifyOptions.Whitespace,
+    level: usize,
+    writer: *Writer,
+) !void {
     var char: u8 = ' ';
     const n_chars = level * switch (kind) {
         .minified => return,
@@ -35,7 +40,7 @@ pub fn indent(kind: StringifyOptions.Whitespace, level: usize, writer: anytype) 
         },
     };
     try writer.writeAll("\n");
-    try writer.writeByteNTimes(char, n_chars);
+    try writer.splatByteAll(char, n_chars);
 }
 
 pub fn stringifyInner(
@@ -43,8 +48,8 @@ pub fn stringifyInner(
     opts: StringifyOptions,
     indent_level: usize,
     depth: usize,
-    writer: anytype,
-) @TypeOf(writer).Error!void {
+    writer: *Writer,
+) Writer.Error!void {
     const T = @TypeOf(value);
     switch (@typeInfo(T)) {
         .bool,
@@ -122,7 +127,7 @@ pub fn stringifyInner(
     }
 }
 
-fn escapeString(writer: anytype, str: []const u8, indent_level: usize, indent_kind: StringifyOptions.Whitespace) !void {
+fn escapeString(writer: *Writer, str: []const u8, indent_level: usize, indent_kind: StringifyOptions.Whitespace) !void {
     if (indent_kind != .minified) {
         if (std.mem.indexOfScalar(u8, str, '\n')) |_| {
             var lines = std.mem.splitScalar(u8, str, '\n');
@@ -132,16 +137,14 @@ fn escapeString(writer: anytype, str: []const u8, indent_level: usize, indent_ki
                 try indent(indent_kind, indent_level, writer);
             }
         } else {
-            // try writer.print("\"{}\"", .{std.zig.fmtEscapes(str)});
-            try writer.print("\"{s}\"", .{str});
+            try writer.print("\"{f}\"", .{std.zig.fmtString(str)});
         }
     } else {
-        // try writer.print("\"{}\"", .{std.zig.fmtEscapes(str)});
-        try writer.print("\"{s}\"", .{str});
+        try writer.print("\"{f}\"", .{std.zig.fmtString(str)});
     }
 }
 
-fn stringifyArray(writer: anytype, array: anytype, indent_level: usize, depth: usize, opts: StringifyOptions) !void {
+fn stringifyArray(writer: *Writer, array: anytype, indent_level: usize, depth: usize, opts: StringifyOptions) !void {
     try writer.writeAll("[");
     switch (opts.whitespace) {
         // no final comma + spaces
@@ -167,7 +170,7 @@ fn stringifyArray(writer: anytype, array: anytype, indent_level: usize, depth: u
     try writer.writeAll("]");
 }
 
-fn stringifyStruct(writer: anytype, strct: anytype, indent_level: usize, depth: usize, opts: StringifyOptions) !void {
+fn stringifyStruct(writer: *Writer, strct: anytype, indent_level: usize, depth: usize, opts: StringifyOptions) !void {
     const omit_curly = opts.omit_top_level_curly and depth == 0;
     if (omit_curly) {
         _ = try stringifyStructInner(writer, strct, indent_level, depth, opts);
@@ -180,7 +183,7 @@ fn stringifyStruct(writer: anytype, strct: anytype, indent_level: usize, depth: 
 }
 
 fn stringifyStructInner(
-    writer: anytype,
+    writer: *Writer,
     strct: anytype,
     indent_level: usize,
     depth: usize,
@@ -278,7 +281,7 @@ fn stringifyStructInner(
     return field_count > 0;
 }
 
-fn stringifyUnion(writer: anytype, un: anytype, indent_level: usize, depth: usize, opts: StringifyOptions) !void {
+fn stringifyUnion(writer: *Writer, un: anytype, indent_level: usize, depth: usize, opts: StringifyOptions) !void {
     const T = @typeInfo(@TypeOf(un)).@"union";
     if (T.tag_type == null) @compileError("Union '" ++ @typeName(@TypeOf(un)) ++ "' must be tagged!");
     var opts_ = opts;
@@ -313,12 +316,15 @@ fn stringifyUnion(writer: anytype, un: anytype, indent_level: usize, depth: usiz
 }
 
 fn testStringify(value: anytype, opts: StringifyOptions, expected_output: []const u8) !void {
-    var output_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
-    defer output_buffer.deinit();
+    var output_buffer: std.ArrayList(u8) = .empty;
+    defer output_buffer.deinit(std.testing.allocator);
 
-    try stringify(value, opts, output_buffer.writer());
+    var out: Writer.Allocating = .init(std.testing.allocator);
+    defer out.deinit();
 
-    try std.testing.expectEqualStrings(expected_output, output_buffer.items);
+    try stringify(value, opts, &out.writer);
+
+    try std.testing.expectEqualStrings(expected_output, out.written());
 }
 
 test "basic data types" {

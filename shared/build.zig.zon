@@ -2,7 +2,7 @@
     .fingerprint = 0xbc82bf36214b36ea,
     .name = .eclipse_shared,
     .version = "1.0.0",
-    .minimum_zig_version = "0.15.1",
+    .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .ztracy = .{ .path = "libs/ztracy" },
         .ziggy = .{ .path = "../ziggy" },

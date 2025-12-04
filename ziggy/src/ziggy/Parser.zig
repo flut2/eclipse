@@ -1,13 +1,12 @@
+const Parser = @This();
+
 const std = @import("std");
 const assert = std.debug.assert;
-
 const Diagnostic = @import("Diagnostic.zig");
-const dynamic = @import("dynamic.zig");
-const Value = dynamic.Value;
 const Tokenizer = @import("Tokenizer.zig");
 const Token = Tokenizer.Token;
-
-const Parser = @This();
+const dynamic = @import("dynamic.zig");
+const Value = dynamic.Value;
 
 gpa: std.mem.Allocator,
 code: [:0]const u8,
@@ -185,15 +184,31 @@ fn parseEnum(
     comptime T: type,
     first_tok: Token,
 ) Error!T {
-    // Skip over "@<enumtype>("
-    _ = try self.nextMust(.identifier);
-    _ = try self.nextMust(.lp);
+    const token = switch (first_tok.tag) {
+        .at => blk: {
+            // Skip over "@<enumtype>("
+            _ = try self.nextMust(.identifier);
+            _ = try self.nextMust(.lp);
+            break :blk try self.nextMust(.string);
+        },
 
-    const token = try self.nextMust(.string);
+        .string => first_tok,
+        else => {
+            return self.addError(.{
+                .syntax = .{
+                    .name = first_tok.loc.src(self.code),
+                    .sel = first_tok.loc.getSelection(self.code),
+                },
+            });
+        },
+    };
+
     const enum_str = std.mem.trim(u8, token.loc.src(self.code), "\"");
 
-    // Skip over ")"
-    _ = try self.nextMust(.rp);
+    if (first_tok.tag == .at) {
+        // Skip over ")"
+        _ = try self.nextMust(.rp);
+    }
 
     return std.meta.stringToEnum(T, enum_str) orelse {
         return self.addError(.{
@@ -250,7 +265,6 @@ fn parseUnion(
         },
     });
 }
-
 pub fn parseStruct(
     self: *Parser,
     comptime T: type,
@@ -273,7 +287,7 @@ pub fn parseStruct(
 
     // TODO: optimization: turn this into an array of bools when
     //       diagnocstics are disabled
-    var fields_seen: [info.fields.len]?Token.Loc = @splat(null);
+    var fields_seen = [_]?Token.Loc{null} ** info.fields.len;
     var val: T = undefined;
     while (true) {
         if (need_closing_rb) {
@@ -391,7 +405,7 @@ fn finalizeStruct(
     inline for (info.fields, 0..) |field, idx| {
         if (fields_seen[idx] == null) {
             if (field.default_value_ptr) |ptr| {
-                const dv_ptr: *const field.type = @alignCast(@ptrCast(ptr));
+                const dv_ptr: *const field.type = @ptrCast(@alignCast(ptr));
                 @field(val, field.name) = dv_ptr.*;
             } else {
                 return self.addError(.{
@@ -443,29 +457,29 @@ pub fn parseBytes(self: *Parser, comptime T: type, token: Token) !T {
     try self.mustAny(token, &.{ .string, .at, .line_string });
 
     switch (token.tag) {
-        .string => return token.loc.unescape(self.gpa, self.code),
+        .string => return self.mustUnescape(token),
         .at => {
             _ = try self.nextMust(.identifier);
             _ = try self.nextMust(.lp);
             const str = try self.nextMust(.string);
             _ = try self.nextMust(.rp);
 
-            return str.loc.unescape(self.gpa, self.code);
+            return self.mustUnescape(str);
         },
         .line_string => {
-            var str = std.array_list.Managed(u8).init(self.gpa);
-            errdefer str.deinit();
+            var str: std.ArrayList(u8) = .empty;
+            errdefer str.deinit(self.gpa);
 
             var current = token;
             while (current.tag == .line_string) {
-                try str.appendSlice(current.loc.src(self.code)[2..]);
+                try str.appendSlice(self.gpa, current.loc.src(self.code)[2..]);
 
                 if (self.peek().tag != .line_string) break;
 
-                try str.append('\n');
+                try str.append(self.gpa, '\n');
                 current = self.next();
             }
-            return str.toOwnedSlice();
+            return str.toOwnedSlice(self.gpa);
         },
         else => unreachable,
     }
@@ -530,6 +544,18 @@ pub fn peek(self: *Parser) Token {
     return t.next(self.code);
 }
 
+pub fn mustUnescape(self: *Parser, tok: Token) ![]const u8 {
+    return tok.loc.unescape(self.gpa, self.code) catch |err| switch (err) {
+        error.Syntax => {
+            return self.addError(.{
+                .syntax = .{
+                    .name = "bad escape",
+                    .sel = tok.loc.getSelection(self.code),
+                },
+            });
+        },
+    };
+}
 pub fn nextMust(self: *Parser, comptime tag: Token.Tag) !Token {
     return self.nextMustAny(&.{tag});
 }

@@ -1,25 +1,32 @@
 const std = @import("std");
 const assert = std.debug.assert;
-
 const yaml = @import("yaml");
 const ziggy = @import("ziggy");
-const Diagnostic = ziggy.Diagnostic;
-const Ast = ziggy.Ast;
-
 const json = @import("convert/json.zig");
 const loadSchema = @import("load_schema.zig").loadSchema;
+const Diagnostic = ziggy.Diagnostic;
+const Ast = ziggy.Ast;
+const Writer = std.Io.Writer;
 
 pub fn run(gpa: std.mem.Allocator, args: []const []const u8) !void {
     const cmd = try Command.parse(gpa, args);
     const schema = loadSchema(gpa, cmd.schema);
     switch (cmd.mode) {
         .stdin => |lang| {
-            const r = std.io.getStdIn().reader();
-            const w = std.io.getStdOut().writer();
+            const in = std.fs.File.stdin();
+            const out = std.fs.File.stdout();
+
             switch (lang) {
                 .json => {
-                    const bytes = try convertToZiggy(gpa, .json, null, schema, r);
-                    try w.writeAll(bytes);
+                    const bytes = try convertToZiggy(
+                        gpa,
+                        .json,
+                        null,
+                        schema,
+                        in,
+                    );
+
+                    try out.writeAll(bytes);
                 },
                 else => @panic("TODO https://github.com/kristoff-it/ziggy/issues/17"),
             }
@@ -141,7 +148,7 @@ fn convertFile(
             format,
             full_path,
             schema,
-            in.reader(),
+            in,
         ),
         else => @panic("TODO"),
     };
@@ -160,14 +167,14 @@ fn convertFile(
         break :blk sub_path;
     };
 
-    const out_path = try std.fmt.allocPrint(arena, "{s}.{s}", .{
+    const out_path = try std.fmt.allocPrint(arena, "{s}.{t}", .{
         extensionless,
-        @tagName(to),
+        to,
     });
 
     const out = base_dir.createFile(out_path, .{ .exclusive = !force }) catch |err| {
-        std.debug.print("Error while creating '{s}': {s}\n", .{
-            out_path, @errorName(err),
+        std.debug.print("Error while creating '{s}': {t}\n", .{
+            out_path, err,
         });
         std.process.exit(1);
     };
@@ -181,7 +188,7 @@ fn convertToZiggy(
     format: Command.Lang,
     file_path: ?[]const u8,
     schema: ziggy.schema.Schema,
-    r: std.fs.File.Reader,
+    file: std.fs.File,
 ) ![]const u8 {
     var diag: ziggy.Diagnostic = .{ .path = file_path };
 
@@ -190,7 +197,7 @@ fn convertToZiggy(
             @panic("TODO: support more file formats");
         },
         .json => {
-            const bytes = json.toZiggy(gpa, schema, &diag, r) catch {
+            const bytes = json.toZiggy(gpa, schema, &diag, file) catch {
                 std.debug.print("{} arstasr\n", .{diag});
                 std.process.exit(1);
             };
@@ -234,10 +241,10 @@ pub const Command = struct {
 
     fn parse(gpa: std.mem.Allocator, args: []const []const u8) !Command {
         var stdin: ?Lang = null;
-        var json_paths = std.array_list.Managed([]const u8).init(gpa);
-        var yaml_paths = std.array_list.Managed([]const u8).init(gpa);
-        var toml_paths = std.array_list.Managed([]const u8).init(gpa);
-        var ziggy_paths = std.array_list.Managed([]const u8).init(gpa);
+        var json_paths: std.ArrayList([]const u8) = .empty;
+        var yaml_paths: std.ArrayList([]const u8) = .empty;
+        var toml_paths: std.ArrayList([]const u8) = .empty;
+        var ziggy_paths: std.ArrayList([]const u8) = .empty;
 
         var to: ?Lang = null;
         var schema: ?[]const u8 = null;
@@ -273,10 +280,10 @@ pub const Command = struct {
 
                 switch (arg[2]) {
                     else => unreachable,
-                    'j' => try json_paths.append(args[idx]),
-                    'y' => try yaml_paths.append(args[idx]),
-                    't' => try toml_paths.append(args[idx]),
-                    'z' => try ziggy_paths.append(args[idx]),
+                    'j' => try json_paths.append(gpa, args[idx]),
+                    'y' => try yaml_paths.append(gpa, args[idx]),
+                    't' => try toml_paths.append(gpa, args[idx]),
+                    'z' => try ziggy_paths.append(gpa, args[idx]),
                 }
                 continue;
             }
@@ -446,10 +453,10 @@ pub const Command = struct {
             .stdin = s,
         } else .{
             .paths = .{
-                .json = try json_paths.toOwnedSlice(),
-                .yaml = try yaml_paths.toOwnedSlice(),
-                .toml = try toml_paths.toOwnedSlice(),
-                .ziggy = try ziggy_paths.toOwnedSlice(),
+                .json = try json_paths.toOwnedSlice(gpa),
+                .yaml = try yaml_paths.toOwnedSlice(gpa),
+                .toml = try toml_paths.toOwnedSlice(gpa),
+                .ziggy = try ziggy_paths.toOwnedSlice(gpa),
             },
         };
 
@@ -525,7 +532,7 @@ fn renderJsonValue(
     value: json.Value,
     rule: ziggy.schema.Schema.Rule,
     schema: ziggy.schema.Schema,
-    w: anytype,
+    w: *Writer,
 ) anyerror!void {
     var sub_rule = rule;
     const r = schema.nodes[rule.node];
@@ -558,7 +565,7 @@ fn renderJsonObject(
     obj: json.ObjectMap,
     rule: ziggy.schema.Schema.Rule,
     schema: ziggy.schema.Schema,
-    w: anytype,
+    w: *Writer,
 ) !void {
     const r = schema.nodes[rule.node];
     const rule_src = r.loc.src(schema.code);
@@ -612,7 +619,7 @@ fn renderJsonArray(
     array: json.Array,
     rule: ziggy.schema.Schema.Rule,
     schema: ziggy.schema.Schema,
-    w: anytype,
+    w: *Writer,
 ) !void {
     const r = schema.nodes[rule.node];
     const rule_src = r.loc.src(schema.code);
@@ -639,7 +646,7 @@ fn renderJsonString(
     str: []const u8,
     rule: ziggy.schema.Schema.Rule,
     schema: ziggy.schema.Schema,
-    w: anytype,
+    w: *Writer,
 ) !void {
     const r = schema.nodes[rule.node];
     const rule_src = r.loc.src(schema.code);
@@ -661,7 +668,7 @@ fn renderJsonNumberString(
     ns: []const u8,
     rule: ziggy.schema.Schema.Rule,
     schema: ziggy.schema.Schema,
-    w: anytype,
+    w: *Writer,
 ) !void {
     const r = schema.nodes[rule.node];
     const rule_src = r.loc.src(schema.code);
@@ -683,7 +690,7 @@ fn renderJsonFloat(
     num: f64,
     rule: ziggy.schema.Schema.Rule,
     schema: ziggy.schema.Schema,
-    w: anytype,
+    w: *Writer,
 ) !void {
     const r = schema.nodes[rule.node];
     const rule_src = r.loc.src(schema.code);
@@ -705,7 +712,7 @@ fn renderJsonInteger(
     num: i64,
     rule: ziggy.schema.Schema.Rule,
     schema: ziggy.schema.Schema,
-    w: anytype,
+    w: *Writer,
 ) !void {
     const r = schema.nodes[rule.node];
     const rule_src = r.loc.src(schema.code);
@@ -727,7 +734,7 @@ fn renderJsonBool(
     b: bool,
     rule: ziggy.schema.Schema.Rule,
     schema: ziggy.schema.Schema,
-    w: anytype,
+    w: *Writer,
 ) !void {
     const r = schema.nodes[rule.node];
     const rule_src = r.loc.src(schema.code);

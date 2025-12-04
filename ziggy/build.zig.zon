@@ -2,15 +2,15 @@
     .name = .ziggy,
     .version = "0.1.0",
     .fingerprint = 0x7d935ea7bf3c3891,
-    .minimum_zig_version = "0.15.1",
+    .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .known_folders = .{
-            .url = "git+https://github.com/ziglibs/known-folders#e893a795cde649157d12ed0945d59ac83918329d",
-            .hash = "known_folders-0.0.0-Fy-PJmPRAAACn0mJEDnCpUaLoqt63Uulh8Y5nqULMFlm",
+            .url = "git+https://github.com/ziglibs/known-folders#83d39161eac2ed6f37ad3cb4d9dd518696ce90bb",
+            .hash = "known_folders-0.0.0-Fy-PJv3LAAABBRVoZWVrKZdyLoUfl5VRY5fqRRRdnF5L",
         },
         .lsp_kit = .{
-            .url = "git+https://github.com/kristoff-it/zig-lsp-kit#46e2b958c02dc4ed2d4784f8841ba7d2076da783",
-            .hash = "lsp_kit-0.1.0-hAAxO8G9AACr9SwC5FsYac37Bn7yi968x2UMq4wxKlgr",
+            .url = "git+https://github.com/kristoff-it/lsp-kit?ref=zig-0.15#01c14e592d25dc57dfebba27b8bd2b4aa91c1140",
+            .hash = "lsp_kit-0.1.0-bi_PL5YyCgA2QFEza6llr2Uy08QUQsWBu2wKvtr8tbLx",
         },
     },
     .paths = .{
