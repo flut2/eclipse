@@ -54,6 +54,7 @@ const AccountData = struct {
         var wtr_buf: [4096]u8 = undefined;
         var wtr = file.writer(&wtr_buf);
         try ziggy.stringify(self, .{ .whitespace = .space_4 }, &wtr.interface);
+        try wtr.interface.flush();
     }
 };
 
