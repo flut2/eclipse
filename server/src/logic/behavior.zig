@@ -4,7 +4,13 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 
-const gen_behaviors = @import("../_gen_behavior_file_dont_use.zig");
+const behaviors = .{
+    @import("behaviors/ability.zig"),
+    @import("behaviors/basic_enemies.zig"),
+    @import("behaviors/crown_cove.zig"),
+    @import("behaviors/misc.zig"),
+};
+
 const main = @import("../main.zig");
 const Enemy = @import("../map/Enemy.zig");
 const Entity = @import("../map/Entity.zig");
@@ -39,7 +45,7 @@ fn Behavior(comptime behav_type: BehaviorType) type {
     var enum_fields: []const EnumField = &[_]EnumField{};
 
     var enum_index: u32 = 0;
-    for (gen_behaviors.behaviors) |import| {
+    for (behaviors) |import| {
         for (@typeInfo(import).@"struct".decls) |d| @"continue": {
             const behav = @field(import, d.name);
             if (getMetadata(behav).type != behav_type) break :@"continue";
@@ -83,7 +89,7 @@ pub var enemy_behavior_map: std.AutoHashMapUnmanaged(u16, EnemyBehavior) = .empt
 pub var ally_behavior_map: std.AutoHashMapUnmanaged(u16, AllyBehavior) = .empty;
 
 pub fn init() !void {
-    inline for (gen_behaviors.behaviors) |import| {
+    inline for (behaviors) |import| {
         inline for (@typeInfo(import).@"struct".decls) |d| @"continue": {
             const behav = @field(import, d.name);
             const metadata = comptime getMetadata(behav);
