@@ -100,13 +100,16 @@ pub fn SpscQueue(comptime T: type, capacity: comptime_int) type {
         read_index: std.atomic.Value(usize) align(std.atomic.cache_line) = .init(0),
         cached_read_index: usize align(std.atomic.cache_line) = 0,
 
-        pub fn push(self: *@This(), item: T) void {
+        pub fn push(self: *@This(), item: T) bool {
             const write = self.write_index.load(.unordered);
             const next_write = (write + 1) % capacity;
-            while (next_write == self.cached_read_index)
+            if (next_write == self.cached_read_index) {
                 self.cached_read_index = self.read_index.load(.acquire);
+                if (next_write == self.cached_read_index) return false;
+            }
             self.data[write] = item;
             self.write_index.store(next_write, .release);
+            return true;
         }
 
         pub fn pop(self: *@This()) ?T {

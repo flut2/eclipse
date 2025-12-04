@@ -35,15 +35,19 @@ const MapData = struct {
     ui_sort_extras: std.ArrayList(f32) = .empty,
     ui_generics: std.ArrayList(Renderer.GenericData) = .empty,
     lights: std.ArrayList(Renderer.LightData) = .empty,
+    successful_draw: bool = true,
 
     pub fn clear(self: *MapData) void {
         inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field|
-            @field(self, field.name).clearRetainingCapacity();
+            if (comptime !std.mem.eql(u8, field.name, "successful_draw"))
+                @field(self, field.name).clearRetainingCapacity();
+        self.successful_draw = true;
     }
 
     pub fn deinit(self: *MapData) void {
         inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field|
-            @field(self, field.name).deinit(main.allocator);
+            if (comptime !std.mem.eql(u8, field.name, "successful_draw"))
+                @field(self, field.name).deinit(main.allocator);
     }
 };
 
@@ -369,107 +373,109 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
         }
     }
 
-    defer draw_data_index = (draw_data_index + 1) % (main.frames_in_flight * 2);
     var cur_draw_data = &draw_data[draw_data_index];
-    cur_draw_data.clear();
+    if (cur_draw_data.successful_draw) {
+        cur_draw_data.clear();
 
-    if ((main.tick_frame or main.needs_map_bg) and
-        main.camera.x >= 0 and main.camera.y >= 0 and
-        validPos(u32f(main.camera.x), u32f(main.camera.y)))
-    {
-        const float_time_ms = f32i(time) / std.time.us_per_ms;
+        if ((main.tick_frame or main.needs_map_bg) and
+            main.camera.x >= 0 and main.camera.y >= 0 and
+            validPos(u32f(main.camera.x), u32f(main.camera.y)))
+        {
+            const float_time_ms = f32i(time) / std.time.us_per_ms;
 
-        for (main.camera.min_y..main.camera.max_y) |y| for (main.camera.min_x..main.camera.max_x) |x|
-            getSquareRef(f32i(x), f32i(y), false).?.draw(&cur_draw_data.grounds, &cur_draw_data.lights, float_time_ms);
+            for (main.camera.min_y..main.camera.max_y) |y| for (main.camera.min_x..main.camera.max_x) |x|
+                getSquareRef(f32i(x), f32i(y), false).?.draw(&cur_draw_data.grounds, &cur_draw_data.lights, float_time_ms);
 
-        inline for (.{ Enemy, Player, Ally }) |T|
-            for (listForType(T).items) |*obj| obj.draw(
+            inline for (.{ Enemy, Player, Ally }) |T|
+                for (listForType(T).items) |*obj| obj.draw(
+                    renderer,
+                    &cur_draw_data.generics,
+                    &cur_draw_data.sort_extras,
+                    &cur_draw_data.lights,
+                    &cur_draw_data.sort_randoms,
+                    float_time_ms,
+                );
+
+            inline for (.{ Entity, Container, Projectile }) |T|
+                for (listForType(T).items) |*obj| obj.draw(
+                    &cur_draw_data.generics,
+                    &cur_draw_data.sort_extras,
+                    &cur_draw_data.lights,
+                    &cur_draw_data.sort_randoms,
+                    float_time_ms,
+                );
+
+            const int_id = interactive.map_id.load(.acquire);
+            for (listForType(Portal).items) |*portal| portal.draw(
                 renderer,
                 &cur_draw_data.generics,
                 &cur_draw_data.sort_extras,
                 &cur_draw_data.lights,
                 &cur_draw_data.sort_randoms,
                 float_time_ms,
+                int_id,
             );
-
-        inline for (.{ Entity, Container, Projectile }) |T|
-            for (listForType(T).items) |*obj| obj.draw(
+            for (listForType(particles.Particle).items) |particle| particle.draw(
                 &cur_draw_data.generics,
                 &cur_draw_data.sort_extras,
-                &cur_draw_data.lights,
                 &cur_draw_data.sort_randoms,
-                float_time_ms,
+            );
+        }
+
+        if (main.settings.enable_lights) {
+            sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items, cur_draw_data.sort_randoms.items);
+
+            const opts: Renderer.QuadOptions = .{
+                .color = info.bg_color,
+                .color_intensity = 1.0,
+                .alpha_mult = getLightIntensity(time),
+            };
+            Renderer.drawQuad(
+                &cur_draw_data.generics,
+                &cur_draw_data.sort_extras,
+                0,
+                0,
+                main.camera.width,
+                main.camera.height,
+                assets.generic_8x8,
+                opts,
             );
 
-        const int_id = interactive.map_id.load(.acquire);
-        for (listForType(Portal).items) |*portal| portal.draw(
-            renderer,
-            &cur_draw_data.generics,
-            &cur_draw_data.sort_extras,
-            &cur_draw_data.lights,
-            &cur_draw_data.sort_randoms,
-            float_time_ms,
-            int_id,
-        );
-        for (listForType(particles.Particle).items) |particle| particle.draw(
-            &cur_draw_data.generics,
-            &cur_draw_data.sort_extras,
-            &cur_draw_data.sort_randoms,
+            for (cur_draw_data.lights.items) |data| Renderer.drawQuad(
+                &cur_draw_data.generics,
+                &cur_draw_data.sort_extras,
+                data.x,
+                data.y,
+                data.w,
+                data.h,
+                assets.light_data,
+                .{ .color = data.color, .color_intensity = 1.0, .alpha_mult = data.intensity },
+            );
+        } else sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items, cur_draw_data.sort_randoms.items);
+
+        for (ui_systems.elements.items) |elem| elem.draw(
+            &cur_draw_data.ui_generics,
+            &cur_draw_data.ui_sort_extras,
+            0,
+            0,
+            time,
         );
     }
-
-    if (main.settings.enable_lights) {
-        sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items, cur_draw_data.sort_randoms.items);
-
-        const opts: Renderer.QuadOptions = .{
-            .color = info.bg_color,
-            .color_intensity = 1.0,
-            .alpha_mult = getLightIntensity(time),
-        };
-        Renderer.drawQuad(
-            &cur_draw_data.generics,
-            &cur_draw_data.sort_extras,
-            0,
-            0,
-            main.camera.width,
-            main.camera.height,
-            assets.generic_8x8,
-            opts,
-        );
-
-        for (cur_draw_data.lights.items) |data| Renderer.drawQuad(
-            &cur_draw_data.generics,
-            &cur_draw_data.sort_extras,
-            data.x,
-            data.y,
-            data.w,
-            data.h,
-            assets.light_data,
-            .{ .color = data.color, .color_intensity = 1.0, .alpha_mult = data.intensity },
-        );
-    } else sortGenerics(cur_draw_data.generics.items, cur_draw_data.sort_extras.items, cur_draw_data.sort_randoms.items);
-
-    for (ui_systems.elements.items) |elem| elem.draw(
-        &cur_draw_data.ui_generics,
-        &cur_draw_data.ui_sort_extras,
-        0,
-        0,
-        time,
-    );
 
     if (cur_draw_data.grounds.items.len > 0 or
         cur_draw_data.generics.items.len > 0 or
         cur_draw_data.ui_generics.items.len > 0)
-        // This is blocking, meaning updating is locked behind frame rates.
-        // This saves power, but has the side effect of lower frame rates being much worse to play,
-        // like on Flash where projs skip over entities in low frame rates.
-        // TODO: Revisit whether this would be an issue for anyone (really bad PCs)
-        renderer.draw_queue.push(.{
+    {
+        if (renderer.draw_queue.push(.{
             .grounds = cur_draw_data.grounds.items,
             .generics = cur_draw_data.generics.items,
             .ui_generics = cur_draw_data.ui_generics.items,
             .camera = main.camera, // to copy and save
-        });
+        })) {
+            draw_data_index = (draw_data_index + 1) % (main.frames_in_flight * 2);
+            cur_draw_data.successful_draw = true;
+        } else cur_draw_data.successful_draw = false;
+    }
 
     if (main.settings.stats_enabled and time - fps_time_start >= 1 * std.time.us_per_s) {
         switch (ui_systems.screen) {
