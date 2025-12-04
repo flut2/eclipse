@@ -36,20 +36,66 @@ pub fn oomPanic() noreturn {
     @panic("Out of memory");
 }
 
-pub fn main() !void {
-    if (build_options.enable_tracy) tracy.SetThreadName("Main");
+fn uvMalloc(len: usize) callconv(.c) ?*anyopaque {
+    const result = std.c.malloc(len);
+    if (result) |addr| {
+        tracy.alloc(@ptrCast(@alignCast(addr)), len);
+    } else {
+        var buffer: [128]u8 = undefined;
+        const msg = std.fmt.bufPrint(&buffer, "Libuv alloc failed, requesting {d} bytes", .{len}) catch return result;
+        tracy.messageCopy(msg);
+    }
+    return result;
+}
 
+fn uvCalloc(len: usize, elem_size: usize) callconv(.c) ?*anyopaque {
+    const result = std.c.malloc(len * elem_size);
+    if (result) |addr| {
+        @memset(@as([*]u8, @ptrCast(@alignCast(result)))[0 .. len * elem_size], 0);
+        tracy.alloc(@ptrCast(@alignCast(addr)), len * elem_size);
+    } else {
+        var buffer: [128]u8 = undefined;
+        const msg = std.fmt.bufPrint(&buffer, "Libuv calloc failed, requesting {d} bytes", .{len * elem_size}) catch return result;
+        tracy.messageCopy(msg);
+    }
+    return result;
+}
+
+fn uvResize(ptr: ?*anyopaque, new_len: usize) callconv(.c) ?*anyopaque {
+    const result = std.c.realloc(ptr, new_len);
+    if (result) |addr| {
+        if (ptr) |p| tracy.free(@ptrCast(@alignCast(p)));
+        tracy.alloc(@ptrCast(@alignCast(addr)), new_len);
+    } else {
+        var buffer: [128]u8 = undefined;
+        const msg = std.fmt.bufPrint(&buffer, "Libuv resize failed, requesting {d} bytes", .{new_len}) catch return result;
+        tracy.messageCopy(msg);
+    }
+    return result;
+}
+
+fn uvFree(ptr: ?*anyopaque) callconv(.c) void {
+    std.c.free(ptr);
+    if (ptr) |p| tracy.free(@ptrCast(@alignCast(p)));
+}
+
+pub fn main() !void {
     utils.rng.seed(@intCast(std.time.microTimestamp()));
 
-    const enable_gpa = build_options.enable_gpa;
-    var gpa = if (enable_gpa) std.heap.DebugAllocator(.{}).init else std.heap.smp_allocator;
-    defer _ = if (enable_gpa) gpa.deinit();
+    var dbg_alloc: std.heap.DebugAllocator(.{ .stack_trace_frames = 10 }) = .init;
+    defer _ = dbg_alloc.deinit();
+    allocator = dbg_alloc.allocator();
+    var tracy_alloc: if (build_options.enable_tracy) tracy.TracyAllocator(null) else void =
+        if (build_options.enable_tracy) .init(allocator) else {};
+    if (build_options.enable_tracy) {
+        allocator = tracy_alloc.allocator();
 
-    allocator = if (enable_gpa) gpa.allocator() else std.heap.smp_allocator;
-    // allocator = if (build_options.enable_tracy) blk: {
-    //     var tracy_alloc: tracy.TracyAllocator = .init(child_allocator);
-    //     break :blk tracy_alloc.allocator();
-    // } else child_allocator;
+        const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
+        if (replace_alloc_status != 0) {
+            std.log.err("Libuv alloc replace error: {s}", .{uv.uv_strerror(replace_alloc_status)});
+            return error.ReplaceAllocFailed;
+        }
+    }
 
     settings = try .init(allocator);
     defer Settings.deinit();

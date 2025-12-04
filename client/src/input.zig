@@ -187,8 +187,7 @@ fn handleAbility4() void {
 
 pub fn charEvent(_: *glfw.Window, char: u32) callconv(.c) void {
     if (selected_input_field) |input_field| {
-        if (char > std.math.maxInt(u8) or char < std.math.minInt(u8)) return;
-
+        if (char > std.math.maxInt(u8)) return;
         const byte_code: u8 = @intCast(char);
         if (!std.ascii.isAscii(byte_code) or input_field.index >= 256) return;
 

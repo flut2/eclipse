@@ -187,8 +187,6 @@ pub fn enterTest(selected_server: network_data.ServerData, char_id: u32, test_ma
 }
 
 fn renderTick(renderer: *Renderer) !void {
-    if (build_options.enable_tracy) tracy.SetThreadName("Render");
-
     var last_vsync = settings.enable_vsync;
     var fps_time_start: i64 = 0;
     var frames: u32 = 0;
@@ -334,11 +332,11 @@ pub fn audioFailure() void {
 fn uvMalloc(len: usize) callconv(.c) ?*anyopaque {
     const result = std.c.malloc(len);
     if (result) |addr| {
-        tracy.Alloc(addr, len);
+        tracy.alloc(@ptrCast(@alignCast(addr)), len);
     } else {
         var buffer: [128]u8 = undefined;
-        const msg = std.fmt.bufPrint(&buffer, "Alloc failed, requesting {d} bytes", .{len}) catch return result;
-        tracy.Message(msg);
+        const msg = std.fmt.bufPrint(&buffer, "Libuv alloc failed, requesting {d} bytes", .{len}) catch return result;
+        tracy.messageCopy(msg);
     }
     return result;
 }
@@ -347,53 +345,45 @@ fn uvCalloc(len: usize, elem_size: usize) callconv(.c) ?*anyopaque {
     const result = std.c.malloc(len * elem_size);
     if (result) |addr| {
         @memset(@as([*]u8, @ptrCast(@alignCast(result)))[0 .. len * elem_size], 0);
-        tracy.Alloc(addr, len * elem_size);
+        tracy.alloc(@ptrCast(@alignCast(addr)), len * elem_size);
     } else {
         var buffer: [128]u8 = undefined;
-        const msg = std.fmt.bufPrint(&buffer, "Calloc failed, requesting {d} bytes", .{len * elem_size}) catch return result;
-        tracy.Message(msg);
+        const msg = std.fmt.bufPrint(&buffer, "Libuv calloc failed, requesting {d} bytes", .{len * elem_size}) catch return result;
+        tracy.messageCopy(msg);
     }
     return result;
 }
 
 fn uvResize(ptr: ?*anyopaque, new_len: usize) callconv(.c) ?*anyopaque {
     const result = std.c.realloc(ptr, new_len);
-    if (result != null) {
-        tracy.Free(ptr);
-        tracy.Alloc(ptr, new_len);
+    if (result) |addr| {
+        if (ptr) |p| tracy.free(@ptrCast(@alignCast(p)));
+        tracy.alloc(@ptrCast(@alignCast(addr)), new_len);
     } else {
         var buffer: [128]u8 = undefined;
-        const msg = std.fmt.bufPrint(&buffer, "Resize failed, requesting {d} bytes", .{new_len}) catch return result;
-        tracy.Message(msg);
+        const msg = std.fmt.bufPrint(&buffer, "Libuv resize failed, requesting {d} bytes", .{new_len}) catch return result;
+        tracy.messageCopy(msg);
     }
     return result;
 }
 
 fn uvFree(ptr: ?*anyopaque) callconv(.c) void {
     std.c.free(ptr);
-    tracy.Free(ptr);
+    if (ptr) |p| tracy.free(@ptrCast(@alignCast(p)));
 }
 
 pub fn main() !void {
-    if (build_options.enable_tracy) tracy.SetThreadName("Main");
-
     start_time = std.time.microTimestamp();
     utils.rng.seed(@intCast(start_time));
 
-    const use_gpa = build_options.enable_gpa;
-    var gpa = if (use_gpa) std.heap.DebugAllocator(.{ .stack_trace_frames = 10 }).init else {};
-    defer _ = if (use_gpa) gpa.deinit();
-
-    allocator = if (use_gpa)
-        gpa.allocator()
-    else
-        std.heap.smp_allocator;
-    // allocator = if (build_options.enable_tracy) blk: {
-    //     var tracy_alloc: tracy.TracyAllocator = .init(child_allocator);
-    //     break :blk tracy_alloc.allocator();
-    // } else child_allocator;
-
+    var dbg_alloc: std.heap.DebugAllocator(.{ .stack_trace_frames = 10 }) = .init;
+    defer _ = dbg_alloc.deinit();
+    allocator = dbg_alloc.allocator();
+    var tracy_alloc: if (build_options.enable_tracy) tracy.TracyAllocator(null) else void =
+        if (build_options.enable_tracy) .init(allocator) else {};
     if (build_options.enable_tracy) {
+        allocator = tracy_alloc.allocator();
+
         const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
         if (replace_alloc_status != 0) {
             std.log.err("Libuv alloc replace error: {s}", .{uv.uv_strerror(replace_alloc_status)});

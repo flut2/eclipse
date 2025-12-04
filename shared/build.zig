@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const libuv_libs = struct {
+const LibuvLibraries = struct {
     const windows = [_][]const u8{
         "psapi",
         "user32",
@@ -13,134 +13,106 @@ const libuv_libs = struct {
         "ole32",
         "shell32",
     };
-
-    const linux = [_][]const u8{
-        "dl", "rt",
-    };
-
-    const apple = [_][]const u8{};
+    const linux = [_][]const u8{ "dl", "rt" };
+    const macos = [_][]const u8{};
 };
 
-const libuv_sources = struct {
+const LibuvSources = struct {
     const base = [_][]const u8{
-        "src/fs-poll.c",
-        "src/idna.c",
-        "src/inet.c",
-        "src/random.c",
-        "src/strscpy.c",
-        "src/thread-common.c",
-        "src/threadpool.c",
-        "src/timer.c",
-        "src/uv-common.c",
-        "src/uv-data-getter-setters.c",
-        "src/version.c",
-        "src/strtok.c",
+        "fs-poll.c",
+        "idna.c",
+        "inet.c",
+        "random.c",
+        "strscpy.c",
+        "thread-common.c",
+        "threadpool.c",
+        "timer.c",
+        "uv-common.c",
+        "uv-data-getter-setters.c",
+        "version.c",
+        "strtok.c",
     };
-
     const unix = [_][]const u8{
-        "src/unix/async.c",
-        "src/unix/core.c",
-        "src/unix/dl.c",
-        "src/unix/fs.c",
-        "src/unix/getaddrinfo.c",
-        "src/unix/getnameinfo.c",
-        "src/unix/loop-watcher.c",
-        "src/unix/loop.c",
-        "src/unix/pipe.c",
-        "src/unix/poll.c",
-        "src/unix/process.c",
-        "src/unix/random-devurandom.c",
-        "src/unix/signal.c",
-        "src/unix/stream.c",
-        "src/unix/tcp.c",
-        "src/unix/thread.c",
-        "src/unix/tty.c",
-        "src/unix/udp.c",
-        "src/unix/proctitle.c",
+        "unix/async.c",
+        "unix/core.c",
+        "unix/dl.c",
+        "unix/fs.c",
+        "unix/getaddrinfo.c",
+        "unix/getnameinfo.c",
+        "unix/loop-watcher.c",
+        "unix/loop.c",
+        "unix/pipe.c",
+        "unix/poll.c",
+        "unix/process.c",
+        "unix/random-devurandom.c",
+        "unix/signal.c",
+        "unix/stream.c",
+        "unix/tcp.c",
+        "unix/thread.c",
+        "unix/tty.c",
+        "unix/udp.c",
+        "unix/proctitle.c",
     };
-
     const windows = base ++ [_][]const u8{
-        "src/win/async.c",
-        "src/win/core.c",
-        "src/win/detect-wakeup.c",
-        "src/win/dl.c",
-        "src/win/error.c",
-        "src/win/fs.c",
-        "src/win/fs-event.c",
-        "src/win/getaddrinfo.c",
-        "src/win/getnameinfo.c",
-        "src/win/handle.c",
-        "src/win/loop-watcher.c",
-        "src/win/pipe.c",
-        "src/win/poll.c",
-        "src/win/process.c",
-        "src/win/process-stdio.c",
-        "src/win/signal.c",
-        "src/win/snprintf.c",
-        "src/win/stream.c",
-        "src/win/tcp.c",
-        "src/win/thread.c",
-        "src/win/tty.c",
-        "src/win/udp.c",
-        "src/win/util.c",
-        "src/win/winapi.c",
-        "src/win/winsock.c",
+        "win/async.c",
+        "win/core.c",
+        "win/detect-wakeup.c",
+        "win/dl.c",
+        "win/error.c",
+        "win/fs.c",
+        "win/fs-event.c",
+        "win/getaddrinfo.c",
+        "win/getnameinfo.c",
+        "win/handle.c",
+        "win/loop-watcher.c",
+        "win/pipe.c",
+        "win/poll.c",
+        "win/process.c",
+        "win/process-stdio.c",
+        "win/signal.c",
+        "win/snprintf.c",
+        "win/stream.c",
+        "win/tcp.c",
+        "win/thread.c",
+        "win/tty.c",
+        "win/udp.c",
+        "win/util.c",
+        "win/winapi.c",
+        "win/winsock.c",
     };
-
     const linux = base ++ unix ++ [_][]const u8{
-        "src/unix/linux.c",
-        "src/unix/proctitle.c",
-        "src/unix/procfs-exepath.c",
-        "src/unix/random-getrandom.c",
-        "src/unix/random-sysctl-linux.c",
+        "unix/linux.c",
+        "unix/proctitle.c",
+        "unix/procfs-exepath.c",
+        "unix/random-getrandom.c",
+        "unix/random-sysctl-linux.c",
     };
-
-    const apple = base ++ unix ++ [_][]const u8{
-        "src/unix/darwin-proctitle.c",
-        "src/unix/darwin.c",
-        "src/unix/fsevents.c",
-        "src/unix/kqueue.c",
-        "src/unix/proctitle.c",
-        "src/unix/bsd-ifaddrs.c",
-        "src/unix/random-getentropy.c",
+    const macos = base ++ unix ++ [_][]const u8{
+        "unix/darwin-proctitle.c",
+        "unix/darwin.c",
+        "unix/fsevents.c",
+        "unix/kqueue.c",
+        "unix/proctitle.c",
+        "unix/bsd-ifaddrs.c",
+        "unix/random-getentropy.c",
     };
 };
 
-const libuv_definitions = struct {
-    const unix = [_][]const u8{
-        // "-D_FILE_OFFSET_BITS=64",
-        "-D_LARGEFILE_SOURCE",
-    };
-
+const LibuvDefinitions = struct {
+    const unix = [_][]const u8{"-D_LARGEFILE_SOURCE"};
     const windows = [_][]const u8{
         "-D_WIN32",
         "-DWIN32_LEAN_AND_MEAN",
         "-D_WIN32_WINNT=0x0602",
         "-D_CRT_DECLARE_NONSTDC_NAMES=0",
     };
-
-    const linux = unix ++ [_][]const u8{
-        "-D_GNU_SOURCE",
-    };
-
-    const apple = unix ++ [_][]const u8{
-        "-D_DARWIN_UNLIMITED_SELECT=1",
-        "-D_DARWIN_USE_64_BIT_INODE=1",
-    };
+    const linux = unix ++ [_][]const u8{"-D_GNU_SOURCE"};
+    const macos = unix ++ [_][]const u8{ "-D_DARWIN_UNLIMITED_SELECT=1", "-D_DARWIN_USE_64_BIT_INODE=1" };
 };
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-
-    const lib = b.addModule("shared", .{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-        .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
-        // .use_lld = optimize != .Debug,
-        // .use_llvm = optimize != .Debug,
-    });
 
     const libuv_lib = b.addLibrary(.{
         .name = "libuv",
@@ -148,32 +120,21 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
     });
 
-    const libuv_dep = b.dependency("libuv", .{});
-    inline for (.{ libuv_dep.path("include"), libuv_dep.path("src") }) |include_path| libuv_lib.addIncludePath(include_path);
-    for (switch (builtin.os.tag) {
-        .windows => libuv_libs.windows,
-        .linux => libuv_libs.linux,
-        .macos => libuv_libs.apple,
-        else => @compileError("Unsupported OS"),
-    }) |lib_name| libuv_lib.linkSystemLibrary(lib_name);
-    libuv_lib.linkLibC();
-    libuv_lib.addCSourceFiles(.{
-        .root = libuv_dep.path("."),
-        .files = &switch (builtin.os.tag) {
-            .windows => libuv_sources.windows,
-            .linux => libuv_sources.linux,
-            .macos => libuv_sources.apple,
-            else => @compileError("Unsupported OS"),
-        },
-        .flags = &switch (builtin.os.tag) {
-            .windows => libuv_definitions.windows,
-            .linux => libuv_definitions.linux,
-            .macos => libuv_definitions.apple,
-            else => @compileError("Unsupported OS"),
-        },
+    const libuv_dep = b.dependency("libuv", .{ .optimize = optimize, .target = target });
+    inline for (.{
+        libuv_dep.path("include"),
+        libuv_dep.path("src"),
+    }) |include_path| libuv_lib.root_module.addIncludePath(include_path);
+    const os_name = @tagName(builtin.os.tag);
+    for (@field(LibuvLibraries, os_name)) |lib_name| libuv_lib.root_module.linkSystemLibrary(lib_name, .{});
+    libuv_lib.root_module.addCSourceFiles(.{
+        .root = libuv_dep.path("src"),
+        .files = &@field(LibuvSources, os_name),
+        .flags = &@field(LibuvDefinitions, os_name),
     });
     b.installArtifact(libuv_lib);
 
@@ -182,12 +143,6 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .root_source_file = libuv_dep.path("include/uv.h"),
     });
-
-    if (target.result.abi == .msvc) {
-        libuv_tc.defineCMacroRaw("MIDL_INTERFACE=struct");
-        libuv_tc.defineCMacroRaw("_UCRT");
-    }
-
     libuv_tc.addIncludePath(libuv_dep.path("include"));
 
     const libuv_patcher = b.addExecutable(.{
@@ -201,42 +156,32 @@ pub fn build(b: *std.Build) !void {
 
     const run_patcher = b.addRunArtifact(libuv_patcher);
     run_patcher.addFileArg(libuv_tc.getOutput());
-    run_patcher.step.dependOn(&libuv_patcher.step);
     run_patcher.step.dependOn(&libuv_tc.step);
+    run_patcher.step.dependOn(&libuv_patcher.step);
 
-    const write_file = b.addNamedWriteFiles("uv");
-    const libuv_c_path = write_file.addCopyFile(libuv_tc.getOutput(), "c.zig");
-    write_file.step.dependOn(&run_patcher.step);
-
-    libuv_lib.step.dependOn(&write_file.step);
+    libuv_lib.step.dependOn(&run_patcher.step);
 
     const libuv_mod = b.addModule("uv", .{
-        .root_source_file = libuv_c_path,
+        .root_source_file = libuv_tc.getOutput(),
         .link_libc = true,
     });
     libuv_mod.linkLibrary(libuv_lib);
 
-    b.modules.put(b.dupe("uv"), libuv_mod) catch @panic("OOM");
-
-    b.modules.put(b.dupe("ziggy"), b.dependency("ziggy", .{
+    _ = b.addModule("shared", .{
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-    }).module("ziggy")) catch @panic("OOM");
-
-    lib.addImport("ziggy", b.dependency("ziggy", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("ziggy"));
-
-    const enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false;
-    if (enable_tracy) {
-        const tracy_dep = b.dependency("ztracy", .{
-            .target = target,
-            .optimize = optimize,
-            .enable_ztracy = true,
-        });
-        b.modules.put(b.dupe("tracy"), tracy_dep.module("root")) catch @panic("OOM");
-        lib.linkLibrary(tracy_dep.artifact("tracy"));
-        lib.link_libcpp = true;
-    }
+        // .use_lld = !check and optimize != .Debug or target.result.os.tag == .windows,
+        // .use_llvm = !check and optimize != .Debug or target.result.os.tag == .windows,
+        .imports = &.{
+            .{ .name = "uv", .module = libuv_mod },
+            .{
+                .name = "ziggy",
+                .module = b.dependency("ziggy", .{
+                    .target = target,
+                    .optimize = optimize,
+                }).module("ziggy"),
+            },
+        },
+    });
 }

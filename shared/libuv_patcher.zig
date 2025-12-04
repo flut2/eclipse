@@ -4,6 +4,7 @@ pub fn main() !void {
     const allocator = std.heap.smp_allocator;
 
     var args = try std.process.argsWithAllocator(allocator);
+    defer args.deinit();
     _ = args.skip();
     const rel_path = args.next() orelse {
         std.log.err("Path not found for uv.zig, patching unsuccessful", .{});

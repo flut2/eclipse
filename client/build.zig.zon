@@ -5,7 +5,8 @@
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .shared = .{ .path = "../shared" },
-        .native_file_dialog = .{ .path = "libs/native-file-dialog" },
+        .ziggy = .{ .path = "../ziggy" },
+        .nfd = .{ .path = "libs/nfd" },
         .zstbi = .{ .path = "libs/zstbi" },
         .zglfw = .{ .path = "libs/zglfw" },
         .zaudio = .{ .path = "libs/zaudio" },
@@ -16,6 +17,14 @@
         .vulkan_zig = .{
             .url = "git+https://github.com/Snektron/vulkan-zig.git#93bc6f1ac3e13dd98d918e242dc892f179a0d0f5",
             .hash = "vulkan-0.0.0-r7YtxwA_AwAU4rmOITZD_KJs11Kie1sv0t-pcMDQGIqw",
+        },
+        .tracy = .{
+            .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.13.0.tar.gz",
+            .hash = "N-V-__8AAHW7KwHH_eNEviRWLkRfsxpWFrdOYM9f8VeCin4q",
+        },
+        .vma = .{
+            .url = "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.3.0.tar.gz",
+            .hash = "N-V-__8AAIutPgABk6NlXZhlJ5P8qVECvakZIKoO94h7xUOw",
         },
     },
     .paths = .{

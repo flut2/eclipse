@@ -5,10 +5,18 @@
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .shared = .{ .path = "shared" },
-        .native_file_dialog = .{ .path = "client/libs/native-file-dialog" },
+        .nfd = .{ .path = "libs/nfd" },
         .zaudio = .{ .path = "client/libs/zaudio" },
         .zstbi = .{ .path = "client/libs/zstbi" },
         .zglfw = .{ .path = "client/libs/zglfw" },
+        .tracy = .{
+            .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.13.0.tar.gz",
+            .hash = "N-V-__8AAHW7KwHH_eNEviRWLkRfsxpWFrdOYM9f8VeCin4q",
+        },
+        .libuv = .{
+            .url = "git+https://github.com/libuv/libuv.git#173b7633346c1f312dd60f9642409886d44196e0",
+            .hash = "N-V-__8AAFFwRAA9UiZoSIIGHgH6Tq59woHw-GRxfbHJO4D2",
+        },
         .hiredis = .{
             .url = "git+https://github.com/redis/hiredis.git#77bcc73ebbc562d8e8173832b710bfbfa4327b13",
             .hash = "N-V-__8AAMeyCAC7f33pfuk8OlGD4qqGI2OwGeP-9KamyBcb",

@@ -8,24 +8,21 @@ pub fn buildWithoutDupes(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     enable_tracy: bool,
-    enable_gpa: bool,
 ) !void {
-    const use_dragonfly = b.option(bool, "use_dragonfly",
-        \\Whether to use Dragonfly for the database.
-        \\Redis is assumed otherwise, and TTL banning/muting will be permanent across HWIDs, but not accounts.
-    ) orelse false;
+    const options = .{
+        .use_dragonfly = b.option(bool, "use_dragonfly",
+            \\Whether to use Dragonfly for the database.
+            \\Redis is assumed otherwise, and TTL banning/muting will be permanent across HWIDs, but not accounts.
+        ) orelse false,
+        .enable_tracy = enable_tracy,
+    };
 
-    behaviorGen: {
-        var gen_file = b.build_root.handle.createFile(root_add ++ "src/_gen_behavior_file_dont_use.zig", .{}) catch break :behaviorGen;
-        try gen_file.writeAll("pub const behaviors = .{\n");
+    const opt_step = b.addOptions();
+    inline for (@typeInfo(@TypeOf(options)).@"struct".fields) |field|
+        opt_step.addOption(field.type, field.name, @field(options, field.name));
 
-        const dir = b.build_root.handle.openDir(root_add ++ "src/logic/behaviors/", .{ .iterate = true }) catch break :behaviorGen;
-        var walker = try dir.walk(b.allocator);
-        while (try walker.next()) |entry| if (std.mem.endsWith(u8, entry.path, ".zig"))
-            try gen_file.writeAll(try std.fmt.allocPrint(b.allocator, "    @import(\"logic/behaviors/{s}\"),\n", .{entry.path}));
-
-        gen_file.writeAll("};\n") catch break :behaviorGen;
-    }
+    const shared_dep = b.dependency("shared", .{ .target = target, .optimize = optimize });
+    const hiredis_dep = b.dependency("hiredis", .{ .target = target, .optimize = optimize });
 
     inline for (.{ true, false }) |check| {
         if (!check and skip_non_check) continue;
@@ -39,38 +36,59 @@ pub fn buildWithoutDupes(
                 .root_source_file = b.path(root_add ++ "src/main.zig"),
                 .target = target,
                 .optimize = optimize,
-                .strip = optimize == .ReleaseFast or optimize == .ReleaseSmall,
+                .link_libc = true,
+                .imports = &.{
+                    .{ .name = "options", .module = opt_step.createModule() },
+                    .{ .name = "shared", .module = shared_dep.module("shared") },
+                    .{ .name = "uv", .module = shared_dep.module("uv") },
+                    .{
+                        .name = "ziggy",
+                        .module = b.dependency("ziggy", .{
+                            .target = target,
+                            .optimize = optimize,
+                        }).module("ziggy"),
+                    },
+                },
             }),
         });
-        if (!check) exe.addWin32ResourceFile(.{ .file = b.path("../assets/resources.rc") });
 
-        if (check) check_step.dependOn(&exe.step);
-
-        const shared_dep = b.dependency("shared", .{
-            .target = target,
-            .optimize = optimize,
-            .enable_tracy = enable_tracy,
-        });
         exe.root_module.linkLibrary(shared_dep.artifact("libuv"));
 
-        exe.root_module.addImport("shared", shared_dep.module("shared"));
-        if (enable_tracy) exe.root_module.addImport("tracy", shared_dep.module("tracy"));
-        exe.root_module.addImport("ziggy", shared_dep.module("ziggy"));
-        exe.root_module.addImport("uv", shared_dep.module("uv"));
+        if (enable_tracy) {
+            const tracy_module = b.createModule(.{
+                .root_source_file = shared_dep.path("src/tracy.zig"),
+                .target = target,
+                .optimize = optimize,
+                .link_libc = true,
+                .link_libcpp = true,
+                .sanitize_c = .off,
+            });
 
-        const hiredis = b.dependency("hiredis", .{});
-        const hiredis_path = hiredis.path(".");
-        exe.addIncludePath(hiredis_path);
+            const tracy_dep = b.dependency("tracy", .{ .target = target, .optimize = optimize });
+
+            tracy_module.addCMacro("TRACY_ENABLE", "1");
+            tracy_module.addIncludePath(tracy_dep.path(""));
+            tracy_module.addCSourceFile(.{ .file = tracy_dep.path("public/TracyClient.cpp") });
+
+            if (target.result.os.tag == .windows) {
+                tracy_module.linkSystemLibrary("dbghelp", .{});
+                tracy_module.linkSystemLibrary("ws2_32", .{});
+            }
+
+            exe.root_module.addImport("tracy", tracy_module);
+        }
+
+        const hiredis_path = hiredis_dep.path(".");
         exe.installHeadersDirectory(hiredis_path, "hiredis", .{ .include_extensions = &.{".h"} });
-        exe.linkLibC();
+        exe.root_module.addIncludePath(hiredis_path);
         if (target.result.os.tag == .windows) {
-            exe.linkSystemLibrary("ws2_32");
-            exe.linkSystemLibrary("crypt32");
+            exe.root_module.linkSystemLibrary("ws2_32", .{});
+            exe.root_module.linkSystemLibrary("crypt32", .{});
             exe.root_module.addCMacro("WIN32_LEAN_AND_MEAN", "");
             exe.root_module.addCMacro("_CRT_SECURE_NO_WARNINGS", "");
             exe.root_module.addCMacro("_WIN32", "");
         }
-        exe.addCSourceFiles(.{
+        exe.root_module.addCSourceFiles(.{
             .root = hiredis_path,
             .files = &.{
                 "alloc.c",
@@ -87,11 +105,10 @@ pub fn buildWithoutDupes(
             },
         });
 
-        var options = b.addOptions();
-        options.addOption(bool, "enable_tracy", enable_tracy);
-        options.addOption(bool, "enable_gpa", enable_gpa);
-        options.addOption(bool, "use_dragonfly", use_dragonfly);
-        exe.root_module.addOptions("options", options);
+        if (check)
+            check_step.dependOn(&exe.step)
+        else
+            exe.addWin32ResourceFile(.{ .file = b.path("../assets/resources.rc") });
 
         if (!check) {
             b.installArtifact(exe);
@@ -123,8 +140,7 @@ pub fn buildWithoutDupes(
 pub fn build(b: *std.Build) !void {
     const check_step = b.step("check", "Check if app compiles");
     const enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false;
-    const enable_gpa = b.option(bool, "enable_gpa", "Toggles using the GPA for memory debugging") orelse false;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    try buildWithoutDupes(b, "", false, check_step, target, optimize, enable_tracy, enable_gpa);
+    try buildWithoutDupes(b, "", false, check_step, target, optimize, enable_tracy);
 }

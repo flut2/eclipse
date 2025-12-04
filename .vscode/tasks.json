@@ -12,9 +12,17 @@
             },
         },
         {
-            "label": "Debug Client (GPA, Validation)",
+            "label": "Debug Client (Tracy)",
             "type": "shell",
-            "command": "zig build -Doptimize=Debug -Denable_validation_layers=true -Denable_gpa=true -freference-trace",
+            "command": "zig build -Doptimize=Debug -Denable_tracy=true -freference-trace",
+            "options": {
+                "cwd": "${workspaceFolder}/client"
+            },
+        },
+        {
+            "label": "Debug Client (Validation)",
+            "type": "shell",
+            "command": "zig build -Doptimize=Debug -Denable_validation_layers=true -freference-trace",
             "options": {
                 "cwd": "${workspaceFolder}/client"
             },
@@ -28,9 +36,9 @@
             },
         },
         {
-            "label": "Debug Server (GPA)",
+            "label": "Debug Server (Tracy)",
             "type": "shell",
-            "command": "zig build -Doptimize=Debug -Denable_gpa=true -freference-trace",
+            "command": "zig build -Doptimize=Debug -Denable_tracy=true -freference-trace",
             "options": {
                 "cwd": "${workspaceFolder}/server"
             },

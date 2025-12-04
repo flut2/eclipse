@@ -4,7 +4,6 @@
     .version = "1.0.0",
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
-        .ztracy = .{ .path = "libs/ztracy" },
         .ziggy = .{ .path = "../ziggy" },
         .libuv = .{
             .url = "git+https://github.com/libuv/libuv.git#173b7633346c1f312dd60f9642409886d44196e0",

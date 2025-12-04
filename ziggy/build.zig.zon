@@ -12,6 +12,14 @@
             .url = "git+https://github.com/kristoff-it/lsp-kit?ref=zig-0.15#01c14e592d25dc57dfebba27b8bd2b4aa91c1140",
             .hash = "lsp_kit-0.1.0-bi_PL5YyCgA2QFEza6llr2Uy08QUQsWBu2wKvtr8tbLx",
         },
+        .tracy = .{
+            .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.13.0.tar.gz",
+            .hash = "N-V-__8AAHW7KwHH_eNEviRWLkRfsxpWFrdOYM9f8VeCin4q",
+        },
+        .vma = .{
+            .url = "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.3.0.tar.gz",
+            .hash = "N-V-__8AAIutPgABk6NlXZhlJ5P8qVECvakZIKoO94h7xUOw",
+        },
     },
     .paths = .{
         "build.zig",

@@ -5,9 +5,14 @@
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .shared = .{ .path = "../shared" },
+        .ziggy = .{ .path = "../ziggy" },
         .hiredis = .{
             .url = "git+https://github.com/redis/hiredis.git#77bcc73ebbc562d8e8173832b710bfbfa4327b13",
             .hash = "N-V-__8AAMeyCAC7f33pfuk8OlGD4qqGI2OwGeP-9KamyBcb",
+        },
+        .tracy = .{
+            .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.13.0.tar.gz",
+            .hash = "N-V-__8AAHW7KwHH_eNEviRWLkRfsxpWFrdOYM9f8VeCin4q",
         },
     },
     .paths = .{

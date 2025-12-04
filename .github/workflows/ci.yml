@@ -31,6 +31,7 @@ jobs:
       fail-fast: false
       matrix:
         build-type: [client, server]
+        tracy-flag: [true, false]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -48,12 +49,13 @@ jobs:
           cache: true
       - name: Build
         working-directory: ./${{ matrix.build-type }}
-        run: zig build
+        run: zig build -Denable_tracy=${{ matrix.tracy-flag }}
   build-windows:
     strategy:
       fail-fast: false
       matrix:
         build-type: [client, server]
+        tracy-flag: [true, false]
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -67,4 +69,4 @@ jobs:
           cache: true
       - name: Build
         working-directory: ./${{ matrix.build-type }}
-        run: zig build
+        run: zig build -Denable_tracy=${{ matrix.tracy-flag }}
