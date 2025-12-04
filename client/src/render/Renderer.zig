@@ -6,8 +6,8 @@ const game_data = shared.game_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
 const u32f = utils.u32f;
+const stbi = @import("stbi");
 const vk = @import("vulkan");
-const zstbi = @import("zstbi");
 
 const assets = @import("../assets.zig");
 const px_per_tile = @import("../Camera.zig").px_per_tile;
@@ -1389,9 +1389,9 @@ pub fn drawText(
     const max_width_off = text_data.max_width == std.math.floatMax(f32);
     const max_height_off = text_data.max_height == std.math.floatMax(f32);
 
-    const render_type: RenderType = if (main.settings.enable_subpixel and !text_data.disable_subpixel) 
-        .text_subpixel 
-    else 
+    const render_type: RenderType = if (main.settings.enable_subpixel and !text_data.disable_subpixel)
+        .text_subpixel
+    else
         .text_normal;
 
     const start_x = x;

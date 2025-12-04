@@ -37,8 +37,8 @@ pub fn buildWithoutDupes(
 
     const vulkan_dep = b.dependency("vulkan_zig", .{ .registry = b.path(root_add ++ "libs/vk.xml") });
     const shared_dep = b.dependency("shared", .{ .target = target, .optimize = optimize });
-    const zstbi_dep = b.dependency("zstbi", .{ .target = target, .optimize = optimize });
-    const zaudio_dep = b.dependency("zaudio", .{ .target = target, .optimize = optimize });
+    const stbi_dep = b.dependency("stbi", .{ .target = target, .optimize = optimize });
+    const miniaudio_dep = b.dependency("miniaudio", .{ .target = target, .optimize = optimize });
     const nfd_dep = b.dependency("nfd", .{ .target = target, .optimize = optimize });
     const glfw_dep = b.dependency("glfw", .{ .target = target, .optimize = optimize });
 
@@ -62,8 +62,8 @@ pub fn buildWithoutDupes(
                     .{ .name = "shared", .module = shared_dep.module("shared") },
                     .{ .name = "vulkan", .module = vulkan_dep.module("vulkan-zig") },
                     .{ .name = "glfw", .module = glfw_dep.module("root") },
-                    .{ .name = "zstbi", .module = zstbi_dep.module("root") },
-                    .{ .name = "zaudio", .module = zaudio_dep.module("root") },
+                    .{ .name = "stbi", .module = stbi_dep.module("root") },
+                    .{ .name = "miniaudio", .module = miniaudio_dep.module("root") },
                     .{ .name = "nfd", .module = nfd_dep.module("root") },
                     .{
                         .name = "ziggy",
@@ -84,8 +84,8 @@ pub fn buildWithoutDupes(
         });
 
         exe.root_module.linkLibrary(shared_dep.artifact("libuv"));
-        exe.root_module.linkLibrary(zstbi_dep.artifact("zstbi"));
-        exe.root_module.linkLibrary(zaudio_dep.artifact("miniaudio"));
+        exe.root_module.linkLibrary(stbi_dep.artifact("stbi"));
+        exe.root_module.linkLibrary(miniaudio_dep.artifact("miniaudio"));
         exe.root_module.linkLibrary(nfd_dep.artifact("nfd"));
         exe.root_module.linkLibrary(glfw_dep.artifact("glfw"));
 

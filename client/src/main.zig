@@ -3,17 +3,17 @@ const builtin = @import("builtin");
 
 const build_options = @import("options");
 const glfw = @import("glfw");
+const miniaudio = @import("miniaudio");
 const shared = @import("shared");
 const network_data = shared.network_data;
 const game_data = shared.game_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
 const u32f = utils.u32f;
+const stbi = @import("stbi");
 const uv = @import("uv");
 const vk = @import("vulkan");
-const zaudio = @import("zaudio");
 const ziggy = @import("ziggy");
-const zstbi = @import("zstbi");
 
 const assets = @import("assets.zig");
 const Camera = @import("Camera.zig");
@@ -407,11 +407,11 @@ pub fn main() !void {
         return error.NoVulkan;
     }
 
-    zstbi.init(allocator);
-    defer zstbi.deinit();
+    stbi.init(allocator);
+    defer stbi.deinit();
 
-    zaudio.init(allocator);
-    defer zaudio.deinit();
+    miniaudio.init(allocator);
+    defer miniaudio.deinit();
 
     settings = try .init(allocator);
     defer settings.deinit();

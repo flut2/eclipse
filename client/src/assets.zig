@@ -2,15 +2,15 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const glfw = @import("glfw");
+const miniaudio = @import("miniaudio");
 const pack = @import("turbopack");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
 const RGBA = utils.RGBA;
-const zaudio = @import("zaudio");
+const stbi = @import("stbi");
 const ziggy = @import("ziggy");
-const zstbi = @import("zstbi");
 
 const main = @import("main.zig");
 const Settings = @import("Settings.zig");
@@ -99,11 +99,11 @@ const ParsedFontData = struct {
 };
 
 const AudioState = struct {
-    device: *zaudio.Device,
-    engine: *zaudio.Engine,
+    device: *miniaudio.Device,
+    engine: *miniaudio.Engine,
 
     fn audioCallback(
-        device: *zaudio.Device,
+        device: *miniaudio.Device,
         output: ?*anyopaque,
         _: ?*const anyopaque,
         num_frames: u32,
@@ -115,7 +115,7 @@ const AudioState = struct {
     fn create() !*AudioState {
         const audio = try arena.allocator().create(AudioState);
 
-        var dvc_cfg: zaudio.Device.Config = .init(.playback);
+        var dvc_cfg: miniaudio.Device.Config = .init(.playback);
         dvc_cfg.data_callback = audioCallback;
         dvc_cfg.user_data = audio;
         dvc_cfg.sample_rate = 48000;
@@ -123,13 +123,13 @@ const AudioState = struct {
         dvc_cfg.period_size_in_milliseconds = 10;
         dvc_cfg.playback.format = .float32;
         dvc_cfg.playback.channels = 2;
-        const device = try zaudio.Device.create(null, dvc_cfg);
+        const device = try miniaudio.Device.create(null, dvc_cfg);
 
-        var eng_cfg: zaudio.Engine.Config = .init();
+        var eng_cfg: miniaudio.Engine.Config = .init();
         eng_cfg.device = device;
         eng_cfg.no_auto_start = .true32;
 
-        audio.* = .{ .device = device, .engine = try zaudio.Engine.create(eng_cfg) };
+        audio.* = .{ .device = device, .engine = try miniaudio.Engine.create(eng_cfg) };
         return audio;
     }
 
@@ -311,19 +311,19 @@ pub const AtlasData = extern struct {
 
 pub var sfx_path_buffer: [256]u8 = undefined;
 pub var audio_state: ?*AudioState = undefined;
-pub var main_music: ?*zaudio.Sound = undefined;
+pub var main_music: ?*miniaudio.Sound = undefined;
 pub var arena: std.heap.ArenaAllocator = undefined;
 
-pub var atlas: zstbi.Image = undefined;
-pub var ui_atlas: zstbi.Image = undefined;
+pub var atlas: stbi.Image = undefined;
+pub var ui_atlas: stbi.Image = undefined;
 
-pub var bold_atlas: zstbi.Image = undefined;
+pub var bold_atlas: stbi.Image = undefined;
 pub var bold_data: ParsedFontData = undefined;
-pub var bold_italic_atlas: zstbi.Image = undefined;
+pub var bold_italic_atlas: stbi.Image = undefined;
 pub var bold_italic_data: ParsedFontData = undefined;
-pub var medium_atlas: zstbi.Image = undefined;
+pub var medium_atlas: stbi.Image = undefined;
 pub var medium_data: ParsedFontData = undefined;
-pub var medium_italic_atlas: zstbi.Image = undefined;
+pub var medium_italic_atlas: stbi.Image = undefined;
 pub var medium_italic_data: ParsedFontData = undefined;
 
 // horrible, but no other option since cursor is opaque
@@ -342,8 +342,8 @@ pub var target_enemy_cursor: *glfw.Cursor = undefined;
 pub var target_ally_cursor_pressed: *glfw.Cursor = undefined;
 pub var target_ally_cursor: *glfw.Cursor = undefined;
 
-pub var sfx_copy_map: std.AutoHashMapUnmanaged(*zaudio.Sound, std.ArrayList(*zaudio.Sound)) = .empty;
-pub var sfx_map: std.StringHashMapUnmanaged(*zaudio.Sound) = .empty;
+pub var sfx_copy_map: std.AutoHashMapUnmanaged(*miniaudio.Sound, std.ArrayList(*miniaudio.Sound)) = .empty;
+pub var sfx_map: std.StringHashMapUnmanaged(*miniaudio.Sound) = .empty;
 pub var dominant_color_data: std.StringHashMapUnmanaged([]RGBA) = .empty;
 pub var atlas_to_color_data: std.AutoHashMapUnmanaged(u160, []u32) = .empty;
 pub var atlas_data: std.StringHashMapUnmanaged([]AtlasData) = .empty;
@@ -378,7 +378,7 @@ fn packSort(_: void, lhs: pack.IdRect, rhs: pack.IdRect) bool {
     return lhs.rect.w < rhs.rect.w;
 }
 
-fn imageBounds(img: zstbi.Image, x: usize, y: usize, cut_w: u32, cut_h: u32) struct {
+fn imageBounds(img: stbi.Image, x: usize, y: usize, cut_w: u32, cut_h: u32) struct {
     w: u32,
     h: u32,
     x_offset: u16,
@@ -411,7 +411,7 @@ fn imageBounds(img: zstbi.Image, x: usize, y: usize, cut_w: u32, cut_h: u32) str
 }
 
 fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, comptime cut_height: u32) !void {
-    var img: zstbi.Image = try .loadFromFile("./assets/sheets/" ++ image_name, 4);
+    var img: stbi.Image = try .loadFromFile("./assets/sheets/" ++ image_name, 4);
     defer img.deinit();
 
     const img_size = cut_width * cut_height;
@@ -479,7 +479,7 @@ fn addWall(
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
-    var img: zstbi.Image = try .loadFromFile(path, 4);
+    var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
     const len = std.math.divExact(u32, img.width * img.height, full_cut_width * full_cut_height) catch
@@ -617,7 +617,7 @@ fn addImage(
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
-    var img: zstbi.Image = try .loadFromFile(path, 4);
+    var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
     const len = std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
@@ -742,7 +742,7 @@ fn addUiImage(
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/ui/{s}", .{image_path});
-    var img: zstbi.Image = try .loadFromFile(path, 4);
+    var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
     const cut_width = if (cut_width_base == UiSheet.imply_size) img.width else cut_width_base;
@@ -813,7 +813,7 @@ fn addAnimEnemy(
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
-    var img: zstbi.Image = try .loadFromFile(path, 4);
+    var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
     const len = @divExact(std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
@@ -955,7 +955,7 @@ fn addAnimPlayer(
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
-    var img: zstbi.Image = try .loadFromFile(path, 4);
+    var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
     var len = @divExact(std.math.divExact(u32, img.width * img.height, cut_width * cut_height) catch
@@ -1225,7 +1225,7 @@ pub fn init() !void {
         if (anim_enemies.capacity() > 0) anim_enemies.rehash(dummy_string_ctx);
         if (anim_players.capacity() > 0) anim_players.rehash(dummy_string_ctx);
 
-        const dummy_sfx_ctx: std.hash_map.AutoContext(*zaudio.Sound) = undefined;
+        const dummy_sfx_ctx: std.hash_map.AutoContext(*miniaudio.Sound) = undefined;
         if (sfx_copy_map.capacity() > 0) sfx_copy_map.rehash(dummy_sfx_ctx);
 
         const dummy_atlas_ctx: std.hash_map.AutoContext(u160) = undefined;

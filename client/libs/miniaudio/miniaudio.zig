@@ -1,5 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const expect = std.testing.expect;
+
 //--------------------------------------------------------------------------------------------------
 //
 // Misc
@@ -2768,8 +2770,6 @@ fn zaudioFree(maybe_ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
 // Tests
 //
 //--------------------------------------------------------------------------------------------------
-const expect = std.testing.expect;
-
 test "zaudio.engine.basic" {
     init(std.testing.allocator);
     defer deinit();
@@ -2959,14 +2959,13 @@ test "zaudio.node_graph.basic" {
 }
 
 test "zaudio.audio_buffer" {
-    const allocator = std.testing.allocator;
-    init(allocator);
+    init(std.testing.allocator);
     defer deinit();
 
-    var samples: std.ArrayList(f32) = .initCapacity(allocator, 1000);
-    defer samples.deinit(allocator);
+    var samples = try std.ArrayList(f32).initCapacity(std.testing.allocator, 1000);
+    defer samples.deinit();
 
-    var prng: std.Random.DefaultPrng = .init(0);
+    var prng = std.Random.DefaultPrng.init(0);
     const rand = prng.random();
 
     samples.expandToCapacity();

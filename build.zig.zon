@@ -6,8 +6,8 @@
     .dependencies = .{
         .shared = .{ .path = "shared" },
         .nfd = .{ .path = "libs/nfd" },
-        .zaudio = .{ .path = "client/libs/zaudio" },
-        .zstbi = .{ .path = "client/libs/zstbi" },
+        .miniaudio = .{ .path = "client/libs/miniaudio" },
+        .stbi = .{ .path = "client/libs/stbi" },
         .glfw = .{ .path = "client/libs/glfw" },
         .tracy = .{
             .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.13.0.tar.gz",

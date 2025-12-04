@@ -7,7 +7,7 @@ const network_data = shared.network_data;
 const f32i = utils.f32i;
 const u32f = utils.u32f;
 const i64f = utils.i64f;
-const zstbi = @import("zstbi");
+const stbi = @import("stbi");
 
 const assets = @import("../assets.zig");
 const input = @import("../input.zig");
@@ -76,7 +76,7 @@ pub var squares: []Square = &.{};
 pub var move_records: std.ArrayList(network_data.TimedPosition) = .empty;
 pub var info: network_data.MapInfo = .{};
 pub var last_records_clear_time: i64 = 0;
-pub var minimap: zstbi.Image = undefined;
+pub var minimap: stbi.Image = undefined;
 pub var minimap_copy: []u8 = undefined;
 pub var frames: std.atomic.Value(u32) = .init(0);
 pub var fps_time_start: i64 = 0;
@@ -97,7 +97,7 @@ pub fn listForType(comptime T: type) *std.ArrayList(T) {
 }
 
 pub fn init() !void {
-    minimap = try zstbi.Image.createEmpty(1024, 1024, 4, .{});
+    minimap = try stbi.Image.createEmpty(1024, 1024, 4, .{});
     minimap_copy = try main.allocator.alloc(u8, 1024 * 1024 * 4);
 }
 
@@ -146,7 +146,7 @@ pub fn dispose() void {
 
     // main.minimap_update = .{};
     // minimap.deinit();
-    // minimap = try zstbi.Image.createEmpty(1, 1, 4, .{});
+    // minimap = try stbi.Image.createEmpty(1, 1, 4, .{});
     // main.need_force_update = true;
 }
 
@@ -180,7 +180,7 @@ pub fn setMapInfo(data: network_data.MapInfo) void {
 
     // main.minimap_update = .{};
     // minimap.deinit();
-    // minimap = zstbi.Image.createEmpty(data.width, data.height, 4, .{}) catch |e| {
+    // minimap = stbi.Image.createEmpty(data.width, data.height, 4, .{}) catch |e| {
     //     std.debug.panic("Minimap allocation failed: {}", .{e});
     //     return;
     // };
