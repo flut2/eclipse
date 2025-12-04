@@ -7,8 +7,8 @@
         .shared = .{ .path = "../shared" },
         .ziggy = .{ .path = "../ziggy" },
         .nfd = .{ .path = "libs/nfd" },
+        .glfw = .{ .path = "libs/glfw" },
         .zstbi = .{ .path = "libs/zstbi" },
-        .zglfw = .{ .path = "libs/zglfw" },
         .zaudio = .{ .path = "libs/zaudio" },
         .turbopack = .{
             .url = "git+https://github.com/flut2/turbopack.git#1ed6f6e423a82bafbee2a540328f767171ad8cef",

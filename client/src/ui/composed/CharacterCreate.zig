@@ -282,6 +282,7 @@ pub fn destroy(self: *CharacterCreate) void {
     element.destroy(self.base);
     element.destroy(self.select_button);
     element.destroy(self.back_button);
+    main.allocator.free(self.class_buttons);
     main.allocator.destroy(self);
 }
 

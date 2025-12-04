@@ -37,13 +37,13 @@ const MapData = struct {
     lights: std.ArrayList(Renderer.LightData) = .empty,
 
     pub fn clear(self: *MapData) void {
-        self.grounds.clearRetainingCapacity();
-        self.sort_randoms.clearRetainingCapacity();
-        self.sort_extras.clearRetainingCapacity();
-        self.generics.clearRetainingCapacity();
-        self.ui_sort_extras.clearRetainingCapacity();
-        self.ui_generics.clearRetainingCapacity();
-        self.lights.clearRetainingCapacity();
+        inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field|
+            @field(self, field.name).clearRetainingCapacity();
+    }
+
+    pub fn deinit(self: *MapData) void {
+        inline for (@typeInfo(@TypeOf(self.*)).@"struct".fields) |field|
+            @field(self, field.name).deinit(main.allocator);
     }
 };
 
@@ -105,6 +105,8 @@ pub fn deinit() void {
             if (comptime std.mem.eql(u8, field.name, field_to_ignore)) break :@"continue";
         for (child_list.items) |*obj| obj.deinit();
     }
+
+    for (&draw_data) |*data| data.deinit();
 
     move_records.deinit(main.allocator);
     main.allocator.free(info.name);

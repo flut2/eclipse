@@ -1,0 +1,16 @@
+.{
+    .fingerprint = 0x3bbe0a5c180d2cd0,
+    .name = .glfw,
+    .version = "1.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "glfw.zig",
+    },
+    .dependencies = .{
+        .glfw = .{
+            .url = "https://github.com/glfw/glfw/archive/refs/tags/3.4.tar.gz",
+            .hash = "N-V-__8AAL40TADEbrysYHBl-UIZO4KiG4chP8pLDVDINGH4",
+        },
+    },
+}
