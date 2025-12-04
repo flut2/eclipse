@@ -354,6 +354,12 @@ pub const C2SPacket = union(enum) {
     use_ability: struct { time: i64, index: u8, data: []const u8 },
     select_card: extern struct { selection: enum(u8) { none, first, second, third } },
     talent_upgrade: extern struct { index: u8 },
+
+    pub fn format(self: C2SPacket, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+        switch (self) {
+            inline else => |inner, tag| try writer.print("[{t}: {any}]", .{ tag, inner }),
+        }
+    }
 };
 
 pub const S2CPacket = union(enum) {
@@ -407,6 +413,12 @@ pub const S2CPacket = union(enum) {
     play_animation: struct { obj_type: ObjectType, map_id: u32, animation_idx: u8, repeating: bool },
     drop_projs: struct { lists: []const EnemyProjList },
     @"error": struct { type: ErrorType, description: []const u8 },
+
+    pub fn format(self: S2CPacket, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+        switch (self) {
+            inline else => |inner, tag| try writer.print("[{t}: {any}]", .{ tag, inner }),
+        }
+    }
 };
 
 pub const C2SPacketLogin = union(enum) {
@@ -414,6 +426,12 @@ pub const C2SPacketLogin = union(enum) {
     register: struct { name: []const u8, email: []const u8, password: []const u8, hwid: []const u8 },
     verify: struct { email: []const u8, token: u128 },
     delete: struct { email: []const u8, token: u128, char_id: u32 },
+
+    pub fn format(self: C2SPacketLogin, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+        switch (self) {
+            inline else => |inner, tag| try writer.print("[{t}: {any}]", .{ tag, inner }),
+        }
+    }
 };
 
 pub const S2CPacketLogin = union(enum) {
@@ -422,4 +440,10 @@ pub const S2CPacketLogin = union(enum) {
     verify_response: CharacterListData,
     delete_response: CharacterListData,
     @"error": struct { description: []const u8 },
+
+    pub fn format(self: S2CPacketLogin, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+        switch (self) {
+            inline else => |inner, tag| try writer.print("[{t}: {any}]", .{ tag, inner }),
+        }
+    }
 };

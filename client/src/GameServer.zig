@@ -5,9 +5,9 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 const network_data = shared.network_data;
-const uv = @import("uv");
 const f32i = utils.f32i;
 const i64f = utils.i64f;
+const uv = @import("uv");
 
 const assets = @import("assets.zig");
 const Ally = @import("game/Ally.zig");
@@ -168,7 +168,16 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
             };
 
             switch (packet_id) {
-                inline else => |id| handlerFn(id)(server, reader.read(PacketData(id), allocator)),
+                inline else => |id| {
+                    const packet = reader.read(PacketData(id), allocator);
+                    const name = @tagName(id);
+                    const is_tick = comptime id == .ping or
+                        std.mem.indexOf(u8, name, "new_") != null or
+                        std.mem.indexOf(u8, name, "dropped_") != null;
+                    if (comptime logRead(if (is_tick) .tick else .non_tick))
+                        std.log.info("Receiving game packet: {f}", .{@unionInit(network_data.S2CPacket, @tagName(id), packet)});
+                    handlerFn(id)(server, packet);
+                },
             }
 
             if (reader.index < next_packet_idx) {
@@ -257,11 +266,15 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
     };
 
     const is_tick = packet == .move or packet == .pong;
-    if (build_options.log_packets == .all or
-        build_options.log_packets == .c2s or
-        (build_options.log_packets == .c2s_tick or build_options.log_packets == .all_tick) and is_tick or
-        (build_options.log_packets == .c2s_non_tick or build_options.log_packets == .all_non_tick) and !is_tick)
-        std.log.info("Send: {}", .{packet}); // TODO: custom formatting
+    log: {
+        comptime switch (build_options.log_packets) {
+            .all, .c2s => {},
+            .c2s_tick, .all_tick => if (!is_tick) break :log,
+            .c2s_non_tick, .all_non_tick => if (is_tick) break :log,
+            else => break :log,
+        };
+        std.log.info("Sending game packet: {f}", .{packet});
+    }
 
     if (packet == .use_portal or packet == .escape)
         if (map.localPlayerRef()) |player| {
@@ -343,8 +356,6 @@ fn logRead(comptime tick: enum { non_tick, tick }) bool {
 }
 
 fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
-    if (logRead(.non_tick)) std.log.debug("Recv - AllyProjectile: {}", .{data});
-
     if (map.findObjectRef(Player, data.player_map_id)) |player| {
         const item_data = game_data.item.from_id.getPtr(data.item_data_id) orelse return;
         Projectile.addToMap(.{
@@ -370,8 +381,6 @@ fn handleAoe(_: *Server, data: PacketData(.aoe)) void {
         .color = data.color,
         .radius = data.radius,
     });
-
-    if (logRead(.non_tick)) std.log.debug("Recv - Aoe: {}", .{data});
 }
 
 fn handleDamage(_: *Server, data: PacketData(.damage)) void {
@@ -383,8 +392,6 @@ fn handleDamage(_: *Server, data: PacketData(.damage)) void {
             data.effects,
             player.colors,
         );
-
-    if (logRead(.non_tick)) std.log.debug("Recv - Damage: {}", .{data});
 }
 
 fn handleDeath(self: *Server, data: PacketData(.death)) void {
@@ -409,13 +416,9 @@ fn handleDeath(self: *Server, data: PacketData(.death)) void {
             std.log.err("Setting death view failed: {}", .{e});
             if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
         };
-
-    if (logRead(.non_tick)) std.log.debug("Recv - Death: {}", .{data});
 }
 
 fn handleEnemyProjectile(_: *Server, data: PacketData(.enemy_projectile)) void {
-    if (logRead(.non_tick)) std.log.debug("Recv - EnemyProjectile: {}", .{data});
-
     var owner = if (map.findObjectRef(Enemy, data.enemy_map_id)) |enemy| enemy else return;
 
     const owner_data = game_data.enemy.from_id.getPtr(owner.data_id);
@@ -447,8 +450,6 @@ fn handleEnemyProjectile(_: *Server, data: PacketData(.enemy_projectile)) void {
 }
 
 fn handleError(self: *Server, data: PacketData(.@"error")) void {
-    if (logRead(.non_tick)) std.log.debug("Recv - Error: {}", .{data});
-
     if (data.type == .message_with_disconnect or data.type == .force_close_game) {
         main.disconnect();
         self.shutdown();
@@ -461,12 +462,10 @@ fn handleError(self: *Server, data: PacketData(.@"error")) void {
 }
 
 fn handleInvResult(_: *Server, data: PacketData(.inv_result)) void {
-    if (logRead(.non_tick)) std.log.debug("Recv - InvResult: {}", .{data});
+    _ = data; // autofix
 }
 
 fn handleMapInfo(_: *Server, data: PacketData(.map_info)) void {
-    if (logRead(.non_tick)) std.log.debug("Recv - MapInfo: {}", .{data});
-
     map.dispose();
 
     main.camera.quake = false;
@@ -479,32 +478,26 @@ fn handleMapInfo(_: *Server, data: PacketData(.map_info)) void {
 
 fn handleDroppedPlayers(_: *Server, data: PacketData(.dropped_players)) void {
     droppedObject(Player, data.map_ids);
-    if (logRead(.tick)) std.log.debug("Recv - DroppedPlayers: {}", .{data});
 }
 
 fn handleDroppedEnemies(_: *Server, data: PacketData(.dropped_enemies)) void {
     droppedObject(Enemy, data.map_ids);
-    if (logRead(.tick)) std.log.debug("Recv - DroppedEnemies: {}", .{data});
 }
 
 fn handleDroppedEntities(_: *Server, data: PacketData(.dropped_entities)) void {
     droppedObject(Entity, data.map_ids);
-    if (logRead(.tick)) std.log.debug("Recv - DroppedEntities: {}", .{data});
 }
 
 fn handleDroppedPortals(_: *Server, data: PacketData(.dropped_portals)) void {
     droppedObject(Portal, data.map_ids);
-    if (logRead(.tick)) std.log.debug("Recv - DroppedPortals: {}", .{data});
 }
 
 fn handleDroppedContainers(_: *Server, data: PacketData(.dropped_containers)) void {
     droppedObject(Container, data.map_ids);
-    if (logRead(.tick)) std.log.debug("Recv - DroppedContainers: {}", .{data});
 }
 
 fn handleDroppedAllies(_: *Server, data: PacketData(.dropped_allies)) void {
     droppedObject(Ally, data.map_ids);
-    if (logRead(.tick)) std.log.debug("Recv - DroppedAllies: {}", .{data});
 }
 
 fn handleNotification(_: *Server, data: PacketData(.notification)) void {
@@ -539,8 +532,6 @@ fn handleNotification(_: *Server, data: PacketData(.notification)) void {
 
 fn handlePing(self: *Server, data: PacketData(.ping)) void {
     self.sendPacket(.{ .pong = .{ .ping_time = data.time, .time = main.current_time } });
-
-    if (logRead(.tick)) std.log.debug("Recv - Ping: {}", .{data});
 }
 
 fn handleShowEffects(_: *Server, data_list: PacketData(.show_effects)) void {
@@ -627,8 +618,6 @@ fn handleShowEffects(_: *Server, data_list: PacketData(.show_effects)) void {
             else => {},
         }
     }
-
-    if (logRead(.non_tick)) std.log.debug("Recv - ShowEffects: {}", .{data_list});
 }
 
 fn handleText(_: *Server, data: PacketData(.text)) void {
@@ -653,13 +642,10 @@ fn handleText(_: *Server, data: PacketData(.text)) void {
             else => std.log.err("Unsupported object type for Text: {}", .{data.obj_type}),
         }
     }
-
-    if (logRead(.non_tick)) std.log.debug("Recv - Text: {}", .{data});
 }
 
 fn handleCardOptions(_: *Server, data: PacketData(.card_options)) void {
     if (ui_systems.screen == .game) ui_systems.screen.game.card_selection.updateSelectables(data.cards);
-    if (logRead(.non_tick)) std.log.debug("Recv - CardOptions: {}", .{data});
 }
 
 fn handleTalentUpgradeResponse(_: *Server, data: PacketData(.talent_upgrade_response)) void {
@@ -687,8 +673,6 @@ fn handlePlayAnimation(_: *Server, data: PacketData(.play_animation)) void {
             }
         },
     }
-
-    if (logRead(.non_tick)) std.log.debug("Recv - PlayAnimation: {}", .{data});
 }
 
 fn handleDropProjs(_: *Server, data: PacketData(.drop_projs)) void {
@@ -746,38 +730,30 @@ fn handleNewTick(self: *Server, data: PacketData(.new_tick)) void {
     });
 
     main.need_minimap_update = data.tiles.len > 0;
-
-    if (logRead(.tick)) std.log.debug("Recv - NewTick: {}", .{data});
 }
 
 fn handleNewPlayers(self: *Server, data: PacketData(.new_players)) void {
     newObject(Player, data.list, f32i(self.tick_time));
-    if (logRead(.tick)) std.log.debug("Recv - NewPlayers: {}", .{data});
 }
 
 fn handleNewEntities(self: *Server, data: PacketData(.new_entities)) void {
     newObject(Entity, data.list, f32i(self.tick_time));
-    if (logRead(.tick)) std.log.debug("Recv - NewEntities: {}", .{data});
 }
 
 fn handleNewEnemies(self: *Server, data: PacketData(.new_enemies)) void {
     newObject(Enemy, data.list, f32i(self.tick_time));
-    if (logRead(.tick)) std.log.debug("Recv - NewEnemies: {}", .{data});
 }
 
 fn handleNewPortals(self: *Server, data: PacketData(.new_portals)) void {
     newObject(Portal, data.list, f32i(self.tick_time));
-    if (logRead(.tick)) std.log.debug("Recv - NewPortals: {}", .{data});
 }
 
 fn handleNewContainers(self: *Server, data: PacketData(.new_containers)) void {
     newObject(Container, data.list, f32i(self.tick_time));
-    if (logRead(.tick)) std.log.debug("Recv - NewContainers: {}", .{data});
 }
 
 fn handleNewAllies(self: *Server, data: PacketData(.new_allies)) void {
     newObject(Ally, data.list, f32i(self.tick_time));
-    if (logRead(.tick)) std.log.debug("Recv - NewAllies: {}", .{data});
 }
 
 fn droppedObject(comptime T: type, list: []const u32) void {

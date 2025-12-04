@@ -87,7 +87,12 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
             };
 
             switch (packet_id) {
-                inline else => |id| handlerFn(id)(server, reader.read(PacketData(id), allocator)),
+                inline else => |id| {
+                    const packet = reader.read(PacketData(id), allocator);
+                    if (comptime logRead())
+                        std.log.info("Receiving login packet: {f}", .{@unionInit(network_data.S2CPacketLogin, @tagName(id), packet)});
+                    handlerFn(id)(server, packet);
+                },
             }
 
             if (reader.index < next_packet_idx) {
@@ -175,13 +180,10 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
         return;
     }
 
-    if (build_options.log_packets == .all or
-        build_options.log_packets == .c2s or
-        build_options.log_packets == .c2s_tick or
-        build_options.log_packets == .all_tick or
-        build_options.log_packets == .c2s_non_tick or
-        build_options.log_packets == .all_non_tick)
-        std.log.info("Send: {}", .{packet}); // TODO: custom formatting
+    switch (build_options.log_packets) {
+        .all, .c2s, .c2s_non_tick, .all_non_tick => std.log.info("Sending login packet: {f}", .{packet}),
+        else => {},
+    }
 
     switch (packet) {
         inline else => |data| {
@@ -249,17 +251,13 @@ pub fn shutdown(self: *Server) void {
 
 fn closeCallback(_: [*c]uv.uv_handle_t) callconv(.c) void {}
 
-fn logRead(comptime tick: enum { non_tick, tick }) bool {
-    return if (tick == .non_tick)
-        build_options.log_packets == .all or
-            build_options.log_packets == .s2c or
-            build_options.log_packets == .s2c_non_tick or
-            build_options.log_packets == .all_non_tick
-    else
-        build_options.log_packets == .all or
-            build_options.log_packets == .s2c or
-            build_options.log_packets == .s2c_tick or
-            build_options.log_packets == .all_tick;
+fn logRead() bool {
+    return build_options.log_packets == .all or
+        build_options.log_packets == .s2c or
+        build_options.log_packets == .s2c_non_tick or
+        build_options.log_packets == .all_non_tick or
+        build_options.log_packets == .s2c_tick or
+        build_options.log_packets == .all_tick;
 }
 
 fn deepCopyList(temp_list: network_data.CharacterListData) !network_data.CharacterListData {
@@ -278,8 +276,6 @@ fn deepCopyList(temp_list: network_data.CharacterListData) !network_data.Charact
 }
 
 fn handleLoginResponse(_: *Server, data: PacketData(.login_response)) void {
-    if (logRead(.non_tick)) std.log.debug("Login Recv - LoginResponse: {}", .{data});
-
     main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.current_account) |*acc| acc.token = main.character_list.?.token;
 
@@ -287,8 +283,6 @@ fn handleLoginResponse(_: *Server, data: PacketData(.login_response)) void {
 }
 
 fn handleRegisterResponse(_: *Server, data: PacketData(.register_response)) void {
-    if (logRead(.non_tick)) std.log.debug("Login Recv - RegisterResponse: {}", .{data});
-
     main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.current_account) |*acc| acc.token = main.character_list.?.token;
 
@@ -296,8 +290,6 @@ fn handleRegisterResponse(_: *Server, data: PacketData(.register_response)) void
 }
 
 fn handleVerifyResponse(_: *Server, data: PacketData(.verify_response)) void {
-    if (logRead(.non_tick)) std.log.debug("Login Recv - VerifyResponse: {}", .{data});
-
     main.character_list = deepCopyList(data) catch main.oomPanic();
     if (main.character_list.?.characters.len == 0) return;
     if (main.skip_verify_loop) {
@@ -317,8 +309,6 @@ fn handleVerifyResponse(_: *Server, data: PacketData(.verify_response)) void {
 }
 
 fn handleDeleteResponse(_: *Server, data: PacketData(.delete_response)) void {
-    if (logRead(.non_tick)) std.log.debug("Login Recv - DeleteResponse: {}", .{data});
-
     main.character_list = deepCopyList(data) catch main.oomPanic();
     if (ui_systems.screen == .char_select)
         ui_systems.screen.char_select.refresh() catch |e| {
@@ -328,8 +318,6 @@ fn handleDeleteResponse(_: *Server, data: PacketData(.delete_response)) void {
 }
 
 fn handleError(_: *Server, data: PacketData(.@"error")) void {
-    if (logRead(.non_tick)) std.log.debug("Login Recv - Error: {}", .{data});
-
     main.skip_verify_loop = false;
     ui_systems.switchScreen(.main_menu);
 
