@@ -28,6 +28,14 @@
             },
         },
         {
+            "label": "ReleaseSafe Client",
+            "type": "shell",
+            "command": "zig build -Doptimize=ReleaseSafe -freference-trace",
+            "options": {
+                "cwd": "${workspaceFolder}/client"
+            },
+        },
+        {
             "label": "Debug Server",
             "type": "shell",
             "command": "zig build -Doptimize=Debug -freference-trace",
@@ -39,6 +47,15 @@
             "label": "Debug Server (Tracy)",
             "type": "shell",
             "command": "zig build -Doptimize=Debug -Denable_tracy=true -freference-trace",
+            "options": {
+                "cwd": "${workspaceFolder}/server"
+            },
+        },
+
+        {
+            "label": "ReleaseSafe Server",
+            "type": "shell",
+            "command": "zig build -Doptimize=ReleaseSafe -freference-trace",
             "options": {
                 "cwd": "${workspaceFolder}/server"
             },

@@ -29,6 +29,15 @@
             "preLaunchTask": "Debug Client (Tracy)"
         },
         {
+            "name": "ReleaseSafe Client",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/client/zig-out/bin/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/client/zig-out/bin",
+            "preLaunchTask": "ReleaseSafe Client"
+        },
+        {
             "name": "Debug Server",
             "type": "lldb",
             "request": "launch",
@@ -45,6 +54,15 @@
             "args": [],
             "cwd": "${workspaceFolder}/server/zig-out/bin",
             "preLaunchTask": "Debug Server (Tracy)"
+        },
+        {
+            "name": "ReleaseSafe Server",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/server/zig-out/bin/Eclipse",
+            "args": [],
+            "cwd": "${workspaceFolder}/server/zig-out/bin",
+            "preLaunchTask": "ReleaseSafe Server"
         },
     ]
 }

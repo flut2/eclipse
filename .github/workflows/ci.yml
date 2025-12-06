@@ -17,6 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        opt: [Debug, ReleaseSafe]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -25,13 +26,14 @@ jobs:
         uses: mlugg/setup-zig@v2
       - name: Build
         working-directory: ./ziggy
-        run: zig build
+        run: zig build -Doptimize=${{ matrix.opt }}
   build-ubuntu:
     strategy:
       fail-fast: false
       matrix:
         build-type: [client, server]
         tracy-flag: [true, false]
+        opt: [Debug, ReleaseSafe]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -49,13 +51,14 @@ jobs:
           cache: true
       - name: Build
         working-directory: ./${{ matrix.build-type }}
-        run: zig build -Denable_tracy=${{ matrix.tracy-flag }}
+        run: zig build -Denable_tracy=${{ matrix.tracy-flag }} -Doptimize=${{ matrix.opt }}
   build-windows:
     strategy:
       fail-fast: false
       matrix:
         build-type: [client, server]
         tracy-flag: [true, false]
+        opt: [Debug, ReleaseSafe]
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -69,4 +72,4 @@ jobs:
           cache: true
       - name: Build
         working-directory: ./${{ matrix.build-type }}
-        run: zig build -Denable_tracy=${{ matrix.tracy-flag }}
+        run: zig build -Denable_tracy=${{ matrix.tracy-flag }} -Doptimize=${{ matrix.opt }}
