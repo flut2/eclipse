@@ -22,6 +22,7 @@ const GameServer = @import("GameServer.zig");
 const input = @import("input.zig");
 const LoginServer = @import("LoginServer.zig");
 const Renderer = @import("render/Renderer.zig");
+const Swapchain = @import("render/Swapchain.zig");
 const Settings = @import("Settings.zig");
 const dialog = @import("ui/dialogs/dialog.zig");
 const element = @import("ui/elements/element.zig");
@@ -91,6 +92,8 @@ pub var window: *glfw.Window = undefined;
 pub var callbacks: std.ArrayList(TimedCallback) = .empty;
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.c) void {
+    if (w <= 0 or h <= 0) return;
+
     const float_w = f32i(w);
     const float_h = f32i(h);
 
@@ -192,17 +195,31 @@ fn renderTick(renderer: *Renderer) !void {
     var fps_time_start: i64 = 0;
     var frames: u32 = 0;
     while (tick_render) : (std.atomic.spinLoopHint()) {
+        const draw_data = renderer.draw_queue.pop() orelse continue;
+
+        const caps = try renderer.context.instance.getPhysicalDeviceSurfaceCapabilitiesKHR(renderer.context.phys_device, renderer.context.surface);
+        const actual_extent = Swapchain.findActualExtent(caps, .{
+            .width = u32f(draw_data.camera.width),
+            .height = u32f(draw_data.camera.height),
+        });
+        if (actual_extent.width == 0 or actual_extent.height == 0) continue;
+
         if (need_swap_chain_update or last_vsync != settings.enable_vsync) {
-            const extent: vk.Extent2D = .{ .width = u32f(camera.width), .height = u32f(camera.height) };
             try renderer.context.device.queueWaitIdle(renderer.context.graphics_queue.handle);
-            try renderer.swapchain.recreate(renderer.context, extent, if (settings.enable_vsync) .fifo_khr else .immediate_khr);
+            try renderer.swapchain.recreate(
+                renderer.context,
+                actual_extent,
+                caps,
+                if (settings.enable_vsync) .fifo_khr else .immediate_khr,
+            );
             renderer.destroyFrameAndCmdBuffers();
             try renderer.createFrameAndCmdBuffers();
             last_vsync = settings.enable_vsync;
             need_swap_chain_update = false;
         }
 
-        if (try renderer.draw()) frames += 1;
+        try renderer.draw(draw_data, actual_extent, caps);
+        frames += 1;
 
         if (current_time - fps_time_start > 1 * std.time.us_per_s) {
             map.frames.store(frames, .release);
@@ -324,7 +341,7 @@ pub fn oomPanic() noreturn {
 pub fn audioFailure() void {
     settings.sfx_volume = 0.0;
     settings.music_volume = 0.0;
-    dialog.showDialog(.text, .{ .title = "Audio Error", .body = 
+    dialog.showDialog(.text, .{ .title = "Audio Error", .body =
         \\There was a problem interacting with your audio device. 
         \\Audio has been turned off, but you can turn it back on in the Options if you believe this to be incorrect or temporary.
     });

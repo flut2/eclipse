@@ -1606,9 +1606,12 @@ pub fn drawLight(
     }) catch main.oomPanic();
 }
 
-pub fn draw(self: *Renderer) !bool {
-    const draw_data = self.draw_queue.pop() orelse return false;
-
+pub fn draw(
+    self: *Renderer,
+    draw_data: DrawData,
+    extent: vk.Extent2D,
+    caps: vk.SurfaceCapabilitiesKHR,
+) !void {
     const clear: vk.ClearValue = .{ .color = .{ .float_32 = .{ 0.0, 0.0, 0.0, 0.0 } } };
     const viewport: vk.Viewport = .{
         .x = 0,
@@ -1776,11 +1779,11 @@ pub fn draw(self: *Renderer) !bool {
         try self.context.device.queueWaitIdle(self.context.graphics_queue.handle);
         try self.swapchain.recreate(
             self.context,
-            .{ .width = u32f(draw_data.camera.width), .height = u32f(draw_data.camera.height) },
+            extent,
+            caps,
             if (main.settings.enable_vsync) .fifo_khr else .immediate_khr,
         );
         self.destroyFrameAndCmdBuffers();
         try self.createFrameAndCmdBuffers();
     }
-    return true;
 }

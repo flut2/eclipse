@@ -68,14 +68,19 @@ image_index: u32,
 next_image_acquired: vk.Semaphore,
 
 pub fn init(ctx: Context, extent: vk.Extent2D, present_mode: vk.PresentModeKHR) !Swapchain {
-    return try initRecycle(ctx, extent, .null_handle, present_mode);
-}
-
-pub fn initRecycle(ctx: Context, extent: vk.Extent2D, old_handle: vk.SwapchainKHR, present_mode: vk.PresentModeKHR) !Swapchain {
     const caps = try ctx.instance.getPhysicalDeviceSurfaceCapabilitiesKHR(ctx.phys_device, ctx.surface);
     const actual_extent = findActualExtent(caps, extent);
     if (actual_extent.width == 0 or actual_extent.height == 0) return error.InvalidSurfaceDimensions;
+    return try initRecycle(ctx, actual_extent, caps, .null_handle, present_mode);
+}
 
+pub fn initRecycle(
+    ctx: Context,
+    extent: vk.Extent2D,
+    caps: vk.SurfaceCapabilitiesKHR,
+    old_handle: vk.SwapchainKHR,
+    present_mode: vk.PresentModeKHR,
+) !Swapchain {
     const surface_format = try findSurfaceFormat(ctx);
     const final_present_mode = try findPresentMode(ctx, present_mode);
 
@@ -93,7 +98,7 @@ pub fn initRecycle(ctx: Context, extent: vk.Extent2D, old_handle: vk.SwapchainKH
         .min_image_count = image_count,
         .image_format = surface_format.format,
         .image_color_space = surface_format.color_space,
-        .image_extent = actual_extent,
+        .image_extent = extent,
         .image_array_layers = 1,
         .image_usage = .{ .color_attachment_bit = true, .transfer_dst_bit = true },
         .image_sharing_mode = sharing_mode,
@@ -119,13 +124,13 @@ pub fn initRecycle(ctx: Context, extent: vk.Extent2D, old_handle: vk.SwapchainKH
     errdefer ctx.device.destroySemaphore(next_image_acquired, null);
 
     const result = try ctx.device.acquireNextImageKHR(handle, std.math.maxInt(u64), next_image_acquired, .null_handle);
-    if (result.result != .success) return error.ImageAcquireFailed;
+    if (result.result != .success and result.result != .suboptimal_khr) return error.ImageAcquireFailed;
 
     std.mem.swap(vk.Semaphore, &swap_images[result.image_index].image_acquired, &next_image_acquired);
     return .{
         .surface_format = surface_format,
         .present_mode = final_present_mode,
-        .extent = actual_extent,
+        .extent = extent,
         .handle = handle,
         .swap_images = swap_images,
         .image_index = result.image_index,
@@ -149,10 +154,16 @@ pub fn deinit(self: Swapchain, ctx: Context) void {
     ctx.device.destroySwapchainKHR(self.handle, null);
 }
 
-pub fn recreate(self: *Swapchain, ctx: Context, new_extent: vk.Extent2D, present_mode: vk.PresentModeKHR) !void {
+pub fn recreate(
+    self: *Swapchain,
+    ctx: Context,
+    new_extent: vk.Extent2D,
+    caps: vk.SurfaceCapabilitiesKHR,
+    present_mode: vk.PresentModeKHR,
+) !void {
     const old_handle = self.handle;
     self.deinitExceptSwapchain(ctx);
-    self.* = try initRecycle(ctx, new_extent, old_handle, present_mode);
+    self.* = try initRecycle(ctx, new_extent, caps, old_handle, present_mode);
 }
 
 pub fn present(self: *Swapchain, ctx: Context, cmd_buffer: vk.CommandBuffer) !PresentState {
@@ -229,7 +240,7 @@ fn findPresentMode(ctx: Context, present_mode: vk.PresentModeKHR) !vk.PresentMod
     return .fifo_khr;
 }
 
-fn findActualExtent(caps: vk.SurfaceCapabilitiesKHR, extent: vk.Extent2D) vk.Extent2D {
+pub fn findActualExtent(caps: vk.SurfaceCapabilitiesKHR, extent: vk.Extent2D) vk.Extent2D {
     if (caps.current_extent.width != 0xFFFFFFFF) return caps.current_extent;
     return .{
         .width = std.math.clamp(extent.width, caps.min_image_extent.width, caps.max_image_extent.width),
