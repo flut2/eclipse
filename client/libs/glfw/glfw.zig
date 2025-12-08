@@ -3,27 +3,84 @@ const builtin = @import("builtin");
 
 const options = @import("options");
 
-pub const Hint = enum(i32) {
-    joystick_hat_buttons = 0x00050001,
-    angle_platform_type = 0x00050002,
-    platform = 0x00050003,
-    cocoa_chdir_resources = 0x00051001,
-    cocoa_menubar = 0x00051002,
-    x11_xcb_vulkan_surface = 0x00052001,
-    wayland_libdecor = 0x00053001,
+var glfw_allocator: ?std.mem.Allocator = null;
+var pointer_size_map: std.AutoHashMapUnmanaged(usize, usize) = .empty;
+var alloc_mutex: std.Thread.Mutex = .{};
+const alignment: std.mem.Alignment = .of(std.c.max_align_t);
 
-    pub fn set(hint: Hint, value: i32) void {
-        glfwInitHint(hint, value);
-    }
-    extern fn glfwInitHint(hint: Hint, value: i32) void;
+fn allocatorMissing() noreturn {
+    @panic("glfw: Allocator is missing, set it through `stbi.init()`");
+}
+
+fn outOfMemory() noreturn {
+    @panic("glfw: Out of memory");
+}
+
+pub const GlfwAllocatorVtable = extern struct {
+    alloc: *const fn (size: usize, userdata: ?*anyopaque) callconv(.c) ?[*]u8,
+    realloc: *const fn (maybe_ptr: ?*anyopaque, new_size: usize, userdata: ?*anyopaque) callconv(.c) ?[*]u8,
+    free: *const fn (maybe_ptr: ?*anyopaque, userdata: ?*anyopaque) callconv(.c) void,
+    userdata: ?*anyopaque,
 };
 
-pub fn init() Error!void {
-    if (glfwInit() != 0) return;
-    try maybeError();
-    unreachable;
+fn alloc(size: usize, _: ?*anyopaque) callconv(.c) ?[*]u8 {
+    const allocator = glfw_allocator orelse allocatorMissing();
+
+    alloc_mutex.lock();
+    defer alloc_mutex.unlock();
+
+    const mem = allocator.alignedAlloc(u8, alignment, size) catch outOfMemory();
+    pointer_size_map.put(allocator, @intFromPtr(mem.ptr), size) catch outOfMemory();
+    return mem.ptr;
 }
+
+fn realloc(maybe_ptr: ?*anyopaque, new_size: usize, _: ?*anyopaque) callconv(.c) ?[*]u8 {
+    const allocator = glfw_allocator orelse allocatorMissing();
+
+    alloc_mutex.lock();
+    defer alloc_mutex.unlock();
+
+    const old_size = if (maybe_ptr) |p| pointer_size_map.fetchRemove(@intFromPtr(p)).?.value else 0;
+    const old_mem: [*]align(alignment.toByteUnits()) u8 = if (maybe_ptr) |p| @ptrCast(@alignCast(p)) else &.{};
+    const new_mem = allocator.realloc(old_mem[0..old_size], new_size) catch outOfMemory();
+    pointer_size_map.put(allocator, @intFromPtr(new_mem.ptr), new_size) catch outOfMemory();
+    return new_mem.ptr;
+}
+
+fn free(maybe_ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
+    const allocator = glfw_allocator orelse allocatorMissing();
+    const ptr = maybe_ptr orelse return;
+
+    alloc_mutex.lock();
+    defer alloc_mutex.unlock();
+
+    const kv = pointer_size_map.fetchRemove(@intFromPtr(ptr)) orelse {
+        std.log.err("glfw: Invalid free attempted on {*}", .{ptr});
+        return;
+    };
+    const mem: [*]align(alignment.toByteUnits()) u8 = @ptrCast(@alignCast(ptr));
+    allocator.free(mem[0..kv.value]);
+}
+
+pub fn init(allocator: std.mem.Allocator) Error!void {
+    glfw_allocator = allocator;
+    glfwInitAllocator(&.{
+        .alloc = alloc,
+        .realloc = realloc,
+        .free = free,
+        .userdata = null,
+    });
+    _ = glfwInit();
+    try maybeError();
+}
+extern fn glfwInitAllocator(vtable: *const GlfwAllocatorVtable) void;
 extern fn glfwInit() i32;
+
+pub fn deinit() void {
+    const allocator = glfw_allocator orelse allocatorMissing();
+    terminate();
+    pointer_size_map.deinit(allocator);
+}
 
 pub const terminate = glfwTerminate;
 extern fn glfwTerminate() void;
@@ -37,14 +94,16 @@ extern fn glfwWaitEvents() void;
 pub const waitEventsTimeout = glfwWaitEventsTimeout;
 extern fn glfwWaitEventsTimeout(timeout: f64) void;
 
-pub fn isVulkanSupported() bool {
-    return glfwVulkanSupported() == 1;
+pub fn isVulkanSupported() !bool {
+    const supported = glfwVulkanSupported() == 1;
+    try maybeError();
+    return supported;
 }
 extern fn glfwVulkanSupported() i32;
 
 pub fn getRequiredInstanceExtensions() Error![][*:0]const u8 {
     var count: u32 = 0;
-    if (glfwGetRequiredInstanceExtensions(&count)) |extensions| 
+    if (glfwGetRequiredInstanceExtensions(&count)) |extensions|
         return extensions[0..count];
     try maybeError();
     unreachable;
@@ -102,6 +161,9 @@ pub fn maybeError() Error!void {
 extern fn glfwGetError(description: ?*?[*:0]const u8) i32;
 
 pub const InputMode = enum(i32) {
+    /// Not a valid enum value to pass to GLFW
+    invalid = std.math.minInt(i32),
+
     cursor = 0x00033001,
     sticky_keys = 0x00033002,
     sticky_mouse_buttons = 0x00033003,
@@ -136,9 +198,27 @@ pub fn getProcAddress(procname: [*:0]const u8) ?GlProc {
 }
 extern fn glfwGetProcAddress(procname: [*:0]const u8) ?GlProc;
 
+pub const Hint = enum(i32) {
+    /// Not a valid enum value to pass to GLFW
+    invalid = std.math.minInt(i32),
+
+    joystick_hat_buttons = 0x00050001,
+    angle_platform_type = 0x00050002,
+    platform = 0x00050003,
+    cocoa_chdir_resources = 0x00051001,
+    cocoa_menubar = 0x00051002,
+    x11_xcb_vulkan_surface = 0x00052001,
+    wayland_libdecor = 0x00053001,
+
+    pub fn set(hint: Hint, value: i32) void {
+        glfwInitHint(hint, value);
+    }
+    extern fn glfwInitHint(hint: Hint, value: i32) void;
+};
+
 pub const Action = enum(i32) {
     /// Not a valid enum value to pass to GLFW
-    unknown = std.math.minInt(i32),
+    invalid = std.math.minInt(i32),
 
     release = 0,
     press = 1,
@@ -147,7 +227,7 @@ pub const Action = enum(i32) {
 
 pub const MouseButton = enum(i32) {
     /// Not a valid enum value to pass to GLFW
-    unknown = std.math.minInt(i32),
+    invalid = std.math.minInt(i32),
 
     left = 0,
     right = 1,
@@ -161,7 +241,7 @@ pub const MouseButton = enum(i32) {
 
 pub const Key = enum(i32) {
     /// Not a valid enum value to pass to GLFW
-    unknown = std.math.minInt(i32),
+    invalid = std.math.minInt(i32),
 
     space = 32,
     apostrophe = 39,
@@ -304,6 +384,9 @@ pub const Image = extern struct {
 
 pub const Cursor = opaque {
     pub const Shape = enum(i32) {
+        /// Not a valid enum value to pass to GLFW
+        invalid = std.math.minInt(i32),
+
         arrow = 0x00036001,
         ibeam = 0x00036002,
         crosshair = 0x00036003,
@@ -317,6 +400,9 @@ pub const Cursor = opaque {
     };
 
     pub const Mode = enum(i32) {
+        /// Not a valid enum value to pass to GLFW
+        invalid = std.math.minInt(i32),
+
         normal = 0x00034001,
         hidden = 0x00034002,
         disabled = 0x00034003,
@@ -348,6 +434,9 @@ pub const Joystick = struct {
     pub const maximum_supported = std.math.maxInt(Id) + 1;
 
     pub const ButtonAction = enum(u8) {
+        /// Not a valid enum value to pass to GLFW
+        invalid = std.math.maxInt(u8),
+
         release = 0,
         press = 1,
     };
@@ -396,6 +485,9 @@ pub const Gamepad = struct {
     jid: Joystick.Id,
 
     pub const Axis = enum(u8) {
+        /// Not a valid enum value to pass to GLFW
+        invalid = std.math.maxInt(u8),
+
         left_x = 0,
         left_y = 1,
         right_x = 2,
@@ -443,10 +535,10 @@ pub const Gamepad = struct {
 
     pub fn getState(self: Gamepad) State {
         var state: State = undefined;
-        _ = glfwGetGamepadState(@intCast(self.jid), &state);
-        // return value of glfwGetGamepadState is ignored as
-        // it is expected this is guarded by glfwJoystickIsGamepad
-        return state;
+        if (glfwGetGamepadState(@intCast(self.jid), &state) == 1)
+            return state;
+        try maybeError();
+        unreachable;
     }
     extern fn glfwGetGamepadState(jid: i32, state: *Gamepad.State) i32;
 
@@ -511,6 +603,9 @@ pub const VideoMode = extern struct {
 
 pub const Window = opaque {
     pub const Attribute = enum(i32) {
+        /// Not a valid enum value to pass to GLFW
+        invalid = std.math.minInt(i32),
+
         focused = 0x00020001,
         iconified = 0x00020002,
         resizable = 0x00020003,
@@ -561,12 +656,12 @@ pub const Window = opaque {
     extern fn glfwSetWindowSizeLimits(window: *Window, min_w: i32, min_h: i32, max_w: i32, max_h: i32) void;
 
     pub fn getContentScale(window: *Window) [2]f32 {
-        var xscale: f32 = 0.0;
-        var yscale: f32 = 0.0;
-        glfwGetWindowContentScale(window, &xscale, &yscale);
-        return .{ xscale, yscale };
+        var x_scale: f32 = 0.0;
+        var y_scale: f32 = 0.0;
+        glfwGetWindowContentScale(window, &x_scale, &y_scale);
+        return .{ x_scale, y_scale };
     }
-    extern fn glfwGetWindowContentScale(window: *Window, xscale: *f32, yscale: *f32) void;
+    extern fn glfwGetWindowContentScale(window: *Window, x_scale: *f32, y_scale: *f32) void;
 
     pub const getKey = glfwGetKey;
     extern fn glfwGetKey(window: *Window, key: Key) Action;
@@ -575,12 +670,12 @@ pub const Window = opaque {
     extern fn glfwGetMouseButton(window: *Window, button: MouseButton) Action;
 
     pub fn getCursorPos(window: *Window) [2]f64 {
-        var xpos: f64 = 0.0;
-        var ypos: f64 = 0.0;
-        glfwGetCursorPos(window, &xpos, &ypos);
-        return .{ xpos, ypos };
+        var x_pos: f64 = 0.0;
+        var y_pos: f64 = 0.0;
+        glfwGetCursorPos(window, &x_pos, &y_pos);
+        return .{ x_pos, y_pos };
     }
-    extern fn glfwGetCursorPos(window: *Window, xpos: *f64, ypos: *f64) void;
+    extern fn glfwGetCursorPos(window: *Window, x_pos: *f64, y_pos: *f64) void;
 
     pub fn getFramebufferSize(window: *Window) [2]i32 {
         var width: i32 = 0.0;
@@ -602,15 +697,15 @@ pub const Window = opaque {
     extern fn glfwSetWindowSize(window: *Window, width: i32, height: i32) void;
 
     pub fn getPos(window: *Window) [2]i32 {
-        var xpos: i32 = 0.0;
-        var ypos: i32 = 0.0;
-        glfwGetWindowPos(window, &xpos, &ypos);
-        return .{ xpos, ypos };
+        var x_pos: i32 = 0.0;
+        var y_pos: i32 = 0.0;
+        glfwGetWindowPos(window, &x_pos, &y_pos);
+        return .{ x_pos, y_pos };
     }
-    extern fn glfwGetWindowPos(window: *Window, xpos: *i32, ypos: *i32) void;
+    extern fn glfwGetWindowPos(window: *Window, x_pos: *i32, y_pos: *i32) void;
 
     pub const setPos = glfwSetWindowPos;
-    extern fn glfwSetWindowPos(window: *Window, xpos: i32, ypos: i32) void;
+    extern fn glfwSetWindowPos(window: *Window, x_pos: i32, y_pos: i32) void;
 
     pub inline fn setTitle(window: *Window, title: [:0]const u8) void {
         glfwSetWindowTitle(window, title);
@@ -625,10 +720,7 @@ pub const Window = opaque {
     pub inline fn setClipboardString(window: *Window, string: [:0]const u8) void {
         return glfwSetClipboardString(window, string);
     }
-    extern fn glfwSetClipboardString(
-        window: *Window,
-        string: [*:0]const u8,
-    ) void;
+    extern fn glfwSetClipboardString(window: *Window, string: [*:0]const u8) void;
 
     pub const setFramebufferSizeCallback = glfwSetFramebufferSizeCallback;
     extern fn glfwSetFramebufferSizeCallback(window: *Window, callback: ?FramebufferSizeFn) ?FramebufferSizeFn;
@@ -759,6 +851,9 @@ pub const Window = opaque {
 };
 
 pub const WindowHint = enum(i32) {
+    /// Not a valid enum value to pass to GLFW
+    invalid = std.math.minInt(i32),
+
     focused = 0x00020001,
     iconified = 0x00020002,
     resizable = 0x00020003,
@@ -809,6 +904,7 @@ pub const WindowHint = enum(i32) {
 
     fn TypeFor(window_hint: WindowHint) type {
         return switch (window_hint) {
+            .invalid => @panic("Invalid WindowHint supplied"),
             .focused,
             .iconified,
             .resizable,
@@ -888,30 +984,45 @@ pub fn windowHintString(window_hint: WindowHint, string: [:0]const u8) void {
 extern fn glfwWindowHintString(WindowHint, string: [*:0]const u8) void;
 
 pub const ClientApi = enum(i32) {
+    /// Not a valid enum value to pass to GLFW
+    invalid = std.math.minInt(i32),
+
     no_api = 0,
     opengl_api = 0x00030001,
     opengl_es_api = 0x00030002,
 };
 
 pub const OpenGLProfile = enum(i32) {
+    /// Not a valid enum value to pass to GLFW
+    invalid = std.math.minInt(i32),
+
     opengl_any_profile = 0,
     opengl_core_profile = 0x00032001,
     opengl_compat_profile = 0x00032002,
 };
 
 pub const ContextRobustness = enum(i32) {
+    /// Not a valid enum value to pass to GLFW
+    invalid = std.math.minInt(i32),
+
     no_robustness = 0,
     no_reset_notification = 0x00031001,
     lose_context_on_reset = 0x00031002,
 };
 
 pub const ReleaseBehaviour = enum(i32) {
+    /// Not a valid enum value to pass to GLFW
+    invalid = std.math.minInt(i32),
+
     any = 0,
     flush = 0x00035001,
     none = 0x00035002,
 };
 
 pub const ContextCreationApi = enum(i32) {
+    /// Not a valid enum value to pass to GLFW
+    invalid = std.math.minInt(i32),
+
     native = 0x00036001,
     egl = 0x00036002,
     osmesa = 0x00036003,

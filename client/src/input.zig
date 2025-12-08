@@ -202,7 +202,7 @@ pub fn charEvent(_: *glfw.Window, char: u32) callconv(.c) void {
 pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action, mods: glfw.Mods) callconv(.c) void {
     if (action == .press or action == .repeat) {
         if (selected_key_mapper) |key_mapper| {
-            key_mapper.settings_button.* = if (key == .escape) .{ .key = .unknown } else .{ .key = key };
+            key_mapper.settings_button.* = if (key == .escape) .{ .key = .invalid } else .{ .key = key };
             key_mapper.listening = false;
             key_mapper.setKeyCallback(key_mapper);
             selected_key_mapper = null;

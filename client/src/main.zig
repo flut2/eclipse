@@ -91,6 +91,10 @@ pub var main_loop: *uv.uv_loop_t = undefined;
 pub var window: *glfw.Window = undefined;
 pub var callbacks: std.ArrayList(TimedCallback) = .empty;
 
+var uv_pointer_size_map: std.AutoHashMapUnmanaged(usize, usize) = .empty;
+var uv_alloc_mutex: std.Thread.Mutex = .{};
+const uv_alignment: std.mem.Alignment = .of(std.c.max_align_t);
+
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.c) void {
     if (w <= 0 or h <= 0) return;
 
@@ -341,53 +345,48 @@ pub fn oomPanic() noreturn {
 pub fn audioFailure() void {
     settings.sfx_volume = 0.0;
     settings.music_volume = 0.0;
-    dialog.showDialog(.text, .{ .title = "Audio Error", .body =
+    dialog.showDialog(.text, .{ .title = "Audio Error", .body = 
         \\There was a problem interacting with your audio device. 
         \\Audio has been turned off, but you can turn it back on in the Options if you believe this to be incorrect or temporary.
     });
 }
 
-fn uvMalloc(len: usize) callconv(.c) ?*anyopaque {
-    const result = std.c.malloc(len);
-    if (result) |addr| {
-        tracy.alloc(@ptrCast(@alignCast(addr)), len);
-    } else {
-        var buffer: [128]u8 = undefined;
-        const msg = std.fmt.bufPrint(&buffer, "Libuv alloc failed, requesting {d} bytes", .{len}) catch return result;
-        tracy.messageCopy(msg);
-    }
-    return result;
+fn uvMalloc(size: usize) callconv(.c) ?*anyopaque {
+    uv_alloc_mutex.lock();
+    defer uv_alloc_mutex.unlock();
+
+    const mem = allocator.alignedAlloc(u8, uv_alignment, size) catch oomPanic();
+    uv_pointer_size_map.put(allocator, @intFromPtr(mem.ptr), size) catch oomPanic();
+    return mem.ptr;
 }
 
-fn uvCalloc(len: usize, elem_size: usize) callconv(.c) ?*anyopaque {
-    const result = std.c.malloc(len * elem_size);
-    if (result) |addr| {
-        @memset(@as([*]u8, @ptrCast(@alignCast(result)))[0 .. len * elem_size], 0);
-        tracy.alloc(@ptrCast(@alignCast(addr)), len * elem_size);
-    } else {
-        var buffer: [128]u8 = undefined;
-        const msg = std.fmt.bufPrint(&buffer, "Libuv calloc failed, requesting {d} bytes", .{len * elem_size}) catch return result;
-        tracy.messageCopy(msg);
-    }
-    return result;
+fn uvCalloc(size: usize, elem_size: usize) callconv(.c) ?*anyopaque {
+    return uvMalloc(size * elem_size);
 }
 
-fn uvResize(ptr: ?*anyopaque, new_len: usize) callconv(.c) ?*anyopaque {
-    const result = std.c.realloc(ptr, new_len);
-    if (result) |addr| {
-        if (ptr) |p| tracy.free(@ptrCast(@alignCast(p)));
-        tracy.alloc(@ptrCast(@alignCast(addr)), new_len);
-    } else {
-        var buffer: [128]u8 = undefined;
-        const msg = std.fmt.bufPrint(&buffer, "Libuv resize failed, requesting {d} bytes", .{new_len}) catch return result;
-        tracy.messageCopy(msg);
-    }
-    return result;
+fn uvResize(maybe_ptr: ?*anyopaque, new_size: usize) callconv(.c) ?*anyopaque {
+    uv_alloc_mutex.lock();
+    defer uv_alloc_mutex.unlock();
+
+    const old_size = if (maybe_ptr) |p| uv_pointer_size_map.fetchRemove(@intFromPtr(p)).?.value else 0;
+    const old_mem: [*]align(uv_alignment.toByteUnits()) u8 = if (maybe_ptr) |p| @ptrCast(@alignCast(p)) else &.{};
+    const new_mem = allocator.realloc(old_mem[0..old_size], new_size) catch oomPanic();
+    uv_pointer_size_map.put(allocator, @intFromPtr(new_mem.ptr), new_size) catch oomPanic();
+    return new_mem.ptr;
 }
 
-fn uvFree(ptr: ?*anyopaque) callconv(.c) void {
-    std.c.free(ptr);
-    if (ptr) |p| tracy.free(@ptrCast(@alignCast(p)));
+fn uvFree(maybe_ptr: ?*anyopaque) callconv(.c) void {
+    const ptr = maybe_ptr orelse return;
+
+    uv_alloc_mutex.lock();
+    defer uv_alloc_mutex.unlock();
+
+    const kv = uv_pointer_size_map.fetchRemove(@intFromPtr(ptr)) orelse {
+        std.log.err("libuv: Invalid free attempted on {*}", .{ptr});
+        return;
+    };
+    const mem: [*]align(uv_alignment.toByteUnits()) u8 = @ptrCast(@alignCast(ptr));
+    allocator.free(mem[0..kv.value]);
 }
 
 pub fn main() !void {
@@ -396,18 +395,16 @@ pub fn main() !void {
 
     var dbg_alloc: std.heap.DebugAllocator(.{ .stack_trace_frames = 10 }) = .init;
     defer _ = dbg_alloc.deinit();
-    allocator = dbg_alloc.allocator();
     var tracy_alloc: if (build_options.enable_tracy) tracy.TracyAllocator(null) else void =
-        if (build_options.enable_tracy) .init(allocator) else {};
-    if (build_options.enable_tracy) {
-        allocator = tracy_alloc.allocator();
+        if (build_options.enable_tracy) .init(dbg_alloc.allocator()) else {};
+    allocator = if (build_options.enable_tracy) tracy_alloc.allocator() else dbg_alloc.allocator();
 
-        const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
-        if (replace_alloc_status != 0) {
-            std.log.err("Libuv alloc replace error: {s}", .{uv.uv_strerror(replace_alloc_status)});
-            return error.ReplaceAllocFailed;
-        }
+    const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
+    if (replace_alloc_status != 0) {
+        std.log.err("Libuv alloc replace error: {s}", .{uv.uv_strerror(replace_alloc_status)});
+        return error.ReplaceAllocFailed;
     }
+    defer uv_pointer_size_map.deinit(allocator);
 
     var account_arena: std.heap.ArenaAllocator = .init(allocator);
     account_arena_allocator = account_arena.allocator();
@@ -416,10 +413,10 @@ pub fn main() !void {
     current_account = AccountData.load() catch null;
     defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
 
-    try glfw.init();
-    defer glfw.terminate();
+    try glfw.init(allocator);
+    defer glfw.deinit();
 
-    if (!glfw.isVulkanSupported()) {
+    if (!try glfw.isVulkanSupported()) {
         std.log.err("GLFW could not find libvulkan", .{});
         return error.NoVulkan;
     }

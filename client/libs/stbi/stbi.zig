@@ -3,7 +3,7 @@ const std = @import("std");
 var stbi_allocator: ?std.mem.Allocator = null;
 var pointer_size_map: std.AutoHashMapUnmanaged(usize, usize) = .empty;
 var alloc_mutex: std.Thread.Mutex = .{};
-const alignment = 16;
+const alignment: std.mem.Alignment = .of(std.c.max_align_t);
 
 fn allocatorMissing() noreturn {
     @panic("stbi: Allocator is missing, set it through `stbi.init()`");
@@ -19,21 +19,21 @@ fn stbiMalloc(size: usize) callconv(.c) ?*anyopaque {
     alloc_mutex.lock();
     defer alloc_mutex.unlock();
 
-    const mem = allocator.alignedAlloc(u8, .fromByteUnits(alignment), size) catch outOfMemory();
+    const mem = allocator.alignedAlloc(u8, alignment, size) catch outOfMemory();
     pointer_size_map.put(allocator, @intFromPtr(mem.ptr), size) catch outOfMemory();
     return mem.ptr;
 }
 
-fn stbiRealloc(ptr: ?*anyopaque, size: usize) callconv(.c) ?*anyopaque {
+fn stbiRealloc(maybe_ptr: ?*anyopaque, new_size: usize) callconv(.c) ?*anyopaque {
     const allocator = stbi_allocator orelse allocatorMissing();
 
     alloc_mutex.lock();
     defer alloc_mutex.unlock();
 
-    const old_size = if (ptr) |p| pointer_size_map.fetchRemove(@intFromPtr(p)).?.value else 0;
-    const old_mem: [*]align(alignment) u8 = if (ptr) |p| @ptrCast(@alignCast(p)) else &.{};
-    const new_mem = allocator.realloc(old_mem[0..old_size], size) catch outOfMemory();
-    pointer_size_map.put(allocator, @intFromPtr(new_mem.ptr), size) catch outOfMemory();
+    const old_size = if (maybe_ptr) |p| pointer_size_map.fetchRemove(@intFromPtr(p)).?.value else 0;
+    const old_mem: [*]align(alignment.toByteUnits()) u8 = if (maybe_ptr) |p| @ptrCast(@alignCast(p)) else &.{};
+    const new_mem = allocator.realloc(old_mem[0..old_size], new_size) catch outOfMemory();
+    pointer_size_map.put(allocator, @intFromPtr(new_mem.ptr), new_size) catch outOfMemory();
     return new_mem.ptr;
 }
 
@@ -48,7 +48,7 @@ fn stbiFree(maybe_ptr: ?*anyopaque) callconv(.c) void {
         std.log.err("stbi: Invalid free attempted on {*}", .{ptr});
         return;
     };
-    const mem: [*]align(alignment) u8 = @ptrCast(@alignCast(ptr));
+    const mem: [*]align(alignment.toByteUnits()) u8 = @ptrCast(@alignCast(ptr));
     allocator.free(mem[0..kv.value]);
 }
 
