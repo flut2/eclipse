@@ -1,5 +1,18 @@
 const std = @import("std");
 
+pub const PacketLogType = enum {
+    all,
+    all_non_tick,
+    all_tick,
+    c2s,
+    c2s_non_tick,
+    c2s_tick,
+    s2c,
+    s2c_non_tick,
+    s2c_tick,
+    off,
+};
+
 pub fn buildWithoutDupes(
     b: *std.Build,
     comptime root_add: []const u8,
@@ -7,6 +20,7 @@ pub fn buildWithoutDupes(
     check_step: *std.Build.Step,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    log_packets: PacketLogType,
     enable_tracy: bool,
 ) !void {
     const options = .{
@@ -14,6 +28,7 @@ pub fn buildWithoutDupes(
             \\Whether to use Dragonfly for the database.
             \\Redis is assumed otherwise, and TTL banning/muting will be permanent across HWIDs, but not accounts.
         ) orelse false,
+        .log_packets = log_packets,
         .enable_tracy = enable_tracy,
     };
 
@@ -139,8 +154,9 @@ pub fn buildWithoutDupes(
 
 pub fn build(b: *std.Build) !void {
     const check_step = b.step("check", "Check if app compiles");
+    const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
     const enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    try buildWithoutDupes(b, "", false, check_step, target, optimize, enable_tracy);
+    try buildWithoutDupes(b, "", false, check_step, target, optimize, log_packets, enable_tracy);
 }

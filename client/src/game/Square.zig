@@ -32,7 +32,7 @@ const AnimData = struct {
     anim_idx: u8 = 0,
     next_anim: i64 = -1,
 };
-var anim_data: std.AutoHashMapUnmanaged(u16, AnimData) = .empty;
+pub var anim_data: std.AutoHashMapUnmanaged(u16, AnimData) = .empty;
 
 data_id: u16 = empty_tile,
 x: f32 = 0.0,

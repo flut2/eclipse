@@ -41,8 +41,8 @@ fn Behavior(comptime behav_type: BehaviorType) type {
     const EnumField = std.builtin.Type.EnumField;
     const UnionField = std.builtin.Type.UnionField;
 
-    var union_fields: []const UnionField = &[_]UnionField{};
-    var enum_fields: []const EnumField = &[_]EnumField{};
+    var union_fields: []const UnionField = &.{};
+    var enum_fields: []const EnumField = &.{};
 
     var enum_index: u32 = 0;
     for (behaviors) |import| {

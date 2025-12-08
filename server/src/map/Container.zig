@@ -21,7 +21,6 @@ x: f32 = 0.0,
 y: f32 = 0.0,
 name: ?[]const u8 = null,
 size_mult: f32 = 1.0,
-stats_writer: utils.PacketWriter = .{},
 owner_map_id: u32 = std.math.maxInt(u32),
 inventory: [9]u16 = inv_default,
 inv_data: [9]network_data.ItemData = inv_data_default,
@@ -34,7 +33,6 @@ spawn: packed struct {
 free_name: bool = false,
 
 pub fn init(self: *Container) !void {
-    self.stats_writer.list = try .initCapacity(main.allocator, 32);
     self.data = game_data.container.from_id.getPtr(self.data_id) orelse {
         std.log.err("Could not find data for container with data id {}", .{self.data_id});
         return;
@@ -44,7 +42,6 @@ pub fn init(self: *Container) !void {
 
 pub fn deinit(self: *Container) !void {
     if (self.free_name) if (self.name) |name| main.allocator.free(name);
-    self.stats_writer.list.deinit(main.allocator);
 }
 
 pub fn tick(self: *Container, time: i64, _: i64) !void {
@@ -56,8 +53,8 @@ pub fn tick(self: *Container, time: i64, _: i64) !void {
 }
 
 pub fn exportStats(self: *Container, cache: *[@typeInfo(network_data.ContainerStat).@"union".fields.len]?network_data.ContainerStat) ![]u8 {
-    const writer = &self.stats_writer;
-    writer.list.clearRetainingCapacity();
+    const writer = &main.stats_writer;
+    const idx = writer.list.items.len;
 
     const T = network_data.ContainerStat;
     inline for (.{
@@ -74,5 +71,5 @@ pub fn exportStats(self: *Container, cache: *[@typeInfo(network_data.ContainerSt
         stat_util.write(T, writer, cache, @unionInit(T, @tagName(inv_data_tag), self.inv_data[i]));
     }
 
-    return writer.list.items;
+    return writer.list.items[idx..];
 }

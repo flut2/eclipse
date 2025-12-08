@@ -52,7 +52,7 @@ name: ?[]const u8 = null,
 name_text_data: ?element.TextData = null,
 name_text_data_inited: bool = false,
 cards: []const u16 = &.{},
-resources: []const network_data.DataIdWithCount(u32) = &.{default_resource},
+resources: []const network_data.DataIdWithCount(u32) = &.{},
 talents: []const network_data.DataIdWithCount(u16) = &.{},
 in_combat: bool = false,
 aether: u8 = 1,
@@ -148,8 +148,7 @@ pub fn deinit(self: *Player) void {
     self.status_texts.deinit(main.allocator);
     if (self.speech_balloon) |*balloon| balloon.deinit();
     main.allocator.free(self.cards);
-    if (self.resources.len != 1 or !self.resources[0].eql(default_resource))
-        main.allocator.free(self.resources);
+    main.allocator.free(self.resources);
     main.allocator.free(self.talents);
 }
 

@@ -5,7 +5,7 @@
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .shared = .{ .path = "shared" },
-        .nfd = .{ .path = "libs/nfd" },
+        .nfd = .{ .path = "client/libs/nfd" },
         .miniaudio = .{ .path = "client/libs/miniaudio" },
         .stbi = .{ .path = "client/libs/stbi" },
         .glfw = .{ .path = "client/libs/glfw" },
@@ -22,8 +22,8 @@
             .hash = "N-V-__8AAMeyCAC7f33pfuk8OlGD4qqGI2OwGeP-9KamyBcb",
         },
         .turbopack = .{
-            .url = "git+https://github.com/flut2/turbopack.git#1ed6f6e423a82bafbee2a540328f767171ad8cef",
-            .hash = "turbopack-1.0.0-rSxRjiIfAABFC5AKKtsNiX_xd3BR0WNcuOZAMy5389Rf",
+            .url = "git+https://github.com/flut2/turbopack.git#d6995ce5a8f071bb759a274ac036dff65909905a",
+            .hash = "turbopack-1.0.0-rSxRjlofAAAoHGx7mg6pkzI3gEh-g9OQcnmF7_px6Sg7",
         },
         .vulkan_zig = .{
             .url = "git+https://github.com/Snektron/vulkan-zig.git#93bc6f1ac3e13dd98d918e242dc892f179a0d0f5",

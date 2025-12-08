@@ -28,8 +28,8 @@ pub fn write(
                     !is_condition and !is_array and !is_slice and @field(cache[tag_id].?, @tagName(tag)) == inner_value))
                 return;
 
-            writer.write(@intFromEnum(tag), main.allocator);
-            writer.write(inner_value, main.allocator);
+            writer.write(@intFromEnum(tag));
+            writer.write(inner_value);
 
             if (cache[tag_id]) |*cache_field| {
                 if (is_slice) main.allocator.free(@field(cache_field.*, @tagName(tag)));

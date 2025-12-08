@@ -121,6 +121,8 @@ pub fn deinit() void {
     main.allocator.free(minimap_copy);
     info = .{};
     main.camera.resetToDefaults();
+
+    Square.anim_data.deinit(main.allocator);
 }
 
 pub fn dispose() void {

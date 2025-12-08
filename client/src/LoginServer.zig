@@ -16,13 +16,7 @@ const ui_systems = @import("ui/systems.zig");
 
 const Server = @This();
 
-const WriteRequest = extern struct {
-    request: uv.uv_write_t = .{},
-    buffer: uv.uv_buf_t = .{},
-};
-
-socket: *uv.uv_tcp_t = undefined,
-read_arena: std.heap.ArenaAllocator = undefined,
+socket: uv.uv_tcp_t = .{},
 unsent_packets: std.ArrayList(network_data.C2SPacketLogin),
 initialized: bool = false,
 needs_verify: bool = false,
@@ -41,46 +35,35 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacketLogin).@"union".tag_t
     };
 }
 
-pub fn allocBuffer(_: [*c]uv.uv_handle_t, suggested_size: usize, buf: [*c]uv.uv_buf_t) callconv(.c) void {
-    buf.* = .{
-        .base = @ptrCast(main.allocator.alloc(u8, suggested_size) catch main.oomPanic()),
-        .len = @intCast(suggested_size),
-    };
-}
-
-fn writeCallback(ud: [*c]uv.uv_write_t, status: c_int) callconv(.c) void {
-    const wr: *WriteRequest = @ptrCast(@alignCast(ud));
-    const server: *Server = @ptrCast(@alignCast(wr.request.data));
-    main.allocator.free(wr.buffer.base[0..wr.buffer.len]);
-    main.allocator.destroy(wr);
-
-    if (status != 0) {
-        std.log.err("Login write error: {s}", .{uv.uv_strerror(status)});
-        server.shutdown();
-        dialog.showDialog(.text, .{
-            .title = "Connection Error",
-            .body = "Login socket writing was interrupted",
-        });
+pub fn allocBuffer(_: [*c]uv.uv_handle_t, _: usize, buf: [*c]uv.uv_buf_t) callconv(.c) void {
+    if (main.login_buffer_free_list.items.len > 0) {
+        const free_buf = main.login_buffer_free_list.pop() orelse unreachable;
+        buf.* = .{ .base = free_buf.ptr, .len = main.login_buffer_size };
         return;
     }
+
+    const start_idx = main.login_buffers.items.len;
+    main.login_buffers.appendNTimes(main.allocator, 0, main.login_buffer_size) catch main.oomPanic();
+    buf.* = .{ .base = &main.login_buffers.items[start_idx], .len = main.login_buffer_size };
 }
 
 pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.c) void {
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const server: *Server = @ptrCast(@alignCast(socket.data));
-    defer _ = server.read_arena.reset(.{ .retain_with_limit = 1024 });
-    const allocator = server.read_arena.allocator();
+
+    defer main.login_buffer_free_list.append(main.allocator, buf.*.base[0..main.login_buffer_size]) catch main.oomPanic();
 
     if (bytes_read > 0) {
-        var reader: utils.PacketReader = .{ .buffer = buf.*.base[0..@intCast(bytes_read)] };
+        const reader = &main.login_reader;
+        reader.reset(buf.*.base[0..@intCast(bytes_read)]);
 
         while (reader.index <= bytes_read - 3) {
-            const len = reader.read(u16, allocator);
+            const len = reader.read(u16);
             if (len > bytes_read - reader.index) return;
 
             const next_packet_idx = reader.index + len;
             const EnumType = @typeInfo(network_data.S2CPacketLogin).@"union".tag_type.?;
-            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)), allocator);
+            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)));
             const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
                 std.log.err("Error parsing S2CPacketLogin ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
                 return;
@@ -88,7 +71,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
 
             switch (packet_id) {
                 inline else => |id| {
-                    const packet = reader.read(PacketData(id), allocator);
+                    const packet = reader.read(PacketData(id));
                     if (comptime logRead())
                         std.log.info("Receiving login packet: {f}", .{@unionInit(network_data.S2CPacketLogin, @tagName(id), packet)});
                     handlerFn(id)(server, packet);
@@ -101,6 +84,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
             }
         }
     } else if (bytes_read < 0) {
+        if (bytes_read == uv.UV_EOF) return;
         std.log.err("Login read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
         server.shutdown();
         dialog.showDialog(.text, .{
@@ -108,8 +92,6 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
             .body = "Login server closed the connection",
         });
     }
-
-    main.allocator.free(buf.*.base[0..@intCast(buf.*.len)]);
 }
 
 fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.c) void {
@@ -118,7 +100,6 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.c) void {
 
     if (status != 0) {
         std.log.err("Login connection callback error: {s}", .{uv.uv_strerror(status)});
-        main.disconnect();
         server.shutdown();
         dialog.showDialog(.text, .{
             .title = "Connection Error",
@@ -127,7 +108,7 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.c) void {
         return;
     }
 
-    const read_status = uv.uv_read_start(@ptrCast(server.socket), allocBuffer, readCallback);
+    const read_status = uv.uv_read_start(@ptrCast(&server.socket), allocBuffer, readCallback);
     if (read_status != 0) {
         std.log.err("Login read init error: {s}", .{uv.uv_strerror(read_status)});
         server.shutdown();
@@ -140,9 +121,10 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.c) void {
 
     server.initialized = true;
     if (server.needs_verify) {
-        if (main.current_account) |acc| {
-            server.sendPacket(.{ .verify = .{ .email = acc.email, .token = acc.token } });
-        } else ui_systems.switchScreen(.main_menu);
+        if (main.current_account) |acc|
+            server.sendPacket(.{ .verify = .{ .email = acc.email, .token = acc.token } })
+        else
+            ui_systems.switchScreen(.main_menu);
 
         server.needs_verify = false;
     }
@@ -157,20 +139,10 @@ fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.c) void {
 }
 
 pub fn init(self: *Server) !void {
-    self.socket = try main.allocator.create(uv.uv_tcp_t);
-    self.read_arena = .init(main.allocator);
     self.connect(build_options.login_server_ip, build_options.login_server_port) catch |e| {
         std.log.err("Login connection failed: {}", .{e});
         return;
     };
-}
-
-pub fn deinit(self: *Server) void {
-    main.disconnect();
-    main.allocator.destroy(self.socket);
-    self.read_arena.deinit();
-    self.unsent_packets.deinit(main.allocator);
-    self.initialized = false;
 }
 
 pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
@@ -180,25 +152,23 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
         return;
     }
 
-    switch (build_options.log_packets) {
-        .all, .c2s, .c2s_non_tick, .all_non_tick => std.log.info("Sending login packet: {f}", .{packet}),
-        else => {},
-    }
+    if (comptime logWrite())
+        std.log.info("Sending login packet: {f}", .{packet});
 
     switch (packet) {
         inline else => |data| {
-            var writer: utils.PacketWriter = .{};
-            defer writer.list.deinit(main.allocator);
-            writer.writeLength(main.allocator);
-            writer.write(@intFromEnum(std.meta.activeTag(packet)), main.allocator);
-            writer.write(data, main.allocator);
+            const writer = &main.login_writer;
+            writer.list.clearRetainingCapacity();
+            writer.writeLength();
+            writer.write(@intFromEnum(std.meta.activeTag(packet)));
+            writer.write(data);
             writer.updateLength();
 
             const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
-
             var write_status = uv.UV_EAGAIN;
-            while (write_status == uv.UV_EAGAIN or (write_status >= 0 and write_status != writer.list.items.len))
-                write_status = uv.uv_try_write(@ptrCast(self.socket), @ptrCast(&uv_buffer), 1);
+            while (write_status == uv.UV_EAGAIN or write_status > 0 and write_status < writer.list.items.len)
+                write_status = uv.uv_try_write(@ptrCast(&self.socket), @ptrCast(&uv_buffer), 1);
+
             if (write_status < 0) {
                 std.log.err("Login write send error: {s}", .{uv.uv_strerror(write_status)});
                 self.shutdown();
@@ -213,24 +183,24 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
 }
 
 pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
-    const addr = try std.net.Address.parseIp4(ip, port);
+    const addr: std.net.Address = try .parseIp4(ip, port);
 
-    self.socket.data = self;
-    const tcp_status = uv.uv_tcp_init(@ptrCast(main.main_loop), @ptrCast(self.socket));
+    const tcp_status = uv.uv_tcp_init(&main.main_loop, &self.socket);
     if (tcp_status != 0) {
         self.needs_verify = false;
         self.unsent_packets.clearAndFree(main.allocator);
         std.log.err("Login socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
         return error.NoSocket;
     }
+    self.socket.data = self;
 
-    const disable_nagle_status = uv.uv_tcp_nodelay(@ptrCast(self.socket), 1);
+    const disable_nagle_status = uv.uv_tcp_nodelay(&self.socket, 1);
     if (disable_nagle_status != 0)
         std.log.err("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
 
     var connect_data = try main.allocator.create(uv.uv_connect_t);
     connect_data.data = self;
-    const conn_status = uv.uv_tcp_connect(@ptrCast(connect_data), @ptrCast(self.socket), @ptrCast(&addr.in.sa), connectCallback);
+    const conn_status = uv.uv_tcp_connect(@ptrCast(connect_data), &self.socket, @ptrCast(&addr.in.sa), connectCallback);
     if (conn_status != 0) {
         self.needs_verify = false;
         self.unsent_packets.clearAndFree(main.allocator);
@@ -240,16 +210,19 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
 }
 
 pub fn shutdown(self: *Server) void {
+    if (!self.initialized) return;
     self.initialized = false;
-    self.needs_verify = false;
-    self.unsent_packets.clearAndFree(main.allocator);
 
-    ui_systems.switchScreen(.main_menu);
-
-    if (self.initialized and uv.uv_is_closing(@ptrCast(self.socket)) == 0) uv.uv_close(@ptrCast(self.socket), closeCallback);
+    const close_status = uv.uv_tcp_close_reset(&self.socket, closeCallback);
+    if (close_status != 0) std.log.err("Libuv socket close error: {s}", .{uv.uv_strerror(close_status)});
 }
 
-fn closeCallback(_: [*c]uv.uv_handle_t) callconv(.c) void {}
+fn closeCallback(ud: [*c]uv.uv_handle_t) callconv(.c) void {
+    const server: *Server = @ptrCast(@alignCast(ud));
+    main.disconnect();
+    server.unsent_packets.clearAndFree(main.allocator);
+    server.needs_verify = false;
+}
 
 fn logRead() bool {
     return build_options.log_packets == .all or
@@ -257,6 +230,15 @@ fn logRead() bool {
         build_options.log_packets == .s2c_non_tick or
         build_options.log_packets == .all_non_tick or
         build_options.log_packets == .s2c_tick or
+        build_options.log_packets == .all_tick;
+}
+
+fn logWrite() bool {
+    return build_options.log_packets == .all or
+        build_options.log_packets == .c2s or
+        build_options.log_packets == .c2s_non_tick or
+        build_options.log_packets == .all_non_tick or
+        build_options.log_packets == .c2s_tick or
         build_options.log_packets == .all_tick;
 }
 

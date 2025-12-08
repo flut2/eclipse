@@ -7,8 +7,8 @@ const game_data = @import("game_data.zig");
 pub const PacketWriter = struct {
     list: std.ArrayList(u8) = .empty,
 
-    pub fn writeLength(self: *PacketWriter, allocator: std.mem.Allocator) void {
-        self.list.appendSlice(allocator, &.{ 0, 0 }) catch @panic("OOM");
+    pub fn writeLength(self: *PacketWriter) void {
+        self.list.appendSliceAssumeCapacity(&.{ 0, 0 });
     }
 
     pub fn updateLength(self: *PacketWriter) void {
@@ -17,23 +17,21 @@ pub const PacketWriter = struct {
         @memcpy(buf, std.mem.asBytes(&len));
     }
 
-    pub fn write(self: *PacketWriter, value: anytype, allocator: std.mem.Allocator) void {
+    pub fn write(self: *PacketWriter, value: anytype) void {
         const T = @TypeOf(value);
         const type_info = @typeInfo(T);
 
         if (type_info == .pointer and (type_info.pointer.size == .slice or type_info.pointer.size == .many)) {
-            self.write(@as(u16, @intCast(value.len)), allocator);
-            for (value) |val| self.write(val, allocator);
+            self.write(@as(u16, @intCast(value.len)));
+            for (value) |val| self.write(val);
             return;
         }
-
-        const value_bytes = std.mem.asBytes(&value);
 
         if (type_info == .@"struct") {
             switch (type_info.@"struct".layout) {
                 .auto, .@"extern" => {
                     inline for (type_info.@"struct".fields) |field| {
-                        self.write(@field(value, field.name), allocator);
+                        self.write(@field(value, field.name));
                     }
                     return;
                 },
@@ -41,36 +39,42 @@ pub const PacketWriter = struct {
             }
         }
 
-        self.list.appendSlice(allocator, value_bytes) catch @panic("OOM");
+        const value_bytes = std.mem.asBytes(&value);
+        self.list.appendSliceAssumeCapacity(value_bytes);
     }
 };
 
 // Big endian isn't supported on this
 pub const PacketReader = struct {
     index: u16 = 0,
-    buffer: []const u8 = undefined,
+    buffer: []const u8 = &.{},
+    fba: std.heap.FixedBufferAllocator = .{
+        .end_index = std.math.maxInt(usize),
+        .buffer = &.{},
+    },
 
-    pub const empty: PacketReader = .{
-        .index = 0,
-        .buffer = undefined,
-    };
+    pub fn reset(self: *PacketReader, buffer: []const u8) void {
+        self.index = 0;
+        self.buffer = buffer;
+        self.fba.reset();
+    }
 
-    // Arrays and slices are allocated. Using an arena allocator is recommended
-    pub fn read(self: *PacketReader, comptime T: type, allocator: std.mem.Allocator) T {
+    pub fn read(self: *PacketReader, comptime T: type) T {
         const type_info = @typeInfo(T);
         switch (type_info) {
             .pointer => {
                 const ChildType = type_info.pointer.child;
-                const len = self.read(u16, allocator);
-                var ret = allocator.alloc(ChildType, len) catch @panic("OOM");
-                for (0..len) |i| ret[i] = self.read(ChildType, allocator);
+                const len = self.read(u16);
+                if (len == 0) return &.{};
+                const ret = self.fba.allocator().alloc(ChildType, len) catch @panic("FBA buffer out of space");
+                for (ret) |*ret_val| ret_val.* = self.read(ChildType);
                 return ret;
             },
             .@"struct" => {
                 switch (type_info.@"struct".layout) {
                     .auto, .@"extern" => {
                         var value: T = undefined;
-                        inline for (type_info.@"struct".fields) |field| @field(value, field.name) = self.read(field.type, allocator);
+                        inline for (type_info.@"struct".fields) |field| @field(value, field.name) = self.read(field.type);
                         return value;
                     },
                     .@"packed" => {}, // will be handled below, packed structs are just ints
@@ -79,12 +83,10 @@ pub const PacketReader = struct {
             else => {},
         }
 
-        const byte_size = @sizeOf(T);
-        const next_idx = self.index + byte_size;
-        if (next_idx > self.buffer.len) @panic("Buffer attempted to read out of bounds");
-        var buf = self.buffer[self.index..next_idx];
-        self.index += byte_size;
-        return std.mem.bytesToValue(T, buf[0..byte_size]);
+        const len = @sizeOf(T);
+        if (self.index + len > self.buffer.len) @panic("Buffer attempted to read out of bounds");
+        defer self.index += len;
+        return std.mem.bytesToValue(T, self.buffer[self.index..][0..len]);
     }
 };
 

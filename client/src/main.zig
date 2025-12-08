@@ -62,6 +62,20 @@ const AccountData = struct {
 pub export var NvOptimusEnablement: c_int = 1;
 pub export var AmdPowerXpressRequestHighPerformance: c_int = 1;
 
+pub const game_buffer_size = std.math.maxInt(u16);
+pub const login_buffer_size = std.math.maxInt(u12);
+
+pub var game_reader: utils.PacketReader = .{};
+pub var game_writer: utils.PacketWriter = .{};
+pub var login_reader: utils.PacketReader = .{};
+pub var login_writer: utils.PacketWriter = .{};
+pub var stat_reader: utils.PacketReader = .{};
+
+pub var game_buffers: std.ArrayList(u8) = .empty;
+pub var login_buffers: std.ArrayList(u8) = .empty;
+pub var game_buffer_free_list: std.ArrayList([]u8) = .empty;
+pub var login_buffer_free_list: std.ArrayList([]u8) = .empty;
+
 pub var account_arena_allocator: std.mem.Allocator = undefined;
 pub var current_account: ?AccountData = null;
 pub var character_list: ?network_data.CharacterListData = null;
@@ -87,7 +101,7 @@ pub var game_server: GameServer = undefined;
 pub var login_server: LoginServer = undefined;
 pub var camera: Camera = .{};
 pub var settings: Settings = .{};
-pub var main_loop: *uv.uv_loop_t = undefined;
+pub var main_loop: uv.uv_loop_t = .{};
 pub var window: *glfw.Window = undefined;
 pub var callbacks: std.ArrayList(TimedCallback) = .empty;
 
@@ -290,7 +304,7 @@ fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.c) void {
     const renderer: *Renderer = @ptrCast(@alignCast(idler.*.data));
     if (window.shouldClose()) {
         @branchHint(.unlikely);
-        uv.uv_stop(@ptrCast(main_loop));
+        uv.uv_stop(&main_loop);
         return;
     }
 
@@ -325,7 +339,6 @@ fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.c) void {
 }
 
 pub fn disconnect() void {
-    map.dispose();
     input.reset();
     if (ui_systems.is_testing) {
         ui_systems.switchScreen(.editor);
@@ -389,6 +402,12 @@ fn uvFree(maybe_ptr: ?*anyopaque) callconv(.c) void {
     allocator.free(mem[0..kv.value]);
 }
 
+fn walkCallback(handle: [*c]uv.uv_handle_t, _: ?*anyopaque) callconv(.c) void {
+    if (uv.uv_is_closing(handle) == 1) return;
+    std.log.err("Unclosed handle found during deinit walk: {*}", .{handle});
+    uv.uv_close(handle, null);
+}
+
 pub fn main() !void {
     start_time = std.time.microTimestamp();
     utils.rng.seed(@intCast(start_time));
@@ -412,6 +431,28 @@ pub fn main() !void {
 
     current_account = AccountData.load() catch null;
     defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
+
+    game_reader.fba = .init(allocator.alloc(u8, game_buffer_size) catch oomPanic());
+    defer allocator.free(game_reader.fba.buffer);
+
+    game_writer.list = std.ArrayList(u8).initCapacity(allocator, game_buffer_size) catch oomPanic();
+    defer game_writer.list.deinit(allocator);
+
+    login_reader.fba = .init(allocator.alloc(u8, login_buffer_size) catch oomPanic());
+    defer allocator.free(login_reader.fba.buffer);
+
+    login_writer.list = std.ArrayList(u8).initCapacity(allocator, login_buffer_size) catch oomPanic();
+    defer login_writer.list.deinit(allocator);
+
+    stat_reader.fba = .init(allocator.alloc(u8, game_buffer_size) catch oomPanic());
+    defer allocator.free(stat_reader.fba.buffer);
+
+    defer {
+        game_buffers.deinit(allocator);
+        login_buffers.deinit(allocator);
+        game_buffer_free_list.deinit(allocator);
+        login_buffer_free_list.deinit(allocator);
+    }
 
     try glfw.init(allocator);
     defer glfw.deinit();
@@ -478,29 +519,36 @@ pub fn main() !void {
         render_thread.join();
     }
 
-    main_loop = try allocator.create(uv.uv_loop_t);
-    const loop_status = uv.uv_loop_init(@ptrCast(main_loop));
+    const loop_status = uv.uv_loop_init(&main_loop);
     if (loop_status != 0) {
         std.log.err("Loop creation error: {s}", .{uv.uv_strerror(loop_status)});
         return error.NoLoop;
     }
-    defer allocator.destroy(main_loop);
+    defer {
+        uv.uv_walk(&main_loop, walkCallback, null);
+
+        const run_status = uv.uv_run(&main_loop, uv.UV_RUN_DEFAULT);
+        if (run_status != 0 and run_status != 1) std.log.err("Loop run error: {s}", .{uv.uv_strerror(run_status)});
+
+        const close_status = uv.uv_loop_close(&main_loop);
+        if (close_status != 0) std.log.err("Loop closing error: {s}", .{uv.uv_strerror(close_status)});
+    }
 
     login_server.needs_verify = true;
 
-    try game_server.init();
-    defer game_server.deinit();
+    defer game_server.shutdown();
 
     try login_server.init();
-    defer login_server.deinit();
+    defer login_server.shutdown();
 
-    var idler: uv.uv_idle_t = undefined;
-    idler.data = &renderer;
-    const idle_init_status = uv.uv_idle_init(@ptrCast(main_loop), &idler);
+    var idler: uv.uv_idle_t = .{};
+    const idle_init_status = uv.uv_idle_init(&main_loop, &idler);
     if (idle_init_status != 0) {
         std.log.err("Idle creation error: {s}", .{uv.uv_strerror(loop_status)});
         return error.NoIdle;
     }
+    idler.data = &renderer;
+    defer uv.uv_close(@ptrCast(&idler), null);
 
     const idle_start_status = uv.uv_idle_start(&idler, gameTick);
     if (idle_start_status != 0) {
@@ -508,7 +556,7 @@ pub fn main() !void {
         return error.IdleStartFailed;
     }
 
-    const run_status = uv.uv_run(@ptrCast(main_loop), uv.UV_RUN_DEFAULT);
+    const run_status = uv.uv_run(&main_loop, uv.UV_RUN_DEFAULT);
     if (run_status != 0 and run_status != 1) {
         std.log.err("Run error: {s}", .{uv.uv_strerror(run_status)});
         return error.RunFailed;

@@ -31,7 +31,6 @@ defense: i32 = 0,
 resistance: i32 = 0,
 owner_map_id: u32 = std.math.maxInt(u32),
 disappear_time: i64 = std.math.maxInt(i64),
-stats_writer: utils.PacketWriter = .{},
 data: *const game_data.AllyData = undefined,
 world_id: i32 = std.math.minInt(i32),
 behavior: ?*behavior_data.AllyBehavior = null,
@@ -50,7 +49,6 @@ pub fn init(self: *Ally) !void {
         }
     }
 
-    self.stats_writer.list = try .initCapacity(main.allocator, 32);
     self.data = game_data.ally.from_id.getPtr(self.data_id) orelse {
         std.log.err("Could not find data for ally with data id {}", .{self.data_id});
         return;
@@ -72,8 +70,6 @@ pub fn deinit(self: *Ally) !void {
 
         main.allocator.destroy(behav);
     }
-
-    self.stats_writer.list.deinit(main.allocator);
 }
 
 pub fn delete(self: *Ally) !void {
@@ -124,8 +120,8 @@ pub fn tick(self: *Ally, time: i64, dt: i64) !void {
 }
 
 pub fn exportStats(self: *Ally, cache: *[@typeInfo(network_data.AllyStat).@"union".fields.len]?network_data.AllyStat) ![]u8 {
-    const writer = &self.stats_writer;
-    writer.list.clearRetainingCapacity();
+    const writer = &main.stats_writer;
+    const idx = writer.list.items.len;
 
     const T = network_data.AllyStat;
     inline for (.{
@@ -138,5 +134,5 @@ pub fn exportStats(self: *Ally, cache: *[@typeInfo(network_data.AllyStat).@"unio
         T{ .owner_map_id = self.owner_map_id },
     }) |stat| stat_util.write(T, writer, cache, stat);
 
-    return writer.list.items;
+    return writer.list.items[idx..];
 }

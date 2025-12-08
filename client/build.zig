@@ -20,14 +20,15 @@ pub fn buildWithoutDupes(
     check_step: *std.Build.Step,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    log_packets: PacketLogType,
     enable_tracy: bool,
 ) !void {
     const options = .{
         .enable_validation_layers = b.option(bool, "enable_validation_layers", "Toggles Vulkan validation layers") orelse false,
-        .log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off,
         .version = b.option([]const u8, "version", "Build version, for the version text and client-server version checks") orelse "0.1",
         .login_server_ip = b.option([]const u8, "login_server_ip", "The IP of the login server") orelse "127.0.0.1",
         .login_server_port = b.option(u16, "login_server_port", "The port of the login server") orelse 2833,
+        .log_packets = log_packets,
         .enable_tracy = enable_tracy,
     };
 
@@ -178,8 +179,9 @@ pub fn buildWithoutDupes(
 
 pub fn build(b: *std.Build) !void {
     const check_step = b.step("check", "Check if app compiles");
+    const log_packets = b.option(PacketLogType, "log_packets", "Toggles various packet logging modes") orelse .off;
     const enable_tracy = b.option(bool, "enable_tracy", "Enable Tracy") orelse false;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    try buildWithoutDupes(b, "", false, check_step, target, optimize, enable_tracy);
+    try buildWithoutDupes(b, "", false, check_step, target, optimize, log_packets, enable_tracy);
 }

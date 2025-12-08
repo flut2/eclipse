@@ -17,7 +17,6 @@ data_id: u16 = std.math.maxInt(u16),
 x: f32 = 0.0,
 y: f32 = 0.0,
 disappear_time: i64 = std.math.maxInt(i64),
-stats_writer: utils.PacketWriter = .{},
 data: *const game_data.PortalData = undefined,
 world_id: i32 = std.math.minInt(i32),
 spawn: packed struct {
@@ -25,7 +24,6 @@ spawn: packed struct {
 } = .{},
 
 pub fn init(self: *Portal) !void {
-    self.stats_writer.list = try .initCapacity(main.allocator, 32);
     self.data = game_data.portal.from_id.getPtr(self.data_id) orelse {
         std.log.err("Could not find data for portal with data id {}", .{self.data_id});
         return;
@@ -35,9 +33,7 @@ pub fn init(self: *Portal) !void {
     }
 }
 
-pub fn deinit(self: *Portal) !void {
-    self.stats_writer.list.deinit(main.allocator);
-}
+pub fn deinit(_: *Portal) !void {}
 
 pub fn tick(self: *Portal, time: i64, _: i64) !void {
     if (time >= self.disappear_time) {
@@ -47,8 +43,8 @@ pub fn tick(self: *Portal, time: i64, _: i64) !void {
 }
 
 pub fn exportStats(self: *Portal, cache: *[@typeInfo(network_data.PortalStat).@"union".fields.len]?network_data.PortalStat) ![]u8 {
-    const writer = &self.stats_writer;
-    writer.list.clearRetainingCapacity();
+    const writer = &main.stats_writer;
+    const idx = writer.list.items.len;
 
     const T = network_data.PortalStat;
     inline for (.{
@@ -56,5 +52,5 @@ pub fn exportStats(self: *Portal, cache: *[@typeInfo(network_data.PortalStat).@"
         T{ .y = self.y },
     }) |stat| stat_util.write(T, writer, cache, stat);
 
-    return writer.list.items;
+    return writer.list.items[idx..];
 }

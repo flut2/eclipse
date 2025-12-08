@@ -17,16 +17,26 @@ const Settings = @import("Settings.zig");
 const World = @import("World.zig");
 
 const tracy = if (build_options.enable_tracy) @import("tracy") else {};
-pub const c = @cImport({
-    @cDefine("REDIS_OPT_NONBLOCK", {});
-    @cDefine("REDIS_OPT_REUSEADDR", {});
-    @cInclude("hiredis.h");
-});
 
-pub var game_client_pool: std.heap.MemoryPool(GameClient) = undefined;
-pub var login_client_pool: std.heap.MemoryPool(LoginClient) = undefined;
-pub var socket_pool: std.heap.MemoryPool(uv.uv_tcp_t) = undefined;
-pub var game_timer: uv.uv_timer_t = undefined;
+pub const game_buffer_size = std.math.maxInt(u16);
+pub const login_buffer_size = std.math.maxInt(u12);
+
+pub var game_reader: utils.PacketReader = .{};
+pub var game_writer: utils.PacketWriter = .{};
+pub var login_reader: utils.PacketReader = .{};
+pub var login_writer: utils.PacketWriter = .{};
+pub var stats_writer: utils.PacketWriter = .{};
+
+pub var game_clients: std.ArrayList(GameClient) = .empty;
+pub var login_clients: std.ArrayList(LoginClient) = .empty;
+pub var game_client_free_list: std.ArrayList(usize) = .empty;
+pub var login_client_free_list: std.ArrayList(usize) = .empty;
+pub var game_buffers: std.ArrayList(u8) = .empty;
+pub var login_buffers: std.ArrayList(u8) = .empty;
+pub var game_buffer_free_list: std.ArrayList([]u8) = .empty;
+pub var login_buffer_free_list: std.ArrayList([]u8) = .empty;
+pub var game_timer: uv.uv_timer_t = .{};
+pub var main_loop: uv.uv_loop_t = .{};
 pub var allocator: std.mem.Allocator = undefined;
 pub var tick_id: u8 = 0;
 pub var current_time: i64 = -1;
@@ -78,6 +88,12 @@ fn uvFree(maybe_ptr: ?*anyopaque) callconv(.c) void {
     allocator.free(mem[0..kv.value]);
 }
 
+fn walkCallback(handle: [*c]uv.uv_handle_t, _: ?*anyopaque) callconv(.c) void {
+    if (uv.uv_is_closing(handle) == 1) return;
+    std.log.err("Unclosed handle found during deinit walk: {*}", .{handle});
+    uv.uv_close(handle, null);
+}
+
 pub fn main() !void {
     utils.rng.seed(@intCast(std.time.microTimestamp()));
 
@@ -94,6 +110,21 @@ pub fn main() !void {
     }
     defer uv_pointer_size_map.deinit(allocator);
 
+    const create_status = uv.uv_loop_init(&main_loop);
+    if (create_status != 0) {
+        std.log.err("Loop creation error: {s}", .{uv.uv_strerror(create_status)});
+        return error.NoLoop;
+    }
+    defer {
+        uv.uv_walk(&main_loop, walkCallback, null);
+
+        const run_status = uv.uv_run(&main_loop, uv.UV_RUN_DEFAULT);
+        if (run_status != 0 and run_status != 1) std.log.err("Loop run error: {s}", .{uv.uv_strerror(run_status)});
+
+        const close_status = uv.uv_loop_close(&main_loop);
+        if (close_status != 0) std.log.err("Loop closing error: {s}", .{uv.uv_strerror(close_status)});
+    }
+
     settings = try .init(allocator);
     defer Settings.deinit();
 
@@ -109,31 +140,54 @@ pub fn main() !void {
     try db.init();
     defer db.deinit();
 
-    game_client_pool = .init(allocator);
-    defer game_client_pool.deinit();
+    game_reader.fba = .init(allocator.alloc(u8, game_buffer_size) catch oomPanic());
+    defer allocator.free(game_reader.fba.buffer);
 
-    login_client_pool = .init(allocator);
-    defer login_client_pool.deinit();
+    game_writer.list = std.ArrayList(u8).initCapacity(allocator, game_buffer_size) catch oomPanic();
+    defer game_writer.list.deinit(allocator);
 
-    socket_pool = .init(allocator);
-    defer socket_pool.deinit();
+    login_reader.fba = .init(allocator.alloc(u8, login_buffer_size) catch oomPanic());
+    defer allocator.free(login_reader.fba.buffer);
 
-    const timer_init_status = uv.uv_timer_init(uv.uv_default_loop(), @ptrCast(&game_timer));
+    login_writer.list = std.ArrayList(u8).initCapacity(allocator, login_buffer_size) catch oomPanic();
+    defer login_writer.list.deinit(allocator);
+
+    // TODO: could be multiple packets so it should dynamically expand
+    stats_writer.list = std.ArrayList(u8).initCapacity(allocator, std.math.maxInt(u20)) catch oomPanic();
+    defer stats_writer.list.deinit(allocator);
+
+    defer {
+        game_clients.deinit(allocator);
+        login_clients.deinit(allocator);
+        game_client_free_list.deinit(allocator);
+        login_client_free_list.deinit(allocator);
+        game_buffers.deinit(allocator);
+        login_buffers.deinit(allocator);
+        game_buffer_free_list.deinit(allocator);
+        login_buffer_free_list.deinit(allocator);
+    }
+
+    const timer_init_status = uv.uv_timer_init(&main_loop, &game_timer);
     if (timer_init_status != 0) std.debug.panic("Timer init failed: {s}", .{uv.uv_strerror(timer_init_status)});
-    const timer_start_status = uv.uv_timer_start(@ptrCast(&game_timer), timerCallback, 0, std.time.ms_per_s / settings.tps);
+    const timer_start_status = uv.uv_timer_start(&game_timer, timerCallback, 0, std.time.ms_per_s / settings.tps);
     if (timer_start_status != 0) std.debug.panic("Timer start failed: {s}", .{uv.uv_strerror(timer_start_status)});
+    defer uv.uv_close(@ptrCast(&game_timer), null);
 
     var game_server: uv.uv_tcp_t = .{};
     var login_server: uv.uv_tcp_t = .{};
     listenToServer(onGameAccept, @ptrCast(&game_server), settings.game_port);
     listenToServer(onLoginAccept, @ptrCast(&login_server), settings.login_port);
+    defer {
+        uv.uv_close(@ptrCast(&game_server), null);
+        uv.uv_close(@ptrCast(&login_server), null);
+    }
 
-    const run_status = uv.uv_run(uv.uv_default_loop(), uv.UV_RUN_DEFAULT);
+    const run_status = uv.uv_run(&main_loop, uv.UV_RUN_DEFAULT);
     if (run_status != 0 and run_status != 1) std.log.err("Run failed: {s}", .{uv.uv_strerror(run_status)});
 }
 
 fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.c) void, server_handle: [*c]uv.uv_tcp_t, port: u16) void {
-    const accept_socket_status = uv.uv_tcp_init(uv.uv_default_loop(), server_handle);
+    const accept_socket_status = uv.uv_tcp_init(&main_loop, server_handle);
     if (accept_socket_status != 0) std.debug.panic("Setting up accept socket failed: {s}", .{uv.uv_strerror(accept_socket_status)});
 
     const disable_nagle_status = uv.uv_tcp_nodelay(server_handle, 1);
@@ -175,33 +229,38 @@ fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.c) void {
         return;
     }
 
-    const socket = socket_pool.create() catch oomPanic();
-    const init_recv_status = uv.uv_tcp_init(uv.uv_default_loop(), @ptrCast(socket));
+    const cli = blk: {
+        if (game_client_free_list.items.len > 0) {
+            const free_idx = game_client_free_list.pop() orelse unreachable;
+            const ret = &game_clients.items[free_idx];
+            ret.* = .{ .list_index = free_idx };
+            break :blk ret;
+        }
+
+        const ret = game_clients.addOne(allocator) catch oomPanic();
+        ret.* = .{ .list_index = game_clients.items.len - 1 };
+        break :blk ret;
+    };
+
+    const init_recv_status = uv.uv_tcp_init(&main_loop, &cli.socket);
     if (init_recv_status != 0) {
         std.log.err("Failed to initialize received game socket: {s}", .{uv.uv_strerror(init_recv_status)});
-        uv.uv_close(@ptrCast(socket), onSocketClose);
         return;
     }
+    cli.socket.data = cli;
 
-    const disable_nagle_status = uv.uv_tcp_nodelay(@ptrCast(socket), 1);
-    if (disable_nagle_status != 0) {
-        std.debug.panic("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
-        uv.uv_close(@ptrCast(socket), onSocketClose);
-        return;
-    }
-
-    const accept_status = uv.uv_accept(server, @ptrCast(socket));
+    const accept_status = uv.uv_accept(server, @ptrCast(&cli.socket));
     if (accept_status != 0) {
         std.log.err("Failed to accept game socket: {s}", .{uv.uv_strerror(accept_status)});
-        uv.uv_close(@ptrCast(socket), onSocketClose);
+        uv.uv_close(@ptrCast(&cli.socket), null);
         return;
     }
 
-    const cli = game_client_pool.create() catch oomPanic();
-    socket.*.data = cli;
-    cli.* = .{ .read_arena = .init(allocator), .socket = socket };
+    const disable_nagle_status = uv.uv_tcp_nodelay(&cli.socket, 1);
+    if (disable_nagle_status != 0)
+        std.log.err("Disabling Nagle on game socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
 
-    const read_init_status = uv.uv_read_start(@ptrCast(socket), GameClient.allocBuffer, GameClient.readCallback);
+    const read_init_status = uv.uv_read_start(@ptrCast(&cli.socket), GameClient.allocBuffer, GameClient.readCallback);
     if (read_init_status != 0) {
         std.log.err("Failed to initialize reading on game socket: {s}", .{uv.uv_strerror(read_init_status)});
         cli.shutdown();
@@ -215,81 +274,41 @@ fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.c) void {
         return;
     }
 
-    const socket = socket_pool.create() catch oomPanic();
-    const init_recv_status = uv.uv_tcp_init(uv.uv_default_loop(), @ptrCast(socket));
+    const cli = blk: {
+        if (login_client_free_list.items.len > 0) {
+            const free_idx = login_client_free_list.pop() orelse unreachable;
+            const ret = &login_clients.items[free_idx];
+            ret.* = .{ .list_index = free_idx };
+            break :blk ret;
+        }
+
+        const ret = login_clients.addOne(allocator) catch oomPanic();
+        ret.* = .{ .list_index = login_clients.items.len - 1 };
+        break :blk ret;
+    };
+
+    const init_recv_status = uv.uv_tcp_init(&main_loop, &cli.socket);
     if (init_recv_status != 0) {
         std.log.err("Failed to initialize received login socket: {s}", .{uv.uv_strerror(init_recv_status)});
-        uv.uv_close(@ptrCast(socket), onSocketClose);
         return;
     }
+    cli.socket.data = cli;
 
-    const accept_status = uv.uv_accept(server, @ptrCast(socket));
+    const disable_nagle_status = uv.uv_tcp_nodelay(&cli.socket, 1);
+    if (disable_nagle_status != 0)
+        std.log.err("Disabling Nagle on login socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
+
+    const accept_status = uv.uv_accept(server, @ptrCast(&cli.socket));
     if (accept_status != 0) {
         std.log.err("Failed to accept login socket: {s}", .{uv.uv_strerror(accept_status)});
-        uv.uv_close(@ptrCast(socket), onSocketClose);
+        uv.uv_close(@ptrCast(&cli.socket), null);
         return;
     }
 
-    const cli = login_client_pool.create() catch oomPanic();
-    socket.*.data = cli;
-    cli.* = .{ .read_arena = .init(allocator), .socket = socket };
-
-    const read_init_status = uv.uv_read_start(@ptrCast(socket), LoginClient.allocBuffer, LoginClient.readCallback);
+    const read_init_status = uv.uv_read_start(@ptrCast(&cli.socket), LoginClient.allocBuffer, LoginClient.readCallback);
     if (read_init_status != 0) {
         std.log.err("Failed to initialize reading on login socket: {s}", .{uv.uv_strerror(read_init_status)});
         cli.shutdown();
         return;
     }
-}
-
-fn onSocketClose(handle: [*c]uv.uv_handle_t) callconv(.c) void {
-    socket_pool.destroy(@ptrCast(@alignCast(handle)));
-}
-
-pub fn getIp(addr: std.net.Address) ![]const u8 {
-    var ip_buf: [64]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&ip_buf);
-    switch (addr.any.family) {
-        std.posix.AF.INET => {
-            const bytes = @as(*const [4]u8, @ptrCast(&addr.in.sa.addr));
-            try std.fmt.format(stream.writer(), "{}.{}.{}.{}", .{ bytes[0], bytes[1], bytes[2], bytes[3] });
-        },
-        std.posix.AF.INET6 => {
-            if (std.mem.eql(u8, addr.in6.sa.addr[0..12], &.{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff })) {
-                try std.fmt.format(stream.writer(), "[::ffff:{}.{}.{}.{}]", .{
-                    addr.in6.sa.addr[12],
-                    addr.in6.sa.addr[13],
-                    addr.in6.sa.addr[14],
-                    addr.in6.sa.addr[15],
-                });
-                return stream.getWritten();
-            }
-            const big_endian_parts = @as(*align(1) const [8]u16, @ptrCast(&addr.in6.sa.addr));
-            const native_endian_parts = switch (builtin.target.cpu.arch.endian()) {
-                .big => big_endian_parts.*,
-                .little => blk: {
-                    var buf: [8]u16 = undefined;
-                    for (big_endian_parts, 0..) |part, i| buf[i] = std.mem.bigToNative(u16, part);
-                    break :blk buf;
-                },
-            };
-            try stream.writer().writeAll("[");
-            var i: usize = 0;
-            var abbrv = false;
-            while (i < native_endian_parts.len) : (i += 1) {
-                if (native_endian_parts[i] == 0) {
-                    if (!abbrv) {
-                        try stream.writer().writeAll(if (i == 0) "::" else ":");
-                        abbrv = true;
-                    }
-                    continue;
-                }
-                try std.fmt.format(stream.writer(), "{x}", .{native_endian_parts[i]});
-                if (i != native_endian_parts.len - 1) try stream.writer().writeAll(":");
-            }
-            try std.fmt.format(stream.writer(), "]", .{});
-        },
-        else => @panic("Invalid IP family"),
-    }
-    return stream.getWritten();
 }

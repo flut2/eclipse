@@ -34,7 +34,6 @@ obelisk_incr_perc: f32 = 1.0,
 name: ?[]const u8 = null,
 next_proj_index: u8 = 0,
 projectiles: [256]?u32 = @splat(null),
-stats_writer: utils.PacketWriter = .{},
 condition: utils.Condition = .{},
 damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
 conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .empty,
@@ -60,8 +59,6 @@ pub fn init(self: *Enemy) !void {
             inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "spawn")) try b.spawn(self),
         }
     }
-
-    self.stats_writer.list = try .initCapacity(main.allocator, 32);
 
     self.data = game_data.enemy.from_id.getPtr(self.data_id) orelse {
         std.log.err("Could not find data for enemy with data id {}", .{self.data_id});
@@ -289,7 +286,6 @@ pub fn deinit(self: *Enemy) !void {
 
     self.storages.deinit();
     self.damages_dealt.deinit(main.allocator);
-    self.stats_writer.list.deinit(main.allocator);
 }
 
 pub fn applyCondition(self: *Enemy, condition: utils.ConditionEnum, duration: i64) void {
@@ -386,8 +382,8 @@ pub fn damage(
 }
 
 pub fn exportStats(self: *Enemy, cache: *[@typeInfo(network_data.EnemyStat).@"union".fields.len]?network_data.EnemyStat) ![]u8 {
-    const writer = &self.stats_writer;
-    writer.list.clearRetainingCapacity();
+    const writer = &main.stats_writer;
+    const idx = writer.list.items.len;
 
     const T = network_data.EnemyStat;
     inline for (.{
@@ -400,5 +396,5 @@ pub fn exportStats(self: *Enemy, cache: *[@typeInfo(network_data.EnemyStat).@"un
     }) |stat| stat_util.write(T, writer, cache, stat);
     if (self.name) |name| stat_util.write(T, writer, cache, .{ .name = name });
 
-    return writer.list.items;
+    return writer.list.items[idx..];
 }

@@ -113,15 +113,12 @@ hit_multiplier: f32 = 1.0,
 health_restore_mult: f32 = 1.0,
 mana_restore_mult: f32 = 1.0,
 ability_state: network_data.AbilityState = .{},
-stats_writer: utils.PacketWriter = .{},
 data: *const game_data.ClassData = undefined,
 client: *Client = undefined,
 world_id: i32 = std.math.minInt(i32),
 export_pos: bool = false,
 
 pub fn init(self: *Player) !void {
-    self.stats_writer.list = try .initCapacity(main.allocator, 256);
-
     self.name = try main.allocator.dupe(u8, try self.acc_data.get(.name));
     self.data_id = try self.char_data.get(.class_id);
     self.data = game_data.class.from_id.getPtr(self.data_id) orelse {
@@ -179,7 +176,6 @@ pub fn deinit(self: *Player) !void {
     main.allocator.free(self.cards);
     self.resources.deinit(main.allocator);
     self.talents.deinit(main.allocator);
-    self.stats_writer.list.deinit(main.allocator);
 }
 
 pub inline fn totalStat(self: Player, comptime stat: StatId) i32 {
@@ -783,8 +779,8 @@ pub fn exportStats(
     is_self: bool,
     force_export_pos: bool,
 ) ![]const u8 {
-    const writer = &self.stats_writer;
-    writer.list.clearRetainingCapacity();
+    const writer = &main.stats_writer;
+    const idx = writer.list.items.len;
 
     const T = network_data.PlayerStat;
     if (force_export_pos or !is_self) {
@@ -842,5 +838,5 @@ pub fn exportStats(
         }
     }
 
-    return writer.list.items;
+    return writer.list.items[idx..];
 }

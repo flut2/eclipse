@@ -29,7 +29,6 @@ name: ?[]const u8 = null,
 condition: utils.Condition = .{},
 conditions_active: std.AutoArrayHashMapUnmanaged(utils.ConditionEnum, i64) = .empty,
 damages_dealt: std.AutoArrayHashMapUnmanaged(u32, i32) = .empty,
-stats_writer: utils.PacketWriter = .{},
 data: *const game_data.EntityData = undefined,
 owner_map_id: u32 = std.math.maxInt(u32),
 world_id: i32 = std.math.minInt(i32),
@@ -48,8 +47,6 @@ pub fn init(self: *Entity) !void {
             inline else => |*b| if (std.meta.hasFn(@TypeOf(b.*), "spawn")) try b.spawn(self),
         }
     }
-
-    self.stats_writer.list = try .initCapacity(main.allocator, 32);
 
     self.data = game_data.entity.from_id.getPtr(self.data_id) orelse {
         std.log.err("Could not find data for entity with data id {}", .{self.data_id});
@@ -84,7 +81,6 @@ pub fn deinit(self: *Entity) !void {
     }
 
     self.damages_dealt.deinit(main.allocator);
-    self.stats_writer.list.deinit(main.allocator);
     if (self.name) |name| main.allocator.free(name);
 }
 
@@ -168,8 +164,8 @@ pub fn damage(
 }
 
 pub fn exportStats(self: *Entity, cache: *[@typeInfo(network_data.EntityStat).@"union".fields.len]?network_data.EntityStat) ![]u8 {
-    const writer = &self.stats_writer;
-    writer.list.clearRetainingCapacity();
+    const writer = &main.stats_writer;
+    const idx = writer.list.items.len;
 
     const T = network_data.EntityStat;
     inline for (.{
@@ -180,5 +176,5 @@ pub fn exportStats(self: *Entity, cache: *[@typeInfo(network_data.EntityStat).@"
     if (self.data.health > 0) stat_util.write(T, writer, cache, .{ .hp = self.hp });
     if (self.name) |name| stat_util.write(T, writer, cache, .{ .name = name });
 
-    return writer.list.items;
+    return writer.list.items[idx..];
 }
