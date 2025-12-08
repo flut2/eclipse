@@ -54,7 +54,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const client: *Client = @ptrCast(@alignCast(socket.data));
 
-    defer main.login_buffer_free_list.append(main.allocator, buf.*.base[0..main.login_buffer_size]) catch main.oomPanic();
+    defer if (buf.*.base != null) main.login_buffer_free_list.append(main.allocator, buf.*.base[0..main.login_buffer_size]) catch main.oomPanic();
 
     if (bytes_read > 0) {
         const reader = &main.login_reader;
@@ -132,20 +132,20 @@ pub fn sendPacket(self: *Client, packet: network_data.S2CPacketLogin) void {
 
 fn logRead() bool {
     return build_options.log_packets == .all or
-            build_options.log_packets == .c2s or
-            build_options.log_packets == .c2s_tick or
-            build_options.log_packets == .all_tick or
-            build_options.log_packets == .c2s_non_tick or
-            build_options.log_packets == .all_non_tick;
+        build_options.log_packets == .c2s or
+        build_options.log_packets == .c2s_tick or
+        build_options.log_packets == .all_tick or
+        build_options.log_packets == .c2s_non_tick or
+        build_options.log_packets == .all_non_tick;
 }
 
 fn logWrite() bool {
     return build_options.log_packets == .all or
-            build_options.log_packets == .s2c or
-            build_options.log_packets == .s2c_tick or
-            build_options.log_packets == .all_tick or
-            build_options.log_packets == .s2c_non_tick or
-            build_options.log_packets == .all_non_tick;
+        build_options.log_packets == .s2c or
+        build_options.log_packets == .s2c_tick or
+        build_options.log_packets == .all_tick or
+        build_options.log_packets == .s2c_non_tick or
+        build_options.log_packets == .all_non_tick;
 }
 
 pub fn sendError(self: *Client, message: []const u8) void {

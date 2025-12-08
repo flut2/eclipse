@@ -51,7 +51,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
     const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
     const server: *Server = @ptrCast(@alignCast(socket.data));
 
-    defer main.login_buffer_free_list.append(main.allocator, buf.*.base[0..main.login_buffer_size]) catch main.oomPanic();
+    defer if (buf.*.base != null) main.login_buffer_free_list.append(main.allocator, buf.*.base[0..main.login_buffer_size]) catch main.oomPanic();
 
     if (bytes_read > 0) {
         const reader = &main.login_reader;
