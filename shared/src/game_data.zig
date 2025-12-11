@@ -5,6 +5,31 @@ const ziggy = @import("ziggy");
 const network_data = @import("network_data.zig");
 const utils = @import("utils.zig");
 
+const macro_mappings = [_]struct { base: []const u8, replace: []const u8 }{
+    .{ .base = "$hptxt", .replace = "&type=\"bold_it\"&col=\"20AC20\"" },
+    .{ .base = "$mptxt", .replace = "&type=\"bold_it\"&col=\"1C40FF\"" },
+    .{ .base = "$strtxt", .replace = "&type=\"bold_it\"&col=\"FF6C32\"" },
+    .{ .base = "$deftxt", .replace = "&type=\"bold_it\"&col=\"FF9670\"" },
+    .{ .base = "$wittxt", .replace = "&type=\"bold_it\"&col=\"A15AFF\"" },
+    .{ .base = "$restxt", .replace = "&type=\"bold_it\"&col=\"D65BFF\"" },
+    .{ .base = "$statxt", .replace = "&type=\"bold_it\"&col=\"C45860\"" },
+    .{ .base = "$inttxt", .replace = "&type=\"bold_it\"&col=\"6080FF\"" },
+    .{ .base = "$spdtxt", .replace = "&type=\"bold_it\"&col=\"C45860\"" },
+    .{ .base = "$hsttxt", .replace = "&type=\"bold_it\"&col=\"60FFAC\"" },
+    .{ .base = "$multitxt", .replace = "&type=\"bold_it\"&col=\"FFE770\"" },
+    .{ .base = "$footnotetxt", .replace = "&type=\"med_it\"&size=\"10\"&col=\"736562\"" },
+    .{ .base = "$hpicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .max_hp = undefined }) },
+    .{ .base = "$mpicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .max_mp = undefined }) },
+    .{ .base = "$stricon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .strength = undefined }) },
+    .{ .base = "$deficon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .defense = undefined }) },
+    .{ .base = "$witicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .wit = undefined }) },
+    .{ .base = "$resicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .resistance = undefined }) },
+    .{ .base = "$staicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .stamina = undefined }) },
+    .{ .base = "$inticon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .intelligence = undefined }) },
+    .{ .base = "$spdicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .speed = undefined }) },
+    .{ .base = "$hsticon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .haste = undefined }) },
+};
+
 pub var resource: Maps(ResourceData) = .{};
 pub var card: Maps(CardData) = .{};
 pub var item: Maps(ItemData) = .{};
@@ -34,20 +59,23 @@ fn parseGeneric(allocator: std.mem.Allocator, path: []const u8, comptime DataTyp
     defer allocator.free(file_data);
 
     const data_slice = try ziggy.parseLeaky([]DataType, allocator, file_data, .{});
-    for (data_slice) |data| {
+    for (data_slice) |*data| {
+        if (std.meta.hasFn(DataType, "postProcess"))
+            try data.postProcess(allocator);
+
         const id_res = try data_maps.from_id.getOrPut(allocator, data.id);
         if (id_res.found_existing) {
             std.log.err("Duplicate id for {s}: wanted to override {s}", .{ data.name, id_res.value_ptr.name });
             std.posix.exit(0);
         }
-        id_res.value_ptr.* = data;
+        id_res.value_ptr.* = data.*;
 
         const name_res = try data_maps.from_name.getOrPut(allocator, data.name);
         if (name_res.found_existing) {
             std.log.err("Duplicate name for {s}", .{data.name});
             std.posix.exit(0);
         }
-        name_res.value_ptr.* = data;
+        name_res.value_ptr.* = data.*;
     }
 }
 
@@ -121,52 +149,23 @@ pub fn magicDamage(dmg: i32, resistance: i32, condition: utils.Condition) i32 {
     return @max(@divFloor(dmg, 5), dmg - resistance);
 }
 
-// TODO: this is garbage
 fn processMacros(allocator: std.mem.Allocator, text: []const u8) ![]const u8 {
-    const size = @min(8192, text.len * 3);
-    var front_buf = try allocator.alloc(u8, size);
-    defer allocator.free(front_buf);
-    @memset(front_buf, 0);
-    @memcpy(front_buf[0..text.len], text);
-    var back_buf = try allocator.alloc(u8, size);
-    defer allocator.free(back_buf);
-    @memset(back_buf, 0);
-    @memcpy(back_buf[0..text.len], text);
-    var front = true;
-    inline for (.{
-        .{ "$hptxt", "&type=\"bold_it\"&col=\"20AC20\"" },
-        .{ "$mptxt", "&type=\"bold_it\"&col=\"1C40FF\"" },
-        .{ "$strtxt", "&type=\"bold_it\"&col=\"FF6C32\"" },
-        .{ "$deftxt", "&type=\"bold_it\"&col=\"FF9670\"" },
-        .{ "$wittxt", "&type=\"bold_it\"&col=\"A15AFF\"" },
-        .{ "$restxt", "&type=\"bold_it\"&col=\"D65BFF\"" },
-        .{ "$statxt", "&type=\"bold_it\"&col=\"C45860\"" },
-        .{ "$inttxt", "&type=\"bold_it\"&col=\"6080FF\"" },
-        .{ "$spdtxt", "&type=\"bold_it\"&col=\"C45860\"" },
-        .{ "$hsttxt", "&type=\"bold_it\"&col=\"60FFAC\"" },
-        .{ "$multitxt", "&type=\"bold_it\"&col=\"FFE770\"" },
-        .{ "$footnotetxt", "&type=\"med_it\"&size=\"10\"&col=\"736562\"" },
-        .{ "$hpicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .max_hp = undefined }) },
-        .{ "$mpicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .max_mp = undefined }) },
-        .{ "$stricon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .strength = undefined }) },
-        .{ "$deficon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .defense = undefined }) },
-        .{ "$witicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .wit = undefined }) },
-        .{ "$resicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .resistance = undefined }) },
-        .{ "$staicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .stamina = undefined }) },
-        .{ "$inticon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .intelligence = undefined }) },
-        .{ "$spdicon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .speed = undefined }) },
-        .{ "$hsticon", "&space" ++ comptime StatIncreaseData.toControlCode(.{ .haste = undefined }) },
-    }) |replace| {
-        _ = std.mem.replace(
-            u8,
-            std.mem.sliceTo(if (front) front_buf else back_buf, 0),
-            replace[0],
-            replace[1],
-            if (front) back_buf else front_buf,
-        );
-        front = !front;
+    var out: std.Io.Writer.Allocating = .init(allocator);
+
+    var slide: usize = 0;
+    slide: while (slide < text.len) {
+        for (macro_mappings) |map|
+            if (std.mem.startsWith(u8, text[slide..], map.base)) {
+                try out.writer.writeAll(map.replace);
+                slide += map.base.len;
+                continue :slide;
+            };
+
+        try out.writer.writeByte(text[slide]);
+        slide += 1;
     }
-    return try allocator.dupe(u8, std.mem.sliceTo(if (front) front_buf else back_buf, 0));
+
+    return out.written();
 }
 
 pub const ItemType = enum {
@@ -277,13 +276,9 @@ pub const AbilityData = struct {
     projectiles: ?[]ProjectileData = null,
     sound: []const u8 = "Unknown.mp3",
 
-    pub const ziggy_options = struct {
-        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !AbilityData {
-            var ability = try parser.parseStruct(AbilityData, first_tok);
-            ability.description = try processMacros(parser.gpa, ability.description);
-            return ability;
-        }
-    };
+    pub fn postProcess(self: *AbilityData, allocator: std.mem.Allocator) !void {
+        self.description = try processMacros(allocator, self.description);
+    }
 };
 
 pub const ResourceRarity = enum { common, rare, epic };
@@ -322,13 +317,9 @@ pub const TalentData = struct {
     flat_stats: ?[]const StatIncreaseData = null,
     perc_stats: ?[]const StatIncreaseDataPerc = null,
 
-    pub const ziggy_options = struct {
-        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !TalentData {
-            var talent = try parser.parseStruct(TalentData, first_tok);
-            talent.description = try processMacros(parser.gpa, talent.description);
-            return talent;
-        }
-    };
+    pub fn postProcess(self: *TalentData, allocator: std.mem.Allocator) !void {
+        self.description = try processMacros(allocator, self.description);
+    }
 };
 
 pub const ClassData = struct {
@@ -344,7 +335,13 @@ pub const ClassData = struct {
     abilities: [4]AbilityData,
     light: LightData = .{},
     float: FloatData = .{},
-    talents: []const TalentData,
+    talents: []TalentData,
+
+    pub fn postProcess(self: *ClassData, allocator: std.mem.Allocator) !void {
+        self.description = try processMacros(allocator, self.description);
+        for (&self.abilities) |*abil| try abil.postProcess(allocator);
+        for (self.talents) |*talent| try talent.postProcess(allocator);
+    }
 };
 
 pub const ContainerData = struct {
@@ -669,13 +666,9 @@ pub const ItemData = struct {
     env_dmg_reduction: f32 = 0.0,
     sound: []const u8 = "Unknown.mp3",
 
-    pub const ziggy_options = struct {
-        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !ItemData {
-            var item_data = try parser.parseStruct(ItemData, first_tok);
-            item_data.description = try processMacros(parser.gpa, item_data.description);
-            return item_data;
-        }
-    };
+    pub fn postProcess(self: *ItemData, allocator: std.mem.Allocator) !void {
+        self.description = try processMacros(allocator, self.description);
+    }
 };
 
 pub const CardRarity = enum { common, rare, epic, legendary, mythic };
@@ -688,13 +681,9 @@ pub const CardData = struct {
     flat_stats: ?[]const StatIncreaseData = null,
     perc_stats: ?[]const StatIncreaseDataPerc = null,
 
-    pub const ziggy_options = struct {
-        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) !CardData {
-            var card_data = try parser.parseStruct(CardData, first_tok);
-            card_data.description = try processMacros(parser.gpa, card_data.description);
-            return card_data;
-        }
-    };
+    pub fn postProcess(self: *CardData, allocator: std.mem.Allocator) !void {
+        self.description = try processMacros(allocator, self.description);
+    }
 };
 
 pub const PortalData = struct {
