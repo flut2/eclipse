@@ -266,6 +266,8 @@ fn onGameAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.c) void {
         cli.shutdown();
         return;
     }
+
+    cli.initialized = true;
 }
 
 fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.c) void {
@@ -311,4 +313,6 @@ fn onLoginAccept(server: [*c]uv.uv_stream_t, status: i32) callconv(.c) void {
         cli.shutdown();
         return;
     }
+
+    cli.initialized = true;
 }

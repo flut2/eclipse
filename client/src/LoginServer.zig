@@ -73,7 +73,10 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
                 inline else => |id| {
                     const packet = reader.read(PacketData(id));
                     if (comptime logRead())
-                        std.log.info("Receiving login packet: {f}", .{@unionInit(network_data.S2CPacketLogin, @tagName(id), packet)});
+                        std.log.info(
+                            "Receiving login packet: {f}",
+                            .{@unionInit(network_data.S2CPacketLogin, @tagName(id), packet)},
+                        );
                     handlerFn(id)(server, packet);
                 },
             }
@@ -210,7 +213,10 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
 }
 
 pub fn shutdown(self: *Server) void {
-    if (!self.initialized) return;
+    if (!self.initialized) {
+        closeCallback(@ptrCast(&self.socket));
+        return;
+    }
     self.initialized = false;
 
     const close_status = uv.uv_tcp_close_reset(&self.socket, closeCallback);
@@ -218,7 +224,7 @@ pub fn shutdown(self: *Server) void {
 }
 
 fn closeCallback(ud: [*c]uv.uv_handle_t) callconv(.c) void {
-    const server: *Server = @ptrCast(@alignCast(ud));
+    const server: *Server = @ptrCast(@alignCast(ud.*.data));
     main.disconnect();
     server.unsent_packets.clearAndFree(main.allocator);
     server.needs_verify = false;

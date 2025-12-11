@@ -4,6 +4,7 @@
     .version = "1.0.0",
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
+        .ziggy = .{ .path = "ziggy" },
         .shared = .{ .path = "shared" },
         .nfd = .{ .path = "client/libs/nfd" },
         .miniaudio = .{ .path = "client/libs/miniaudio" },

@@ -15,6 +15,7 @@ const Client = @This();
 
 socket: uv.uv_tcp_t = .{},
 list_index: usize = std.math.maxInt(usize),
+initialized: bool = false,
 
 fn PacketData(comptime tag: @typeInfo(network_data.C2SPacketLogin).@"union".tag_type.?) type {
     return @typeInfo(network_data.C2SPacketLogin).@"union".fields[@intFromEnum(tag)].type;
@@ -39,15 +40,6 @@ pub fn allocBuffer(_: [*c]uv.uv_handle_t, _: usize, buf: [*c]uv.uv_buf_t) callco
     const start_idx = main.login_buffers.items.len;
     main.login_buffers.appendNTimes(main.allocator, 0, main.login_buffer_size) catch main.oomPanic();
     buf.* = .{ .base = &main.login_buffers.items[start_idx], .len = main.login_buffer_size };
-}
-
-fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.c) void {
-    const client: *Client = @ptrCast(@alignCast(socket.*.data));
-    if (client.list_index == std.math.maxInt(usize)) {
-        std.log.err("Login client had unset list index, not appending to free list", .{});
-        return;
-    }
-    main.login_client_free_list.append(main.allocator, client.list_index) catch main.oomPanic();
 }
 
 pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.c) void {
@@ -79,7 +71,7 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
                     if (comptime logRead())
                         std.log.info("Reading login packet with len `{}`: {f}", .{
                             len,
-                            @unionInit(network_data.C2SPacket, @tagName(id), packet),
+                            @unionInit(network_data.C2SPacketLogin, @tagName(id), packet),
                         });
                     handlerFn(id)(client, packet);
                 },
@@ -100,8 +92,23 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
 }
 
 pub fn shutdown(self: *Client) void {
+    if (!self.initialized) {
+        closeCallback(@ptrCast(&self.socket));
+        return;
+    }
+    self.initialized = false;
+
     const close_status = uv.uv_tcp_close_reset(&self.socket, closeCallback);
     if (close_status != 0) std.log.err("Libuv socket close error: {s}", .{uv.uv_strerror(close_status)});
+}
+
+fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.c) void {
+    const client: *Client = @ptrCast(@alignCast(socket.*.data));
+    if (client.list_index == std.math.maxInt(usize)) {
+        std.log.err("Login client had unset list index, not appending to free list", .{});
+        return;
+    }
+    main.login_client_free_list.append(main.allocator, client.list_index) catch main.oomPanic();
 }
 
 pub fn sendPacket(self: *Client, packet: network_data.S2CPacketLogin) void {

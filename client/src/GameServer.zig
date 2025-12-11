@@ -162,7 +162,10 @@ pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_
                     if (comptime logRead(id == .ping or
                         std.mem.indexOf(u8, name, "new_") != null or
                         std.mem.indexOf(u8, name, "dropped_") != null))
-                        std.log.info("Receiving game packet: {f}", .{@unionInit(network_data.S2CPacket, name, packet)});
+                        std.log.info(
+                            "Receiving game packet: {f}",
+                            .{@unionInit(network_data.S2CPacket, name, packet)},
+                        );
                     handlerFn(id)(server, packet);
                 },
             }
@@ -293,7 +296,10 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
 }
 
 pub fn shutdown(self: *Server) void {
-    if (!self.initialized) return;
+    if (!self.initialized) {
+        closeCallback(@ptrCast(&self.socket));
+        return;
+    }
     self.initialized = false;
 
     const close_status = uv.uv_tcp_close_reset(&self.socket, closeCallback);
