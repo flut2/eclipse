@@ -3,17 +3,24 @@ const builtin = @import("builtin");
 
 const game_data = @import("game_data.zig");
 
-// Big endian isn't supported on this
 pub const PacketWriter = struct {
     list: std.ArrayList(u8) = .empty,
 
+    pub fn init(self: *PacketWriter, allocator: std.mem.Allocator, size: usize) std.mem.Allocator.Error!void {
+        self.list = try .initCapacity(allocator, size);
+    }
+
+    pub fn deinit(self: *PacketWriter, allocator: std.mem.Allocator) void {
+        self.list.deinit(allocator);
+    }
+
     pub fn writeLength(self: *PacketWriter) void {
-        self.list.appendSliceAssumeCapacity(&.{ 0, 0 });
+        self.list.appendSliceAssumeCapacity(&.{ 0, 0, 0, 0 });
     }
 
     pub fn updateLength(self: *PacketWriter) void {
-        const buf = self.list.items[0..2];
-        const len: u16 = @intCast(self.list.items.len - 2);
+        const buf = self.list.items[0..4];
+        const len: u32 = @intCast(self.list.items.len - 4);
         @memcpy(buf, std.mem.asBytes(&len));
     }
 
@@ -21,64 +28,73 @@ pub const PacketWriter = struct {
         const T = @TypeOf(value);
         const type_info = @typeInfo(T);
 
-        if (type_info == .pointer and (type_info.pointer.size == .slice or type_info.pointer.size == .many)) {
-            self.write(@as(u16, @intCast(value.len)));
-            for (value) |val| self.write(val);
-            return;
-        }
-
-        if (type_info == .@"struct") {
-            switch (type_info.@"struct".layout) {
-                .auto, .@"extern" => {
-                    inline for (type_info.@"struct".fields) |field| {
-                        self.write(@field(value, field.name));
-                    }
+        switch (type_info) {
+            .pointer => |p| {
+                self.write(@as(u16, @intCast(value.len)));
+                if (@alignOf(p.child) == 1) {
+                    self.list.appendSliceAssumeCapacity(@ptrCast(value));
+                    return;
+                }
+                for (value) |val| self.write(val);
+                return;
+            },
+            .@"struct" => |s| switch (s.layout) {
+                .auto => {
+                    inline for (s.fields) |field| self.write(@field(value, field.name));
                     return;
                 },
-                .@"packed" => {}, // will be handled below, packed structs are just ints
-            }
+                .@"extern", .@"packed" => {},
+            },
+            else => {},
         }
 
-        const value_bytes = std.mem.asBytes(&value);
-        self.list.appendSliceAssumeCapacity(value_bytes);
+        self.list.appendSliceAssumeCapacity(std.mem.asBytes(&value));
     }
 };
 
-// Big endian isn't supported on this
 pub const PacketReader = struct {
-    index: u16 = 0,
-    buffer: []const u8 = &.{},
-    fba: std.heap.FixedBufferAllocator = .{
-        .end_index = std.math.maxInt(usize),
-        .buffer = &.{},
-    },
+    index: u32 = 0,
+    buffer: []u8 = &.{},
+    fba: std.heap.FixedBufferAllocator = .{ .buffer = &.{}, .end_index = 0 },
 
-    pub fn reset(self: *PacketReader, buffer: []const u8) void {
+    pub fn init(self: *PacketReader, allocator: std.mem.Allocator, size: usize) std.mem.Allocator.Error!void {
+        self.buffer = try allocator.alloc(u8, size);
+        self.fba = .init(try allocator.alloc(u8, size));
+    }
+
+    pub fn deinit(self: *PacketReader, allocator: std.mem.Allocator) void {
+        allocator.free(self.buffer);
+        allocator.free(self.fba.buffer);
+    }
+
+    pub fn reset(self: *PacketReader) void {
         self.index = 0;
-        self.buffer = buffer;
         self.fba.reset();
     }
 
     pub fn read(self: *PacketReader, comptime T: type) T {
         const type_info = @typeInfo(T);
         switch (type_info) {
-            .pointer => {
-                const ChildType = type_info.pointer.child;
+            .pointer => |p| {
                 const len = self.read(u16);
                 if (len == 0) return &.{};
-                const ret = self.fba.allocator().alloc(ChildType, len) catch @panic("FBA buffer out of space");
-                for (ret) |*ret_val| ret_val.* = self.read(ChildType);
+                if (@alignOf(p.child) == 1) {
+                    const byte_len = len * @sizeOf(p.child);
+                    if (self.index + byte_len > self.buffer.len) @panic("Buffer attempted to read out of bounds");
+                    defer self.index += byte_len;
+                    return @ptrCast(self.buffer[self.index..][0..byte_len]);
+                }
+                const ret = self.fba.allocator().alloc(p.child, len) catch @panic("FBA buffer out of space");
+                for (ret) |*r| r.* = self.read(p.child);
                 return ret;
             },
-            .@"struct" => {
-                switch (type_info.@"struct".layout) {
-                    .auto, .@"extern" => {
-                        var value: T = undefined;
-                        inline for (type_info.@"struct".fields) |field| @field(value, field.name) = self.read(field.type);
-                        return value;
-                    },
-                    .@"packed" => {}, // will be handled below, packed structs are just ints
-                }
+            .@"struct" => |s| switch (s.layout) {
+                .auto => {
+                    var value: T = undefined;
+                    inline for (type_info.@"struct".fields) |field| @field(value, field.name) = self.read(field.type);
+                    return value;
+                },
+                .@"extern", .@"packed" => {},
             },
             else => {},
         }

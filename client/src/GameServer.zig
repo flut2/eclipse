@@ -61,11 +61,11 @@ map_hello_fragments: ?[]network_data.C2SPacket = null,
 initialized: bool = false,
 tick_time: i64 = @as(f32, std.time.us_per_s) / 10.0,
 
-fn PacketData(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?) type {
-    return @typeInfo(network_data.S2CPacket).@"union".fields[@intFromEnum(tag)].type;
+fn PacketData(comptime tag: std.meta.Tag(network_data.S2CPacket)) type {
+    return @FieldType(network_data.S2CPacket, @tagName(tag));
 }
 
-fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacket).@"union".tag_type.?) fn (*Server, PacketData(tag)) void {
+fn handlerFn(comptime tag: std.meta.Tag(network_data.S2CPacket)) fn (*Server, PacketData(tag)) void {
     return switch (tag) {
         .ally_projectile => handleAllyProjectile,
         .aoe => handleAoe,
@@ -110,7 +110,7 @@ fn ObjEnumToStatType(comptime obj_type: network_data.ObjectType) type {
     };
 }
 
-fn ObjEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnumToType(obj_type), ObjEnumToStatType(obj_type)) void {
+fn objEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnumToType(obj_type), ObjEnumToStatType(obj_type)) void {
     return switch (obj_type) {
         .player => parsePlayerStat,
         .entity => parseEntityStat,
@@ -121,68 +121,76 @@ fn ObjEnumToStatHandler(comptime obj_type: network_data.ObjectType) fn (*ObjEnum
     };
 }
 
-pub fn allocBuffer(_: [*c]uv.uv_handle_t, _: usize, buf: [*c]uv.uv_buf_t) callconv(.c) void {
-    if (main.game_buffer_free_list.items.len > 0) {
-        const free_buf = main.game_buffer_free_list.pop() orelse unreachable;
-        buf.* = .{ .base = free_buf.ptr, .len = main.game_buffer_size };
-        return;
-    }
-
-    const start_idx = main.game_buffers.items.len;
-    main.game_buffers.appendNTimes(main.allocator, 0, main.game_buffer_size) catch main.oomPanic();
-    buf.* = .{ .base = &main.game_buffers.items[start_idx], .len = main.game_buffer_size };
+fn logRead(comptime tag: std.meta.Tag(network_data.S2CPacket)) bool {
+    const name = @tagName(tag);
+    const tick = comptime tag == .ping or tag == .show_effects or
+        std.mem.indexOf(u8, name, "new_") != null or
+        std.mem.indexOf(u8, name, "dropped_") != null;
+    return if (tick)
+        build_options.log_packets == .all or
+            build_options.log_packets == .s2c or
+            build_options.log_packets == .s2c_tick or
+            build_options.log_packets == .all_tick
+    else
+        build_options.log_packets == .all or
+            build_options.log_packets == .s2c or
+            build_options.log_packets == .s2c_non_tick or
+            build_options.log_packets == .all_non_tick;
 }
 
-pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.c) void {
-    const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
-    const server: *Server = @ptrCast(@alignCast(socket.data));
+fn logWrite(comptime tag: std.meta.Tag(network_data.C2SPacket)) bool {
+    const tick = tag == .move or tag == .pong;
+    return if (tick)
+        build_options.log_packets == .all or
+            build_options.log_packets == .c2s or
+            build_options.log_packets == .c2s_tick or
+            build_options.log_packets == .all_tick
+    else
+        build_options.log_packets == .all or
+            build_options.log_packets == .c2s or
+            build_options.log_packets == .c2s_non_tick or
+            build_options.log_packets == .all_non_tick;
+}
 
-    defer if (buf.*.base != null) main.game_buffer_free_list.append(main.allocator, buf.*.base[0..main.game_buffer_size]) catch main.oomPanic();
+pub fn allocBuffer(_: [*c]uv.uv_handle_t, _: usize, buf: [*c]uv.uv_buf_t) callconv(.c) void {
+    buf.* = .{ .base = @ptrCast(main.game_reader.buffer.ptr), .len = main.game_buffer_size };
+}
 
-    if (bytes_read > 0) {
-        const reader = &main.game_reader;
-        reader.reset(buf.*.base[0..@intCast(bytes_read)]);
+pub fn shutdown(self: *Server) void {
+    if (!self.initialized) {
+        closeCallback(@ptrCast(&self.socket));
+        return;
+    }
+    self.initialized = false;
 
-        while (reader.index <= bytes_read - 3) {
-            const len = reader.read(u16);
-            if (len > bytes_read - reader.index) return;
+    const close_status = uv.uv_tcp_close_reset(&self.socket, closeCallback);
+    if (close_status != 0) std.log.err("Libuv socket close error: {s}", .{uv.uv_strerror(close_status)});
+}
 
-            const next_packet_idx = reader.index + len;
-            const EnumType = @typeInfo(network_data.S2CPacket).@"union".tag_type.?;
-            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)));
-            const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
-                std.log.err("Error parsing S2CPacket ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
-                return;
-            };
+fn closeCallback(_: [*c]uv.uv_handle_t) callconv(.c) void {
+    main.disconnect();
+}
 
-            switch (packet_id) {
-                inline else => |id| {
-                    const packet = reader.read(PacketData(id));
-                    const name = @tagName(id);
-                    if (comptime logRead(id == .ping or
-                        std.mem.indexOf(u8, name, "new_") != null or
-                        std.mem.indexOf(u8, name, "dropped_") != null))
-                        std.log.info(
-                            "Receiving game packet: {f}",
-                            .{@unionInit(network_data.S2CPacket, name, packet)},
-                        );
-                    handlerFn(id)(server, packet);
-                },
-            }
+pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
+    const addr: std.net.Address = try .parseIp4(ip, port);
 
-            if (reader.index < next_packet_idx) {
-                std.log.err("S2C packet {} has {} bytes left over", .{ packet_id, next_packet_idx - reader.index });
-                reader.index = next_packet_idx;
-            }
-        }
-    } else if (bytes_read < 0) {
-        if (bytes_read == uv.UV_EOF) return;
-        std.log.err("Game read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
-        server.shutdown();
-        dialog.showDialog(.text, .{
-            .title = "Connection Error",
-            .body = "Game server closed the connection",
-        });
+    const tcp_status = uv.uv_tcp_init(&main.main_loop, &self.socket);
+    if (tcp_status != 0) {
+        std.log.err("Game socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
+        return error.NoSocket;
+    }
+    self.socket.data = self;
+
+    const disable_nagle_status = uv.uv_tcp_nodelay(&self.socket, 1);
+    if (disable_nagle_status != 0)
+        std.log.err("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
+
+    var con_handle = try main.allocator.create(uv.uv_connect_t);
+    con_handle.data = self;
+    const conn_status = uv.uv_tcp_connect(@ptrCast(con_handle), &self.socket, @ptrCast(&addr.in.sa), connectCallback);
+    if (conn_status != 0) {
+        std.log.err("Game connection error: {s}", .{uv.uv_strerror(conn_status)});
+        return error.ConnectionFailed;
     }
 }
 
@@ -217,14 +225,45 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.c) void {
 
     if (server.map_hello_fragments) |fragments| {
         defer main.allocator.free(fragments);
-        for (fragments) |fragment| {
-            server.sendPacket(fragment);
-            // not great, but libuv seems to struggle under heavy load, overwriting existing data
-            std.Thread.sleep(100 * std.time.ns_per_ms);
-        }
+        for (fragments) |fragment| server.sendPacket(fragment);
         server.map_hello_fragments = null;
     }
     server.sendPacket(server.hello_data);
+}
+
+pub fn readCallback(ud: *anyopaque, bytes_read: isize, _: [*c]const uv.uv_buf_t) callconv(.c) void {
+    if (bytes_read == 0) return;
+
+    const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
+    const server: *Server = @ptrCast(@alignCast(socket.data));
+
+    if (bytes_read < 0) {
+        server.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Game server closed the connection",
+        });
+        if (bytes_read != uv.UV_EOF)
+            std.log.err("Game read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
+        return;
+    }
+
+    if (!shared.uv.socketRead(
+        network_data.S2CPacket,
+        "S2C packet",
+        server,
+        bytes_read,
+        &main.game_reader,
+        handlerFn,
+        logRead,
+    )) {
+        server.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Game server closed the connection",
+        });
+        return;
+    }
 }
 
 pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
@@ -235,9 +274,6 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
         main.skip_verify_loop = true;
     };
 
-    if (logWrite(packet == .move or packet == .pong))
-        std.log.info("Sending game packet: {f}", .{packet});
-
     if (packet == .use_portal or packet == .escape)
         if (map.localPlayerRef()) |player| {
             player.x = -1.0;
@@ -245,95 +281,23 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacket) void {
             map.clearMoveRecords(main.current_time);
         };
 
-    switch (packet) {
-        inline else => |data| {
-            const writer = &main.game_writer;
-            writer.list.clearRetainingCapacity();
-            writer.writeLength();
-            writer.write(@intFromEnum(std.meta.activeTag(packet)));
-            writer.write(data);
-            writer.updateLength();
-
-            const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
-            var write_status = uv.UV_EAGAIN;
-            while (write_status == uv.UV_EAGAIN or write_status > 0 and write_status < writer.list.items.len)
-                write_status = uv.uv_try_write(@ptrCast(&self.socket), @ptrCast(&uv_buffer), 1);
-
-            if (write_status < 0) {
-                std.log.err("Game write send error: {s}", .{uv.uv_strerror(write_status)});
-                self.shutdown();
-                dialog.showDialog(.text, .{
-                    .title = "Connection Error",
-                    .body = "Game socket writing failed",
-                });
-                return;
-            }
-        },
-    }
-}
-
-pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
-    const addr: std.net.Address = try .parseIp4(ip, port);
-
-    const tcp_status = uv.uv_tcp_init(&main.main_loop, &self.socket);
-    if (tcp_status != 0) {
-        std.log.err("Game socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
-        return error.NoSocket;
-    }
-    self.socket.data = self;
-
-    const disable_nagle_status = uv.uv_tcp_nodelay(&self.socket, 1);
-    if (disable_nagle_status != 0)
-        std.log.err("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
-
-    var connect_data = try main.allocator.create(uv.uv_connect_t);
-    connect_data.data = self;
-    const conn_status = uv.uv_tcp_connect(@ptrCast(connect_data), &self.socket, @ptrCast(&addr.in.sa), connectCallback);
-    if (conn_status != 0) {
-        std.log.err("Game connection error: {s}", .{uv.uv_strerror(conn_status)});
-        return error.ConnectionFailed;
-    }
-}
-
-pub fn shutdown(self: *Server) void {
-    if (!self.initialized) {
-        closeCallback(@ptrCast(&self.socket));
+    const write_status = shared.uv.socketWrite(
+        network_data.C2SPacket,
+        "C2S packet",
+        packet,
+        &main.game_writer,
+        &self.socket,
+        logWrite,
+    );
+    if (write_status < 0) {
+        std.log.err("Game write send error: {s}", .{uv.uv_strerror(write_status)});
+        self.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Game socket writing failed",
+        });
         return;
     }
-    self.initialized = false;
-
-    const close_status = uv.uv_tcp_close_reset(&self.socket, closeCallback);
-    if (close_status != 0) std.log.err("Libuv socket close error: {s}", .{uv.uv_strerror(close_status)});
-}
-
-fn closeCallback(_: [*c]uv.uv_handle_t) callconv(.c) void {
-    main.disconnect();
-}
-
-fn logRead(tick: bool) bool {
-    return if (tick)
-        build_options.log_packets == .all or
-            build_options.log_packets == .s2c or
-            build_options.log_packets == .s2c_tick or
-            build_options.log_packets == .all_tick
-    else
-        build_options.log_packets == .all or
-            build_options.log_packets == .s2c or
-            build_options.log_packets == .s2c_non_tick or
-            build_options.log_packets == .all_non_tick;
-}
-
-fn logWrite(tick: bool) bool {
-    return if (tick)
-        build_options.log_packets == .all or
-            build_options.log_packets == .c2s or
-            build_options.log_packets == .c2s_tick or
-            build_options.log_packets == .all_tick
-    else
-        build_options.log_packets == .all or
-            build_options.log_packets == .c2s or
-            build_options.log_packets == .c2s_non_tick or
-            build_options.log_packets == .all_non_tick;
 }
 
 fn handleAllyProjectile(_: *Server, data: PacketData(.ally_projectile)) void {
@@ -745,7 +709,8 @@ fn droppedObject(comptime T: type, list: []const u32) void {
 fn newObject(comptime T: type, list: []const network_data.ObjectData, tick_time: f32) void {
     for (list) |obj| {
         const stat_reader = &main.stat_reader;
-        stat_reader.reset(obj.stats);
+        stat_reader.buffer = @constCast(obj.stats);
+        stat_reader.reset();
 
         if (map.findObjectRef(T, obj.map_id)) |object| {
             const pre_x = switch (T) {
@@ -804,7 +769,7 @@ fn parseObjectStat(
             if (i != stat_id) break :@"continue";
 
             const stat = @unionInit(StatType, field.name, stat_reader.read(field.type));
-            ObjEnumToStatHandler(obj_type)(object, stat);
+            objEnumToStatHandler(obj_type)(object, stat);
         }
     }
 }
@@ -841,10 +806,8 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         .size_mult => |val| player.size_mult = val,
         .cards => |val| player.cards = val,
         .resources => |val| {
-            if (player.resources.len == 0) {
-                player.resources = main.allocator.dupe(network_data.DataIdWithCount(u32), val) catch main.oomPanic();
-                return;
-            }
+            main.allocator.free(player.resources);
+            player.resources = main.allocator.dupe(network_data.DataIdWithCount(u32), val) catch main.oomPanic();
 
             mainLoop: for (val) |pair| {
                 for (player.resources) |old_pair| {
@@ -898,9 +861,11 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
                     },
                 }) catch main.oomPanic();
             }
-            player.resources = val;
         },
-        .talents => |val| player.talents = main.allocator.dupe(network_data.DataIdWithCount(u16), val) catch main.oomPanic(),
+        .talents => |val| {
+            main.allocator.free(player.talents);
+            player.talents = main.allocator.dupe(network_data.DataIdWithCount(u16), val) catch main.oomPanic();
+        },
         .rank => |val| player.rank = val,
         .aether => |val| player.aether = val,
         .spirits_communed => |val| {

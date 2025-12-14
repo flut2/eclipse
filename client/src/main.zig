@@ -62,7 +62,11 @@ const AccountData = struct {
 pub export var NvOptimusEnablement: c_int = 1;
 pub export var AmdPowerXpressRequestHighPerformance: c_int = 1;
 
-pub const game_buffer_size = std.math.maxInt(u16);
+// The size (in bytes) for each corresponding reader/writer.
+// Note that only a single one of each is used, as libuv's TCP
+// seems to always call the read callback after an allocation,
+// so the allocation lifetime is effectively sync.
+pub const game_buffer_size = std.math.maxInt(u24);
 pub const login_buffer_size = std.math.maxInt(u12);
 
 pub var game_reader: utils.PacketReader = .{};
@@ -104,10 +108,6 @@ pub var settings: Settings = .{};
 pub var main_loop: uv.uv_loop_t = .{};
 pub var window: *glfw.Window = undefined;
 pub var callbacks: std.ArrayList(TimedCallback) = .empty;
-
-var uv_pointer_size_map: std.AutoHashMapUnmanaged(usize, usize) = .empty;
-var uv_alloc_mutex: std.Thread.Mutex = .{};
-const uv_alignment: std.mem.Alignment = .of(std.c.max_align_t);
 
 fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.c) void {
     if (w <= 0 or h <= 0) return;
@@ -358,54 +358,10 @@ pub fn oomPanic() noreturn {
 pub fn audioFailure() void {
     settings.sfx_volume = 0.0;
     settings.music_volume = 0.0;
-    dialog.showDialog(.text, .{ .title = "Audio Error", .body =
+    dialog.showDialog(.text, .{ .title = "Audio Error", .body = 
         \\There was a problem interacting with your audio device. 
         \\Audio has been turned off, but you can turn it back on in the Options if you believe this to be incorrect or temporary.
     });
-}
-
-fn uvMalloc(size: usize) callconv(.c) ?*anyopaque {
-    uv_alloc_mutex.lock();
-    defer uv_alloc_mutex.unlock();
-
-    const mem = allocator.alignedAlloc(u8, uv_alignment, size) catch oomPanic();
-    uv_pointer_size_map.put(allocator, @intFromPtr(mem.ptr), size) catch oomPanic();
-    return mem.ptr;
-}
-
-fn uvCalloc(size: usize, elem_size: usize) callconv(.c) ?*anyopaque {
-    return uvMalloc(size * elem_size);
-}
-
-fn uvResize(maybe_ptr: ?*anyopaque, new_size: usize) callconv(.c) ?*anyopaque {
-    uv_alloc_mutex.lock();
-    defer uv_alloc_mutex.unlock();
-
-    const old_size = if (maybe_ptr) |p| uv_pointer_size_map.fetchRemove(@intFromPtr(p)).?.value else 0;
-    const old_mem: [*]align(uv_alignment.toByteUnits()) u8 = if (maybe_ptr) |p| @ptrCast(@alignCast(p)) else &.{};
-    const new_mem = allocator.realloc(old_mem[0..old_size], new_size) catch oomPanic();
-    uv_pointer_size_map.put(allocator, @intFromPtr(new_mem.ptr), new_size) catch oomPanic();
-    return new_mem.ptr;
-}
-
-fn uvFree(maybe_ptr: ?*anyopaque) callconv(.c) void {
-    const ptr = maybe_ptr orelse return;
-
-    uv_alloc_mutex.lock();
-    defer uv_alloc_mutex.unlock();
-
-    const kv = uv_pointer_size_map.fetchRemove(@intFromPtr(ptr)) orelse {
-        std.log.err("libuv: Invalid free attempted on {*}", .{ptr});
-        return;
-    };
-    const mem: [*]align(uv_alignment.toByteUnits()) u8 = @ptrCast(@alignCast(ptr));
-    allocator.free(mem[0..kv.value]);
-}
-
-fn walkCallback(handle: [*c]uv.uv_handle_t, _: ?*anyopaque) callconv(.c) void {
-    if (uv.uv_is_closing(handle) == 1) return;
-    std.log.err("Unclosed handle found during deinit walk: {*}", .{handle});
-    uv.uv_close(handle, null);
 }
 
 pub fn main() !void {
@@ -418,12 +374,8 @@ pub fn main() !void {
         if (build_options.tracy) .init(dbg_alloc.allocator()) else {};
     allocator = if (build_options.tracy) tracy_alloc.allocator() else dbg_alloc.allocator();
 
-    const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
-    if (replace_alloc_status != 0) {
-        std.log.err("Libuv alloc replace error: {s}", .{uv.uv_strerror(replace_alloc_status)});
-        return error.ReplaceAllocFailed;
-    }
-    defer uv_pointer_size_map.deinit(allocator);
+    try shared.uv.init(allocator);
+    defer shared.uv.deinit();
 
     var account_arena: std.heap.ArenaAllocator = .init(allocator);
     account_arena_allocator = account_arena.allocator();
@@ -432,17 +384,17 @@ pub fn main() !void {
     current_account = AccountData.load() catch null;
     defer if (settings.remember_login) if (current_account) |acc| acc.save() catch {};
 
-    game_reader.fba = .init(allocator.alloc(u8, game_buffer_size) catch oomPanic());
-    defer allocator.free(game_reader.fba.buffer);
+    game_reader.init(allocator, game_buffer_size) catch oomPanic();
+    defer game_reader.deinit(allocator);
 
-    game_writer.list = std.ArrayList(u8).initCapacity(allocator, game_buffer_size) catch oomPanic();
-    defer game_writer.list.deinit(allocator);
+    game_writer.init(allocator, game_buffer_size) catch oomPanic();
+    defer game_writer.deinit(allocator);
 
-    login_reader.fba = .init(allocator.alloc(u8, login_buffer_size) catch oomPanic());
-    defer allocator.free(login_reader.fba.buffer);
+    login_reader.init(allocator, login_buffer_size) catch oomPanic();
+    defer login_reader.deinit(allocator);
 
-    login_writer.list = std.ArrayList(u8).initCapacity(allocator, login_buffer_size) catch oomPanic();
-    defer login_writer.list.deinit(allocator);
+    login_writer.init(allocator, login_buffer_size) catch oomPanic();
+    defer login_writer.deinit(allocator);
 
     stat_reader.fba = .init(allocator.alloc(u8, game_buffer_size) catch oomPanic());
     defer allocator.free(stat_reader.fba.buffer);
@@ -525,7 +477,7 @@ pub fn main() !void {
         return error.NoLoop;
     }
     defer {
-        uv.uv_walk(&main_loop, walkCallback, null);
+        uv.uv_walk(&main_loop, shared.uv.walkCallback, null);
 
         const run_status = uv.uv_run(&main_loop, uv.UV_RUN_DEFAULT);
         if (run_status != 0 and run_status != 1) std.log.err("Loop run error: {s}", .{uv.uv_strerror(run_status)});

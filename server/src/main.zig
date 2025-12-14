@@ -18,7 +18,11 @@ const World = @import("World.zig");
 
 const tracy = if (build_options.tracy) @import("tracy") else {};
 
-pub const game_buffer_size = std.math.maxInt(u16);
+// The size (in bytes) for each corresponding reader/writer.
+// Note that only a single one of each is used, as libuv's TCP
+// seems to always call the read callback after an allocation,
+// so the allocation lifetime is effectively sync.
+pub const game_buffer_size = std.math.maxInt(u24);
 pub const login_buffer_size = std.math.maxInt(u12);
 
 pub var game_reader: utils.PacketReader = .{};
@@ -31,10 +35,6 @@ pub var game_clients: std.ArrayList(GameClient) = .empty;
 pub var login_clients: std.ArrayList(LoginClient) = .empty;
 pub var game_client_free_list: std.ArrayList(usize) = .empty;
 pub var login_client_free_list: std.ArrayList(usize) = .empty;
-pub var game_buffers: std.ArrayList(u8) = .empty;
-pub var login_buffers: std.ArrayList(u8) = .empty;
-pub var game_buffer_free_list: std.ArrayList([]u8) = .empty;
-pub var login_buffer_free_list: std.ArrayList([]u8) = .empty;
 pub var game_timer: uv.uv_timer_t = .{};
 pub var main_loop: uv.uv_loop_t = .{};
 pub var allocator: std.mem.Allocator = undefined;
@@ -42,56 +42,8 @@ pub var tick_id: u8 = 0;
 pub var current_time: i64 = -1;
 pub var settings: Settings = .{};
 
-var uv_pointer_size_map: std.AutoHashMapUnmanaged(usize, usize) = .empty;
-var uv_alloc_mutex: std.Thread.Mutex = .{};
-const uv_alignment: std.mem.Alignment = .of(std.c.max_align_t);
-
 pub fn oomPanic() noreturn {
     @panic("Out of memory");
-}
-
-fn uvMalloc(size: usize) callconv(.c) ?*anyopaque {
-    uv_alloc_mutex.lock();
-    defer uv_alloc_mutex.unlock();
-
-    const mem = allocator.alignedAlloc(u8, uv_alignment, size) catch oomPanic();
-    uv_pointer_size_map.put(allocator, @intFromPtr(mem.ptr), size) catch oomPanic();
-    return mem.ptr;
-}
-
-fn uvCalloc(size: usize, elem_size: usize) callconv(.c) ?*anyopaque {
-    return uvMalloc(size * elem_size);
-}
-
-fn uvResize(maybe_ptr: ?*anyopaque, new_size: usize) callconv(.c) ?*anyopaque {
-    uv_alloc_mutex.lock();
-    defer uv_alloc_mutex.unlock();
-
-    const old_size = if (maybe_ptr) |p| uv_pointer_size_map.fetchRemove(@intFromPtr(p)).?.value else 0;
-    const old_mem: [*]align(uv_alignment.toByteUnits()) u8 = if (maybe_ptr) |p| @ptrCast(@alignCast(p)) else &.{};
-    const new_mem = allocator.realloc(old_mem[0..old_size], new_size) catch oomPanic();
-    uv_pointer_size_map.put(allocator, @intFromPtr(new_mem.ptr), new_size) catch oomPanic();
-    return new_mem.ptr;
-}
-
-fn uvFree(maybe_ptr: ?*anyopaque) callconv(.c) void {
-    const ptr = maybe_ptr orelse return;
-
-    uv_alloc_mutex.lock();
-    defer uv_alloc_mutex.unlock();
-
-    const kv = uv_pointer_size_map.fetchRemove(@intFromPtr(ptr)) orelse {
-        std.log.err("libuv: Invalid free attempted on {*}", .{ptr});
-        return;
-    };
-    const mem: [*]align(uv_alignment.toByteUnits()) u8 = @ptrCast(@alignCast(ptr));
-    allocator.free(mem[0..kv.value]);
-}
-
-fn walkCallback(handle: [*c]uv.uv_handle_t, _: ?*anyopaque) callconv(.c) void {
-    if (uv.uv_is_closing(handle) == 1) return;
-    std.log.err("Unclosed handle found during deinit walk: {*}", .{handle});
-    uv.uv_close(handle, null);
 }
 
 pub fn main() !void {
@@ -103,12 +55,15 @@ pub fn main() !void {
         if (build_options.tracy) .init(dbg_alloc.allocator()) else {};
     allocator = if (build_options.tracy) tracy_alloc.allocator() else dbg_alloc.allocator();
 
-    const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
-    if (replace_alloc_status != 0) {
-        std.log.err("Libuv alloc replace error: {s}", .{uv.uv_strerror(replace_alloc_status)});
-        return error.ReplaceAllocFailed;
+    defer {
+        game_clients.deinit(allocator);
+        login_clients.deinit(allocator);
+        game_client_free_list.deinit(allocator);
+        login_client_free_list.deinit(allocator);
     }
-    defer uv_pointer_size_map.deinit(allocator);
+
+    try shared.uv.init(allocator);
+    defer shared.uv.deinit();
 
     const create_status = uv.uv_loop_init(&main_loop);
     if (create_status != 0) {
@@ -116,7 +71,7 @@ pub fn main() !void {
         return error.NoLoop;
     }
     defer {
-        uv.uv_walk(&main_loop, walkCallback, null);
+        uv.uv_walk(&main_loop, shared.uv.walkCallback, null);
 
         const run_status = uv.uv_run(&main_loop, uv.UV_RUN_DEFAULT);
         if (run_status != 0 and run_status != 1) std.log.err("Loop run error: {s}", .{uv.uv_strerror(run_status)});
@@ -140,32 +95,20 @@ pub fn main() !void {
     try db.init();
     defer db.deinit();
 
-    game_reader.fba = .init(allocator.alloc(u8, game_buffer_size) catch oomPanic());
-    defer allocator.free(game_reader.fba.buffer);
+    game_reader.init(allocator, game_buffer_size) catch oomPanic();
+    defer game_reader.deinit(allocator);
 
-    game_writer.list = std.ArrayList(u8).initCapacity(allocator, game_buffer_size) catch oomPanic();
-    defer game_writer.list.deinit(allocator);
+    game_writer.init(allocator, game_buffer_size) catch oomPanic();
+    defer game_writer.deinit(allocator);
 
-    login_reader.fba = .init(allocator.alloc(u8, login_buffer_size) catch oomPanic());
-    defer allocator.free(login_reader.fba.buffer);
+    login_reader.init(allocator, login_buffer_size) catch oomPanic();
+    defer login_reader.deinit(allocator);
 
-    login_writer.list = std.ArrayList(u8).initCapacity(allocator, login_buffer_size) catch oomPanic();
-    defer login_writer.list.deinit(allocator);
+    login_writer.init(allocator, login_buffer_size) catch oomPanic();
+    defer login_writer.deinit(allocator);
 
-    // TODO: could be multiple packets so it should dynamically expand
-    stats_writer.list = std.ArrayList(u8).initCapacity(allocator, std.math.maxInt(u20)) catch oomPanic();
-    defer stats_writer.list.deinit(allocator);
-
-    defer {
-        game_clients.deinit(allocator);
-        login_clients.deinit(allocator);
-        game_client_free_list.deinit(allocator);
-        login_client_free_list.deinit(allocator);
-        game_buffers.deinit(allocator);
-        login_buffers.deinit(allocator);
-        game_buffer_free_list.deinit(allocator);
-        login_buffer_free_list.deinit(allocator);
-    }
+    stats_writer.init(allocator, game_buffer_size) catch oomPanic();
+    defer stats_writer.deinit(allocator);
 
     const timer_init_status = uv.uv_timer_init(&main_loop, &game_timer);
     if (timer_init_status != 0) std.debug.panic("Timer init failed: {s}", .{uv.uv_strerror(timer_init_status)});
@@ -180,10 +123,15 @@ pub fn main() !void {
     defer {
         uv.uv_close(@ptrCast(&game_server), null);
         uv.uv_close(@ptrCast(&login_server), null);
+        for (game_clients.items) |*cli| uv.uv_close(@ptrCast(&cli.socket), null);
+        for (login_clients.items) |*cli| uv.uv_close(@ptrCast(&cli.socket), null);
     }
 
     const run_status = uv.uv_run(&main_loop, uv.UV_RUN_DEFAULT);
-    if (run_status != 0 and run_status != 1) std.log.err("Run failed: {s}", .{uv.uv_strerror(run_status)});
+    if (run_status != 0 and run_status != 1) {
+        std.log.err("Run failed: {s}", .{uv.uv_strerror(run_status)});
+        return error.RunFailed;
+    }
 }
 
 fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.c) void, server_handle: [*c]uv.uv_tcp_t, port: u16) void {
@@ -197,11 +145,7 @@ fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.c) void, se
     const socket_bind_status = uv.uv_tcp_bind(server_handle, @ptrCast(&addr.in.sa), 0);
     if (socket_bind_status != 0) std.debug.panic("Setting up socket bind failed: {s}", .{uv.uv_strerror(socket_bind_status)});
 
-    const listen_result = uv.uv_listen(@ptrCast(server_handle), switch (builtin.os.tag) {
-        .windows => std.os.windows.ws2_32.SOMAXCONN,
-        .macos, .ios, .tvos, .watchos, .linux => std.os.linux.SOMAXCONN,
-        else => @compileError("Host OS not supported"),
-    }, acceptFunc);
+    const listen_result = uv.uv_listen(@ptrCast(server_handle), std.c.SOMAXCONN, acceptFunc);
     if (listen_result != 0) std.debug.panic("Listen error: {s}", .{uv.uv_strerror(listen_result)});
 }
 

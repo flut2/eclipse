@@ -21,11 +21,11 @@ unsent_packets: std.ArrayList(network_data.C2SPacketLogin),
 initialized: bool = false,
 needs_verify: bool = false,
 
-fn PacketData(comptime tag: @typeInfo(network_data.S2CPacketLogin).@"union".tag_type.?) type {
-    return @typeInfo(network_data.S2CPacketLogin).@"union".fields[@intFromEnum(tag)].type;
+fn PacketData(comptime tag: std.meta.Tag(network_data.S2CPacketLogin)) type {
+    return @FieldType(network_data.S2CPacketLogin, @tagName(tag));
 }
 
-fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacketLogin).@"union".tag_type.?) fn (*Server, PacketData(tag)) void {
+fn handlerFn(comptime tag: std.meta.Tag(network_data.S2CPacketLogin)) fn (*Server, PacketData(tag)) void {
     return switch (tag) {
         .login_response => handleLoginResponse,
         .register_response => handleRegisterResponse,
@@ -35,65 +35,77 @@ fn handlerFn(comptime tag: @typeInfo(network_data.S2CPacketLogin).@"union".tag_t
     };
 }
 
-pub fn allocBuffer(_: [*c]uv.uv_handle_t, _: usize, buf: [*c]uv.uv_buf_t) callconv(.c) void {
-    if (main.login_buffer_free_list.items.len > 0) {
-        const free_buf = main.login_buffer_free_list.pop() orelse unreachable;
-        buf.* = .{ .base = free_buf.ptr, .len = main.login_buffer_size };
-        return;
-    }
-
-    const start_idx = main.login_buffers.items.len;
-    main.login_buffers.appendNTimes(main.allocator, 0, main.login_buffer_size) catch main.oomPanic();
-    buf.* = .{ .base = &main.login_buffers.items[start_idx], .len = main.login_buffer_size };
+fn logRead(comptime _: std.meta.Tag(network_data.S2CPacketLogin)) bool {
+    return build_options.log_packets == .all or
+        build_options.log_packets == .s2c or
+        build_options.log_packets == .s2c_non_tick or
+        build_options.log_packets == .all_non_tick or
+        build_options.log_packets == .s2c_tick or
+        build_options.log_packets == .all_tick;
 }
 
-pub fn readCallback(ud: *anyopaque, bytes_read: isize, buf: [*c]const uv.uv_buf_t) callconv(.c) void {
-    const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
-    const server: *Server = @ptrCast(@alignCast(socket.data));
+fn logWrite(comptime _: std.meta.Tag(network_data.C2SPacketLogin)) bool {
+    return build_options.log_packets == .all or
+        build_options.log_packets == .c2s or
+        build_options.log_packets == .c2s_non_tick or
+        build_options.log_packets == .all_non_tick or
+        build_options.log_packets == .c2s_tick or
+        build_options.log_packets == .all_tick;
+}
 
-    defer if (buf.*.base != null) main.login_buffer_free_list.append(main.allocator, buf.*.base[0..main.login_buffer_size]) catch main.oomPanic();
+pub fn allocBuffer(_: [*c]uv.uv_handle_t, _: usize, buf: [*c]uv.uv_buf_t) callconv(.c) void {
+    buf.* = .{ .base = @ptrCast(main.login_reader.buffer.ptr), .len = main.login_buffer_size };
+}
 
-    if (bytes_read > 0) {
-        const reader = &main.login_reader;
-        reader.reset(buf.*.base[0..@intCast(bytes_read)]);
+pub fn init(self: *Server) !void {
+    self.connect(build_options.login_server_ip, build_options.login_server_port) catch |e| {
+        std.log.err("Login connection failed: {}", .{e});
+        return;
+    };
+}
 
-        while (reader.index <= bytes_read - 3) {
-            const len = reader.read(u16);
-            if (len > bytes_read - reader.index) return;
+pub fn shutdown(self: *Server) void {
+    if (!self.initialized) {
+        closeCallback(@ptrCast(&self.socket));
+        return;
+    }
+    self.initialized = false;
 
-            const next_packet_idx = reader.index + len;
-            const EnumType = @typeInfo(network_data.S2CPacketLogin).@"union".tag_type.?;
-            const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(EnumType)));
-            const packet_id = std.meta.intToEnum(EnumType, byte_id) catch |e| {
-                std.log.err("Error parsing S2CPacketLogin ({}): id={}, size={}, len={}", .{ e, byte_id, bytes_read, len });
-                return;
-            };
+    const close_status = uv.uv_tcp_close_reset(&self.socket, closeCallback);
+    if (close_status != 0) std.log.err("Libuv socket close error: {s}", .{uv.uv_strerror(close_status)});
+}
 
-            switch (packet_id) {
-                inline else => |id| {
-                    const packet = reader.read(PacketData(id));
-                    if (comptime logRead())
-                        std.log.info(
-                            "Receiving login packet: {f}",
-                            .{@unionInit(network_data.S2CPacketLogin, @tagName(id), packet)},
-                        );
-                    handlerFn(id)(server, packet);
-                },
-            }
+fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.c) void {
+    const server: *Server = @ptrCast(@alignCast(socket.*.data));
+    main.disconnect();
+    server.unsent_packets.clearAndFree(main.allocator);
+    server.needs_verify = false;
+}
 
-            if (reader.index < next_packet_idx) {
-                std.log.err("S2C login packet {} has {} bytes left over", .{ packet_id, next_packet_idx - reader.index });
-                reader.index = next_packet_idx;
-            }
-        }
-    } else if (bytes_read < 0) {
-        if (bytes_read == uv.UV_EOF) return;
-        std.log.err("Login read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
-        server.shutdown();
-        dialog.showDialog(.text, .{
-            .title = "Connection Error",
-            .body = "Login server closed the connection",
-        });
+pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
+    const addr: std.net.Address = try .parseIp4(ip, port);
+
+    const tcp_status = uv.uv_tcp_init(&main.main_loop, &self.socket);
+    if (tcp_status != 0) {
+        self.needs_verify = false;
+        self.unsent_packets.clearAndFree(main.allocator);
+        std.log.err("Login socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
+        return error.NoSocket;
+    }
+    self.socket.data = self;
+
+    const disable_nagle_status = uv.uv_tcp_nodelay(&self.socket, 1);
+    if (disable_nagle_status != 0)
+        std.log.err("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
+
+    var con_handle = try main.allocator.create(uv.uv_connect_t);
+    con_handle.data = self;
+    const conn_status = uv.uv_tcp_connect(@ptrCast(con_handle), &self.socket, @ptrCast(&addr.in.sa), connectCallback);
+    if (conn_status != 0) {
+        self.needs_verify = false;
+        self.unsent_packets.clearAndFree(main.allocator);
+        std.log.err("Login connection error: {s}", .{uv.uv_strerror(conn_status)});
+        return error.ConnectionFailed;
     }
 }
 
@@ -135,17 +147,39 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.c) void {
     for (server.unsent_packets.items) |packet| server.sendPacket(packet);
 }
 
-fn shutdownCallback(handle: [*c]uv.uv_async_t) callconv(.c) void {
-    const server: *Server = @ptrCast(@alignCast(handle.*.data));
-    server.shutdown();
-    dialog.showDialog(.none, {});
-}
+pub fn readCallback(ud: *anyopaque, bytes_read: isize, _: [*c]const uv.uv_buf_t) callconv(.c) void {
+    if (bytes_read == 0) return;
 
-pub fn init(self: *Server) !void {
-    self.connect(build_options.login_server_ip, build_options.login_server_port) catch |e| {
-        std.log.err("Login connection failed: {}", .{e});
+    const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
+    const server: *Server = @ptrCast(@alignCast(socket.data));
+
+    if (bytes_read < 0) {
+        server.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Login server closed the connection",
+        });
+        if (bytes_read != uv.UV_EOF)
+            std.log.err("Login read error: {s}", .{uv.uv_err_name(@intCast(bytes_read))});
         return;
-    };
+    }
+
+    if (!shared.uv.socketRead(
+        network_data.S2CPacketLogin,
+        "S2C login packet",
+        server,
+        bytes_read,
+        &main.login_reader,
+        handlerFn,
+        logRead,
+    )) {
+        server.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Login server closed the connection",
+        });
+        return;
+    }
 }
 
 pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
@@ -155,97 +189,23 @@ pub fn sendPacket(self: *Server, packet: network_data.C2SPacketLogin) void {
         return;
     }
 
-    if (comptime logWrite())
-        std.log.info("Sending login packet: {f}", .{packet});
-
-    switch (packet) {
-        inline else => |data| {
-            const writer = &main.login_writer;
-            writer.list.clearRetainingCapacity();
-            writer.writeLength();
-            writer.write(@intFromEnum(std.meta.activeTag(packet)));
-            writer.write(data);
-            writer.updateLength();
-
-            const uv_buffer: uv.uv_buf_t = .{ .base = @ptrCast(writer.list.items.ptr), .len = @intCast(writer.list.items.len) };
-            var write_status = uv.UV_EAGAIN;
-            while (write_status == uv.UV_EAGAIN or write_status > 0 and write_status < writer.list.items.len)
-                write_status = uv.uv_try_write(@ptrCast(&self.socket), @ptrCast(&uv_buffer), 1);
-
-            if (write_status < 0) {
-                std.log.err("Login write send error: {s}", .{uv.uv_strerror(write_status)});
-                self.shutdown();
-                dialog.showDialog(.text, .{
-                    .title = "Connection Error",
-                    .body = "Login socket writing failed",
-                });
-                return;
-            }
-        },
-    }
-}
-
-pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
-    const addr: std.net.Address = try .parseIp4(ip, port);
-
-    const tcp_status = uv.uv_tcp_init(&main.main_loop, &self.socket);
-    if (tcp_status != 0) {
-        self.needs_verify = false;
-        self.unsent_packets.clearAndFree(main.allocator);
-        std.log.err("Login socket creation error: {s}", .{uv.uv_strerror(tcp_status)});
-        return error.NoSocket;
-    }
-    self.socket.data = self;
-
-    const disable_nagle_status = uv.uv_tcp_nodelay(&self.socket, 1);
-    if (disable_nagle_status != 0)
-        std.log.err("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
-
-    var connect_data = try main.allocator.create(uv.uv_connect_t);
-    connect_data.data = self;
-    const conn_status = uv.uv_tcp_connect(@ptrCast(connect_data), &self.socket, @ptrCast(&addr.in.sa), connectCallback);
-    if (conn_status != 0) {
-        self.needs_verify = false;
-        self.unsent_packets.clearAndFree(main.allocator);
-        std.log.err("Login connection error: {s}", .{uv.uv_strerror(conn_status)});
-        return error.ConnectionFailed;
-    }
-}
-
-pub fn shutdown(self: *Server) void {
-    if (!self.initialized) {
-        closeCallback(@ptrCast(&self.socket));
+    const write_status = shared.uv.socketWrite(
+        network_data.C2SPacketLogin,
+        "C2S login packet",
+        packet,
+        &main.login_writer,
+        &self.socket,
+        logWrite,
+    );
+    if (write_status < 0) {
+        std.log.err("Login write send error: {s}", .{uv.uv_strerror(write_status)});
+        self.shutdown();
+        dialog.showDialog(.text, .{
+            .title = "Connection Error",
+            .body = "Login socket writing failed",
+        });
         return;
     }
-    self.initialized = false;
-
-    const close_status = uv.uv_tcp_close_reset(&self.socket, closeCallback);
-    if (close_status != 0) std.log.err("Libuv socket close error: {s}", .{uv.uv_strerror(close_status)});
-}
-
-fn closeCallback(ud: [*c]uv.uv_handle_t) callconv(.c) void {
-    const server: *Server = @ptrCast(@alignCast(ud.*.data));
-    main.disconnect();
-    server.unsent_packets.clearAndFree(main.allocator);
-    server.needs_verify = false;
-}
-
-fn logRead() bool {
-    return build_options.log_packets == .all or
-        build_options.log_packets == .s2c or
-        build_options.log_packets == .s2c_non_tick or
-        build_options.log_packets == .all_non_tick or
-        build_options.log_packets == .s2c_tick or
-        build_options.log_packets == .all_tick;
-}
-
-fn logWrite() bool {
-    return build_options.log_packets == .all or
-        build_options.log_packets == .c2s or
-        build_options.log_packets == .c2s_non_tick or
-        build_options.log_packets == .all_non_tick or
-        build_options.log_packets == .c2s_tick or
-        build_options.log_packets == .all_tick;
 }
 
 fn deepCopyList(temp_list: network_data.CharacterListData) !network_data.CharacterListData {
