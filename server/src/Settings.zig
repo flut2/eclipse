@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const ziggy = @import("ziggy");
 
 const Settings = @This();
@@ -9,6 +10,7 @@ game_port: u16 = 3328,
 login_port: u16 = 2833,
 redis_ip: []const u8 = "127.0.0.1",
 redis_port: u16 = 6379,
+redis_db_id: u8 = 0,
 public_ip: []const u8 = "127.0.0.1",
 server_name: []const u8 = "Eclipse",
 build_version: []const u8 = "0.1",

@@ -2,6 +2,7 @@
 .login_port = 2833,
 .redis_ip = "127.0.0.1",
 .redis_port = 6379,
+.redis_db_id = 1,
 .public_ip = "127.0.0.1",
 .server_name = "Eclipse",
 .build_version = "0.1",

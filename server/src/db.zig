@@ -381,6 +381,10 @@ pub fn init() !void {
         std.log.err("Redis connection error: {s}", .{context.errstr});
         return error.ConnectionError;
     }
+
+    if (main.settings.redis_db_id != 0)
+        if (redisCommand(context, "SELECT %d", .{main.settings.redis_db_id})) |reply|
+            c.freeReplyObject(reply);
 }
 
 pub fn deinit() void {
