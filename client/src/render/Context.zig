@@ -3,12 +3,17 @@ const std = @import("std");
 const build_options = @import("options");
 const glfw = @import("glfw");
 const vk = @import("vulkan");
+const BaseWrapper = vk.BaseWrapper;
+const InstanceWrapper = vk.InstanceWrapper;
+const DeviceWrapper = vk.DeviceWrapper;
+const Instance = vk.InstanceProxy;
+const Device = vk.DeviceProxy;
 
 const main = @import("../main.zig");
 
 const required_layers: []const [*:0]const u8 =
     // zig fmt: off
-    if (build_options.enable_validation_layers)
+    if (build_options.vk_validation)
         &.{"VK_LAYER_KHRONOS_validation"}
     else
         &.{};
@@ -22,13 +27,6 @@ const apis: []const vk.ApiInfo = &.{
     vk.extensions.khr_surface,
     vk.extensions.khr_swapchain,
 };
-
-const BaseWrapper = vk.BaseWrapper;
-const InstanceWrapper = vk.InstanceWrapper;
-const DeviceWrapper = vk.DeviceWrapper;
-
-const Instance = vk.InstanceProxy;
-const Device = vk.DeviceProxy;
 
 const DeviceCandidate = struct {
     phys_device: vk.PhysicalDevice,

@@ -16,7 +16,7 @@ const maps = @import("map/maps.zig");
 const Settings = @import("Settings.zig");
 const World = @import("World.zig");
 
-const tracy = if (build_options.enable_tracy) @import("tracy") else {};
+const tracy = if (build_options.tracy) @import("tracy") else {};
 
 pub const game_buffer_size = std.math.maxInt(u16);
 pub const login_buffer_size = std.math.maxInt(u12);
@@ -99,9 +99,9 @@ pub fn main() !void {
 
     var dbg_alloc: std.heap.DebugAllocator(.{ .stack_trace_frames = 10 }) = .init;
     defer _ = dbg_alloc.deinit();
-    var tracy_alloc: if (build_options.enable_tracy) tracy.TracyAllocator(null) else void =
-        if (build_options.enable_tracy) .init(dbg_alloc.allocator()) else {};
-    allocator = if (build_options.enable_tracy) tracy_alloc.allocator() else dbg_alloc.allocator();
+    var tracy_alloc: if (build_options.tracy) tracy.TracyAllocator(null) else void =
+        if (build_options.tracy) .init(dbg_alloc.allocator()) else {};
+    allocator = if (build_options.tracy) tracy_alloc.allocator() else dbg_alloc.allocator();
 
     const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
     if (replace_alloc_status != 0) {

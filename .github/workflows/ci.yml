@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build-type: [client, server]
+        skip-build: [client, server]
         tracy-flag: [true, false]
         opt: [Debug, ReleaseSafe]
     runs-on: ubuntu-latest
@@ -50,13 +50,12 @@ jobs:
           version: 1.4.309.0
           cache: true
       - name: Build
-        working-directory: ./${{ matrix.build-type }}
-        run: zig build -Denable_tracy=${{ matrix.tracy-flag }} -Doptimize=${{ matrix.opt }}
+        run: zig build -D${{ matrix.skip-build }}=false -Dtracy=${{ matrix.tracy-flag }} -Doptimize=${{ matrix.opt }}
   build-windows:
     strategy:
       fail-fast: false
       matrix:
-        build-type: [client, server]
+        skip-build: [client, server]
         tracy-flag: [true, false]
         opt: [Debug, ReleaseSafe]
     runs-on: windows-latest
@@ -71,5 +70,4 @@ jobs:
           version: 1.4.309.0
           cache: true
       - name: Build
-        working-directory: ./${{ matrix.build-type }}
-        run: zig build -Denable_tracy=${{ matrix.tracy-flag }} -Doptimize=${{ matrix.opt }}
+        run: zig build -D${{ matrix.skip-build }}=false -Dtracy=${{ matrix.tracy-flag }} -Doptimize=${{ matrix.opt }}

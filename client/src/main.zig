@@ -33,7 +33,7 @@ pub const frames_in_flight = 2;
 /// Data must have pointer stability and must be deallocated manually, usually in the callback (for type information)
 pub const TimedCallback = struct { trigger_on: i64, callback: *const fn (*anyopaque) void, data: *anyopaque };
 
-const tracy = if (build_options.enable_tracy) @import("tracy") else {};
+const tracy = if (build_options.tracy) @import("tracy") else {};
 const AccountData = struct {
     email: []const u8,
     token: u128,
@@ -358,7 +358,7 @@ pub fn oomPanic() noreturn {
 pub fn audioFailure() void {
     settings.sfx_volume = 0.0;
     settings.music_volume = 0.0;
-    dialog.showDialog(.text, .{ .title = "Audio Error", .body = 
+    dialog.showDialog(.text, .{ .title = "Audio Error", .body =
         \\There was a problem interacting with your audio device. 
         \\Audio has been turned off, but you can turn it back on in the Options if you believe this to be incorrect or temporary.
     });
@@ -414,9 +414,9 @@ pub fn main() !void {
 
     var dbg_alloc: std.heap.DebugAllocator(.{ .stack_trace_frames = 10 }) = .init;
     defer _ = dbg_alloc.deinit();
-    var tracy_alloc: if (build_options.enable_tracy) tracy.TracyAllocator(null) else void =
-        if (build_options.enable_tracy) .init(dbg_alloc.allocator()) else {};
-    allocator = if (build_options.enable_tracy) tracy_alloc.allocator() else dbg_alloc.allocator();
+    var tracy_alloc: if (build_options.tracy) tracy.TracyAllocator(null) else void =
+        if (build_options.tracy) .init(dbg_alloc.allocator()) else {};
+    allocator = if (build_options.tracy) tracy_alloc.allocator() else dbg_alloc.allocator();
 
     const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
     if (replace_alloc_status != 0) {

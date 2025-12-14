@@ -5,63 +5,63 @@
             "name": "Debug Client",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/client/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/client/zig-out/bin",
+            "cwd": "${workspaceFolder}/zig-out/client",
             "preLaunchTask": "Debug Client"
         },
         {
             "name": "Debug Client (Validation)",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/client/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/client/zig-out/bin",
+            "cwd": "${workspaceFolder}/zig-out/client",
             "preLaunchTask": "Debug Client (Validation)"
         },
         {
             "name": "Debug Client (Tracy)",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/client/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/client/zig-out/bin",
+            "cwd": "${workspaceFolder}/zig-out/client",
             "preLaunchTask": "Debug Client (Tracy)"
         },
         {
             "name": "ReleaseSafe Client",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/client/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/client/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/client/zig-out/bin",
+            "cwd": "${workspaceFolder}/zig-out/client",
             "preLaunchTask": "ReleaseSafe Client"
         },
         {
             "name": "Debug Server",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/server/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/server/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/server/zig-out/bin",
+            "cwd": "${workspaceFolder}/zig-out/server",
             "preLaunchTask": "Debug Server"
         },
         {
             "name": "Debug Server (Tracy)",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/server/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/server/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/server/zig-out/bin",
+            "cwd": "${workspaceFolder}/zig-out/server",
             "preLaunchTask": "Debug Server (Tracy)"
         },
         {
             "name": "ReleaseSafe Server",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/server/zig-out/bin/Eclipse",
+            "program": "${workspaceFolder}/zig-out/server/Eclipse",
             "args": [],
-            "cwd": "${workspaceFolder}/server/zig-out/bin",
+            "cwd": "${workspaceFolder}/zig-out/server",
             "preLaunchTask": "ReleaseSafe Server"
         },
     ]

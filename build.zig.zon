@@ -4,24 +4,19 @@
     .version = "1.0.0",
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
+        // shared deps
         .ziggy = .{ .path = "ziggy" },
         .shared = .{ .path = "shared" },
-        .nfd = .{ .path = "client/libs/nfd" },
-        .miniaudio = .{ .path = "client/libs/miniaudio" },
-        .stbi = .{ .path = "client/libs/stbi" },
-        .glfw = .{ .path = "client/libs/glfw" },
         .tracy = .{
             .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.13.0.tar.gz",
             .hash = "N-V-__8AAHW7KwHH_eNEviRWLkRfsxpWFrdOYM9f8VeCin4q",
         },
-        .libuv = .{
-            .url = "git+https://github.com/libuv/libuv.git#173b7633346c1f312dd60f9642409886d44196e0",
-            .hash = "N-V-__8AAFFwRAA9UiZoSIIGHgH6Tq59woHw-GRxfbHJO4D2",
-        },
-        .hiredis = .{
-            .url = "git+https://github.com/redis/hiredis.git#77bcc73ebbc562d8e8173832b710bfbfa4327b13",
-            .hash = "N-V-__8AAMeyCAC7f33pfuk8OlGD4qqGI2OwGeP-9KamyBcb",
-        },
+
+        // client deps
+        .nfd = .{ .path = "client/libs/nfd" },
+        .miniaudio = .{ .path = "client/libs/miniaudio" },
+        .stbi = .{ .path = "client/libs/stbi" },
+        .glfw = .{ .path = "client/libs/glfw" },
         .turbopack = .{
             .url = "git+https://github.com/flut2/turbopack.git#d6995ce5a8f071bb759a274ac036dff65909905a",
             .hash = "turbopack-1.0.0-rSxRjlofAAAoHGx7mg6pkzI3gEh-g9OQcnmF7_px6Sg7",
@@ -30,18 +25,24 @@
             .url = "git+https://github.com/Snektron/vulkan-zig.git#93bc6f1ac3e13dd98d918e242dc892f179a0d0f5",
             .hash = "vulkan-0.0.0-r7YtxwA_AwAU4rmOITZD_KJs11Kie1sv0t-pcMDQGIqw",
         },
-        .known_folders = .{
-            .url = "git+https://github.com/ziglibs/known-folders#aa24df42183ad415d10bc0a33e6238c437fc0f59",
-            .hash = "known_folders-0.0.0-Fy-PJv3LAAABBRVoZWVrKZdyLoUfl5VRY5fqRRRdnF5L",
+        .vma = .{
+            .url = "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.3.0.tar.gz",
+            .hash = "N-V-__8AAIutPgABk6NlXZhlJ5P8qVECvakZIKoO94h7xUOw",
         },
-        .lsp_kit = .{
-            .url = "git+https://github.com/kristoff-it/lsp-kit?ref=zig-0.15#01c14e592d25dc57dfebba27b8bd2b4aa91c1140",
-            .hash = "lsp_kit-0.1.0-bi_PL5YyCgA2QFEza6llr2Uy08QUQsWBu2wKvtr8tbLx",
+
+        // server deps
+        .hiredis = .{
+            .url = "git+https://github.com/redis/hiredis.git#77bcc73ebbc562d8e8173832b710bfbfa4327b13",
+            .hash = "N-V-__8AAMeyCAC7f33pfuk8OlGD4qqGI2OwGeP-9KamyBcb",
         },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
-        "src/",
+        "LICENSE",
+        "client/",
+        "server/",
+        "shared/",
+        "ziggy/",
     },
 }

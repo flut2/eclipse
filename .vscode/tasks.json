@@ -6,59 +6,37 @@
         {
             "label": "Debug Client",
             "type": "shell",
-            "command": "zig build -Doptimize=Debug -freference-trace",
-            "options": {
-                "cwd": "${workspaceFolder}/client"
-            },
+            "command": "zig build -Dserver=false -Doptimize=Debug -freference-trace",
         },
         {
             "label": "Debug Client (Tracy)",
             "type": "shell",
-            "command": "zig build -Doptimize=Debug -Denable_tracy=true -freference-trace",
-            "options": {
-                "cwd": "${workspaceFolder}/client"
-            },
+            "command": "zig build -Dserver=false -Doptimize=Debug -Dtracy=true -freference-trace",
         },
         {
             "label": "Debug Client (Validation)",
             "type": "shell",
-            "command": "zig build -Doptimize=Debug -Denable_validation_layers=true -freference-trace",
-            "options": {
-                "cwd": "${workspaceFolder}/client"
-            },
+            "command": "zig build -Dserver=false -Doptimize=Debug -Dvk_validation=true -freference-trace",
         },
         {
             "label": "ReleaseSafe Client",
             "type": "shell",
-            "command": "zig build -Doptimize=ReleaseSafe -freference-trace",
-            "options": {
-                "cwd": "${workspaceFolder}/client"
-            },
+            "command": "zig build -Dserver=false -Doptimize=ReleaseSafe -freference-trace",
         },
         {
             "label": "Debug Server",
             "type": "shell",
-            "command": "zig build -Doptimize=Debug -freference-trace",
-            "options": {
-                "cwd": "${workspaceFolder}/server"
-            },
+            "command": "zig build -Dclient=false -Doptimize=Debug -freference-trace",
         },
         {
             "label": "Debug Server (Tracy)",
             "type": "shell",
-            "command": "zig build -Doptimize=Debug -Denable_tracy=true -freference-trace",
-            "options": {
-                "cwd": "${workspaceFolder}/server"
-            },
+            "command": "zig build -Dclient=false -Doptimize=Debug -Dtracy=true -freference-trace",
         },
-
         {
             "label": "ReleaseSafe Server",
             "type": "shell",
-            "command": "zig build -Doptimize=ReleaseSafe -freference-trace",
-            "options": {
-                "cwd": "${workspaceFolder}/server"
-            },
+            "command": "zig build -Dclient=false -Doptimize=ReleaseSafe -freference-trace",
         },
     ]
 }
