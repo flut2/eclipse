@@ -5,29 +5,26 @@ const ziggy = @import("ziggy");
 const network_data = @import("network_data.zig");
 const utils = @import("utils.zig");
 
-const macro_mappings = [_]struct { base: []const u8, replace: []const u8 }{
-    .{ .base = "$hptxt", .replace = "&type=\"bold_it\"&col=\"20AC20\"" },
-    .{ .base = "$mptxt", .replace = "&type=\"bold_it\"&col=\"1C40FF\"" },
-    .{ .base = "$strtxt", .replace = "&type=\"bold_it\"&col=\"FF6C32\"" },
-    .{ .base = "$deftxt", .replace = "&type=\"bold_it\"&col=\"FF9670\"" },
-    .{ .base = "$wittxt", .replace = "&type=\"bold_it\"&col=\"A15AFF\"" },
-    .{ .base = "$restxt", .replace = "&type=\"bold_it\"&col=\"D65BFF\"" },
-    .{ .base = "$statxt", .replace = "&type=\"bold_it\"&col=\"C45860\"" },
-    .{ .base = "$inttxt", .replace = "&type=\"bold_it\"&col=\"6080FF\"" },
-    .{ .base = "$spdtxt", .replace = "&type=\"bold_it\"&col=\"C45860\"" },
-    .{ .base = "$hsttxt", .replace = "&type=\"bold_it\"&col=\"60FFAC\"" },
-    .{ .base = "$multitxt", .replace = "&type=\"bold_it\"&col=\"FFE770\"" },
-    .{ .base = "$footnotetxt", .replace = "&type=\"med_it\"&size=\"10\"&col=\"736562\"" },
-    .{ .base = "$hpicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .max_hp = undefined }) },
-    .{ .base = "$mpicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .max_mp = undefined }) },
-    .{ .base = "$stricon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .strength = undefined }) },
-    .{ .base = "$deficon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .defense = undefined }) },
-    .{ .base = "$witicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .wit = undefined }) },
-    .{ .base = "$resicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .resistance = undefined }) },
-    .{ .base = "$staicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .stamina = undefined }) },
-    .{ .base = "$inticon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .intelligence = undefined }) },
-    .{ .base = "$spdicon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .speed = undefined }) },
-    .{ .base = "$hsticon", .replace = "&space" ++ StatIncreaseData.toControlCode(.{ .haste = undefined }) },
+const ReplacePair = struct { base: []const u8, replace: []const u8 };
+const macro_mappings = b: {
+    var ret: []const ReplacePair = &.{};
+    for (@typeInfo(Stat).@"enum".fields) |field| {
+        const stat = @field(Stat, field.name);
+        const shorthand = stat.shorthand();
+        ret = ret ++ &[_]ReplacePair{.{
+            .base = "$" ++ shorthand ++ "txt",
+            .replace = std.fmt.comptimePrint("&type=\"bold_it\"&col=\"{X:0>6}\"", .{stat.color()}),
+        }};
+        ret = ret ++ &[_]ReplacePair{.{
+            .base = "$" ++ shorthand ++ "icon",
+            .replace = "&space" ++ stat.icon().comptimeControlCode(),
+        }};
+    }
+    ret = ret ++ &[_]ReplacePair{
+        .{ .base = "$multitxt", .replace = "&type=\"bold_it\"&col=\"FFE770\"" },
+        .{ .base = "$footnotetxt", .replace = "&type=\"med_it\"&size=\"10\"&col=\"736562\"" },
+    };
+    break :b ret;
 };
 
 pub var resource: Maps(ResourceData) = .{};
@@ -231,6 +228,14 @@ pub const FrameData = struct {
 pub const TextureData = struct {
     sheet: []const u8,
     index: u16,
+
+    pub fn controlCode(self: TextureData, buf: []u8) ![]const u8 {
+        return try std.fmt.bufPrint(buf, "&img=\"{s},{d}\"", .{ self.sheet, self.index });
+    }
+
+    pub fn comptimeControlCode(self: TextureData) []const u8 {
+        return std.fmt.comptimePrint("&img=\"{s},{d}\"", .{ self.sheet, self.index });
+    }
 
     pub const ziggy_options = struct {
         pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) ziggy.Parser.Error!TextureData {
@@ -508,19 +513,19 @@ pub const GroundData = struct {
     animations: ?[]const FrameData = null,
 };
 
-pub const StatIncreaseData = union(enum) {
-    max_hp: struct { amount: u16 },
-    max_mp: struct { amount: u16 },
-    strength: struct { amount: u16 },
-    wit: struct { amount: u16 },
-    defense: struct { amount: u16 },
-    resistance: struct { amount: u16 },
-    speed: struct { amount: u16 },
-    stamina: struct { amount: u16 },
-    intelligence: struct { amount: u16 },
-    haste: struct { amount: u16 },
+pub const Stat = enum(u8) {
+    max_hp = 0,
+    max_mp = 1,
+    strength = 2,
+    wit = 3,
+    defense = 4,
+    resistance = 5,
+    speed = 6,
+    stamina = 7,
+    intelligence = 8,
+    haste = 9,
 
-    pub fn toString(self: StatIncreaseData) []const u8 {
+    pub fn name(self: Stat) []const u8 {
         return switch (self) {
             .max_hp => "Max HP",
             .max_mp => "Max MP",
@@ -535,26 +540,63 @@ pub const StatIncreaseData = union(enum) {
         };
     }
 
-    pub fn toControlCode(self: StatIncreaseData) []const u8 {
+    pub fn shorthand(self: Stat) []const u8 {
         return switch (self) {
-            .max_hp => "&img=\"misc_big,0\"",
-            .max_mp => "&img=\"misc_big,1\"",
-            .strength => "&img=\"misc_big,2\"",
-            .wit => "&img=\"misc_big,3\"",
-            .defense => "&img=\"misc_big,4\"",
-            .resistance => "&img=\"misc_big,5\"",
-            .stamina => "&img=\"misc_big,6\"",
-            .intelligence => "&img=\"misc_big,7\"",
-            .speed => "&img=\"misc_big,8\"",
-            .haste => "&img=\"misc_big,9\"",
+            .max_hp => "hp",
+            .max_mp => "mp",
+            .strength => "str",
+            .wit => "wit",
+            .defense => "def",
+            .resistance => "res",
+            .speed => "spd",
+            .stamina => "sta",
+            .intelligence => "int",
+            .haste => "hst",
         };
     }
 
-    pub fn amount(self: StatIncreaseData) u16 {
+    pub fn color(self: Stat) u24 {
         return switch (self) {
-            inline else => |inner| inner.amount,
+            .max_hp => 0x20AC20,
+            .max_mp => 0x1C40FF,
+            .strength => 0xFF6C32,
+            .wit => 0xA15AFF,
+            .defense => 0xFF9670,
+            .resistance => 0xD65BFF,
+            .speed => 0xC45860,
+            .stamina => 0xC45860,
+            .intelligence => 0x6080FF,
+            .haste => 0x60FFAC,
         };
     }
+
+    pub fn icon(self: Stat) TextureData {
+        return switch (self) {
+            .max_hp => .{ .sheet = "misc_big", .index = 0 },
+            .max_mp => .{ .sheet = "misc_big", .index = 1 },
+            .strength => .{ .sheet = "misc_big", .index = 2 },
+            .wit => .{ .sheet = "misc_big", .index = 3 },
+            .defense => .{ .sheet = "misc_big", .index = 4 },
+            .resistance => .{ .sheet = "misc_big", .index = 5 },
+            .stamina => .{ .sheet = "misc_big", .index = 6 },
+            .intelligence => .{ .sheet = "misc_big", .index = 7 },
+            .speed => .{ .sheet = "misc_big", .index = 8 },
+            .haste => .{ .sheet = "misc_big", .index = 9 },
+        };
+    }
+};
+
+pub const StatIncreaseData = union(Stat) {
+    max_hp: struct { amount: u16 },
+    max_mp: struct { amount: u16 },
+    strength: struct { amount: u16 },
+    wit: struct { amount: u16 },
+    defense: struct { amount: u16 },
+    resistance: struct { amount: u16 },
+    speed: struct { amount: u16 },
+    stamina: struct { amount: u16 },
+    intelligence: struct { amount: u16 },
+    haste: struct { amount: u16 },
 };
 
 pub const StatIncreaseDataPerc = union(enum) {

@@ -101,9 +101,9 @@ pub fn update(self: *AbilityTooltip, params: tooltip.ParamsFor(AbilityTooltip)) 
             .{params.data.cooldown},
         ) catch "Buffer overflow");
     } else {
-        const mana_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_mp = undefined });
-        const health_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_hp = undefined });
-        const gold_icon = "&img=\"misc,0\"";
+        const mana_icon = comptime game_data.Stat.max_mp.icon().comptimeControlCode();
+        const health_icon = comptime game_data.Stat.max_hp.icon().comptimeControlCode();
+        const gold_icon = comptime game_data.Currency.gold.icon().comptimeControlCode();
 
         if (has_health_cost and has_mana_cost) {
             self.subtext.text_data.setText(std.fmt.bufPrint(

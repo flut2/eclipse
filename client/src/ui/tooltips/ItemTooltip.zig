@@ -380,19 +380,22 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         defer i += 1;
         if (i == 0) text = std.fmt.bufPrint(self.getMainBuffer(), line_base ++ "On Equip: ", .{text}) catch text;
 
-        const amount = incr.amount();
-        if (amount > 0) {
-            text = std.fmt.bufPrint(
-                self.getMainBuffer(),
-                "{s}+" ++ decimal_fmt ++ " {s}{s}",
-                .{ text, amount, incr.toControlCode(), if (i == stat_increases.len - 1) "" else ", " },
-            ) catch text;
-        } else {
-            text = std.fmt.bufPrint(
-                self.getMainBuffer(),
-                "{s}" ++ decimal_fmt ++ " {s}{s}",
-                .{ text, amount, incr.toControlCode(), if (i == stat_increases.len - 1) "" else ", " },
-            ) catch text;
+        switch (incr) {
+            inline else => |val, tag| {
+                if (val.amount > 0) {
+                    text = std.fmt.bufPrint(
+                        self.getMainBuffer(),
+                        "{s}+" ++ decimal_fmt ++ " {s}{s}",
+                        .{ text, val.amount, comptime tag.icon().comptimeControlCode(), if (i == stat_increases.len - 1) "" else ", " },
+                    ) catch text;
+                } else {
+                    text = std.fmt.bufPrint(
+                        self.getMainBuffer(),
+                        "{s}" ++ decimal_fmt ++ " {s}{s}",
+                        .{ text, val.amount, comptime tag.icon().comptimeControlCode(), if (i == stat_increases.len - 1) "" else ", " },
+                    ) catch text;
+                }
+            },
         }
     };
 
@@ -417,7 +420,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     };
 
     if (data.mana_cost) |cost| {
-        const mana_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_mp = undefined });
+        const mana_icon = comptime game_data.Stat.max_mp.icon().comptimeControlCode();
         text = std.fmt.bufPrint(
             self.getMainBuffer(),
             line_base ++ float_fmt ++ "% chance to consume " ++ decimal_fmt ++ "&space{s}",
@@ -426,7 +429,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     }
 
     if (data.health_cost) |cost| {
-        const health_icon = comptime game_data.StatIncreaseData.toControlCode(.{ .max_hp = undefined });
+        const health_icon = comptime game_data.Stat.max_hp.icon().comptimeControlCode();
         text = std.fmt.bufPrint(
             self.getMainBuffer(),
             line_base ++ float_fmt ++ "% chance to consume " ++ decimal_fmt ++ "&space{s}",
@@ -435,7 +438,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     }
 
     if (data.gold_cost) |cost| {
-        const gold_icon = "&img=\"misc,0\"";
+        const gold_icon = comptime game_data.Currency.gold.icon().comptimeControlCode();
         text = std.fmt.bufPrint(
             self.getMainBuffer(),
             line_base ++ float_fmt ++ "% chance to consume " ++ decimal_fmt ++ "&space{s}",
