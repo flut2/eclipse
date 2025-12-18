@@ -68,7 +68,7 @@ fn buildClient(
     const shared_dep = b.dependency("shared", .{ .target = target, .optimize = optimize });
     const stbi_dep = b.dependency("stbi", .{ .target = target, .optimize = optimize });
     const miniaudio_dep = b.dependency("miniaudio", .{ .target = target, .optimize = optimize });
-    const nfd_dep = b.dependency("nfd", .{ .target = target, .optimize = optimize });
+    const zd_dep = b.dependency("zig_dialog", .{ .target = target, .optimize = optimize });
     const glfw_dep = b.dependency("glfw", .{ .target = target, .optimize = optimize });
 
     inline for (.{ true, false }) |check| {
@@ -92,7 +92,7 @@ fn buildClient(
                     .{ .name = "glfw", .module = glfw_dep.module("root") },
                     .{ .name = "stbi", .module = stbi_dep.module("root") },
                     .{ .name = "miniaudio", .module = miniaudio_dep.module("root") },
-                    .{ .name = "nfd", .module = nfd_dep.module("root") },
+                    .{ .name = "zd", .module = zd_dep.module("zig-dialog") },
                     .{
                         .name = "ziggy",
                         .module = b.dependency("ziggy", .{
@@ -114,7 +114,6 @@ fn buildClient(
         exe.root_module.linkLibrary(shared_dep.artifact("libuv"));
         exe.root_module.linkLibrary(stbi_dep.artifact("stbi"));
         exe.root_module.linkLibrary(miniaudio_dep.artifact("miniaudio"));
-        exe.root_module.linkLibrary(nfd_dep.artifact("nfd"));
         exe.root_module.linkLibrary(glfw_dep.artifact("glfw"));
 
         if (tracy)

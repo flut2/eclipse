@@ -2,7 +2,6 @@ const std = @import("std");
 
 const build_options = @import("options");
 const glfw = @import("glfw");
-const nfd = @import("nfd");
 const shared = @import("shared");
 const map_data = shared.map_data;
 const game_data = shared.game_data;
@@ -10,6 +9,7 @@ const utils = shared.utils;
 const f32i = utils.f32i;
 const u16f = utils.u16f;
 const usizef = utils.usizef;
+const zd = @import("zd");
 
 const assets = @import("../../assets.zig");
 const Container = @import("../../game/Container.zig");
@@ -1009,7 +1009,7 @@ fn addObjectContainer(
 }
 
 fn layerToggleCallback(ud: ?*anyopaque) void {
-    const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
+    const screen: *MapEditorScreen = @ptrCast(@alignCast(ud.?));
     screen.layer_container.base.visible = !screen.layer_container.base.visible;
     if (screen.layer_button.text_data == null) @panic("Layer toggle button must have text data");
     if (screen.layer_container.base.visible) {
@@ -1022,27 +1022,27 @@ fn layerToggleCallback(ud: ?*anyopaque) void {
 }
 
 fn groundClicked(ud: ?*anyopaque) void {
-    ui_systems.screen.editor.selected.ground = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    ui_systems.screen.editor.selected.ground = @as(*u16, @ptrCast(@alignCast(ud))).*;
 }
 
 fn entityClicked(ud: ?*anyopaque) void {
-    ui_systems.screen.editor.selected.entity = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    ui_systems.screen.editor.selected.entity = @as(*u16, @ptrCast(@alignCast(ud))).*;
 }
 
 fn enemyClicked(ud: ?*anyopaque) void {
-    ui_systems.screen.editor.selected.enemy = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    ui_systems.screen.editor.selected.enemy = @as(*u16, @ptrCast(@alignCast(ud))).*;
 }
 
 fn portalClicked(ud: ?*anyopaque) void {
-    ui_systems.screen.editor.selected.portal = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    ui_systems.screen.editor.selected.portal = @as(*u16, @ptrCast(@alignCast(ud))).*;
 }
 
 fn containerClicked(ud: ?*anyopaque) void {
-    ui_systems.screen.editor.selected.container = @as(*u16, @alignCast(@ptrCast(ud))).*;
+    ui_systems.screen.editor.selected.container = @as(*u16, @ptrCast(@alignCast(ud))).*;
 }
 
 fn regionClicked(ud: ?*anyopaque) void {
-    ui_systems.screen.editor.selected.region = @as(*u8, @alignCast(@ptrCast(ud))).*;
+    ui_systems.screen.editor.selected.region = @as(*u8, @ptrCast(@alignCast(ud))).*;
 }
 
 fn sizeCallback(dc: *DropdownContainer) void {
@@ -1127,21 +1127,24 @@ fn loadMap(screen: *MapEditorScreen, buffer: []const u8) !void {
 fn openInner(screen: *MapEditorScreen) !void {
     // TODO: popup for save
 
-    const file_path = try nfd.openFileDialog("map", null);
-    if (file_path) |path| {
-        defer nfd.freePath(path);
-        const file = try std.fs.openFileAbsolute(path, .{});
-        defer file.close();
+    const path = try zd.openDialog(false, main.allocator, .file, &.{
+        .{ .name = "Eclipse Map", .exts = &.{"map"} },
+    }, "Select Map", null);
+    defer zd.freeResult(main.allocator, path);
 
-        const file_buf = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
-        defer main.allocator.free(file_buf);
+    if (path.len == 0) return;
 
-        try screen.loadMap(file_buf);
-    }
+    const file = try std.fs.openFileAbsolute(path, .{});
+    defer file.close();
+
+    const file_buf = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
+    defer main.allocator.free(file_buf);
+
+    try screen.loadMap(file_buf);
 }
 
 fn openCallback(ud: ?*anyopaque) void {
-    openInner(@alignCast(@ptrCast(ud.?))) catch |e| {
+    openInner(@ptrCast(@alignCast(ud.?))) catch |e| {
         std.log.err("Error while parsing map: {}", .{e});
         if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
     };
@@ -1259,34 +1262,36 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
 fn saveInner(screen: *MapEditorScreen) !void {
     if (!main.needs_map_bg) return;
 
-    const file_path = nfd.saveFileDialog("map", null) catch return;
-    if (file_path) |path| {
-        defer nfd.freePath(path);
+    const path = try zd.saveDialog(main.allocator, &.{
+        .{ .name = "Eclipse Map", .exts = &.{"map"} },
+    }, "Save Map", null);
+    defer zd.freeResult(main.allocator, path);
 
-        const data = mapData(screen) catch {
-            dialog.showDialog(.text, .{
-                .title = "Map Error",
-                .body = "Map was invalid",
-            });
-            return;
-        };
-        defer main.allocator.free(data);
+    if (path.len == 0) return;
 
-        const file = try std.fs.createFileAbsolute(path, .{});
-        defer file.close();
-        try file.writeAll(data);
-    }
+    const data = mapData(screen) catch {
+        dialog.showDialog(.text, .{
+            .title = "Map Error",
+            .body = "Map was invalid",
+        });
+        return;
+    };
+    defer main.allocator.free(data);
+
+    const file = try std.fs.createFileAbsolute(path, .{});
+    defer file.close();
+    try file.writeAll(data);
 }
 
 fn saveCallback(ud: ?*anyopaque) void {
-    saveInner(@alignCast(@ptrCast(ud.?))) catch |e| {
+    saveInner(@ptrCast(@alignCast(ud.?))) catch |e| {
         std.log.err("Error while saving map: {}", .{e});
         if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
     };
 }
 
 fn exitCallback(ud: ?*anyopaque) void {
-    const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
+    const screen: *MapEditorScreen = @ptrCast(@alignCast(ud.?));
     saveMap: {
         const data = mapData(screen) catch |e| {
             if (e == error.EmptyMap) break :saveMap;
@@ -1306,7 +1311,7 @@ fn exitCallback(ud: ?*anyopaque) void {
 
 fn testCallback(ud: ?*anyopaque) void {
     if (main.character_list) |list| if (list.servers.len > 0 and list.characters.len > 0) {
-        const screen: *MapEditorScreen = @alignCast(@ptrCast(ud.?));
+        const screen: *MapEditorScreen = @ptrCast(@alignCast(ud.?));
 
         const data = mapData(screen) catch |e| {
             std.log.err("Error while saving map (for testing): {}", .{e});
