@@ -15,18 +15,17 @@
         // client deps
         .miniaudio = .{ .path = "client/libs/miniaudio" },
         .stbi = .{ .path = "client/libs/stbi" },
-        .glfw = .{ .path = "client/libs/glfw" },
-        .zig_dialog = .{
-            .url = "git+https://github.com/flut2/zig-dialog.git#b9bf10c89065a1df584513c1c77f3ed7b3e0e730",
-            .hash = "zig_dialog-0.1.0-XalyXbZiAACnOzEhJVyV07WbknFWxvBIHKqrRy367_Y3",
+        .windy = .{
+            .url = "git+https://github.com/flut2/windy.git#a349bf94cd5a99e1c96f47cf507c29c31aedb130",
+            .hash = "windy-0.2.0-wLI1BBxAAQApBlYXcbUfavAzQPhOf5nNjygFtGYHBZDc",
         },
         .turbopack = .{
             .url = "git+https://github.com/flut2/turbopack.git#d6995ce5a8f071bb759a274ac036dff65909905a",
             .hash = "turbopack-1.0.0-rSxRjlofAAAoHGx7mg6pkzI3gEh-g9OQcnmF7_px6Sg7",
         },
         .vulkan_zig = .{
-            .url = "git+https://github.com/Snektron/vulkan-zig.git#93bc6f1ac3e13dd98d918e242dc892f179a0d0f5",
-            .hash = "vulkan-0.0.0-r7YtxwA_AwAU4rmOITZD_KJs11Kie1sv0t-pcMDQGIqw",
+            .url = "git+https://github.com/Snektron/vulkan-zig.git#1446b0b994c2362264cc24513d7c7ec31b469c50",
+            .hash = "vulkan-0.0.0-r7Ytx_VDAwAiMl0YSu2UOkVMIGJN7CeIQaxJR-hUSfD6",
         },
         .vma = .{
             .url = "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.3.0.tar.gz",

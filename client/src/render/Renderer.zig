@@ -1,6 +1,5 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const utils = shared.utils;
@@ -400,14 +399,14 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
         .address_mode_v = .repeat,
         .address_mode_w = .repeat,
         .mip_lod_bias = 0.0,
-        .anisotropy_enable = vk.FALSE,
+        .anisotropy_enable = .false,
         .max_anisotropy = 1.0,
-        .compare_enable = vk.FALSE,
+        .compare_enable = .false,
         .compare_op = .always,
         .min_lod = 0.0,
         .max_lod = 0.0,
         .border_color = .float_transparent_black,
-        .unnormalized_coordinates = vk.FALSE,
+        .unnormalized_coordinates = .false,
     }, null);
 
     self.linear_sampler = try self.context.device.createSampler(&.{
@@ -418,14 +417,14 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
         .address_mode_v = .repeat,
         .address_mode_w = .repeat,
         .mip_lod_bias = 0.0,
-        .anisotropy_enable = vk.FALSE,
+        .anisotropy_enable = .false,
         .max_anisotropy = 1.0,
-        .compare_enable = vk.FALSE,
+        .compare_enable = .false,
         .compare_op = .always,
         .min_lod = 0.0,
         .max_lod = 0.0,
         .border_color = .float_transparent_black,
-        .unnormalized_coordinates = vk.FALSE,
+        .unnormalized_coordinates = .false,
     }, null);
 
     try self.createRenderPass();
@@ -1071,7 +1070,7 @@ fn createGenericMaterial(self: *Renderer) !void {
     defer self.context.device.destroyShaderModule(frag_shader, null);
 
     const attachments: []const vk.PipelineColorBlendAttachmentState = &.{.{
-        .blend_enable = vk.TRUE,
+        .blend_enable = .true,
         .src_color_blend_factor = .one,
         .dst_color_blend_factor = .one_minus_src_alpha,
         .color_blend_op = .add,
@@ -1091,7 +1090,7 @@ fn createGenericMaterial(self: *Renderer) !void {
         .p_vertex_input_state = &.{},
         .p_input_assembly_state = &.{
             .topology = .triangle_list,
-            .primitive_restart_enable = vk.FALSE,
+            .primitive_restart_enable = .false,
         },
         .p_tessellation_state = null,
         .p_viewport_state = &.{
@@ -1101,12 +1100,12 @@ fn createGenericMaterial(self: *Renderer) !void {
             .p_scissors = undefined,
         },
         .p_rasterization_state = &.{
-            .depth_clamp_enable = vk.FALSE,
-            .rasterizer_discard_enable = vk.FALSE,
+            .depth_clamp_enable = .false,
+            .rasterizer_discard_enable = .false,
             .polygon_mode = .fill,
             .cull_mode = .{},
             .front_face = .clockwise,
-            .depth_bias_enable = vk.FALSE,
+            .depth_bias_enable = .false,
             .depth_bias_constant_factor = 0,
             .depth_bias_clamp = 0,
             .depth_bias_slope_factor = 0,
@@ -1114,14 +1113,14 @@ fn createGenericMaterial(self: *Renderer) !void {
         },
         .p_multisample_state = &.{
             .rasterization_samples = .{ .@"1_bit" = true },
-            .sample_shading_enable = vk.FALSE,
+            .sample_shading_enable = .false,
             .min_sample_shading = 1,
-            .alpha_to_coverage_enable = vk.FALSE,
-            .alpha_to_one_enable = vk.FALSE,
+            .alpha_to_coverage_enable = .false,
+            .alpha_to_one_enable = .false,
         },
         .p_depth_stencil_state = null,
         .p_color_blend_state = &.{
-            .logic_op_enable = vk.FALSE,
+            .logic_op_enable = .false,
             .logic_op = .copy,
             .attachment_count = 1,
             .p_attachments = @ptrCast(attachments),
@@ -1243,7 +1242,7 @@ fn createGroundMaterial(self: *Renderer) !void {
     defer self.context.device.destroyShaderModule(frag_shader, null);
 
     const attachments: []const vk.PipelineColorBlendAttachmentState = &.{.{
-        .blend_enable = vk.FALSE,
+        .blend_enable = .false,
         .src_color_blend_factor = .one,
         .dst_color_blend_factor = .one,
         .color_blend_op = .add,
@@ -1263,7 +1262,7 @@ fn createGroundMaterial(self: *Renderer) !void {
         .p_vertex_input_state = &.{},
         .p_input_assembly_state = &.{
             .topology = .triangle_list,
-            .primitive_restart_enable = vk.FALSE,
+            .primitive_restart_enable = .false,
         },
         .p_tessellation_state = null,
         .p_viewport_state = &.{
@@ -1273,12 +1272,12 @@ fn createGroundMaterial(self: *Renderer) !void {
             .p_scissors = undefined,
         },
         .p_rasterization_state = &.{
-            .depth_clamp_enable = vk.FALSE,
-            .rasterizer_discard_enable = vk.FALSE,
+            .depth_clamp_enable = .false,
+            .rasterizer_discard_enable = .false,
             .polygon_mode = .fill,
             .cull_mode = .{},
             .front_face = .clockwise,
-            .depth_bias_enable = vk.FALSE,
+            .depth_bias_enable = .false,
             .depth_bias_constant_factor = 0,
             .depth_bias_clamp = 0,
             .depth_bias_slope_factor = 0,
@@ -1286,14 +1285,14 @@ fn createGroundMaterial(self: *Renderer) !void {
         },
         .p_multisample_state = &.{
             .rasterization_samples = .{ .@"1_bit" = true },
-            .sample_shading_enable = vk.FALSE,
+            .sample_shading_enable = .false,
             .min_sample_shading = 1,
-            .alpha_to_coverage_enable = vk.FALSE,
-            .alpha_to_one_enable = vk.FALSE,
+            .alpha_to_coverage_enable = .false,
+            .alpha_to_one_enable = .false,
         },
         .p_depth_stencil_state = null,
         .p_color_blend_state = &.{
-            .logic_op_enable = vk.FALSE,
+            .logic_op_enable = .false,
             .logic_op = .copy,
             .attachment_count = 1,
             .p_attachments = @ptrCast(attachments),

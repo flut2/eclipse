@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
+const windy = @import("windy");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
@@ -98,7 +98,7 @@ pub fn mouseMove(self: *Minimap, x: f32, y: f32, x_offset: f32, y_offset: f32) b
     return !(self.base.event_policy.pass_move or !in_bounds);
 }
 
-pub fn mousePress(self: *Minimap, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
+pub fn mousePress(self: *Minimap, x: f32, y: f32, _: f32, _: f32, _: windy.MouseMods) bool {
     if (!self.base.visible) return false;
 
     if (menu.current.* != .teleport and self.list_item_idx > 0) {

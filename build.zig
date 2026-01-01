@@ -68,8 +68,11 @@ fn buildClient(
     const shared_dep = b.dependency("shared", .{ .target = target, .optimize = optimize });
     const stbi_dep = b.dependency("stbi", .{ .target = target, .optimize = optimize });
     const miniaudio_dep = b.dependency("miniaudio", .{ .target = target, .optimize = optimize });
-    const zd_dep = b.dependency("zig_dialog", .{ .target = target, .optimize = optimize });
-    const glfw_dep = b.dependency("glfw", .{ .target = target, .optimize = optimize });
+    const windy_dep = b.dependency("windy", .{
+        .target = target,
+        .optimize = optimize,
+        .vulkan_support = true,
+    });
 
     inline for (.{ true, false }) |check| {
         const exe = b.addExecutable(.{
@@ -89,10 +92,9 @@ fn buildClient(
                     .{ .name = "uv", .module = shared_dep.module("uv") },
                     .{ .name = "shared", .module = shared_dep.module("shared") },
                     .{ .name = "vulkan", .module = vulkan_dep.module("vulkan-zig") },
-                    .{ .name = "glfw", .module = glfw_dep.module("root") },
+                    .{ .name = "windy", .module = windy_dep.module("windy") },
                     .{ .name = "stbi", .module = stbi_dep.module("root") },
                     .{ .name = "miniaudio", .module = miniaudio_dep.module("root") },
-                    .{ .name = "zd", .module = zd_dep.module("zig-dialog") },
                     .{
                         .name = "ziggy",
                         .module = b.dependency("ziggy", .{
@@ -114,7 +116,6 @@ fn buildClient(
         exe.root_module.linkLibrary(shared_dep.artifact("libuv"));
         exe.root_module.linkLibrary(stbi_dep.artifact("stbi"));
         exe.root_module.linkLibrary(miniaudio_dep.artifact("miniaudio"));
-        exe.root_module.linkLibrary(glfw_dep.artifact("glfw"));
 
         if (tracy)
             addTracy(b, exe.root_module, shared_dep.path("src/tracy.zig"), target, optimize);

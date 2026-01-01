@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
+const windy = @import("windy");
 
 const main = @import("../../main.zig");
 const Renderer = @import("../../render/Renderer.zig");
@@ -21,7 +21,7 @@ clamp_y: bool = false,
 clamp_to_screen: bool = false,
 elements: std.ArrayList(element.UiElement) = .empty,
 
-pub fn mousePress(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
+pub fn mousePress(self: *Container, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: windy.MouseMods) bool {
     if (!self.base.visible) return false;
 
     var iter = std.mem.reverseIterator(self.elements.items);

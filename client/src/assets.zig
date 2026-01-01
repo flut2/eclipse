@@ -1,7 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const glfw = @import("glfw");
 const miniaudio = @import("miniaudio");
 const pack = @import("turbopack");
 const shared = @import("shared");
@@ -10,6 +9,7 @@ const utils = shared.utils;
 const f32i = utils.f32i;
 const RGBA = utils.RGBA;
 const stbi = @import("stbi");
+const windy = @import("windy");
 const ziggy = @import("ziggy");
 
 const main = @import("main.zig");
@@ -326,21 +326,21 @@ pub var medium_data: ParsedFontData = undefined;
 pub var medium_italic_atlas: stbi.Image = undefined;
 pub var medium_italic_data: ParsedFontData = undefined;
 
-// horrible, but no other option since cursor is opaque
-pub var default_cursor_pressed: *glfw.Cursor = undefined;
-pub var default_cursor: *glfw.Cursor = undefined;
-pub var royal_cursor_pressed: *glfw.Cursor = undefined;
-pub var royal_cursor: *glfw.Cursor = undefined;
-pub var ranger_cursor_pressed: *glfw.Cursor = undefined;
-pub var ranger_cursor: *glfw.Cursor = undefined;
-pub var aztec_cursor_pressed: *glfw.Cursor = undefined;
-pub var aztec_cursor: *glfw.Cursor = undefined;
-pub var fiery_cursor_pressed: *glfw.Cursor = undefined;
-pub var fiery_cursor: *glfw.Cursor = undefined;
-pub var target_enemy_cursor_pressed: *glfw.Cursor = undefined;
-pub var target_enemy_cursor: *glfw.Cursor = undefined;
-pub var target_ally_cursor_pressed: *glfw.Cursor = undefined;
-pub var target_ally_cursor: *glfw.Cursor = undefined;
+// TODO: clean this up now that we're on Windy
+pub var default_cursor_pressed: windy.Cursor = undefined;
+pub var default_cursor: windy.Cursor = undefined;
+pub var royal_cursor_pressed: windy.Cursor = undefined;
+pub var royal_cursor: windy.Cursor = undefined;
+pub var ranger_cursor_pressed: windy.Cursor = undefined;
+pub var ranger_cursor: windy.Cursor = undefined;
+pub var aztec_cursor_pressed: windy.Cursor = undefined;
+pub var aztec_cursor: windy.Cursor = undefined;
+pub var fiery_cursor_pressed: windy.Cursor = undefined;
+pub var fiery_cursor: windy.Cursor = undefined;
+pub var target_enemy_cursor_pressed: windy.Cursor = undefined;
+pub var target_enemy_cursor: windy.Cursor = undefined;
+pub var target_ally_cursor_pressed: windy.Cursor = undefined;
+pub var target_ally_cursor: windy.Cursor = undefined;
 
 pub var sfx_copy_map: std.AutoHashMapUnmanaged(*miniaudio.Sound, std.ArrayList(*miniaudio.Sound)) = .empty;
 pub var sfx_map: std.StringHashMapUnmanaged(*miniaudio.Sound) = .empty;
@@ -433,8 +433,12 @@ fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, compti
             @memcpy(temp[target_idx .. target_idx + 4], img.data[src_idx .. src_idx + 4]);
         }
 
-        const cursor = try glfw.Cursor.create(
-            .{ .w = cut_width, .h = cut_height, .pixels = temp.ptr },
+        for (0..temp.len / 4) |j| std.mem.swap(u8, &temp[j * 4], &temp[j * 4 + 2]);
+
+        const cursor: windy.Cursor = try .create(
+            temp,
+            cut_width,
+            cut_height,
             cut_width / 2,
             cut_height / 2,
         );
@@ -1411,8 +1415,8 @@ fn populateKeyMap() void {
         .{ Settings.Button{ .mouse = .left }, 46 },
         .{ Settings.Button{ .mouse = .right }, 59 },
         .{ Settings.Button{ .mouse = .middle }, 58 },
-        .{ Settings.Button{ .mouse = .four }, 108 },
-        .{ Settings.Button{ .mouse = .five }, 109 },
+        .{ Settings.Button{ .mouse = .m4 }, 108 },
+        .{ Settings.Button{ .mouse = .m5 }, 109 },
         .{ Settings.Button{ .key = .zero }, 0 },
         .{ Settings.Button{ .key = .one }, 4 },
         .{ Settings.Button{ .key = .two }, 5 },
@@ -1433,18 +1437,18 @@ fn populateKeyMap() void {
         .{ Settings.Button{ .key = .kp_7 }, 98 },
         .{ Settings.Button{ .key = .kp_8 }, 99 },
         .{ Settings.Button{ .key = .kp_9 }, 100 },
-        .{ Settings.Button{ .key = .F1 }, 68 },
-        .{ Settings.Button{ .key = .F2 }, 69 },
-        .{ Settings.Button{ .key = .F3 }, 70 },
-        .{ Settings.Button{ .key = .F4 }, 71 },
-        .{ Settings.Button{ .key = .F5 }, 72 },
-        .{ Settings.Button{ .key = .F6 }, 73 },
-        .{ Settings.Button{ .key = .F7 }, 74 },
-        .{ Settings.Button{ .key = .F8 }, 75 },
-        .{ Settings.Button{ .key = .F9 }, 76 },
-        .{ Settings.Button{ .key = .F10 }, 1 },
-        .{ Settings.Button{ .key = .F11 }, 2 },
-        .{ Settings.Button{ .key = .F12 }, 3 },
+        .{ Settings.Button{ .key = .f1 }, 68 },
+        .{ Settings.Button{ .key = .f2 }, 69 },
+        .{ Settings.Button{ .key = .f3 }, 70 },
+        .{ Settings.Button{ .key = .f4 }, 71 },
+        .{ Settings.Button{ .key = .f5 }, 72 },
+        .{ Settings.Button{ .key = .f6 }, 73 },
+        .{ Settings.Button{ .key = .f7 }, 74 },
+        .{ Settings.Button{ .key = .f8 }, 75 },
+        .{ Settings.Button{ .key = .f9 }, 76 },
+        .{ Settings.Button{ .key = .f10 }, 1 },
+        .{ Settings.Button{ .key = .f11 }, 2 },
+        .{ Settings.Button{ .key = .f12 }, 3 },
         .{ Settings.Button{ .key = .a }, 20 },
         .{ Settings.Button{ .key = .b }, 34 },
         .{ Settings.Button{ .key = .c }, 39 },
@@ -1496,7 +1500,7 @@ fn populateKeyMap() void {
         .{ Settings.Button{ .key = .enter }, 54 },
         .{ Settings.Button{ .key = .delete }, 51 },
         .{ Settings.Button{ .key = .end }, 53 },
-        .{ Settings.Button{ .key = .print_screen }, 44 },
+        .{ Settings.Button{ .key = .print }, 44 },
         .{ Settings.Button{ .key = .insert }, 62 },
         .{ Settings.Button{ .key = .escape }, 64 },
         .{ Settings.Button{ .key = .home }, 87 },

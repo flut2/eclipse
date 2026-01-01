@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
+const windy = @import("windy");
 const ItemData = @import("shared").network_data.ItemData;
 
 const main = @import("../../main.zig");
@@ -32,7 +32,7 @@ last_click_time: i64 = 0,
 data_id: u16 = std.math.maxInt(u16),
 item_data: ItemData = .{},
 
-pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: glfw.Mods) bool {
+pub fn mousePress(self: *Item, x: f32, y: f32, _: f32, _: f32, mods: windy.MouseMods) bool {
     if (!self.base.visible or !self.draggable) return false;
 
     const in_bounds = element.intersects(self, x, y);

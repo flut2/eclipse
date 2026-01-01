@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
+const windy = @import("windy");
 
 const assets = @import("../../assets.zig");
 const input = @import("../../input.zig");
@@ -26,7 +26,7 @@ last_input: i64 = -1,
 x_offset: f32 = 0.0,
 index: u32 = 0,
 
-pub fn mousePress(self: *Input, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
+pub fn mousePress(self: *Input, x: f32, y: f32, _: f32, _: f32, _: windy.MouseMods) bool {
     if (!self.base.visible) return false;
 
     const in_bounds = element.intersects(self, x, y);

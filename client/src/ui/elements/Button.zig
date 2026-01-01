@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
+const windy = @import("windy");
 const shared = @import("shared");
 const CharacterData = shared.network_data.CharacterData;
 const TalentData = shared.game_data.TalentData;
@@ -29,7 +29,7 @@ char: ?*const CharacterData = null, // hack
 talent: ?*const TalentData = null, // hack 2
 talent_index: u8 = std.math.maxInt(u8),
 
-pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
+pub fn mousePress(self: *Button, x: f32, y: f32, _: f32, _: f32, _: windy.MouseMods) bool {
     if (!self.base.visible or !self.enabled) return false;
 
     const in_bounds = element.intersects(self, x, y);

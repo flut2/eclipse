@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
+const windy = @import("windy");
 
 const assets = @import("../../assets.zig");
 const input = @import("../../input.zig");
@@ -22,7 +22,7 @@ tooltip_text: ?element.TextData = null,
 state: element.InteractableState = .none,
 listening: bool = false,
 
-pub fn mousePress(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
+pub fn mousePress(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32, _: windy.MouseMods) bool {
     if (!self.base.visible) return false;
 
     const in_bounds = element.intersects(self, x, y);

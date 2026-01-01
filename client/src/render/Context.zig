@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const build_options = @import("options");
-const glfw = @import("glfw");
 const vk = @import("vulkan");
 const BaseWrapper = vk.BaseWrapper;
 const InstanceWrapper = vk.InstanceWrapper;
 const DeviceWrapper = vk.DeviceWrapper;
 const Instance = vk.InstanceProxy;
 const Device = vk.DeviceProxy;
+const windy = @import("windy");
 
 const main = @import("../main.zig");
 
@@ -61,14 +61,15 @@ device: Device,
 graphics_queue: Queue,
 present_queue: Queue,
 
-pub const VkProc = *const anyopaque;
-extern fn glfwGetInstanceProcAddress(instance: vk.Instance, procname: [*:0]const u8) ?VkProc;
+fn procAddrBounce(inst: vk.Instance, name: [*:0]const u8) vk.PfnVoidFunction {
+    return windy.vulkanProcAddr(vk, inst, name);
+}
 
-pub fn init(window: *glfw.Window) !Context {
+pub fn init(window: *windy.Window) !Context {
     var self: Context = undefined;
-    self.base_dispatch = .load(glfwGetInstanceProcAddress);
+    self.base_dispatch = .load(procAddrBounce);
 
-    const glfw_exts = try glfw.getRequiredInstanceExtensions();
+    const exts = windy.vulkanExts();
 
     const app_info: vk.ApplicationInfo = .{
         .p_application_name = "Eclipse",
@@ -82,8 +83,8 @@ pub fn init(window: *glfw.Window) !Context {
         .p_application_info = &app_info,
         .enabled_layer_count = @intCast(required_layers.len),
         .pp_enabled_layer_names = @ptrCast(required_layers),
-        .enabled_extension_count = @intCast(glfw_exts.len),
-        .pp_enabled_extension_names = @ptrCast(glfw_exts),
+        .enabled_extension_count = @intCast(exts.len),
+        .pp_enabled_extension_names = @ptrCast(exts.ptr),
     }, null);
 
     const vki = try main.allocator.create(InstanceWrapper);
@@ -92,7 +93,7 @@ pub fn init(window: *glfw.Window) !Context {
     self.instance = .init(instance, vki);
     errdefer self.instance.destroyInstance(null);
 
-    self.surface = try createSurface(self.instance, window);
+    self.surface = try window.createSurface(vk, self.instance);
     errdefer self.instance.destroySurfaceKHR(self.surface, null);
 
     const candidate = try pickPhysicalDevice(self.instance, self.surface);
@@ -142,17 +143,10 @@ pub fn allocate(self: Context, requirements: vk.MemoryRequirements, flags: vk.Me
     }, null);
 }
 
-extern fn glfwCreateWindowSurface(
-    instance: vk.Instance,
-    window: *glfw.Window,
-    allocator: ?*const vk.AllocationCallbacks,
-    surface: *vk.SurfaceKHR,
-) vk.Result;
+fn createSurface(instance: Instance, window: *windy.Window) !vk.SurfaceKHR {
+    _ = instance; // autofix
+    _ = window; // autofix
 
-fn createSurface(instance: Instance, window: *glfw.Window) !vk.SurfaceKHR {
-    var surface: vk.SurfaceKHR = undefined;
-    if (glfwCreateWindowSurface(instance.handle, window, null, &surface) != .success) return error.SurfaceInitFailed;
-    return surface;
 }
 
 fn initializeCandidate(instance: Instance, candidate: DeviceCandidate) !vk.Device {
@@ -208,7 +202,8 @@ fn allocateQueues(instance: Instance, phys_device: vk.PhysicalDevice, surface: v
     for (families, 0..) |properties, i| {
         const family: u32 = @intCast(i);
         if (graphics_family == null and properties.queue_flags.graphics_bit) graphics_family = family;
-        if (present_family == null and (try instance.getPhysicalDeviceSurfaceSupportKHR(phys_device, family, surface)) == vk.TRUE)
+        if (present_family == null and
+            (try instance.getPhysicalDeviceSurfaceSupportKHR(phys_device, family, surface)) == .true)
             present_family = family;
     }
 

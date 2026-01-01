@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
+const windy = @import("windy");
 
 const main = @import("../../main.zig");
 const Renderer = @import("../../render/Renderer.zig");
@@ -31,7 +31,7 @@ container: *Container = undefined,
 scroll_bar: *Slider = undefined,
 scroll_bar_decor: *Image = undefined,
 
-pub fn mousePress(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: glfw.Mods) bool {
+pub fn mousePress(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: windy.MouseMods) bool {
     if (!self.base.visible) return false;
     if (self.container.mousePress(x, y, x_offset, y_offset, mods) or self.scroll_bar.mousePress(x, y, x_offset, y_offset, mods)) return true;
     return !(self.base.event_policy.pass_press or !element.intersects(self, x, y));
@@ -188,7 +188,7 @@ pub fn update(self: *ScrollableContainer) void {
 }
 
 fn onScrollChanged(scroll_bar: *Slider) void {
-    var parent: *ScrollableContainer = @alignCast(@ptrCast(scroll_bar.userdata));
+    var parent: *ScrollableContainer = @ptrCast(@alignCast(scroll_bar.userdata));
     if (parent.scissor_h >= parent.container.height()) {
         parent.scroll_bar.base.visible = false;
         if (parent.hasScrollDecor()) parent.scroll_bar_decor.base.visible = false;

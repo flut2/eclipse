@@ -327,7 +327,7 @@ pub const AllocationInfo = extern struct {
 pub const AllocationInfo2 = extern struct {
     allocation_info: AllocationInfo = .{},
     block_size: vk.DeviceSize = 0,
-    dedicated_memory: vk.Bool32 = vk.FALSE,
+    dedicated_memory: vk.Bool32 = .false,
 };
 pub const Allocation = c.VmaAllocation;
 pub const DefragmentationFlags = packed struct(Flags) {
