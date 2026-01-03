@@ -1,11 +1,11 @@
 const std = @import("std");
 
-const windy = @import("windy");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const network_data = shared.network_data;
 const utils = shared.utils;
 const f32i = utils.f32i;
+const windy = @import("windy");
 
 const assets = @import("../../assets.zig");
 const Camera = @import("../../Camera.zig");
@@ -98,7 +98,7 @@ pub fn mouseMove(self: *Minimap, x: f32, y: f32, x_offset: f32, y_offset: f32) b
     return !(self.base.event_policy.pass_move or !in_bounds);
 }
 
-pub fn mousePress(self: *Minimap, x: f32, y: f32, _: f32, _: f32, _: windy.MouseMods) bool {
+pub fn mousePress(self: *Minimap, x: f32, y: f32, _: f32, _: f32, _: windy.Mods) bool {
     if (!self.base.visible) return false;
 
     if (menu.current.* != .teleport and self.list_item_idx > 0) {

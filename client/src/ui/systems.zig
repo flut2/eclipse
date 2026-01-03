@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const build_options = @import("options");
-const windy = @import("windy");
 const shared = @import("shared");
 const utils = shared.utils;
 const network_data = shared.network_data;
 const game_data = shared.game_data;
 const map_data = shared.map_data;
 const f32i = utils.f32i;
+const windy = @import("windy");
 
 const assets = @import("../assets.zig");
 const Camera = @import("../Camera.zig");
@@ -287,7 +287,7 @@ pub fn mouseMove(x: f32, y: f32) bool {
     return false;
 }
 
-pub fn mousePress(x: f32, y: f32, button: windy.MouseButton, mods: windy.MouseMods) bool {
+pub fn mousePress(x: f32, y: f32, button: windy.MouseButton, mods: windy.Mods) bool {
     var elem_iter = std.mem.reverseIterator(elements.items);
     while (elem_iter.next()) |elem| switch (elem) {
         inline else => |inner_elem| if (std.meta.hasFn(@typeInfo(@TypeOf(inner_elem)).pointer.child, "mousePress") and inner_elem.mousePress(x, y, 0, 0, mods))

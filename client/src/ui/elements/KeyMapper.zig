@@ -22,7 +22,7 @@ tooltip_text: ?element.TextData = null,
 state: element.InteractableState = .none,
 listening: bool = false,
 
-pub fn mousePress(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32, _: windy.MouseMods) bool {
+pub fn mousePress(self: *KeyMapper, x: f32, y: f32, _: f32, _: f32, _: windy.Mods) bool {
     if (!self.base.visible) return false;
 
     const in_bounds = element.intersects(self, x, y);

@@ -440,7 +440,7 @@ pub fn main() !void {
     window = try .create(1280, 720, .{ .title = "Eclipse", .back_pixel = .black });
     defer window.destroy();
 
-    // window.setSizeLimits(1280, 720, -1, -1);
+    try window.setMinSize(.{.w = 1280, .h = 720});
     try window.setCursor(switch (settings.cursor_type) {
         .basic => assets.default_cursor,
         .royal => assets.royal_cursor,

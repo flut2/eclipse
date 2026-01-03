@@ -185,7 +185,7 @@ fn handleAbility4() void {
     if (map.localPlayerRef()) |player| player.useAbility(3);
 }
 
-pub fn charEvent(_: *windy.Window, state: windy.PressState, char: u21, _: windy.KeyMods) void {
+pub fn charEvent(_: *windy.Window, state: windy.PressState, char: u21, _: windy.Mods) void {
     if (state != .press) return;
     if (selected_input_field) |input_field| {
         if (char > std.math.maxInt(u8)) return;
@@ -200,7 +200,7 @@ pub fn charEvent(_: *windy.Window, state: windy.PressState, char: u21, _: windy.
     }
 }
 
-pub fn keyEvent(window: *windy.Window, state: windy.PressState, key: windy.Key, mods: windy.KeyMods) void {
+pub fn keyEvent(window: *windy.Window, state: windy.PressState, key: windy.Key, mods: windy.Mods) void {
     _ = window; // autofix
     if (state == .press) {
         if (selected_key_mapper) |key_mapper| {
@@ -324,7 +324,7 @@ pub fn keyEvent(window: *windy.Window, state: windy.PressState, key: windy.Key, 
     menu.cancelMenu();
 }
 
-pub fn mouseEvent(window: *windy.Window, state: windy.PressState, button: windy.MouseButton, _: i16, _: i16, mods: windy.MouseMods) void {
+pub fn mouseEvent(window: *windy.Window, state: windy.PressState, button: windy.MouseButton, _: i16, _: i16, mods: windy.Mods) void {
     if (state == .press) {
         window.setCursor(switch (main.settings.cursor_type) {
             .basic => assets.default_cursor_pressed,
@@ -388,7 +388,7 @@ pub fn updateMove() void {
     move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
 }
 
-pub fn mouseMoveEvent(_: *windy.Window, x_pos: i16, y_pos: i16, _: windy.MouseMods) void {
+pub fn mouseMoveEvent(_: *windy.Window, x_pos: i16, y_pos: i16, _: windy.Mods) void {
     mouse_x = @floatFromInt(x_pos);
     mouse_y = @floatFromInt(y_pos);
 
@@ -396,7 +396,7 @@ pub fn mouseMoveEvent(_: *windy.Window, x_pos: i16, y_pos: i16, _: windy.MouseMo
     if (ui_systems.screen == .editor) ui_systems.screen.editor.onMouseMove(mouse_x, mouse_y);
 }
 
-pub fn scrollEvent(_: *windy.Window, x_offset: f64, y_offset: f64, _: windy.MouseMods) void {
+pub fn scrollEvent(_: *windy.Window, x_offset: f64, y_offset: f64, _: windy.Mods) void {
     if (!ui_systems.mouseScroll(mouse_x, mouse_y, @floatCast(x_offset), @floatCast(y_offset))) {
         switch (ui_systems.screen) {
             .game => {

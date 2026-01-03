@@ -16,8 +16,8 @@
         .miniaudio = .{ .path = "client/libs/miniaudio" },
         .stbi = .{ .path = "client/libs/stbi" },
         .windy = .{
-            .url = "git+https://github.com/flut2/windy.git#a349bf94cd5a99e1c96f47cf507c29c31aedb130",
-            .hash = "windy-0.2.0-wLI1BBxAAQApBlYXcbUfavAzQPhOf5nNjygFtGYHBZDc",
+            .url = "git+https://github.com/flut2/windy.git#9cf7bb833756aad30775def8bac4703e037e3677",
+            .hash = "windy-0.2.0-wLI1BCFRAQAI7e2qP5-KsuQWabAf7pBXzsMW3zMHFKvn",
         },
         .turbopack = .{
             .url = "git+https://github.com/flut2/turbopack.git#d6995ce5a8f071bb759a274ac036dff65909905a",

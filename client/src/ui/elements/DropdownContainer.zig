@@ -18,7 +18,7 @@ background_data: element.InteractableImageData,
 state: element.InteractableState = .none,
 index: u32 = std.math.maxInt(u32),
 
-pub fn mousePress(self: *DropdownContainer, x: f32, y: f32, _: f32, _: f32, _: windy.MouseMods) bool {
+pub fn mousePress(self: *DropdownContainer, x: f32, y: f32, _: f32, _: f32, _: windy.Mods) bool {
     if (!self.base.visible or self.index == self.parent.selected_index) return false;
 
     const in_bounds = element.intersects(self, x, y);

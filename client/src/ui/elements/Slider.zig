@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const windy = @import("windy");
 const utils = @import("shared").utils;
+const windy = @import("windy");
 
 const main = @import("../../main.zig");
 const Renderer = @import("../../render/Renderer.zig");
@@ -37,7 +37,7 @@ knob_offset_x: f32 = 0.0,
 knob_offset_y: f32 = 0.0,
 current_value: f32 = 0.0,
 
-pub fn mousePress(self: *Slider, x: f32, y: f32, _: f32, _: f32, _: windy.MouseMods) bool {
+pub fn mousePress(self: *Slider, x: f32, y: f32, _: f32, _: f32, _: windy.Mods) bool {
     if (!self.base.visible) return false;
 
     if (utils.isInBounds(x, y, self.base.x, self.base.y, self.w, self.h)) {

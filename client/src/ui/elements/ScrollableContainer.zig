@@ -31,7 +31,7 @@ container: *Container = undefined,
 scroll_bar: *Slider = undefined,
 scroll_bar_decor: *Image = undefined,
 
-pub fn mousePress(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: windy.MouseMods) bool {
+pub fn mousePress(self: *ScrollableContainer, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: windy.Mods) bool {
     if (!self.base.visible) return false;
     if (self.container.mousePress(x, y, x_offset, y_offset, mods) or self.scroll_bar.mousePress(x, y, x_offset, y_offset, mods)) return true;
     return !(self.base.event_policy.pass_press or !element.intersects(self, x, y));

@@ -1124,23 +1124,22 @@ fn loadMap(screen: *MapEditorScreen, buffer: []const u8) !void {
 
 // for easier error handling
 fn openInner(screen: *MapEditorScreen) !void {
-    _ = screen; // autofix
     // TODO: popup for save
 
-    // const path = try windy.openDialog(false, .file, &.{
-    //     .{ .name = "Eclipse Map", .exts = &.{"map"} },
-    // }, "Select Map", null);
-    // defer windy.freeResult(main.allocator, path);
+    const path = try windy.openDialog(false, .file, &.{
+        .{ .name = "Eclipse Map", .exts = &.{"map"} },
+    }, "Select Map", null);
+    defer windy.freeResult(path);
 
-    // if (path.len == 0) return;
+    if (path.len == 0) return;
 
-    // const file = try std.fs.openFileAbsolute(path, .{});
-    // defer file.close();
+    const file = try std.fs.openFileAbsolute(path, .{});
+    defer file.close();
 
-    // const file_buf = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
-    // defer main.allocator.free(file_buf);
+    const file_buf = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
+    defer main.allocator.free(file_buf);
 
-    // try screen.loadMap(file_buf);
+    try screen.loadMap(file_buf);
 }
 
 fn openCallback(ud: ?*anyopaque) void {
@@ -1260,28 +1259,27 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
 }
 
 fn saveInner(screen: *MapEditorScreen) !void {
-    _ = screen; // autofix
     if (!main.needs_map_bg) return;
 
-    // const path = try windy.saveDialog(&.{
-    //     .{ .name = "Eclipse Map", .exts = &.{"map"} },
-    // }, "Save Map", null);
-    // defer windy.freeResult(main.allocator, path);
+    const path = try windy.saveDialog(&.{
+        .{ .name = "Eclipse Map", .exts = &.{"map"} },
+    }, "Save Map", null);
+    defer windy.freeResult(path);
 
-    // if (path.len == 0) return;
+    if (path.len == 0) return;
 
-    // const data = mapData(screen) catch {
-    //     dialog.showDialog(.text, .{
-    //         .title = "Map Error",
-    //         .body = "Map was invalid",
-    //     });
-    //     return;
-    // };
-    // defer main.allocator.free(data);
+    const data = mapData(screen) catch {
+        dialog.showDialog(.text, .{
+            .title = "Map Error",
+            .body = "Map was invalid",
+        });
+        return;
+    };
+    defer main.allocator.free(data);
 
-    // const file = try std.fs.createFileAbsolute(path, .{});
-    // defer file.close();
-    // try file.writeAll(data);
+    const file = try std.fs.createFileAbsolute(path, .{});
+    defer file.close();
+    try file.writeAll(data);
 }
 
 fn saveCallback(ud: ?*anyopaque) void {

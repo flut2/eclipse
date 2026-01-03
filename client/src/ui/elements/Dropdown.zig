@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const windy = @import("windy");
 const shared = @import("shared");
 const utils = shared.utils;
 const f32i = utils.f32i;
+const windy = @import("windy");
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
@@ -44,7 +44,7 @@ next_index: u32 = 0,
 selected_index: u32 = std.math.maxInt(u32),
 children: std.ArrayList(*DropdownContainer) = .empty,
 
-pub fn mousePress(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: windy.MouseMods) bool {
+pub fn mousePress(self: *Dropdown, x: f32, y: f32, x_offset: f32, y_offset: f32, mods: windy.Mods) bool {
     if (!self.base.visible) return false;
 
     const button_data = if (self.toggled) self.button_data_collapsed else self.button_data_extended;
