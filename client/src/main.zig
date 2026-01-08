@@ -420,7 +420,7 @@ pub fn main() !void {
     miniaudio.init(allocator);
     defer miniaudio.deinit();
 
-    settings = try .init(allocator);
+    settings = Settings.init(allocator) catch .{};
     defer settings.deinit();
 
     try assets.init();
