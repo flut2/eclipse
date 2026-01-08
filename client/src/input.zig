@@ -160,7 +160,7 @@ fn handleChat() void {
 }
 
 fn handleChatCmd() void {
-    charEvent(main.window, .press, @intFromEnum(windy.Key.slash), .{});
+    charEvent(main.window, @intFromEnum(windy.Key.slash), .{});
     selected_input_field = ui_systems.screen.game.chat_input;
     ui_systems.screen.game.chat_input.last_input = 0;
 }
@@ -185,8 +185,7 @@ fn handleAbility4() void {
     if (map.localPlayerRef()) |player| player.useAbility(3);
 }
 
-pub fn charEvent(_: *windy.Window, state: windy.PressState, char: u21, _: windy.Mods) void {
-    if (state != .press) return;
+pub fn charEvent(_: *windy.Window, char: u21, _: windy.Mods) void {
     if (selected_input_field) |input_field| {
         if (char > std.math.maxInt(u8)) return;
         const byte_code: u8 = @intCast(char);
@@ -200,8 +199,7 @@ pub fn charEvent(_: *windy.Window, state: windy.PressState, char: u21, _: windy.
     }
 }
 
-pub fn keyEvent(window: *windy.Window, state: windy.PressState, key: windy.Key, mods: windy.Mods) void {
-    _ = window; // autofix
+pub fn keyEvent(_: *windy.Window, state: windy.PressState, key: windy.Key, mods: windy.Mods) void {
     if (state == .press) {
         if (selected_key_mapper) |key_mapper| {
             key_mapper.settings_button.* = if (key == .escape) .{ .key = .invalid } else .{ .key = key };
@@ -396,22 +394,22 @@ pub fn mouseMoveEvent(_: *windy.Window, x_pos: i16, y_pos: i16, _: windy.Mods) v
     if (ui_systems.screen == .editor) ui_systems.screen.editor.onMouseMove(mouse_x, mouse_y);
 }
 
-pub fn scrollEvent(_: *windy.Window, x_offset: f64, y_offset: f64, _: windy.Mods) void {
-    if (!ui_systems.mouseScroll(mouse_x, mouse_y, @floatCast(x_offset), @floatCast(y_offset))) {
+pub fn scrollEvent(_: *windy.Window, x_offset: f32, y_offset: f32, _: windy.Mods) void {
+    if (!ui_systems.mouseScroll(mouse_x, mouse_y, x_offset, y_offset)) {
         switch (ui_systems.screen) {
             .game => {
                 const size = @max(map.info.width, map.info.height);
                 const max_zoom = f32i(@divFloor(size, 32));
                 const scroll_speed = f32i(size) / 1280;
 
-                main.camera.minimap_zoom += @floatCast(y_offset * scroll_speed);
+                main.camera.minimap_zoom += y_offset * scroll_speed;
                 main.camera.minimap_zoom = @max(1, @min(max_zoom, main.camera.minimap_zoom));
             },
             .editor => {
                 const min_zoom = 0.05;
                 const scroll_speed = 0.01;
 
-                main.camera.scale += @floatCast(y_offset * scroll_speed);
+                main.camera.scale += y_offset * scroll_speed;
                 main.camera.scale = @min(1, @max(min_zoom, main.camera.scale));
             },
             else => {},

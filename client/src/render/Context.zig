@@ -61,8 +61,8 @@ device: Device,
 graphics_queue: Queue,
 present_queue: Queue,
 
-fn procAddrBounce(inst: vk.Instance, name: [*:0]const u8) vk.PfnVoidFunction {
-    return windy.vulkanProcAddr(vk, inst, name);
+fn procAddrBounce(_: vk.Instance, name: [*:0]const u8) vk.PfnVoidFunction {
+    return windy.vulkanProcAddr(vk, name);
 }
 
 pub fn init(window: *windy.Window) !Context {
