@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
+const windy = @import("windy");
 
 const assets = @import("../../assets.zig");
 const main = @import("../../main.zig");
@@ -20,7 +20,7 @@ text_data: ?element.TextData = null,
 tooltip_text: ?element.TextData = null,
 state_change: ?*const fn (*Toggle) void = null,
 
-pub fn mousePress(self: *Toggle, x: f32, y: f32, _: f32, _: f32, _: glfw.Mods) bool {
+pub fn mousePress(self: *Toggle, x: f32, y: f32, _: f32, _: f32, _: windy.Mods) bool {
     if (!self.base.visible) return false;
 
     const in_bounds = element.intersects(self, x, y);

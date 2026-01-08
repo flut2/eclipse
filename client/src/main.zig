@@ -2,7 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const build_options = @import("options");
-const glfw = @import("glfw");
 const miniaudio = @import("miniaudio");
 const shared = @import("shared");
 const network_data = shared.network_data;
@@ -13,6 +12,7 @@ const u32f = utils.u32f;
 const stbi = @import("stbi");
 const uv = @import("uv");
 const vk = @import("vulkan");
+const windy = @import("windy");
 const ziggy = @import("ziggy");
 
 const assets = @import("assets.zig");
@@ -106,10 +106,10 @@ pub var login_server: LoginServer = undefined;
 pub var camera: Camera = .{};
 pub var settings: Settings = .{};
 pub var main_loop: uv.uv_loop_t = .{};
-pub var window: *glfw.Window = undefined;
+pub var window: *windy.Window = undefined;
 pub var callbacks: std.ArrayList(TimedCallback) = .empty;
 
-fn onResize(_: *glfw.Window, w: i32, h: i32) callconv(.c) void {
+fn onResize(_: *windy.Window, w: u16, h: u16) void {
     if (w <= 0 or h <= 0) return;
 
     const float_w = f32i(w);
@@ -302,13 +302,16 @@ fn renderTick(renderer: *Renderer) !void {
 
 fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.c) void {
     const renderer: *Renderer = @ptrCast(@alignCast(idler.*.data));
-    if (window.shouldClose()) {
+    if (window.should_close) {
         @branchHint(.unlikely);
         uv.uv_stop(&main_loop);
         return;
     }
 
-    glfw.pollEvents();
+    windy.pollEvents() catch |e| {
+        std.log.err("Event polling error: {}", .{e});
+        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+    };
 
     const time = std.time.microTimestamp() - start_time;
     current_time = time;
@@ -406,13 +409,10 @@ pub fn main() !void {
         login_buffer_free_list.deinit(allocator);
     }
 
-    try glfw.init(allocator);
-    defer glfw.deinit();
-
-    if (!try glfw.isVulkanSupported()) {
-        std.log.err("GLFW could not find libvulkan", .{});
-        return error.NoVulkan;
-    }
+    const clip_buf = try allocator.alloc(u8, std.math.maxInt(u12));
+    defer allocator.free(clip_buf);
+    try windy.init(allocator, clip_buf);
+    defer windy.deinit();
 
     stbi.init(allocator);
     defer stbi.deinit();
@@ -420,7 +420,7 @@ pub fn main() !void {
     miniaudio.init(allocator);
     defer miniaudio.deinit();
 
-    settings = try .init(allocator);
+    settings = Settings.init(allocator) catch .{};
     defer settings.deinit();
 
     try assets.init();
@@ -437,12 +437,11 @@ pub fn main() !void {
 
     defer input.deinit();
 
-    glfw.windowHintTyped(.client_api, .no_api);
-    window = try glfw.Window.create(1280, 720, "Eclipse", null);
+    window = try .create(1280, 720, .{ .title = "Eclipse", .back_pixel = .black });
     defer window.destroy();
 
-    window.setSizeLimits(1280, 720, -1, -1);
-    window.setCursor(switch (settings.cursor_type) {
+    try window.setMinSize(.{.w = 1280, .h = 720});
+    try window.setCursor(switch (settings.cursor_type) {
         .basic => assets.default_cursor,
         .royal => assets.royal_cursor,
         .ranger => assets.ranger_cursor,
@@ -452,12 +451,12 @@ pub fn main() !void {
         .target_ally => assets.target_ally_cursor,
     });
 
-    _ = window.setKeyCallback(input.keyEvent);
-    _ = window.setCharCallback(input.charEvent);
-    _ = window.setCursorPosCallback(input.mouseMoveEvent);
-    _ = window.setMouseButtonCallback(input.mouseEvent);
-    _ = window.setScrollCallback(input.scrollEvent);
-    _ = window.setFramebufferSizeCallback(onResize);
+    try window.registerKeyCb(input.keyEvent);
+    try window.registerCharCb(input.charEvent);
+    try window.registerMouseMoveCb(input.mouseMoveEvent);
+    try window.registerMouseCb(input.mouseEvent);
+    try window.registerScrollCb(input.scrollEvent);
+    try window.registerResizeCb(onResize);
 
     var renderer: Renderer = try .create(if (settings.enable_vsync) .fifo_khr else .immediate_khr);
     defer renderer.destroy() catch |e| {

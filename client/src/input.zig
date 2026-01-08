@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const glfw = @import("glfw");
 const shared = @import("shared");
 const game_data = shared.game_data;
 const f32i = shared.utils.f32i;
+const windy = @import("windy");
 
 const assets = @import("assets.zig");
 const map = @import("game/map.zig");
@@ -160,7 +160,7 @@ fn handleChat() void {
 }
 
 fn handleChatCmd() void {
-    charEvent(main.window, @intFromEnum(glfw.Key.slash));
+    charEvent(main.window, @intFromEnum(windy.Key.slash), .{});
     selected_input_field = ui_systems.screen.game.chat_input;
     ui_systems.screen.game.chat_input.last_input = 0;
 }
@@ -185,7 +185,7 @@ fn handleAbility4() void {
     if (map.localPlayerRef()) |player| player.useAbility(3);
 }
 
-pub fn charEvent(_: *glfw.Window, char: u32) callconv(.c) void {
+pub fn charEvent(_: *windy.Window, char: u21, _: windy.Mods) void {
     if (selected_input_field) |input_field| {
         if (char > std.math.maxInt(u8)) return;
         const byte_code: u8 = @intCast(char);
@@ -199,8 +199,8 @@ pub fn charEvent(_: *glfw.Window, char: u32) callconv(.c) void {
     }
 }
 
-pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action, mods: glfw.Mods) callconv(.c) void {
-    if (action == .press or action == .repeat) {
+pub fn keyEvent(_: *windy.Window, state: windy.PressState, key: windy.Key, mods: windy.Mods) void {
+    if (state == .press) {
         if (selected_key_mapper) |key_mapper| {
             key_mapper.settings_button.* = if (key == .escape) .{ .key = .invalid } else .{ .key = key };
             key_mapper.listening = false;
@@ -209,28 +209,35 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
         }
 
         if (selected_input_field) |input_field| {
-            if (mods.control) {
+            if (mods.ctrl) {
                 switch (key) {
                     .c => {
                         const old = input_field.text_data.text;
-                        input_field.text_data.backing_buffer[input_field.index] = 0;
-                        window.setClipboardString(input_field.text_data.backing_buffer[0..input_field.index :0]);
+                        windy.setClipboard(input_field.text_data.backing_buffer[0..input_field.index]) catch |e| {
+                            std.log.err("Clipboard set failed: {}", .{e});
+                            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+                        };
                         input_field.text_data.text = old;
                     },
                     .v => {
-                        if (window.getClipboardString()) |clip_str| {
-                            if (clip_str.len > 256 - input_field.index) return;
-                            const clip_len = clip_str.len;
-                            @memcpy(input_field.text_data.backing_buffer[input_field.index .. input_field.index + clip_len], clip_str);
-                            input_field.index += @intCast(clip_len);
-                            input_field.text_data.text = input_field.text_data.backing_buffer[0..input_field.index];
-                            input_field.inputUpdate();
+                        const clip_str = windy.getClipboard() catch |e| {
+                            std.log.err("Clipboard get failed: {}", .{e});
+                            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
                             return;
-                        }
+                        };
+                        if (clip_str.len > 256 - input_field.index) return;
+                        const clip_len = clip_str.len;
+                        @memcpy(input_field.text_data.backing_buffer[input_field.index .. input_field.index + clip_len], clip_str);
+                        input_field.index += @intCast(clip_len);
+                        input_field.text_data.text = input_field.text_data.backing_buffer[0..input_field.index];
+                        input_field.inputUpdate();
+                        return;
                     },
                     .x => {
-                        input_field.text_data.backing_buffer[input_field.index] = 0;
-                        window.setClipboardString(input_field.text_data.backing_buffer[0..input_field.index :0]);
+                        windy.setClipboard(input_field.text_data.backing_buffer[0..input_field.index]) catch |e| {
+                            std.log.err("Clipboard set failed: {}", .{e});
+                            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+                        };
                         input_field.clear();
                         return;
                     },
@@ -303,7 +310,7 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
             inline for (press_mappings) |mapping|
                 if ((mapping[2] or !is_editor) and mapping[0].* == .key and mapping[0].key == key) mapping[1]();
         if (is_editor) ui_systems.screen.editor.onKeyPress(key);
-    } else if (action == .release) {
+    } else if (state == .release) {
         const is_editor = ui_systems.screen == .editor;
         if ((ui_systems.screen == .game or is_editor) and !disable_input)
             inline for (release_mappings) |mapping|
@@ -315,8 +322,8 @@ pub fn keyEvent(window: *glfw.Window, key: glfw.Key, _: i32, action: glfw.Action
     menu.cancelMenu();
 }
 
-pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.c) void {
-    if (action == .press) {
+pub fn mouseEvent(window: *windy.Window, state: windy.PressState, button: windy.MouseButton, _: i16, _: i16, mods: windy.Mods) void {
+    if (state == .press) {
         window.setCursor(switch (main.settings.cursor_type) {
             .basic => assets.default_cursor_pressed,
             .royal => assets.royal_cursor_pressed,
@@ -325,7 +332,10 @@ pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.A
             .fiery => assets.fiery_cursor_pressed,
             .target_enemy => assets.target_enemy_cursor_pressed,
             .target_ally => assets.target_ally_cursor_pressed,
-        });
+        }) catch |e| {
+            std.log.err("Cursor set failed: {}", .{e});
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        };
 
         if (selected_input_field) |input_field| {
             input_field.last_input = -1;
@@ -345,7 +355,7 @@ pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.A
                 inline for (press_mappings) |mapping| if (mapping[0].* == .mouse and mapping[0].mouse == button) mapping[1]();
             if (is_editor) ui_systems.screen.editor.onMousePress(button);
         }
-    } else if (action == .release) {
+    } else if (state == .release) {
         window.setCursor(switch (main.settings.cursor_type) {
             .basic => assets.default_cursor,
             .royal => assets.royal_cursor,
@@ -354,7 +364,11 @@ pub fn mouseEvent(window: *glfw.Window, button: glfw.MouseButton, action: glfw.A
             .fiery => assets.fiery_cursor,
             .target_enemy => assets.target_enemy_cursor,
             .target_ally => assets.target_ally_cursor,
-        });
+        }) catch |e| {
+            std.log.err("Cursor set failed: {}", .{e});
+            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        };
+
         if (!ui_systems.mouseRelease(mouse_x, mouse_y)) {
             const is_editor = ui_systems.screen == .editor;
             if ((ui_systems.screen == .game or is_editor) and !disable_input)
@@ -372,30 +386,30 @@ pub fn updateMove() void {
     move_angle = if (y_dt == 0 and x_dt == 0) std.math.nan(f32) else std.math.atan2(y_dt, x_dt);
 }
 
-pub fn mouseMoveEvent(_: *glfw.Window, x_pos: f64, y_pos: f64) callconv(.c) void {
-    mouse_x = @floatCast(x_pos);
-    mouse_y = @floatCast(y_pos);
+pub fn mouseMoveEvent(_: *windy.Window, x_pos: i16, y_pos: i16, _: windy.Mods) void {
+    mouse_x = @floatFromInt(x_pos);
+    mouse_y = @floatFromInt(y_pos);
 
     _ = ui_systems.mouseMove(mouse_x, mouse_y);
     if (ui_systems.screen == .editor) ui_systems.screen.editor.onMouseMove(mouse_x, mouse_y);
 }
 
-pub fn scrollEvent(_: *glfw.Window, x_offset: f64, y_offset: f64) callconv(.c) void {
-    if (!ui_systems.mouseScroll(mouse_x, mouse_y, @floatCast(x_offset), @floatCast(y_offset))) {
+pub fn scrollEvent(_: *windy.Window, x_offset: f32, y_offset: f32, _: windy.Mods) void {
+    if (!ui_systems.mouseScroll(mouse_x, mouse_y, x_offset, y_offset)) {
         switch (ui_systems.screen) {
             .game => {
                 const size = @max(map.info.width, map.info.height);
                 const max_zoom = f32i(@divFloor(size, 32));
                 const scroll_speed = f32i(size) / 1280;
 
-                main.camera.minimap_zoom += @floatCast(y_offset * scroll_speed);
+                main.camera.minimap_zoom += y_offset * scroll_speed;
                 main.camera.minimap_zoom = @max(1, @min(max_zoom, main.camera.minimap_zoom));
             },
             .editor => {
                 const min_zoom = 0.05;
                 const scroll_speed = 0.01;
 
-                main.camera.scale += @floatCast(y_offset * scroll_speed);
+                main.camera.scale += y_offset * scroll_speed;
                 main.camera.scale = @min(1, @max(min_zoom, main.camera.scale));
             },
             else => {},

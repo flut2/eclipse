@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const glfw = @import("glfw");
+const windy = @import("windy");
 const ziggy = @import("ziggy");
 
 const assets = @import("assets.zig");
@@ -10,7 +10,7 @@ const main = @import("main.zig");
 const Settings = @This();
 
 pub const CursorType = enum { basic, royal, ranger, aztec, fiery, target_enemy, target_ally };
-pub const Button = union(enum) { key: glfw.Key, mouse: glfw.MouseButton };
+pub const Button = union(enum) { key: windy.Key, mouse: windy.MouseButton };
 
 var arena: std.heap.ArenaAllocator = undefined;
 pub var needs_char_id_dispose = false;
@@ -30,10 +30,10 @@ escape: Button = .{ .key = .tab },
 chat_up: Button = .{ .key = .page_up },
 chat_down: Button = .{ .key = .page_down },
 walk: Button = .{ .key = .left_shift },
-toggle_perf_stats: Button = .{ .key = .F3 },
+toggle_perf_stats: Button = .{ .key = .f3 },
 chat: Button = .{ .key = .enter },
 chat_cmd: Button = .{ .key = .slash },
-respond: Button = .{ .key = .F2 },
+respond: Button = .{ .key = .f2 },
 shoot: Button = .{ .mouse = .left },
 sfx_volume: f32 = 0.33,
 music_volume: f32 = 0.1,

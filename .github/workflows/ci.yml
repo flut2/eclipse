@@ -41,7 +41,7 @@ jobs:
       - name: Install packages
         run: |
           sudo apt update
-          sudo apt install libglfw3 libglfw3-dev libatk1.0-0 libgtk-3-dev libglib2.0-dev
+          sudo apt install libgtk-3-dev libxcb-xkb-dev libxcb-render-util0-dev libxkbcommon-x11-dev
       - name: Install Zig
         uses: mlugg/setup-zig@v2
       - name: Install Vulkan SDK

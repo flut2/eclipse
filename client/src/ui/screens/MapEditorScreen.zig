@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const build_options = @import("options");
-const glfw = @import("glfw");
 const shared = @import("shared");
 const map_data = shared.map_data;
 const game_data = shared.game_data;
@@ -9,7 +8,7 @@ const utils = shared.utils;
 const f32i = utils.f32i;
 const u16f = utils.u16f;
 const usizef = utils.usizef;
-const zd = @import("zd");
+const windy = @import("windy");
 
 const assets = @import("../../assets.zig");
 const Container = @import("../../game/Container.zig");
@@ -1127,10 +1126,10 @@ fn loadMap(screen: *MapEditorScreen, buffer: []const u8) !void {
 fn openInner(screen: *MapEditorScreen) !void {
     // TODO: popup for save
 
-    const path = try zd.openDialog(false, main.allocator, .file, &.{
+    const path = try windy.openDialog(false, .file, &.{
         .{ .name = "Eclipse Map", .exts = &.{"map"} },
     }, "Select Map", null);
-    defer zd.freeResult(main.allocator, path);
+    defer windy.freeResult(path);
 
     if (path.len == 0) return;
 
@@ -1262,10 +1261,10 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
 fn saveInner(screen: *MapEditorScreen) !void {
     if (!main.needs_map_bg) return;
 
-    const path = try zd.saveDialog(main.allocator, &.{
+    const path = try windy.saveDialog(&.{
         .{ .name = "Eclipse Map", .exts = &.{"map"} },
     }, "Save Map", null);
-    defer zd.freeResult(main.allocator, path);
+    defer windy.freeResult(path);
 
     if (path.len == 0) return;
 
@@ -1419,7 +1418,7 @@ fn onSearchChange(text: []const u8) void {
     };
 }
 
-pub fn onMousePress(self: *MapEditorScreen, button: glfw.MouseButton) void {
+pub fn onMousePress(self: *MapEditorScreen, button: windy.MouseButton) void {
     if (self.place_key == .mouse and button == self.place_key.mouse)
         self.action = .place
     else if (self.erase_key == .mouse and button == self.erase_key.mouse)
@@ -1444,7 +1443,7 @@ pub fn onMousePress(self: *MapEditorScreen, button: glfw.MouseButton) void {
     };
 }
 
-pub fn onMouseRelease(self: *MapEditorScreen, button: glfw.MouseButton) void {
+pub fn onMouseRelease(self: *MapEditorScreen, button: windy.MouseButton) void {
     if (self.place_key == .mouse and button == self.place_key.mouse or
         self.erase_key == .mouse and button == self.erase_key.mouse)
         self.action = .none;
@@ -1464,7 +1463,7 @@ pub fn onMouseMove(self: *MapEditorScreen, mouse_x: f32, mouse_y: f32) void {
     self.processRectSelect();
 }
 
-pub fn onKeyPress(self: *MapEditorScreen, key: glfw.Key) void {
+pub fn onKeyPress(self: *MapEditorScreen, key: windy.Key) void {
     if (self.place_key == .key and key == self.place_key.key)
         self.action = .place
     else if (self.erase_key == .key and key == self.erase_key.key)
@@ -1499,7 +1498,7 @@ pub fn onKeyPress(self: *MapEditorScreen, key: glfw.Key) void {
     };
 }
 
-pub fn onKeyRelease(self: *MapEditorScreen, key: glfw.Key) void {
+pub fn onKeyRelease(self: *MapEditorScreen, key: windy.Key) void {
     if (self.place_key == .key and key == self.place_key.key or
         self.erase_key == .key and key == self.erase_key.key)
         self.action = .none;
