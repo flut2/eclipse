@@ -171,7 +171,7 @@ fn loadMap() !void {
     // Means that the map is already loaded, map editor unsets this
     if (main.needs_map_bg) return;
 
-    const file = try std.fs.cwd().openFile("./assets/background.map", .{});
+    const file = try std.fs.cwd().openFile("./assets/client/background.map", .{});
     defer file.close();
 
     const file_buf = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));

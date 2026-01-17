@@ -157,8 +157,6 @@ fn buildClient(
             exe.root_module.addWin32ResourceFile(.{ .file = b.path("assets/resources.rc") });
 
         if (!check) {
-            b.installArtifact(exe);
-
             b.getInstallStep().dependOn(&b.addInstallArtifact(exe, .{
                 .dest_dir = .{ .override = .{ .custom = "client" } },
             }).step);
@@ -166,13 +164,13 @@ fn buildClient(
             exe.step.dependOn(&b.addInstallDirectory(.{
                 .source_dir = b.path("assets/shared"),
                 .install_dir = .{ .custom = "client" },
-                .install_subdir = "assets",
+                .install_subdir = "assets/shared",
             }).step);
 
             exe.step.dependOn(&b.addInstallDirectory(.{
                 .source_dir = b.path("assets/client"),
                 .install_dir = .{ .custom = "client" },
-                .install_subdir = "assets",
+                .install_subdir = "assets/client",
             }).step);
 
             const run_cmd = b.addRunArtifact(exe);
@@ -272,8 +270,6 @@ fn buildServer(
             exe.addWin32ResourceFile(.{ .file = b.path("assets/resources.rc") });
 
         if (!check) {
-            b.installArtifact(exe);
-
             b.getInstallStep().dependOn(&b.addInstallArtifact(exe, .{
                 .dest_dir = .{ .override = .{ .custom = "server" } },
             }).step);
@@ -281,13 +277,13 @@ fn buildServer(
             exe.step.dependOn(&b.addInstallDirectory(.{
                 .source_dir = b.path("assets/shared"),
                 .install_dir = .{ .custom = "server" },
-                .install_subdir = "assets",
+                .install_subdir = "assets/shared",
             }).step);
 
             exe.step.dependOn(&b.addInstallDirectory(.{
                 .source_dir = b.path("assets/server"),
                 .install_dir = .{ .custom = "server" },
-                .install_subdir = "assets",
+                .install_subdir = "assets/client",
             }).step);
 
             const run_cmd = b.addRunArtifact(exe);

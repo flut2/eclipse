@@ -182,14 +182,14 @@ pub fn parseMap(buffer: []const u8, details: MapDetails) !MapData {
 }
 
 pub fn init() !void {
-    const file = try std.fs.cwd().openFile("./assets/worlds/maps.ziggy", .{});
+    const file = try std.fs.cwd().openFile("./assets/server/worlds/maps.ziggy", .{});
     defer file.close();
 
     const file_data = try file.readToEndAllocOptions(main.allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);
     defer main.allocator.free(file_data);
 
     for (try ziggy.parseLeaky([]MapDetails, main.allocator, file_data, .{})) |details| {
-        const path = try std.fmt.allocPrint(main.allocator, "./assets/worlds/{s}", .{details.file});
+        const path = try std.fmt.allocPrint(main.allocator, "./assets/server/worlds/{s}", .{details.file});
         defer main.allocator.free(path);
 
         const map_file = try std.fs.cwd().openFile(path, .{});

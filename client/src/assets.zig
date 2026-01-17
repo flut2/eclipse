@@ -411,7 +411,7 @@ fn imageBounds(img: stbi.Image, x: usize, y: usize, cut_w: u32, cut_h: u32) stru
 }
 
 fn addCursors(comptime image_name: [:0]const u8, comptime cut_width: u32, comptime cut_height: u32) !void {
-    var img: stbi.Image = try .loadFromFile("./assets/sheets/" ++ image_name, 4);
+    var img: stbi.Image = try .loadFromFile("./assets/client/sheets/" ++ image_name, 4);
     defer img.deinit();
 
     const img_size = cut_width * cut_height;
@@ -482,7 +482,7 @@ fn addWall(
         std.posix.exit(0);
     }
     var buf: [128]u8 = undefined;
-    const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/client/sheets/{s}", .{image_path});
     var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
@@ -620,7 +620,7 @@ fn addImage(
         std.posix.exit(0);
     }
     var buf: [128]u8 = undefined;
-    const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/client/sheets/{s}", .{image_path});
     var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
@@ -745,7 +745,7 @@ fn addUiImage(
         std.posix.exit(0);
     }
     var buf: [128]u8 = undefined;
-    const path = try std.fmt.bufPrintZ(&buf, "./assets/ui/{s}", .{image_path});
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/client/ui/{s}", .{image_path});
     var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
@@ -816,7 +816,7 @@ fn addAnimEnemy(
         std.posix.exit(0);
     }
     var buf: [128]u8 = undefined;
-    const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/client/sheets/{s}", .{image_path});
     var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
@@ -958,7 +958,7 @@ fn addAnimPlayer(
         std.posix.exit(0);
     }
     var buf: [128]u8 = undefined;
-    const path = try std.fmt.bufPrintZ(&buf, "./assets/sheets/{s}", .{image_path});
+    const path = try std.fmt.bufPrintZ(&buf, "./assets/client/sheets/{s}", .{image_path});
     var img: stbi.Image = try .loadFromFile(path, 4);
     defer img.deinit();
 
@@ -1140,7 +1140,7 @@ pub fn playSfx(name: []const u8) void {
         };
 
         initMusic: {
-            main_music = audio_state.?.engine.createSoundFromFile("./assets/music/main_menu.mp3", .{}) catch break :initMusic;
+            main_music = audio_state.?.engine.createSoundFromFile("./assets/client/music/main_menu.mp3", .{}) catch break :initMusic;
             main_music.?.setLooping(true);
             main_music.?.setVolume(main.settings.music_volume);
             if (main.settings.music_volume > 0.0) main_music.?.start() catch main.audioFailure();
@@ -1174,7 +1174,7 @@ pub fn playSfx(name: []const u8) void {
         return;
     }
 
-    const path = std.fmt.bufPrintZ(&sfx_path_buffer, "./assets/sfx/{s}", .{name}) catch return;
+    const path = std.fmt.bufPrintZ(&sfx_path_buffer, "./assets/client/sfx/{s}", .{name}) catch return;
 
     if (std.fs.cwd().access(path, .{})) |_| {
         var audio = audio_state.?.engine.createSoundFromFile(path, .{}) catch return;
@@ -1239,15 +1239,15 @@ pub fn init() !void {
         if (key_tex_map.capacity() > 0) key_tex_map.rehash(dummy_button_ctx);
     }
 
-    bold_atlas = try .loadFromFile("./assets/fonts/amaranth_bold.png", 4);
-    bold_italic_atlas = try .loadFromFile("./assets/fonts/amaranth_bold_italic.png", 4);
-    medium_atlas = try .loadFromFile("./assets/fonts/amaranth_regular.png", 4);
-    medium_italic_atlas = try .loadFromFile("./assets/fonts/amaranth_italic.png", 4);
+    bold_atlas = try .loadFromFile("./assets/client/fonts/amaranth_bold.png", 4);
+    bold_italic_atlas = try .loadFromFile("./assets/client/fonts/amaranth_bold_italic.png", 4);
+    medium_atlas = try .loadFromFile("./assets/client/fonts/amaranth_regular.png", 4);
+    medium_italic_atlas = try .loadFromFile("./assets/client/fonts/amaranth_italic.png", 4);
 
-    bold_data = try parseFontData("./assets/fonts/amaranth_bold.ziggy");
-    bold_italic_data = try parseFontData("./assets/fonts/amaranth_bold_italic.ziggy");
-    medium_data = try parseFontData("./assets/fonts/amaranth_regular.ziggy");
-    medium_italic_data = try parseFontData("./assets/fonts/amaranth_italic.ziggy");
+    bold_data = try parseFontData("./assets/client/fonts/amaranth_bold.ziggy");
+    bold_italic_data = try parseFontData("./assets/client/fonts/amaranth_bold_italic.ziggy");
+    medium_data = try parseFontData("./assets/client/fonts/amaranth_regular.ziggy");
+    medium_italic_data = try parseFontData("./assets/client/fonts/amaranth_italic.ziggy");
 
     audio_state = AudioState.create() catch blk: {
         main.audioFailure();
@@ -1256,7 +1256,7 @@ pub fn init() !void {
     if (audio_state) |state| {
         state.engine.start() catch main.audioFailure();
 
-        main_music = state.engine.createSoundFromFile("./assets/music/main_menu.mp3", .{}) catch null;
+        main_music = state.engine.createSoundFromFile("./assets/client/music/main_menu.mp3", .{}) catch null;
         if (main_music) |music| {
             music.setLooping(true);
             music.setVolume(main.settings.music_volume);
@@ -1274,7 +1274,7 @@ pub fn init() !void {
     var ui_ctx: pack.Context = try .create(main.allocator, ui_atlas_width, ui_atlas_height, .{ .spaces_to_prealloc = 4096 });
     defer ui_ctx.deinit();
 
-    const game_sheets_data = try std.fs.cwd().openFile("./assets/sheets/game_sheets.ziggy", .{});
+    const game_sheets_data = try std.fs.cwd().openFile("./assets/client/sheets/game_sheets.ziggy", .{});
     defer game_sheets_data.close();
 
     const game_sheets_file_data = try game_sheets_data.readToEndAllocOptions(
@@ -1312,7 +1312,7 @@ pub fn init() !void {
         }
     }
 
-    const wall_sheets_file = try std.fs.cwd().openFile("./assets/sheets/wall_sheets.ziggy", .{});
+    const wall_sheets_file = try std.fs.cwd().openFile("./assets/client/sheets/wall_sheets.ziggy", .{});
     defer wall_sheets_file.close();
 
     const wall_sheets_file_data = try wall_sheets_file.readToEndAllocOptions(
@@ -1334,7 +1334,7 @@ pub fn init() !void {
             &ctx,
         );
 
-    const ui_sheets_data = try std.fs.cwd().openFile("./assets/ui/ui_sheets.ziggy", .{});
+    const ui_sheets_data = try std.fs.cwd().openFile("./assets/client/ui/ui_sheets.ziggy", .{});
     defer ui_sheets_data.close();
 
     const ui_sheets_file_data = try ui_sheets_data.readToEndAllocOptions(

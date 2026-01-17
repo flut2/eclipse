@@ -101,18 +101,18 @@ pub fn init(allocator: std.mem.Allocator) !void {
     arena = .init(allocator);
     const arena_allocator = arena.allocator();
 
-    try parseGeneric(arena_allocator, "./assets/data/cards.ziggy", CardData, &card);
-    try parseGeneric(arena_allocator, "./assets/data/items.ziggy", ItemData, &item);
-    try parseGeneric(arena_allocator, "./assets/data/containers.ziggy", ContainerData, &container);
-    try parseGeneric(arena_allocator, "./assets/data/enemies.ziggy", EnemyData, &enemy);
-    try parseGeneric(arena_allocator, "./assets/data/entities.ziggy", EntityData, &entity);
-    try parseGeneric(arena_allocator, "./assets/data/walls.ziggy", EntityData, &entity);
-    try parseGeneric(arena_allocator, "./assets/data/ground.ziggy", GroundData, &ground);
-    try parseGeneric(arena_allocator, "./assets/data/portals.ziggy", PortalData, &portal);
-    try parseGeneric(arena_allocator, "./assets/data/regions.ziggy", RegionData, &region);
-    try parseGeneric(arena_allocator, "./assets/data/allies.ziggy", AllyData, &ally);
-    try parseGeneric(arena_allocator, "./assets/data/resources.ziggy", ResourceData, &resource);
-    try parseGeneric(arena_allocator, "./assets/data/classes.ziggy", ClassData, &class);
+    try parseGeneric(arena_allocator, "./assets/shared/data/cards.ziggy", CardData, &card);
+    try parseGeneric(arena_allocator, "./assets/shared/data/items.ziggy", ItemData, &item);
+    try parseGeneric(arena_allocator, "./assets/shared/data/containers.ziggy", ContainerData, &container);
+    try parseGeneric(arena_allocator, "./assets/shared/data/enemies.ziggy", EnemyData, &enemy);
+    try parseGeneric(arena_allocator, "./assets/shared/data/entities.ziggy", EntityData, &entity);
+    try parseGeneric(arena_allocator, "./assets/shared/data/walls.ziggy", EntityData, &entity);
+    try parseGeneric(arena_allocator, "./assets/shared/data/ground.ziggy", GroundData, &ground);
+    try parseGeneric(arena_allocator, "./assets/shared/data/portals.ziggy", PortalData, &portal);
+    try parseGeneric(arena_allocator, "./assets/shared/data/regions.ziggy", RegionData, &region);
+    try parseGeneric(arena_allocator, "./assets/shared/data/allies.ziggy", AllyData, &ally);
+    try parseGeneric(arena_allocator, "./assets/shared/data/resources.ziggy", ResourceData, &resource);
+    try parseGeneric(arena_allocator, "./assets/shared/data/classes.ziggy", ClassData, &class);
 }
 
 pub fn deinit() void {

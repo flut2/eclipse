@@ -17,10 +17,10 @@ build_version: []const u8 = "0.1",
 tps: u16 = 10,
 
 pub fn init(allocator: std.mem.Allocator) !Settings {
-    arena = std.heap.ArenaAllocator.init(allocator);
+    arena = .init(allocator);
     const arena_allocator = arena.allocator();
 
-    const file = std.fs.cwd().openFile("assets/settings.ziggy", .{}) catch @panic("Settings file not found");
+    const file = std.fs.cwd().openFile("assets/server/settings.ziggy", .{}) catch @panic("Settings file not found");
     defer file.close();
 
     const file_data = try file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);

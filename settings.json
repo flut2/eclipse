@@ -1,0 +1,69 @@
+{
+    "move_left": {
+        "key": "a"
+    },
+    "move_right": {
+        "key": "d"
+    },
+    "move_up": {
+        "key": "w"
+    },
+    "move_down": {
+        "key": "s"
+    },
+    "ability_1": {
+        "key": "q"
+    },
+    "ability_2": {
+        "key": "e"
+    },
+    "ability_3": {
+        "key": "r"
+    },
+    "ability_4": {
+        "key": "f"
+    },
+    "interact": {
+        "key": "x"
+    },
+    "options": {
+        "key": "escape"
+    },
+    "escape": {
+        "key": "tab"
+    },
+    "chat_up": {
+        "key": "page_up"
+    },
+    "chat_down": {
+        "key": "page_down"
+    },
+    "walk": {
+        "key": "left_shift"
+    },
+    "toggle_perf_stats": {
+        "key": "f3"
+    },
+    "chat": {
+        "key": "enter"
+    },
+    "chat_cmd": {
+        "key": "slash"
+    },
+    "respond": {
+        "key": "f2"
+    },
+    "shoot": {
+        "mouse": "left"
+    },
+    "sfx_volume": 0.33000001311302185,
+    "music_volume": 0.10000000149011612,
+    "enable_vsync": true,
+    "enable_lights": true,
+    "stats_enabled": true,
+    "remember_login": true,
+    "enable_subpixel": true,
+    "cursor_type": "aztec",
+    "favorite_char_ids": [],
+    "char_ids_login_sort": []
+}
