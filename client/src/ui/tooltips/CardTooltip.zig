@@ -30,7 +30,7 @@ pub fn init(self: *CardTooltip) !void {
         .base = .{ .x = 15, .y = 15 },
         .text_data = .{
             .text = "",
-            .size = 14.0,
+            .size = 16,
             .text_type = .bold_italic,
             .hori_align = .middle,
             .max_width = 280 - 15 * 2,
@@ -41,7 +41,7 @@ pub fn init(self: *CardTooltip) !void {
         .base = .{ .x = 15, .y = self.title.base.y + self.title.height() + 2 },
         .text_data = .{
             .text = "",
-            .size = 12.0,
+            .size = 14,
             .text_type = .medium_italic,
             .hori_align = .middle,
             .max_width = 280 - 15 * 2,
@@ -58,7 +58,7 @@ pub fn init(self: *CardTooltip) !void {
         .base = .{ .x = 6 + 2, .y = self.line_break.base.y + self.line_break.height() + 15 },
         .text_data = .{
             .text = "",
-            .size = 12.0,
+            .size = 14,
             .hori_align = .middle,
             .max_width = 280 - (6 + 2) * 2,
         },

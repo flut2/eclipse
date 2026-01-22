@@ -49,7 +49,7 @@ const LabelledIcon = struct {
             .base = .{ .x = icon.width() + 5, .y = 0 },
             .text_data = .{
                 .text = "",
-                .size = 12,
+                .size = 14,
                 .text_type = .medium_italic,
                 .max_chars = 128,
                 .color = utils.redToGreen(perc).toColor(),
@@ -111,7 +111,7 @@ pub fn init(self: *TalentTooltip) !void {
         .base = .{ .x = 8 * 4 + 30, .y = 12 },
         .text_data = .{
             .text = "",
-            .size = 14.0,
+            .size = 16,
             .text_type = .bold_italic,
         },
     });
@@ -120,7 +120,7 @@ pub fn init(self: *TalentTooltip) !void {
         .base = .{ .x = 8 * 4 + 30, .y = 12 + 5 + self.title.text_data.height },
         .text_data = .{
             .text = "",
-            .size = 12.0,
+            .size = 14,
             .max_chars = 128,
             .color = 0xB3B3B3,
         },
@@ -138,7 +138,7 @@ pub fn init(self: *TalentTooltip) !void {
         .base = .{ .x = 10, .y = self.line_break_one.base.y + self.line_break_one.height() + 10 },
         .text_data = .{
             .text = "",
-            .size = 12.0,
+            .size = 14,
             .color = 0x9B9B9B,
             .max_width = self.decor.width() - 20,
         },
@@ -156,7 +156,7 @@ pub fn init(self: *TalentTooltip) !void {
         .base = .{ .x = 10, .y = self.line_break_two.base.y + self.line_break_two.height() + 10 },
         .text_data = .{
             .text = "Costs:",
-            .size = 12.0,
+            .size = 14,
             .color = 0xB3B3B3,
         },
     });
@@ -165,7 +165,7 @@ pub fn init(self: *TalentTooltip) !void {
         .base = .{ .x = 10, .y = self.cost_text.base.y + self.cost_text.height() + 10, .visible = false },
         .text_data = .{
             .text = "Requires:",
-            .size = 12.0,
+            .size = 14,
             .color = 0xB3B3B3,
         },
     });

@@ -96,6 +96,13 @@ fn buildClient(
                     .{ .name = "stbi", .module = stbi_dep.module("root") },
                     .{ .name = "miniaudio", .module = miniaudio_dep.module("root") },
                     .{
+                        .name = "msdf-zig",
+                        .module = b.dependency("msdf_zig", .{
+                            .target = target,
+                            .optimize = optimize,
+                        }).module("msdf-zig"),
+                    },
+                    .{
                         .name = "ziggy",
                         .module = b.dependency("ziggy", .{
                             .target = target,
@@ -283,7 +290,7 @@ fn buildServer(
             exe.step.dependOn(&b.addInstallDirectory(.{
                 .source_dir = b.path("assets/server"),
                 .install_dir = .{ .custom = "server" },
-                .install_subdir = "assets/client",
+                .install_subdir = "assets/server",
             }).step);
 
             const run_cmd = b.addRunArtifact(exe);

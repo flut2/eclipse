@@ -36,9 +36,9 @@ defense: i16 = 0,
 resistance: i16 = 0,
 render_color_override: u32 = std.math.maxInt(u32),
 condition: utils.Condition = .{},
-atlas_data: assets.AtlasData = .default,
-subtex_atlas_data: assets.AtlasData = .default,
-wall_data: assets.WallData = .default,
+atlas_data: assets.AtlasData = .invalid,
+subtex_atlas_data: assets.AtlasData = .invalid,
+wall_data: assets.WallData = .invalid,
 data: *const game_data.EntityData = undefined,
 colors: []u32 = &.{},
 playing_anim: union(enum) {
@@ -195,18 +195,6 @@ pub fn draw(
     var screen_pos = main.camera.worldToScreen(self.x, self.y);
     const size = Camera.size_mult * main.camera.scale * self.size_mult;
 
-    var atlas_data = self.atlas_data;
-    var sink: f32 = 1.0;
-    if (!self.data.block_sink) {
-        if (map.getSquareCon(self.x, self.y, true)) |square| {
-            if (game_data.ground.from_id.get(square.data_id)) |data| sink += if (data.sink) 0.75 else 0;
-        }
-        atlas_data.tex_h /= sink;
-    }
-
-    const w = atlas_data.texWRaw() * size;
-    const h = atlas_data.texHRaw() * size;
-
     if (self.data.is_wall) {
         const wall_size_mult = Camera.px_per_tile / 9.0 * main.camera.scale * self.size_mult;
         const base_w = self.wall_data.base.texWRaw() * wall_size_mult;
@@ -221,7 +209,7 @@ pub fn draw(
             base_w,
             base_h,
             self.wall_data.base,
-            .{ .sort_extra = (screen_pos.y - base_y) + (h - base_h) },
+            .{ .sort_extra = (screen_pos.y - base_y) },
         );
         sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
 
@@ -248,7 +236,7 @@ pub fn draw(
                 left_w,
                 self.wall_data.left_outline.texHRaw() * wall_size_mult,
                 self.wall_data.left_outline,
-                .{ .sort_extra = (screen_pos.y - base_y) + (h - left_h) },
+                .{ .sort_extra = (screen_pos.y - base_y) + (base_h - left_h) },
             );
             sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
         }
@@ -263,7 +251,7 @@ pub fn draw(
                 self.wall_data.right_outline.texWRaw() * wall_size_mult,
                 right_h,
                 self.wall_data.right_outline,
-                .{ .sort_extra = (screen_pos.y - base_y) + (h - right_h) },
+                .{ .sort_extra = (screen_pos.y - base_y) + (base_h - right_h) },
             );
             sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
         }
@@ -279,7 +267,7 @@ pub fn draw(
                 self.wall_data.top_outline.texWRaw() * wall_size_mult,
                 top_h,
                 self.wall_data.top_outline,
-                .{ .sort_extra = (screen_pos.y - top_y) + (h - top_h) },
+                .{ .sort_extra = (screen_pos.y - top_y) + (base_h - top_h) },
             );
             sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
         }
@@ -295,7 +283,7 @@ pub fn draw(
                 self.wall_data.bottom_outline.texWRaw() * wall_size_mult,
                 bottom_h,
                 self.wall_data.bottom_outline,
-                .{ .sort_extra = (screen_pos.y - bottom_y) + (h - bottom_h) },
+                .{ .sort_extra = (screen_pos.y - bottom_y) + (base_h - bottom_h) },
             );
             sort_randoms.append(main.allocator, self.sort_random) catch main.oomPanic();
         }
@@ -322,7 +310,7 @@ pub fn draw(
         if (self.name_text_data) |*data| {
             const name_h = h_half - (data.height - 5) * main.camera.scale;
             const name_y = screen_pos.y - name_h;
-            data.sort_extra = (screen_pos.y - name_y) + (h - name_h);
+            data.sort_extra = (screen_pos.y - name_y);
             Renderer.drawText(
                 generics,
                 sort_extras,
@@ -349,6 +337,18 @@ pub fn draw(
 
         return;
     }
+
+    var atlas_data = self.atlas_data;
+    var sink: f32 = 1.0;
+    if (!self.data.block_sink) {
+        if (map.getSquareCon(self.x, self.y, true)) |square| {
+            if (game_data.ground.from_id.get(square.data_id)) |data| sink += if (data.sink) 0.75 else 0;
+        }
+        atlas_data.tex_h /= sink;
+    }
+
+    const w = atlas_data.texWRaw() * size;
+    const h = atlas_data.texHRaw() * size;
 
     screen_pos.y += self.z * -px_per_tile - h + assets.padding * size;
     if (self.data.float.time > 0) {

@@ -90,6 +90,15 @@ pub const TextType = enum(u32) {
     medium_italic = 1,
     bold = 2,
     bold_italic = 3,
+
+    pub fn font(self: TextType) assets.Font {
+        return switch (self) {
+            .medium => assets.medium_font,
+            .medium_italic => assets.medium_italic_font,
+            .bold => assets.bold_font,
+            .bold_italic => assets.bold_italic_font,
+        };
+    }
 };
 
 pub const AlignHori = enum {
@@ -107,7 +116,8 @@ pub const AlignVert = enum {
 pub const TextData = struct {
     text: []const u8,
     size: f32,
-    // 0 implies that the backing buffer won't be used. if your element uses it, you must set this to something above 0
+    /// 0 implies that the backing buffer won't be used.
+    /// If your element uses it, you must set this to something appropriate.
     max_chars: u32 = 0,
     text_type: TextType = .medium,
     color: u32 = 0xFFFFFF,
@@ -117,8 +127,11 @@ pub const TextData = struct {
     password: bool = false,
     handle_special_chars: bool = true,
     disable_subpixel: bool = false,
+    /// Disables text pos realignment based on the true width/height,
+    /// for use with input fields and the like.
+    disable_trim_pos: bool = false,
     scissor: ScissorRect = .{},
-    // alignments other than default need max width/height defined respectively
+    /// Alignments other than default (left/top) need max width/height defined, respectively.
     hori_align: AlignHori = .left,
     vert_align: AlignVert = .top,
     max_width: f32 = std.math.floatMax(f32),
@@ -128,225 +141,435 @@ pub const TextData = struct {
     height: f32 = 0.0,
     line_count: f32 = 0.0,
     sort_extra: f32 = 0.0,
-    line_widths: ?std.ArrayList(f32) = null,
-    break_indices: ?std.AutoHashMapUnmanaged(usize, void) = null,
+    generics: std.ArrayList(Renderer.GenericData) = .empty,
+    sort_extras: std.ArrayList(f32) = .empty,
 
     pub fn setText(self: *TextData, text: []const u8) void {
         self.text = text;
-        self.recalculateAttributes();
+        self.update();
     }
 
-    pub fn recalculateAttributes(self: *TextData) void {
-        if (self.backing_buffer.len == 0 and self.max_chars > 0) self.backing_buffer = main.allocator.alloc(u8, self.max_chars) catch main.oomPanic();
-        if (self.line_widths) |*line_widths| line_widths.clearRetainingCapacity() else self.line_widths = .empty;
-        if (self.break_indices) |*break_indices| break_indices.clearRetainingCapacity() else self.break_indices = .empty;
+    fn norm(f: f32) f32 {
+        return if (f == std.math.floatMax(f32)) 0.0 else f;
+    }
+
+    pub fn update(self: *TextData) void {
+        self.generics.clearRetainingCapacity();
+        self.sort_extras.clearRetainingCapacity();
+
+        if (self.backing_buffer.len == 0 and self.max_chars > 0)
+            self.backing_buffer = main.allocator.alloc(u8, self.max_chars) catch main.oomPanic();
+
+        const render_type: Renderer.RenderType = if (self.disable_subpixel) .text_normal else .text_subpixel;
 
         var word_widths: std.ArrayList(f32) = .empty;
         defer word_widths.deinit(main.allocator);
-        inline for (.{ true, false }) |width_pass| @"continue": {
-            var current_type = self.text_type;
-            var current_font_data = switch (current_type) {
-                .medium => assets.medium_data,
-                .medium_italic => assets.medium_italic_data,
-                .bold => assets.bold_data,
-                .bold_italic => assets.bold_italic_data,
-            };
 
-            const size_scale = self.size / current_font_data.size * (1.0 + current_font_data.padding * 2 / current_font_data.size);
-            const start_line_height = current_font_data.line_height * current_font_data.size * size_scale;
+        var line_widths: std.ArrayList(f32) = .empty;
+        defer line_widths.deinit(main.allocator);
+
+        var x_min_norm: f32 = 0.0;
+        var y_min_norm: f32 = 0.0;
+
+        const Pass = enum { width, line, render };
+        inline for (.{ Pass.width, Pass.line, Pass.render }) |pass| @"continue": {
+            var current_type = self.text_type;
+            var current_font = current_type.font();
+
+            const size_scale = self.size / current_font.size;
+            const start_line_height = current_font.line_height * current_font.size * size_scale;
             var line_height = start_line_height;
 
-            var x_pointer: f32 = 0.0;
-            var y_pointer: f32 = line_height;
+            const max_width_off = self.max_width == std.math.floatMax(f32);
+            const max_height_off = self.max_height == std.math.floatMax(f32);
+
+            const start_x = if (self.disable_trim_pos) 0.0 else -x_min_norm;
+            const start_y = line_height - if (self.disable_trim_pos) 0.0 else y_min_norm;
+            const y_base: f32 = switch (pass) {
+                .render => switch (self.vert_align) {
+                    .top => start_y,
+                    .middle => if (max_height_off) start_y else start_y + (self.max_height - self.height) / 2.0,
+                    .bottom => if (max_height_off) start_y else start_y + (self.max_height - self.height),
+                },
+                else => start_y,
+            };
+            var line_idx: u16 = 1;
+            var x_base: f32 = switch (pass) {
+                .render => switch (self.hori_align) {
+                    .left => start_x,
+                    .middle => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[0]) / 2.0,
+                    .right => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[0]),
+                },
+                else => start_x,
+            };
+            var x_pointer = x_base;
+            var y_pointer = y_base;
+
+            var line_x_min: f32 = std.math.floatMax(f32);
+            var x_min: f32 = std.math.floatMax(f32);
             var x_max: f32 = 0.0;
+            var y_min: f32 = std.math.floatMax(f32);
             var y_max: f32 = line_height;
+            var last_x_off: f32 = 0.0;
+            var last_y_off: f32 = 0.0;
+            var last_nonzero_y_off: f32 = 0.0;
+            var last_w: f32 = 0.0;
+            var last_h: f32 = 0.0;
+            var last_advance: f32 = 0.0;
             var current_size = size_scale;
+            var current_color = self.color;
             var index_offset: u16 = 0;
-            var word_start: usize = 0;
             var word_idx: usize = 0;
             var last_word_start_pointer: f32 = 0.0;
-            var last_word_end_pointer: f32 = 0.0;
             var needs_new_word_idx = true;
-            defer if (!width_pass) {
-                self.width = @max(x_max, x_pointer);
-                self.height = @max(y_max, y_pointer);
-                self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
-            } else word_widths.append(main.allocator, x_pointer - last_word_start_pointer) catch main.oomPanic();
+            var prev_char: u8 = std.math.maxInt(u8);
+            defer {
+                const right_x = x_pointer + last_x_off + last_w - last_advance;
+                switch (pass) {
+                    .width => word_widths.append(main.allocator, right_x - last_word_start_pointer) catch main.oomPanic(),
+                    .line => {
+                        x_min_norm = norm(x_min);
+                        y_min_norm = norm(y_min);
+                        self.width = x_max - x_min_norm;
+                        self.height = y_max - y_min_norm;
+                        line_widths.append(main.allocator, right_x - norm(line_x_min)) catch main.oomPanic();
+                    },
+                    .render => {},
+                }
+            }
 
             for (0..self.text.len) |i| {
                 const offset_i = i + index_offset;
                 if (offset_i >= self.text.len) break :@"continue";
 
-                defer if (!width_pass) {
-                    x_max = @max(x_max, x_pointer);
-                    y_max = @max(y_max, y_pointer);
-                };
-
                 var skip_space_check = false;
                 var char = self.text[offset_i];
-                specialChar: {
-                    if (!self.handle_special_chars) break :specialChar;
+                defer prev_char = char;
+                if (self.handle_special_chars and char == '&') specialChar: {
+                    const name_start = self.text[offset_i + 1 ..];
 
-                    if (char == '&') {
-                        const name_start = self.text[offset_i + 1 ..];
-                        const reset = "reset";
-                        if (self.text.len >= offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
-                            current_type = self.text_type;
-                            current_font_data = switch (current_type) {
-                                .medium => assets.medium_data,
-                                .medium_italic => assets.medium_italic_data,
-                                .bold => assets.bold_data,
-                                .bold_italic => assets.bold_italic_data,
-                            };
-                            current_size = size_scale;
-                            line_height = start_line_height;
-                            y_pointer += (line_height - start_line_height) / 2.0;
-                            index_offset += @intCast(reset.len);
-                            continue;
-                        }
-
-                        const space = "space";
-                        if (self.text.len >= offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
-                            char = ' ';
-                            skip_space_check = true;
-                            index_offset += @intCast(space.len);
-                            break :specialChar;
-                        }
-
-                        if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
-                            const value_start_idx = offset_i + 1 + eql_idx + 1;
-                            if (self.text.len <= value_start_idx or self.text[value_start_idx] != '"') break :specialChar;
-
-                            const value_start = self.text[value_start_idx + 1 ..];
-                            if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
-                                const name = name_start[0..eql_idx];
-                                const value = value_start[0..value_end_idx];
-                                if (std.mem.eql(u8, name, "size")) {
-                                    const size = std.fmt.parseFloat(f32, value) catch break :specialChar;
-                                    current_size = size / current_font_data.size * (1.0 + current_font_data.padding * 2 / current_font_data.size);
-                                    line_height = current_font_data.line_height * current_font_data.size * current_size;
-                                    y_pointer += (line_height - start_line_height) / 2.0;
-                                } else if (std.mem.eql(u8, name, "type")) {
-                                    if (std.mem.eql(u8, value, "med")) {
-                                        current_type = .medium;
-                                        current_font_data = assets.medium_data;
-                                    } else if (std.mem.eql(u8, value, "med_it")) {
-                                        current_type = .medium_italic;
-                                        current_font_data = assets.medium_italic_data;
-                                    } else if (std.mem.eql(u8, value, "bold")) {
-                                        current_type = .bold;
-                                        current_font_data = assets.bold_data;
-                                    } else if (std.mem.eql(u8, value, "bold_it")) {
-                                        current_type = .bold_italic;
-                                        current_font_data = assets.bold_italic_data;
-                                    }
-                                } else if (std.mem.eql(u8, name, "img")) {
-                                    var values = std.mem.splitScalar(u8, value, ',');
-                                    const sheet = values.next();
-                                    if (sheet == null or std.mem.eql(u8, sheet.?, value)) break :specialChar;
-                                    const index_str = values.next() orelse break :specialChar;
-                                    const index = std.fmt.parseInt(u32, index_str, 0) catch break :specialChar;
-                                    const data = assets.atlas_data.get(sheet.?) orelse break :specialChar;
-                                    if (index >= data.len) break :specialChar;
-
-                                    const scaled_size = current_size * current_font_data.size;
-                                    const advance = if (data[index].tex_w > data[index].tex_h)
-                                        scaled_size
-                                    else
-                                        data[index].width() * (scaled_size / data[index].height());
-
-                                    if (needs_new_word_idx) {
-                                        last_word_start_pointer = x_pointer;
-                                        if (!width_pass) {
-                                            defer word_idx += 1;
-                                            word_start = i;
-                                            if (x_pointer + word_widths.items[word_idx] > self.max_width) {
-                                                y_pointer += line_height;
-                                                self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
-                                                self.break_indices.?.put(main.allocator, i, {}) catch main.oomPanic();
-                                                self.line_count += 1;
-                                                x_pointer = 0.0;
-                                            }
-                                        }
-                                        needs_new_word_idx = false;
-                                    }
-
-                                    if (!width_pass and x_pointer + advance > self.max_width) {
-                                        y_pointer += line_height;
-                                        self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
-                                        self.break_indices.?.put(main.allocator, i, {}) catch main.oomPanic();
-                                        self.line_count += 1;
-                                        x_pointer = advance;
-                                    } else x_pointer += advance;
-                                } else if (!std.mem.eql(u8, name, "col")) break :specialChar;
-
-                                index_offset += @intCast(1 + eql_idx + 1 + value_end_idx + 1);
-                                continue;
-                            } else break :specialChar;
-                        } else break :specialChar;
+                    const reset = "reset";
+                    if (self.text.len >= offset_i + 1 + reset.len and
+                        std.mem.eql(u8, name_start[0..reset.len], reset))
+                    {
+                        current_type = self.text_type;
+                        current_font = current_type.font();
+                        current_color = self.color;
+                        current_size = size_scale;
+                        line_height = start_line_height;
+                        index_offset += @intCast(reset.len);
+                        continue;
                     }
-                }
 
-                const mod_char = if (self.password) '*' else char;
-                const char_data = current_font_data.characters[mod_char];
-                const scaled_advance = char_data.x_advance * current_size;
+                    const space = "space";
+                    if (self.text.len >= offset_i + 1 + space.len and
+                        std.mem.eql(u8, name_start[0..space.len], space))
+                    {
+                        char = ' ';
+                        skip_space_check = true;
+                        index_offset += @intCast(space.len);
+                        break :specialChar;
+                    }
 
-                if (!width_pass and char == '\n') {
-                    y_pointer += line_height;
-                    self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
-                    self.break_indices.?.put(main.allocator, i, {}) catch main.oomPanic();
-                    self.line_count += 1;
-                    x_pointer = scaled_advance;
+                    const eql_idx = std.mem.indexOfScalar(u8, name_start, '=') orelse break :specialChar;
+                    const value_start_idx = offset_i + 1 + eql_idx + 1;
+                    if (self.text.len <= value_start_idx) break :specialChar;
+
+                    const value_start = self.text[value_start_idx + 1 ..];
+                    const value_end_idx = std.mem.indexOfScalar(u8, value_start, '"') orelse break :specialChar;
+                    if (self.text.len <= value_end_idx) break :specialChar;
+
+                    const name = name_start[0..eql_idx];
+                    const value = value_start[0..value_end_idx];
+                    if (std.mem.eql(u8, name, "size")) {
+                        const size = std.fmt.parseFloat(f32, value) catch break :specialChar;
+                        current_size = size / current_font.size;
+                        line_height = current_font.line_height * current_font.size * current_size;
+                    } else if (std.mem.eql(u8, name, "type")) {
+                        if (std.mem.eql(u8, value, "med"))
+                            current_type = .medium
+                        else if (std.mem.eql(u8, value, "med_it"))
+                            current_type = .medium_italic
+                        else if (std.mem.eql(u8, value, "bold"))
+                            current_type = .bold
+                        else if (std.mem.eql(u8, value, "bold_it"))
+                            current_type = .bold_italic;
+                        current_font = current_type.font();
+                    } else if (std.mem.eql(u8, name, "img")) {
+                        var values = std.mem.splitScalar(u8, value, ',');
+                        const sheet = values.next();
+                        if (sheet == null or std.mem.eql(u8, sheet.?, value)) break :specialChar;
+                        const index_str = values.next() orelse break :specialChar;
+                        const index = std.fmt.parseInt(u32, index_str, 0) catch break :specialChar;
+                        const atlas: assets.AtlasType = .fromString(values.next() orelse "base");
+                        if (atlas == .invalid) break :specialChar;
+                        const sheet_rects = assets.tryGet(sheet.?, atlas) orelse break :specialChar;
+                        if (index >= sheet_rects.len) break :specialChar;
+
+                        const scaled_size = current_size * current_font.size;
+                        const w_larger = sheet_rects[index].tex_w > sheet_rects[index].tex_h;
+
+                        last_h = if (w_larger)
+                            sheet_rects[index].height() * (scaled_size / sheet_rects[index].width())
+                        else
+                            scaled_size;
+
+                        last_w = if (w_larger)
+                            scaled_size
+                        else
+                            sheet_rects[index].width() * (scaled_size / sheet_rects[index].height());
+
+                        last_x_off = 0.0;
+                        last_y_off = 0.0;
+
+                        if (needs_new_word_idx) {
+                            last_word_start_pointer = x_pointer;
+                            if (pass == .line) {
+                                defer word_idx += 1;
+                                if (x_pointer + word_widths.items[word_idx] > self.max_width) {
+                                    y_pointer += line_height;
+                                    line_widths.append(main.allocator, x_pointer + last_w - norm(line_x_min)) catch main.oomPanic();
+                                    x_min = @min(x_min, x_pointer);
+                                    x_max = @max(x_max, x_pointer + last_w);
+                                    x_pointer = 0.0;
+                                    line_x_min = @min(line_x_min, 0.0);
+                                }
+                            }
+                            needs_new_word_idx = false;
+                        }
+
+                        last_advance = last_w + 2;
+                        const needs_new_line = x_pointer + last_advance > self.max_width;
+                        switch (pass) {
+                            .width => {},
+                            .line => {
+                                if (needs_new_line) {
+                                    y_pointer += line_height;
+                                    line_widths.append(main.allocator, x_pointer + last_w - norm(line_x_min)) catch main.oomPanic();
+                                    x_pointer = 0.0;
+                                    line_x_min = @min(line_x_min, 0.0);
+                                }
+
+                                x_min = @min(x_min, x_pointer);
+                                x_max = @max(x_max, x_pointer + last_w);
+                                y_min = @min(y_min, y_pointer);
+                                y_max = @max(y_max, y_pointer + last_h);
+                            },
+                            .render => {
+                                if (needs_new_line) {
+                                    y_pointer += line_height;
+                                    if (y_pointer - y_base > self.max_height) return;
+
+                                    x_base = switch (self.hori_align) {
+                                        .left => start_x,
+                                        .middle => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[line_idx]) / 2.0,
+                                        .right => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[line_idx]),
+                                    };
+                                    x_pointer = x_base;
+                                    line_idx += 1;
+                                }
+
+                                Renderer.drawQuad(
+                                    &self.generics,
+                                    &self.sort_extras,
+                                    x_pointer,
+                                    y_pointer + last_nonzero_y_off - last_h / 2.0,
+                                    last_w,
+                                    last_h,
+                                    sheet_rects[index],
+                                    .{ .alpha_mult = self.alpha },
+                                );
+                            },
+                        }
+
+                        x_pointer += last_advance;
+                    } else if (std.mem.eql(u8, name, "col")) {
+                        current_color = std.fmt.parseInt(u32, value, 16) catch break :specialChar;
+                    } else break :specialChar;
+
+                    index_offset += @intCast(1 + eql_idx + 1 + value_end_idx + 1);
                     continue;
                 }
 
+                if (char == '\n') switch (pass) {
+                    .width => {},
+                    .line => {
+                        y_pointer += line_height;
+                        const old_right_x = x_pointer + last_x_off + last_w - last_advance;
+                        line_widths.append(main.allocator, old_right_x - norm(line_x_min)) catch main.oomPanic();
+                        x_min = @min(x_min, old_right_x);
+                        x_max = @max(x_max, old_right_x);
+                        x_pointer = 0.0;
+                        line_x_min = @min(line_x_min, 0.0);
+                        continue;
+                    },
+                    .render => {
+                        y_pointer += line_height;
+                        if (y_pointer - y_base > self.max_height) return;
+
+                        x_base = switch (self.hori_align) {
+                            .left => start_x,
+                            .middle => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[line_idx]) / 2.0,
+                            .right => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[line_idx]),
+                        };
+                        x_pointer = x_base;
+                        line_idx += 1;
+                        continue;
+                    },
+                };
+
+                const mod_char = if (self.password) '*' else char;
+                const char_info = current_font.characters[mod_char];
+                const kern_x = current_font.characters[prev_char].kernings.get(mod_char) orelse 0.0;
+                const scaled_advance = (if (char_info.isInvalid()) 0.0 else char_info.x_advance) * current_size;
+                last_advance = scaled_advance;
+                last_w = (char_info.width - current_font.padding * 2.0) * current_size;
+                last_h = (char_info.height - current_font.padding * 2.0) * current_size;
+                last_x_off = (char_info.x_offset + kern_x) * current_size;
+                last_y_off = -char_info.y_offset * current_size;
+                if (last_y_off > 0.0) last_nonzero_y_off = last_y_off;
+                var left_x = x_pointer + last_x_off;
+                var right_x = left_x + last_w;
+
                 if (!skip_space_check and std.ascii.isWhitespace(char)) {
-                    if (!needs_new_word_idx) {
-                        if (width_pass)
-                            word_widths.append(main.allocator, x_pointer + scaled_advance - last_word_start_pointer) catch main.oomPanic()
-                        else
-                            last_word_end_pointer = x_pointer + scaled_advance;
-                    }
+                    if (!needs_new_word_idx and pass == .width)
+                        word_widths.append(main.allocator, x_pointer - last_word_start_pointer) catch main.oomPanic();
                     needs_new_word_idx = true;
                 } else if (needs_new_word_idx) {
                     defer needs_new_word_idx = false;
-                    last_word_start_pointer = x_pointer;
-                    if (!width_pass) {
-                        defer word_idx += 1;
-                        word_start = i;
-                        if (x_pointer + word_widths.items[word_idx] > self.max_width) {
-                            y_pointer += line_height;
-                            self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
-                            self.break_indices.?.put(main.allocator, i, {}) catch main.oomPanic();
-                            self.line_count += 1;
-                            x_pointer = 0.0;
-                        }
+                    switch (pass) {
+                        .width => last_word_start_pointer = left_x,
+                        .line => {
+                            defer word_idx += 1;
+                            if (left_x + word_widths.items[word_idx] > self.max_width) {
+                                y_pointer += line_height;
+                                line_widths.append(main.allocator, x_pointer - norm(line_x_min)) catch main.oomPanic();
+                                x_min = @min(x_min, left_x);
+                                x_max = @max(x_max, right_x);
+                                x_pointer = 0.0;
+                                left_x = last_x_off;
+                                right_x = left_x + last_w;
+                                line_x_min = @min(line_x_min, 0.0);
+                            }
+                        },
+                        .render => {
+                            defer word_idx += 1;
+                            if (left_x + word_widths.items[word_idx] > self.max_width) {
+                                y_pointer += line_height;
+                                if (y_pointer - y_base > self.max_height) return;
+
+                                x_base = switch (self.hori_align) {
+                                    .left => start_x,
+                                    .middle => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[line_idx]) / 2.0,
+                                    .right => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[line_idx]),
+                                };
+                                x_pointer = x_base;
+                                left_x = x_pointer + last_x_off;
+                                right_x = left_x + last_w;
+                                line_idx += 1;
+                            }
+                        },
                     }
                 }
 
-                if (!width_pass and x_pointer + scaled_advance > self.max_width) {
-                    y_pointer += line_height;
-                    self.line_widths.?.append(main.allocator, x_pointer) catch main.oomPanic();
-                    self.break_indices.?.put(main.allocator, i, {}) catch main.oomPanic();
-                    self.line_count += 1;
-                    x_pointer = scaled_advance;
-                } else x_pointer += scaled_advance;
+                switch (pass) {
+                    .width => {},
+                    .line => {
+                        line_x_min = @min(line_x_min, left_x);
+                        x_min = @min(x_min, left_x);
+                        x_max = @max(x_max, right_x);
+
+                        if (right_x > self.max_width) {
+                            y_pointer += line_height;
+                            line_widths.append(main.allocator, right_x - norm(line_x_min)) catch main.oomPanic();
+                            x_pointer = 0.0;
+                            line_x_min = 0.0;
+                        }
+
+                        const left_y = y_pointer + last_y_off;
+                        y_min = @min(y_min, left_y);
+                        y_max = @max(y_max, left_y + last_h);
+                    },
+                    .render => {
+                        if (right_x > self.max_width) {
+                            y_pointer += line_height;
+                            if (y_pointer - y_base > self.max_height) return;
+
+                            x_base = switch (self.hori_align) {
+                                .left => start_x,
+                                .middle => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[line_idx]) / 2.0,
+                                .right => if (max_width_off) start_x else start_x + (self.max_width - line_widths.items[line_idx]),
+                            };
+                            x_pointer = x_base;
+                            left_x = x_pointer + last_x_off;
+                            right_x = left_x + last_w;
+                            line_idx += 1;
+                        }
+
+                        if (char_info.tex_w <= 0) {
+                            x_pointer += scaled_advance;
+                            continue;
+                        }
+
+                        const pos: [2]f32 = .{
+                            x_pointer + (char_info.x_offset + kern_x - current_font.padding) * current_size,
+                            y_pointer + (-char_info.y_offset - current_font.padding) * current_size,
+                        };
+
+                        const w = char_info.width * current_size;
+                        const h = char_info.height * current_size;
+                        const uv_w_per_px = char_info.tex_w / w;
+                        const uv_h_per_px = char_info.tex_h / h;
+                        const x_off = -pos[0];
+                        const y_off = -pos[1];
+
+                        const dont_scissor = ScissorRect.dont_scissor;
+
+                        self.sort_extras.append(main.allocator, self.sort_extra) catch main.oomPanic();
+                        self.generics.append(main.allocator, .{
+                            .render_type = render_type,
+                            .text_type = current_type,
+                            .text_dist_factor = current_font.px_range * current_size,
+                            .alpha_mult = self.alpha,
+                            .outline_color = self.outline_color,
+                            .outline_width = self.outline_width,
+                            .base_color = current_color,
+                            .color_intensity = 1.0,
+                            .pos = pos,
+                            .size = .{ w, h },
+                            .uv = .{ char_info.tex_u, char_info.tex_v },
+                            .uv_size = .{ char_info.tex_w, char_info.tex_h },
+                            .scissor = .{
+                                char_info.tex_u + if (self.scissor.min_x == dont_scissor)
+                                    0
+                                else
+                                    (self.scissor.min_x + x_off) * uv_w_per_px,
+                                char_info.tex_u + if (self.scissor.max_x == dont_scissor)
+                                    char_info.tex_w
+                                else
+                                    (self.scissor.max_x + x_off) * uv_w_per_px,
+                                char_info.tex_v + if (self.scissor.min_y == dont_scissor)
+                                    0
+                                else
+                                    (self.scissor.min_y + y_off) * uv_h_per_px,
+                                char_info.tex_v + if (self.scissor.max_y == dont_scissor)
+                                    char_info.tex_h
+                                else
+                                    (self.scissor.max_y + y_off) * uv_h_per_px,
+                            },
+                        }) catch main.oomPanic();
+                    },
+                }
+
+                x_pointer += scaled_advance;
             }
         }
     }
 
     pub fn deinit(self: *TextData) void {
         main.allocator.free(self.backing_buffer);
-
-        if (self.line_widths) |*line_widths| {
-            line_widths.deinit(main.allocator);
-            self.line_widths = null;
-        }
-
-        if (self.break_indices) |*break_indices| {
-            break_indices.deinit(main.allocator);
-            self.break_indices = null;
-        }
+        self.generics.deinit(main.allocator);
+        self.sort_extras.deinit(main.allocator);
     }
 };
 

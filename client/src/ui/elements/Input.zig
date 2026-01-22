@@ -68,7 +68,7 @@ pub fn init(self: *Input) void {
             .max_y = self.height() - self.text_inlay_y * 2,
         };
 
-    self.text_data.recalculateAttributes();
+    self.text_data.update();
 
     switch (self.cursor_image_data) {
         .nine_slice => |*nine_slice| nine_slice.h = self.text_data.height,
@@ -141,7 +141,7 @@ pub fn clear(self: *Input) void {
 pub fn inputUpdate(self: *Input) void {
     self.last_input = main.current_time;
 
-    self.text_data.recalculateAttributes();
+    self.text_data.update();
 
     const cursor_width = switch (self.cursor_image_data) {
         .nine_slice => |nine_slice| if (nine_slice.alpha > 0) nine_slice.w else 0.0,

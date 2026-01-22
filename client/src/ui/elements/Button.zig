@@ -99,10 +99,10 @@ pub fn init(self: *Button) void {
             text_data.hori_align = .middle;
         }
 
-        text_data.recalculateAttributes();
+        text_data.update();
     }
 
-    if (self.tooltip_text) |*text_data| text_data.recalculateAttributes();
+    if (self.tooltip_text) |*text_data| text_data.update();
 }
 
 pub fn deinit(self: *Button) void {

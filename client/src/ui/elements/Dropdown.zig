@@ -117,7 +117,7 @@ pub fn init(self: *Dropdown) void {
     self.title_text.max_height = self.title_data.height();
     self.title_text.vert_align = .middle;
     self.title_text.hori_align = .middle;
-    self.title_text.recalculateAttributes();
+    self.title_text.update();
 
     const w_base = self.w - self.container_inlay_x * 2;
     const scroll_max_w = @max(self.scroll_w, self.scroll_knob_image_data.width(.none));

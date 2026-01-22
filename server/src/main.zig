@@ -16,6 +16,8 @@ const maps = @import("map/maps.zig");
 const Settings = @import("Settings.zig");
 const World = @import("World.zig");
 
+pub const std_options: std.Options = .{ .log_level = std.log.Level.info };
+
 const tracy = if (build_options.tracy) @import("tracy") else {};
 
 // The size (in bytes) for each corresponding reader/writer.

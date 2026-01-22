@@ -48,7 +48,7 @@ const ListItem = struct {
             .base = .{ .x = 30, .y = 6 },
             .text_data = .{
                 .text = player_list_item.name,
-                .size = 10,
+                .size = 12,
                 .max_chars = 16,
                 .vert_align = .middle,
                 .hori_align = .middle,

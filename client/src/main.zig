@@ -437,7 +437,7 @@ pub fn main() !void {
 
     defer input.deinit();
 
-    window = try .create(1280, 720, .{ .title = "Eclipse", .back_pixel = .black });
+    window = try .create(1280, 720, .{ .title = "Eclipse" });
     defer window.destroy();
 
     try window.setMinSize(.{.w = 1280, .h = 720});

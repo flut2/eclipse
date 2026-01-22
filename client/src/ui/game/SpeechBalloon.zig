@@ -46,7 +46,7 @@ pub fn create(
         .outline_width = 0.0,
         .sort_extra = 500, // TODO: hack
     };
-    text_data.recalculateAttributes();
+    text_data.update();
 
     if (text_data.height >= 12 * text_scale) {
         image_data.normal.atlas_data = if (is_enemy)
@@ -54,7 +54,7 @@ pub fn create(
         else
             assets.getUiData("speech_balloons_medium", 0);
         text_data.max_height = 19 * text_scale;
-        text_data.recalculateAttributes();
+        text_data.update();
     }
 
     if (text_data.height >= 19 * text_scale) {
@@ -64,7 +64,7 @@ pub fn create(
             assets.getUiData("speech_balloons_large", 0);
         text_data.max_width = 59 * text_scale;
         text_data.max_height = 26 * text_scale;
-        text_data.recalculateAttributes();
+        text_data.update();
     }
 
     return .{

@@ -71,6 +71,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
             .text_type = .bold,
             .max_chars = 256,
             .handle_special_chars = false,
+            .disable_trim_pos = true,
         },
     });
 
@@ -109,6 +110,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
             .text_type = .bold,
             .max_chars = 256,
             .handle_special_chars = false,
+            .disable_trim_pos = true,
         },
     });
 
@@ -148,6 +150,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
             .password = true,
             .max_chars = 256,
             .handle_special_chars = false,
+            .disable_trim_pos = true,
         },
     });
 
@@ -187,6 +190,7 @@ pub fn init(self: *AccountRegisterScreen) !void {
             .password = true,
             .max_chars = 256,
             .handle_special_chars = false,
+            .disable_trim_pos = true,
         },
     });
 
@@ -334,7 +338,7 @@ fn getHwid(allocator: std.mem.Allocator) ![]const u8 {
 }
 
 fn registerCallback(ud: ?*anyopaque) void {
-    const current_screen: *AccountRegisterScreen = @alignCast(@ptrCast(ud.?));
+    const current_screen: *AccountRegisterScreen = @ptrCast(@alignCast(ud.?));
     const email = main.account_arena_allocator.dupe(u8, current_screen.email_input.text_data.text) catch main.oomPanic();
     const hwid = getHwid(main.account_arena_allocator) catch {
         ui_systems.switchScreen(.main_menu);

@@ -48,6 +48,7 @@ pub fn init(self: *AccountLoginScreen) !void {
             .text_type = .bold,
             .max_chars = 256,
             .handle_special_chars = false,
+            .disable_trim_pos = true,
         },
     });
 
@@ -85,6 +86,7 @@ pub fn init(self: *AccountLoginScreen) !void {
             .password = true,
             .max_chars = 256,
             .handle_special_chars = false,
+            .disable_trim_pos = true,
         },
     });
 
@@ -216,7 +218,7 @@ fn rememberLoginCallback(_: *Toggle) void {
 }
 
 fn loginCallback(ud: ?*anyopaque) void {
-    const current_screen: *AccountLoginScreen = @alignCast(@ptrCast(ud.?));
+    const current_screen: *AccountLoginScreen = @ptrCast(@alignCast(ud.?));
     const email = main.account_arena_allocator.dupe(u8, current_screen.email_input.text_data.text) catch main.oomPanic();
     main.current_account = .{ .email = email, .token = 0 };
     main.login_server.sendPacket(.{ .login = .{

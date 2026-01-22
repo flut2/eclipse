@@ -27,7 +27,7 @@ alpha: f32 = 1.0,
 name: ?[]const u8 = null,
 name_text_data: ?element.TextData = null,
 size_mult: f32 = 1.0,
-atlas_data: assets.AtlasData = .default,
+atlas_data: assets.AtlasData = .invalid,
 data: *const game_data.PortalData = undefined,
 playing_anim: union(enum) {
     none: void,

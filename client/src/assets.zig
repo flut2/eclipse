@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const Generator = @import("msdf-zig");
 const miniaudio = @import("miniaudio");
 const pack = @import("turbopack");
 const shared = @import("shared");
@@ -14,6 +15,8 @@ const ziggy = @import("ziggy");
 
 const main = @import("main.zig");
 const Settings = @import("Settings.zig");
+
+const f32_nan = std.math.nan(f32);
 
 // for packing
 const Position = struct { x: u16, y: u16 };
@@ -45,57 +48,139 @@ const UiSheet = struct {
     h: u32 = imply_size,
 };
 
-const PlaneBounds = struct {
-    left: f32 = 0.0,
-    bottom: f32 = 0.0,
-    right: f32 = 0.0,
-    top: f32 = 0.0,
-};
-
-const AtlasBounds = struct {
-    left: f32 = 0.0,
-    bottom: f32 = 0.0,
-    right: f32 = 0.0,
-    top: f32 = 0.0,
-};
-
-const GlyphData = struct {
-    unicode: u8,
-    advance: f32,
-    plane_bounds: ?PlaneBounds = null,
-    atlas_bounds: ?AtlasBounds = null,
-};
-
-const InternalFontData = struct {
-    atlas: struct {
-        type: enum { sdf, psdf, msdf, mtsdf },
-        distance_range: f32,
-        distance_range_middle: f32,
-        size: f32,
-        width: f32,
-        height: f32,
-        y_origin: enum { top, bottom },
-    },
-    metrics: struct {
-        em_size: f32,
-        line_height: f32,
-        ascender: f32,
-        descender: f32,
-        underline_y: f32,
-        underline_thickness: f32,
-    },
-    glyphs: []GlyphData,
-    kerning: []struct { dummy: f32 },
-};
-
-const ParsedFontData = struct {
-    characters: [256]CharacterData,
+pub const Font = struct {
+    characters: [256]Character,
     size: f32,
     padding: f32,
     px_range: f32,
     line_height: f32,
     width: f32,
     height: f32,
+
+    pub const invalid: Font = .{
+        .characters = @splat(.invalid),
+        .size = f32_nan,
+        .padding = f32_nan,
+        .px_range = f32_nan,
+        .line_height = f32_nan,
+        .width = f32_nan,
+        .height = f32_nan,
+    };
+
+    fn asciiCharsUnicode() []const u21 {
+        var ret: []const u21 = &.{};
+        for (32..127) |i| ret = ret ++ [_]u21{i};
+        return ret;
+    }
+
+    pub fn parse(font_path: []const u8, target_img: *stbi.Image) !Font {
+        const pad = 2.0;
+        const px_size = 24.0;
+        const px_range = 6.0;
+        const font_atlas_w = 256;
+        const font_atlas_h = 256;
+
+        const file = try std.fs.cwd().openFile(font_path, .{});
+        defer file.close();
+
+        var read_buf: [4096]u8 = undefined;
+        var reader = file.reader(&read_buf);
+        const bytes = try reader.interface.allocRemaining(main.allocator, .unlimited);
+        defer main.allocator.free(bytes);
+
+        var gen: Generator = try .create(bytes);
+        defer gen.destroy();
+
+        const metrics = try gen.fontMetrics();
+        var ret: Font = .{
+            .characters = @splat(.invalid),
+            .size = px_size,
+            .padding = pad,
+            .px_range = px_range,
+            .line_height = @floatCast(metrics.line_height),
+            .width = font_atlas_w,
+            .height = font_atlas_h,
+        };
+
+        const font_info = try gen.generateAtlas(main.allocator, comptime asciiCharsUnicode(), font_atlas_w, font_atlas_h, pad, true, .{
+            .sdf_type = .sdf,
+            .scanline_fill_rule = .non_zero,
+            .px_size = px_size,
+            .px_range = px_range,
+        });
+        defer font_info.deinit(main.allocator);
+
+        target_img.* = try .createEmpty(font_atlas_w, font_atlas_h, 1, .{});
+        @memcpy(target_img.data, font_info.pixels.normal);
+
+        for (font_info.glyphs) |glyph|
+            ret.characters[glyph.codepoint] = try .parse(glyph, px_size);
+
+        for (font_info.kernings) |kern|
+            ret.characters[kern.codepoint_1].kernings.put(
+                main.allocator,
+                kern.codepoint_2,
+                @floatCast(kern.x * px_size),
+            ) catch main.oomPanic();
+
+        return ret;
+    }
+
+    pub fn deinit(self: *Font) void {
+        for (&self.characters) |*char| char.deinit();
+    }
+};
+
+pub const Character = struct {
+    x_advance: f32,
+    tex_u: f32,
+    tex_v: f32,
+    tex_w: f32,
+    tex_h: f32,
+    x_offset: f32,
+    y_offset: f32,
+    width: f32,
+    height: f32,
+    kernings: std.AutoHashMapUnmanaged(u21, f32) = .empty,
+
+    pub const invalid: Character = .{
+        .x_advance = f32_nan,
+        .tex_u = f32_nan,
+        .tex_v = f32_nan,
+        .tex_w = f32_nan,
+        .tex_h = f32_nan,
+        .x_offset = f32_nan,
+        .y_offset = f32_nan,
+        .width = f32_nan,
+        .height = f32_nan,
+    };
+
+    pub fn isInvalid(self: Character) bool {
+        inline for (@typeInfo(Character).@"struct".fields) |field| @"continue": {
+            if (comptime std.mem.eql(u8, field.name, "kernings")) break :@"continue";
+            if (std.math.isNan(@field(self, field.name))) return true;
+        }
+
+        return false;
+    }
+
+    pub fn parse(glyph: Generator.AtlasGlyphData, size: f64) !Character {
+        return .{
+            .x_advance = @floatCast(glyph.glyph_data.advance * size),
+            .x_offset = @floatCast(glyph.glyph_data.bearing_x * size),
+            .y_offset = @floatCast(glyph.glyph_data.bearing_y * size),
+            .width = @floatFromInt(glyph.glyph_data.width),
+            .height = @floatFromInt(glyph.glyph_data.height),
+            .tex_u = @floatCast(glyph.tex_u),
+            .tex_v = @floatCast(glyph.tex_v),
+            .tex_w = @floatCast(glyph.tex_w),
+            .tex_h = @floatCast(glyph.tex_h),
+        };
+    }
+
+    pub fn deinit(self: *Character) void {
+        self.kernings.deinit(main.allocator);
+    }
 };
 
 const AudioState = struct {
@@ -154,34 +239,6 @@ pub const ui_texel_h = 1.0 / @as(comptime_float, ui_atlas_height);
 pub const Action = enum { stand, walk, attack };
 pub const Direction = enum { right, left, down, up };
 
-pub const CharacterData = struct {
-    x_advance: f32,
-    tex_u: f32,
-    tex_v: f32,
-    tex_w: f32,
-    tex_h: f32,
-    x_offset: f32,
-    y_offset: f32,
-    width: f32,
-    height: f32,
-
-    pub fn parse(glyph: GlyphData, size: f32, atlas_w: f32, atlas_h: f32) !CharacterData {
-        const plane_bounds: PlaneBounds = glyph.plane_bounds orelse .{};
-        const atlas_bounds: AtlasBounds = glyph.atlas_bounds orelse .{};
-        return .{
-            .x_advance = glyph.advance * size,
-            .x_offset = plane_bounds.left * size,
-            .y_offset = plane_bounds.bottom * size,
-            .width = (plane_bounds.right - plane_bounds.left) * size,
-            .height = (plane_bounds.top - plane_bounds.bottom) * size,
-            .tex_u = atlas_bounds.left / atlas_w,
-            .tex_v = (atlas_h - atlas_bounds.top) / atlas_h,
-            .tex_h = (atlas_bounds.top - atlas_bounds.bottom) / atlas_h,
-            .tex_w = (atlas_bounds.right - atlas_bounds.left) / atlas_w,
-        };
-    }
-};
-
 pub const WallData = struct {
     base: AtlasData,
     left_outline: AtlasData,
@@ -189,13 +246,21 @@ pub const WallData = struct {
     top_outline: AtlasData,
     bottom_outline: AtlasData,
 
-    pub const default: WallData = .{
-        .base = .fromRaw(0, 0, 0, 0, .base),
-        .left_outline = .fromRaw(0, 0, 0, 0, .base),
-        .right_outline = .fromRaw(0, 0, 0, 0, .base),
-        .top_outline = .fromRaw(0, 0, 0, 0, .base),
-        .bottom_outline = .fromRaw(0, 0, 0, 0, .base),
+    pub const invalid: WallData = .{
+        .base = .invalid,
+        .left_outline = .invalid,
+        .right_outline = .invalid,
+        .top_outline = .invalid,
+        .bottom_outline = .invalid,
     };
+
+    pub fn removePadding(self: *WallData) void {
+        self.base.removePadding();
+        self.left_outline.removePadding();
+        self.right_outline.removePadding();
+        self.top_outline.removePadding();
+        self.bottom_outline.removePadding();
+    }
 };
 
 pub const AnimEnemyData = struct {
@@ -205,6 +270,11 @@ pub const AnimEnemyData = struct {
 
     walk_anims: [directions * walk_actions]AtlasData,
     attack_anims: [directions * attack_actions]AtlasData,
+
+    pub const invalid: AnimEnemyData = .{
+        .walk_anims = @splat(.invalid),
+        .attack_anims = @splat(.invalid),
+    };
 
     pub fn removePadding(self: *AnimEnemyData) void {
         for (&self.walk_anims) |*data| data.removePadding();
@@ -220,6 +290,11 @@ pub const AnimPlayerData = struct {
     walk_anims: [directions * walk_actions]AtlasData,
     attack_anims: [directions * attack_actions]AtlasData,
 
+    pub const invalid: AnimPlayerData = .{
+        .walk_anims = @splat(.invalid),
+        .attack_anims = @splat(.invalid),
+    };
+
     pub fn removePadding(self: *AnimPlayerData) void {
         for (&self.walk_anims) |*data| data.removePadding();
         for (&self.attack_anims) |*data| data.removePadding();
@@ -229,11 +304,22 @@ pub const AnimPlayerData = struct {
 pub const AtlasType = enum(u8) {
     base,
     ui,
+    invalid,
+
+    pub fn fromString(str: []const u8) AtlasType {
+        return if (std.mem.eql(u8, str, "base"))
+            .base
+        else if (std.mem.eql(u8, str, "ui"))
+            .ui
+        else
+            .invalid;
+    }
 
     pub fn width(self: AtlasType) f32 {
         return switch (self) {
             .base => atlas_width,
             .ui => ui_atlas_width,
+            .invalid => @panic("Invalid atlas type passed to `width()`"),
         };
     }
 
@@ -241,6 +327,7 @@ pub const AtlasType = enum(u8) {
         return switch (self) {
             .base => atlas_height,
             .ui => ui_atlas_height,
+            .invalid => @panic("Invalid atlas type passed to `height()`"),
         };
     }
 };
@@ -250,7 +337,13 @@ pub const AtlasData = extern struct {
         return fromRawF32(1.0, 1.0, 1.0, 1.0, atlas_type);
     }
 
-    pub const default: AtlasData = .fromRaw(0, 0, 0, 0, .base);
+    pub const invalid: AtlasData = .{
+        .tex_u = f32_nan,
+        .tex_v = f32_nan,
+        .tex_w = f32_nan,
+        .tex_h = f32_nan,
+        .atlas_type = .invalid,
+    };
 
     tex_u: f32,
     tex_v: f32,
@@ -309,38 +402,38 @@ pub const AtlasData = extern struct {
     }
 };
 
-pub var sfx_path_buffer: [256]u8 = undefined;
-pub var audio_state: ?*AudioState = undefined;
-pub var main_music: ?*miniaudio.Sound = undefined;
+pub var sfx_path_buffer: [256]u8 = @splat(std.math.maxInt(u8));
+pub var audio_state: ?*AudioState = null;
+pub var main_music: ?*miniaudio.Sound = null;
 pub var arena: std.heap.ArenaAllocator = undefined;
 
-pub var atlas: stbi.Image = undefined;
-pub var ui_atlas: stbi.Image = undefined;
+pub var atlas: stbi.Image = .invalid;
+pub var ui_atlas: stbi.Image = .invalid;
 
-pub var bold_atlas: stbi.Image = undefined;
-pub var bold_data: ParsedFontData = undefined;
-pub var bold_italic_atlas: stbi.Image = undefined;
-pub var bold_italic_data: ParsedFontData = undefined;
-pub var medium_atlas: stbi.Image = undefined;
-pub var medium_data: ParsedFontData = undefined;
-pub var medium_italic_atlas: stbi.Image = undefined;
-pub var medium_italic_data: ParsedFontData = undefined;
+pub var bold_atlas: stbi.Image = .invalid;
+pub var bold_font: Font = .invalid;
+pub var bold_italic_atlas: stbi.Image = .invalid;
+pub var bold_italic_font: Font = .invalid;
+pub var medium_atlas: stbi.Image = .invalid;
+pub var medium_font: Font = .invalid;
+pub var medium_italic_atlas: stbi.Image = .invalid;
+pub var medium_italic_font: Font = .invalid;
 
 // TODO: clean this up now that we're on Windy
-pub var default_cursor_pressed: windy.Cursor = undefined;
-pub var default_cursor: windy.Cursor = undefined;
-pub var royal_cursor_pressed: windy.Cursor = undefined;
-pub var royal_cursor: windy.Cursor = undefined;
-pub var ranger_cursor_pressed: windy.Cursor = undefined;
-pub var ranger_cursor: windy.Cursor = undefined;
-pub var aztec_cursor_pressed: windy.Cursor = undefined;
-pub var aztec_cursor: windy.Cursor = undefined;
-pub var fiery_cursor_pressed: windy.Cursor = undefined;
-pub var fiery_cursor: windy.Cursor = undefined;
-pub var target_enemy_cursor_pressed: windy.Cursor = undefined;
-pub var target_enemy_cursor: windy.Cursor = undefined;
-pub var target_ally_cursor_pressed: windy.Cursor = undefined;
-pub var target_ally_cursor: windy.Cursor = undefined;
+pub var default_cursor_pressed: windy.Cursor = .invalid;
+pub var default_cursor: windy.Cursor = .invalid;
+pub var royal_cursor_pressed: windy.Cursor = .invalid;
+pub var royal_cursor: windy.Cursor = .invalid;
+pub var ranger_cursor_pressed: windy.Cursor = .invalid;
+pub var ranger_cursor: windy.Cursor = .invalid;
+pub var aztec_cursor_pressed: windy.Cursor = .invalid;
+pub var aztec_cursor: windy.Cursor = .invalid;
+pub var fiery_cursor_pressed: windy.Cursor = .invalid;
+pub var fiery_cursor: windy.Cursor = .invalid;
+pub var target_enemy_cursor_pressed: windy.Cursor = .invalid;
+pub var target_enemy_cursor: windy.Cursor = .invalid;
+pub var target_ally_cursor_pressed: windy.Cursor = .invalid;
+pub var target_ally_cursor: windy.Cursor = .invalid;
 
 pub var sfx_copy_map: std.AutoHashMapUnmanaged(*miniaudio.Sound, std.ArrayList(*miniaudio.Sound)) = .empty;
 pub var sfx_map: std.StringHashMapUnmanaged(*miniaudio.Sound) = .empty;
@@ -352,27 +445,27 @@ pub var anim_enemies: std.StringHashMapUnmanaged([]AnimEnemyData) = .empty;
 pub var anim_players: std.StringHashMapUnmanaged([]AnimPlayerData) = .empty;
 pub var walls: std.StringHashMapUnmanaged([]WallData) = .empty;
 
-pub var interact_key_tex: AtlasData = .fromRawF32(0.0, 0.0, 0.0, 0.0, .ui);
+pub var interact_key_tex: AtlasData = .invalid;
 pub var key_tex_map: std.AutoHashMapUnmanaged(Settings.Button, u16) = .empty;
 
-pub var left_mask_uv: [2]f32 = undefined;
-pub var top_mask_uv: [2]f32 = undefined;
-pub var right_mask_uv: [2]f32 = undefined;
-pub var bottom_mask_uv: [2]f32 = undefined;
-pub var minimap_icons: []AtlasData = undefined;
-pub var particle: AtlasData = undefined;
-pub var generic_8x8: AtlasData = undefined;
-pub var empty_bar_data: AtlasData = undefined;
-pub var hp_bar_data: AtlasData = undefined;
-pub var mp_bar_data: AtlasData = undefined;
-pub var error_data: AtlasData = undefined;
-pub var error_data_enemy: AnimEnemyData = undefined;
-pub var error_data_player: AnimPlayerData = undefined;
-pub var error_data_wall: WallData = undefined;
+pub var left_mask_uv: [2]f32 = @splat(f32_nan);
+pub var top_mask_uv: [2]f32 = @splat(f32_nan);
+pub var right_mask_uv: [2]f32 = @splat(f32_nan);
+pub var bottom_mask_uv: [2]f32 = @splat(f32_nan);
+pub var minimap_icons: []AtlasData = &.{};
+pub var particle: AtlasData = .invalid;
+pub var generic_8x8: AtlasData = .invalid;
+pub var empty_bar_data: AtlasData = .invalid;
+pub var hp_bar_data: AtlasData = .invalid;
+pub var mp_bar_data: AtlasData = .invalid;
+pub var error_data: AtlasData = .invalid;
+pub var error_data_enemy: AnimEnemyData = .invalid;
+pub var error_data_player: AnimPlayerData = .invalid;
+pub var error_data_wall: WallData = .invalid;
 pub var light_w: f32 = 1.0;
 pub var light_h: f32 = 1.0;
-pub var light_data: AtlasData = undefined;
-pub var bloodfont_data: AnimPlayerData = undefined;
+pub var light_data: AtlasData = .invalid;
+pub var bloodfont_data: AnimPlayerData = .invalid;
 
 fn packSort(_: void, lhs: pack.IdRect, rhs: pack.IdRect) bool {
     return lhs.rect.w < rhs.rect.w;
@@ -1092,41 +1185,6 @@ fn addAnimPlayer(
     try dominant_color_data.put(arena.allocator(), sheet_name, dominant_colors);
 }
 
-fn parseFontData(comptime path: []const u8) !ParsedFontData {
-    const arena_allocator = arena.allocator();
-
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-
-    const file_data = try file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);
-    defer arena_allocator.free(file_data);
-
-    const font_data = try ziggy.parseLeaky(InternalFontData, arena_allocator, file_data, .{});
-
-    const empty_char: CharacterData = .{
-        .x_advance = 0.0,
-        .tex_u = 0.0,
-        .tex_v = 0.0,
-        .tex_w = 0.0,
-        .tex_h = 0.0,
-        .x_offset = 0.0,
-        .y_offset = 0.0,
-        .width = 0.0,
-        .height = 0.0,
-    };
-    var ret: ParsedFontData = .{
-        .characters = @splat(empty_char),
-        .size = font_data.atlas.size,
-        .padding = 8.0,
-        .px_range = font_data.atlas.distance_range,
-        .line_height = font_data.metrics.line_height,
-        .width = font_data.atlas.width,
-        .height = font_data.atlas.height,
-    };
-    for (font_data.glyphs) |glyph| ret.characters[glyph.unicode] = try .parse(glyph, ret.size, ret.width, ret.height);
-    return ret;
-}
-
 pub fn playSfx(name: []const u8) void {
     if (main.settings.sfx_volume <= 0.0) return;
     if (audio_state == null) {
@@ -1213,6 +1271,11 @@ pub fn deinit() void {
     target_ally_cursor_pressed.destroy();
     target_ally_cursor.destroy();
 
+    bold_font.deinit();
+    bold_italic_font.deinit();
+    medium_font.deinit();
+    medium_italic_font.deinit();
+
     arena.deinit();
 }
 
@@ -1239,15 +1302,10 @@ pub fn init() !void {
         if (key_tex_map.capacity() > 0) key_tex_map.rehash(dummy_button_ctx);
     }
 
-    bold_atlas = try .loadFromFile("./assets/client/fonts/amaranth_bold.png", 4);
-    bold_italic_atlas = try .loadFromFile("./assets/client/fonts/amaranth_bold_italic.png", 4);
-    medium_atlas = try .loadFromFile("./assets/client/fonts/amaranth_regular.png", 4);
-    medium_italic_atlas = try .loadFromFile("./assets/client/fonts/amaranth_italic.png", 4);
-
-    bold_data = try parseFontData("./assets/client/fonts/amaranth_bold.ziggy");
-    bold_italic_data = try parseFontData("./assets/client/fonts/amaranth_bold_italic.ziggy");
-    medium_data = try parseFontData("./assets/client/fonts/amaranth_regular.ziggy");
-    medium_italic_data = try parseFontData("./assets/client/fonts/amaranth_italic.ziggy");
+    bold_font = try .parse("./assets/client/fonts/Amaranth-Bold.ttf", &bold_atlas);
+    bold_italic_font = try .parse("./assets/client/fonts/Amaranth-BoldItalic.ttf", &bold_italic_atlas);
+    medium_font = try .parse("./assets/client/fonts/Amaranth-Regular.ttf", &medium_atlas);
+    medium_italic_font = try .parse("./assets/client/fonts/Amaranth-Italic.ttf", &medium_italic_atlas);
 
     audio_state = AudioState.create() catch blk: {
         main.audioFailure();
@@ -1522,6 +1580,19 @@ fn populateKeyMap() void {
 pub fn getKeyTexture(button: Settings.Button) AtlasData {
     const tex_list = ui_atlas_data.get("key_indicators") orelse @panic("Key texture parsing failed, the key_indicators sheet is missing");
     return tex_list[key_tex_map.get(button) orelse 104];
+}
+
+pub fn get(name: []const u8, atlas_type: AtlasType) []const AtlasData {
+    return tryGet(name, atlas_type) orelse
+        std.debug.panic("Could not find sheet `{s}` in the `{t}` atlas", .{ name, atlas_type });
+}
+
+pub fn tryGet(name: []const u8, atlas_type: AtlasType) ?[]const AtlasData {
+    return switch (atlas_type) {
+        .invalid => @panic("Invalid atlas type passed to `assets.tryGet()`"),
+        .base => atlas_data.get(name),
+        .ui => ui_atlas_data.get(name),
+    };
 }
 
 pub fn getUiData(name: []const u8, idx: u16) AtlasData {

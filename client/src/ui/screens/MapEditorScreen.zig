@@ -662,6 +662,7 @@ pub fn init(self: *MapEditorScreen) !void {
             .text_type = .bold,
             .max_chars = 256,
             .handle_special_chars = false,
+            .disable_trim_pos = true,
         },
     });
 

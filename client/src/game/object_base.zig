@@ -95,8 +95,10 @@ pub fn addToMap(obj_data: anytype, comptime ObjType: type) void {
             };
         }
 
-        if (self.data.draw_on_ground or @hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall)
-            if (@hasField(T, "anim_data")) self.anim_data.removePadding() else self.atlas_data.removePadding();
+        if (self.data.draw_on_ground)
+            if (@hasField(T, "anim_data")) self.anim_data.removePadding() else self.atlas_data.removePadding()
+        else if (@hasField(@TypeOf(self.data.*), "is_wall") and self.data.is_wall)
+            self.wall_data.removePadding();
     }
 
     subtexParse: {

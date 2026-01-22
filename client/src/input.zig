@@ -186,17 +186,16 @@ fn handleAbility4() void {
 }
 
 pub fn charEvent(_: *windy.Window, char: u21, _: windy.Mods) void {
-    if (selected_input_field) |input_field| {
-        if (char > std.math.maxInt(u8)) return;
-        const byte_code: u8 = @intCast(char);
-        if (!std.ascii.isAscii(byte_code) or input_field.index >= 256) return;
+    if (char > std.math.maxInt(u8)) return;
+    
+    const byte_code: u8 = @intCast(char);
+    const input_field = selected_input_field orelse return;
+    if (std.ascii.isControl(byte_code) or input_field.index >= 256) return;
 
-        input_field.text_data.backing_buffer[input_field.index] = byte_code;
-        input_field.index += 1;
-        input_field.text_data.text = input_field.text_data.backing_buffer[0..input_field.index];
-        input_field.inputUpdate();
-        return;
-    }
+    input_field.text_data.backing_buffer[input_field.index] = byte_code;
+    input_field.index += 1;
+    input_field.text_data.text = input_field.text_data.backing_buffer[0..input_field.index];
+    input_field.inputUpdate();
 }
 
 pub fn keyEvent(_: *windy.Window, state: windy.PressState, key: windy.Key, mods: windy.Mods) void {

@@ -185,7 +185,7 @@ pub fn init(self: *Slider) void {
 
     if (self.value_text_data) |*text_data| {
         // have to do it for the backing buffer init
-        text_data.recalculateAttributes();
+        text_data.update();
         text_data.setText(std.fmt.bufPrint(text_data.backing_buffer, "{d:.2}", .{self.current_value}) catch "-1.00");
     }
 
@@ -194,10 +194,10 @@ pub fn init(self: *Slider) void {
         text_data.hori_align = .middle;
         text_data.max_width = self.w;
         text_data.max_height = self.title_offset;
-        text_data.recalculateAttributes();
+        text_data.update();
     }
 
-    if (self.tooltip_text) |*text_data| text_data.recalculateAttributes();
+    if (self.tooltip_text) |*text_data| text_data.update();
 
     self.setValue(self.current_value);
 }

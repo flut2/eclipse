@@ -34,7 +34,7 @@ pub fn draw(
     const frac = f32i(elapsed) / f32i(self.duration);
     self.text_data.size = self.initial_size * @min(1.0, @max(0.7, 1.0 - frac * 0.3 + 0.075));
     self.text_data.alpha = 1.0 - frac + 0.33;
-    self.text_data.recalculateAttributes(); // not great doing this per frame for each instance but oh well
+    self.text_data.update(); // not great doing this per frame for each instance but oh well
     const x = obj_x - self.text_data.width / 2;
     const y = obj_y - offset - self.text_data.height - frac * 40;
     self.text_data.sort_extra = obj_y - y;

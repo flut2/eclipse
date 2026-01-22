@@ -804,7 +804,7 @@ fn parsePlayerStat(player: *Player, stat: network_data.PlayerStat) void {
         .x => |val| player.x = val,
         .y => |val| player.y = val,
         .size_mult => |val| player.size_mult = val,
-        .cards => |val| player.cards = val,
+        .cards => |val| player.cards = main.allocator.dupe(u16, val) catch main.oomPanic(),
         .resources => |val| {
             main.allocator.free(player.resources);
             player.resources = main.allocator.dupe(network_data.DataIdWithCount(u32), val) catch main.oomPanic();

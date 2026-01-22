@@ -68,7 +68,7 @@ pub fn mouseMove(self: *Image, x: f32, y: f32, x_offset: f32, y_offset: f32) boo
 }
 
 pub fn init(self: *Image) void {
-    if (self.tooltip_text) |*text_data| text_data.recalculateAttributes();
+    if (self.tooltip_text) |*text_data| text_data.update();
 }
 
 pub fn deinit(self: *Image) void {

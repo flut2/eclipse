@@ -49,7 +49,7 @@ pub fn init(self: *CharacterTooltip) !void {
         .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_tooltip_spirit_bar", 0) } },
         .text_data = .{
             .text = "Aether 0 - 0/0",
-            .size = 10,
+            .size = 12,
             .text_type = .bold_italic,
             .max_chars = 128,
         },
@@ -73,7 +73,7 @@ pub fn init(self: *CharacterTooltip) !void {
         .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_tooltip_talent_bar_1", 0) } },
         .text_data = .{
             .text = "0% Keystone Talents unlocked",
-            .size = 11,
+            .size = 13,
             .text_type = .bold_italic,
             .max_chars = 128,
         },
@@ -84,7 +84,7 @@ pub fn init(self: *CharacterTooltip) !void {
         .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_tooltip_talent_bar_1", 0) } },
         .text_data = .{
             .text = "0% Ability Talents unlocked",
-            .size = 11,
+            .size = 13,
             .text_type = .bold_italic,
             .max_chars = 128,
         },
@@ -95,7 +95,7 @@ pub fn init(self: *CharacterTooltip) !void {
         .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("character_tooltip_talent_bar_2", 0) } },
         .text_data = .{
             .text = "0% Minor Talents unlocked",
-            .size = 10,
+            .size = 12,
             .text_type = .bold_italic,
             .max_chars = 128,
         },
@@ -110,7 +110,7 @@ pub fn init(self: *CharacterTooltip) !void {
         .base = .{ .x = 42 + i * 60, .y = 208 },
         .text_data = .{
             .text = "",
-            .size = 10,
+            .size = 12,
             .max_chars = 32,
             .text_type = .bold,
             .hori_align = .middle,

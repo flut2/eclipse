@@ -443,7 +443,7 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
         self.cmd_pool,
         self.vk_allocator,
         .{ .depth = 1, .width = mapping[1].width, .height = mapping[1].height },
-        if (mapping[2]) .r8g8b8a8_unorm else .r8g8b8a8_srgb,
+        if (mapping[2]) .r8_unorm else .r8g8b8a8_srgb,
         .{ .transfer_dst_bit = true, .sampled_bit = true },
         mapping[1].data,
     );
@@ -1333,6 +1333,7 @@ pub fn drawQuad(
     const render_type: RenderType = if (opts.render_type_override) |rt| rt else switch (atlas_data.atlas_type) {
         .ui => .ui_quad,
         .base => .quad,
+        .invalid => @panic("Invalid atlas type passed to `drawQuad()`"),
     };
 
     const uv_w_per_px = atlas_data.tex_w / w;
@@ -1369,216 +1370,46 @@ pub fn drawText(
     text_data: *element.TextData,
     scissor_override: element.ScissorRect,
 ) void {
-    if (scale <= 0.3) return;
+    // TODO: handle scales properly
+    if (scale < 1.0 or text_data.text.len == 0) return;
 
-    if (text_data.line_widths == null or text_data.break_indices == null) return;
+    sort_extras.appendSlice(main.allocator, text_data.sort_extras.items) catch main.oomPanic();
+    for (text_data.generics.items) |generic| {
+        var mod_generic = generic;
+        mod_generic.pos[0] += x;
+        mod_generic.pos[1] += y;
 
-    var current_type = text_data.text_type;
-    var current_font_data = switch (current_type) {
-        .medium => assets.medium_data,
-        .medium_italic => assets.medium_italic_data,
-        .bold => assets.bold_data,
-        .bold_italic => assets.bold_italic_data,
-    };
-
-    const size_scale = text_data.size / current_font_data.size * scale * (1.0 + current_font_data.padding * 2 / current_font_data.size);
-    const start_line_height = current_font_data.line_height * current_font_data.size * size_scale;
-    var line_height = start_line_height;
-
-    const max_width_off = text_data.max_width == std.math.floatMax(f32);
-    const max_height_off = text_data.max_height == std.math.floatMax(f32);
-
-    const render_type: RenderType = if (main.settings.enable_subpixel and !text_data.disable_subpixel)
-        .text_subpixel
-    else
-        .text_normal;
-
-    const start_x = x;
-    const start_y = y + line_height;
-    const y_base = switch (text_data.vert_align) {
-        .top => start_y,
-        .middle => if (max_height_off) start_y else start_y + (text_data.max_height - text_data.height) / 2.0,
-        .bottom => if (max_height_off) start_y else start_y + (text_data.max_height - text_data.height),
-    };
-    var line_idx: u16 = 1;
-    var x_base = switch (text_data.hori_align) {
-        .left => start_x,
-        .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[0]) / 2.0,
-        .right => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[0]),
-    };
-    var x_pointer = x_base;
-    var y_pointer = y_base;
-    var current_color = text_data.color;
-    var current_size = size_scale;
-    var index_offset: u16 = 0;
-    for (0..text_data.text.len) |i| {
-        const offset_i = i + index_offset;
-        if (offset_i >= text_data.text.len) return;
-
-        var char = text_data.text[offset_i];
-        specialChar: {
-            if (!text_data.handle_special_chars) break :specialChar;
-
-            if (char == '&') {
-                const name_start = text_data.text[offset_i + 1 ..];
-                const reset = "reset";
-                if (text_data.text.len >= offset_i + 1 + reset.len and std.mem.eql(u8, name_start[0..reset.len], reset)) {
-                    current_type = text_data.text_type;
-                    current_font_data = switch (current_type) {
-                        .medium => assets.medium_data,
-                        .medium_italic => assets.medium_italic_data,
-                        .bold => assets.bold_data,
-                        .bold_italic => assets.bold_italic_data,
-                    };
-                    current_color = text_data.color;
-                    current_size = size_scale;
-                    line_height = start_line_height;
-                    y_pointer += (line_height - start_line_height) / 2.0;
-                    index_offset += @intCast(reset.len);
-                    continue;
-                }
-
-                const space = "space";
-                if (text_data.text.len >= offset_i + 1 + space.len and std.mem.eql(u8, name_start[0..space.len], space)) {
-                    char = ' ';
-                    index_offset += @intCast(space.len);
-                    break :specialChar;
-                }
-
-                if (std.mem.indexOfScalar(u8, name_start, '=')) |eql_idx| {
-                    const value_start_idx = offset_i + 1 + eql_idx + 1;
-                    if (text_data.text.len <= value_start_idx or text_data.text[value_start_idx] != '"') break :specialChar;
-
-                    const value_start = text_data.text[value_start_idx + 1 ..];
-                    if (std.mem.indexOfScalar(u8, value_start, '"')) |value_end_idx| {
-                        const name = name_start[0..eql_idx];
-                        const value = value_start[0..value_end_idx];
-                        if (std.mem.eql(u8, name, "col")) {
-                            current_color = std.fmt.parseInt(u32, value, 16) catch break :specialChar;
-                        } else if (std.mem.eql(u8, name, "size")) {
-                            const size = std.fmt.parseFloat(f32, value) catch break :specialChar;
-                            current_size = size / current_font_data.size * scale * (1.0 + current_font_data.padding * 2 / current_font_data.size);
-                            line_height = current_font_data.line_height * current_font_data.size * current_size;
-                            y_pointer += (line_height - start_line_height) / 2.0;
-                        } else if (std.mem.eql(u8, name, "type")) {
-                            if (std.mem.eql(u8, value, "med")) {
-                                current_type = .medium;
-                                current_font_data = assets.medium_data;
-                            } else if (std.mem.eql(u8, value, "med_it")) {
-                                current_type = .medium_italic;
-                                current_font_data = assets.medium_italic_data;
-                            } else if (std.mem.eql(u8, value, "bold")) {
-                                current_type = .bold;
-                                current_font_data = assets.bold_data;
-                            } else if (std.mem.eql(u8, value, "bold_it")) {
-                                current_type = .bold_italic;
-                                current_font_data = assets.bold_italic_data;
-                            }
-                        } else if (std.mem.eql(u8, name, "img")) {
-                            var values = std.mem.splitScalar(u8, value, ',');
-                            const sheet = values.next();
-                            if (sheet == null or std.mem.eql(u8, sheet.?, value)) break :specialChar;
-                            const index_str = values.next() orelse break :specialChar;
-                            const index = std.fmt.parseInt(u32, index_str, 0) catch break :specialChar;
-                            const data = assets.atlas_data.get(sheet.?) orelse break :specialChar;
-                            if (index >= data.len) break :specialChar;
-
-                            if (text_data.break_indices.?.get(i) != null) {
-                                y_pointer += line_height;
-                                if (y_pointer - y_base > text_data.max_height) return;
-
-                                x_base = switch (text_data.hori_align) {
-                                    .left => start_x,
-                                    .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]) / 2.0,
-                                    .right => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]),
-                                };
-                                x_pointer = x_base;
-                                line_idx += 1;
-                            }
-
-                            const w_larger = data[index].tex_w > data[index].tex_h;
-                            const scaled_size = current_size * current_font_data.size;
-                            drawQuad(
-                                generics,
-                                sort_extras,
-                                x_pointer,
-                                y_pointer - scaled_size,
-                                if (w_larger) scaled_size else data[index].width() * (scaled_size / data[index].height()),
-                                if (w_larger) data[index].height() * (scaled_size / data[index].width()) else scaled_size,
-                                data[index],
-                                .{ .alpha_mult = text_data.alpha },
-                            );
-
-                            x_pointer += scaled_size;
-                        } else break :specialChar;
-
-                        index_offset += @intCast(1 + eql_idx + 1 + value_end_idx + 1);
-                        continue;
-                    } else break :specialChar;
-                } else break :specialChar;
-            }
-        }
-
-        const mod_char = if (text_data.password) '*' else char;
-        const char_data = current_font_data.characters[mod_char];
-
-        const scaled_advance = char_data.x_advance * current_size;
-        var next_x_pointer = x_pointer + scaled_advance;
-        defer x_pointer = next_x_pointer;
-        if (text_data.break_indices.?.get(i) != null) {
-            y_pointer += line_height;
-            if (y_pointer - y_base > text_data.max_height) return;
-
-            x_base = switch (text_data.hori_align) {
-                .left => start_x,
-                .middle => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]) / 2.0,
-                .right => if (max_width_off) start_x else start_x + (text_data.max_width - text_data.line_widths.?.items[line_idx]),
-            };
-            x_pointer = x_base;
-            next_x_pointer = x_base + scaled_advance;
-            line_idx += 1;
-        }
-
-        if (char_data.tex_w <= 0) continue;
-
-        const w = char_data.width * current_size;
-        const h = char_data.height * current_size;
-        const pos = .{
-            x_pointer + char_data.x_offset * current_size,
-            // TODO: need to subtract pad height as well... maybe render padding properly later
-            y_pointer + (-char_data.y_offset - current_font_data.padding * 2) * current_size - h,
-        };
-
-        const uv_w_per_px = char_data.tex_w / w;
-        const uv_h_per_px = char_data.tex_h / h;
-        const x_off = x_base - pos[0];
-        const y_off = y_base - pos[1] - line_height;
-
+        const scissor = if (scissor_override.isDefault())
+            text_data.scissor
+        else
+            scissor_override;
         const dont_scissor = element.ScissorRect.dont_scissor;
 
-        const scissor = if (scissor_override.isDefault()) text_data.scissor else scissor_override;
+        const uv_w_per_px = mod_generic.uv_size[0] / mod_generic.size[0];
+        const uv_h_per_px = mod_generic.uv_size[1] / mod_generic.size[1];
+        const x_off = x - mod_generic.pos[0];
+        const y_off = y - mod_generic.pos[1];
 
-        sort_extras.append(main.allocator, text_data.sort_extra) catch main.oomPanic();
-        generics.append(main.allocator, .{
-            .render_type = render_type,
-            .text_type = current_type,
-            .text_dist_factor = current_font_data.px_range * current_size,
-            .alpha_mult = text_data.alpha,
-            .outline_color = text_data.outline_color,
-            .outline_width = text_data.outline_width,
-            .base_color = current_color,
-            .color_intensity = 1.0,
-            .pos = pos,
-            .size = .{ w, h },
-            .uv = .{ char_data.tex_u, char_data.tex_v },
-            .uv_size = .{ char_data.tex_w, char_data.tex_h },
-            .scissor = .{
-                char_data.tex_u + if (scissor.min_x == dont_scissor) 0 else (scissor.min_x + x_off) * uv_w_per_px,
-                char_data.tex_u + if (scissor.max_x == dont_scissor) char_data.tex_w else (scissor.max_x + x_off) * uv_w_per_px,
-                char_data.tex_v + if (scissor.min_y == dont_scissor) 0 else (scissor.min_y + y_off) * uv_h_per_px,
-                char_data.tex_v + if (scissor.max_y == dont_scissor) char_data.tex_h else (scissor.max_y + y_off) * uv_h_per_px,
-            },
-        }) catch main.oomPanic();
+        mod_generic.scissor = .{
+            mod_generic.uv[0] + if (scissor.min_x == dont_scissor)
+                0.0
+            else
+                (scissor.min_x + x_off) * uv_w_per_px,
+            mod_generic.uv[0] + if (scissor.max_x == dont_scissor)
+                mod_generic.uv_size[0]
+            else
+                (scissor.max_x + x_off) * uv_w_per_px,
+            mod_generic.uv[1] + if (scissor.min_y == dont_scissor)
+                0.0
+            else
+                (scissor.min_y + y_off) * uv_h_per_px,
+            mod_generic.uv[1] + if (scissor.max_y == dont_scissor)
+                mod_generic.uv_size[1]
+            else
+                (scissor.max_y + y_off) * uv_h_per_px,
+        };
+
+        generics.append(main.allocator, mod_generic) catch main.oomPanic();
     }
 }
 

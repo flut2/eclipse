@@ -10,7 +10,7 @@ base: ElementBase,
 text_data: element.TextData,
 
 pub fn init(self: *Text) void {
-    self.text_data.recalculateAttributes();
+    self.text_data.update();
 }
 
 pub fn deinit(self: *Text) void {

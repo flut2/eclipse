@@ -70,8 +70,8 @@ pub fn mouseMove(self: *KeyMapper, x: f32, y: f32, x_offset: f32, y_offset: f32)
 }
 
 pub fn init(self: *KeyMapper) void {
-    if (self.title_text_data) |*text_data| text_data.recalculateAttributes();
-    if (self.tooltip_text) |*text_data| text_data.recalculateAttributes();
+    if (self.title_text_data) |*text_data| text_data.update();
+    if (self.tooltip_text) |*text_data| text_data.update();
 }
 
 pub fn deinit(self: *KeyMapper) void {

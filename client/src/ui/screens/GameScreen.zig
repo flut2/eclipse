@@ -379,7 +379,7 @@ pub fn init(self: *GameScreen) !void {
         .image_data = .{ .normal = .{ .atlas_data = health_bar_data } },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .text_type = .bold_italic,
             .max_chars = 64,
         },
@@ -391,7 +391,7 @@ pub fn init(self: *GameScreen) !void {
         .image_data = .{ .normal = .{ .atlas_data = mana_bar_data } },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .text_type = .bold_italic,
             .max_chars = 64,
         },
@@ -403,7 +403,7 @@ pub fn init(self: *GameScreen) !void {
         .image_data = .{ .normal = .{ .atlas_data = spirit_bar_data } },
         .text_data = .{
             .text = "",
-            .size = 10,
+            .size = 12,
             .text_type = .bold_italic,
             .max_chars = 64,
         },
@@ -570,6 +570,7 @@ pub fn init(self: *GameScreen) !void {
             .text_type = .bold,
             .max_chars = 256,
             .handle_special_chars = false,
+            .disable_trim_pos = true,
         },
         .enterCallback = chatCallback,
         .is_chat = true,
@@ -603,7 +604,7 @@ pub fn init(self: *GameScreen) !void {
         },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .text_type = .bold,
             .hori_align = .middle,
             .max_width = self.minimap.width(),
@@ -957,13 +958,13 @@ pub fn update(self: *GameScreen, time: i64, _: f32) !void {
 
             var health_text_data = &self.health_bar.text_data;
             if (local_player.max_hp_bonus > 0) {
-                health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"65E698\"(+{})", .{
+                health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"12\"&col=\"65E698\"(+{})", .{
                     local_player.hp,
                     local_player.data.stats.health + local_player.max_hp_bonus,
                     local_player.max_hp_bonus,
                 }));
             } else if (local_player.max_hp_bonus < 0) {
-                health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"10\"&col=\"FF7070\"({})", .{
+                health_text_data.setText(try std.fmt.bufPrint(health_text_data.backing_buffer, "{}/{} &size=\"12\"&col=\"FF7070\"({})", .{
                     local_player.hp,
                     local_player.data.stats.health + local_player.max_hp_bonus,
                     local_player.max_hp_bonus,
@@ -1208,7 +1209,7 @@ fn itemDoubleClickCallback(item: *Item) void {
 }
 
 fn statsCallback(ud: ?*anyopaque) void {
-    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    const screen: *GameScreen = @ptrCast(@alignCast(ud.?));
     screen.stats_container.base.visible = !screen.stats_container.base.visible;
     screen.cards_container.base.visible = false;
     screen.talent_view.setVisible(false);
@@ -1217,7 +1218,7 @@ fn statsCallback(ud: ?*anyopaque) void {
 }
 
 fn cardsCallback(ud: ?*anyopaque) void {
-    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    const screen: *GameScreen = @ptrCast(@alignCast(ud.?));
     screen.cards_container.base.visible = !screen.cards_container.base.visible;
     screen.stats_container.base.visible = false;
     screen.talent_view.setVisible(false);
@@ -1225,7 +1226,7 @@ fn cardsCallback(ud: ?*anyopaque) void {
 }
 
 fn talentsCallback(ud: ?*anyopaque) void {
-    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    const screen: *GameScreen = @ptrCast(@alignCast(ud.?));
     screen.talent_view.setVisible(!screen.talent_view.base.base.visible);
     screen.cards_container.base.visible = false;
     screen.stats_container.base.visible = false;
@@ -1233,7 +1234,7 @@ fn talentsCallback(ud: ?*anyopaque) void {
 }
 
 fn resourcesCallback(ud: ?*anyopaque) void {
-    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    const screen: *GameScreen = @ptrCast(@alignCast(ud.?));
     screen.resource_view.setVisible(!screen.resource_view.base.base.visible);
     screen.cards_container.base.visible = false;
     screen.stats_container.base.visible = false;
@@ -1241,12 +1242,12 @@ fn resourcesCallback(ud: ?*anyopaque) void {
 }
 
 fn leftCardFlipperCallback(ud: ?*anyopaque) void {
-    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    const screen: *GameScreen = @ptrCast(@alignCast(ud.?));
     screen.card_page = @max(1, screen.card_page - 1);
 }
 
 fn rightCardFlipperCallback(ud: ?*anyopaque) void {
-    const screen: *GameScreen = @alignCast(@ptrCast(ud.?));
+    const screen: *GameScreen = @ptrCast(@alignCast(ud.?));
     if (map.localPlayerCon()) |player| screen.card_page = @min(@divFloor(player.cards.len, 5), screen.card_page + 1);
 }
 

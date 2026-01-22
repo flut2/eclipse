@@ -39,7 +39,7 @@ pub fn init(self: *AbilityTooltip) !void {
         .base = .{ .x = 8 * 4 + 30, .y = 12 },
         .text_data = .{
             .text = "",
-            .size = 14,
+            .size = 16,
             .text_type = .bold_italic,
         },
     });
@@ -48,7 +48,7 @@ pub fn init(self: *AbilityTooltip) !void {
         .base = .{ .x = 8 * 4 + 30, .y = 12 + 5 + self.title.text_data.height },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .color = 0xB3B3B3,
             .max_chars = 128,
         },
@@ -66,7 +66,7 @@ pub fn init(self: *AbilityTooltip) !void {
         .base = .{ .x = 10, .y = self.line_break.base.y + self.line_break.height() + 10 },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .max_width = self.decor.width() - 20,
             .color = 0x9B9B9B,
         },

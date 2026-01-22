@@ -69,12 +69,8 @@ vec3 unpackColor(uint color) {
     );
 }
 
-float median(vec3 tex) {
-    return max(min(tex.r, tex.g), min(max(tex.r, tex.g), tex.b));
-}
-
-float sampleMsdf(float msdf, float dist_factor, float width) {
-    return clamp((msdf - 0.5 + width) * dist_factor + 0.5, 0.0, 1.0);
+float resolveDist(float dist, float dist_factor, float width) {
+    return clamp((dist - 0.5 + width) * dist_factor + 0.5, 0.0, 1.0);
 }
 
 void main() {
@@ -108,38 +104,37 @@ void main() {
         }
 
         case text_normal_render_type: {
-            vec4 tex = vec4(0.0, 0.0, 0.0, 0.0);
+            float dist = 0.0;
             switch (instance.text_type) {
                 default: discard;
 
                 case medium_text_type:
-                    tex = textureGrad(medium_text_tex, in_uv, dx, dy);
+                    dist = textureGrad(medium_text_tex, in_uv, dx, dy).r;
                     break;
 
                 case medium_italic_text_type:
-                    tex = textureGrad(medium_italic_text_tex, in_uv, dx, dy);
+                    dist = textureGrad(medium_italic_text_tex, in_uv, dx, dy).r;
                     break;
 
                 case bold_text_type:
-                    tex = textureGrad(bold_text_tex, in_uv, dx, dy);
+                    dist = textureGrad(bold_text_tex, in_uv, dx, dy).r;
                     break;
                 
                 case bold_italic_text_type:
-                    tex = textureGrad(bold_italic_text_tex, in_uv, dx, dy);
+                    dist = textureGrad(bold_italic_text_tex, in_uv, dx, dy).r;
                     break;
             }
 
-            float msdf = median(tex.rgb);
-            if (msdf == 0.0) discard;
+            if (dist == 0.0) discard;
             
-            float alpha = sampleMsdf(msdf, instance.text_dist_factor, 0.0);
+            float alpha = resolveDist(dist, instance.text_dist_factor, 0.0);
             vec4 base_pixel = vec4(unpackColor(instance.base_color), alpha * instance.alpha_mult);
             if (instance.outline_width <= 0.0) {
                 color = premultiply(base_pixel);
                 return;
             }
 
-            float outline_alpha = sampleMsdf(msdf, instance.text_dist_factor, instance.outline_width);
+            float outline_alpha = resolveDist(dist, instance.text_dist_factor, instance.outline_width);
             color = premultiply(mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, alpha * instance.alpha_mult));
             return;
         }
@@ -147,59 +142,56 @@ void main() {
         case text_subpixel_render_type: {
             vec2 subpixel_width = vec2((abs(dx.x) + abs(dy.x)) / 3.0, 0.0);
 
-            vec4 red = vec4(0.0, 0.0, 0.0, 0.0);
-            vec4 green = vec4(0.0, 0.0, 0.0, 0.0);
-            vec4 blue = vec4(0.0, 0.0, 0.0, 0.0);
+            float red = 0.0;
+            float green = 0.0;
+            float blue = 0.0;
             switch (instance.text_type) {
                 default: discard;
 
                 case medium_text_type:
-                    red = textureGrad(medium_text_tex, in_uv - subpixel_width, dx, dy);
-                    green = textureGrad(medium_text_tex, in_uv, dx, dy);
-                    blue = textureGrad(medium_text_tex, in_uv + subpixel_width, dx, dy);
+                    red = textureGrad(medium_text_tex, in_uv - subpixel_width, dx, dy).r;
+                    green = textureGrad(medium_text_tex, in_uv, dx, dy).r;
+                    blue = textureGrad(medium_text_tex, in_uv + subpixel_width, dx, dy).r;
                     break;
 
                 case medium_italic_text_type:
-                    red = textureGrad(medium_italic_text_tex, in_uv - subpixel_width, dx, dy);
-                    green = textureGrad(medium_italic_text_tex, in_uv, dx, dy);
-                    blue = textureGrad(medium_italic_text_tex, in_uv + subpixel_width, dx, dy);
+                    red = textureGrad(medium_italic_text_tex, in_uv - subpixel_width, dx, dy).r;
+                    green = textureGrad(medium_italic_text_tex, in_uv, dx, dy).r;
+                    blue = textureGrad(medium_italic_text_tex, in_uv + subpixel_width, dx, dy).r;
                     break;
 
                 case bold_text_type:
-                    red = textureGrad(bold_text_tex, in_uv - subpixel_width, dx, dy);
-                    green = textureGrad(bold_text_tex, in_uv, dx, dy);
-                    blue = textureGrad(bold_text_tex, in_uv + subpixel_width, dx, dy);
+                    red = textureGrad(bold_text_tex, in_uv - subpixel_width, dx, dy).r;
+                    green = textureGrad(bold_text_tex, in_uv, dx, dy).r;
+                    blue = textureGrad(bold_text_tex, in_uv + subpixel_width, dx, dy).r;
                     break;
                 
                 case bold_italic_text_type:
-                    red = textureGrad(bold_italic_text_tex, in_uv - subpixel_width, dx, dy);
-                    green = textureGrad(bold_italic_text_tex, in_uv, dx, dy);
-                    blue = textureGrad(bold_italic_text_tex, in_uv + subpixel_width, dx, dy);
+                    red = textureGrad(bold_italic_text_tex, in_uv - subpixel_width, dx, dy).r;
+                    green = textureGrad(bold_italic_text_tex, in_uv, dx, dy).r;
+                    blue = textureGrad(bold_italic_text_tex, in_uv + subpixel_width, dx, dy).r;
                     break;
             }
 
-            float red_dist = median(red.rgb);
-            float green_dist = median(green.rgb);
-            float blue_dist = median(blue.rgb);
-            if (red_dist == 0.0 && green_dist == 0.0 && blue_dist == 0.0) discard;
+            if (red == 0.0 && green == 0.0 && blue == 0.0) discard;
             
-            float red_alpha = sampleMsdf(red_dist, instance.text_dist_factor, 0.0) * instance.alpha_mult;
-            float green_alpha = sampleMsdf(green_dist, instance.text_dist_factor, 0.0) * instance.alpha_mult;
-            float blue_alpha = sampleMsdf(blue_dist, instance.text_dist_factor, 0.0) * instance.alpha_mult;
+            float red_alpha = resolveDist(red, instance.text_dist_factor, 0.0) * instance.alpha_mult;
+            float green_alpha = resolveDist(green, instance.text_dist_factor, 0.0) * instance.alpha_mult;
+            float blue_alpha = resolveDist(blue, instance.text_dist_factor, 0.0) * instance.alpha_mult;
 
             vec3 base_color = unpackColor(instance.base_color);
             vec4 base_pixel = vec4(
                 base_color.r * red_alpha,
                 base_color.g * green_alpha,
                 base_color.b * blue_alpha,
-                (red_alpha + green_alpha + blue_alpha) / 3.0
+                green_alpha
             );
             if (instance.outline_width <= 0.0) {
                 color = premultiply(base_pixel);
                 return;
             }
 
-            float outline_alpha = sampleMsdf(green_dist, instance.text_dist_factor, instance.outline_width);
+            float outline_alpha = resolveDist(green, instance.text_dist_factor, instance.outline_width);
             color = premultiply(mix(vec4(unpackColor(instance.outline_color), outline_alpha * instance.alpha_mult), base_pixel, green_alpha));
             return;
         }

@@ -91,7 +91,7 @@ pub fn mouseMove(self: *Item, x: f32, y: f32, x_offset: f32, y_offset: f32) bool
 }
 
 pub fn init(self: *Item) void {
-    if (self.amount_text) |*text_data| text_data.recalculateAttributes();
+    if (self.amount_text) |*text_data| text_data.update();
 }
 
 pub fn deinit(self: *Item) void {

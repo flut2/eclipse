@@ -15,7 +15,7 @@ pub fn init(self: *Bar) void {
     self.text_data.max_height = self.height();
     self.text_data.vert_align = .middle;
     self.text_data.hori_align = .middle;
-    self.text_data.recalculateAttributes();
+    self.text_data.update();
 }
 
 pub fn deinit(self: *Bar) void {

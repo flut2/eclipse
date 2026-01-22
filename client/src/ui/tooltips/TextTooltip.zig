@@ -43,14 +43,12 @@ pub fn update(self: *TextTooltip, params: tooltip.ParamsFor(TextTooltip)) void {
 
     inline for (@typeInfo(element.TextData).@"struct".fields) |field| {
         comptime if (std.mem.eql(u8, field.name, "backing_buffer") or
-            std.mem.eql(u8, field.name, "line_widths") or
-            std.mem.eql(u8, field.name, "break_indices") or
-            std.mem.eql(u8, field.name, "lock")) continue;
+            std.mem.eql(u8, field.name, "generics")) continue;
 
         @field(self.text.text_data, field.name) = @field(params.text_data, field.name);
     }
 
-    self.text.text_data.recalculateAttributes();
+    self.text.text_data.update();
 
     switch (self.decor.image_data) {
         .nine_slice => |*nine_slice| {

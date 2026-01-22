@@ -50,14 +50,14 @@ pub fn init(self: *ItemTooltip) !void {
 
     self.item_name = try self.root.createChild(Text, .{
         .base = .{ .x = 8 * 4 + 25, .y = 10 },
-        .text_data = .{ .text = "", .size = 14, .max_chars = 64, .text_type = .bold_italic },
+        .text_data = .{ .text = "", .size = 16, .max_chars = 64, .text_type = .bold_italic },
     });
 
     self.rarity = try self.root.createChild(Text, .{
         .base = .{ .x = 8 * 4 + 25, .y = self.item_name.text_data.height + 10 },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .color = 0xB3B3B3,
             .max_chars = 64,
             .text_type = .medium_italic,
@@ -65,10 +65,10 @@ pub fn init(self: *ItemTooltip) !void {
     });
 
     self.description = try self.root.createChild(Text, .{
-        .base = .{ .x = 10, .y = self.rarity.base.y + self.rarity.height() + 10 },
+        .base = .{ .x = 10, .y = self.rarity.base.y + self.rarity.height() + 15 },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .max_width = self.decor.width() - 20,
             .color = 0xB3B3B3,
             .max_chars = 64,
@@ -86,7 +86,7 @@ pub fn init(self: *ItemTooltip) !void {
         .image_data = .{ .normal = .{ .atlas_data = assets.getUiData("tooltip_level_bar", 0) } },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .text_type = .bold_italic,
             .max_chars = 128,
         },
@@ -109,7 +109,7 @@ pub fn init(self: *ItemTooltip) !void {
         .base = .{ .x = 10, .y = self.line_break_one.base.y + self.line_break_one.height() - 10 },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .max_width = self.decor.width() - 20,
             .color = 0x9B9B9B,
             // only half of the buffer is used at a time to avoid aliasing, so the max len is half of this
@@ -129,7 +129,7 @@ pub fn init(self: *ItemTooltip) !void {
         .base = .{ .x = 10, .y = self.line_break_two.base.y + self.line_break_two.height() - 10 },
         .text_data = .{
             .text = "",
-            .size = 12,
+            .size = 14,
             .max_width = self.decor.width() - 20,
             .color = 0x9B9B9B,
             // only half of the buffer is used at a time to avoid aliasing, so the max len is half of this
@@ -233,12 +233,12 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         .common => "Common",
     };
 
+    self.rarity.text_data.color = rarity_text_color;
     self.rarity.text_data.setText(std.fmt.bufPrint(
         self.rarity.text_data.backing_buffer,
         "{s} {s}",
         .{ rarity_text, data.item_type.toString() },
     ) catch self.rarity.text_data.text);
-    self.rarity.text_data.color = rarity_text_color;
 
     if (assets.atlas_data.get(data.texture.sheet)) |tex_data| {
         self.image.image_data.normal.atlas_data = tex_data[data.texture.index];
@@ -295,8 +295,8 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
         self.tooltip_level_bar_decor.base.y + self.tooltip_level_bar_decor.height()
     else
         self.description.base.y + self.description.height();
-    self.line_break_one.base.y = bottom + 10;
-    self.main_text.base.y = self.line_break_one.base.y - 10;
+    self.line_break_one.base.y = bottom + 5;
+    self.main_text.base.y = self.line_break_one.base.y + self.line_break_one.height() + 5;
 
     const line_base = "{s}\n";
     const line_base_inset = line_base ++ "- ";
@@ -480,7 +480,7 @@ pub fn update(self: *ItemTooltip, params: tooltip.ParamsFor(ItemTooltip)) void {
     self.main_text.text_data.setText(text);
 
     self.line_break_two.base.y = self.main_text.base.y + self.main_text.text_data.height + 5;
-    self.footer.base.y = self.line_break_two.base.y - 10;
+    self.footer.base.y = self.line_break_two.base.y + self.line_break_two.height() + 5;
 
     var footer_text: []u8 = "";
     if (data.untradeable)
