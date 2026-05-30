@@ -171,10 +171,13 @@ fn loadMap() !void {
     // Means that the map is already loaded, map editor unsets this
     if (main.needs_map_bg) return;
 
-    const file = try std.fs.cwd().openFile("./assets/client/background.map", .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().openFile(main.io, "./assets/client/background.map", .{});
+    defer file.close(main.io);
 
-    const file_buf = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
+    var read_buf: [4096]u8 = undefined;
+    var reader = file.reader(main.io, &read_buf);
+
+    const file_buf = try reader.interface.allocRemaining(main.allocator, .unlimited);
     defer main.allocator.free(file_buf);
 
     var arena: std.heap.ArenaAllocator = .init(main.allocator);

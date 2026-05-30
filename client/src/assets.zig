@@ -80,11 +80,11 @@ pub const Font = struct {
         const font_atlas_w = 256;
         const font_atlas_h = 256;
 
-        const file = try std.fs.cwd().openFile(font_path, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().openFile(main.io, font_path, .{});
+        defer file.close(main.io);
 
         var read_buf: [4096]u8 = undefined;
-        var reader = file.reader(&read_buf);
+        var reader = file.reader(main.io, &read_buf);
         const bytes = try reader.interface.allocRemaining(main.allocator, .unlimited);
         defer main.allocator.free(bytes);
 
@@ -111,6 +111,7 @@ pub const Font = struct {
         defer font_info.deinit(main.allocator);
 
         target_img.* = try .createEmpty(font_atlas_w, font_atlas_h, 1, .{});
+        errdefer target_img.deinit();
         @memcpy(target_img.data, font_info.pixels.normal);
 
         for (font_info.glyphs) |glyph|
@@ -572,7 +573,7 @@ fn addWall(
     if (x_off < 0 or y_off < 0) @panic("Invalid base cut w/h");
     if (std.mem.indexOf(u8, image_path, "..") != null) {
         std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
-        std.posix.exit(0);
+        std.process.exit(0);
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/client/sheets/{s}", .{image_path});
@@ -710,7 +711,7 @@ fn addImage(
 
     if (std.mem.indexOf(u8, image_path, "..") != null) {
         std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
-        std.posix.exit(0);
+        std.process.exit(0);
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/client/sheets/{s}", .{image_path});
@@ -835,7 +836,7 @@ fn addUiImage(
 
     if (std.mem.indexOf(u8, image_path, "..") != null) {
         std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
-        std.posix.exit(0);
+        std.process.exit(0);
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/client/ui/{s}", .{image_path});
@@ -906,7 +907,7 @@ fn addAnimEnemy(
 
     if (std.mem.indexOf(u8, image_path, "..") != null) {
         std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
-        std.posix.exit(0);
+        std.process.exit(0);
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/client/sheets/{s}", .{image_path});
@@ -1048,7 +1049,7 @@ fn addAnimPlayer(
 
     if (std.mem.indexOf(u8, image_path, "..") != null) {
         std.log.err("Going backwards in paths is not allowed. Problematic path: {s}", .{image_path});
-        std.posix.exit(0);
+        std.process.exit(0);
     }
     var buf: [128]u8 = undefined;
     const path = try std.fmt.bufPrintZ(&buf, "./assets/client/sheets/{s}", .{image_path});
@@ -1234,7 +1235,7 @@ pub fn playSfx(name: []const u8) void {
 
     const path = std.fmt.bufPrintZ(&sfx_path_buffer, "./assets/client/sfx/{s}", .{name}) catch return;
 
-    if (std.fs.cwd().access(path, .{})) |_| {
+    if (std.Io.Dir.cwd().access(main.io, path, .{})) |_| {
         var audio = audio_state.?.engine.createSoundFromFile(path, .{}) catch return;
         audio.setVolume(main.settings.sfx_volume);
         audio.start() catch return;
@@ -1248,14 +1249,15 @@ pub fn playSfx(name: []const u8) void {
     }
 }
 
-pub fn deinit() void {
-    if (main_music) |music| music.destroy();
+fn deinitSounds() void {
     var copy_audio_iter = sfx_copy_map.valueIterator();
     while (copy_audio_iter.next()) |copy_audio_list| for (copy_audio_list.items) |copy_audio| copy_audio.*.destroy();
     var audio_iter = sfx_map.valueIterator();
     while (audio_iter.next()) |audio| audio.*.destroy();
     if (audio_state) |state| state.destroy();
+}
 
+fn deinitCursors() void {
     default_cursor_pressed.destroy();
     default_cursor.destroy();
     royal_cursor_pressed.destroy();
@@ -1270,6 +1272,13 @@ pub fn deinit() void {
     target_enemy_cursor.destroy();
     target_ally_cursor_pressed.destroy();
     target_ally_cursor.destroy();
+}
+
+pub fn deinit() void {
+    if (main_music) |music| music.destroy();
+
+    deinitSounds();
+    deinitCursors();
 
     bold_font.deinit();
     bold_italic_font.deinit();
@@ -1282,6 +1291,7 @@ pub fn deinit() void {
 pub fn init() !void {
     arena = .init(main.allocator);
     const arena_allocator = arena.allocator();
+    errdefer arena.deinit();
 
     defer {
         const dummy_string_ctx: std.hash_map.StringContext = undefined;
@@ -1303,14 +1313,26 @@ pub fn init() !void {
     }
 
     bold_font = try .parse("./assets/client/fonts/Amaranth-Bold.ttf", &bold_atlas);
+    errdefer bold_font.deinit();
+
     bold_italic_font = try .parse("./assets/client/fonts/Amaranth-BoldItalic.ttf", &bold_italic_atlas);
+    errdefer bold_italic_font.deinit();
+
     medium_font = try .parse("./assets/client/fonts/Amaranth-Regular.ttf", &medium_atlas);
+    errdefer medium_font.deinit();
+
     medium_italic_font = try .parse("./assets/client/fonts/Amaranth-Italic.ttf", &medium_italic_atlas);
+    errdefer medium_italic_font.deinit();
 
     audio_state = AudioState.create() catch blk: {
         main.audioFailure();
         break :blk null;
     };
+    errdefer {
+        deinitSounds();
+        if (audio_state) |state| state.destroy();
+    }
+
     if (audio_state) |state| {
         state.engine.start() catch main.audioFailure();
 
@@ -1321,29 +1343,44 @@ pub fn init() !void {
             if (main.settings.music_volume > 0.0) music.start() catch main.audioFailure();
         }
     }
+    errdefer if (main_music) |music| music.destroy();
 
     try addCursors("cursors.png", 32, 32);
+    errdefer deinitCursors();
 
     atlas = try .createEmpty(atlas_width, atlas_height, 4, .{});
+    errdefer atlas.deinit();
+
     var ctx: pack.Context = try .create(main.allocator, atlas_width, atlas_height, .{ .spaces_to_prealloc = 4096 });
     defer ctx.deinit();
 
     ui_atlas = try .createEmpty(ui_atlas_width, ui_atlas_height, 4, .{});
+    errdefer ui_atlas.deinit();
+
     var ui_ctx: pack.Context = try .create(main.allocator, ui_atlas_width, ui_atlas_height, .{ .spaces_to_prealloc = 4096 });
     defer ui_ctx.deinit();
 
-    const game_sheets_data = try std.fs.cwd().openFile("./assets/client/sheets/game_sheets.ziggy", .{});
-    defer game_sheets_data.close();
+    const game_file_path = "./assets/client/sheets/game_sheets.ziggy";
+    const game_sheet_file = try std.Io.Dir.cwd().openFile(main.io, game_file_path, .{});
+    defer game_sheet_file.close(main.io);
 
-    const game_sheets_file_data = try game_sheets_data.readToEndAllocOptions(
-        arena_allocator,
-        std.math.maxInt(u32),
-        null,
-        .fromByteUnits(@alignOf(u8)),
-        0,
-    );
+    var game_read_buf: [1024]u8 = undefined;
+    var game_reader = game_sheet_file.reader(main.io, &game_read_buf);
 
-    for (try ziggy.parseLeaky([]GameSheet, arena_allocator, game_sheets_file_data, .{})) |game_sheet| {
+    const game_sheet_bytes = try game_reader.interface.allocRemainingAlignedSentinel(arena_allocator, .unlimited, .of(u8), 0);
+
+    var stdout: std.Io.File = .stdout();
+    var stdout_buf: [4096]u8 = undefined;
+    var stdout_wtr = stdout.writer(main.io, &stdout_buf);
+
+    var game_meta: ziggy.Deserializer.Meta = .init;
+    for (ziggy.deserializeLeaky([]GameSheet, arena_allocator, game_sheet_bytes, &game_meta, .{ .copy_strings = .always }) catch |e| {
+        if (e != error.OutOfMemory) {
+            try game_meta.reportErrors(arena_allocator, .{}, game_file_path, game_sheet_bytes, e, &stdout_wtr.interface);
+            try stdout_wtr.interface.flush();
+        }
+        return e;
+    }) |game_sheet| {
         switch (game_sheet.type) {
             .image => try addImage(
                 game_sheet.name,
@@ -1370,40 +1407,49 @@ pub fn init() !void {
         }
     }
 
-    const wall_sheets_file = try std.fs.cwd().openFile("./assets/client/sheets/wall_sheets.ziggy", .{});
-    defer wall_sheets_file.close();
+    const wall_file_path = "./assets/client/sheets/wall_sheets.ziggy";
+    const wall_sheet_file = try std.Io.Dir.cwd().openFile(main.io, wall_file_path, .{});
+    defer wall_sheet_file.close(main.io);
 
-    const wall_sheets_file_data = try wall_sheets_file.readToEndAllocOptions(
-        arena_allocator,
-        std.math.maxInt(u32),
-        null,
-        .fromByteUnits(@alignOf(u8)),
-        0,
+    var wall_read_buf: [1024]u8 = undefined;
+    var wall_reader = wall_sheet_file.reader(main.io, &wall_read_buf);
+
+    const wall_sheet_bytes = try wall_reader.interface.allocRemainingAlignedSentinel(arena_allocator, .unlimited, .of(u8), 0);
+
+    var wall_meta: ziggy.Deserializer.Meta = .init;
+    for (ziggy.deserializeLeaky([]WallSheet, arena_allocator, wall_sheet_bytes, &wall_meta, .{ .copy_strings = .always }) catch |e| {
+        if (e != error.OutOfMemory) {
+            try wall_meta.reportErrors(arena_allocator, .{}, wall_file_path, wall_sheet_bytes, e, &stdout_wtr.interface);
+            try stdout_wtr.interface.flush();
+        }
+        return e;
+    }) |wall_sheet| try addWall(
+        wall_sheet.name,
+        wall_sheet.path,
+        wall_sheet.full_w,
+        wall_sheet.full_h,
+        wall_sheet.w,
+        wall_sheet.h,
+        &ctx,
     );
 
-    for (try ziggy.parseLeaky([]WallSheet, arena_allocator, wall_sheets_file_data, .{})) |wall_sheet|
-        try addWall(
-            wall_sheet.name,
-            wall_sheet.path,
-            wall_sheet.full_w,
-            wall_sheet.full_h,
-            wall_sheet.w,
-            wall_sheet.h,
-            &ctx,
-        );
+    const ui_file_path = "./assets/client/ui/ui_sheets.ziggy";
+    const ui_sheet_file = try std.Io.Dir.cwd().openFile(main.io, ui_file_path, .{});
+    defer ui_sheet_file.close(main.io);
 
-    const ui_sheets_data = try std.fs.cwd().openFile("./assets/client/ui/ui_sheets.ziggy", .{});
-    defer ui_sheets_data.close();
+    var ui_read_buf: [1024]u8 = undefined;
+    var ui_reader = ui_sheet_file.reader(main.io, &ui_read_buf);
 
-    const ui_sheets_file_data = try ui_sheets_data.readToEndAllocOptions(
-        arena_allocator,
-        std.math.maxInt(u32),
-        null,
-        .fromByteUnits(@alignOf(u8)),
-        0,
-    );
+    const ui_sheet_bytes = try ui_reader.interface.allocRemainingAlignedSentinel(arena_allocator, .unlimited, .of(u8), 0);
 
-    for (try ziggy.parseLeaky([]UiSheet, arena_allocator, ui_sheets_file_data, .{})) |ui_sheet|
+    var ui_meta: ziggy.Deserializer.Meta = .init;
+    for (ziggy.deserializeLeaky([]UiSheet, arena_allocator, ui_sheet_bytes, &ui_meta, .{ .copy_strings = .always }) catch |e| {
+        if (e != error.OutOfMemory) {
+            try ui_meta.reportErrors(arena_allocator, .{}, ui_file_path, ui_sheet_bytes, e, &stdout_wtr.interface);
+            try stdout_wtr.interface.flush();
+        }
+        return e;
+    }) |ui_sheet|
         try addUiImage(ui_sheet.name, ui_sheet.path, ui_sheet.w, ui_sheet.h, &ui_ctx);
 
     if (ui_atlas_data.get("minimap_icons")) |icons| minimap_icons = icons else @panic("minimap_icons not found in UI atlas");

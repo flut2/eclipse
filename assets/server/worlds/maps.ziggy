@@ -1,22 +1,22 @@
 [
-    {
+    .{
         .id = -1,
         .name = "the Retrieve",
         .file = "retrieve.map",
         .light = {
-            .intensity = 0.8,
-            .color = "0x000000",
+            "intensity": 0.8,
+            "color": 0x000000,
         },
     },
-    {
+    .{
         .name = "Luntaer",
         .file = "t1_realm.map",
         .portal_name = "Luntaer",
-        .map_type = @MapType("realm"),
-        .light = {
+        .map_type = .realm,
+        .light = .{
             .day_intensity = 0.2,
             .night_intensity = 0.65,
-            .color = "0x000000",
+            .color = 0x000000,
         },
         .biome_1_mobs = [
             "Spike Ball",
@@ -44,23 +44,23 @@
         .biome_3_name = "Desert",
         .biome_3_encounter_chance = 0.001,
     },
-    {
+    .{
         .name = "Crimson Chasm",
         .file = "crimson_chasm.map",
         .portal_name = "Crimson Chasm",
-        .light = {
+        .light = .{
             .intensity = 0.2,
-            .color = "0x3D1D16",
+            .color = 0x3D1D16,
         },
     },
-    {
+    .{
         .name = "Crown Cove",
         .file = "crown_cove.map",
         .portal_name = "Crown Cove",
-        .map_type = @MapType("dungeon"),
-        .light = {
+        .map_type = .dungeon,
+        .light = .{
             .intensity = 0.2,
-            .color = "0x000000",
+            .color = 0x000000,
         },
         .normal_mobs = [
             "Possessed Short Sword of Anger",

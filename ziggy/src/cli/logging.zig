@@ -1,51 +1,42 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 const builtin = @import("builtin");
 const folders = @import("known-folders");
 
-pub var log_file: ?std.fs.File = switch (builtin.target.os.tag) {
-    .linux, .macos => std.fs.File.stderr(),
-    else => null,
-};
+var buf: [1024]u8 = undefined;
+pub var log_writer: Io.File.Writer = undefined;
 
 pub fn logFn(
     comptime level: std.log.Level,
-    comptime scope: @Type(.enum_literal),
+    comptime scope: @EnumLiteral(),
     comptime format: []const u8,
     args: anytype,
 ) void {
-    // if (scope != .ws and scope != .network) return;
-
-    const l = log_file orelse return;
     const scope_prefix = "(" ++ @tagName(scope) ++ "): ";
     const prefix = "[" ++ @tagName(level) ++ "] " ++ scope_prefix;
-    std.debug.lockStdErr();
-    defer std.debug.unlockStdErr();
+    _ = std.debug.lockStderr(&.{});
+    defer std.debug.unlockStderr();
 
-    var writer = l.writer(&.{});
-    const w = &writer.interface;
+    const w = &log_writer.interface;
     w.print(prefix ++ format ++ "\n", args) catch return;
+    w.flush() catch return;
 }
 
-pub fn setup(gpa: std.mem.Allocator) void {
-    std.debug.lockStdErr();
-    defer std.debug.unlockStdErr();
+pub fn setup(io: Io, gpa: Allocator, environ_map: std.process.Environ.Map) void {
+    _ = std.debug.lockStderr(&.{});
+    defer std.debug.unlockStderr();
 
-    setupInternal(gpa) catch {
-        log_file = null;
+    setupInternal(io, gpa, environ_map) catch {
+        log_writer = Io.File.stderr().writerStreaming(io, &.{});
     };
 }
 
-fn setupInternal(gpa: std.mem.Allocator) !void {
-    const cache_base = try folders.open(gpa, .cache, .{}) orelse return error.Failure;
-    try cache_base.makePath("ziggy");
-
+fn setupInternal(io: Io, gpa: Allocator, environ_map: std.process.Environ.Map) !void {
     const log_name = "ziggy.log";
-    const log_path = try std.fmt.allocPrint(gpa, "ziggy/{s}", .{log_name});
-    defer gpa.free(log_path);
+    var cache_base = try folders.open(io, gpa, environ_map, .cache, .{}) orelse return error.Failure;
+    defer cache_base.close(io);
 
-    const file = try cache_base.createFile(log_path, .{ .truncate = false });
-    const end = try file.getEndPos();
-    try file.seekTo(end);
-
-    log_file = file;
+    const f: Io.File = try cache_base.createFile(io, log_name, .{ .truncate = false });
+    log_writer = f.writerStreaming(io, &buf);
 }

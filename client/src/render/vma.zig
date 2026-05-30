@@ -3,7 +3,7 @@ const std = @import("std");
 const vk = @import("vulkan");
 
 const c = @cImport({
-    @cInclude("vk_mem_alloc.h");
+    @cInclude("vma/vk_mem_alloc.h");
 });
 fn zigHandleToC(comptime T: type, zig_handle: anytype) T {
     const Z = @typeInfo(@TypeOf(zig_handle));

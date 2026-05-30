@@ -187,7 +187,7 @@ fn handleAbility4() void {
 
 pub fn charEvent(_: *windy.Window, char: u21, _: windy.Mods) void {
     if (char > std.math.maxInt(u8)) return;
-    
+
     const byte_code: u8 = @intCast(char);
     const input_field = selected_input_field orelse return;
     if (std.ascii.isControl(byte_code) or input_field.index >= 256) return;
@@ -214,14 +214,14 @@ pub fn keyEvent(_: *windy.Window, state: windy.PressState, key: windy.Key, mods:
                         const old = input_field.text_data.text;
                         windy.setClipboard(input_field.text_data.backing_buffer[0..input_field.index]) catch |e| {
                             std.log.err("Clipboard set failed: {}", .{e});
-                            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+                            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
                         };
                         input_field.text_data.text = old;
                     },
                     .v => {
                         const clip_str = windy.getClipboard() catch |e| {
                             std.log.err("Clipboard get failed: {}", .{e});
-                            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+                            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
                             return;
                         };
                         if (clip_str.len > 256 - input_field.index) return;
@@ -235,7 +235,7 @@ pub fn keyEvent(_: *windy.Window, state: windy.PressState, key: windy.Key, mods:
                     .x => {
                         windy.setClipboard(input_field.text_data.backing_buffer[0..input_field.index]) catch |e| {
                             std.log.err("Clipboard set failed: {}", .{e});
-                            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+                            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
                         };
                         input_field.clear();
                         return;
@@ -333,7 +333,7 @@ pub fn mouseEvent(window: *windy.Window, state: windy.PressState, button: windy.
             .target_ally => assets.target_ally_cursor_pressed,
         }) catch |e| {
             std.log.err("Cursor set failed: {}", .{e});
-            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
         };
 
         if (selected_input_field) |input_field| {
@@ -365,7 +365,7 @@ pub fn mouseEvent(window: *windy.Window, state: windy.PressState, button: windy.
             .target_ally => assets.target_ally_cursor,
         }) catch |e| {
             std.log.err("Cursor set failed: {}", .{e});
-            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
         };
 
         if (!ui_systems.mouseRelease(mouse_x, mouse_y)) {

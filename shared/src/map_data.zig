@@ -19,7 +19,7 @@ pub const Map = struct {
 
 pub fn parseMap(buffer: []const u8, arena: *std.heap.ArenaAllocator) !Map {
     const allocator = arena.allocator();
-    var reader: std.io.Reader = .fixed(buffer);
+    var reader: std.Io.Reader = .fixed(buffer);
 
     const version = try reader.takeInt(u8, .little);
     if (version != 0) {

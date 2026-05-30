@@ -1134,10 +1134,13 @@ fn openInner(screen: *MapEditorScreen) !void {
 
     if (path.len == 0) return;
 
-    const file = try std.fs.openFileAbsolute(path, .{});
-    defer file.close();
+    const file = try std.Io.Dir.openFileAbsolute(main.io, path, .{});
+    defer file.close(main.io);
 
-    const file_buf = try file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
+    var read_buf: [4096]u8 = undefined;
+    var reader = file.reader(main.io, &read_buf);
+
+    const file_buf = try reader.interface.allocRemaining(main.allocator, .unlimited);
     defer main.allocator.free(file_buf);
 
     try screen.loadMap(file_buf);
@@ -1146,7 +1149,7 @@ fn openInner(screen: *MapEditorScreen) !void {
 fn openCallback(ud: ?*anyopaque) void {
     openInner(@ptrCast(@alignCast(ud.?))) catch |e| {
         std.log.err("Error while parsing map: {}", .{e});
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
     };
 }
 
@@ -1194,17 +1197,15 @@ pub fn indexOfTile(tiles: []const map_data.Tile, value: map_data.Tile) ?usize {
 }
 
 fn mapData(screen: *MapEditorScreen) ![]u8 {
-    var data: std.ArrayList(u8) = .empty;
-
     const bounds = tileBounds(screen.map_tile_data);
     if (bounds.min_x >= bounds.max_x or bounds.min_y >= bounds.max_y) return error.InvalidMap;
 
-    var writer = data.writer(main.allocator);
-    try writer.writeInt(u8, 0, .little); // version
-    try writer.writeInt(u16, bounds.min_x, .little);
-    try writer.writeInt(u16, bounds.min_y, .little);
-    try writer.writeInt(u16, bounds.max_x - bounds.min_x, .little);
-    try writer.writeInt(u16, bounds.max_y - bounds.min_y, .little);
+    var aw: std.Io.Writer.Allocating = .init(main.allocator);
+    try aw.writer.writeInt(u8, 0, .little); // version
+    try aw.writer.writeInt(u16, bounds.min_x, .little);
+    try aw.writer.writeInt(u16, bounds.min_y, .little);
+    try aw.writer.writeInt(u16, bounds.max_x - bounds.min_x, .little);
+    try aw.writer.writeInt(u16, bounds.max_y - bounds.min_y, .little);
 
     var tiles: std.ArrayList(map_data.Tile) = .empty;
     defer tiles.deinit(main.allocator);
@@ -1225,13 +1226,13 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
         }
     }
 
-    try writer.writeInt(u16, @intCast(tiles.items.len), .little);
+    try aw.writer.writeInt(u16, @intCast(tiles.items.len), .little);
     const byte_len = tiles.items.len <= 256;
 
     for (tiles.items) |tile| {
         inline for (@typeInfo(map_data.Tile).@"struct".fields) |field| {
-            try writer.writeInt(u16, @intCast(@field(tile, field.name).len), .little);
-            try writer.writeAll(@field(tile, field.name));
+            try aw.writer.writeInt(u16, @intCast(@field(tile, field.name).len), .little);
+            try aw.writer.writeAll(@field(tile, field.name));
         }
     }
 
@@ -1249,14 +1250,14 @@ fn mapData(screen: *MapEditorScreen) ![]u8 {
 
             if (indexOfTile(tiles.items, tile)) |idx| {
                 if (byte_len)
-                    try writer.writeInt(u8, @intCast(idx), .little)
+                    try aw.writer.writeInt(u8, @intCast(idx), .little)
                 else
-                    try writer.writeInt(u16, @intCast(idx), .little);
+                    try aw.writer.writeInt(u16, @intCast(idx), .little);
             } else @panic("No index found");
         }
     }
 
-    return try data.toOwnedSlice(main.allocator);
+    return try aw.toOwnedSlice();
 }
 
 fn saveInner(screen: *MapEditorScreen) !void {
@@ -1278,15 +1279,19 @@ fn saveInner(screen: *MapEditorScreen) !void {
     };
     defer main.allocator.free(data);
 
-    const file = try std.fs.createFileAbsolute(path, .{});
-    defer file.close();
-    try file.writeAll(data);
+    const file = try std.Io.Dir.createFileAbsolute(main.io, path, .{});
+    defer file.close(main.io);
+
+    var write_buf: [4096]u8 = undefined;
+    var writer = file.writer(main.io, &write_buf);
+    try writer.interface.writeAll(data);
+    try writer.interface.flush();
 }
 
 fn saveCallback(ud: ?*anyopaque) void {
     saveInner(@ptrCast(@alignCast(ud.?))) catch |e| {
         std.log.err("Error while saving map: {}", .{e});
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
     };
 }
 
@@ -1296,7 +1301,7 @@ fn exitCallback(ud: ?*anyopaque) void {
         const data = mapData(screen) catch |e| {
             if (e == error.EmptyMap) break :saveMap;
             std.log.err("Error while saving map (for exit): {}", .{e});
-            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
             break :saveMap;
         };
         if (ui_systems.last_map_data) |last_map_data| main.allocator.free(last_map_data);
@@ -1315,7 +1320,7 @@ fn testCallback(ud: ?*anyopaque) void {
 
         const data = mapData(screen) catch |e| {
             std.log.err("Error while saving map (for testing): {}", .{e});
-            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
             return;
         };
         if (ui_systems.last_map_data) |last_map_data| main.allocator.free(last_map_data);
@@ -1415,7 +1420,7 @@ fn processRectSelect(self: *MapEditorScreen) void {
 fn onSearchChange(text: []const u8) void {
     if (ui_systems.screen == .editor) ui_systems.screen.editor.addContainers(text) catch |e| {
         std.log.err("Error while updating search filter: {}", .{e});
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
     };
 }
 
@@ -1901,7 +1906,7 @@ pub fn handleAction(self: *MapEditorScreen, action: EditorAction) !void {
     }
 }
 
-pub fn updateFps(self: *MapEditorScreen, fps: u32, mem: f32) void {
+pub fn updateFpsText(self: *MapEditorScreen, fps: u32, mem: f32) void {
     self.last_fps = fps;
     self.last_mem = mem;
     self.updateDetailsText();

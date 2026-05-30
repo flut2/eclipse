@@ -48,7 +48,7 @@ const SwapImage = struct {
     }
 
     fn deinit(self: SwapImage, ctx: Context) void {
-        _ = ctx.device.waitForFences(1, @ptrCast(&self.frame_fence), .true, std.math.maxInt(u64)) catch {};
+        _ = ctx.device.waitForFences(&.{self.frame_fence}, .true, std.math.maxInt(u64)) catch {};
         ctx.device.destroyImageView(self.view, null);
         ctx.device.destroySemaphore(self.image_acquired, null);
         ctx.device.destroySemaphore(self.render_finished, null);
@@ -146,7 +146,7 @@ fn deinitExceptSwapchain(self: Swapchain, ctx: Context) void {
 
 pub fn waitForAllFences(self: Swapchain, ctx: Context) !void {
     for (self.swap_images) |swap_img|
-        _ = try ctx.device.waitForFences(1, @ptrCast(&swap_img.frame_fence), .true, std.math.maxInt(u64));
+        _ = try ctx.device.waitForFences(&.{swap_img.frame_fence}, .true, std.math.maxInt(u64));
 }
 
 pub fn deinit(self: Swapchain, ctx: Context) void {
@@ -168,11 +168,11 @@ pub fn recreate(
 
 pub fn present(self: *Swapchain, ctx: Context, cmd_buffer: vk.CommandBuffer) !PresentState {
     const current = &self.swap_images[self.image_index];
-    _ = try ctx.device.waitForFences(1, @ptrCast(&current.frame_fence), .true, std.math.maxInt(u64));
-    try ctx.device.resetFences(1, @ptrCast(&current.frame_fence));
+    _ = try ctx.device.waitForFences(&.{current.frame_fence}, .true, std.math.maxInt(u64));
+    try ctx.device.resetFences(&.{current.frame_fence});
 
     const wait_stage = [_]vk.PipelineStageFlags{.{ .top_of_pipe_bit = true }};
-    try ctx.device.queueSubmit(ctx.graphics_queue.handle, 1, &[_]vk.SubmitInfo{.{
+    try ctx.device.queueSubmit(ctx.graphics_queue.handle, &.{.{
         .wait_semaphore_count = 1,
         .p_wait_semaphores = @ptrCast(&current.image_acquired),
         .p_wait_dst_stage_mask = &wait_stage,

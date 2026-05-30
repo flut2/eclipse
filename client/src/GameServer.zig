@@ -172,7 +172,7 @@ fn closeCallback(_: [*c]uv.uv_handle_t) callconv(.c) void {
 }
 
 pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
-    const addr: std.net.Address = try .parseIp4(ip, port);
+    const addr: std.Io.net.IpAddress = try .parseIp4(ip, port);
 
     const tcp_status = uv.uv_tcp_init(&main.main_loop, &self.socket);
     if (tcp_status != 0) {
@@ -185,9 +185,11 @@ pub fn connect(self: *Server, ip: []const u8, port: u16) !void {
     if (disable_nagle_status != 0)
         std.log.err("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
 
+    var sa: std.Io.Threaded.PosixAddress = undefined;
+    _ = std.Io.Threaded.addressToPosix(&addr, &sa);
     var con_handle = try main.allocator.create(uv.uv_connect_t);
     con_handle.data = self;
-    const conn_status = uv.uv_tcp_connect(@ptrCast(con_handle), &self.socket, @ptrCast(&addr.in.sa), connectCallback);
+    const conn_status = uv.uv_tcp_connect(@ptrCast(con_handle), &self.socket, @ptrCast(&sa.in), connectCallback);
     if (conn_status != 0) {
         std.log.err("Game connection error: {s}", .{uv.uv_strerror(conn_status)});
         return error.ConnectionFailed;
@@ -231,11 +233,10 @@ fn connectCallback(conn: [*c]uv.uv_connect_t, status: c_int) callconv(.c) void {
     server.sendPacket(server.hello_data);
 }
 
-pub fn readCallback(ud: *anyopaque, bytes_read: isize, _: [*c]const uv.uv_buf_t) callconv(.c) void {
+pub fn readCallback(socket: [*c]uv.uv_stream_t, bytes_read: isize, _: [*c]const uv.uv_buf_t) callconv(.c) void {
     if (bytes_read == 0) return;
 
-    const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
-    const server: *Server = @ptrCast(@alignCast(socket.data));
+    const server: *Server = @ptrCast(@alignCast(socket.*.data));
 
     if (bytes_read < 0) {
         server.shutdown();
@@ -359,7 +360,7 @@ fn handleDeath(self: *Server, data: PacketData(.death)) void {
     if (ui_systems.screen == .char_select)
         ui_systems.screen.char_select.death_view.show(data) catch |e| {
             std.log.err("Setting death view failed: {}", .{e});
-            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
         };
 }
 

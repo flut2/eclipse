@@ -47,16 +47,24 @@ favorite_char_ids: []const u32 = &.{},
 char_ids_login_sort: []const u32 = &.{},
 
 pub fn init(allocator: std.mem.Allocator) !Settings {
-    arena = std.heap.ArenaAllocator.init(allocator);
+    arena = .init(allocator);
     const arena_allocator = arena.allocator();
 
-    const file = std.fs.cwd().openFile("settings.json", .{}) catch return .{};
-    defer file.close();
+    const file = std.Io.Dir.cwd().openFile(main.io, "settings.json", .{}) catch return .{};
+    defer file.close(main.io);
 
-    const file_data = try file.readToEndAlloc(arena_allocator, std.math.maxInt(u32));
+    var read_buf: [1024]u8 = undefined;
+    var reader = file.reader(main.io, &read_buf);
+
+    const file_data = try reader.interface.allocRemaining(arena_allocator, .unlimited);
     defer arena_allocator.free(file_data);
 
-    return try std.json.parseFromSliceLeaky(Settings, arena_allocator, file_data, .{ .ignore_unknown_fields = true, .allocate = .alloc_always });
+    return try std.json.parseFromSliceLeaky(
+        Settings,
+        arena_allocator,
+        file_data,
+        .{ .ignore_unknown_fields = true, .allocate = .alloc_always },
+    );
 }
 
 pub fn deinit(self: Settings) void {
@@ -71,11 +79,14 @@ pub fn deinit(self: Settings) void {
 }
 
 pub fn save(self: Settings) !void {
-    const file = try std.fs.cwd().createFile("settings.json", .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(main.io, "settings.json", .{});
+    defer file.close(main.io);
 
-    const settings_json = try std.json.Stringify.valueAlloc(arena.allocator(), self, .{ .whitespace = .indent_4 });
-    try file.writeAll(settings_json);
+    var write_buf: [1024]u8 = undefined;
+    var writer = file.writer(main.io, &write_buf);
+
+    try std.json.Stringify.value(self, .{ .whitespace = .indent_4 }, &writer.interface);
+    try writer.interface.flush();
 }
 
 pub fn resetToDefaults(self: *Settings) void {

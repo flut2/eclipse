@@ -313,25 +313,37 @@ pub fn typeId(comptime T: type) u32 {
     return @intFromError(@field(anyerror, @typeName(T)));
 }
 
-pub fn currentMemoryUse(time: i64) !f32 {
+pub fn currentMemoryUse(io: std.Io, time: i64) !f32 {
     if (time - last_memory_access < 5 * std.time.us_per_s) return last_memory_value;
 
     var memory_value: f32 = -1.0;
     switch (builtin.os.tag) {
         .windows => {
-            const mem_info = try std.os.windows.GetProcessMemoryInfo(std.os.windows.self_process_handle);
-            memory_value = f32i(mem_info.WorkingSetSize) / 1024.0 / 1024.0;
+            const mem_info = try std.os.windows.GetProcessMemoryInfo(std.os.windows.GetCurrentProcess());
+            memory_value = f32i(mem_info.WorkingSetSize) / (1024.0 * 1024.0);
         },
         .linux => {
-            const file = try std.fs.cwd().openFile("/proc/self/statm", .{});
-            defer file.close();
+            const file = try std.Io.Dir.cwd().openFile(io, "/proc/self/statm", .{});
+            defer file.close(io);
 
-            var buf: [1024]u8 = undefined;
-            const size = try file.readAll(&buf);
+            var buf: [256]u8 = undefined;
+            var rdr = file.reader(io, &buf);
 
-            var split_iter = std.mem.splitScalar(u8, buf[0..size], ' ');
+            var text_buf: [1024]u8 = undefined;
+            const size = try rdr.interface.readSliceShort(&text_buf);
+            if (size == 0) {
+                last_memory_access = time;
+                last_memory_value = 0;
+                return 0;
+            }
+
+            var split_iter = std.mem.splitScalar(u8, text_buf[0..size], ' ');
             _ = split_iter.next(); // total size
-            const rss = f32i(try std.fmt.parseInt(u32, split_iter.next().?, 0));
+            const rss = f32i(try std.fmt.parseInt(
+                u32,
+                split_iter.next() orelse return error.RssMissing,
+                0,
+            ));
             memory_value = rss / 1024.0;
         },
         else => memory_value = 0,

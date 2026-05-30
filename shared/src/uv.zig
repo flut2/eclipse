@@ -4,9 +4,10 @@ const uv = @import("uv");
 
 const utils = @import("utils.zig");
 
-var allocator: std.mem.Allocator = undefined;
+var uv_allocator: std.mem.Allocator = undefined;
 var pointer_size_map: std.AutoHashMapUnmanaged(usize, usize) = .empty;
-var alloc_mutex: std.Thread.Mutex = .{};
+var alloc_mutex: std.Io.Mutex = .init;
+var alloc_io: std.Io = .failing;
 const alignment: std.mem.Alignment = .of(std.c.max_align_t);
 
 fn outOfMemory() noreturn {
@@ -14,11 +15,11 @@ fn outOfMemory() noreturn {
 }
 
 fn uvMalloc(size: usize) callconv(.c) ?*anyopaque {
-    alloc_mutex.lock();
-    defer alloc_mutex.unlock();
+    alloc_mutex.lockUncancelable(alloc_io);
+    defer alloc_mutex.unlock(alloc_io);
 
-    const mem = allocator.alignedAlloc(u8, alignment, size) catch outOfMemory();
-    pointer_size_map.put(allocator, @intFromPtr(mem.ptr), size) catch outOfMemory();
+    const mem = uv_allocator.alignedAlloc(u8, alignment, size) catch outOfMemory();
+    pointer_size_map.put(uv_allocator, @intFromPtr(mem.ptr), size) catch outOfMemory();
     return mem.ptr;
 }
 
@@ -27,32 +28,33 @@ fn uvCalloc(size: usize, elem_size: usize) callconv(.c) ?*anyopaque {
 }
 
 fn uvResize(maybe_ptr: ?*anyopaque, new_size: usize) callconv(.c) ?*anyopaque {
-    alloc_mutex.lock();
-    defer alloc_mutex.unlock();
+    alloc_mutex.lockUncancelable(alloc_io);
+    defer alloc_mutex.unlock(alloc_io);
 
     const old_size = if (maybe_ptr) |p| pointer_size_map.fetchRemove(@intFromPtr(p)).?.value else 0;
     const old_mem: [*]align(alignment.toByteUnits()) u8 = if (maybe_ptr) |p| @ptrCast(@alignCast(p)) else &.{};
-    const new_mem = allocator.realloc(old_mem[0..old_size], new_size) catch outOfMemory();
-    pointer_size_map.put(allocator, @intFromPtr(new_mem.ptr), new_size) catch outOfMemory();
+    const new_mem = uv_allocator.realloc(old_mem[0..old_size], new_size) catch outOfMemory();
+    pointer_size_map.put(uv_allocator, @intFromPtr(new_mem.ptr), new_size) catch outOfMemory();
     return new_mem.ptr;
 }
 
 fn uvFree(maybe_ptr: ?*anyopaque) callconv(.c) void {
     const ptr = maybe_ptr orelse return;
 
-    alloc_mutex.lock();
-    defer alloc_mutex.unlock();
+    alloc_mutex.lockUncancelable(alloc_io);
+    defer alloc_mutex.unlock(alloc_io);
 
     const kv = pointer_size_map.fetchRemove(@intFromPtr(ptr)) orelse {
         std.log.err("libuv: Invalid free attempted on `{*}`", .{ptr});
         return;
     };
     const mem: [*]align(alignment.toByteUnits()) u8 = @ptrCast(@alignCast(ptr));
-    allocator.free(mem[0..kv.value]);
+    uv_allocator.free(mem[0..kv.value]);
 }
 
-pub fn init(ally: std.mem.Allocator) !void {
-    allocator = ally;
+pub fn init(allocator: std.mem.Allocator, io: std.Io) !void {
+    uv_allocator = allocator;
+    alloc_io = io;
 
     const replace_alloc_status = uv.uv_replace_allocator(uvMalloc, uvResize, uvCalloc, uvFree);
     if (replace_alloc_status != 0) {
@@ -62,7 +64,7 @@ pub fn init(ally: std.mem.Allocator) !void {
 }
 
 pub fn deinit() void {
-    pointer_size_map.deinit(allocator);
+    pointer_size_map.deinit(uv_allocator);
 }
 
 pub fn walkCallback(handle: [*c]uv.uv_handle_t, _: ?*anyopaque) callconv(.c) void {
@@ -139,8 +141,8 @@ pub fn socketRead(
 
         const next_packet_idx = reader.index + len;
         const byte_id = reader.read(std.meta.Int(.unsigned, @bitSizeOf(std.meta.Tag(T))));
-        const packet_id = std.meta.intToEnum(std.meta.Tag(T), byte_id) catch |e| {
-            std.log.err("Error parsing {s} with id `{}`, size `{}`, len `{}`: {}", .{ log_name, byte_id, bytes_read, len, e });
+        const packet_id = std.enums.fromInt(std.meta.Tag(T), byte_id) orelse {
+            std.log.err("Error parsing {s} with id `{}`, size `{}`, len `{}`", .{ log_name, byte_id, bytes_read, len });
             return false;
         };
 

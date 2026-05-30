@@ -229,7 +229,7 @@ pub fn create(present_mode: vk.PresentModeKHR) !Renderer {
 
     for (0..@bitSizeOf(utils.Condition)) |i| {
         const sheet_name = "conditions";
-        const sheet_indices: []const u16 = switch (std.meta.intToEnum(utils.ConditionEnum, i) catch continue) {
+        const sheet_indices: []const u16 = switch (std.enums.fromInt(utils.ConditionEnum, i) orelse continue) {
             .weak => &.{5},
             .slowed => &.{7},
             .sick => &.{10},
@@ -556,7 +556,7 @@ pub fn destroyFrameAndCmdBuffers(self: *Renderer) void {
         self.context.device.destroyFramebuffer(framebuffer, null);
     main.allocator.free(self.framebuffers);
     self.framebuffers = &.{};
-    self.context.device.freeCommandBuffers(self.cmd_pool, @intCast(self.cmd_buffers.len), self.cmd_buffers.ptr);
+    self.context.device.freeCommandBuffers(self.cmd_pool, self.cmd_buffers);
     main.allocator.free(self.cmd_buffers);
     self.cmd_buffers = &.{};
 }
@@ -574,12 +574,12 @@ fn createImmediateSubmit(ctx: Context, cmd_pool: vk.CommandPool) !vk.CommandBuff
 
 fn destroyImmediateSubmit(ctx: Context, cmd_pool: vk.CommandPool, cmd_buffer: vk.CommandBuffer) !void {
     try ctx.device.endCommandBuffer(cmd_buffer);
-    try ctx.device.queueSubmit(ctx.graphics_queue.handle, 1, &.{.{
+    try ctx.device.queueSubmit(ctx.graphics_queue.handle, &.{.{
         .command_buffer_count = 1,
         .p_command_buffers = @ptrCast(&cmd_buffer),
     }}, .null_handle);
     try ctx.device.queueWaitIdle(ctx.graphics_queue.handle);
-    ctx.device.freeCommandBuffers(cmd_pool, 1, @ptrCast(&cmd_buffer));
+    ctx.device.freeCommandBuffers(cmd_pool, &.{cmd_buffer});
 }
 
 fn copyBuffer(
@@ -605,7 +605,6 @@ fn copySimple(
         cmd_buffer,
         src_buffer,
         dst_buffer,
-        1,
         &.{.{
             .src_offset = 0,
             .dst_offset = 0,
@@ -626,8 +625,8 @@ fn transitionImageLayout(
     // zig fmt: off
     const barrier_src_mask: vk.AccessFlags,
     const barrier_dst_mask: vk.AccessFlags,
-    const src_stage_mask: vk.PipelineStageFlags, 
-    const dst_stage_mask: vk.PipelineStageFlags = 
+    const src_stage_mask: vk.PipelineStageFlags,
+    const dst_stage_mask: vk.PipelineStageFlags =
         if (old_layout == .undefined and new_layout == .transfer_dst_optimal) .{
             .{},
             .{ .transfer_write_bit = true },
@@ -646,11 +645,8 @@ fn transitionImageLayout(
         src_stage_mask,
         dst_stage_mask,
         .{},
-        0,
         null,
-        0,
         null,
-        1,
         &.{.{
             .image = texture.image.handle,
             .src_access_mask = barrier_src_mask,
@@ -687,7 +683,6 @@ fn copyBufferToTexture(
         buffer,
         texture.image.handle,
         .transfer_dst_optimal,
-        1,
         &.{.{
             .buffer_offset = 0,
             .buffer_image_height = 0,
@@ -928,7 +923,7 @@ fn createGenericMaterial(self: *Renderer) !void {
         .p_set_layouts = @ptrCast(&descriptor_layouts),
     }, @ptrCast(&descriptor_sets));
 
-    self.context.device.updateDescriptorSets(9, &.{
+    self.context.device.updateDescriptorSets(&.{
         .{
             .dst_set = descriptor_sets[0],
             .dst_binding = 0,
@@ -1055,7 +1050,7 @@ fn createGenericMaterial(self: *Renderer) !void {
             }},
             .p_texel_buffer_view = undefined,
         },
-    }, 0, undefined);
+    }, null);
 
     const vert_shader = try self.context.device.createShaderModule(&.{
         .code_size = generic_vert_spv.len,
@@ -1139,7 +1134,7 @@ fn createGenericMaterial(self: *Renderer) !void {
     };
 
     var pipeline: vk.Pipeline = undefined;
-    _ = try self.context.device.createGraphicsPipelines(.null_handle, 1, @ptrCast(&pipeline_info), null, @ptrCast(&pipeline));
+    _ = try self.context.device.createGraphicsPipelines(.null_handle, &.{pipeline_info}, null, @ptrCast(&pipeline));
     self.generic_material = .{
         .descriptor_layouts = descriptor_layouts,
         .descriptor_sets = descriptor_sets,
@@ -1198,7 +1193,7 @@ fn createGroundMaterial(self: *Renderer) !void {
         .p_set_layouts = @ptrCast(&descriptor_layouts),
     }, @ptrCast(&descriptor_sets));
 
-    self.context.device.updateDescriptorSets(2, &.{
+    self.context.device.updateDescriptorSets(&.{
         .{
             .dst_set = descriptor_sets[0],
             .dst_binding = 0,
@@ -1227,7 +1222,7 @@ fn createGroundMaterial(self: *Renderer) !void {
             }},
             .p_texel_buffer_view = undefined,
         },
-    }, 0, undefined);
+    }, null);
 
     const vert_shader = try self.context.device.createShaderModule(&.{
         .code_size = ground_vert_spv.len,
@@ -1311,7 +1306,7 @@ fn createGroundMaterial(self: *Renderer) !void {
     };
 
     var pipeline: vk.Pipeline = undefined;
-    _ = try self.context.device.createGraphicsPipelines(.null_handle, 1, @ptrCast(&pipeline_info), null, @ptrCast(&pipeline));
+    _ = try self.context.device.createGraphicsPipelines(.null_handle, &.{pipeline_info}, null, @ptrCast(&pipeline));
     self.ground_material = .{
         .descriptor_layouts = descriptor_layouts,
         .descriptor_sets = descriptor_sets,
@@ -1458,8 +1453,8 @@ pub fn draw(
 
     const cmd_buffer = self.cmd_buffers[self.swapchain.image_index];
     try self.context.device.beginCommandBuffer(cmd_buffer, &.{ .flags = .{} });
-    self.context.device.cmdSetViewport(cmd_buffer, 0, 1, @ptrCast(&viewport));
-    self.context.device.cmdSetScissor(cmd_buffer, 0, 1, @ptrCast(&scissor));
+    self.context.device.cmdSetViewport(cmd_buffer, 0, &.{viewport});
+    self.context.device.cmdSetScissor(cmd_buffer, 0, &.{scissor});
     const render_area: vk.Rect2D = .{
         .offset = .{ .x = 0, .y = 0 },
         .extent = self.swapchain.extent,
@@ -1508,9 +1503,7 @@ pub fn draw(
             .graphics,
             self.ground_material.pipeline_layout,
             0,
-            2,
-            @ptrCast(&self.ground_material.descriptor_sets),
-            0,
+            &self.ground_material.descriptor_sets,
             null,
         );
         self.context.device.cmdDraw(cmd_buffer, ground_len * 6, 1, 0, 0);
@@ -1552,9 +1545,7 @@ pub fn draw(
             .graphics,
             self.generic_material.pipeline_layout,
             0,
-            2,
-            @ptrCast(&self.generic_material.descriptor_sets),
-            0,
+            &self.generic_material.descriptor_sets,
             null,
         );
         self.context.device.cmdDraw(cmd_buffer, game_len * 6, 1, 0, 0);
@@ -1587,9 +1578,7 @@ pub fn draw(
                 .graphics,
                 self.generic_material.pipeline_layout,
                 0,
-                2,
-                @ptrCast(&self.generic_material.descriptor_sets),
-                0,
+                &self.generic_material.descriptor_sets,
                 null,
             );
         }

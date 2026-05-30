@@ -1,658 +1,658 @@
 [
-{
-    .name = "rare_slot",
-    .path = "item/rare_slot.png",
-},
-{
-    .name = "epic_slot",
-    .path = "item/epic_slot.png",
-},
-{
-    .name = "legendary_slot",
-    .path = "item/legendary_slot.png",
-},
-{
-    .name = "mythic_slot",
-    .path = "item/mythic_slot.png",
-},
-{
-    .name = "rare_slot_equip",
-    .path = "item/rare_slot_equip.png",
-},
-{
-    .name = "epic_slot_equip",
-    .path = "item/epic_slot_equip.png",
-},
-{
-    .name = "legendary_slot_equip",
-    .path = "item/legendary_slot_equip.png",
-},
-{
-    .name = "mythic_slot_equip",
-    .path = "item/mythic_slot_equip.png",
-},
-{
-    .name = "out_of_mana_slot",
-    .path = "ability/out_of_mana_slot.png",
-},
-{
-    .name = "out_of_health_slot",
-    .path = "ability/out_of_health_slot.png",
-},
-{
-    .name = "out_of_gold_slot",
-    .path = "ability/out_of_gold_slot.png",
-},
-{
-    .name = "on_cooldown_slot",
-    .path = "ability/on_cooldown_slot.png",
-},
-{
-    .name = "dialog_base_background",
-    .path = "elements/dialog_base_background.png",
-},
-{
-    .name = "dialog_title_background",
-    .path = "elements/dialog_title_background.png",
-},
-{
-    .name = "button_base",
-    .path = "elements/button_base.png",
-},
-{
-    .name = "button_hover",
-    .path = "elements/button_hover.png",
-},
-{
-    .name = "button_press",
-    .path = "elements/button_press.png",
-},
-{
-    .name = "dropdown_collapsed_icon_base",
-    .path = "elements/dropdown_collapsed_icon_base.png",
-},
-{
-    .name = "dropdown_collapsed_icon_hover",
-    .path = "elements/dropdown_collapsed_icon_hover.png",
-},
-{
-    .name = "dropdown_collapsed_icon_press",
-    .path = "elements/dropdown_collapsed_icon_press.png",
-},
-{
-    .name = "dropdown_extended_icon_base",
-    .path = "elements/dropdown_extended_icon_base.png",
-},
-{
-    .name = "dropdown_extended_icon_hover",
-    .path = "elements/dropdown_extended_icon_hover.png",
-},
-{
-    .name = "dropdown_extended_icon_press",
-    .path = "elements/dropdown_extended_icon_press.png",
-},
-{
-    .name = "dropdown_main_color_base",
-    .path = "elements/dropdown_main_color_base.png",
-},
-{
-    .name = "dropdown_main_color_hover",
-    .path = "elements/dropdown_main_color_hover.png",
-},
-{
-    .name = "dropdown_main_color_press",
-    .path = "elements/dropdown_main_color_press.png",
-},
-{
-    .name = "dropdown_alt_color_base",
-    .path = "elements/dropdown_alt_color_base.png",
-},
-{
-    .name = "dropdown_alt_color_hover",
-    .path = "elements/dropdown_alt_color_hover.png",
-},
-{
-    .name = "dropdown_alt_color_press",
-    .path = "elements/dropdown_alt_color_press.png",
-},
-{
-    .name = "dropdown_title_background",
-    .path = "elements/dropdown_title_background.png",
-},
-{
-    .name = "dropdown_background",
-    .path = "elements/dropdown_background.png",
-},
-{
-    .name = "checked_box_base",
-    .path = "elements/checked_box_base.png",
-},
-{
-    .name = "checked_box_hover",
-    .path = "elements/checked_box_hover.png",
-},
-{
-    .name = "checked_box_press",
-    .path = "elements/checked_box_press.png",
-},
-{
-    .name = "slider_background",
-    .path = "elements/slider_background.png",
-},
-{
-    .name = "slider_knob_base",
-    .path = "elements/slider_knob_base.png",
-},
-{
-    .name = "slider_knob_hover",
-    .path = "elements/slider_knob_hover.png",
-},
-{
-    .name = "slider_knob_press",
-    .path = "elements/slider_knob_press.png",
-},
-{
-    .name = "toggle_slider_base_off",
-    .path = "elements/toggle_slider_base_off.png",
-},
-{
-    .name = "toggle_slider_hover_off",
-    .path = "elements/toggle_slider_hover_off.png",
-},
-{
-    .name = "toggle_slider_press_off",
-    .path = "elements/toggle_slider_press_off.png",
-},
-{
-    .name = "toggle_slider_base_on",
-    .path = "elements/toggle_slider_base_on.png",
-},
-{
-    .name = "toggle_slider_hover_on",
-    .path = "elements/toggle_slider_hover_on.png",
-},
-{
-    .name = "toggle_slider_press_on",
-    .path = "elements/toggle_slider_press_on.png",
-},
-{
-    .name = "tooltip_line_spacer_bottom",
-    .path = "elements/tooltip_line_spacer_bottom.png",
-},
-{
-    .name = "tooltip_line_spacer_bottom_rare",
-    .path = "elements/tooltip_line_spacer_bottom_rare.png",
-},
-{
-    .name = "tooltip_line_spacer_bottom_epic",
-    .path = "elements/tooltip_line_spacer_bottom_epic.png",
-},
-{
-    .name = "tooltip_line_spacer_bottom_legendary",
-    .path = "elements/tooltip_line_spacer_bottom_legendary.png",
-},
-{
-    .name = "tooltip_line_spacer_bottom_mythic",
-    .path = "elements/tooltip_line_spacer_bottom_mythic.png",
-},
-{
-    .name = "tooltip_line_spacer_top",
-    .path = "elements/tooltip_line_spacer_top.png",
-},
-{
-    .name = "tooltip_line_spacer_top_rare",
-    .path = "elements/tooltip_line_spacer_top_rare.png",
-},
-{
-    .name = "tooltip_line_spacer_top_epic",
-    .path = "elements/tooltip_line_spacer_top_epic.png",
-},
-{
-    .name = "tooltip_line_spacer_top_legendary",
-    .path = "elements/tooltip_line_spacer_top_legendary.png",
-},
-{
-    .name = "tooltip_line_spacer_top_mythic",
-    .path = "elements/tooltip_line_spacer_top_mythic.png",
-},
-{
-    .name = "unchecked_box_base",
-    .path = "elements/unchecked_box_base.png",
-},
-{
-    .name = "unchecked_box_hover",
-    .path = "elements/unchecked_box_hover.png",
-},
-{
-    .name = "unchecked_box_press",
-    .path = "elements/unchecked_box_press.png",
-},
-{
-    .name = "container_view",
-    .path = "item/container_view.png",
-},
-{
-    .name = "minimap",
-    .path = "minimap.png",
-},
-{
-    .name = "teleport_icon",
-    .path = "teleport_icon.png",
-},
-{
-    .name = "block_icon",
-    .path = "block_icon.png",
-},
-{
-    .name = "celestial_player_tooltip_line",
-    .path = "celestial_player_tooltip_line.png",
-},
-{
-    .name = "player_tooltip_line",
-    .path = "player_tooltip_line.png",
-},
-{
-    .name = "celestial_player_menu",
-    .path = "menu/celestial_player_menu.png",
-},
-{
-    .name = "player_menu",
-    .path = "menu/player_menu.png",
-},
-{
-    .name = "player_menu_spirit_bar",
-    .path = "menu/player_menu_spirit_bar.png",
-},
-{
-    .name = "player_menu_health_bar",
-    .path = "menu/player_menu_health_bar.png",
-},
-{
-    .name = "player_menu_mana_bar",
-    .path = "menu/player_menu_mana_bar.png",
-},
-{
-    .name = "player_inventory",
-    .path = "item/player_inventory.png",
-},
-{
-    .name = "player_health_bar",
-    .path = "player_health_bar.png",
-},
-{
-    .name = "player_mana_bar",
-    .path = "player_mana_bar.png",
-},
-{
-    .name = "player_abilities_bars",
-    .path = "player_abilities_bars.png",
-},
-{
-    .name = "player_spirit_bar",
-    .path = "player_spirit_bar.png",
-},
-{
-    .name = "dark_background",
-    .path = "dark_background.png",
-},
-{
-    .name = "player_stats",
-    .path = "player_stats.png",
-},
-{
-    .name = "chatbox_background",
-    .path = "chat/chatbox_background.png",
-},
-{
-    .name = "chatbox_input",
-    .path = "chat/chatbox_input.png",
-},
-{
-    .name = "chatbox_cursor",
-    .path = "chat/chatbox_cursor.png",
-},
-{
-    .name = "scroll_background",
-    .path = "elements/scroll_background.png",
-},
-{
-    .name = "scroll_wheel_base",
-    .path = "elements/scroll_wheel_base.png",
-},
-{
-    .name = "scroll_wheel_hover",
-    .path = "elements/scroll_wheel_hover.png",
-},
-{
-    .name = "scroll_wheel_press",
-    .path = "elements/scroll_wheel_press.png",
-},
-{
-    .name = "scrollbar_decor",
-    .path = "elements/scrollbar_decor.png",
-},
-{
-    .name = "party_view",
-    .path = "party_view.png",
-},
-{
-    .name = "party_view_health_bar",
-    .path = "party_view_health_bar.png",
-},
-{
-    .name = "party_view_mana_bar",
-    .path = "party_view_mana_bar.png",
-},
-{
-    .name = "card_panel_bg",
-    .path = "cards/card_panel_bg.png",
-},
-{
-    .name = "empty_card_slot",
-    .path = "cards/empty_card_slot.png",
-},
-{
-    .name = "common_card_slot",
-    .path = "cards/common_card_slot.png",
-},
-{
-    .name = "rare_card_slot",
-    .path = "cards/rare_card_slot.png",
-},
-{
-    .name = "epic_card_slot",
-    .path = "cards/epic_card_slot.png",
-},
-{
-    .name = "legendary_card_slot",
-    .path = "cards/legendary_card_slot.png",
-},
-{
-    .name = "mythic_card_slot",
-    .path = "cards/mythic_card_slot.png",
-},
-{
-    .name = "player_talent_tree_view",
-    .path = "talents/player_talent_tree_view.png",
-},
-{
-    .name = "talent_cell_small_locked",
-    .path = "talents/talent_cell_small_locked.png",
-},
-{
-    .name = "talent_cell_big_locked",
-    .path = "talents/talent_cell_big_locked.png",
-},
-{
-    .name = "editor_selection",
-    .path = "editor_selection.png",
-},
-{
-    .name = "tooltip_level_bar_background",
-    .path = "elements/tooltip_level_bar_background.png",
-},
-{
-    .name = "tooltip_level_bar",
-    .path = "elements/tooltip_level_bar.png",
-},
-{
-    .name = "resource_view_background",
-    .path = "resources/resource_view_background.png",
-},
-{
-    .name = "resource_view_cell",
-    .path = "resources/resource_view_cell.png",
-},
-{
-    .name = "celestial_character_tooltip",
-    .path = "character_select/celestial_character_tooltip.png",
-},
-{
-    .name = "character_tooltip",
-    .path = "character_select/character_tooltip.png",
-},
-{
-    .name = "character_list_background",
-    .path = "character_select/character_list_background.png",
-},
-{
-    .name = "character_line_spirit_bar",
-    .path = "character_select/character_line_spirit_bar.png",
-},
-{
-    .name = "character_tooltip_spirit_bar",
-    .path = "character_select/character_tooltip_spirit_bar.png",
-},
-{
-    .name = "character_tooltip_talent_bar_1",
-    .path = "character_select/character_tooltip_talent_bar_1.png",
-},
-{
-    .name = "character_tooltip_talent_bar_2",
-    .path = "character_select/character_tooltip_talent_bar_2.png",
-},
-{
-    .name = "tooltip_background_locked",
-    .path = "elements/tooltip_background_locked.png",
-},
-{
-    .name = "tooltip_line_spacer_top_locked",
-    .path = "elements/tooltip_line_spacer_top_locked.png",
-},
-{
-    .name = "tooltip_line_spacer_bottom_locked",
-    .path = "elements/tooltip_line_spacer_bottom_locked.png",
-},
-{
-    .name = "death_screen_aether_bar",
-    .path = "death_screen/death_screen_aether_bar.png",
-},
-{
-    .name = "death_screen_background",
-    .path = "death_screen/death_screen_background.png",
-},
-{
-    .name = "death_screen_talent_bar_1",
-    .path = "death_screen/death_screen_talent_bar_1.png",
-},
-{
-    .name = "death_screen_talent_bar_2",
-    .path = "death_screen/death_screen_talent_bar_2.png",
-},
-{
-    .name = "character_create_background",
-    .path = "character_create/character_create_background.png",
-},
-{
-    .name = "character_create_class_button_background",
-    .path = "character_create/character_create_class_button_background.png",
-    .w = 76,
-    .h = 76,
-},
-{
-    .name = "player_menu_buttons",
-    .path = "menu/player_menu_buttons.png",
-    .w = 114,
-    .h = 34,
-},
-{
-    .name = "celestial_character_line",
-    .path = "character_select/celestial_character_line.png",
-    .w = 312,
-    .h = 76,
-},
-{
-    .name = "celestial_new_character_line",
-    .path = "character_select/celestial_new_character_line.png",
-    .w = 312,
-    .h = 76,
-},
-{
-    .name = "celestial_character_delete_button",
-    .path = "character_select/celestial_character_delete_button.png",
-    .w = 38,
-    .h = 44,
-},
-{
-    .name = "celestial_character_favorite_button",
-    .path = "character_select/celestial_character_favorite_button.png",
-    .w = 38,
-    .h = 44,
-},
-{
-    .name = "celestial_character_unfavorite_button",
-    .path = "character_select/celestial_character_unfavorite_button.png",
-    .w = 38,
-    .h = 44,
-},
-{
-    .name = "character_line",
-    .path = "character_select/character_line.png",
-    .w = 312,
-    .h = 76,
-},
-{
-    .name = "new_character_line",
-    .path = "character_select/new_character_line.png",
-    .w = 312,
-    .h = 76,
-},
-{
-    .name = "character_delete_button",
-    .path = "character_select/character_delete_button.png",
-    .w = 38,
-    .h = 44,
-},
-{
-    .name = "character_favorite_button",
-    .path = "character_select/character_favorite_button.png",
-    .w = 38,
-    .h = 44,
-},
-{
-    .name = "character_unfavorite_button",
-    .path = "character_select/character_unfavorite_button.png",
-    .w = 38,
-    .h = 44,
-},
-{
-    .name = "character_tooltip_card_icons",
-    .path = "character_select/character_tooltip_card_icons.png",
-    .w = 18,
-    .h = 18,
-},
-{
-    .name = "text_input",
-    .path = "elements/text_input.png",
-    .w = 107,
-    .h = 41,
-},
-{
-    .name = "talent_cell_big",
-    .path = "talents/talent_cell_big.png",
-    .w = 56,
-    .h = 80,
-},
-{
-    .name = "talent_cell_small",
-    .path = "talents/talent_cell_small.png",
-    .w = 46,
-    .h = 70,
-},
-{
-    .name = "cards_button",
-    .path = "cards/cards_button.png",
-    .w = 18,
-    .h = 18,
-},
-{
-    .name = "stats_button",
-    .path = "stats_button.png",
-    .w = 18,
-    .h = 18,
-},
-{
-    .name = "talent_view_button",
-    .path = "talents/talent_view_button.png",
-    .w = 18,
-    .h = 18,
-},
-{
-    .name = "resource_view_button",
-    .path = "resources/resource_view_button.png",
-    .w = 24,
-    .h = 24,
-},
-{
-    .name = "tooltip_background",
-    .path = "elements/tooltip_background.png",
-    .w = 69,
-    .h = 69,
-},
-{
-    .name = "tooltip_background_rare",
-    .path = "elements/tooltip_background_rare.png",
-    .w = 69,
-    .h = 69,
-},
-{
-    .name = "tooltip_background_epic",
-    .path = "elements/tooltip_background_epic.png",
-    .w = 69,
-    .h = 69,
-},
-{
-    .name = "tooltip_background_legendary",
-    .path = "elements/tooltip_background_legendary.png",
-    .w = 69,
-    .h = 69,
-},
-{
-    .name = "tooltip_background_mythic",
-    .path = "elements/tooltip_background_mythic.png",
-    .w = 69,
-    .h = 69,
-},
-{
-    .name = "card_panel_buttons",
-    .path = "cards/card_panel_buttons.png",
-    .w = 49,
-    .h = 28,
-},
-{
-    .name = "minimap_icons",
-    .path = "minimap_icons.png",
-    .w = 10,
-    .h = 10,
-},
-{
-    .name = "ability_icons",
-    .path = "ability/ability_icons.png",
-    .w = 22,
-    .h = 22,
-},
-{
-    .name = "speech_balloons_large",
-    .path = "chat/speech_balloons_large.png",
-    .w = 63,
-    .h = 39,
-},
-{
-    .name = "speech_balloons_medium",
-    .path = "chat/speech_balloons_medium.png",
-    .w = 47,
-    .h = 30,
-},
-{
-    .name = "speech_balloons_small",
-    .path = "chat/speech_balloons_small.png",
-    .w = 47,
-    .h = 20,
-},
-{
-    .name = "key_indicators",
-    .path = "key_indicators.png",
-    .w = 100,
-    .h = 100,
-},
+    .{
+        .name = "rare_slot",
+        .path = "item/rare_slot.png",
+    },
+    .{
+        .name = "epic_slot",
+        .path = "item/epic_slot.png",
+    },
+    .{
+        .name = "legendary_slot",
+        .path = "item/legendary_slot.png",
+    },
+    .{
+        .name = "mythic_slot",
+        .path = "item/mythic_slot.png",
+    },
+    .{
+        .name = "rare_slot_equip",
+        .path = "item/rare_slot_equip.png",
+    },
+    .{
+        .name = "epic_slot_equip",
+        .path = "item/epic_slot_equip.png",
+    },
+    .{
+        .name = "legendary_slot_equip",
+        .path = "item/legendary_slot_equip.png",
+    },
+    .{
+        .name = "mythic_slot_equip",
+        .path = "item/mythic_slot_equip.png",
+    },
+    .{
+        .name = "out_of_mana_slot",
+        .path = "ability/out_of_mana_slot.png",
+    },
+    .{
+        .name = "out_of_health_slot",
+        .path = "ability/out_of_health_slot.png",
+    },
+    .{
+        .name = "out_of_gold_slot",
+        .path = "ability/out_of_gold_slot.png",
+    },
+    .{
+        .name = "on_cooldown_slot",
+        .path = "ability/on_cooldown_slot.png",
+    },
+    .{
+        .name = "dialog_base_background",
+        .path = "elements/dialog_base_background.png",
+    },
+    .{
+        .name = "dialog_title_background",
+        .path = "elements/dialog_title_background.png",
+    },
+    .{
+        .name = "button_base",
+        .path = "elements/button_base.png",
+    },
+    .{
+        .name = "button_hover",
+        .path = "elements/button_hover.png",
+    },
+    .{
+        .name = "button_press",
+        .path = "elements/button_press.png",
+    },
+    .{
+        .name = "dropdown_collapsed_icon_base",
+        .path = "elements/dropdown_collapsed_icon_base.png",
+    },
+    .{
+        .name = "dropdown_collapsed_icon_hover",
+        .path = "elements/dropdown_collapsed_icon_hover.png",
+    },
+    .{
+        .name = "dropdown_collapsed_icon_press",
+        .path = "elements/dropdown_collapsed_icon_press.png",
+    },
+    .{
+        .name = "dropdown_extended_icon_base",
+        .path = "elements/dropdown_extended_icon_base.png",
+    },
+    .{
+        .name = "dropdown_extended_icon_hover",
+        .path = "elements/dropdown_extended_icon_hover.png",
+    },
+    .{
+        .name = "dropdown_extended_icon_press",
+        .path = "elements/dropdown_extended_icon_press.png",
+    },
+    .{
+        .name = "dropdown_main_color_base",
+        .path = "elements/dropdown_main_color_base.png",
+    },
+    .{
+        .name = "dropdown_main_color_hover",
+        .path = "elements/dropdown_main_color_hover.png",
+    },
+    .{
+        .name = "dropdown_main_color_press",
+        .path = "elements/dropdown_main_color_press.png",
+    },
+    .{
+        .name = "dropdown_alt_color_base",
+        .path = "elements/dropdown_alt_color_base.png",
+    },
+    .{
+        .name = "dropdown_alt_color_hover",
+        .path = "elements/dropdown_alt_color_hover.png",
+    },
+    .{
+        .name = "dropdown_alt_color_press",
+        .path = "elements/dropdown_alt_color_press.png",
+    },
+    .{
+        .name = "dropdown_title_background",
+        .path = "elements/dropdown_title_background.png",
+    },
+    .{
+        .name = "dropdown_background",
+        .path = "elements/dropdown_background.png",
+    },
+    .{
+        .name = "checked_box_base",
+        .path = "elements/checked_box_base.png",
+    },
+    .{
+        .name = "checked_box_hover",
+        .path = "elements/checked_box_hover.png",
+    },
+    .{
+        .name = "checked_box_press",
+        .path = "elements/checked_box_press.png",
+    },
+    .{
+        .name = "slider_background",
+        .path = "elements/slider_background.png",
+    },
+    .{
+        .name = "slider_knob_base",
+        .path = "elements/slider_knob_base.png",
+    },
+    .{
+        .name = "slider_knob_hover",
+        .path = "elements/slider_knob_hover.png",
+    },
+    .{
+        .name = "slider_knob_press",
+        .path = "elements/slider_knob_press.png",
+    },
+    .{
+        .name = "toggle_slider_base_off",
+        .path = "elements/toggle_slider_base_off.png",
+    },
+    .{
+        .name = "toggle_slider_hover_off",
+        .path = "elements/toggle_slider_hover_off.png",
+    },
+    .{
+        .name = "toggle_slider_press_off",
+        .path = "elements/toggle_slider_press_off.png",
+    },
+    .{
+        .name = "toggle_slider_base_on",
+        .path = "elements/toggle_slider_base_on.png",
+    },
+    .{
+        .name = "toggle_slider_hover_on",
+        .path = "elements/toggle_slider_hover_on.png",
+    },
+    .{
+        .name = "toggle_slider_press_on",
+        .path = "elements/toggle_slider_press_on.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_bottom",
+        .path = "elements/tooltip_line_spacer_bottom.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_bottom_rare",
+        .path = "elements/tooltip_line_spacer_bottom_rare.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_bottom_epic",
+        .path = "elements/tooltip_line_spacer_bottom_epic.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_bottom_legendary",
+        .path = "elements/tooltip_line_spacer_bottom_legendary.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_bottom_mythic",
+        .path = "elements/tooltip_line_spacer_bottom_mythic.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_top",
+        .path = "elements/tooltip_line_spacer_top.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_top_rare",
+        .path = "elements/tooltip_line_spacer_top_rare.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_top_epic",
+        .path = "elements/tooltip_line_spacer_top_epic.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_top_legendary",
+        .path = "elements/tooltip_line_spacer_top_legendary.png",
+    },
+    .{
+        .name = "tooltip_line_spacer_top_mythic",
+        .path = "elements/tooltip_line_spacer_top_mythic.png",
+    },
+    .{
+        .name = "unchecked_box_base",
+        .path = "elements/unchecked_box_base.png",
+    },
+    .{
+        .name = "unchecked_box_hover",
+        .path = "elements/unchecked_box_hover.png",
+    },
+    .{
+        .name = "unchecked_box_press",
+        .path = "elements/unchecked_box_press.png",
+    },
+    .{
+        .name = "container_view",
+        .path = "item/container_view.png",
+    },
+    .{
+        .name = "minimap",
+        .path = "minimap.png",
+    },
+    .{
+        .name = "teleport_icon",
+        .path = "teleport_icon.png",
+    },
+    .{
+        .name = "block_icon",
+        .path = "block_icon.png",
+    },
+    .{
+        .name = "celestial_player_tooltip_line",
+        .path = "celestial_player_tooltip_line.png",
+    },
+    .{
+        .name = "player_tooltip_line",
+        .path = "player_tooltip_line.png",
+    },
+    .{
+        .name = "celestial_player_menu",
+        .path = "menu/celestial_player_menu.png",
+    },
+    .{
+        .name = "player_menu",
+        .path = "menu/player_menu.png",
+    },
+    .{
+        .name = "player_menu_spirit_bar",
+        .path = "menu/player_menu_spirit_bar.png",
+    },
+    .{
+        .name = "player_menu_health_bar",
+        .path = "menu/player_menu_health_bar.png",
+    },
+    .{
+        .name = "player_menu_mana_bar",
+        .path = "menu/player_menu_mana_bar.png",
+    },
+    .{
+        .name = "player_inventory",
+        .path = "item/player_inventory.png",
+    },
+    .{
+        .name = "player_health_bar",
+        .path = "player_health_bar.png",
+    },
+    {
+        "name": "player_mana_bar",
+        "path": "player_mana_bar.png",
+    },
+    {
+        "name": "player_abilities_bars",
+        "path": "player_abilities_bars.png",
+    },
+    {
+        "name": "player_spirit_bar",
+        "path": "player_spirit_bar.png",
+    },
+    {
+        "name": "dark_background",
+        "path": "dark_background.png",
+    },
+    {
+        "name": "player_stats",
+        "path": "player_stats.png",
+    },
+    {
+        "name": "chatbox_background",
+        "path": "chat/chatbox_background.png",
+    },
+    {
+        "name": "chatbox_input",
+        "path": "chat/chatbox_input.png",
+    },
+    {
+        "name": "chatbox_cursor",
+        "path": "chat/chatbox_cursor.png",
+    },
+    {
+        "name": "scroll_background",
+        "path": "elements/scroll_background.png",
+    },
+    {
+        "name": "scroll_wheel_base",
+        "path": "elements/scroll_wheel_base.png",
+    },
+    {
+        "name": "scroll_wheel_hover",
+        "path": "elements/scroll_wheel_hover.png",
+    },
+    {
+        "name": "scroll_wheel_press",
+        "path": "elements/scroll_wheel_press.png",
+    },
+    {
+        "name": "scrollbar_decor",
+        "path": "elements/scrollbar_decor.png",
+    },
+    {
+        "name": "party_view",
+        "path": "party_view.png",
+    },
+    {
+        "name": "party_view_health_bar",
+        "path": "party_view_health_bar.png",
+    },
+    {
+        "name": "party_view_mana_bar",
+        "path": "party_view_mana_bar.png",
+    },
+    {
+        "name": "card_panel_bg",
+        "path": "cards/card_panel_bg.png",
+    },
+    {
+        "name": "empty_card_slot",
+        "path": "cards/empty_card_slot.png",
+    },
+    {
+        "name": "common_card_slot",
+        "path": "cards/common_card_slot.png",
+    },
+    {
+        "name": "rare_card_slot",
+        "path": "cards/rare_card_slot.png",
+    },
+    {
+        "name": "epic_card_slot",
+        "path": "cards/epic_card_slot.png",
+    },
+    {
+        "name": "legendary_card_slot",
+        "path": "cards/legendary_card_slot.png",
+    },
+    {
+        "name": "mythic_card_slot",
+        "path": "cards/mythic_card_slot.png",
+    },
+    {
+        "name": "player_talent_tree_view",
+        "path": "talents/player_talent_tree_view.png",
+    },
+    {
+        "name": "talent_cell_small_locked",
+        "path": "talents/talent_cell_small_locked.png",
+    },
+    {
+        "name": "talent_cell_big_locked",
+        "path": "talents/talent_cell_big_locked.png",
+    },
+    {
+        "name": "editor_selection",
+        "path": "editor_selection.png",
+    },
+    {
+        "name": "tooltip_level_bar_background",
+        "path": "elements/tooltip_level_bar_background.png",
+    },
+    {
+        "name": "tooltip_level_bar",
+        "path": "elements/tooltip_level_bar.png",
+    },
+    {
+        "name": "resource_view_background",
+        "path": "resources/resource_view_background.png",
+    },
+    {
+        "name": "resource_view_cell",
+        "path": "resources/resource_view_cell.png",
+    },
+    {
+        "name": "celestial_character_tooltip",
+        "path": "character_select/celestial_character_tooltip.png",
+    },
+    {
+        "name": "character_tooltip",
+        "path": "character_select/character_tooltip.png",
+    },
+    {
+        "name": "character_list_background",
+        "path": "character_select/character_list_background.png",
+    },
+    {
+        "name": "character_line_spirit_bar",
+        "path": "character_select/character_line_spirit_bar.png",
+    },
+    {
+        "name": "character_tooltip_spirit_bar",
+        "path": "character_select/character_tooltip_spirit_bar.png",
+    },
+    {
+        "name": "character_tooltip_talent_bar_1",
+        "path": "character_select/character_tooltip_talent_bar_1.png",
+    },
+    {
+        "name": "character_tooltip_talent_bar_2",
+        "path": "character_select/character_tooltip_talent_bar_2.png",
+    },
+    {
+        "name": "tooltip_background_locked",
+        "path": "elements/tooltip_background_locked.png",
+    },
+    {
+        "name": "tooltip_line_spacer_top_locked",
+        "path": "elements/tooltip_line_spacer_top_locked.png",
+    },
+    {
+        "name": "tooltip_line_spacer_bottom_locked",
+        "path": "elements/tooltip_line_spacer_bottom_locked.png",
+    },
+    {
+        "name": "death_screen_aether_bar",
+        "path": "death_screen/death_screen_aether_bar.png",
+    },
+    {
+        "name": "death_screen_background",
+        "path": "death_screen/death_screen_background.png",
+    },
+    {
+        "name": "death_screen_talent_bar_1",
+        "path": "death_screen/death_screen_talent_bar_1.png",
+    },
+    {
+        "name": "death_screen_talent_bar_2",
+        "path": "death_screen/death_screen_talent_bar_2.png",
+    },
+    {
+        "name": "character_create_background",
+        "path": "character_create/character_create_background.png",
+    },
+    {
+        "name": "character_create_class_button_background",
+        "path": "character_create/character_create_class_button_background.png",
+        "w": 76,
+        "h": 76,
+    },
+    {
+        "name": "player_menu_buttons",
+        "path": "menu/player_menu_buttons.png",
+        "w": 114,
+        "h": 34,
+    },
+    {
+        "name": "celestial_character_line",
+        "path": "character_select/celestial_character_line.png",
+        "w": 312,
+        "h": 76,
+    },
+    {
+        "name": "celestial_new_character_line",
+        "path": "character_select/celestial_new_character_line.png",
+        "w": 312,
+        "h": 76,
+    },
+    {
+        "name": "celestial_character_delete_button",
+        "path": "character_select/celestial_character_delete_button.png",
+        "w": 38,
+        "h": 44,
+    },
+    {
+        "name": "celestial_character_favorite_button",
+        "path": "character_select/celestial_character_favorite_button.png",
+        "w": 38,
+        "h": 44,
+    },
+    {
+        "name": "celestial_character_unfavorite_button",
+        "path": "character_select/celestial_character_unfavorite_button.png",
+        "w": 38,
+        "h": 44,
+    },
+    {
+        "name": "character_line",
+        "path": "character_select/character_line.png",
+        "w": 312,
+        "h": 76,
+    },
+    {
+        "name": "new_character_line",
+        "path": "character_select/new_character_line.png",
+        "w": 312,
+        "h": 76,
+    },
+    {
+        "name": "character_delete_button",
+        "path": "character_select/character_delete_button.png",
+        "w": 38,
+        "h": 44,
+    },
+    {
+        "name": "character_favorite_button",
+        "path": "character_select/character_favorite_button.png",
+        "w": 38,
+        "h": 44,
+    },
+    {
+        "name": "character_unfavorite_button",
+        "path": "character_select/character_unfavorite_button.png",
+        "w": 38,
+        "h": 44,
+    },
+    {
+        "name": "character_tooltip_card_icons",
+        "path": "character_select/character_tooltip_card_icons.png",
+        "w": 18,
+        "h": 18,
+    },
+    {
+        "name": "text_input",
+        "path": "elements/text_input.png",
+        "w": 107,
+        "h": 41,
+    },
+    {
+        "name": "talent_cell_big",
+        "path": "talents/talent_cell_big.png",
+        "w": 56,
+        "h": 80,
+    },
+    {
+        "name": "talent_cell_small",
+        "path": "talents/talent_cell_small.png",
+        "w": 46,
+        "h": 70,
+    },
+    {
+        "name": "cards_button",
+        "path": "cards/cards_button.png",
+        "w": 18,
+        "h": 18,
+    },
+    {
+        "name": "stats_button",
+        "path": "stats_button.png",
+        "w": 18,
+        "h": 18,
+    },
+    {
+        "name": "talent_view_button",
+        "path": "talents/talent_view_button.png",
+        "w": 18,
+        "h": 18,
+    },
+    {
+        "name": "resource_view_button",
+        "path": "resources/resource_view_button.png",
+        "w": 24,
+        "h": 24,
+    },
+    {
+        "name": "tooltip_background",
+        "path": "elements/tooltip_background.png",
+        "w": 69,
+        "h": 69,
+    },
+    {
+        "name": "tooltip_background_rare",
+        "path": "elements/tooltip_background_rare.png",
+        "w": 69,
+        "h": 69,
+    },
+    {
+        "name": "tooltip_background_epic",
+        "path": "elements/tooltip_background_epic.png",
+        "w": 69,
+        "h": 69,
+    },
+    {
+        "name": "tooltip_background_legendary",
+        "path": "elements/tooltip_background_legendary.png",
+        "w": 69,
+        "h": 69,
+    },
+    {
+        "name": "tooltip_background_mythic",
+        "path": "elements/tooltip_background_mythic.png",
+        "w": 69,
+        "h": 69,
+    },
+    {
+        "name": "card_panel_buttons",
+        "path": "cards/card_panel_buttons.png",
+        "w": 49,
+        "h": 28,
+    },
+    {
+        "name": "minimap_icons",
+        "path": "minimap_icons.png",
+        "w": 10,
+        "h": 10,
+    },
+    {
+        "name": "ability_icons",
+        "path": "ability/ability_icons.png",
+        "w": 22,
+        "h": 22,
+    },
+    {
+        "name": "speech_balloons_large",
+        "path": "chat/speech_balloons_large.png",
+        "w": 63,
+        "h": 39,
+    },
+    {
+        "name": "speech_balloons_medium",
+        "path": "chat/speech_balloons_medium.png",
+        "w": 47,
+        "h": 30,
+    },
+    {
+        "name": "speech_balloons_small",
+        "path": "chat/speech_balloons_small.png",
+        "w": 47,
+        "h": 20,
+    },
+    {
+        "name": "key_indicators",
+        "path": "key_indicators.png",
+        "w": 100,
+        "h": 100,
+    },
 ]

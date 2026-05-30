@@ -366,7 +366,7 @@ fn redisCommand(ctx: [*c]c.redisContext, format: [*c]const u8, args: anytype) ?*
 
 pub fn init() !void {
     var buf: [std.Random.DefaultCsprng.secret_seed_length]u8 = undefined;
-    std.posix.getrandom(&buf) catch |e| {
+    main.io.randomSecure(&buf) catch |e| {
         std.log.err("getrandom() failed: {}. This means that the server is insecure and should not be used in production", .{e});
         buf = @splat(0);
     };

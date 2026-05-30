@@ -49,24 +49,25 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
     const world = maps.worlds.getPtr(player.world_id) orelse return;
 
     var buf: [256]u8 = undefined;
-    var name_stream = std.io.fixedBufferStream(&buf);
+    var name_stream: std.Io.Writer = .fixed(&buf);
     const first_str = iter.next() orelse return;
     const count = blk: {
         const int = std.fmt.parseInt(u16, first_str, 0) catch {
-            _ = name_stream.write(first_str) catch return;
+            name_stream.writeAll(first_str) catch return;
             break :blk 1;
         };
 
         break :blk int;
     };
     if (iter.index) |i| {
-        if (name_stream.pos != 0) _ = name_stream.write(" ") catch return;
-        _ = name_stream.write(iter.buffer[i..]) catch return;
+        if (name_stream.end != 0)
+            name_stream.writeAll(" ") catch return;
+        name_stream.writeAll(iter.buffer[i..]) catch return;
     }
 
     var response_buf: [256]u8 = undefined;
 
-    const written_name = name_stream.getWritten();
+    const written_name = name_stream.buffered();
     var name: ?[]const u8 = null;
     inline for (.{ Entity, Enemy, Portal, Container, Ally }) |ObjType| {
         if (switch (ObjType) {
@@ -89,8 +90,7 @@ fn handleSpawn(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void 
 
     if (name) |name_inner| {
         player.client.sendMessage(std.fmt.bufPrint(&response_buf, "Spawned {}x \"{s}\"", .{ count, name_inner }) catch return);
-    } else
-        player.client.sendMessage(std.fmt.bufPrint(&response_buf, "\"{s}\" not found in game data", .{written_name}) catch return);
+    } else player.client.sendMessage(std.fmt.bufPrint(&response_buf, "\"{s}\" not found in game data", .{written_name}) catch return);
 }
 
 fn handleGive(iter: *std.mem.SplitIterator(u8, .scalar), player: *Player) void {

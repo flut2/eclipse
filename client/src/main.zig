@@ -39,22 +39,41 @@ const AccountData = struct {
     token: u128,
 
     pub fn load() !AccountData {
-        const file = try std.fs.cwd().openFile("login_data_do_not_share.ziggy", .{});
-        defer file.close();
+        const login_path = "login_data_do_not_share.ziggy";
 
-        const file_data = try file.readToEndAllocOptions(account_arena_allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);
-        defer account_arena_allocator.free(file_data);
+        const file = try std.Io.Dir.cwd().openFile(io, login_path, .{});
+        defer file.close(io);
 
-        return try ziggy.parseLeaky(AccountData, account_arena_allocator, file_data, .{});
+        var read_buf: [1024]u8 = undefined;
+        var reader = file.reader(io, &read_buf);
+
+        const bytes = try reader.interface.allocRemainingAlignedSentinel(account_arena_allocator, .unlimited, .of(u8), 0);
+        defer account_arena_allocator.free(bytes);
+
+        if (bytes.len == 0) return error.EmptyLogin;
+
+        var meta: ziggy.Deserializer.Meta = .init;
+        return ziggy.deserializeLeaky(AccountData, account_arena_allocator, bytes, &meta, .{ .copy_strings = .always }) catch |e| {
+            if (e != error.OutOfMemory) {
+                var stdout: std.Io.File = .stdout();
+                var stdout_buf: [4096]u8 = undefined;
+                var stdout_wtr = stdout.writer(io, &stdout_buf);
+
+                try meta.reportErrors(account_arena_allocator, .{}, login_path, bytes, e, &stdout_wtr.interface);
+                try stdout_wtr.interface.flush();
+            }
+            return e;
+        };
     }
 
     pub fn save(self: AccountData) !void {
-        const file = try std.fs.cwd().createFile("login_data_do_not_share.ziggy", .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, "login_data_do_not_share.ziggy", .{});
+        defer file.close(io);
 
-        var wtr_buf: [4096]u8 = undefined;
-        var wtr = file.writer(&wtr_buf);
-        try ziggy.stringify(self, .{ .whitespace = .space_4 }, &wtr.interface);
+        var wtr_buf: [256]u8 = undefined;
+        var wtr = file.writer(io, &wtr_buf);
+
+        try ziggy.serialize(self, .{ .whitespace = .space_4 }, &wtr.interface);
         try wtr.interface.flush();
     }
 };
@@ -99,10 +118,11 @@ pub var minimap_update: struct {
     min_y: u32 = std.math.maxInt(u32),
     max_y: u32 = std.math.minInt(u32),
 } = .{};
-pub var allocator: std.mem.Allocator = undefined;
+pub var allocator: std.mem.Allocator = .failing;
+pub var io: std.Io = .failing;
 pub var start_time: i64 = 0;
-pub var game_server: GameServer = undefined;
-pub var login_server: LoginServer = undefined;
+pub var game_server: GameServer = .{};
+pub var login_server: LoginServer = .{};
 pub var camera: Camera = .{};
 pub var settings: Settings = .{};
 pub var main_loop: uv.uv_loop_t = .{};
@@ -310,10 +330,10 @@ fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.c) void {
 
     windy.pollEvents() catch |e| {
         std.log.err("Event polling error: {}", .{e});
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
     };
 
-    const time = std.time.microTimestamp() - start_time;
+    const time = microTimestamp() - start_time;
     current_time = time;
 
     // Limited to 10000 updates a second to avoid tiny dt values causing issues (most notably movement).
@@ -324,7 +344,7 @@ fn gameTick(idler: [*c]uv.uv_idle_t) callconv(.c) void {
 
         ui_systems.update(time, dt) catch |e| {
             std.log.err("Error while updating UI: {}", .{e});
-            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
         };
         if (tick_frame or needs_map_bg) map.update(renderer, time, dt);
     }
@@ -361,14 +381,29 @@ pub fn oomPanic() noreturn {
 pub fn audioFailure() void {
     settings.sfx_volume = 0.0;
     settings.music_volume = 0.0;
-    dialog.showDialog(.text, .{ .title = "Audio Error", .body = 
-        \\There was a problem interacting with your audio device. 
+    dialog.showDialog(.text, .{ .title = "Audio Error", .body =
+        \\There was a problem interacting with your audio device.
         \\Audio has been turned off, but you can turn it back on in the Options if you believe this to be incorrect or temporary.
     });
 }
 
-pub fn main() !void {
-    start_time = std.time.microTimestamp();
+pub fn microTimestamp() i64 {
+    return @intCast(@divTrunc(
+        io.vtable.now(io.userdata, .real).nanoseconds,
+        std.time.ns_per_us,
+    ));
+}
+
+pub fn main(init: std.process.Init.Minimal) !void {
+    var threaded: std.Io.Threaded = .init(allocator, .{ .environ = init.environ });
+    defer threaded.deinit();
+    io = threaded.io();
+
+    const clock_res = try std.Io.Clock.resolution(.real, io);
+    if (clock_res.nanoseconds == 0)
+        return error.UnsupportedClock;
+
+    start_time = microTimestamp();
     utils.rng.seed(@intCast(start_time));
 
     var dbg_alloc: std.heap.DebugAllocator(.{ .stack_trace_frames = 10 }) = .init;
@@ -377,7 +412,7 @@ pub fn main() !void {
         if (build_options.tracy) .init(dbg_alloc.allocator()) else {};
     allocator = if (build_options.tracy) tracy_alloc.allocator() else dbg_alloc.allocator();
 
-    try shared.uv.init(allocator);
+    try shared.uv.init(allocator, io);
     defer shared.uv.deinit();
 
     var account_arena: std.heap.ArenaAllocator = .init(allocator);
@@ -411,13 +446,13 @@ pub fn main() !void {
 
     const clip_buf = try allocator.alloc(u8, std.math.maxInt(u12));
     defer allocator.free(clip_buf);
-    try windy.init(allocator, clip_buf);
+    try windy.init(allocator, io, clip_buf);
     defer windy.deinit();
 
-    stbi.init(allocator);
+    stbi.init(allocator, io);
     defer stbi.deinit();
 
-    miniaudio.init(allocator);
+    miniaudio.init(allocator, io);
     defer miniaudio.deinit();
 
     settings = Settings.init(allocator) catch .{};
@@ -426,7 +461,7 @@ pub fn main() !void {
     try assets.init();
     defer assets.deinit();
 
-    try game_data.init(allocator);
+    try game_data.init(allocator, io);
     defer game_data.deinit();
 
     try map.init();
@@ -440,7 +475,7 @@ pub fn main() !void {
     window = try .create(1280, 720, .{ .title = "Eclipse" });
     defer window.destroy();
 
-    try window.setMinSize(.{.w = 1280, .h = 720});
+    try window.setMinSize(.{ .w = 1280, .h = 720 });
     try window.setCursor(switch (settings.cursor_type) {
         .basic => assets.default_cursor,
         .royal => assets.royal_cursor,
@@ -461,7 +496,7 @@ pub fn main() !void {
     var renderer: Renderer = try .create(if (settings.enable_vsync) .fifo_khr else .immediate_khr);
     defer renderer.destroy() catch |e| {
         std.log.err("Error while destroying renderer: {}", .{e});
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
     };
 
     render_thread = try .spawn(.{ .allocator = allocator }, renderTick, .{&renderer});

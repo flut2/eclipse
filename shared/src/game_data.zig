@@ -48,35 +48,56 @@ pub fn Maps(comptime T: type) type {
     };
 }
 
-fn parseGeneric(allocator: std.mem.Allocator, path: []const u8, comptime DataType: type, data_maps: *Maps(DataType)) !void {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
+fn parseGeneric(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    stdout_wtr: *std.Io.Writer,
+    path: []const u8,
+    comptime T: type,
+    data_maps: *Maps(T),
+) !void {
+    const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+    defer file.close(io);
 
-    const file_data = try file.readToEndAllocOptions(allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);
-    defer allocator.free(file_data);
+    var read_buf: [4096]u8 = undefined;
+    var reader = file.reader(io, &read_buf);
 
-    const data_slice = try ziggy.parseLeaky([]DataType, allocator, file_data, .{});
-    for (data_slice) |*data| {
-        if (std.meta.hasFn(DataType, "postProcess"))
-            try data.postProcess(allocator);
+    const bytes = try reader.interface.allocRemainingAlignedSentinel(allocator, .unlimited, .of(u8), 0);
+    defer allocator.free(bytes);
 
-        const id_res = try data_maps.from_id.getOrPut(allocator, data.id);
+    var meta: ziggy.Deserializer.Meta = .init;
+    const slice = ziggy.deserializeLeaky([]T, allocator, bytes, &meta, .{ .copy_strings = .always }) catch |e| {
+        if (e != error.OutOfMemory) {
+            try meta.reportErrors(allocator, .{}, path, bytes, e, stdout_wtr);
+            try stdout_wtr.flush();
+        }
+        return e;
+    };
+    for (slice) |*val| {
+        if (std.meta.hasFn(T, "postProcess"))
+            try val.postProcess(allocator);
+
+        const id_res = try data_maps.from_id.getOrPut(allocator, val.id);
         if (id_res.found_existing) {
-            std.log.err("Duplicate id for {s}: wanted to override {s}", .{ data.name, id_res.value_ptr.name });
-            std.posix.exit(0);
+            std.log.err("Duplicate id for {s}: wanted to override {s}", .{ val.name, id_res.value_ptr.name });
+            std.process.exit(0);
         }
-        id_res.value_ptr.* = data.*;
+        id_res.value_ptr.* = val.*;
 
-        const name_res = try data_maps.from_name.getOrPut(allocator, data.name);
+        const name_res = try data_maps.from_name.getOrPut(allocator, val.name);
         if (name_res.found_existing) {
-            std.log.err("Duplicate name for {s}", .{data.name});
-            std.posix.exit(0);
+            std.log.err("Duplicate name for {s}", .{val.name});
+            std.process.exit(0);
         }
-        name_res.value_ptr.* = data.*;
+        name_res.value_ptr.* = val.*;
     }
 }
 
-pub fn init(allocator: std.mem.Allocator) !void {
+pub fn init(allocator: std.mem.Allocator, io: std.Io) !void {
+    arena = .init(allocator);
+    const arena_allocator = arena.allocator();
+    errdefer arena.deinit();
+
     defer {
         const dummy_id_ctx: std.hash_map.AutoContext(u16) = undefined;
         const dummy_name_ctx: StringContext = undefined;
@@ -98,21 +119,22 @@ pub fn init(allocator: std.mem.Allocator) !void {
         }
     }
 
-    arena = .init(allocator);
-    const arena_allocator = arena.allocator();
+    var stdout: std.Io.File = .stdout();
+    var stdout_buf: [4096]u8 = undefined;
+    var stdout_wtr = stdout.writer(io, &stdout_buf);
 
-    try parseGeneric(arena_allocator, "./assets/shared/data/cards.ziggy", CardData, &card);
-    try parseGeneric(arena_allocator, "./assets/shared/data/items.ziggy", ItemData, &item);
-    try parseGeneric(arena_allocator, "./assets/shared/data/containers.ziggy", ContainerData, &container);
-    try parseGeneric(arena_allocator, "./assets/shared/data/enemies.ziggy", EnemyData, &enemy);
-    try parseGeneric(arena_allocator, "./assets/shared/data/entities.ziggy", EntityData, &entity);
-    try parseGeneric(arena_allocator, "./assets/shared/data/walls.ziggy", EntityData, &entity);
-    try parseGeneric(arena_allocator, "./assets/shared/data/ground.ziggy", GroundData, &ground);
-    try parseGeneric(arena_allocator, "./assets/shared/data/portals.ziggy", PortalData, &portal);
-    try parseGeneric(arena_allocator, "./assets/shared/data/regions.ziggy", RegionData, &region);
-    try parseGeneric(arena_allocator, "./assets/shared/data/allies.ziggy", AllyData, &ally);
-    try parseGeneric(arena_allocator, "./assets/shared/data/resources.ziggy", ResourceData, &resource);
-    try parseGeneric(arena_allocator, "./assets/shared/data/classes.ziggy", ClassData, &class);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/cards.ziggy", CardData, &card);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/items.ziggy", ItemData, &item);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/containers.ziggy", ContainerData, &container);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/enemies.ziggy", EnemyData, &enemy);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/entities.ziggy", EntityData, &entity);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/walls.ziggy", EntityData, &entity);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/ground.ziggy", GroundData, &ground);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/portals.ziggy", PortalData, &portal);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/regions.ziggy", RegionData, &region);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/allies.ziggy", AllyData, &ally);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/resources.ziggy", ResourceData, &resource);
+    try parseGeneric(arena_allocator, io, &stdout_wtr.interface, "./assets/shared/data/classes.ziggy", ClassData, &class);
 }
 
 pub fn deinit() void {
@@ -229,8 +251,9 @@ pub const TextureData = struct {
     sheet: []const u8,
     index: u16,
 
-    pub fn controlCode(self: TextureData, buf: []u8) ![]const u8 {
-        return try std.fmt.bufPrint(buf, "&img=\"{s},{d}\"", .{ self.sheet, self.index });
+    pub fn controlCode(self: TextureData, buf: []u8) []const u8 {
+        // maybe bubble the error up later... I don't really see an use for it now
+        return std.fmt.bufPrint(buf, "&img=\"{s},{d}\"", .{ self.sheet, self.index }) catch "Buffer overflow";
     }
 
     pub fn comptimeControlCode(self: TextureData) []const u8 {
@@ -238,11 +261,15 @@ pub const TextureData = struct {
     }
 
     pub const ziggy_options = struct {
-        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) ziggy.Parser.Error!TextureData {
-            const map = try parser.parseValue(ziggy.dynamic.Map(u16), first_tok);
-            switch (map.fields.count()) {
+        pub fn deserialize(d: *const ziggy.Deserializer, first_tok: ziggy.Tokenizer.Token, top_lvl: bool) ziggy.Deserializer.Error!TextureData {
+            const map = try d.deserializeOne(ziggy.Dynamic, first_tok, top_lvl);
+            if (map != .kv) @panic("Invalid TextureData format");
+            switch (map.kv.fields.count()) {
                 0 => @panic("You can't provide an empty map"),
-                1 => return .{ .sheet = map.fields.keys()[0], .index = map.fields.values()[0] },
+                1 => return .{
+                    .sheet = try arena.allocator().dupe(u8, map.kv.fields.keys()[0]),
+                    .index = @intCast(map.kv.fields.values()[0].integer),
+                },
                 else => @panic("You can only map one value in a TextureData"),
             }
         }
@@ -299,11 +326,15 @@ pub const TalentResourceCost = struct {
     amount: u32,
 
     pub const ziggy_options = struct {
-        pub fn parse(parser: *ziggy.Parser, first_tok: ziggy.Tokenizer.Token) ziggy.Parser.Error!TalentResourceCost {
-            const map = try parser.parseValue(ziggy.dynamic.Map(u16), first_tok);
-            switch (map.fields.count()) {
+        pub fn deserialize(d: *const ziggy.Deserializer, first_tok: ziggy.Tokenizer.Token, top_lvl: bool) ziggy.Deserializer.Error!TalentResourceCost {
+            const map = try d.deserializeOne(ziggy.Dynamic, first_tok, top_lvl);
+            if (map != .kv) @panic("Invalid TalentResourceCost format");
+            switch (map.kv.fields.count()) {
                 0 => @panic("You can't provide an empty map"),
-                1 => return .{ .name = map.fields.keys()[0], .amount = map.fields.values()[0] },
+                1 => return .{
+                    .name = try arena.allocator().dupe(u8, map.kv.fields.keys()[0]),
+                    .amount = @intCast(map.kv.fields.values()[0].integer),
+                },
                 else => @panic("You can only map one value in a TalentResourceCost"),
             }
         }

@@ -39,7 +39,8 @@ pub var game_client_free_list: std.ArrayList(usize) = .empty;
 pub var login_client_free_list: std.ArrayList(usize) = .empty;
 pub var game_timer: uv.uv_timer_t = .{};
 pub var main_loop: uv.uv_loop_t = .{};
-pub var allocator: std.mem.Allocator = undefined;
+pub var allocator: std.mem.Allocator = .failing;
+pub var io: std.Io = .failing;
 pub var tick_id: u8 = 0;
 pub var current_time: i64 = -1;
 pub var settings: Settings = .{};
@@ -48,8 +49,30 @@ pub fn oomPanic() noreturn {
     @panic("Out of memory");
 }
 
-pub fn main() !void {
-    utils.rng.seed(@intCast(std.time.microTimestamp()));
+pub fn microTimestamp() i64 {
+    return @intCast(@divTrunc(
+        io.vtable.now(io.userdata, .real).nanoseconds,
+        std.time.ns_per_us,
+    ));
+}
+
+pub fn milliTimestamp() i64 {
+    return @intCast(@divTrunc(
+        io.vtable.now(io.userdata, .real).nanoseconds,
+        std.time.ns_per_ms,
+    ));
+}
+
+pub fn main(init: std.process.Init.Minimal) !void {
+    var threaded: std.Io.Threaded = .init(allocator, .{ .environ = init.environ });
+    defer threaded.deinit();
+    io = threaded.io();
+
+    const clock_res = try std.Io.Clock.resolution(.real, io);
+    if (clock_res.nanoseconds == 0)
+        return error.UnsupportedClock;
+
+    utils.rng.seed(@intCast(microTimestamp()));
 
     var dbg_alloc: std.heap.DebugAllocator(.{ .stack_trace_frames = 10 }) = .init;
     defer _ = dbg_alloc.deinit();
@@ -64,7 +87,7 @@ pub fn main() !void {
         login_client_free_list.deinit(allocator);
     }
 
-    try shared.uv.init(allocator);
+    try shared.uv.init(allocator, io);
     defer shared.uv.deinit();
 
     const create_status = uv.uv_loop_init(&main_loop);
@@ -85,7 +108,7 @@ pub fn main() !void {
     settings = try .init(allocator);
     defer Settings.deinit();
 
-    try game_data.init(allocator);
+    try game_data.init(allocator, io);
     defer game_data.deinit();
 
     try behavior.init();
@@ -143,8 +166,10 @@ fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.c) void, se
     const disable_nagle_status = uv.uv_tcp_nodelay(server_handle, 1);
     if (disable_nagle_status != 0) std.debug.panic("Disabling Nagle on socket failed: {s}", .{uv.uv_strerror(disable_nagle_status)});
 
-    const addr = std.net.Address.parseIp4("0.0.0.0", port) catch @panic("Parsing 0.0.0.0 failed");
-    const socket_bind_status = uv.uv_tcp_bind(server_handle, @ptrCast(&addr.in.sa), 0);
+    const addr = std.Io.net.IpAddress.parseIp4("0.0.0.0", port) catch @panic("Parsing 0.0.0.0 failed");
+    var sa: std.Io.Threaded.PosixAddress = undefined;
+    _ = std.Io.Threaded.addressToPosix(&addr, &sa);
+    const socket_bind_status = uv.uv_tcp_bind(server_handle, @ptrCast(&sa.in), 0);
     if (socket_bind_status != 0) std.debug.panic("Setting up socket bind failed: {s}", .{uv.uv_strerror(socket_bind_status)});
 
     const listen_result = uv.uv_listen(@ptrCast(server_handle), std.c.SOMAXCONN, acceptFunc);
@@ -153,7 +178,7 @@ fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.c) void, se
 
 fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.c) void {
     tick_id +%= 1;
-    const time = std.time.microTimestamp();
+    const time = microTimestamp();
     defer current_time = time;
     const dt = if (current_time == -1) 0 else time - current_time;
 
@@ -163,7 +188,7 @@ fn timerCallback(_: [*c]uv.uv_timer_t) callconv(.c) void {
         var i = worlds_len - 1;
         while (iter.next()) |entry| : (i -%= 1) _ = if (!(entry.value_ptr.tick(time, dt) catch |e| blk: {
             std.log.err("Error while ticking world: {}", .{e});
-            if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+            if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
             break :blk false;
         })) maps.worlds.swapRemoveAt(i);
     }

@@ -4,16 +4,16 @@ const shared = @import("shared");
 const utils = shared.utils;
 const game_data = shared.game_data;
 
+const main = @import("../main.zig");
+const Enemy = @import("../map/Enemy.zig");
+const Entity = @import("../map/Entity.zig");
+
 const behaviors = .{
     @import("behaviors/ability.zig"),
     @import("behaviors/basic_enemies.zig"),
     @import("behaviors/crown_cove.zig"),
     @import("behaviors/misc.zig"),
 };
-
-const main = @import("../main.zig");
-const Enemy = @import("../map/Enemy.zig");
-const Entity = @import("../map/Entity.zig");
 
 const BehaviorType = enum { entity, enemy, ally };
 pub const BehaviorMetadata = struct {
@@ -38,11 +38,13 @@ fn getMetadata(comptime T: type) BehaviorMetadata {
 }
 
 fn Behavior(comptime behav_type: BehaviorType) type {
-    const EnumField = std.builtin.Type.EnumField;
-    const UnionField = std.builtin.Type.UnionField;
+    const UnionAttrs = std.builtin.Type.UnionField.Attributes;
 
-    var union_fields: []const UnionField = &.{};
-    var enum_fields: []const EnumField = &.{};
+    var union_field_names: []const []const u8 = &.{};
+    var union_field_types: []const type = &.{};
+    var union_field_attrs: []const UnionAttrs = &.{};
+    var enum_field_names: []const []const u8 = &.{};
+    var enum_field_values: []const u32 = &.{};
 
     var enum_index: u32 = 0;
     for (behaviors) |import| {
@@ -51,33 +53,18 @@ fn Behavior(comptime behav_type: BehaviorType) type {
             if (getMetadata(behav).type != behav_type) break :@"continue";
             const name = std.fmt.comptimePrint("{d}", .{utils.typeId(behav)});
 
-            enum_fields = enum_fields ++ &[_]EnumField{.{
-                .name = name,
-                .value = enum_index,
-            }};
+            enum_field_names = enum_field_names ++ &[_][]const u8{name};
+            enum_field_values = enum_field_values ++ &[_]u32{enum_index};
             enum_index += 1;
 
-            union_fields = union_fields ++ &[_]UnionField{.{
-                .name = name,
-                .type = behav,
-                .alignment = @alignOf(behav),
-            }};
+            union_field_names = union_field_names ++ &[_][]const u8{name};
+            union_field_types = union_field_types ++ &[_]type{behav};
+            union_field_attrs = union_field_attrs ++ &[_]UnionAttrs{.{ .@"align" = @alignOf(behav) }};
         }
     }
 
-    const Enum = @Type(.{ .@"enum" = .{
-        .tag_type = u32,
-        .fields = enum_fields,
-        .decls = &.{},
-        .is_exhaustive = true,
-    } });
-
-    return @Type(.{ .@"union" = .{
-        .layout = .auto,
-        .fields = union_fields,
-        .decls = &.{},
-        .tag_type = Enum,
-    } });
+    const TagEnum = @Enum(u32, .nonexhaustive, enum_field_names, enum_field_values[0..]);
+    return @Union(.auto, TagEnum, union_field_names, union_field_types[0..], union_field_attrs[0..]);
 }
 
 pub const EntityBehavior = Behavior(.entity);

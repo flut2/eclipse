@@ -1,115 +1,115 @@
 [
-    {
+    .{
         .id = 1000,
         .name = "Retrieve Sheet Metal Wall",
         .textures = [{ "walls": 0 }],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1001,
         .name = "Retrieve Electronic Wall Off",
         .textures = [{ "walls": 1 }],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1002,
         .name = "Retrieve Electronic Wall On",
         .textures = [{ "walls": 2 }],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1003,
         .name = "Retrieve Electronic Pillar 1",
         .textures = [{ "walls": 3 }],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1004,
         .name = "Retrieve Electronic Pillar 2",
         .textures = [{ "walls": 4 }],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1005,
         .name = "Retrieve Electronic Pillar 3",
         .textures = [{ "walls": 5 }],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1006,
         .name = "Retrieve Terminal Off",
         .textures = [{ "walls": 6 }],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1007,
         .name = "Retrieve Terminal Blue",
         .textures = [{ "walls": 7 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.3, .texture = { "walls": 7 } },
-            { .time = 0.3, .texture = { "walls": 8 } },
-            { .time = 0.3, .texture = { "walls": 9 } },
-            { .time = 0.3, .texture = { "walls": 10 } },
-            { .time = 0.3, .texture = { "walls": 11 } },
-            { .time = 0.3, .texture = { "walls": 12 } },
-            { .time = 0.3, .texture = { "walls": 13 } },
-            { .time = 0.3, .texture = { "walls": 14 } },
-            { .time = 0.3, .texture = { "walls": 15 } },
+            .{ .time = 0.3, .texture = { "walls": 7 } },
+            .{ .time = 0.3, .texture = { "walls": 8 } },
+            .{ .time = 0.3, .texture = { "walls": 9 } },
+            .{ .time = 0.3, .texture = { "walls": 10 } },
+            .{ .time = 0.3, .texture = { "walls": 11 } },
+            .{ .time = 0.3, .texture = { "walls": 12 } },
+            .{ .time = 0.3, .texture = { "walls": 13 } },
+            .{ .time = 0.3, .texture = { "walls": 14 } },
+            .{ .time = 0.3, .texture = { "walls": 15 } },
         ],
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1008,
         .name = "Retrieve Terminal Green",
         .textures = [{ "walls": 16 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.3, .texture = { "walls": 16 } },
-            { .time = 0.3, .texture = { "walls": 17 } },
-            { .time = 0.3, .texture = { "walls": 18 } },
-            { .time = 0.3, .texture = { "walls": 19 } },
-            { .time = 0.3, .texture = { "walls": 20 } },
-            { .time = 0.3, .texture = { "walls": 21 } },
-            { .time = 0.3, .texture = { "walls": 22 } },
-            { .time = 0.3, .texture = { "walls": 23 } },
-            { .time = 0.3, .texture = { "walls": 24 } },
+            .{ .time = 0.3, .texture = { "walls": 16 } },
+            .{ .time = 0.3, .texture = { "walls": 17 } },
+            .{ .time = 0.3, .texture = { "walls": 18 } },
+            .{ .time = 0.3, .texture = { "walls": 19 } },
+            .{ .time = 0.3, .texture = { "walls": 20 } },
+            .{ .time = 0.3, .texture = { "walls": 21 } },
+            .{ .time = 0.3, .texture = { "walls": 22 } },
+            .{ .time = 0.3, .texture = { "walls": 23 } },
+            .{ .time = 0.3, .texture = { "walls": 24 } },
         ],
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1009,
         .name = "Retrieve Terminal Red",
         .textures = [{ "walls": 25 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.3, .texture = { "walls": 25 } },
-            { .time = 0.3, .texture = { "walls": 26 } },
-            { .time = 0.3, .texture = { "walls": 27 } },
-            { .time = 0.3, .texture = { "walls": 28 } },
-            { .time = 0.3, .texture = { "walls": 29 } },
-            { .time = 0.3, .texture = { "walls": 30 } },
-            { .time = 0.3, .texture = { "walls": 31 } },
-            { .time = 0.3, .texture = { "walls": 32 } },
-            { .time = 0.3, .texture = { "walls": 33 } },
+            .{ .time = 0.3, .texture = { "walls": 25 } },
+            .{ .time = 0.3, .texture = { "walls": 26 } },
+            .{ .time = 0.3, .texture = { "walls": 27 } },
+            .{ .time = 0.3, .texture = { "walls": 28 } },
+            .{ .time = 0.3, .texture = { "walls": 29 } },
+            .{ .time = 0.3, .texture = { "walls": 30 } },
+            .{ .time = 0.3, .texture = { "walls": 31 } },
+            .{ .time = 0.3, .texture = { "walls": 32 } },
+            .{ .time = 0.3, .texture = { "walls": 33 } },
         ],
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1010,
         .name = "Retrieve Terminal Error",
         .textures = [{ "walls": 34 }],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1011,
         .name = "Crimson Chasm Breakable Wall 1",
         .textures = [{ "walls": 35 }],
@@ -118,7 +118,7 @@
         .resistance = 10,
         .health = 500,
     },
-    {
+    .{
         .id = 1012,
         .name = "Crimson Chasm Breakable Wall 2",
         .textures = [{ "walls": 80 }],
@@ -127,35 +127,35 @@
         .resistance = 10,
         .health = 500,
     },
-    {
+    .{
         .id = 1013,
         .name = "Crimson Chasm Candle Wall 1",
         .textures = [{ "walls": 36 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.3, .texture = { "walls": 36 } },
-            { .time = 0.3, .texture = { "walls": 37 } },
-            { .time = 0.3, .texture = { "walls": 38 } },
-            { .time = 0.3, .texture = { "walls": 39 } },
-            { .time = 0.3, .texture = { "walls": 40 } },
-            { .time = 0.3, .texture = { "walls": 41 } },
+            .{ .time = 0.3, .texture = { "walls": 36 } },
+            .{ .time = 0.3, .texture = { "walls": 37 } },
+            .{ .time = 0.3, .texture = { "walls": 38 } },
+            .{ .time = 0.3, .texture = { "walls": 39 } },
+            .{ .time = 0.3, .texture = { "walls": 40 } },
+            .{ .time = 0.3, .texture = { "walls": 41 } },
         ],
     },
-    {
+    .{
         .id = 1014,
         .name = "Crimson Chasm Candle Wall 2",
         .textures = [{ "walls": 42 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.3, .texture = { "walls": 42 } },
-            { .time = 0.3, .texture = { "walls": 43 } },
-            { .time = 0.3, .texture = { "walls": 44 } },
-            { .time = 0.3, .texture = { "walls": 45 } },
-            { .time = 0.3, .texture = { "walls": 46 } },
-            { .time = 0.3, .texture = { "walls": 47 } },
+            .{ .time = 0.3, .texture = { "walls": 42 } },
+            .{ .time = 0.3, .texture = { "walls": 43 } },
+            .{ .time = 0.3, .texture = { "walls": 44 } },
+            .{ .time = 0.3, .texture = { "walls": 45 } },
+            .{ .time = 0.3, .texture = { "walls": 46 } },
+            .{ .time = 0.3, .texture = { "walls": 47 } },
         ],
     },
-    {
+    .{
         .id = 1015,
         .name = "Crimson Chasm Wall",
         .textures = [
@@ -178,7 +178,7 @@
         ],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1016,
         .name = "Crimson Chasm Wall Fiery",
         .textures = [
@@ -201,85 +201,85 @@
         ],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1017,
         .name = "T1 Realm Brown Stone Wall Cracked",
         .textures = [{ "walls": 81 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1018,
         .name = "T1 Realm Brown Stone Wall",
         .textures = [{ "walls": 82 }, { "walls": 83 }, { "walls": 83 }, { "walls": 83 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1019,
         .name = "T1 Realm Brown Candle Wall",
         .textures = [{ "walls": 84 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.5, .texture = { "walls": 84 } },
-            { .time = 0.5, .texture = { "walls": 85 } },
+            .{ .time = 0.5, .texture = { "walls": 84 } },
+            .{ .time = 0.5, .texture = { "walls": 85 } },
         ],
     },
-    {
+    .{
         .id = 1020,
         .name = "T1 Realm Grey Stone Wall Cracked",
         .textures = [{ "walls": 86 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1021,
         .name = "T1 Realm Grey Stone Wall",
         .textures = [{ "walls": 87 }, { "walls": 88 }, { "walls": 88 }, { "walls": 88 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1022,
         .name = "T1 Realm Grey Candle Wall",
         .textures = [{ "walls": 89 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.5, .texture = { "walls": 89 } },
-            { .time = 0.5, .texture = { "walls": 90 } },
+            .{ .time = 0.5, .texture = { "walls": 89 } },
+            .{ .time = 0.5, .texture = { "walls": 90 } },
         ],
     },
-    {
+    .{
         .id = 1023,
         .name = "T1 Realm Green Stone Wall Cracked",
         .textures = [{ "walls": 91 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1024,
         .name = "T1 Realm Green Stone Wall",
         .textures = [{ "walls": 92 }, { "walls": 93 }, { "walls": 93 }, { "walls": 93 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1025,
         .name = "T1 Realm Green Candle Wall",
         .textures = [{ "walls": 94 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.5, .texture = { "walls": 94 } },
-            { .time = 0.5, .texture = { "walls": 95 } },
+            .{ .time = 0.5, .texture = { "walls": 94 } },
+            .{ .time = 0.5, .texture = { "walls": 95 } },
         ],
     },
-    {
+    .{
         .id = 1026,
         .name = "T1 Realm Bookshelf Empty",
         .textures = [{ "walls": 96 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1027,
         .name = "T1 Realm Rotten Bookshelf Empty",
         .textures = [{ "walls": 97 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1028,
         .name = "T1 Realm Bookshelf",
         .textures = [
@@ -298,43 +298,43 @@
         ],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1029,
         .name = "Retrieve Electronic Pillar 1 Off",
         .textures = [
             { "walls": 110 },
         ],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1030,
         .name = "Retrieve Electronic Pillar 2 Off",
         .textures = [
             { "walls": 111 },
         ],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1031,
         .name = "Retrieve Electronic Pillar 3 Off",
         .textures = [
             { "walls": 112 },
         ],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1032,
         .name = "Retrieve Glass Pillar",
         .textures = [
             { "walls": 113 },
         ],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1033,
         .name = "Retrieve Glass Wall",
         .textures = [
@@ -344,9 +344,9 @@
             { "walls": 117 },
         ],
         .is_wall = true,
-        .minimap_color = "0xD3C3D2",
+        .minimap_color = 0xD3C3D2,
     },
-    {
+    .{
         .id = 1034,
         .name = "Goblin Lair Wall",
         .textures = [
@@ -354,99 +354,70 @@
         ],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1035,
         .name = "Goblin Lair Dart Wall West",
-        .textures = [
-            { "walls": 119 },
-            { "walls": 120 },
-            { "walls": 121 },
-            { "walls": 122 }
-        ],
+        .textures = [{ "walls": 119 }, { "walls": 120 }, { "walls": 121 }, { "walls": 122 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1036,
         .name = "Goblin Lair Dart Wall East",
-        .textures = [
-            { "walls": 123 },
-            { "walls": 124 },
-            { "walls": 125 },
-            { "walls": 126 }
-        ],
+        .textures = [{ "walls": 123 }, { "walls": 124 }, { "walls": 125 }, { "walls": 126 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1037,
         .name = "Goblin Lair Dart Wall South",
-        .textures = [
-            { "walls": 127 },
-            { "walls": 128 },
-            { "walls": 129 },
-            { "walls": 130 }
-        ],
+        .textures = [{ "walls": 127 }, { "walls": 128 }, { "walls": 129 }, { "walls": 130 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1038,
         .name = "Goblin Lair Dart Wall North",
-        .textures = [
-            { "walls": 131 },
-            { "walls": 132 },
-            { "walls": 133 },
-            { "walls": 134 }
-        ],
+        .textures = [{ "walls": 131 }, { "walls": 132 }, { "walls": 133 }, { "walls": 134 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1039,
         .name = "Goblin Lair Candle Wall",
         .textures = [{ "walls": 135 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.3, .texture = { "walls": 135 } },
-            { .time = 0.3, .texture = { "walls": 136 } },
-            { .time = 0.3, .texture = { "walls": 137 } },
-            { .time = 0.3, .texture = { "walls": 138 } },
-            { .time = 0.3, .texture = { "walls": 139 } },
-            { .time = 0.3, .texture = { "walls": 140 } },
+            .{ .time = 0.3, .texture = { "walls": 135 } },
+            .{ .time = 0.3, .texture = { "walls": 136 } },
+            .{ .time = 0.3, .texture = { "walls": 137 } },
+            .{ .time = 0.3, .texture = { "walls": 138 } },
+            .{ .time = 0.3, .texture = { "walls": 139 } },
+            .{ .time = 0.3, .texture = { "walls": 140 } },
         ],
     },
-    {
+    .{
         .id = 1040,
         .name = "Marble Wall",
-        .textures = [
-            { "walls": 141 }
-        ],
+        .textures = [{ "walls": 141 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1041,
         .name = "Marble Brick Wall",
-        .textures = [
-            { "walls": 142 }
-        ],
+        .textures = [{ "walls": 142 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1042,
         .name = "Marble Pillar",
-        .textures = [
-            { "walls": 143 },
-            { "walls": 144 },
-            { "walls": 145 }
-        ],
+        .textures = [{ "walls": 143 }, { "walls": 144 }, { "walls": 145 }],
         .is_wall = true,
     },
-    {
+    .{
         .id = 1043,
         .name = "Marble Candle Wall",
         .textures = [{ "walls": 146 }],
         .is_wall = true,
         .animations = [
-            { .time = 0.3, .texture = { "walls": 146 } },
-            { .time = 0.3, .texture = { "walls": 147 } },
+            .{ .time = 0.3, .texture = { "walls": 146 } },
+            .{ .time = 0.3, .texture = { "walls": 147 } },
         ],
     },
-    
 ]

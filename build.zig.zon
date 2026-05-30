@@ -1,45 +1,41 @@
 .{
-    .fingerprint = 0xbd5534bf7da310cf,
     .name = .eclipse,
+    .fingerprint = 0xbd5534bf7da310cf,
     .version = "1.0.0",
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.16.0",
     .dependencies = .{
         // shared deps
         .ziggy = .{ .path = "ziggy" },
         .shared = .{ .path = "shared" },
         .tracy = .{
-            .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.13.0.tar.gz",
-            .hash = "N-V-__8AAHW7KwHH_eNEviRWLkRfsxpWFrdOYM9f8VeCin4q",
+            .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.13.1.tar.gz",
+            .hash = "N-V-__8AAOncKwEm1F9c5LrT7HMNmRMYX8-fAoqpc6YyTu9X",
         },
 
         // client deps
         .miniaudio = .{ .path = "client/libs/miniaudio" },
         .stbi = .{ .path = "client/libs/stbi" },
         .windy = .{
-            .url = "git+https://github.com/flut2/windy.git#8994ee4053e3fc741a30486bfd5a531321938e8f",
-            .hash = "windy-0.3.1-wLI1BJr0AQDLFhiFWWItucmzeUNMlsNplg9EU6IvlROD",
+            .url = "git+https://github.com/flut2/windy.git#9ebe6ae01e9e386678ce22c3cadf4affa94b8366",
+            .hash = "windy-0.3.1-wLI1BJH_AQA6QLCWMSG1Cr97ZjbZV_PfsNlAj3qSIelJ",
         },
         .msdf_zig = .{
-            .url = "git+https://github.com/flut2/msdf-zig.git#fb1f92da2d7ef9e990a1301555f91de370fecfcb",
-            .hash = "msdf_zig-1.0.0-5-oN4zTzBABPgS6W-gctcBj4Yf43BiiS12wGxtB9_zz7",
+            .url = "git+https://github.com/flut2/msdf-zig.git#846cdd15cdf0b45f8bcb271910d49be9d0cad9f3",
+            .hash = "msdf_zig-1.0.0-5-oN4xLzBABO7Z77N6iSHi0oz1lNueZll8HlZ7fjYg8G",
         },
         .turbopack = .{
-            .url = "git+https://github.com/flut2/turbopack.git#d6995ce5a8f071bb759a274ac036dff65909905a",
-            .hash = "turbopack-1.0.0-rSxRjlofAAAoHGx7mg6pkzI3gEh-g9OQcnmF7_px6Sg7",
+            .url = "git+https://github.com/flut2/turbopack.git#90cc3da6bd6f4d5da142651b861a1c6834f3af9c",
+            .hash = "turbopack-1.0.0-rSxRjkcfAADwwnU2F77B91vY6wttplFZNVmhDG-mDeUi",
         },
         .vulkan_zig = .{
-            .url = "git+https://github.com/Snektron/vulkan-zig.git#1446b0b994c2362264cc24513d7c7ec31b469c50",
-            .hash = "vulkan-0.0.0-r7Ytx_VDAwAiMl0YSu2UOkVMIGJN7CeIQaxJR-hUSfD6",
-        },
-        .vma = .{
-            .url = "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.3.0.tar.gz",
-            .hash = "N-V-__8AAIutPgABk6NlXZhlJ5P8qVECvakZIKoO94h7xUOw",
+            .url = "git+https://github.com/Snektron/vulkan-zig.git#b496a6a561ffbbeb530b0f9ed4e059f88c0723a5",
+            .hash = "vulkan-0.0.0-r7Ytx7N9AwD7IZt5_XNHtkJ4G9qY0pCH-cpcOsbL8wzD",
         },
 
         // server deps
         .hiredis = .{
-            .url = "git+https://github.com/redis/hiredis.git#77bcc73ebbc562d8e8173832b710bfbfa4327b13",
-            .hash = "N-V-__8AAMeyCAC7f33pfuk8OlGD4qqGI2OwGeP-9KamyBcb",
+            .url = "git+https://github.com/redis/hiredis.git#1d18adbf41dc10d456bee34a3fb966a2009c591c",
+            .hash = "N-V-__8AACdkCAB0LdDMFdlwQtyHsMtgrF5T70EEXMRhucj-",
         },
     },
     .paths = .{

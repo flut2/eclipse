@@ -2,9 +2,11 @@ const std = @import("std");
 
 const ziggy = @import("ziggy");
 
+const main = @import("main.zig");
+
 const Settings = @This();
 
-var arena: std.heap.ArenaAllocator = undefined;
+var arena: std.heap.ArenaAllocator = .{ .state = .init, .child_allocator = .failing };
 
 game_port: u16 = 3328,
 login_port: u16 = 2833,
@@ -18,15 +20,31 @@ tps: u16 = 10,
 
 pub fn init(allocator: std.mem.Allocator) !Settings {
     arena = .init(allocator);
+    errdefer arena.deinit();
     const arena_allocator = arena.allocator();
 
-    const file = std.fs.cwd().openFile("assets/server/settings.ziggy", .{}) catch @panic("Settings file not found");
-    defer file.close();
+    const file_path = "assets/server/settings.ziggy";
+    const file = std.Io.Dir.cwd().openFile(main.io, file_path, .{}) catch @panic("Settings file not found");
+    defer file.close(main.io);
 
-    const file_data = try file.readToEndAllocOptions(arena_allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);
-    defer arena_allocator.free(file_data);
+    var read_buf: [1024]u8 = undefined;
+    var reader = file.reader(main.io, &read_buf);
 
-    return try ziggy.parseLeaky(Settings, arena_allocator, file_data, .{});
+    const bytes = try reader.interface.allocRemainingAlignedSentinel(arena_allocator, .unlimited, .of(u8), 0);
+    defer arena_allocator.free(bytes);
+
+    var stdout: std.Io.File = .stdout();
+    var stdout_buf: [4096]u8 = undefined;
+    var stdout_wtr = stdout.writer(main.io, &stdout_buf);
+
+    var meta: ziggy.Deserializer.Meta = .init;
+    return ziggy.deserializeLeaky(Settings, arena_allocator, bytes, &meta, .{ .copy_strings = .always }) catch |e| {
+        if (e != error.OutOfMemory) {
+            try meta.reportErrors(arena_allocator, .{}, file_path, bytes, e, &stdout_wtr.interface);
+            try stdout_wtr.interface.flush();
+        }
+        return e;
+    };
 }
 
 pub fn deinit() void {

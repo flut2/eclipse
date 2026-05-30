@@ -1,128 +1,411 @@
+const builtin = @import("builtin");
 const std = @import("std");
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
+const assert = std.debug.assert;
 const ziggy = @import("ziggy");
 const Diagnostic = ziggy.Diagnostic;
 const Ast = ziggy.Ast;
 
-pub fn run(gpa: std.mem.Allocator, args: []const []const u8) !void {
-    const cmd = Command.parse(args);
+pub fn run(io: Io, gpa: Allocator, args: []const []const u8) !void {
+    var cmd = Command.parse(args);
 
-    const schema_file = std.fs.cwd().readFileAllocOptions(
-        gpa,
-        cmd.schema_path,
-        ziggy.max_size,
-        null,
-        .of(u8),
-        0,
-    ) catch |err| {
-        std.debug.print("Error reading '{s}': {s}\n", .{
-            cmd.schema_path,
-            @errorName(err),
-        });
-        std.process.exit(1);
-    };
+    switch (cmd.strategy) {
+        .search => {},
+        .provided => |*p| {
+            const src = Io.Dir.cwd().readFileAllocOptions(
+                io,
+                p.path,
+                gpa,
+                .limited(ziggy.max_size),
+                .of(u8),
+                0,
+            ) catch |err| fatal("unable to read '{s}': {t}", .{ p.path, err });
 
-    var schema_diag: ziggy.schema.Diagnostic = .{ .lsp = false, .path = cmd.schema_path };
-    const schema_ast = ziggy.schema.Ast.init(
-        gpa,
-        schema_file,
-        &schema_diag,
-    ) catch fatalDiag(schema_diag);
-    const schema = ziggy.schema.Schema.init(
-        gpa,
-        schema_ast.nodes.items,
-        schema_file,
-        &schema_diag,
-    ) catch fatalDiag(schema_diag);
-
-    // checkFile will reset the arena at the end of the call
-    var arena_impl = std.heap.ArenaAllocator.init(gpa);
-    for (cmd.doc_paths) |path| {
-        checkFile(&arena_impl, std.fs.cwd(), path, schema) catch |err| switch (err) {
-            error.IsDir, error.AccessDenied => {
-                checkDir(gpa, &arena_impl, path, schema) catch |dir_err| {
-                    std.debug.print("Error walking dir '{s}': {s}\n", .{
-                        path,
-                        @errorName(dir_err),
+            const ast = ziggy.schema.Ast.init(gpa, src) catch oom();
+            if (ast.errors.len > 0) {
+                for (ast.errors) |err| {
+                    const sel = err.main_location.getSelection(src);
+                    std.debug.print("{s}:{}:{} {f}\n", .{
+                        p.path,
+                        sel.start.line,
+                        sel.start.col,
+                        err.tag,
                     });
-                };
-            },
-            else => {
-                std.debug.print("Error while accessing '{s}': {s}\n", .{
-                    path, @errorName(err),
-                });
-            },
+                }
+                fatal("provided schema file contains parsing errors", .{});
+            }
+            p.src = src;
+            p.ast = ast;
+        },
+    }
+
+    var any_error: std.atomic.Value(bool) = .init(false);
+    for (cmd.paths) |path| {
+        checkDir(io, gpa, &any_error, &cmd, path) catch |dir_err| {
+            switch (dir_err) {
+                error.NotDir, error.AccessDenied => {
+                    if (std.mem.endsWith(u8, path, ".ziggy")) {
+                        checkFile(io, gpa, &any_error, &cmd, try gpa.dupe(u8, path));
+                    } else {
+                        checkSmdFile(io, gpa, &any_error, &cmd, try gpa.dupe(u8, path));
+                    }
+                },
+                else => fatal("unable to access '{s}': {t}", .{ path, dir_err }),
+            }
         };
     }
+
+    if (any_error.load(.monotonic)) std.process.exit(1);
+    std.process.cleanExit(io);
 }
 
 fn checkDir(
-    gpa: std.mem.Allocator,
-    arena_impl: *std.heap.ArenaAllocator,
+    io: Io,
+    gpa: Allocator,
+    any_error: *std.atomic.Value(bool),
+    cmd: *Command,
     path: []const u8,
-    schema: ziggy.schema.Schema,
 ) !void {
-    var dir = try std.fs.cwd().openDir(path, .{ .iterate = true });
-    defer dir.close();
+    var dir = try Io.Dir.cwd().openDir(io, path, .{ .iterate = true });
+    defer dir.close(io);
     var walker = dir.walk(gpa) catch oom();
     defer walker.deinit();
-    while (try walker.next()) |item| {
+
+    var g: Io.Group = .init;
+    defer g.cancel(io);
+
+    while (try walker.next(io)) |item| {
         switch (item.kind) {
             .file => {
                 if (std.mem.endsWith(u8, item.basename, ".ziggy")) {
-                    try checkFile(arena_impl, item.dir, item.basename, schema);
+                    const file_path = try std.fs.path.join(gpa, &.{ path, item.path });
+                    g.async(io, checkFile, .{ io, gpa, any_error, cmd, file_path });
+                }
+                if (std.mem.endsWith(u8, item.basename, ".smd")) {
+                    const file_path = try std.fs.path.join(gpa, &.{ path, item.path });
+                    g.async(io, checkSmdFile, .{ io, gpa, any_error, cmd, file_path });
                 }
             },
             else => {},
         }
     }
+
+    try g.await(io);
 }
 
+threadlocal var check_arena: std.heap.ArenaAllocator = .init(std.heap.page_allocator);
 fn checkFile(
-    arena_impl: *std.heap.ArenaAllocator,
-    base_dir: std.fs.Dir,
-    sub_path: []const u8,
-    schema: ziggy.schema.Schema,
-) !void {
-    defer _ = arena_impl.reset(.retain_capacity);
-    const arena = arena_impl.allocator();
+    io: Io,
+    gpa: Allocator,
+    any_error: *std.atomic.Value(bool),
+    cmd: *Command,
+    path: []const u8,
+) void {
+    defer if (cmd.strategy == .provided) gpa.free(path);
+    checkFileFallible(io, gpa, &cmd.strategy, path) catch |err| switch (err) {
+        error.OutOfMemory => oom(),
+        error.ZiggyInvalid => any_error.store(true, .unordered),
+        error.MissingSchema => if (!cmd.lenient) {
+            any_error.store(true, .unordered);
+            std.debug.print(
+                "error: unable to find matching schema for document '{s}'\n",
+                .{path},
+            );
+        },
+        else => fatal("unable to access '{s}': {t}", .{ path, err }),
+    };
+}
 
-    const doc_file = try base_dir.readFileAllocOptions(
+fn checkFileFallible(
+    io: Io,
+    gpa: Allocator,
+    strat: *Command.Strategy,
+    path: []const u8,
+) !void {
+    defer _ = check_arena.reset(.retain_capacity);
+    const arena = check_arena.allocator();
+
+    const src = try Io.Dir.cwd().readFileAllocOptions(
+        io,
+        path,
         arena,
-        sub_path,
-        ziggy.max_size,
-        null,
+        .limited(ziggy.max_size),
         .of(u8),
         0,
     );
-    var diag: ziggy.Diagnostic = .{ .path = sub_path };
-    const doc_ast = ziggy.Ast.init(
+
+    const ast = try ziggy.Ast.init(arena, src, .{});
+    if (ast.errors.len > 0) {
+        _ = std.debug.lockStderr(&.{});
+        for (ast.errors) |err| {
+            const sel = err.main_location.getSelection(src);
+            std.debug.print("{s}:{}:{} {f}\n", .{
+                path,
+                sel.start.line,
+                sel.start.col,
+                err.tag,
+            });
+        }
+        std.debug.unlockStderr();
+        return error.ZiggyInvalid;
+    }
+
+    const schema_src, const schema_ast = switch (strat.*) {
+        .provided => |p| .{ p.src, p.ast },
+        .search => |*map| blk: {
+            // Same name
+            const schema_path = try std.fmt.allocPrint(arena, "{s}-schema", .{path});
+            const schema_src = Io.Dir.cwd().readFileAllocOptions(
+                io,
+                schema_path,
+                arena,
+                .limited(ziggy.max_size),
+                .of(u8),
+                0,
+            ) catch |err| switch (err) {
+                error.FileNotFound => {
+                    const match = try searchDotSchema(io, gpa, map, path);
+                    break :blk .{ match.src, match.ast };
+                },
+                else => fatal("unable to access schema '{s}': {t}", .{ schema_path, err }),
+            };
+
+            const schema_ast = ziggy.schema.Ast.init(arena, schema_src) catch oom();
+            if (schema_ast.errors.len > 0) {
+                for (schema_ast.errors) |err| {
+                    const sel = err.main_location.getSelection(schema_src);
+                    std.debug.print("{s}:{}:{} {f}\n", .{
+                        schema_path,
+                        sel.start.line,
+                        sel.start.col,
+                        err.tag,
+                    });
+                }
+                return error.ZiggyInvalid;
+            }
+
+            break :blk .{ schema_src, schema_ast };
+        },
+    };
+
+    const errors = try schema_ast.validate(arena, schema_src, ast, src);
+    if (errors.len > 0) {
+        _ = std.debug.lockStderr(&.{});
+        for (errors) |err| {
+            const sel = err.main_location.getSelection(src);
+            std.debug.print("{s}:{}:{} {f}\n", .{
+                path,
+                sel.start.line,
+                sel.start.col,
+                err.tag,
+            });
+        }
+        std.debug.unlockStderr();
+        return error.ZiggyInvalid;
+    }
+}
+
+fn checkSmdFile(
+    io: Io,
+    gpa: Allocator,
+    any_error: *std.atomic.Value(bool),
+    cmd: *Command,
+    path: []const u8,
+) void {
+    defer if (cmd.strategy == .provided) gpa.free(path);
+    checkSmdFileFallible(io, gpa, &cmd.strategy, path) catch |err| switch (err) {
+        error.OutOfMemory => oom(),
+        error.ZiggyInvalid => any_error.store(true, .unordered),
+        error.MissingSchema => if (!cmd.lenient) {
+            any_error.store(true, .unordered);
+            std.debug.print(
+                "error: unable to find matching schema for document '{s}'\n",
+                .{path},
+            );
+        },
+        else => fatal("unable to access '{s}': {t}", .{ path, err }),
+    };
+}
+
+fn checkSmdFileFallible(
+    io: Io,
+    gpa: Allocator,
+    strat: *Command.Strategy,
+    path: []const u8,
+) !void {
+    defer _ = check_arena.reset(.retain_capacity);
+    const arena = check_arena.allocator();
+
+    const src = try Io.Dir.cwd().readFileAllocOptions(
+        io,
+        path,
         arena,
-        doc_file,
-        true,
-        true,
-        false,
-        &diag,
-    ) catch fatalDiag(diag.fmt(doc_file));
+        .limited(ziggy.max_size),
+        .of(u8),
+        0,
+    );
 
-    doc_ast.check(arena, schema, &diag) catch fatalDiag(diag.fmt(doc_file));
-    std.debug.print("{f}\n", .{diag.fmt(doc_file)});
+    const ast = try ziggy.Ast.init(arena, src, .{
+        .delimiter = .{
+            .dashes = blk: {
+                var t: ziggy.Tokenizer = .init(.{ .dashes = 0 });
+                const start = t.next(src, true);
+                break :blk switch (start.tag) {
+                    .eod => start.loc.end,
+                    else => 0,
+                };
+            },
+        },
+    });
+
+    if (ast.errors.len > 0) {
+        _ = std.debug.lockStderr(&.{});
+        for (ast.errors) |err| {
+            const sel = err.main_location.getSelection(src);
+            std.debug.print("{s}:{}:{} {f}\n", .{
+                path,
+                sel.start.line,
+                sel.start.col,
+                err.tag,
+            });
+        }
+        std.debug.unlockStderr();
+        return error.ZiggyInvalid;
+    }
+
+    const schema_src, const schema_ast = switch (strat.*) {
+        .provided => |p| .{ p.src, p.ast },
+        .search => |*map| blk: {
+            // Same name
+            const schema_path = try std.fmt.allocPrint(arena, "{s}.ziggy-schema", .{path});
+            const schema_src = Io.Dir.cwd().readFileAllocOptions(
+                io,
+                schema_path,
+                arena,
+                .limited(ziggy.max_size),
+                .of(u8),
+                0,
+            ) catch |err| switch (err) {
+                error.FileNotFound => {
+                    const match = try searchDotSchema(io, gpa, map, path);
+                    break :blk .{ match.src, match.ast };
+                },
+                else => fatal("unable to access schema '{s}': {t}", .{ schema_path, err }),
+            };
+
+            const schema_ast = ziggy.schema.Ast.init(arena, schema_src) catch oom();
+            if (schema_ast.errors.len > 0) {
+                for (schema_ast.errors) |err| {
+                    const sel = err.main_location.getSelection(schema_src);
+                    std.debug.print("{s}:{}:{} {f}\n", .{
+                        schema_path,
+                        sel.start.line,
+                        sel.start.col,
+                        err.tag,
+                    });
+                }
+                return error.ZiggyInvalid;
+            }
+
+            break :blk .{ schema_src, schema_ast };
+        },
+    };
+
+    const errors = try schema_ast.validate(arena, schema_src, ast, src);
+    if (errors.len > 0) {
+        _ = std.debug.lockStderr(&.{});
+        for (errors) |err| {
+            const sel = err.main_location.getSelection(src);
+            std.debug.print("{s}:{}:{} {f}\n", .{
+                path,
+                sel.start.line,
+                sel.start.col,
+                err.tag,
+            });
+        }
+        std.debug.unlockStderr();
+        return error.ZiggyInvalid;
+    }
 }
 
-fn fatalDiag(diag: anytype) noreturn {
-    std.debug.print("{f}\n", .{diag});
-    std.process.exit(1);
-}
+pub const Match = struct {
+    src: [:0]const u8,
+    ast: ziggy.schema.Ast,
+};
 
-fn oom() noreturn {
-    std.debug.print("Out of memory\n", .{});
-    std.process.exit(1);
+var lock: Io.Mutex = .init;
+fn searchDotSchema(
+    io: Io,
+    gpa: Allocator,
+    map: *std.StringHashMapUnmanaged(?Match),
+    path: []const u8,
+) !Match {
+    try lock.lock(io);
+    defer lock.unlock(io);
+
+    const arena = check_arena.allocator();
+    var path_dir = path;
+    assert(std.mem.endsWith(u8, path_dir, ".ziggy") or std.mem.endsWith(u8, path_dir, ".smd"));
+    while (true) {
+        path_dir = std.fs.path.dirname(path_dir) orelse return error.MissingSchema;
+
+        const gop = try map.getOrPut(gpa, path_dir);
+        if (gop.found_existing) return gop.value_ptr.* orelse continue;
+        gop.value_ptr.* = null;
+
+        const path_schema = try std.fs.path.join(arena, &.{ path_dir, ".ziggy-schema" });
+        defer arena.free(path_schema);
+
+        const schema_src = Io.Dir.cwd().readFileAllocOptions(
+            io,
+            path_schema,
+            gpa,
+            .limited(ziggy.max_size),
+            .of(u8),
+            0,
+        ) catch |err| switch (err) {
+            error.FileNotFound => continue,
+            else => fatal("unable to access schema '{s}': {t}", .{ path_schema, err }),
+        };
+
+        const schema_ast = ziggy.schema.Ast.init(gpa, schema_src) catch oom();
+        if (schema_ast.errors.len > 0) {
+            for (schema_ast.errors) |err| {
+                const sel = err.main_location.getSelection(schema_src);
+                std.debug.print("{s}:{}:{} {f}\n", .{
+                    path_schema,
+                    sel.start.line,
+                    sel.start.col,
+                    err.tag,
+                });
+            }
+            fatal("found parsing errors in a dot ziggy schema file", .{});
+        }
+
+        gop.value_ptr.* = .{ .src = schema_src, .ast = schema_ast };
+        return gop.value_ptr.*.?;
+    }
 }
 
 pub const Command = struct {
-    schema_path: []const u8,
-    doc_paths: []const []const u8,
+    strategy: Strategy,
+    lenient: bool,
+    paths: []const []const u8,
 
+    pub const Strategy = union(enum) {
+        provided: struct {
+            path: []const u8,
+            src: [:0]const u8 = undefined,
+            ast: ziggy.schema.Ast = undefined,
+        },
+        search: std.StringHashMapUnmanaged(?Match),
+    };
     fn parse(args: []const []const u8) Command {
+        var strategy: ?Strategy = null;
+        var lenient: ?bool = null;
+        var paths_start_idx: usize = 0;
+
         var idx: usize = 0;
         while (idx < args.len) : (idx += 1) {
             const arg = args[idx];
@@ -131,34 +414,103 @@ pub const Command = struct {
             {
                 fatalHelp();
             }
+
+            if (std.mem.startsWith(u8, arg, "--schema")) {
+                if (strategy != null) fatal("duplicate '--schema' argument", .{});
+                if (std.mem.eql(u8, arg, "--schema")) {
+                    if (idx != 0) fatal("if present, '--schema' must be the first argument", .{});
+                    idx += 1;
+                    if (idx == args.len) fatal("missing argument to '--schema'", .{});
+                    strategy = .{
+                        .provided = .{ .path = args[idx] },
+                    };
+                    paths_start_idx = idx + 1;
+                } else if (std.mem.startsWith(u8, arg, "--schema=")) {
+                    if (idx != 0) fatal("if present, '--schema' must be the first argument", .{});
+                    strategy = .{
+                        .provided = .{ .path = args[idx]["--schema=".len..] },
+                    };
+                    paths_start_idx = idx + 1;
+                }
+            }
+
+            if (std.mem.eql(u8, arg, "--lenient")) {
+                if (idx != 0) fatal("if present, '--lenient' must be the first argument", .{});
+                if (lenient != null) fatal("duplicate '--lenient' flag", .{});
+                lenient = true;
+                paths_start_idx = idx + 1;
+            }
         }
 
-        if (args.len < 2) {
-            std.debug.print("missing argument(s)\n\n", .{});
+        if (paths_start_idx == args.len) {
+            std.debug.print("fatal error: missing PATH argument(s)\n\n", .{});
             fatalHelp();
         }
 
         const cmd: Command = .{
-            .schema_path = args[0],
-            .doc_paths = args[1..],
+            .strategy = strategy orelse .{ .search = .empty },
+            .lenient = lenient orelse false,
+            .paths = args[paths_start_idx..],
         };
+        assert(cmd.paths.len > 0);
 
         return cmd;
     }
 
     fn fatalHelp() noreturn {
         std.debug.print(
-            \\Usage: ziggy check SCHEMA DOC [DOC...] [OPTIONS]
+            \\Usage: ziggy check [--schema=PATH | --lenient]  PATH [PATH...]
             \\
-            \\   Checks input paths against a Ziggy Schema.
-            \\   If DOC is a directory, it will be searched  
-            \\   recursively for Ziggy files. 
+            \\Check input paths for schema coherence.
+            \\
+            \\If PATH is a directory, it will be searched recursively
+            \\for Ziggy and SuperMD Documents.
+            \\
+            \\NOTE: SuperMD support is temporary until a dedicated
+            \\      CLI tool is created.
+            \\
+            \\You can optionally specify a Ziggy Schema that will be
+            \\used for all found documents, or leave it unspecified
+            \\to have the tool detect schemas automatically using the
+            \\following logic: 
+            \\
+            \\  1. Schema file with the same name as the document
+            \\     placed next to it, for example:
+            \\          'foo.ziggy' => 'foo.ziggy-schema'
+            \\
+            \\  2. Schema file named '.ziggy-schema' in the same
+            \\     directory, or any directory above (closest wins).
+            \\
+            \\Documents that contain syntax errors, that do not match
+            \\their schema or for which there is no matching schema,
+            \\will cause a non-zero exit code.
             \\
             \\Options:
-            \\
+            \\--schema PATH    Override schema detection and use the
+            \\                 same schema for all documents. Must be
+            \\                 the first agument if present (mutually
+            \\                 exclusive with '--lenient').
+            \\--lenient        Ignore Ziggy Documents for which there
+            \\                 is no matching Ziggy Schema instead of
+            \\                 reporting an error (a warning line 
+            \\                 will still be printed). Must be the  
+            \\                 first argument if present (mutually 
+            \\                 exclusive with '--schema').
             \\--help, -h       Print this help and exit.
+            \\
+            \\
         , .{});
 
         std.process.exit(1);
     }
 };
+
+fn fatal(comptime fmt: []const u8, args: anytype) noreturn {
+    std.debug.print("fatal error: " ++ fmt ++ "\n", args);
+    if (builtin.mode == .Debug) @breakpoint();
+    std.process.exit(1);
+}
+
+fn oom() noreturn {
+    fatal("out of memory", .{});
+}

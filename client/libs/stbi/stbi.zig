@@ -2,7 +2,8 @@ const std = @import("std");
 
 var stbi_allocator: ?std.mem.Allocator = null;
 var pointer_size_map: std.AutoHashMapUnmanaged(usize, usize) = .empty;
-var alloc_mutex: std.Thread.Mutex = .{};
+var alloc_mutex: std.Io.Mutex = .init;
+var alloc_io: std.Io = .failing;
 const alignment: std.mem.Alignment = .of(std.c.max_align_t);
 
 fn allocatorMissing() noreturn {
@@ -16,8 +17,8 @@ fn outOfMemory() noreturn {
 fn stbiMalloc(size: usize) callconv(.c) ?*anyopaque {
     const allocator = stbi_allocator orelse allocatorMissing();
 
-    alloc_mutex.lock();
-    defer alloc_mutex.unlock();
+    alloc_mutex.lockUncancelable(alloc_io);
+    defer alloc_mutex.unlock(alloc_io);
 
     const mem = allocator.alignedAlloc(u8, alignment, size) catch outOfMemory();
     pointer_size_map.put(allocator, @intFromPtr(mem.ptr), size) catch outOfMemory();
@@ -27,8 +28,8 @@ fn stbiMalloc(size: usize) callconv(.c) ?*anyopaque {
 fn stbiRealloc(maybe_ptr: ?*anyopaque, new_size: usize) callconv(.c) ?*anyopaque {
     const allocator = stbi_allocator orelse allocatorMissing();
 
-    alloc_mutex.lock();
-    defer alloc_mutex.unlock();
+    alloc_mutex.lockUncancelable(alloc_io);
+    defer alloc_mutex.unlock(alloc_io);
 
     const old_size = if (maybe_ptr) |p| pointer_size_map.fetchRemove(@intFromPtr(p)).?.value else 0;
     const old_mem: [*]align(alignment.toByteUnits()) u8 = if (maybe_ptr) |p| @ptrCast(@alignCast(p)) else &.{};
@@ -41,8 +42,8 @@ fn stbiFree(maybe_ptr: ?*anyopaque) callconv(.c) void {
     const allocator = stbi_allocator orelse allocatorMissing();
     const ptr = maybe_ptr orelse return;
 
-    alloc_mutex.lock();
-    defer alloc_mutex.unlock();
+    alloc_mutex.lockUncancelable(alloc_io);
+    defer alloc_mutex.unlock(alloc_io);
 
     const kv = pointer_size_map.fetchRemove(@intFromPtr(ptr)) orelse {
         std.log.err("stbi: Invalid free attempted on {*}", .{ptr});
@@ -60,10 +61,11 @@ fn stbirFree(maybe_ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
     stbiFree(maybe_ptr);
 }
 
-pub fn init(allocator: std.mem.Allocator) void {
+pub fn init(allocator: std.mem.Allocator, io: std.Io) void {
     if (stbi_allocator != null)
         @panic("stbi: Library already initialized");
     stbi_allocator = allocator;
+    alloc_io = io;
 
     mallocPtr = stbiMalloc;
     reallocPtr = stbiRealloc;

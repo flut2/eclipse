@@ -1,68 +1,68 @@
 [
-    {
+    .{
         .id = 65534,
         .name = "Editor Grid",
         .textures = [{ "ground": 0 }],
     },
-    {
+    .{
         .id = 1,
         .name = "Water",
         .textures = [{ "ground": 3 }],
         .blend_prio = 99,
         .sink = true,
         .speed_mult = 0.7,
-        .animation = { .type = @GroundAnim("wave"), .delta_x = 0.55, .delta_y = 0.55 },
+        .animation = .{ .type = .wave, .delta_x = 0.55, .delta_y = 0.55 },
     },
-    {
+    .{
         .id = 2,
         .name = "Water Dark",
         .textures = [{ "ground": 4 }],
         .no_walk = true,
-        .animation = { .type = @GroundAnim("wave"), .delta_x = 0.55, .delta_y = 0.55 },
+        .animation = .{ .type = .wave, .delta_x = 0.55, .delta_y = 0.55 },
     },
-    {
+    .{
         .id = 3,
         .name = "Grass",
         .textures = [{ "ground": 2 }],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 4,
         .name = "Dirt",
         .textures = [{ "ground": 1 }],
         .blend_prio = 2,
     },
-    {
+    .{
         .id = 5,
         .name = "Retrieve Metal Plating 1",
         .textures = [{ "ground": 5 }, { "ground": 6 }, { "ground": 6 }, { "ground": 6 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 6,
         .name = "Retrieve Metal Plating 2",
         .textures = [{ "ground": 7 }, { "ground": 8 }, { "ground": 8 }, { "ground": 8 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 7,
         .name = "Retrieve Air Vent",
         .textures = [{ "ground": 9 }, { "ground": 10 }, { "ground": 10 }, { "ground": 10 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 8,
         .name = "Retrieve Metal Tile",
         .textures = [{ "ground": 11 }, { "ground": 12 }, { "ground": 12 }, { "ground": 12 }, { "ground": 12 }, { "ground": 13 }, { "ground": 13 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 9,
         .name = "Crimson Chasm Gravel",
         .textures = [{ "ground": 22 }, { "ground": 22 }, { "ground": 22 }, { "ground": 22 }, { "ground": 23 }, { "ground": 24 }, { "ground": 25 }],
         .blend_prio = 2,
     },
-    {
+    .{
         .id = 10,
         .name = "Crimson Chasm Path",
         .textures = [
@@ -78,7 +78,7 @@
         ],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 11,
         .name = "Crimson Chasm Soil",
         .textures = [
@@ -103,160 +103,160 @@
         ],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 12,
         .name = "Crimson Chasm Checker Tile",
         .textures = [{ "ground": 50 }],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 13,
         .name = "Crimson Chasm Lava",
         .textures = [{ "ground": 51 }],
         .blend_prio = 4,
         .sink = true,
         .damage = 50,
-        .light = {
-            .color = "0xFFF4AA",
+        .light = .{
+            .color = 0xFFF4AA,
             .intensity = 0.1,
             .radius = 1.0,
         },
-        .animation = { .type = @GroundAnim("wave"), .delta_x = -0.26, .delta_y = 0.26 },
+        .animation = .{ .type = .wave, .delta_x = -0.26, .delta_y = 0.26 },
     },
-    {
+    .{
         .id = 14,
         .name = "Crimson Chasm Lava Path",
         .textures = [{ "ground": 52 }],
         .blend_prio = 5,
-        .light = {
-            .color = "0xFFF4AA",
+        .light = .{
+            .color = 0xFFF4AA,
             .intensity = 0.015,
             .radius = 0.75,
         },
     },
-    {
+    .{
         .id = 15,
         .name = "T1 Realm Grass Blades Light",
         .textures = [{ "ground": 53 }],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 16,
         .name = "T1 Realm Grass Blades Dark",
         .textures = [{ "ground": 54 }, { "ground": 55 }],
         .blend_prio = 6,
     },
-    {
+    .{
         .id = 17,
         .name = "T1 Realm Grass Blades Short",
         .textures = [{ "ground": 56 }, { "ground": 57 }, { "ground": 58 }],
         .blend_prio = 3,
     },
-    {
+    .{
         .id = 18,
         .name = "T1 Realm Grass Blades Dry Light",
         .textures = [{ "ground": 59 }],
         .blend_prio = 5,
     },
-    {
+    .{
         .id = 19,
         .name = "T1 Realm Grass Blades Dry Dark",
         .textures = [{ "ground": 60 }, { "ground": 61 }],
         .blend_prio = 8,
     },
-    {
+    .{
         .id = 20,
         .name = "T1 Realm Grass Blades Dry Short",
         .textures = [{ "ground": 62 }, { "ground": 63 }, { "ground": 64 }],
         .blend_prio = 9,
     },
-    {
+    .{
         .id = 21,
         .name = "T1 Realm Wood Plank",
         .textures = [{ "ground": 65 }],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 22,
         .name = "T1 Realm Wood Plank Light",
         .textures = [{ "ground": 66 }],
         .blend_prio = 2,
     },
-    {
+    .{
         .id = 23,
         .name = "T1 Realm Wood Plank Dark",
         .textures = [{ "ground": 67 }],
         .blend_prio = 4,
     },
-    {
+    .{
         .id = 24,
         .name = "T1 Realm Wood Plank Rotten",
         .textures = [{ "ground": 68 }],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 25,
         .name = "T1 Realm Wood Plank Rotten Light",
         .textures = [{ "ground": 69 }],
         .blend_prio = 2,
     },
-    {
+    .{
         .id = 26,
         .name = "T1 Realm Wood Plank Rotten Dark",
         .textures = [{ "ground": 70 }],
         .blend_prio = 4,
     },
-    {
+    .{
         .id = 27,
         .name = "T1 Realm Brown Stone Tile Cracked",
         .textures = [{ "ground": 71 }],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 28,
         .name = "T1 Realm Brown Stone Tile",
         .textures = [{ "ground": 72 }],
         .blend_prio = 2,
     },
-    {
+    .{
         .id = 29,
         .name = "T1 Realm Grey Stone Tile Cracked",
         .textures = [{ "ground": 73 }],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 30,
         .name = "T1 Realm Grey Stone Tile",
         .textures = [{ "ground": 74 }],
         .blend_prio = 2,
     },
-    {
+    .{
         .id = 31,
         .name = "T1 Realm Green Stone Tile Cracked",
         .textures = [{ "ground": 75 }],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 32,
         .name = "T1 Realm Green Stone Tile",
         .textures = [{ "ground": 76 }],
         .blend_prio = 2,
     },
-    {
+    .{
         .id = 33,
         .name = "T1 Realm Brown Stone Road",
         .textures = [{ "ground": 77 }, { "ground": 78 }],
         .blend_prio = 1,
         .speed_mult = 1.10,
     },
-    {
+    .{
         .id = 34,
         .name = "T1 Realm Grey Stone Road",
         .textures = [{ "ground": 79 }, { "ground": 80 }],
         .blend_prio = 1,
         .speed_mult = 1.10,
     },
-    {
+    .{
         .id = 35,
         .name = "T1 Realm Green Stone Road",
         .textures = [{ "ground": 81 }, { "ground": 82 }],
@@ -264,863 +264,996 @@
         .speed_mult = 1.10,
     },
     // TODO: fill id 36
-    {
+    .{
         .id = 37,
         .name = "Crown Cove Dirt",
-        .textures = [{ "ground": 107 }, {
+        .textures = [
+            { "ground": 107 },
+            {
                 "ground": 108,
-            }, { "ground": 109 }],
+            },
+            { "ground": 109 },
+        ],
         .blend_prio = 1,
     },
-    {
+    .{
         .id = 38,
         .name = "Crown Cove Grass Light",
         .textures = [{ "ground": 110 }],
         .blend_prio = 3,
     },
-    {
+    .{
         .id = 39,
         .name = "Crown Cove Grass Dark",
         .textures = [{ "ground": 111 }],
         .blend_prio = 2,
     },
-    {
+    .{
         .id = 40,
         .name = "Crown Cove Sand",
         .textures = [{ "ground": 112 }],
         .blend_prio = 4,
     },
-    {
+    .{
         .id = 41,
         .name = "Crown Cove Sand Wet",
         .textures = [{ "ground": 113 }],
         .blend_prio = 5,
     },
-    {
+    .{
         .id = 42,
         .name = "T1 Realm Rug Green",
         .textures = [{ "ground": 88 }, { "ground": 89 }, { "ground": 90 }],
-        .rug_textures = {
+        .rug_textures = .{
             .corners = [{ "ground": 83 }],
             .inner_corners = [{ "ground": 84 }],
             .edges = [{ "ground": 85 }, { "ground": 86 }, { "ground": 87 }],
         },
     },
-    {
+    .{
         .id = 43,
         .name = "T1 Realm Rug Red",
         .textures = [{ "ground": 96 }, { "ground": 97 }, { "ground": 98 }],
-        .rug_textures = {
+        .rug_textures = .{
             .corners = [{ "ground": 91 }],
             .inner_corners = [{ "ground": 92 }],
             .edges = [{ "ground": 93 }, { "ground": 94 }, { "ground": 95 }],
         },
     },
-    {
+    .{
         .id = 44,
         .name = "T1 Realm Rug Grey",
         .textures = [{ "ground": 104 }, { "ground": 105 }, { "ground": 106 }],
-        .rug_textures = {
+        .rug_textures = .{
             .corners = [{ "ground": 99 }],
             .inner_corners = [{ "ground": 100 }],
             .edges = [{ "ground": 101 }, { "ground": 102 }, { "ground": 103 }],
         },
     },
-    {
+    .{
         .id = 45,
         .name = "Retrieve 3x3 Power Tile TL",
         .textures = [{ "ground": 114 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 46,
         .name = "Retrieve 3x3 Power Tile TM",
         .textures = [{ "ground": 115 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 47,
         .name = "Retrieve 3x3 Power Tile TR",
         .textures = [{ "ground": 116 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 48,
         .name = "Retrieve 3x3 Power Tile ML",
         .textures = [{ "ground": 117 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 49,
         .name = "Retrieve 3x3 Power Tile MM",
         .textures = [{ "ground": 118 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 50,
         .name = "Retrieve 3x3 Power Tile MR",
         .textures = [{ "ground": 119 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 51,
         .name = "Retrieve 3x3 Power Tile BL",
         .textures = [{ "ground": 120 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 52,
         .name = "Retrieve 3x3 Power Tile BM",
         .textures = [{ "ground": 121 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 53,
         .name = "Retrieve 3x3 Power Tile BR",
         .textures = [{ "ground": 122 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 54,
         .name = "Retrieve 5x5 Power Tile R1C1",
         .textures = [{ "ground": 123 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 55,
         .name = "Retrieve 5x5 Power Tile R1C2",
         .textures = [{ "ground": 124 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 56,
         .name = "Retrieve 5x5 Power Tile R1C3",
         .textures = [{ "ground": 125 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 57,
         .name = "Retrieve 5x5 Power Tile R1C4",
         .textures = [{ "ground": 126 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 58,
         .name = "Retrieve 5x5 Power Tile R1C5",
         .textures = [{ "ground": 127 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 59,
         .name = "Retrieve 5x5 Power Tile R2C1",
         .textures = [{ "ground": 128 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 60,
         .name = "Retrieve 5x5 Power Tile R2C2",
         .textures = [{ "ground": 129 }],
         .anim_sync_id = 0,
         .animations = [
-            { .time = 0.666, .texture = { "ground": 129 } },
-            { .time = 0.666, .texture = { "ground": 148 } },
+            .{ .time = 0.666, .texture = { "ground": 129 } },
+            .{ .time = 0.666, .texture = { "ground": 148 } },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 61,
         .name = "Retrieve 5x5 Power Tile R2C3",
         .textures = [{ "ground": 130 }],
         .anim_sync_id = 0,
         .animations = [
-            { .time = 0.666, .texture = { "ground": 130 } },
-            { .time = 0.666, .texture = { "ground": 149 } },
+            .{ .time = 0.666, .texture = { "ground": 130 } },
+            .{ .time = 0.666, .texture = { "ground": 149 } },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 62,
         .name = "Retrieve 5x5 Power Tile R2C4",
         .textures = [{ "ground": 131 }],
         .anim_sync_id = 0,
         .animations = [
-            { .time = 0.666, .texture = { "ground": 131 } },
-            { .time = 0.666, .texture = { "ground": 150 } },
+            .{ .time = 0.666, .texture = { "ground": 131 } },
+            .{ .time = 0.666, .texture = { "ground": 150 } },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 63,
         .name = "Retrieve 5x5 Power Tile R2C5",
         .textures = [{ "ground": 132 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 64,
         .name = "Retrieve 5x5 Power Tile R3C1",
         .textures = [{ "ground": 133 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 65,
         .name = "Retrieve 5x5 Power Tile R3C2",
         .textures = [{ "ground": 134 }],
         .anim_sync_id = 0,
         .animations = [
-            { .time = 0.666, .texture = { "ground": 134 } },
-            { .time = 0.666, .texture = { "ground": 151 } },
+            .{ .time = 0.666, .texture = { "ground": 134 } },
+            .{ .time = 0.666, .texture = { "ground": 151 } },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 66,
         .name = "Retrieve 5x5 Power Tile R3C3",
         .textures = [{ "ground": 135 }],
         .anim_sync_id = 0,
         .animations = [
-            { .time = 0.666, .texture = { "ground": 135 } },
-            { .time = 0.666, .texture = { "ground": 152 } },
+            .{ .time = 0.666, .texture = { "ground": 135 } },
+            .{ .time = 0.666, .texture = { "ground": 152 } },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 67,
         .name = "Retrieve 5x5 Power Tile R3C4",
         .textures = [{ "ground": 136 }],
         .anim_sync_id = 0,
         .animations = [
-            { .time = 0.666, .texture = { "ground": 136 } },
-            { .time = 0.666, .texture = { "ground": 153 } },
+            .{ .time = 0.666, .texture = { "ground": 136 } },
+            .{ .time = 0.666, .texture = { "ground": 153 } },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 68,
         .name = "Retrieve 5x5 Power Tile R3C5",
         .textures = [{ "ground": 137 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 69,
         .name = "Retrieve 5x5 Power Tile R4C1",
         .textures = [{ "ground": 138 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 70,
         .name = "Retrieve 5x5 Power Tile R4C2",
         .textures = [{ "ground": 139 }],
         .anim_sync_id = 0,
         .animations = [
-            { .time = 0.666, .texture = { "ground": 139 } },
-            { .time = 0.666, .texture = { "ground": 154 } },
+            .{ .time = 0.666, .texture = { "ground": 139 } },
+            .{ .time = 0.666, .texture = { "ground": 154 } },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 71,
         .name = "Retrieve 5x5 Power Tile R4C3",
         .textures = [{ "ground": 140 }],
         .anim_sync_id = 0,
         .animations = [
-            { .time = 0.666, .texture = { "ground": 140 } },
-            { .time = 0.666, .texture = { "ground": 155 } },
+            .{ .time = 0.666, .texture = { "ground": 140 } },
+            .{ .time = 0.666, .texture = { "ground": 155 } },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 72,
         .name = "Retrieve 5x5 Power Tile R4C4",
         .textures = [{ "ground": 141 }],
         .anim_sync_id = 0,
         .animations = [
-            { .time = 0.666, .texture = { "ground": 141 } },
-            { .time = 0.666, .texture = { "ground": 156 } },
+            .{ .time = 0.666, .texture = { "ground": 141 } },
+            .{ .time = 0.666, .texture = { "ground": 156 } },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 73,
         .name = "Retrieve 5x5 Power Tile R4C5",
         .textures = [{ "ground": 142 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 74,
         .name = "Retrieve 5x5 Power Tile R5C1",
         .textures = [{ "ground": 143 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 75,
         .name = "Retrieve 5x5 Power Tile R5C2",
         .textures = [{ "ground": 144 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 76,
         .name = "Retrieve 5x5 Power Tile R5C3",
         .textures = [{ "ground": 145 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 77,
         .name = "Retrieve 5x5 Power Tile R5C4",
         .textures = [{ "ground": 146 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 78,
         .name = "Retrieve 5x5 Power Tile R5C5",
         .textures = [{ "ground": 147 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 87,
         .name = "Retrieve Powered Tile Cross",
         .textures = [{ "ground": 14 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 88,
         .name = "Retrieve Powered Tile Line Vertical",
         .textures = [{ "ground": 15 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 89,
         .name = "Retrieve Powered Tile Line Horizontal",
         .textures = [{ "ground": 16 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 90,
         .name = "Retrieve Powered Tile Down",
         .textures = [{ "ground": 17 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 91,
         .name = "Retrieve Powered Tile Up",
         .textures = [{ "ground": 18 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 92,
         .name = "Retrieve Powered Tile Right",
         .textures = [{ "ground": 19 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 93,
         .name = "Retrieve Powered Tile Left",
         .textures = [{ "ground": 20 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 94,
         .name = "Retrieve Air Vent East",
         .textures = [{ "ground": 157 }, { "ground": 158 }, { "ground": 158 }, { "ground": 158 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 95,
         .name = "Retrieve Air Vent West",
         .textures = [{ "ground": 159 }, { "ground": 160 }, { "ground": 160 }, { "ground": 160 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 96,
         .name = "Retrieve Air Vent North",
         .textures = [{ "ground": 161 }, { "ground": 162 }, { "ground": 162 }, { "ground": 162 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 97,
         .name = "Retrieve 3x3 Power Tile Off TL",
         .textures = [{ "ground": 163 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 98,
         .name = "Retrieve 3x3 Power Tile Off TM",
         .textures = [{ "ground": 164 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 99,
         .name = "Retrieve 3x3 Power Tile Off TR",
         .textures = [{ "ground": 165 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 100,
         .name = "Retrieve 3x3 Power Tile Off ML",
         .textures = [{ "ground": 166 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 101,
         .name = "Retrieve 3x3 Power Tile Off MM",
         .textures = [{ "ground": 167 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 102,
         .name = "Retrieve 3x3 Power Tile Off MR",
         .textures = [{ "ground": 168 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 103,
         .name = "Retrieve 3x3 Power Tile Off BL",
         .textures = [{ "ground": 169 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 104,
         .name = "Retrieve 3x3 Power Tile Off BM",
         .textures = [{ "ground": 170 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 105,
         .name = "Retrieve 3x3 Power Tile Off BR",
         .textures = [{ "ground": 171 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 106,
         .name = "Retrieve 5x5 Power Tile Off R1C1",
         .textures = [{ "ground": 172 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 107,
         .name = "Retrieve 5x5 Power Tile Off R1C2",
         .textures = [{ "ground": 173 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 108,
         .name = "Retrieve 5x5 Power Tile Off R1C3",
         .textures = [{ "ground": 174 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 109,
         .name = "Retrieve 5x5 Power Tile Off R1C4",
         .textures = [{ "ground": 175 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 110,
         .name = "Retrieve 5x5 Power Tile Off R1C5",
         .textures = [{ "ground": 176 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 111,
         .name = "Retrieve 5x5 Power Tile Off R2C1",
         .textures = [{ "ground": 177 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 112,
         .name = "Retrieve 5x5 Power Tile Off R2C2",
         .textures = [{ "ground": 178 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 113,
         .name = "Retrieve 5x5 Power Tile Off R2C3",
         .textures = [{ "ground": 179 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 114,
         .name = "Retrieve 5x5 Power Tile Off R2C4",
         .textures = [{ "ground": 180 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 115,
         .name = "Retrieve 5x5 Power Tile Off R2C5",
         .textures = [{ "ground": 181 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 116,
         .name = "Retrieve 5x5 Power Tile Off R3C1",
         .textures = [{ "ground": 182 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 117,
         .name = "Retrieve 5x5 Power Tile Off R3C2",
         .textures = [{ "ground": 183 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 118,
         .name = "Retrieve 5x5 Power Tile Off R3C3",
         .textures = [{ "ground": 184 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 119,
         .name = "Retrieve 5x5 Power Tile Off R3C4",
         .textures = [{ "ground": 185 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 120,
         .name = "Retrieve 5x5 Power Tile Off R3C5",
         .textures = [{ "ground": 186 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 121,
         .name = "Retrieve 5x5 Power Tile Off R4C1",
         .textures = [{ "ground": 187 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 122,
         .name = "Retrieve 5x5 Power Tile Off R4C2",
         .textures = [{ "ground": 188 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 123,
         .name = "Retrieve 5x5 Power Tile Off R4C3",
         .textures = [{ "ground": 189 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 124,
         .name = "Retrieve 5x5 Power Tile Off R4C4",
         .textures = [{ "ground": 190 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 125,
         .name = "Retrieve 5x5 Power Tile Off R4C5",
         .textures = [{ "ground": 191 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 126,
         .name = "Retrieve 5x5 Power Tile Off R5C1",
         .textures = [{ "ground": 192 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 127,
         .name = "Retrieve 5x5 Power Tile Off R5C2",
         .textures = [{ "ground": 193 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 128,
         .name = "Retrieve 5x5 Power Tile Off R5C3",
         .textures = [{ "ground": 194 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 129,
         .name = "Retrieve 5x5 Power Tile Off R5C4",
         .textures = [{ "ground": 195 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 130,
         .name = "Retrieve 5x5 Power Tile Off R5C5",
         .textures = [{ "ground": 196 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 79,
         .name = "Retrieve Glass Tile TL",
         .textures = [
-            { "retrieve_space_tiles": 0 }, { "retrieve_space_tiles": 0 }, { "retrieve_space_tiles": 0 },
-            { "retrieve_space_tiles": 1 }, { "retrieve_space_tiles": 2 }, { "retrieve_space_tiles": 3 }
+            { "retrieve_space_tiles": 0 },
+            { "retrieve_space_tiles": 0 },
+            { "retrieve_space_tiles": 0 },
+            { "retrieve_space_tiles": 1 },
+            { "retrieve_space_tiles": 2 },
+            { "retrieve_space_tiles": 3 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 80,
         .name = "Retrieve Glass Tile TL Corner",
         .textures = [
-            { "retrieve_space_tiles": 4 }, { "retrieve_space_tiles": 4 }, { "retrieve_space_tiles": 4 },
-            { "retrieve_space_tiles": 5 }, { "retrieve_space_tiles": 6 }, { "retrieve_space_tiles": 7 }
+            { "retrieve_space_tiles": 4 },
+            { "retrieve_space_tiles": 4 },
+            { "retrieve_space_tiles": 4 },
+            { "retrieve_space_tiles": 5 },
+            { "retrieve_space_tiles": 6 },
+            { "retrieve_space_tiles": 7 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 81,
         .name = "Retrieve Glass Tile BL",
         .textures = [
-            { "retrieve_space_tiles": 8 }, { "retrieve_space_tiles":  8 }, { "retrieve_space_tiles":  8 },
-            { "retrieve_space_tiles": 9 }, { "retrieve_space_tiles": 10 }, { "retrieve_space_tiles": 11 }
+            { "retrieve_space_tiles": 8 },
+            { "retrieve_space_tiles": 8 },
+            { "retrieve_space_tiles": 8 },
+            { "retrieve_space_tiles": 9 },
+            { "retrieve_space_tiles": 10 },
+            { "retrieve_space_tiles": 11 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 82,
         .name = "Retrieve Glass Tile BL Corner",
         .textures = [
-            { "retrieve_space_tiles": 12 }, { "retrieve_space_tiles": 12 }, { "retrieve_space_tiles": 12 },
-            { "retrieve_space_tiles": 13 }, { "retrieve_space_tiles": 14 }, { "retrieve_space_tiles": 15 }
+            { "retrieve_space_tiles": 12 },
+            { "retrieve_space_tiles": 12 },
+            { "retrieve_space_tiles": 12 },
+            { "retrieve_space_tiles": 13 },
+            { "retrieve_space_tiles": 14 },
+            { "retrieve_space_tiles": 15 },
         ],
         .disable_blend = true,
     },
-   
-   {
+    .{
         .id = 83,
         .name = "Retrieve Glass Tile TR",
         .textures = [
-            { "retrieve_space_tiles": 16 }, { "retrieve_space_tiles": 16 }, { "retrieve_space_tiles": 16 },
-            { "retrieve_space_tiles": 17 }, { "retrieve_space_tiles": 18 }, { "retrieve_space_tiles": 19 }
+            { "retrieve_space_tiles": 16 },
+            { "retrieve_space_tiles": 16 },
+            { "retrieve_space_tiles": 16 },
+            { "retrieve_space_tiles": 17 },
+            { "retrieve_space_tiles": 18 },
+            { "retrieve_space_tiles": 19 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 84,
         .name = "Retrieve Glass Tile TR Corner",
         .textures = [
-            { "retrieve_space_tiles": 20 }, { "retrieve_space_tiles": 20 }, { "retrieve_space_tiles": 20 },
-            { "retrieve_space_tiles": 21 }, { "retrieve_space_tiles": 22 }, { "retrieve_space_tiles": 23 }
+            { "retrieve_space_tiles": 20 },
+            { "retrieve_space_tiles": 20 },
+            { "retrieve_space_tiles": 20 },
+            { "retrieve_space_tiles": 21 },
+            { "retrieve_space_tiles": 22 },
+            { "retrieve_space_tiles": 23 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 85,
         .name = "Retrieve Glass Tile BR",
         .textures = [
-            { "retrieve_space_tiles": 24 }, { "retrieve_space_tiles": 24 }, { "retrieve_space_tiles": 24 },
-            { "retrieve_space_tiles": 25 }, { "retrieve_space_tiles": 26 }, { "retrieve_space_tiles": 27 }
+            { "retrieve_space_tiles": 24 },
+            { "retrieve_space_tiles": 24 },
+            { "retrieve_space_tiles": 24 },
+            { "retrieve_space_tiles": 25 },
+            { "retrieve_space_tiles": 26 },
+            { "retrieve_space_tiles": 27 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 86,
         .name = "Retrieve Glass Tile BR Corner",
         .textures = [
-            { "retrieve_space_tiles": 28 }, { "retrieve_space_tiles": 28 }, { "retrieve_space_tiles": 28 },
-            { "retrieve_space_tiles": 29 }, { "retrieve_space_tiles": 30 }, { "retrieve_space_tiles": 31 }
+            { "retrieve_space_tiles": 28 },
+            { "retrieve_space_tiles": 28 },
+            { "retrieve_space_tiles": 28 },
+            { "retrieve_space_tiles": 29 },
+            { "retrieve_space_tiles": 30 },
+            { "retrieve_space_tiles": 31 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 132,
         .name = "Retrieve Glass Tile TM",
         .textures = [
-            { "retrieve_space_tiles": 32 }, { "retrieve_space_tiles": 33 }, { "retrieve_space_tiles": 34 }, { "retrieve_space_tiles": 35 },
-            { "retrieve_space_tiles": 36 }, { "retrieve_space_tiles": 37 }, { "retrieve_space_tiles": 38 }, { "retrieve_space_tiles": 39 },
+            { "retrieve_space_tiles": 32 },
+            { "retrieve_space_tiles": 33 },
+            { "retrieve_space_tiles": 34 },
+            { "retrieve_space_tiles": 35 },
+            { "retrieve_space_tiles": 36 },
+            { "retrieve_space_tiles": 37 },
+            { "retrieve_space_tiles": 38 },
+            { "retrieve_space_tiles": 39 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 133,
         .name = "Retrieve Glass Tile BM",
         .textures = [
-            { "retrieve_space_tiles": 40 }, { "retrieve_space_tiles": 41 }, { "retrieve_space_tiles": 42 }, { "retrieve_space_tiles": 43 },
-            { "retrieve_space_tiles": 44 }, { "retrieve_space_tiles": 45 }, { "retrieve_space_tiles": 46 }, { "retrieve_space_tiles": 47 },
+            { "retrieve_space_tiles": 40 },
+            { "retrieve_space_tiles": 41 },
+            { "retrieve_space_tiles": 42 },
+            { "retrieve_space_tiles": 43 },
+            { "retrieve_space_tiles": 44 },
+            { "retrieve_space_tiles": 45 },
+            { "retrieve_space_tiles": 46 },
+            { "retrieve_space_tiles": 47 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 134,
         .name = "Retrieve Glass Tile LM",
         .textures = [
-            { "retrieve_space_tiles": 48 }, { "retrieve_space_tiles": 49 }, { "retrieve_space_tiles": 50 }, { "retrieve_space_tiles": 51 },
-            { "retrieve_space_tiles": 52 }, { "retrieve_space_tiles": 53 }, { "retrieve_space_tiles": 54 }, { "retrieve_space_tiles": 55 },
+            { "retrieve_space_tiles": 48 },
+            { "retrieve_space_tiles": 49 },
+            { "retrieve_space_tiles": 50 },
+            { "retrieve_space_tiles": 51 },
+            { "retrieve_space_tiles": 52 },
+            { "retrieve_space_tiles": 53 },
+            { "retrieve_space_tiles": 54 },
+            { "retrieve_space_tiles": 55 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 135,
         .name = "Retrieve Glass Tile RM",
         .textures = [
-            { "retrieve_space_tiles": 56 }, { "retrieve_space_tiles": 57 }, { "retrieve_space_tiles": 58 }, { "retrieve_space_tiles": 59 },
-            { "retrieve_space_tiles": 60 }, { "retrieve_space_tiles": 61 }, { "retrieve_space_tiles": 62 }, { "retrieve_space_tiles": 63 },
+            { "retrieve_space_tiles": 56 },
+            { "retrieve_space_tiles": 57 },
+            { "retrieve_space_tiles": 58 },
+            { "retrieve_space_tiles": 59 },
+            { "retrieve_space_tiles": 60 },
+            { "retrieve_space_tiles": 61 },
+            { "retrieve_space_tiles": 62 },
+            { "retrieve_space_tiles": 63 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 136,
         .name = "Retrieve Glass Tile MM",
         .textures = [
-            { "retrieve_space_tiles": 64 }, { "retrieve_space_tiles": 64 }, { "retrieve_space_tiles": 64 }, { "retrieve_space_tiles": 64 },
-            { "retrieve_space_tiles": 64 }, { "retrieve_space_tiles": 72 }, { "retrieve_space_tiles": 80 }, { "retrieve_space_tiles": 88 },
-            { "retrieve_space_tiles": 64 }, { "retrieve_space_tiles": 72 }, { "retrieve_space_tiles": 80 }, { "retrieve_space_tiles": 88 },
-            { "retrieve_space_tiles": 64 }, { "retrieve_space_tiles": 72 }, { "retrieve_space_tiles": 80 }, { "retrieve_space_tiles": 88 },
-            { "retrieve_space_tiles": 65 }, { "retrieve_space_tiles": 66 }, { "retrieve_space_tiles": 67 }, { "retrieve_space_tiles": 68 },
-            { "retrieve_space_tiles": 69 }, { "retrieve_space_tiles": 70 }, { "retrieve_space_tiles": 71 }, { "retrieve_space_tiles": 73 },
-            { "retrieve_space_tiles": 74 }, { "retrieve_space_tiles": 75 }, { "retrieve_space_tiles": 76 }, { "retrieve_space_tiles": 77 },
-            { "retrieve_space_tiles": 78 }, { "retrieve_space_tiles": 79 }, { "retrieve_space_tiles": 81 }, { "retrieve_space_tiles": 82 },
-            { "retrieve_space_tiles": 83 }, { "retrieve_space_tiles": 84 }, { "retrieve_space_tiles": 85 }, { "retrieve_space_tiles": 86 },
-            { "retrieve_space_tiles": 87 }, { "retrieve_space_tiles": 89 }, { "retrieve_space_tiles": 90 }, { "retrieve_space_tiles": 91 },
-            { "retrieve_space_tiles": 92 }, { "retrieve_space_tiles": 93 }, { "retrieve_space_tiles": 94 }, { "retrieve_space_tiles": 95 },
+            { "retrieve_space_tiles": 64 },
+            { "retrieve_space_tiles": 64 },
+            { "retrieve_space_tiles": 64 },
+            { "retrieve_space_tiles": 64 },
+            { "retrieve_space_tiles": 64 },
+            { "retrieve_space_tiles": 72 },
+            { "retrieve_space_tiles": 80 },
+            { "retrieve_space_tiles": 88 },
+            { "retrieve_space_tiles": 64 },
+            { "retrieve_space_tiles": 72 },
+            { "retrieve_space_tiles": 80 },
+            { "retrieve_space_tiles": 88 },
+            { "retrieve_space_tiles": 64 },
+            { "retrieve_space_tiles": 72 },
+            { "retrieve_space_tiles": 80 },
+            { "retrieve_space_tiles": 88 },
+            { "retrieve_space_tiles": 65 },
+            { "retrieve_space_tiles": 66 },
+            { "retrieve_space_tiles": 67 },
+            { "retrieve_space_tiles": 68 },
+            { "retrieve_space_tiles": 69 },
+            { "retrieve_space_tiles": 70 },
+            { "retrieve_space_tiles": 71 },
+            { "retrieve_space_tiles": 73 },
+            { "retrieve_space_tiles": 74 },
+            { "retrieve_space_tiles": 75 },
+            { "retrieve_space_tiles": 76 },
+            { "retrieve_space_tiles": 77 },
+            { "retrieve_space_tiles": 78 },
+            { "retrieve_space_tiles": 79 },
+            { "retrieve_space_tiles": 81 },
+            { "retrieve_space_tiles": 82 },
+            { "retrieve_space_tiles": 83 },
+            { "retrieve_space_tiles": 84 },
+            { "retrieve_space_tiles": 85 },
+            { "retrieve_space_tiles": 86 },
+            { "retrieve_space_tiles": 87 },
+            { "retrieve_space_tiles": 89 },
+            { "retrieve_space_tiles": 90 },
+            { "retrieve_space_tiles": 91 },
+            { "retrieve_space_tiles": 92 },
+            { "retrieve_space_tiles": 93 },
+            { "retrieve_space_tiles": 94 },
+            { "retrieve_space_tiles": 95 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 137,
         .name = "Retrieve Space Tile Stary",
         .textures = [
-            { "retrieve_space_tiles": 96 }, { "retrieve_space_tiles": 97 }, { "retrieve_space_tiles": 98 }, { "retrieve_space_tiles": 99 },
-            { "retrieve_space_tiles": 100 }, { "retrieve_space_tiles": 101 }, { "retrieve_space_tiles": 102 }, { "retrieve_space_tiles": 103 },
-            { "retrieve_space_tiles": 104 }, { "retrieve_space_tiles": 105 }, { "retrieve_space_tiles": 106 }, { "retrieve_space_tiles": 107 },
-            { "retrieve_space_tiles": 108 }, { "retrieve_space_tiles": 109 }, { "retrieve_space_tiles": 110 }, { "retrieve_space_tiles": 111 },
-            { "retrieve_space_tiles": 112 }, { "retrieve_space_tiles": 113 }, { "retrieve_space_tiles": 114 }, { "retrieve_space_tiles": 115 },
-            { "retrieve_space_tiles": 116 }, { "retrieve_space_tiles": 117 }, { "retrieve_space_tiles": 118 }, { "retrieve_space_tiles": 119 },
-            { "retrieve_space_tiles": 120 }, { "retrieve_space_tiles": 121 }, { "retrieve_space_tiles": 122 }, { "retrieve_space_tiles": 123 },
-            { "retrieve_space_tiles": 124 }, { "retrieve_space_tiles": 125 }, { "retrieve_space_tiles": 126 }, { "retrieve_space_tiles": 127 },
-            { "retrieve_space_tiles": 128 }, { "retrieve_space_tiles": 129 }, { "retrieve_space_tiles": 130 }, { "retrieve_space_tiles": 131 },
-            { "retrieve_space_tiles": 132 }, { "retrieve_space_tiles": 133 }, { "retrieve_space_tiles": 134 }, { "retrieve_space_tiles": 135 },
-            { "retrieve_space_tiles": 136 }, { "retrieve_space_tiles": 137 }, { "retrieve_space_tiles": 138 }, { "retrieve_space_tiles": 139 },
-            { "retrieve_space_tiles": 140 }, { "retrieve_space_tiles": 141 }
+            { "retrieve_space_tiles": 96 },
+            { "retrieve_space_tiles": 97 },
+            { "retrieve_space_tiles": 98 },
+            { "retrieve_space_tiles": 99 },
+            { "retrieve_space_tiles": 100 },
+            { "retrieve_space_tiles": 101 },
+            { "retrieve_space_tiles": 102 },
+            { "retrieve_space_tiles": 103 },
+            { "retrieve_space_tiles": 104 },
+            { "retrieve_space_tiles": 105 },
+            { "retrieve_space_tiles": 106 },
+            { "retrieve_space_tiles": 107 },
+            { "retrieve_space_tiles": 108 },
+            { "retrieve_space_tiles": 109 },
+            { "retrieve_space_tiles": 110 },
+            { "retrieve_space_tiles": 111 },
+            { "retrieve_space_tiles": 112 },
+            { "retrieve_space_tiles": 113 },
+            { "retrieve_space_tiles": 114 },
+            { "retrieve_space_tiles": 115 },
+            { "retrieve_space_tiles": 116 },
+            { "retrieve_space_tiles": 117 },
+            { "retrieve_space_tiles": 118 },
+            { "retrieve_space_tiles": 119 },
+            { "retrieve_space_tiles": 120 },
+            { "retrieve_space_tiles": 121 },
+            { "retrieve_space_tiles": 122 },
+            { "retrieve_space_tiles": 123 },
+            { "retrieve_space_tiles": 124 },
+            { "retrieve_space_tiles": 125 },
+            { "retrieve_space_tiles": 126 },
+            { "retrieve_space_tiles": 127 },
+            { "retrieve_space_tiles": 128 },
+            { "retrieve_space_tiles": 129 },
+            { "retrieve_space_tiles": 130 },
+            { "retrieve_space_tiles": 131 },
+            { "retrieve_space_tiles": 132 },
+            { "retrieve_space_tiles": 133 },
+            { "retrieve_space_tiles": 134 },
+            { "retrieve_space_tiles": 135 },
+            { "retrieve_space_tiles": 136 },
+            { "retrieve_space_tiles": 137 },
+            { "retrieve_space_tiles": 138 },
+            { "retrieve_space_tiles": 139 },
+            { "retrieve_space_tiles": 140 },
+            { "retrieve_space_tiles": 141 },
         ],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 138,
         .name = "Retrieve Space Tile Background",
         .textures = [{ "retrieve_space_tiles": 143 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 139,
         .name = "Goblin Lair Gravel",
-        .textures = [{ "ground": 197 }, { "ground": 197 }, { "ground": 197 }, { "ground": 198 }, { "ground": 199 }, { "ground": 200 }, { "ground": 201 }, { "ground": 202 }],
+        .textures = [
+            { "ground": 197 },
+            { "ground": 197 },
+            { "ground": 197 },
+            { "ground": 198 },
+            { "ground": 199 },
+            { "ground": 200 },
+            { "ground": 201 },
+            { "ground": 202 },
+        ],
         .blend_prio = 3,
     },
-    {
+    .{
         .id = 140,
         .name = "Goblin Lair 2x2 Emerald Vein TL",
         .textures = [{ "ground": 203 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 141,
         .name = "Goblin Lair 2x2 Emerald Vein TR",
         .textures = [{ "ground": 204 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 142,
         .name = "Goblin Lair 2x2 Emerald Vein BL",
         .textures = [{ "ground": 205 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 143,
         .name = "Goblin Lair 2x2 Emerald Vein BR",
         .textures = [{ "ground": 206 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 144,
         .name = "Goblin Lair 2x2 Gold Vein TL",
         .textures = [{ "ground": 207 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 145,
         .name = "Goblin Lair 2x2 Gold Vein TR",
         .textures = [{ "ground": 208 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 146,
         .name = "Goblin Lair 2x2 Gold Vein BL",
         .textures = [{ "ground": 209 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 147,
         .name = "Goblin Lair 2x2 Gold Vein BR",
         .textures = [{ "ground": 210 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 148,
         .name = "Goblin Lair 2x2 Ruby Vein TL",
         .textures = [{ "ground": 211 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 149,
         .name = "Goblin Lair 2x2 Ruby Vein TR",
         .textures = [{ "ground": 212 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 150,
         .name = "Goblin Lair 2x2 Ruby Vein BL",
         .textures = [{ "ground": 213 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 151,
         .name = "Goblin Lair 2x2 Ruby Vein BR",
         .textures = [{ "ground": 214 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 152,
         .name = "Goblin Lair 2x2 Diamond Vein TL",
         .textures = [{ "ground": 215 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 153,
         .name = "Goblin Lair 2x2 Diamond Vein TR",
         .textures = [{ "ground": 216 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 154,
         .name = "Goblin Lair 2x2 Diamond Vein BL",
         .textures = [{ "ground": 217 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 155,
         .name = "Goblin Lair 2x2 Diamond Vein BR",
         .textures = [{ "ground": 218 }],
         .disable_blend = true,
     },
-    {
+    .{
         .id = 156,
         .name = "Marble Sand",
         .textures = [{ "ground": 219 }, { "ground": 220 }, { "ground": 221 }],
         .blend_prio = 4,
     },
-    {
+    .{
         .id = 157,
         .name = "Marble Cobble",
         .textures = [{ "ground": 222 }, { "ground": 223 }, { "ground": 224 }],
         .blend_prio = 5,
     },
-    {
+    .{
         .id = 158,
         .name = "Marble Eclipse Tile",
         .textures = [{ "ground": 225 }],
     },
-    {
+    .{
         .id = 159,
         .name = "Marble Tile",
         .textures = [{ "ground": 226 }],
     },
-    {
+    .{
         .id = 160,
         .name = "Marble Road",
         .textures = [{ "ground": 227 }, { "ground": 228 }],
         .blend_prio = 7,
     },
-    
-
 ]

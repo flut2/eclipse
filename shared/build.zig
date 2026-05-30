@@ -145,21 +145,21 @@ pub fn build(b: *std.Build) !void {
     });
     libuv_tc.addIncludePath(libuv_dep.path("include"));
 
-    const libuv_patcher = b.addExecutable(.{
-        .name = "libuv_patcher",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("libuv_patcher.zig"),
-            .optimize = optimize,
-            .target = target,
-        }),
-    });
+    // const libuv_patcher = b.addExecutable(.{
+    //     .name = "libuv_patcher",
+    //     .root_module = b.createModule(.{
+    //         .root_source_file = b.path("libuv_patcher.zig"),
+    //         .optimize = optimize,
+    //         .target = target,
+    //     }),
+    // });
 
-    const run_patcher = b.addRunArtifact(libuv_patcher);
-    run_patcher.addFileArg(libuv_tc.getOutput());
-    run_patcher.step.dependOn(&libuv_tc.step);
-    run_patcher.step.dependOn(&libuv_patcher.step);
+    // const run_patcher = b.addRunArtifact(libuv_patcher);
+    // run_patcher.addFileArg(libuv_tc.getOutput());
+    // run_patcher.step.dependOn(&libuv_tc.step);
+    // run_patcher.step.dependOn(&libuv_patcher.step);
 
-    libuv_lib.step.dependOn(&run_patcher.step);
+    // libuv_lib.step.dependOn(&run_patcher.step);
 
     const libuv_mod = b.addModule("uv", .{
         .root_source_file = libuv_tc.getOutput(),

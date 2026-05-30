@@ -1,0 +1,107 @@
+[
+  {
+    "label": "Debug Client",
+    "adapter": "CodeLLDB",
+    "program": "zig-out/client/Eclipse",
+    "request": "launch",
+    "build": {
+      "command": "zig",
+      "args": [
+        "build",
+        "-Dserver=false",
+        "-Doptimize=Debug",
+        "-freference-trace",
+      ],
+    },
+    "cwd": "zig-out/client",
+  },
+  {
+    "label": "Debug Client (Tracy)",
+    "adapter": "CodeLLDB",
+    "program": "zig-out/client/Eclipse",
+    "request": "launch",
+    "build": {
+      "command": "zig",
+      "args": [
+        "build",
+        "-Dserver=false",
+        "-Dtracy=true",
+        "-Doptimize=Debug",
+        "-freference-trace",
+      ],
+    },
+    "cwd": "zig-out/client",
+  },
+  {
+    "label": "Debug Client (Validation)",
+    "adapter": "CodeLLDB",
+    "program": "zig-out/Eclipse",
+    "request": "launch",
+    "build": {
+      "command": "zig",
+      "args": [
+        "build",
+        "-Dserver=false",
+        "-Dtracy=true",
+        "-Doptimize=Debug",
+        "-freference-trace",
+      ],
+    },
+    "cwd": "zig-out",
+  },
+  {
+    "label": "ReleaseSafe Client",
+    "adapter": "CodeLLDB",
+    "program": "zig-out/client/Example",
+    "request": "launch",
+    "build": {
+      "command": "zig",
+      "args": ["build", "-Dserver=false", "-Doptimize=ReleaseSafe"],
+    },
+    "cwd": "zig-out/client",
+  },
+  {
+    "label": "Debug Server",
+    "adapter": "CodeLLDB",
+    "program": "zig-out/server/Eclipse",
+    "request": "launch",
+    "build": {
+      "command": "zig",
+      "args": [
+        "build",
+        "-Dclient=false",
+        "-Doptimize=Debug",
+        "-freference-trace",
+      ],
+    },
+    "cwd": "zig-out/server",
+  },
+  {
+    "label": "Debug Server (Tracy)",
+    "adapter": "CodeLLDB",
+    "program": "zig-out/server/Eclipse",
+    "request": "launch",
+    "build": {
+      "command": "zig",
+      "args": [
+        "build",
+        "-Dclient=false",
+        "-Dtracy=true",
+        "-Doptimize=Debug",
+        "-freference-trace",
+      ],
+    },
+    "cwd": "zig-out/server",
+  },
+  {
+    "label": "ReleaseSafe Server",
+    "adapter": "CodeLLDB",
+    "program": "zig-out/server/Example",
+    "request": "launch",
+    "build": {
+      "command": "zig",
+      "args": ["build", "-Dclient=false", "-Doptimize=ReleaseSafe"],
+    },
+    "cwd": "zig-out/server",
+  },
+]

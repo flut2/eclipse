@@ -310,28 +310,35 @@ fn getHwid(allocator: std.mem.Allocator) ![]const u8 {
                     return allocator.dupe(u8, line[left_bound..right_bound]) catch main.oomPanic();
                 }
             }
+
             @panic("No HWID found");
         },
         .linux => {
             tryVar: {
-                const file = std.fs.cwd().openFile("/var/lib/dbus/machine-id", .{}) catch break :tryVar;
-                defer file.close();
+                const file = std.Io.Dir.cwd().openFile(main.io, "/var/lib/dbus/machine-id", .{}) catch break :tryVar;
+                defer file.close(main.io);
 
                 var buf: [256]u8 = undefined;
-                const size = try file.readAll(&buf);
-                return std.mem.trim(u8, std.mem.trim(u8, buf[0..size], " "), "\n");
+                var rdr = file.reader(main.io, &buf);
+
+                const text = try rdr.interface.allocRemaining(main.allocator, .unlimited);
+                defer main.allocator.free(text);
+                return std.mem.trim(u8, std.mem.trim(u8, text, " "), "\n");
             }
 
             tryEtc: {
-                const file = std.fs.cwd().openFile("/etc/machine-id", .{}) catch break :tryEtc;
-                defer file.close();
+                const file = std.Io.Dir.cwd().openFile(main.io, "/etc/machine-id", .{}) catch break :tryEtc;
+                defer file.close(main.io);
 
                 var buf: [256]u8 = undefined;
-                const size = try file.readAll(&buf);
-                return std.mem.trim(u8, std.mem.trim(u8, buf[0..size], " "), "\n");
+                var rdr = file.reader(main.io, &buf);
+
+                const text = try rdr.interface.allocRemaining(main.allocator, .unlimited);
+                defer main.allocator.free(text);
+                return std.mem.trim(u8, std.mem.trim(u8, text, " "), "\n");
             }
 
-            @panic("No hwid found");
+            @panic("No HWID found");
         },
         else => @compileError("Unsupported OS"),
     };

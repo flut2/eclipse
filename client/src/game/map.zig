@@ -481,8 +481,10 @@ pub fn update(renderer: *Renderer, time: i64, dt: f32) void {
 
     if (main.settings.stats_enabled and time - fps_time_start >= 1 * std.time.us_per_s) {
         switch (ui_systems.screen) {
-            .game => |screen| screen.updateFpsText(frames.load(.acquire), utils.currentMemoryUse(time) catch -1.0),
-            .editor => |screen| screen.updateFps(frames.load(.acquire), utils.currentMemoryUse(time) catch -1.0),
+            inline .game, .editor => |screen| screen.updateFpsText(
+                frames.load(.acquire),
+                utils.currentMemoryUse(main.io, time) catch -1.0,
+            ),
             else => {},
         }
         fps_time_start = time;

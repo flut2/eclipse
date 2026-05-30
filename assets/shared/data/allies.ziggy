@@ -1,5 +1,5 @@
 [
-    {
+    .{
         .id = 0,
         .name = "Boulder Buddy",
         .health = 3600,
@@ -7,7 +7,7 @@
         .resistance = 5,
         .textures = [{ "misc_chars": 0 }, { "misc_chars": 1 }, { "misc_chars": 2 }],
     },
-    {
+    .{
         .id = 1,
         .name = "Dwarven Coil",
         .health = 5000,
@@ -15,7 +15,7 @@
         .resistance = 25,
         .textures = [{ "misc_chars_big": 0 }],
     },
-    {
+    .{
         .id = 2,
         .name = "Obelisk of Binding",
         .health = 35000,

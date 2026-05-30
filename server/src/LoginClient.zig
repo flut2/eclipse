@@ -72,11 +72,10 @@ fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.c) void {
     main.login_client_free_list.append(main.allocator, client.list_index) catch main.oomPanic();
 }
 
-pub fn readCallback(ud: *anyopaque, bytes_read: isize, _: [*c]const uv.uv_buf_t) callconv(.c) void {
+pub fn readCallback(socket: [*c]uv.uv_stream_t, bytes_read: isize, _: [*c]const uv.uv_buf_t) callconv(.c) void {
     if (bytes_read == 0) return;
 
-    const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
-    const client: *Client = @ptrCast(@alignCast(socket.data));
+    const client: *Client = @ptrCast(@alignCast(socket.*.data));
 
     if (bytes_read < 0) {
         if (bytes_read != uv.UV_EOF)
@@ -230,7 +229,7 @@ fn handleLogin(self: *Client, data: PacketData(.login)) void {
     defer acc_data.deinit();
     const list = self.getListData(&acc_data, token) catch |e| {
         std.log.err("Error while creating list for {s}: {}", .{ data.email, e });
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
 
         self.sendError("Could not retrieve list");
         return;
@@ -277,7 +276,7 @@ fn handleRegister(self: *Client, data: PacketData(.register)) void {
         .allocator = main.allocator,
         .params = scrypt.Params.interactive,
         .encoding = .crypt,
-    }, &out) catch {
+    }, &out, main.io) catch {
         self.sendError("Password hashing failed");
         return;
     };
@@ -294,7 +293,7 @@ fn handleRegister(self: *Client, data: PacketData(.register)) void {
     var acc_data: db.AccountData = .{ .acc_id = acc_id };
     defer acc_data.deinit();
 
-    const timestamp = std.time.milliTimestamp();
+    const timestamp = main.milliTimestamp();
 
     acc_data.set(.{ .email = data.email }) catch {
         self.databaseError();
@@ -399,7 +398,7 @@ fn handleVerify(self: *Client, data: PacketData(.verify)) void {
     defer acc_data.deinit();
     const list = self.getListData(&acc_data, data.token) catch |e| {
         std.log.err("Error while creating list for {s}: {}", .{ data.email, e });
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
 
         self.sendError("Could not retrieve list");
         return;
@@ -444,7 +443,7 @@ fn handleDelete(self: *Client, data: PacketData(.delete)) void {
 
     const list = self.getListData(&acc_data, data.token) catch |e| {
         std.log.err("Error while creating list for {s}: {}", .{ data.email, e });
-        if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
+        if (@errorReturnTrace()) |trace| std.debug.dumpErrorReturnTrace(trace);
 
         self.sendError("Could not retrieve list");
         return;

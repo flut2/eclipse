@@ -19,7 +19,7 @@ fn addTracy(
     tracy_path: std.Build.LazyPath,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-) void {
+) !void {
     const tracy_module = b.createModule(.{
         .root_source_file = tracy_path,
         .target = target,
@@ -29,7 +29,7 @@ fn addTracy(
         .sanitize_c = .off,
     });
 
-    const tracy_dep = b.dependency("tracy", .{ .target = target, .optimize = optimize });
+    const tracy_dep = b.lazyDependency("tracy", .{ .target = target, .optimize = optimize }) orelse return error.TracyMissing;
 
     tracy_module.addCMacro("TRACY_ENABLE", "");
     tracy_module.addIncludePath(tracy_dep.path(""));
@@ -125,23 +125,18 @@ fn buildClient(
         exe.root_module.linkLibrary(miniaudio_dep.artifact("miniaudio"));
 
         if (tracy)
-            addTracy(b, exe.root_module, shared_dep.path("src/tracy.zig"), target, optimize);
+            try addTracy(b, exe.root_module, shared_dep.path("src/tracy.zig"), target, optimize);
 
         exe.root_module.linkSystemLibrary(if (target.result.os.tag == .windows) "vulkan-1" else "vulkan", .{});
 
-        exe.root_module.addIncludePath(b.dependency("vma", .{
-            .target = target,
-            .optimize = optimize,
-        }).path("include"));
-        const env_map = try std.process.getEnvMap(b.allocator);
-        if (env_map.get("VULKAN_SDK")) |path| {
+        if (b.graph.environ_map.get("VULKAN_SDK")) |path| {
             exe.root_module.addLibraryPath(.{ .cwd_relative = b.pathJoin(&.{ path, "lib" }) });
             exe.root_module.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ path, "include" }) });
         } else @panic("Could not find Vulkan SDK");
         exe.root_module.addCSourceFile(.{
             .file = b.addWriteFiles().add("vma.cpp",
                 \\#define VMA_IMPLEMENTATION
-                \\#include <vk_mem_alloc.h>
+                \\#include "vma/vk_mem_alloc.h"
             ),
             .flags = &.{"-std=c++17"},
         });
@@ -242,7 +237,7 @@ fn buildServer(
         exe.root_module.linkLibrary(shared_dep.artifact("libuv"));
 
         if (tracy)
-            addTracy(b, exe.root_module, shared_dep.path("src/tracy.zig"), target, optimize);
+            try addTracy(b, exe.root_module, shared_dep.path("src/tracy.zig"), target, optimize);
 
         const hiredis_path = hiredis_dep.path(".");
         exe.installHeadersDirectory(hiredis_path, "hiredis", .{ .include_extensions = &.{".h"} });
@@ -274,7 +269,7 @@ fn buildServer(
         if (check)
             check_step.dependOn(&exe.step)
         else
-            exe.addWin32ResourceFile(.{ .file = b.path("assets/resources.rc") });
+            exe.root_module.addWin32ResourceFile(.{ .file = b.path("assets/resources.rc") });
 
         if (!check) {
             b.getInstallStep().dependOn(&b.addInstallArtifact(exe, .{

@@ -1,181 +1,181 @@
 [
-    {
+    .{
         .id = 65534,
         .name = "Map Editor Region Placeholder",
         .textures = [{ "misc_big": 11 }],
         .show_name = true,
     },
-    {
+    .{
         .id = 0,
         .name = "Health Shrine",
         .textures = [{ "props_big": 1 }],
         .size_mult = 1.6,
-        .light = {
-            .color = "0xE54242",
+        .light = .{
+            .color = 0xE54242,
             .intensity = 0.1,
             .radius = 3.0,
         },
         .static = true,
         .occupy_square = true,
         .show_effects = [
-            {
-                .effect = @Effect("ring"),
-                .color = "0xE54242",
+            .{
+                .effect = .ring,
+                .color = 0xE54242,
                 .radius = 4.0,
                 .cooldown = 1.0,
             },
         ],
     },
-    {
+    .{
         .id = 1,
         .name = "Magic Shrine",
         .textures = [{ "props_big": 2 }],
         .size_mult = 1.6,
-        .light = {
-            .color = "0x4C8AED",
+        .light = .{
+            .color = 0x4C8AED,
             .intensity = 0.1,
             .radius = 3.0,
         },
         .static = true,
         .occupy_square = true,
         .animations = [
-            { .time = 0.4, .texture = { "props_big": 2 } },
-            { .time = 0.4, .texture = { "props_big": 3 } },
-            { .time = 0.4, .texture = { "props_big": 4 } },
-            { .time = 0.4, .texture = { "props_big": 3 } },
+            .{ .time = 0.4, .texture = { "props_big": 2 } },
+            .{ .time = 0.4, .texture = { "props_big": 3 } },
+            .{ .time = 0.4, .texture = { "props_big": 4 } },
+            .{ .time = 0.4, .texture = { "props_big": 3 } },
         ],
         .show_effects = [
-            {
-                .effect = @Effect("ring"),
-                .color = "0x4C8AED",
+            .{
+                .effect = .ring,
+                .color = 0x4C8AED,
                 .radius = 4.0,
                 .cooldown = 1.0,
             },
         ],
     },
-    {
+    .{
         .id = 2,
         .name = "Gravestone 1",
         .textures = [{ "props_big": 49 }],
         .show_name = true,
     },
-    {
+    .{
         .id = 3,
         .name = "Gravestone 2",
         .textures = [{ "props_big": 50 }],
         .show_name = true,
     },
-    {
+    .{
         .id = 4,
         .name = "Gravestone 3",
         .textures = [{ "props_big": 50 }],
         .show_name = true,
     },
-    {
+    .{
         .id = 5,
         .name = "Gravestone 4",
         .textures = [{ "props_big": 50 }],
         .show_name = true,
     },
-    {
+    .{
         .id = 6,
         .name = "Gravestone 5",
         .textures = [{ "props_big": 50 }],
         .show_name = true,
     },
-    {
+    .{
         .id = 7,
         .name = "Grass",
         .textures = [{ "props": 0 }],
     },
-    {
+    .{
         .id = 8,
         .name = "Rock",
         .textures = [{ "props": 1 }, { "props": 2 }],
     },
-    {
+    .{
         .id = 9,
         .name = "Bush",
         .textures = [{ "props": 3 }],
         .occupy_square = true,
     },
-    {
+    .{
         .id = 10,
         .name = "Flowers",
         .textures = [{ "props": 4 }, { "props": 5 }, { "props": 6 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 11,
         .name = "T1 Realm Deco Bench",
         .textures = [{ "props": 61 }, { "props": 62 }],
         .occupy_square = false,
     },
-    {
+    .{
         .id = 12,
         .name = "T1 Realm Deco Table",
         .textures = [{ "props": 63 }],
         .occupy_square = true,
     },
-    {
+    .{
         .id = 13,
         .name = "T1 Realm Deco Bed",
         .textures = [{ "props": 64 }],
         .occupy_square = true,
     },
-    {
+    .{
         .id = 14,
         .name = "T1 Realm Flowers",
         .textures = [{ "props": 89 }, { "props": 90 }, { "props": 91 }, { "props": 92 }, { "props": 93 }, { "props": 94 }, { "props": 95 }, { "props": 96 }, { "props": 97 }, { "props": 98 }, { "props": 99 }, { "props": 100 }, { "props": 101 }, { "props": 102 }, { "props": 103 }, { "props": 104 }, { "props": 105 }, { "props": 106 }, { "props": 107 }, { "props": 108 }, { "props": 109 }, { "props": 110 }, { "props": 111 }, { "props": 112 }, { "props": 113 }, { "props": 114 }, { "props": 115 }],
         .occupy_square = false,
     },
-    {
+    .{
         .id = 15,
         .name = "T1 Realm Dead Trees",
         .textures = [{ "props": 116 }, { "props": 117 }, { "props": 118 }, { "props": 119 }, { "props": 120 }, { "props": 121 }, { "props": 122 }, { "props": 123 }],
         .occupy_square = true,
     },
-    {
+    .{
         .id = 16,
         .name = "T1 Realm Bushes",
         .textures = [{ "props": 124 }, { "props": 125 }, { "props": 126 }, { "props": 127 }, { "props": 128 }, { "props": 129 }, { "props": 0 }, { "props": 3 }],
     },
-    {
+    .{
         .id = 17,
         .name = "T1 Realm Small Trees",
         .textures = [{ "props": 130 }, { "props": 131 }, { "props": 132 }, { "props": 133 }, { "props": 134 }, { "props": 135 }, { "props": 136 }, { "props": 137 }, { "props": 138 }, { "props": 139 }, { "props": 140 }, { "props": 141 }, { "props": 142 }, { "props": 143 }, { "props": 144 }, { "props": 145 }, { "props": 146 }, { "props": 147 }],
     },
-    {
+    .{
         .id = 18,
         .name = "T1 Realm Dry Bushes",
         .textures = [{ "props": 148 }, { "props": 149 }, { "props": 150 }, { "props": 151 }, { "props": 152 }, { "props": 153 }, { "props": 154 }, { "props": 155 }],
     },
-    {
+    .{
         .id = 19,
         .name = "T1 Realm Small Dry Trees",
         .textures = [{ "props": 156 }, { "props": 157 }, { "props": 158 }, { "props": 159 }, { "props": 160 }, { "props": 161 }, { "props": 162 }, { "props": 163 }, { "props": 164 }, { "props": 165 }, { "props": 166 }, { "props": 164 }, { "props": 165 }, { "props": 166 }, { "props": 165 }, { "props": 168 }, { "props": 169 }, { "props": 170 }, { "props": 171 }, { "props": 172 }, { "props": 173 }],
     },
-    {
+    .{
         .id = 20,
         .name = "T1 Realm Mushrooms",
         .textures = [{ "props": 174 }, { "props": 175 }, { "props": 176 }, { "props": 177 }, { "props": 178 }, { "props": 179 }, { "props": 180 }, { "props": 181 }, { "props": 182 }],
     },
-    {
+    .{
         .id = 21,
         .name = "T1 Realm Grey Rocks",
         .textures = [{ "props": 183 }, { "props": 184 }, { "props": 185 }, { "props": 186 }, { "props": 187 }],
     },
-    {
+    .{
         .id = 22,
         .name = "T1 Realm Brown Rocks",
         .textures = [{ "props": 188 }, { "props": 189 }, { "props": 190 }, { "props": 191 }, { "props": 192 }],
     },
-    {
+    .{
         .id = 23,
         .name = "T1 Realm Green Rocks",
         .textures = [{ "props": 193 }, { "props": 194 }, { "props": 195 }, { "props": 196 }, { "props": 197 }],
     },
-    {
+    .{
         .id = 24,
         .name = "T1 Realm Deco Crates",
         .textures = [{ "props": 198 }, { "props": 199 }, { "props": 200 }, { "props": 201 }],
@@ -183,8 +183,14 @@
         .defense = 10,
         .occupy_square = true,
     },
-    { .id = 25, .name = "T1 Realm Deco Crates Rotten", .textures = [{ "props": 202 }, { "props": 203 }], .health = 200, .defense = 5 },
-    {
+    .{
+        .id = 25,
+        .name = "T1 Realm Deco Crates Rotten",
+        .textures = [{ "props": 202 }, { "props": 203 }],
+        .health = 200,
+        .defense = 5,
+    },
+    .{
         .id = 26,
         .name = "T1 Realm Deco Barrels",
         .textures = [{ "props": 204 }, { "props": 205 }, { "props": 206 }],
@@ -192,8 +198,14 @@
         .defense = 10,
         .occupy_square = true,
     },
-    { .id = 27, .name = "T1 Realm Deco Barrels Rotten", .textures = [{ "props": 207 }, { "props": 208 }], .health = 200, .defense = 5 },
-    {
+    .{
+        .id = 27,
+        .name = "T1 Realm Deco Barrels Rotten",
+        .textures = [{ "props": 207 }, { "props": 208 }],
+        .health = 200,
+        .defense = 5,
+    },
+    .{
         .id = 28,
         .name = "T1 Realm Deco Chest Closed 1",
         .textures = [{ "props": 209 }],
@@ -201,12 +213,12 @@
         .defense = 20,
         .occupy_square = true,
     },
-    {
+    .{
         .id = 29,
         .name = "T1 Realm Deco Chest Closed 2",
         .textures = [{ "props": 210 }],
     },
-    {
+    .{
         .id = 30,
         .name = "T1 Realm Deco Rotten Chest Closed",
         .textures = [{ "props": 211 }],
@@ -214,28 +226,28 @@
         .defense = 15,
         .occupy_square = true,
     },
-    {
+    .{
         .id = 31,
         .name = "T1 Realm Deco Chest Closed",
         .textures = [{ "props": 212 }],
     },
-    {
+    .{
         .id = 32,
         .name = "T1 Realm Deco Bed Front",
         .textures = [{ "props": 213 }],
         .occupy_square = true,
     },
-    {
+    .{
         .id = 33,
         .name = "T1 Realm Deco Sword Stand",
         .textures = [{ "props": 214 }],
     },
-    {
+    .{
         .id = 34,
         .name = "T1 Realm Deco Cross",
         .textures = [{ "props": 215 }],
     },
-    {
+    .{
         .id = 35,
         .name = "Retrieve Health Beacon",
         .textures = [{ "retrieve_beacons": 0 }],
@@ -243,42 +255,42 @@
         .static = true,
         .occupy_square = true,
         .animations = [
-            { .time = 0.4, .texture = { "retrieve_beacons": 0 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 1 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 2 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 3 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 4 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 5 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 0 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 1 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 2 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 3 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 4 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 5 } },
         ],
-        .subtexture = {
+        .subtexture = .{
             .textures = [{ "retrieve_beacons": 6 }],
             .y_offset = -3,
-            .light = {
-                .color = "0x7DD8B1",
+            .light = .{
+                .color = 0x7DD8B1,
                 .intensity = 0.1,
                 .radius = 2.0,
             },
-            .float = {
+            .float = .{
                 .time = 1.0,
                 .height = 0.5,
             },
             .animations = [
-                { .time = 0.4, .texture = { "retrieve_beacons": 6 } },
-                { .time = 0.4, .texture = { "retrieve_beacons": 7 } },
-                { .time = 0.4, .texture = { "retrieve_beacons": 8 } },
-                { .time = 0.4, .texture = { "retrieve_beacons": 7 } },
+                .{ .time = 0.4, .texture = { "retrieve_beacons": 6 } },
+                .{ .time = 0.4, .texture = { "retrieve_beacons": 7 } },
+                .{ .time = 0.4, .texture = { "retrieve_beacons": 8 } },
+                .{ .time = 0.4, .texture = { "retrieve_beacons": 7 } },
             ],
         },
         .show_effects = [
-            {
-                .effect = @Effect("ring"),
-                .color = "0x7DD8B1",
+            .{
+                .effect = .ring,
+                .color = 0x7DD8B1,
                 .radius = 4.0,
                 .cooldown = 1.0,
             },
         ],
     },
-    {
+    .{
         .id = 36,
         .name = "Retrieve Mana Beacon",
         .textures = [{ "retrieve_beacons": 0 }],
@@ -286,42 +298,42 @@
         .static = true,
         .occupy_square = true,
         .animations = [
-            { .time = 0.4, .texture = { "retrieve_beacons": 0 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 1 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 2 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 3 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 4 } },
-            { .time = 0.4, .texture = { "retrieve_beacons": 5 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 0 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 1 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 2 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 3 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 4 } },
+            .{ .time = 0.4, .texture = { "retrieve_beacons": 5 } },
         ],
-        .subtexture = {
+        .subtexture = .{
             .textures = [{ "retrieve_beacons": 9 }],
             .y_offset = -3,
-            .light = {
-                .color = "0x76D8FF",
+            .light = .{
+                .color = 0x76D8FF,
                 .intensity = 0.1,
                 .radius = 2.0,
             },
-            .float = {
+            .float = .{
                 .time = 1.0,
                 .height = 0.5,
             },
             .animations = [
-                { .time = 0.4, .texture = { "retrieve_beacons": 9 } },
-                { .time = 0.4, .texture = { "retrieve_beacons": 10 } },
-                { .time = 0.4, .texture = { "retrieve_beacons": 11 } },
-                { .time = 0.4, .texture = { "retrieve_beacons": 10 } },
+                .{ .time = 0.4, .texture = { "retrieve_beacons": 9 } },
+                .{ .time = 0.4, .texture = { "retrieve_beacons": 10 } },
+                .{ .time = 0.4, .texture = { "retrieve_beacons": 11 } },
+                .{ .time = 0.4, .texture = { "retrieve_beacons": 10 } },
             ],
         },
         .show_effects = [
-            {
-                .effect = @Effect("ring"),
-                .color = "0x76D8FF",
+            .{
+                .effect = .ring,
+                .color = 0x76D8FF,
                 .radius = 4.0,
                 .cooldown = 1.0,
             },
         ],
     },
-    {
+    .{
         .id = 37,
         .name = "Retrieve Realm Transport Terminal",
         .textures = [{ "props_large": 22 }],
@@ -329,62 +341,62 @@
         .static = true,
         .occupy_square = true,
         .animations = [
-            { .time = 0.666, .texture = { "props_large": 22 } },
-            { .time = 0.666, .texture = { "props_large": 23 } },
-            { .time = 0.666, .texture = { "props_large": 24 } },
-            { .time = 0.666, .texture = { "props_large": 25 } },
-            { .time = 0.666, .texture = { "props_large": 26 } },
-            { .time = 0.666, .texture = { "props_large": 27 } },
+            .{ .time = 0.666, .texture = { "props_large": 22 } },
+            .{ .time = 0.666, .texture = { "props_large": 23 } },
+            .{ .time = 0.666, .texture = { "props_large": 24 } },
+            .{ .time = 0.666, .texture = { "props_large": 25 } },
+            .{ .time = 0.666, .texture = { "props_large": 26 } },
+            .{ .time = 0.666, .texture = { "props_large": 27 } },
         ],
     },
-    {
+    .{
         .id = 38,
         .name = "Palm Trees",
         .textures = [{ "props_big": 14 }, { "props_big": 15 }, { "props_big": 51 }, { "props_big": 52 }],
         .occupy_square = true,
     },
-    {
+    .{
         .id = 39,
         .name = "Crown Cove Campfire",
         .textures = [{ "props_big": 53 }],
-        .light = {
-            .color = "0xD12D00",
+        .light = .{
+            .color = 0xD12D00,
             .intensity = 0.075,
             .radius = 1.5,
         },
     },
-    {
+    .{
         .id = 40,
         .name = "Crown Cove Torch",
         .textures = [{ "props_big": 19 }],
-        .light = {
-            .color = "0xD12D00",
+        .light = .{
+            .color = 0xD12D00,
             .intensity = 0.075,
             .radius = 3.0,
         },
         .animations = [
-            { .time = 0.4, .texture = { "props_big": 19 } },
-            { .time = 0.4, .texture = { "props_big": 20 } },
-            { .time = 0.4, .texture = { "props_big": 21 } },
+            .{ .time = 0.4, .texture = { "props_big": 19 } },
+            .{ .time = 0.4, .texture = { "props_big": 20 } },
+            .{ .time = 0.4, .texture = { "props_big": 21 } },
         ],
     },
-    {
+    .{
         .id = 41,
         .name = "Crown Cove Tall Grass",
         .textures = [{ "props_big": 56 }, { "props_big": 57 }, { "props_big": 58 }],
     },
-    {
+    .{
         .id = 42,
         .name = "Crown Cove Short Grass",
         .textures = [{ "props": 224 }, { "props": 225 }, { "props": 226 }, { "props": 227 }],
     },
-    {
+    .{
         .id = 43,
         .name = "Crown Cove Spears",
         .textures = [{ "props_big": 59 }, { "props_big": 60 }, { "props_big": 61 }, { "props_big": 62 }, { "props_big": 63 }, { "props_big": 64 }, { "props_big": 65 }, { "props_big": 66 }, { "props_big": 67 }, { "props_big": 68 }, { "props_big": 69 }, { "props_big": 70 }],
         .occupy_square = true,
     },
-    {
+    .{
         .id = 44,
         .name = "Dormant Health Shrine",
         .textures = [{ "props_big": 81 }],
@@ -393,22 +405,22 @@
         .occupy_square = true,
         .playable_animations = [
             [
-                { .time = 0.1, .texture = { "props_big": 82 } },
-                { .time = 0.1, .texture = { "props_big": 83 } },
-                { .time = 0.1, .texture = { "props_big": 84 } },
-                { .time = 0.1, .texture = { "props_big": 85 } },
-                { .time = 0.1, .texture = { "props_big": 86 } },
-                { .time = 0.1, .texture = { "props_big": 87 } },
-                { .time = 0.1, .texture = { "props_big": 88 } },
-                { .time = 0.1, .texture = { "props_big": 89 } },
-                { .time = 0.1, .texture = { "props_big": 90 } },
-                { .time = 0.1, .texture = { "props_big": 91 } },
-                { .time = 0.1, .texture = { "props_big": 92 } },
-                { .time = 0.1, .texture = { "props_big": 93 } },
+                .{ .time = 0.1, .texture = { "props_big": 82 } },
+                .{ .time = 0.1, .texture = { "props_big": 83 } },
+                .{ .time = 0.1, .texture = { "props_big": 84 } },
+                .{ .time = 0.1, .texture = { "props_big": 85 } },
+                .{ .time = 0.1, .texture = { "props_big": 86 } },
+                .{ .time = 0.1, .texture = { "props_big": 87 } },
+                .{ .time = 0.1, .texture = { "props_big": 88 } },
+                .{ .time = 0.1, .texture = { "props_big": 89 } },
+                .{ .time = 0.1, .texture = { "props_big": 90 } },
+                .{ .time = 0.1, .texture = { "props_big": 91 } },
+                .{ .time = 0.1, .texture = { "props_big": 92 } },
+                .{ .time = 0.1, .texture = { "props_big": 93 } },
             ],
         ],
     },
-    {
+    .{
         .id = 45,
         .name = "Dormant Magic Shrine",
         .textures = [{ "props_big": 94 }],
@@ -417,22 +429,22 @@
         .occupy_square = true,
         .playable_animations = [
             [
-                { .time = 0.1, .texture = { "props_big": 95 } },
-                { .time = 0.1, .texture = { "props_big": 96 } },
-                { .time = 0.1, .texture = { "props_big": 97 } },
-                { .time = 0.1, .texture = { "props_big": 98 } },
-                { .time = 0.1, .texture = { "props_big": 99 } },
-                { .time = 0.1, .texture = { "props_big": 100 } },
-                { .time = 0.1, .texture = { "props_big": 101 } },
-                { .time = 0.1, .texture = { "props_big": 102 } },
-                { .time = 0.1, .texture = { "props_big": 103 } },
-                { .time = 0.1, .texture = { "props_big": 104 } },
-                { .time = 0.1, .texture = { "props_big": 105 } },
-                { .time = 0.1, .texture = { "props_big": 106 } },
+                .{ .time = 0.1, .texture = { "props_big": 95 } },
+                .{ .time = 0.1, .texture = { "props_big": 96 } },
+                .{ .time = 0.1, .texture = { "props_big": 97 } },
+                .{ .time = 0.1, .texture = { "props_big": 98 } },
+                .{ .time = 0.1, .texture = { "props_big": 99 } },
+                .{ .time = 0.1, .texture = { "props_big": 100 } },
+                .{ .time = 0.1, .texture = { "props_big": 101 } },
+                .{ .time = 0.1, .texture = { "props_big": 102 } },
+                .{ .time = 0.1, .texture = { "props_big": 103 } },
+                .{ .time = 0.1, .texture = { "props_big": 104 } },
+                .{ .time = 0.1, .texture = { "props_big": 105 } },
+                .{ .time = 0.1, .texture = { "props_big": 106 } },
             ],
         ],
     },
-    {
+    .{
         .id = 46,
         .name = "T1 Realm Large Trees",
         .textures = [{ "props_big": 0 }, { "props_big": 107 }, { "props_big": 108 }],
@@ -440,7 +452,7 @@
         .defense = 10,
         .occupy_square = true,
     },
-    {
+    .{
         .id = 47,
         .name = "T1 Realm Large Trees Dry",
         .textures = [{ "props_big": 40 }, { "props_big": 109 }, { "props_big": 110 }],
@@ -448,346 +460,339 @@
         .defense = 10,
         .occupy_square = true,
     },
-    {
+    .{
         .id = 48,
         .name = "T1 Realm Lamp Post",
         .textures = [{ "props_big": 22 }],
-        .light = {
-            .color = "0xE2DD4E",
+        .light = .{
+            .color = 0xE2DD4E,
             .intensity = 0.075,
             .radius = 2.75,
         },
         .animations = [
-            { .time = 0.4, .texture = { "props_big": 22 } },
-            { .time = 0.4, .texture = { "props_big": 23 } },
-            { .time = 0.4, .texture = { "props_big": 24 } },
-            { .time = 0.4, .texture = { "props_big": 23 } },
+            .{ .time = 0.4, .texture = { "props_big": 22 } },
+            .{ .time = 0.4, .texture = { "props_big": 23 } },
+            .{ .time = 0.4, .texture = { "props_big": 24 } },
+            .{ .time = 0.4, .texture = { "props_big": 23 } },
         ],
     },
-    {
+    .{
         .id = 49,
         .name = "Enemy Soul",
         .textures = [{ "misc": 3 }],
-        .light = {
-            .color = "0xB49DFF",
+        .light = .{
+            .color = 0xB49DFF,
             .intensity = 0.05,
             .radius = 0.5,
         },
         .animations = [
-            { .time = 0.4, .texture = { "misc": 3 } },
-            { .time = 0.4, .texture = { "misc": 4 } },
-            { .time = 0.4, .texture = { "misc": 5 } },
-            { .time = 0.4, .texture = { "misc": 6 } },
-            { .time = 0.4, .texture = { "misc": 7 } },
-            { .time = 0.4, .texture = { "misc": 6 } },
-            { .time = 0.4, .texture = { "misc": 5 } },
-            { .time = 0.4, .texture = { "misc": 4 } },
+            .{ .time = 0.4, .texture = { "misc": 3 } },
+            .{ .time = 0.4, .texture = { "misc": 4 } },
+            .{ .time = 0.4, .texture = { "misc": 5 } },
+            .{ .time = 0.4, .texture = { "misc": 6 } },
+            .{ .time = 0.4, .texture = { "misc": 7 } },
+            .{ .time = 0.4, .texture = { "misc": 6 } },
+            .{ .time = 0.4, .texture = { "misc": 5 } },
+            .{ .time = 0.4, .texture = { "misc": 4 } },
         ],
     },
-    {
+    .{
         .id = 50,
         .name = "Demon Rift",
         .textures = [{ "misc_big": 13 }],
-        .light = {
-            .color = "0x5F3CD6",
+        .light = .{
+            .color = 0x5F3CD6,
             .intensity = 0.05,
             .radius = 2.0,
         },
-        .float = {
+        .float = .{
             .time = 1.0,
             .height = 0.5,
         },
         .static = true,
     },
-    {
+    .{
         .id = 51,
         .name = "Retrieve Ground Power Line CTL",
         .textures = [{ "props": 228 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 52,
         .name = "Retrieve Ground Power Line CBL",
         .textures = [{ "props": 229 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 53,
         .name = "Retrieve Ground Power Line CTR",
         .textures = [{ "props": 230 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 54,
         .name = "Retrieve Ground Power Line CBR",
         .textures = [{ "props": 231 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 55,
         .name = "Retrieve Ground Power Line TE",
         .textures = [{ "props": 232 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 56,
         .name = "Retrieve Ground Power Line SE",
         .textures = [{ "props": 233 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 57,
         .name = "Retrieve Tree Pods",
         .textures = [{ "props_big": 111 }, { "props_big": 112 }, { "props_big": 113 }],
         .occupy_square = true,
     },
-    {
+    .{
         .id = 58,
         .name = "Retrieve Power Crystal High Energy",
         .textures = [{ "props_big": 114 }, { "props_big": 115 }, { "props_big": 116 }],
         .occupy_square = true,
         .size_mult = 1.25,
     },
-    {
+    .{
         .id = 59,
         .name = "Retrieve Power Crystal Low Energy",
         .textures = [{ "props_big": 117 }, { "props_big": 118 }],
         .occupy_square = true,
         .size_mult = 1.25,
     },
-    {
+    .{
         .id = 60,
         .name = "Retrieve Power Battery",
         .textures = [{ "props_big": 119 }],
         .occupy_square = true,
         .size_mult = 1.25,
     },
-    {
+    .{
         .id = 61,
         .name = "Retrieve Power Battery Depleted",
         .textures = [{ "props_big": 120 }],
     },
-    {
+    .{
         .id = 62,
         .name = "Retrieve Grey Barrels",
         .textures = [{ "props_big": 121 }, { "props_big": 122 }, { "props_big": 123 }],
     },
-    {
+    .{
         .id = 63,
         .name = "Retrieve Orange Barrels",
         .textures = [{ "props_big": 124 }, { "props_big": 125 }, { "props_big": 126 }],
     },
-    {
+    .{
         .id = 64,
         .name = "Retrieve Lamp Off",
         .textures = [{ "props_big": 127 }],
     },
-    {
+    .{
         .id = 65,
         .name = "Retrieve Floating Lamp",
         .textures = [{ "props_big": 128 }],
-        .light = {
-            .color = "0xFFFFE5",
+        .light = .{
+            .color = 0xFFFFE5,
             .intensity = 0.125,
             .radius = 2.0,
         },
-        .float = {
+        .float = .{
             .time = 0.6,
             .height = 0.3,
         },
     },
-    {
+    .{
         .id = 66,
         .name = "Retrieve Ground Power Line T-Junction Up",
         .textures = [{ "props": 234 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 67,
         .name = "Retrieve Ground Power Line T-Junction Down",
         .textures = [{ "props": 235 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 68,
         .name = "Retrieve Ground Power Line T-Junction Right",
         .textures = [{ "props": 236 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 69,
         .name = "Retrieve Ground Power Line T-Junction Left",
         .textures = [{ "props": 237 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 70,
         .name = "Retrieve Ground Power Line Cross Junction",
         .textures = [{ "props": 238 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 71,
         .name = "Retrieve Ground Power Off Line Cross CTL",
         .textures = [{ "props": 239 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 72,
         .name = "Retrieve Ground Power Off Line Cross CBL",
         .textures = [{ "props": 240 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 73,
         .name = "Retrieve Ground Power Off Line Cross CTR",
         .textures = [{ "props": 241 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 74,
         .name = "Retrieve Ground Power Off Line Cross CBR",
         .textures = [{ "props": 242 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 75,
         .name = "Retrieve Ground Power Off Line Cross TE",
         .textures = [{ "props": 243 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 76,
         .name = "Retrieve Ground Power Off Line Cross SE",
         .textures = [{ "props": 244 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 77,
         .name = "Retrieve Ground Power Off Line T-Junction Up",
         .textures = [{ "props": 245 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 78,
         .name = "Retrieve Ground Power Off Line T-Junction Down",
         .textures = [{ "props": 246 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 79,
         .name = "Retrieve Ground Power Off Line T-Junction Right",
         .textures = [{ "props": 247 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 80,
         .name = "Retrieve Ground Power Off Line T-Junction Left",
         .textures = [{ "props": 248 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 81,
         .name = "Retrieve Ground Power Off Line Cross Junction",
         .textures = [{ "props": 249 }],
         .draw_on_ground = true,
     },
-    {
-        .id = 82,
-        .name = "Retrieve Asteroids",
-        .textures = [{ "retrieve_asteroids": 0 }, { "retrieve_asteroids": 1 }, { "retrieve_asteroids": 2 }],
-        .float = {
-            .time = 0.6,
-            .height = 0.3,
-        },
-        .rotation = 0.006
-    },
-    {
+    .{ .id = 82, .name = "Retrieve Asteroids", .textures = [{ "retrieve_asteroids": 0 }, { "retrieve_asteroids": 1 }, { "retrieve_asteroids": 2 }], .float = {
+        "time": 0.6,
+        "height": 0.3,
+    }, .rotation = 0.006 },
+    .{
         .id = 83,
         .name = "Goblin Lair Spike Trap",
         .textures = [{ "ground_props": 0 }],
         .animations = [
-            { .time = 0.2, .texture = { "ground_props": 0 } },
-            { .time = 0.2, .texture = { "ground_props": 1 } },
-            { .time = 0.1, .texture = { "ground_props": 2 } },
-            { .time = 0.1, .texture = { "ground_props": 3 } },
-            { .time = 0.1, .texture = { "ground_props": 4 } },
-            { .time = 0.6, .texture = { "ground_props": 5 } },
-            { .time = 0.4, .texture = { "ground_props": 4 } },
-            { .time = 0.4, .texture = { "ground_props": 3 } },
-            { .time = 0.4, .texture = { "ground_props": 2 } },
-            { .time = 0.4, .texture = { "ground_props": 1 } },
-            { .time = 0.4, .texture = { "ground_props": 0 } },
+            .{ .time = 0.2, .texture = { "ground_props": 0 } },
+            .{ .time = 0.2, .texture = { "ground_props": 1 } },
+            .{ .time = 0.1, .texture = { "ground_props": 2 } },
+            .{ .time = 0.1, .texture = { "ground_props": 3 } },
+            .{ .time = 0.1, .texture = { "ground_props": 4 } },
+            .{ .time = 0.6, .texture = { "ground_props": 5 } },
+            .{ .time = 0.4, .texture = { "ground_props": 4 } },
+            .{ .time = 0.4, .texture = { "ground_props": 3 } },
+            .{ .time = 0.4, .texture = { "ground_props": 2 } },
+            .{ .time = 0.4, .texture = { "ground_props": 1 } },
+            .{ .time = 0.4, .texture = { "ground_props": 0 } },
         ],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 84,
         .name = "Goblin Lair Incantation Trap Slow",
         .textures = [{ "ground_props": 6 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 85,
         .name = "Goblin Lair Incantation Trap Expose",
         .textures = [{ "ground_props": 9 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 86,
         .name = "Goblin Lair Incantation Trap Weaken",
         .textures = [{ "ground_props": 12 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 87,
         .name = "Goblin Lair Incantation Trap Blast",
         .textures = [{ "ground_props": 15 }],
         .draw_on_ground = true,
     },
-    {
+    .{
         .id = 88,
         .name = "Goblin Lair Emerald Ore",
         .textures = [{ "props_big": 130 }],
     },
-    {
+    .{
         .id = 89,
         .name = "Goblin Lair Gold Ore",
         .textures = [{ "props_big": 131 }],
     },
-    {
+    .{
         .id = 90,
         .name = "Goblin Lair Ruby  Ore",
         .textures = [{ "props_big": 132 }],
     },
-    {
+    .{
         .id = 91,
         .name = "Goblin Lair Diamond  Ore",
         .textures = [{ "props_big": 133 }],
     },
-    {
+    .{
         .id = 92,
         .name = "Marble Rocks",
         .textures = [{ "props": 256 }, { "props": 257 }, { "props": 258 }, { "props": 259 }],
     },
-    {
+    .{
         .id = 93,
         .name = "Greek Vases",
         .textures = [{ "props": 260 }, { "props": 261 }, { "props": 262 }],
     },
-    {
+    .{
         .id = 94,
         .name = "Candle",
         .textures = [{ "props": 216 }],
         .animations = [
-            { .time = 0.3, .texture = { "props": 216 } },
-            { .time = 0.3, .texture = { "props": 217 } },
-            { .time = 0.3, .texture = { "props": 218 } },
-            { .time = 0.3, .texture = { "props": 219 } },
-            { .time = 0.3, .texture = { "props": 220 } },
-            { .time = 0.3, .texture = { "props": 221 } },
-            { .time = 0.3, .texture = { "props": 222 } },
-
+            .{ .time = 0.3, .texture = { "props": 216 } },
+            .{ .time = 0.3, .texture = { "props": 217 } },
+            .{ .time = 0.3, .texture = { "props": 218 } },
+            .{ .time = 0.3, .texture = { "props": 219 } },
+            .{ .time = 0.3, .texture = { "props": 220 } },
+            .{ .time = 0.3, .texture = { "props": 221 } },
+            .{ .time = 0.3, .texture = { "props": 222 } },
         ],
     },
 ]

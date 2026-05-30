@@ -138,11 +138,10 @@ fn closeCallback(socket: [*c]uv.uv_handle_t) callconv(.c) void {
     main.game_client_free_list.append(main.allocator, client.list_index) catch main.oomPanic();
 }
 
-pub fn readCallback(ud: *anyopaque, bytes_read: isize, _: [*c]const uv.uv_buf_t) callconv(.c) void {
+pub fn readCallback(socket: [*c]uv.uv_stream_t, bytes_read: isize, _: [*c]const uv.uv_buf_t) callconv(.c) void {
     if (bytes_read == 0) return;
 
-    const socket: *uv.uv_stream_t = @ptrCast(@alignCast(ud));
-    const client: *Client = @ptrCast(@alignCast(socket.data));
+    const client: *Client = @ptrCast(@alignCast(socket.*.data));
 
     if (bytes_read < 0) {
         if (bytes_read != uv.UV_EOF)
@@ -712,7 +711,7 @@ fn handleHello(self: *Client, data: PacketData(.hello)) void {
         return;
     };
 
-    const timestamp: u64 = @intCast(std.time.milliTimestamp());
+    const timestamp: u64 = @intCast(main.milliTimestamp());
     if (locked_until > timestamp) {
         self.sendError(.message_with_disconnect, "Account is locked");
         return;
@@ -974,7 +973,7 @@ fn handleMapHello(self: *Client, data: PacketData(.map_hello)) void {
         return;
     };
 
-    const timestamp: u64 = @intCast(std.time.milliTimestamp());
+    const timestamp: u64 = @intCast(main.milliTimestamp());
     if (locked_until > timestamp) {
         self.sendError(.message_with_disconnect, "Account is locked");
         return;
@@ -1049,20 +1048,20 @@ fn handleUseAbility(self: *Client, data: PacketData(.use_ability)) void {
     if (player.gold < abil_data.gold_cost) return;
     player.gold = @intCast(@as(i33, player.gold) - abil_data.gold_cost);
 
-    var fbs = std.io.fixedBufferStream(data.data);
+    var r: std.Io.Reader = .fixed(data.data);
 
     _ = switch (hash(abil_data.name)) {
         hash("Terrain Expulsion") => abilities.handleTerrainExpulsion(
             player,
             &player.data.abilities[data.index].projectiles.?[0],
-            fbs.reader().readInt(u8, .little) catch {
+            r.takeInt(u8, .little) catch {
                 self.sendError(.message_with_disconnect, "Invalid data");
                 return;
             },
-            @bitCast(fbs.reader().any().readBytesNoEof(4) catch {
+            @bitCast((r.takeArray(4) catch {
                 self.sendError(.message_with_disconnect, "Invalid data");
                 return;
-            }),
+            }).*),
         ),
         hash("Heart of Stone") => abilities.handleHeartOfStone(player),
         hash("Boulder Buddies") => abilities.handleBoulderBuddies(player),

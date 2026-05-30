@@ -43,10 +43,10 @@ pub fn handleTerrainExpulsion(player: *Player, proj_data: *const game_data.Proje
     }
 
     var buf: [@sizeOf(@TypeOf(first_proj_index)) + @sizeOf(@TypeOf(attack_angle))]u8 = undefined;
-    var fba = std.io.fixedBufferStream(&buf);
-    _ = fba.write(&std.mem.toBytes(first_proj_index)) catch main.oomPanic();
-    _ = fba.write(&std.mem.toBytes(attack_angle)) catch main.oomPanic();
-    return fba.getWritten();
+    var w: std.Io.Writer = .fixed(&buf);
+    _ = w.write(&std.mem.toBytes(first_proj_index)) catch main.oomPanic();
+    _ = w.write(&std.mem.toBytes(attack_angle)) catch main.oomPanic();
+    return w.buffered();
 }
 
 pub fn handleHeartOfStone(player: *Player) ![]u8 {

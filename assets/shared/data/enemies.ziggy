@@ -1,5 +1,5 @@
 [
-    {
+    .{
         .id = 0,
         .name = "Spike Ball",
         .textures = [{ "low_realm": 0 }],
@@ -7,7 +7,7 @@
         .defense = 15,
         .resistance = 15,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 11 }],
                 .angle_correction = 1,
                 .phys_dmg = 70,
@@ -20,7 +20,7 @@
         .hit_sound = "enemies/goblin_hit.mp3",
         .death_sound = "enemies/goblin_death.mp3",
     },
-    {
+    .{
         .id = 1,
         .name = "Goblin Guard",
         .textures = [{ "low_realm": 1 }],
@@ -28,7 +28,7 @@
         .defense = 25,
         .resistance = 20,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 12 }],
                 .angle_correction = 1,
                 .phys_dmg = 55,
@@ -41,7 +41,7 @@
         .hit_sound = "enemies/goblin_hit.mp3",
         .death_sound = "enemies/goblin_death.mp3",
     },
-    {
+    .{
         .id = 2,
         .name = "Goblin Grunt",
         .textures = [{ "low_realm": 2 }],
@@ -49,7 +49,7 @@
         .defense = 10,
         .resistance = 0,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 30 }],
                 .angle_correction = 1,
                 .phys_dmg = 80,
@@ -62,7 +62,7 @@
         .hit_sound = "enemies/goblin_hit.mp3",
         .death_sound = "enemies/goblin_death.mp3",
     },
-    {
+    .{
         .id = 3,
         .name = "Crocodile",
         .textures = [{ "low_realm": 3 }],
@@ -70,7 +70,7 @@
         .defense = 20,
         .resistance = 35,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 31 }],
                 .angle_correction = 1,
                 .phys_dmg = 65,
@@ -83,7 +83,7 @@
         .hit_sound = "enemies/goblin_hit.mp3",
         .death_sound = "enemies/goblin_death.mp3",
     },
-    {
+    .{
         .id = 4,
         .name = "Imp",
         .textures = [{ "low_realm": 4 }],
@@ -91,7 +91,7 @@
         .defense = 35,
         .resistance = 50,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 50 }],
                 .angle_correction = 1,
                 .magic_dmg = 75,
@@ -104,7 +104,7 @@
         .hit_sound = "enemies/demon_hit.mp3",
         .death_sound = "enemies/demon_death.mp3",
     },
-    {
+    .{
         .id = 5,
         .name = "Living Flame",
         .textures = [{ "low_realm": 5 }],
@@ -112,7 +112,7 @@
         .defense = 45,
         .resistance = 55,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 49 }],
                 .angle_correction = 1,
                 .magic_dmg = 120,
@@ -126,7 +126,7 @@
         .hit_sound = "enemies/demon_hit.mp3",
         .death_sound = "enemies/demon_death.mp3",
     },
-    {
+    .{
         .id = 6,
         .name = "Demon Mage",
         .textures = [{ "low_realm": 6 }],
@@ -134,7 +134,7 @@
         .defense = 50,
         .resistance = 70,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 48 }],
                 .angle_correction = 1,
                 .magic_dmg = 90,
@@ -149,7 +149,7 @@
         .hit_sound = "enemies/demon_hit.mp3",
         .death_sound = "enemies/demon_death.mp3",
     },
-    {
+    .{
         .id = 7,
         .name = "Demon Archer",
         .textures = [{ "low_realm": 7 }],
@@ -157,7 +157,7 @@
         .defense = 35,
         .resistance = 20,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 47 }],
                 .angle_correction = 1,
                 .phys_dmg = 125,
@@ -172,7 +172,7 @@
         .hit_sound = "enemies/demon_hit.mp3",
         .death_sound = "enemies/demon_death.mp3",
     },
-    {
+    .{
         .id = 8,
         .name = "Jackal Warrior",
         .textures = [{ "low_realm": 8 }],
@@ -180,7 +180,7 @@
         .defense = 45,
         .resistance = 30,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 22 }],
                 .angle_correction = 1,
                 .phys_dmg = 75,
@@ -194,7 +194,7 @@
         .hit_sound = "enemies/jackal_hit.mp3",
         .death_sound = "enemies/jackal_death.mp3",
     },
-    {
+    .{
         .id = 9,
         .name = "Jackal Priest",
         .textures = [{ "low_realm": 9 }],
@@ -202,7 +202,7 @@
         .defense = 75,
         .resistance = 90,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 22 }],
                 .angle_correction = 1,
                 .magic_dmg = 75,
@@ -216,7 +216,7 @@
         .hit_sound = "enemies/jackal_hit.mp3",
         .death_sound = "enemies/jackal_death.mp3",
     },
-    {
+    .{
         .id = 10,
         .name = "Jackal Archer",
         .textures = [{ "low_realm": 10 }],
@@ -224,7 +224,7 @@
         .defense = 50,
         .resistance = 45,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 33 }],
                 .angle_correction = 1,
                 .phys_dmg = 95,
@@ -239,7 +239,7 @@
         .hit_sound = "enemies/jackal_hit.mp3",
         .death_sound = "enemies/jackal_death.mp3",
     },
-    {
+    .{
         .id = 11,
         .name = "Regal Mummy",
         .textures = [{ "low_realm": 11 }],
@@ -250,17 +250,17 @@
         .hit_sound = "enemies/jackal_hit.mp3",
         .death_sound = "enemies/jackal_death.mp3",
     },
-    {
+    .{
         .id = 12,
         .name = "Forest Firefly",
         .textures = [{ "low_realm": 21 }],
         .size_mult = 0.8,
-        .light = {
-            .color = "0xE0CB99",
+        .light = .{
+            .color = 0xE0CB99,
             .intensity = 0.15,
         },
     },
-    {
+    .{
         .id = 13,
         .name = "Loot Tester",
         .textures = [{ "low_realm": 0 }],
@@ -269,7 +269,7 @@
         .hit_sound = "enemies/goblin_hit.mp3",
         .death_sound = "enemies/goblin_death.mp3",
     },
-    {
+    .{
         .id = 14,
         .name = "Health Wisp",
         .textures = [{ "low_realm": 27 }],
@@ -277,12 +277,12 @@
         .defense = 100,
         .resistance = 65,
         .size_mult = 1.2,
-        .light = {
-            .color = "0xE54242",
+        .light = .{
+            .color = 0xE54242,
             .intensity = 0.12,
         },
     },
-    {
+    .{
         .id = 15,
         .name = "Magic Wisp",
         .textures = [{ "low_realm": 28 }],
@@ -290,47 +290,47 @@
         .defense = 65,
         .resistance = 100,
         .size_mult = 1.2,
-        .light = {
-            .color = "0x4C8AED",
+        .light = .{
+            .color = 0x4C8AED,
             .intensity = 0.12,
         },
     },
-    {
+    .{
         .id = 16,
         .name = "Tribe Shaman",
         .textures = [{ "low_realm": 22 }],
     },
-    {
+    .{
         .id = 17,
         .name = "Tribe Rogue",
         .textures = [{ "low_realm": 23 }],
     },
-    {
+    .{
         .id = 18,
         .name = "Tribe Mage",
         .textures = [{ "low_realm": 24 }],
     },
-    {
+    .{
         .id = 19,
         .name = "Tribe Pyromancer",
         .textures = [{ "low_realm": 25 }],
     },
-    {
+    .{
         .id = 20,
         .name = "Tribe Monk",
         .textures = [{ "low_realm": 26 }],
     },
-    {
+    .{
         .id = 21,
         .name = "Possessed Totem",
         .textures = [{ "low_realm_big": 1 }],
     },
-    {
+    .{
         .id = 22,
         .name = "Possessed Gilded Totem",
         .textures = [{ "low_realm_big": 2 }],
     },
-    {
+    .{
         .id = 23,
         .name = "Tribe Chief",
         .textures = [{ "low_realm_big": 3 }],
@@ -339,14 +339,14 @@
         .defense = 85,
         .resistance = 115,
         .projectiles = [
-            {
+            .{
                 .textures = [{ "projectiles": 11 }],
                 .angle_correction = 1,
                 .phys_dmg = 150,
                 .speed = 0.7,
                 .duration = 0.9,
             },
-            {
+            .{
                 .textures = [{ "projectiles": 11 }],
                 .angle_correction = 1,
                 .magic_dmg = 85,
@@ -357,57 +357,57 @@
             },
         ],
     },
-    {
+    .{
         .id = 24,
         .name = "Possessed Sword of Sorrow",
         .textures = [{ "low_realm_big": 4 }],
     },
-    {
+    .{
         .id = 25,
         .name = "Possessed Axe of Sorrow",
         .textures = [{ "low_realm_big": 5 }],
     },
-    {
+    .{
         .id = 26,
         .name = "Possessed Sword of Anger",
         .textures = [{ "low_realm_big": 6 }],
     },
-    {
+    .{
         .id = 27,
         .name = "Possessed Axe of Anger",
         .textures = [{ "low_realm_big": 7 }],
     },
-    {
+    .{
         .id = 28,
         .name = "Possessed Short Sword of Sorrow",
         .textures = [{ "low_realm_big": 8 }],
     },
-    {
+    .{
         .id = 29,
         .name = "Possessed Short Axe of Sorrow",
         .textures = [{ "low_realm_big": 9 }],
     },
-    {
+    .{
         .id = 30,
         .name = "Possessed Short Daggers of Sorrow",
         .textures = [{ "low_realm_big": 10 }],
     },
-    {
+    .{
         .id = 31,
         .name = "Possessed Short Sword of Anger",
         .textures = [{ "low_realm_big": 11 }],
     },
-    {
+    .{
         .id = 32,
         .name = "Possessed Short Axe of Anger",
         .textures = [{ "low_realm_big": 12 }],
     },
-    {
+    .{
         .id = 33,
         .name = "Possessed Short Daggers of Anger",
         .textures = [{ "low_realm_big": 13 }],
     },
-    {
+    .{
         .id = 35,
         .name = "Possessed Short Totem",
         .textures = [{ "low_realm_big": 25 }],

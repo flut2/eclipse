@@ -109,6 +109,7 @@ pub fn parseMap(buffer: []const u8, details: MapDetails) !MapData {
     var map: MapData = undefined;
     map.details = details;
     map.details.name = try main.allocator.dupe(u8, details.name);
+    errdefer main.allocator.free(map.details.name);
 
     tiles.clearRetainingCapacity();
     entities.clearRetainingCapacity();
@@ -182,23 +183,45 @@ pub fn parseMap(buffer: []const u8, details: MapDetails) !MapData {
 }
 
 pub fn init() !void {
-    const file = try std.fs.cwd().openFile("./assets/server/worlds/maps.ziggy", .{});
-    defer file.close();
+    const file_path = "./assets/server/worlds/maps.ziggy";
+    const file = try std.Io.Dir.cwd().openFile(main.io, file_path, .{});
+    defer file.close(main.io);
 
-    const file_data = try file.readToEndAllocOptions(main.allocator, std.math.maxInt(u32), null, .fromByteUnits(@alignOf(u8)), 0);
-    defer main.allocator.free(file_data);
+    var read_buf: [1024]u8 = undefined;
+    var reader = file.reader(main.io, &read_buf);
 
-    for (try ziggy.parseLeaky([]MapDetails, main.allocator, file_data, .{})) |details| {
+    const bytes = try reader.interface.allocRemainingAlignedSentinel(main.allocator, .unlimited, .of(u8), 0);
+    defer main.allocator.free(bytes);
+
+    var maps_arena: std.heap.ArenaAllocator = .init(main.allocator);
+    defer maps_arena.deinit();
+    const arena_allocator = maps_arena.allocator();
+
+    var stdout: std.Io.File = .stdout();
+    var stdout_buf: [4096]u8 = undefined;
+    var stdout_wtr = stdout.writer(main.io, &stdout_buf);
+
+    var meta: ziggy.Deserializer.Meta = .init;
+    for (ziggy.deserializeLeaky([]MapDetails, arena_allocator, bytes, &meta, .{ .copy_strings = .always }) catch |e| {
+        if (e != error.OutOfMemory) {
+            try meta.reportErrors(arena_allocator, .{}, file_path, bytes, e, &stdout_wtr.interface);
+            try stdout_wtr.interface.flush();
+        }
+        return e;
+    }) |details| {
         const path = try std.fmt.allocPrint(main.allocator, "./assets/server/worlds/{s}", .{details.file});
         defer main.allocator.free(path);
 
-        const map_file = try std.fs.cwd().openFile(path, .{});
-        defer map_file.close();
+        const map_file = try std.Io.Dir.cwd().openFile(main.io, path, .{});
+        defer map_file.close(main.io);
 
-        const file_buf = try map_file.readToEndAlloc(main.allocator, std.math.maxInt(u32));
-        defer main.allocator.free(file_buf);
+        var map_read_buf: [2048]u8 = undefined;
+        var map_reader = map_file.reader(main.io, &map_read_buf);
 
-        var map = try parseMap(file_buf, details);
+        const map_bytes = try map_reader.interface.allocRemaining(main.allocator, .unlimited);
+        defer main.allocator.free(map_bytes);
+
+        var map = try parseMap(map_bytes, details);
 
         const portal_id = if (details.portal_name) |name|
             (game_data.portal.from_name.get(name) orelse @panic("Given portal name has no data")).id
