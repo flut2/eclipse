@@ -139,27 +139,18 @@ pub fn build(b: *std.Build) !void {
     b.installArtifact(libuv_lib);
 
     const libuv_tc = b.addTranslateC(.{
-        .optimize = optimize,
+        // TODO: Translate-c bug: https://codeberg.org/ziglang/translate-c/issues/327. Remove when fixed
+        .optimize = .ReleaseFast,
         .target = target,
         .root_source_file = libuv_dep.path("include/uv.h"),
     });
     libuv_tc.addIncludePath(libuv_dep.path("include"));
 
-    // const libuv_patcher = b.addExecutable(.{
-    //     .name = "libuv_patcher",
-    //     .root_module = b.createModule(.{
-    //         .root_source_file = b.path("libuv_patcher.zig"),
-    //         .optimize = optimize,
-    //         .target = target,
-    //     }),
-    // });
-
-    // const run_patcher = b.addRunArtifact(libuv_patcher);
-    // run_patcher.addFileArg(libuv_tc.getOutput());
-    // run_patcher.step.dependOn(&libuv_tc.step);
-    // run_patcher.step.dependOn(&libuv_patcher.step);
-
-    // libuv_lib.step.dependOn(&run_patcher.step);
+    // Libuv bugs, should eventually remove libuv (when `std.Io` evented impls are stable)
+    switch (builtin.os.tag) {
+        .linux => libuv_tc.defineCMacro("_FORTIFY_SOURCE", "0"),
+        else => {},
+    }
 
     const libuv_mod = b.addModule("uv", .{
         .root_source_file = libuv_tc.getOutput(),

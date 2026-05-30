@@ -319,8 +319,39 @@ pub fn currentMemoryUse(io: std.Io, time: i64) !f32 {
     var memory_value: f32 = -1.0;
     switch (builtin.os.tag) {
         .windows => {
-            const mem_info = try std.os.windows.GetProcessMemoryInfo(std.os.windows.GetCurrentProcess());
-            memory_value = f32i(mem_info.WorkingSetSize) / (1024.0 * 1024.0);
+            const Psapi = struct {
+                const DWORD = std.os.windows.DWORD;
+                const HANDLE = std.os.windows.HANDLE;
+                const BOOL = std.os.windows.BOOL;
+
+                const PROCESS_MEMORY_COUNTERS_EX = extern struct {
+                    cb: DWORD,
+                    PageFaultCount: DWORD,
+                    PeakWorkingSetSize: usize,
+                    WorkingSetSize: usize,
+                    QuotaPeakPagedPoolUsage: usize,
+                    QuotaPagedPoolUsage: usize,
+                    QuotaPeakNonPagedPoolUsage: usize,
+                    QuotaNonPagedPoolUsage: usize,
+                    PagefileUsage: usize,
+                    PeakPagefileUsage: usize,
+                    PrivateUsage: usize,
+                };
+
+                extern "psapi" fn GetProcessMemoryInfo(
+                    Process: HANDLE,
+                    ppsmemCounters: *PROCESS_MEMORY_COUNTERS_EX,
+                    cb: DWORD,
+                ) callconv(.winapi) BOOL;
+            };
+
+            var ct: Psapi.PROCESS_MEMORY_COUNTERS_EX = std.mem.zeroes(Psapi.PROCESS_MEMORY_COUNTERS_EX);
+            ct.cb = @intCast(@sizeOf(Psapi.PROCESS_MEMORY_COUNTERS_EX));
+
+            if (Psapi.GetProcessMemoryInfo(std.os.windows.GetCurrentProcess(), &ct, ct.cb) == .FALSE)
+                return error.MemoryInfo;
+
+            memory_value = f32i(ct.WorkingSetSize) / (1024.0 * 1024.0);
         },
         .linux => {
             const file = try std.Io.Dir.cwd().openFile(io, "/proc/self/statm", .{});

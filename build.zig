@@ -129,6 +129,11 @@ fn buildClient(
 
         exe.root_module.linkSystemLibrary(if (target.result.os.tag == .windows) "vulkan-1" else "vulkan", .{});
 
+        // Use explicit (rather than Vulkan SDK) VMA to work around Windows issues
+        exe.root_module.addIncludePath(b.dependency("vma", .{
+            .target = target,
+            .optimize = optimize,
+        }).path("include"));
         if (b.graph.environ_map.get("VULKAN_SDK")) |path| {
             exe.root_module.addLibraryPath(.{ .cwd_relative = b.pathJoin(&.{ path, "lib" }) });
             exe.root_module.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ path, "include" }) });
@@ -136,7 +141,7 @@ fn buildClient(
         exe.root_module.addCSourceFile(.{
             .file = b.addWriteFiles().add("vma.cpp",
                 \\#define VMA_IMPLEMENTATION
-                \\#include "vma/vk_mem_alloc.h"
+                \\#include "vk_mem_alloc.h"
             ),
             .flags = &.{"-std=c++17"},
         });

@@ -275,23 +275,39 @@ pub fn update(_: *AccountRegisterScreen, _: i64, _: f32) !void {}
 fn getHwid(allocator: std.mem.Allocator) ![]const u8 {
     return switch (builtin.os.tag) {
         .windows => {
-            const windows = std.os.windows;
+            const Advapi32 = struct {
+                extern "advapi32" fn RegGetValueW(
+                    hkey: std.os.windows.HKEY,
+                    sub_key: ?[*:0]const u16,
+                    value_name: ?[*:0]const u16,
+                    flags: u32,
+                    actual_type: ?*std.os.windows.ULONG,
+                    data: ?*anyopaque,
+                    data_len: ?*u32,
+                ) callconv(.winapi) std.os.windows.LSTATUS;
+
+                const RRF_RT_REG_SZ: u32 = 0x00000002;
+                const RRF_SUBKEY_WOW6464KEY: u32 = 65536;
+            };
+
             const sub_key = try std.unicode.utf8ToUtf16LeAllocZ(allocator, "SOFTWARE\\Microsoft\\Cryptography");
             defer allocator.free(sub_key);
+
             const value = try std.unicode.utf8ToUtf16LeAllocZ(allocator, "MachineGuid");
             defer allocator.free(value);
-            var buf: [128:0]u16 = undefined;
+
+            var buf: [128:0]u16 = @splat(0);
             var len: u32 = 128;
-            _ = windows.advapi32.RegGetValueW(
-                windows.HKEY_LOCAL_MACHINE,
+            _ = Advapi32.RegGetValueW(
+                std.os.windows.HKEY_LOCAL_MACHINE,
                 sub_key,
                 value,
-                windows.advapi32.RRF.SUBKEY_WOW6464KEY | windows.advapi32.RRF.RT_REG_SZ,
+                Advapi32.RRF_SUBKEY_WOW6464KEY | Advapi32.RRF_RT_REG_SZ,
                 null,
                 &buf,
                 &len,
             );
-            return try std.unicode.utf16LeToUtf8Alloc(allocator, std.mem.span(@as([*:0]const u16, &buf)));
+            return try std.unicode.utf16LeToUtf8Alloc(allocator, std.mem.sliceTo(&buf, 0));
         },
         .macos => {
             const proc = std.process.Child.run(.{

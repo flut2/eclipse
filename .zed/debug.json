@@ -35,7 +35,7 @@
   {
     "label": "Debug Client (Validation)",
     "adapter": "CodeLLDB",
-    "program": "zig-out/Eclipse",
+    "program": "zig-out/client/Eclipse",
     "request": "launch",
     "build": {
       "command": "zig",
@@ -47,12 +47,12 @@
         "-freference-trace",
       ],
     },
-    "cwd": "zig-out",
+    "cwd": "zig-out/client",
   },
   {
     "label": "ReleaseSafe Client",
     "adapter": "CodeLLDB",
-    "program": "zig-out/client/Example",
+    "program": "zig-out/client/Eclipse",
     "request": "launch",
     "build": {
       "command": "zig",
@@ -96,7 +96,7 @@
   {
     "label": "ReleaseSafe Server",
     "adapter": "CodeLLDB",
-    "program": "zig-out/server/Example",
+    "program": "zig-out/server/Eclipse",
     "request": "launch",
     "build": {
       "command": "zig",

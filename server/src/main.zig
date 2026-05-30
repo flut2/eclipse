@@ -172,7 +172,12 @@ fn listenToServer(acceptFunc: fn ([*c]uv.uv_stream_t, i32) callconv(.c) void, se
     const socket_bind_status = uv.uv_tcp_bind(server_handle, @ptrCast(&sa.in), 0);
     if (socket_bind_status != 0) std.debug.panic("Setting up socket bind failed: {s}", .{uv.uv_strerror(socket_bind_status)});
 
-    const listen_result = uv.uv_listen(@ptrCast(server_handle), std.c.SOMAXCONN, acceptFunc);
+    const somaxconn = switch (builtin.os.tag) {
+        // TODO: the std.c one seems to be busted on windows, remove this when fixed in the Zig stdlib
+        .windows => 2147483647,
+        else => std.c.SOMAXCONN,
+    };
+    const listen_result = uv.uv_listen(@ptrCast(server_handle), somaxconn, acceptFunc);
     if (listen_result != 0) std.debug.panic("Listen error: {s}", .{uv.uv_strerror(listen_result)});
 }
 

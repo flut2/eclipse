@@ -31,6 +31,10 @@
             .url = "git+https://github.com/Snektron/vulkan-zig.git#b496a6a561ffbbeb530b0f9ed4e059f88c0723a5",
             .hash = "vulkan-0.0.0-r7Ytx7N9AwD7IZt5_XNHtkJ4G9qY0pCH-cpcOsbL8wzD",
         },
+        .vma = .{
+            .url = "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.3.0.tar.gz",
+            .hash = "N-V-__8AAIutPgABk6NlXZhlJ5P8qVECvakZIKoO94h7xUOw",
+        },
 
         // server deps
         .hiredis = .{
